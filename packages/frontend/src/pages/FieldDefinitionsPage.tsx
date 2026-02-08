@@ -54,7 +54,6 @@ export default function FieldDefinitionsPage() {
     displayName: '',
     description: '',
     datatype: 'text',
-    mandatory: false,
     options: [] as Array<{ value: string; label: string }>,
   });
 
@@ -89,7 +88,6 @@ export default function FieldDefinitionsPage() {
         displayName: field.displayName,
         description: field.description || '',
         datatype: field.datatype,
-        mandatory: field.mandatory,
         options: field.datatypeProperties?.options || [],
       });
     } else {
@@ -99,7 +97,6 @@ export default function FieldDefinitionsPage() {
         displayName: '',
         description: '',
         datatype: 'text',
-        mandatory: false,
         options: [],
       });
     }
@@ -126,7 +123,6 @@ export default function FieldDefinitionsPage() {
         displayName: formData.displayName,
         description: formData.description,
         datatype: formData.datatype,
-        mandatory: formData.mandatory,
         datatypeProperties,
         validationRules: [],
       };
@@ -228,7 +224,6 @@ export default function FieldDefinitionsPage() {
               <TableCell>Short Name</TableCell>
               <TableCell>Display Name</TableCell>
               <TableCell>Datatype</TableCell>
-              <TableCell>Mandatory</TableCell>
               <TableCell>Description</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -236,7 +231,7 @@ export default function FieldDefinitionsPage() {
           <TableBody>
             {fields.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={5} align="center">
                   No field definitions found. Create one to get started.
                 </TableCell>
               </TableRow>
@@ -246,7 +241,6 @@ export default function FieldDefinitionsPage() {
                   <TableCell>{field.shortName}</TableCell>
                   <TableCell>{field.displayName}</TableCell>
                   <TableCell>{field.datatype}</TableCell>
-                  <TableCell>{field.mandatory ? 'Yes' : 'No'}</TableCell>
                   <TableCell>{field.description}</TableCell>
                   <TableCell align="right">
                     <IconButton
@@ -312,17 +306,6 @@ export default function FieldDefinitionsPage() {
                   {type}
                 </MenuItem>
               ))}
-            </TextField>
-            <TextField
-              select
-              label="Mandatory"
-              value={formData.mandatory ? 'true' : 'false'}
-              onChange={(e) =>
-                setFormData({ ...formData, mandatory: e.target.value === 'true' })
-              }
-            >
-              <MenuItem value="false">No</MenuItem>
-              <MenuItem value="true">Yes</MenuItem>
             </TextField>
 
             {(formData.datatype === 'single_select' || formData.datatype === 'multi_select') && (

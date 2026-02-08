@@ -29,7 +29,6 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
               displayName: `Field ${fieldShortName}`,
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
-              mandatory: false,
               datatypeProperties: {},
               validationRules: [],
             };
@@ -41,7 +40,7 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
               fields: [
                 {
                   fieldShortName: field.shortName,
-                  mandatory: true, // Make it mandatory to trigger validation error
+                  mandatory: true, // Set mandatory at object field reference level
                   order: 0,
                 },
               ],
@@ -108,7 +107,6 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
         displayName: 'Field 1',
         description: 'First field',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -118,7 +116,6 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
         displayName: 'Field 2',
         description: 'Second field',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -130,7 +127,7 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
         fields: [
           {
             fieldShortName: field1.shortName,
-            mandatory: true,
+            mandatory: true, // Set mandatory at object field reference level
             order: 0,
           },
           {
@@ -197,7 +194,6 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
         displayName: 'Test Field',
         description: 'Test field',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -209,7 +205,7 @@ describe('MetadataForm Property Tests - UI Error Display', () => {
         fields: [
           {
             fieldShortName: field.shortName,
-            mandatory: true,
+            mandatory: true, // Set mandatory at object field reference level
             order: 0,
           },
         ],

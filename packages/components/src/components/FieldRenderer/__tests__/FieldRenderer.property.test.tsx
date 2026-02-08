@@ -33,7 +33,6 @@ const fieldDefinitionArbitrary = fc
       .filter(s => s.trim().length >= 3 && /[a-zA-Z0-9]/.test(s)),
     description: fc.string({ maxLength: 200 }),
     datatype: fieldDatatypeArbitrary,
-    mandatory: fc.boolean(),
   })
   .map((base) => {
     const field: FieldDefinition = {
@@ -156,22 +155,26 @@ describe('FieldRenderer Property Tests', () => {
     it('should mark mandatory fields with required attribute', () => {
       fc.assert(
         fc.property(
-          fieldDefinitionArbitrary.filter((f) => f.mandatory && f.datatype !== FieldDatatype.BOOLEAN),
-          (fieldDef) => {
+          fieldDefinitionArbitrary.filter((f) => f.datatype !== FieldDatatype.BOOLEAN),
+          fc.boolean(),
+          (fieldDef, isRequired) => {
             const { container } = render(
               <FieldRenderer
                 fieldDefinition={fieldDef}
                 value={null}
                 onChange={() => {}}
+                required={isRequired}
               />
             );
 
-            // For most input types, check for required attribute or asterisk
-            const hasRequiredAttr = container.querySelector('[required]');
-            const hasAsterisk = container.textContent?.includes('*');
-            
-            // At least one indicator of required field should be present
-            expect(hasRequiredAttr || hasAsterisk).toBeTruthy();
+            if (isRequired) {
+              // For required fields, check for required attribute or asterisk
+              const hasRequiredAttr = container.querySelector('[required]');
+              const hasAsterisk = container.textContent?.includes('*');
+              
+              // At least one indicator of required field should be present
+              expect(hasRequiredAttr || hasAsterisk).toBeTruthy();
+            }
           }
         ),
         { numRuns: 30 }
@@ -186,7 +189,6 @@ describe('FieldRenderer Property Tests', () => {
             displayName: `Test Date ${id}`,
             description: 'A test date field',
             datatype: FieldDatatype.DATE,
-            mandatory: fc.sample(fc.boolean(), 1)[0],
             datatypeProperties: {},
             validationRules: [],
           })),
@@ -220,7 +222,6 @@ describe('FieldRenderer Property Tests', () => {
               displayName: 'Test Select',
               description: 'A test select field',
               datatype: FieldDatatype.SINGLE_SELECT,
-              mandatory: false,
               datatypeProperties: {
                 displayMode,
                 options: [

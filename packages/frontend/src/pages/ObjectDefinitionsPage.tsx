@@ -56,7 +56,7 @@ export default function ObjectDefinitionsPage() {
     shortName: '',
     displayName: '',
     description: '',
-    fields: [] as Array<{ fieldShortName: string; mandatory: boolean; order: number }>,
+    fields: [] as Array<{ fieldShortName: string; mandatory: boolean; order: number; inTable?: boolean }>,
   });
 
   const loadData = async () => {
@@ -151,6 +151,7 @@ export default function ObjectDefinitionsPage() {
       fieldShortName: availableFields[0].shortName,
       mandatory: false,
       order: formData.fields.length + 1,
+      inTable: true, // Default to true for new fields
     };
     setFormData({
       ...formData,
@@ -441,6 +442,18 @@ export default function ObjectDefinitionsPage() {
                                 />
                               }
                               label="Mandatory"
+                            />
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={field.inTable !== false} // Default to true if undefined
+                                  onChange={(e) =>
+                                    handleUpdateField(index, { inTable: e.target.checked })
+                                  }
+                                  size="small"
+                                />
+                              }
+                              label="In Table"
                             />
                             <Box sx={{ flexGrow: 1 }} />
                             <IconButton

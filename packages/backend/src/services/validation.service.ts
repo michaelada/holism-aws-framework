@@ -68,12 +68,10 @@ export class ValidationService {
       }
     }
 
-    // Apply mandatory constraint
-    if (field.mandatory) {
-      schema = schema.required(`${field.displayName} is required`);
-    } else {
-      schema = schema.nullable().optional();
-    }
+    // Note: Mandatory constraint is now handled at the object field reference level,
+    // not at the field definition level. This method builds the base schema.
+    // The caller should apply .required() if the field is mandatory in the object context.
+    schema = schema.nullable().optional();
 
     return schema;
   }
@@ -171,12 +169,15 @@ export class ValidationService {
     for (const fieldRef of objectDef.fields) {
       const field = fields.find(f => f.shortName === fieldRef.fieldShortName);
       if (field) {
-        // Override field's mandatory setting with object-level setting
-        const fieldWithOverride: FieldDefinition = {
-          ...field,
-          mandatory: fieldRef.mandatory
-        };
-        shape[field.shortName] = this.buildFieldSchema(fieldWithOverride);
+        // Build base schema from field definition
+        let fieldSchema = this.buildFieldSchema(field);
+        
+        // Apply mandatory constraint from object-level setting
+        if (fieldRef.mandatory) {
+          fieldSchema = fieldSchema.required(`${field.displayName} is required`);
+        }
+        
+        shape[field.shortName] = fieldSchema;
       }
     }
 

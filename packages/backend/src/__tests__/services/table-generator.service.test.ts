@@ -24,7 +24,6 @@ describe('TableGeneratorService', () => {
           description: 'Customer name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         },
         {
           shortName: 'email',
@@ -32,7 +31,6 @@ describe('TableGeneratorService', () => {
           description: 'Customer email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 
@@ -67,7 +65,6 @@ describe('TableGeneratorService', () => {
           description: 'Phone number',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -89,17 +86,17 @@ describe('TableGeneratorService', () => {
 
     it('should map all datatypes correctly', () => {
       const fields: FieldDefinition[] = [
-        { shortName: 'text_field', displayName: 'Text', description: '', datatype: FieldDatatype.TEXT, datatypeProperties: {}, mandatory: false },
-        { shortName: 'textarea_field', displayName: 'TextArea', description: '', datatype: FieldDatatype.TEXT_AREA, datatypeProperties: {}, mandatory: false },
-        { shortName: 'number_field', displayName: 'Number', description: '', datatype: FieldDatatype.NUMBER, datatypeProperties: {}, mandatory: false },
-        { shortName: 'boolean_field', displayName: 'Boolean', description: '', datatype: FieldDatatype.BOOLEAN, datatypeProperties: {}, mandatory: false },
-        { shortName: 'date_field', displayName: 'Date', description: '', datatype: FieldDatatype.DATE, datatypeProperties: {}, mandatory: false },
-        { shortName: 'time_field', displayName: 'Time', description: '', datatype: FieldDatatype.TIME, datatypeProperties: {}, mandatory: false },
-        { shortName: 'datetime_field', displayName: 'DateTime', description: '', datatype: FieldDatatype.DATETIME, datatypeProperties: {}, mandatory: false },
-        { shortName: 'email_field', displayName: 'Email', description: '', datatype: FieldDatatype.EMAIL, datatypeProperties: {}, mandatory: false },
-        { shortName: 'url_field', displayName: 'URL', description: '', datatype: FieldDatatype.URL, datatypeProperties: {}, mandatory: false },
-        { shortName: 'select_field', displayName: 'Select', description: '', datatype: FieldDatatype.SINGLE_SELECT, datatypeProperties: {}, mandatory: false },
-        { shortName: 'multiselect_field', displayName: 'MultiSelect', description: '', datatype: FieldDatatype.MULTI_SELECT, datatypeProperties: {}, mandatory: false }
+        { shortName: 'text_field', displayName: 'Text', description: '', datatype: FieldDatatype.TEXT, datatypeProperties: {}},
+        { shortName: 'textarea_field', displayName: 'TextArea', description: '', datatype: FieldDatatype.TEXT_AREA, datatypeProperties: {}},
+        { shortName: 'number_field', displayName: 'Number', description: '', datatype: FieldDatatype.NUMBER, datatypeProperties: {}},
+        { shortName: 'boolean_field', displayName: 'Boolean', description: '', datatype: FieldDatatype.BOOLEAN, datatypeProperties: {}},
+        { shortName: 'date_field', displayName: 'Date', description: '', datatype: FieldDatatype.DATE, datatypeProperties: {}},
+        { shortName: 'time_field', displayName: 'Time', description: '', datatype: FieldDatatype.TIME, datatypeProperties: {}},
+        { shortName: 'datetime_field', displayName: 'DateTime', description: '', datatype: FieldDatatype.DATETIME, datatypeProperties: {}},
+        { shortName: 'email_field', displayName: 'Email', description: '', datatype: FieldDatatype.EMAIL, datatypeProperties: {}},
+        { shortName: 'url_field', displayName: 'URL', description: '', datatype: FieldDatatype.URL, datatypeProperties: {}},
+        { shortName: 'select_field', displayName: 'Select', description: '', datatype: FieldDatatype.SINGLE_SELECT, datatypeProperties: {}},
+        { shortName: 'multiselect_field', displayName: 'MultiSelect', description: '', datatype: FieldDatatype.MULTI_SELECT, datatypeProperties: {}}
       ];
 
       const objectDef: ObjectDefinition = {
@@ -185,7 +182,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 
@@ -218,7 +214,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 
@@ -240,7 +235,6 @@ describe('TableGeneratorService', () => {
           description: 'Email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -265,7 +259,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         },
         {
           shortName: 'email',
@@ -273,7 +266,6 @@ describe('TableGeneratorService', () => {
           description: 'Email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -295,7 +287,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 
@@ -319,7 +310,6 @@ describe('TableGeneratorService', () => {
           description: 'Age',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -340,7 +330,6 @@ describe('TableGeneratorService', () => {
           description: 'Age',
           datatype: FieldDatatype.NUMBER,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -364,7 +353,6 @@ describe('TableGeneratorService', () => {
           description: 'Email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -400,7 +388,6 @@ describe('TableGeneratorService', () => {
           description: 'Email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -436,7 +423,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 
@@ -470,7 +456,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 
@@ -504,7 +489,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         },
         {
           shortName: 'old_field',
@@ -512,7 +496,6 @@ describe('TableGeneratorService', () => {
           description: 'Old',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -534,7 +517,6 @@ describe('TableGeneratorService', () => {
           description: 'Name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: true
         },
         {
           shortName: 'email',
@@ -542,7 +524,6 @@ describe('TableGeneratorService', () => {
           description: 'Email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: true
         }
       ];
 

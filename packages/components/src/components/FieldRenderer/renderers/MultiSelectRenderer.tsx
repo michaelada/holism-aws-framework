@@ -19,6 +19,7 @@ export interface MultiSelectRendererProps {
   onBlur?: () => void;
   error?: string | null;
   disabled?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -31,6 +32,7 @@ export function MultiSelectRenderer({
   onBlur,
   error,
   disabled = false,
+  required = false,
 }: MultiSelectRendererProps): JSX.Element {
   const options = fieldDefinition.datatypeProperties?.options || [];
   const selectedValues = Array.isArray(value) ? value : [];
@@ -47,7 +49,7 @@ export function MultiSelectRenderer({
 
   return (
     <FormControl fullWidth error={!!error} disabled={disabled}>
-      <InputLabel required={fieldDefinition.mandatory}>
+      <InputLabel required={required}>
         {fieldDefinition.displayName}
       </InputLabel>
       <Select

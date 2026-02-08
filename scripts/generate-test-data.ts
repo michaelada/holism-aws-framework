@@ -28,7 +28,6 @@ interface FieldDefinition {
   description: string;
   datatype: string;
   datatypeProperties: Record<string, any>;
-  mandatory: boolean;
   validationRules?: any[];
 }
 
@@ -40,6 +39,7 @@ interface ObjectDefinition {
     fieldShortName: string;
     mandatory: boolean;
     order: number;
+    inTable?: boolean;
   }>;
   displayProperties: {
     defaultSortField?: string;
@@ -117,7 +117,6 @@ class TestDataGenerator {
         description: 'Person first name',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: true,
       },
       {
         shortName: 'last_name',
@@ -125,7 +124,6 @@ class TestDataGenerator {
         description: 'Person last name',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: true,
       },
       {
         shortName: 'company_name',
@@ -133,7 +131,6 @@ class TestDataGenerator {
         description: 'Name of the company',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: true,
       },
       {
         shortName: 'job_title',
@@ -141,7 +138,6 @@ class TestDataGenerator {
         description: 'Job title or position',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'phone',
@@ -149,7 +145,6 @@ class TestDataGenerator {
         description: 'Contact phone number',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'address',
@@ -157,7 +152,6 @@ class TestDataGenerator {
         description: 'Street address',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'city',
@@ -165,7 +159,6 @@ class TestDataGenerator {
         description: 'City name',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'country',
@@ -173,7 +166,6 @@ class TestDataGenerator {
         description: 'Country name',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'postal_code',
@@ -181,7 +173,6 @@ class TestDataGenerator {
         description: 'Postal or ZIP code',
         datatype: 'text',
         datatypeProperties: {},
-        mandatory: false,
       },
 
       // Text area
@@ -191,7 +182,6 @@ class TestDataGenerator {
         description: 'Detailed description',
         datatype: 'text_area',
         datatypeProperties: { rows: 4 },
-        mandatory: false,
       },
       {
         shortName: 'notes',
@@ -199,7 +189,6 @@ class TestDataGenerator {
         description: 'Additional notes',
         datatype: 'text_area',
         datatypeProperties: { rows: 3 },
-        mandatory: false,
       },
       {
         shortName: 'comments',
@@ -207,7 +196,6 @@ class TestDataGenerator {
         description: 'User comments',
         datatype: 'text_area',
         datatypeProperties: { rows: 5 },
-        mandatory: false,
       },
 
       // Email and URL
@@ -217,7 +205,6 @@ class TestDataGenerator {
         description: 'Email address',
         datatype: 'email',
         datatypeProperties: {},
-        mandatory: true,
       },
       {
         shortName: 'website',
@@ -225,7 +212,6 @@ class TestDataGenerator {
         description: 'Website URL',
         datatype: 'url',
         datatypeProperties: {},
-        mandatory: false,
       },
 
       // Single select
@@ -242,7 +228,6 @@ class TestDataGenerator {
             { value: 'archived', label: 'Archived' },
           ],
         },
-        mandatory: true,
       },
       {
         shortName: 'priority',
@@ -257,7 +242,6 @@ class TestDataGenerator {
             { value: 'critical', label: 'Critical' },
           ],
         },
-        mandatory: false,
       },
       {
         shortName: 'category',
@@ -273,7 +257,6 @@ class TestDataGenerator {
             { value: 'operations', label: 'Operations' },
           ],
         },
-        mandatory: false,
       },
 
       // Multi select
@@ -291,7 +274,6 @@ class TestDataGenerator {
             { value: 'featured', label: 'Featured' },
           ],
         },
-        mandatory: false,
       },
       {
         shortName: 'skills',
@@ -308,7 +290,6 @@ class TestDataGenerator {
             { value: 'aws', label: 'AWS' },
           ],
         },
-        mandatory: false,
       },
 
       // Date/Time
@@ -318,7 +299,6 @@ class TestDataGenerator {
         description: 'Start date',
         datatype: 'date',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'end_date',
@@ -326,7 +306,6 @@ class TestDataGenerator {
         description: 'End date',
         datatype: 'date',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'birth_date',
@@ -334,7 +313,6 @@ class TestDataGenerator {
         description: 'Date of birth',
         datatype: 'date',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'created_date',
@@ -342,7 +320,6 @@ class TestDataGenerator {
         description: 'Creation date',
         datatype: 'datetime',
         datatypeProperties: {},
-        mandatory: false,
       },
 
       // Number
@@ -352,7 +329,6 @@ class TestDataGenerator {
         description: 'Age in years',
         datatype: 'number',
         datatypeProperties: { min: 0, max: 150 },
-        mandatory: false,
       },
       {
         shortName: 'salary',
@@ -360,7 +336,6 @@ class TestDataGenerator {
         description: 'Annual salary',
         datatype: 'number',
         datatypeProperties: { min: 0 },
-        mandatory: false,
       },
       {
         shortName: 'quantity',
@@ -368,7 +343,6 @@ class TestDataGenerator {
         description: 'Item quantity',
         datatype: 'number',
         datatypeProperties: { min: 0 },
-        mandatory: false,
       },
       {
         shortName: 'price',
@@ -376,7 +350,6 @@ class TestDataGenerator {
         description: 'Item price',
         datatype: 'number',
         datatypeProperties: { min: 0, step: 0.01 },
-        mandatory: false,
       },
 
       // Boolean
@@ -386,7 +359,6 @@ class TestDataGenerator {
         description: 'Whether the item is active',
         datatype: 'boolean',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'is_verified',
@@ -394,7 +366,6 @@ class TestDataGenerator {
         description: 'Whether the item is verified',
         datatype: 'boolean',
         datatypeProperties: {},
-        mandatory: false,
       },
       {
         shortName: 'is_featured',
@@ -402,7 +373,6 @@ class TestDataGenerator {
         description: 'Whether the item is featured',
         datatype: 'boolean',
         datatypeProperties: {},
-        mandatory: false,
       },
     ];
 
@@ -437,12 +407,12 @@ class TestDataGenerator {
         displayName: 'Contact',
         description: 'Simple contact with basic information',
         fields: [
-          { fieldShortName: 'first_name', mandatory: true, order: 1 },
-          { fieldShortName: 'last_name', mandatory: true, order: 2 },
-          { fieldShortName: 'email', mandatory: true, order: 3 },
-          { fieldShortName: 'phone', mandatory: false, order: 4 },
-          { fieldShortName: 'company_name', mandatory: false, order: 5 },
-          { fieldShortName: 'notes', mandatory: false, order: 6 },
+          { fieldShortName: 'first_name', mandatory: true, order: 1, inTable: true },
+          { fieldShortName: 'last_name', mandatory: true, order: 2, inTable: true },
+          { fieldShortName: 'email', mandatory: true, order: 3, inTable: true },
+          { fieldShortName: 'phone', mandatory: false, order: 4, inTable: true },
+          { fieldShortName: 'company_name', mandatory: false, order: 5, inTable: true },
+          { fieldShortName: 'notes', mandatory: false, order: 6, inTable: false },
         ],
         displayProperties: {
           defaultSortField: 'last_name',
@@ -458,16 +428,16 @@ class TestDataGenerator {
         displayName: 'Employee',
         description: 'Employee with grouped fields',
         fields: [
-          { fieldShortName: 'first_name', mandatory: true, order: 1 },
-          { fieldShortName: 'last_name', mandatory: true, order: 2 },
-          { fieldShortName: 'email', mandatory: true, order: 3 },
-          { fieldShortName: 'phone', mandatory: false, order: 4 },
-          { fieldShortName: 'job_title', mandatory: true, order: 5 },
-          { fieldShortName: 'salary', mandatory: false, order: 6 },
-          { fieldShortName: 'start_date', mandatory: true, order: 7 },
-          { fieldShortName: 'status', mandatory: true, order: 8 },
-          { fieldShortName: 'skills', mandatory: false, order: 9 },
-          { fieldShortName: 'notes', mandatory: false, order: 10 },
+          { fieldShortName: 'first_name', mandatory: true, order: 1, inTable: true },
+          { fieldShortName: 'last_name', mandatory: true, order: 2, inTable: true },
+          { fieldShortName: 'email', mandatory: true, order: 3, inTable: true },
+          { fieldShortName: 'phone', mandatory: false, order: 4, inTable: false },
+          { fieldShortName: 'job_title', mandatory: true, order: 5, inTable: true },
+          { fieldShortName: 'salary', mandatory: false, order: 6, inTable: false },
+          { fieldShortName: 'start_date', mandatory: true, order: 7, inTable: false },
+          { fieldShortName: 'status', mandatory: true, order: 8, inTable: true },
+          { fieldShortName: 'skills', mandatory: false, order: 9, inTable: false },
+          { fieldShortName: 'notes', mandatory: false, order: 10, inTable: false },
         ],
         displayProperties: {
           defaultSortField: 'last_name',
@@ -503,18 +473,18 @@ class TestDataGenerator {
         displayName: 'Customer',
         description: 'Customer with wizard configuration',
         fields: [
-          { fieldShortName: 'first_name', mandatory: true, order: 1 },
-          { fieldShortName: 'last_name', mandatory: true, order: 2 },
-          { fieldShortName: 'email', mandatory: true, order: 3 },
-          { fieldShortName: 'phone', mandatory: false, order: 4 },
-          { fieldShortName: 'company_name', mandatory: false, order: 5 },
-          { fieldShortName: 'address', mandatory: false, order: 6 },
-          { fieldShortName: 'city', mandatory: false, order: 7 },
-          { fieldShortName: 'country', mandatory: false, order: 8 },
-          { fieldShortName: 'postal_code', mandatory: false, order: 9 },
-          { fieldShortName: 'status', mandatory: true, order: 10 },
-          { fieldShortName: 'category', mandatory: false, order: 11 },
-          { fieldShortName: 'notes', mandatory: false, order: 12 },
+          { fieldShortName: 'first_name', mandatory: true, order: 1, inTable: true },
+          { fieldShortName: 'last_name', mandatory: true, order: 2, inTable: true },
+          { fieldShortName: 'email', mandatory: true, order: 3, inTable: true },
+          { fieldShortName: 'phone', mandatory: false, order: 4, inTable: false },
+          { fieldShortName: 'company_name', mandatory: false, order: 5, inTable: true },
+          { fieldShortName: 'address', mandatory: false, order: 6, inTable: false },
+          { fieldShortName: 'city', mandatory: false, order: 7, inTable: false },
+          { fieldShortName: 'country', mandatory: false, order: 8, inTable: false },
+          { fieldShortName: 'postal_code', mandatory: false, order: 9, inTable: false },
+          { fieldShortName: 'status', mandatory: true, order: 10, inTable: true },
+          { fieldShortName: 'category', mandatory: false, order: 11, inTable: false },
+          { fieldShortName: 'notes', mandatory: false, order: 12, inTable: false },
         ],
         displayProperties: {
           defaultSortField: 'last_name',
@@ -558,17 +528,17 @@ class TestDataGenerator {
         displayName: 'Project',
         description: 'Project with field groups and wizard',
         fields: [
-          { fieldShortName: 'company_name', mandatory: true, order: 1 },
-          { fieldShortName: 'description', mandatory: true, order: 2 },
-          { fieldShortName: 'status', mandatory: true, order: 3 },
-          { fieldShortName: 'priority', mandatory: true, order: 4 },
-          { fieldShortName: 'category', mandatory: false, order: 5 },
-          { fieldShortName: 'start_date', mandatory: true, order: 6 },
-          { fieldShortName: 'end_date', mandatory: false, order: 7 },
-          { fieldShortName: 'tags', mandatory: false, order: 8 },
-          { fieldShortName: 'price', mandatory: false, order: 9 },
-          { fieldShortName: 'is_active', mandatory: false, order: 10 },
-          { fieldShortName: 'notes', mandatory: false, order: 11 },
+          { fieldShortName: 'company_name', mandatory: true, order: 1, inTable: true },
+          { fieldShortName: 'description', mandatory: true, order: 2, inTable: false },
+          { fieldShortName: 'status', mandatory: true, order: 3, inTable: true },
+          { fieldShortName: 'priority', mandatory: true, order: 4, inTable: true },
+          { fieldShortName: 'category', mandatory: false, order: 5, inTable: false },
+          { fieldShortName: 'start_date', mandatory: true, order: 6, inTable: true },
+          { fieldShortName: 'end_date', mandatory: false, order: 7, inTable: true },
+          { fieldShortName: 'tags', mandatory: false, order: 8, inTable: false },
+          { fieldShortName: 'price', mandatory: false, order: 9, inTable: false },
+          { fieldShortName: 'is_active', mandatory: false, order: 10, inTable: false },
+          { fieldShortName: 'notes', mandatory: false, order: 11, inTable: false },
         ],
         displayProperties: {
           defaultSortField: 'start_date',
@@ -638,18 +608,18 @@ class TestDataGenerator {
         displayName: 'Product',
         description: 'Product with all field types',
         fields: [
-          { fieldShortName: 'company_name', mandatory: true, order: 1 },
-          { fieldShortName: 'description', mandatory: true, order: 2 },
-          { fieldShortName: 'category', mandatory: true, order: 3 },
-          { fieldShortName: 'price', mandatory: true, order: 4 },
-          { fieldShortName: 'quantity', mandatory: false, order: 5 },
-          { fieldShortName: 'status', mandatory: true, order: 6 },
-          { fieldShortName: 'tags', mandatory: false, order: 7 },
-          { fieldShortName: 'website', mandatory: false, order: 8 },
-          { fieldShortName: 'is_featured', mandatory: false, order: 9 },
-          { fieldShortName: 'is_active', mandatory: false, order: 10 },
-          { fieldShortName: 'created_date', mandatory: false, order: 11 },
-          { fieldShortName: 'notes', mandatory: false, order: 12 },
+          { fieldShortName: 'company_name', mandatory: true, order: 1, inTable: true },
+          { fieldShortName: 'description', mandatory: true, order: 2, inTable: false },
+          { fieldShortName: 'category', mandatory: true, order: 3, inTable: true },
+          { fieldShortName: 'price', mandatory: true, order: 4, inTable: true },
+          { fieldShortName: 'quantity', mandatory: false, order: 5, inTable: true },
+          { fieldShortName: 'status', mandatory: true, order: 6, inTable: true },
+          { fieldShortName: 'tags', mandatory: false, order: 7, inTable: false },
+          { fieldShortName: 'website', mandatory: false, order: 8, inTable: false },
+          { fieldShortName: 'is_featured', mandatory: false, order: 9, inTable: false },
+          { fieldShortName: 'is_active', mandatory: false, order: 10, inTable: false },
+          { fieldShortName: 'created_date', mandatory: false, order: 11, inTable: false },
+          { fieldShortName: 'notes', mandatory: false, order: 12, inTable: false },
         ],
         displayProperties: {
           defaultSortField: 'company_name',

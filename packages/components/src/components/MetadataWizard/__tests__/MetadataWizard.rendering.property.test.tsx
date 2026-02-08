@@ -48,7 +48,6 @@ describe('Property 30: Wizard Step Rendering', () => {
                 description: `Field ${fieldIdx + 1} for step ${stepIdx + 1}`,
                 datatype: FieldDatatype.TEXT,
                 datatypeProperties: {},
-                mandatory: false,
               });
             }
 
@@ -70,7 +69,6 @@ describe('Property 30: Wizard Step Rendering', () => {
             description: 'Test object with wizard',
             fields: allFields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},
@@ -154,7 +152,6 @@ describe('Property 30: Wizard Step Rendering', () => {
             description: 'Test field description',
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: false,
           };
 
           const wizardConfig: WizardConfiguration = {
@@ -175,7 +172,6 @@ describe('Property 30: Wizard Step Rendering', () => {
             fields: [
               {
                 fieldShortName: 'test_field',
-                mandatory: false,
                 order: 0,
               },
             ],

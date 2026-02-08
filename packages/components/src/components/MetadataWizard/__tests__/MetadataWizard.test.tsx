@@ -23,7 +23,6 @@ describe('MetadataWizard', () => {
       description: `Field description ${i + 1}`,
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: false,
     }));
 
     const wizardConfig: WizardConfiguration = {
@@ -41,7 +40,6 @@ describe('MetadataWizard', () => {
       description: 'A test wizard object',
       fields: fields.map((f, i) => ({
         fieldShortName: f.shortName,
-        mandatory: false,
         order: i,
       })),
       displayProperties: {},

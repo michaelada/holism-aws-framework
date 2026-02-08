@@ -21,7 +21,6 @@ describe('ValidationService', () => {
         description: 'User name',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       const schema = validationService.buildFieldSchema(field);
@@ -35,7 +34,6 @@ describe('ValidationService', () => {
         description: 'User age',
         datatype: FieldDatatype.NUMBER,
         datatypeProperties: {},
-        mandatory: false
       };
 
       const schema = validationService.buildFieldSchema(field);
@@ -49,13 +47,13 @@ describe('ValidationService', () => {
         description: 'User email',
         datatype: FieldDatatype.EMAIL,
         datatypeProperties: {},
-        mandatory: true
       };
 
       const schema = validationService.buildFieldSchema(field);
       
-      await expect(schema.validate(null)).rejects.toThrow();
-      await expect(schema.validate('')).rejects.toThrow();
+      // Field definitions are now optional by default
+      // Mandatory constraint is applied at the object field reference level
+      await expect(schema.validate(null)).resolves.toBeNull();
       await expect(schema.validate('test@example.com')).resolves.toBe('test@example.com');
     });
 
@@ -66,7 +64,7 @@ describe('ValidationService', () => {
         description: 'Username',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.MIN_LENGTH, value: 3 }
         ]
@@ -85,7 +83,7 @@ describe('ValidationService', () => {
         description: 'Username',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.MAX_LENGTH, value: 10 }
         ]
@@ -104,7 +102,7 @@ describe('ValidationService', () => {
         description: 'Product code',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.PATTERN, value: '^[A-Z]{3}\\d{3}$' }
         ]
@@ -124,7 +122,7 @@ describe('ValidationService', () => {
         description: 'User age',
         datatype: FieldDatatype.NUMBER,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.MIN_VALUE, value: 18 }
         ]
@@ -143,7 +141,7 @@ describe('ValidationService', () => {
         description: 'User age',
         datatype: FieldDatatype.NUMBER,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.MAX_VALUE, value: 100 }
         ]
@@ -162,7 +160,6 @@ describe('ValidationService', () => {
         description: 'User email',
         datatype: FieldDatatype.EMAIL,
         datatypeProperties: {},
-        mandatory: false
       };
 
       const schema = validationService.buildFieldSchema(field);
@@ -178,7 +175,6 @@ describe('ValidationService', () => {
         description: 'Website URL',
         datatype: FieldDatatype.URL,
         datatypeProperties: {},
-        mandatory: false
       };
 
       const schema = validationService.buildFieldSchema(field);
@@ -197,7 +193,6 @@ describe('ValidationService', () => {
           description: 'User name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false
         },
         {
           shortName: 'email',
@@ -205,7 +200,6 @@ describe('ValidationService', () => {
           description: 'User email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -232,7 +226,6 @@ describe('ValidationService', () => {
           description: 'User name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false // Field level: not mandatory
         }
       ];
 
@@ -262,7 +255,6 @@ describe('ValidationService', () => {
           description: 'User name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false
         },
         {
           shortName: 'email',
@@ -270,7 +262,6 @@ describe('ValidationService', () => {
           description: 'User email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -304,7 +295,6 @@ describe('ValidationService', () => {
           description: 'User name',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false
         },
         {
           shortName: 'email',
@@ -312,7 +302,6 @@ describe('ValidationService', () => {
           description: 'User email',
           datatype: FieldDatatype.EMAIL,
           datatypeProperties: {},
-          mandatory: false
         }
       ];
 
@@ -346,7 +335,7 @@ describe('ValidationService', () => {
           description: 'User age',
           datatype: FieldDatatype.NUMBER,
           datatypeProperties: {},
-          mandatory: false,
+          
           validationRules: [
             { type: ValidationType.MIN_VALUE, value: 18, message: 'Must be at least 18' }
           ]
@@ -387,7 +376,7 @@ describe('ValidationService', () => {
         description: 'Must be even',
         datatype: FieldDatatype.NUMBER,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.CUSTOM, customFunction: 'isEven', message: 'Must be even' }
         ]
@@ -406,7 +395,7 @@ describe('ValidationService', () => {
         description: 'Test field',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.CUSTOM, customFunction: 'nonExistent' }
         ]

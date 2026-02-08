@@ -53,7 +53,6 @@ describe('Property 29: Wizard Configuration Support', () => {
             description: `Field description ${i + 1}`,
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: false,
           }));
 
           const objectDef: ObjectDefinition = {
@@ -62,7 +61,6 @@ describe('Property 29: Wizard Configuration Support', () => {
             description,
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},

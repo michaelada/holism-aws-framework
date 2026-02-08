@@ -19,6 +19,7 @@ export interface SelectRendererProps {
   onBlur?: () => void;
   error?: string | null;
   disabled?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -32,6 +33,7 @@ export function SelectRenderer({
   onBlur,
   error,
   disabled = false,
+  required = false,
 }: SelectRendererProps): JSX.Element {
   const displayMode = fieldDefinition.datatypeProperties?.displayMode || 'dropdown';
   const options = fieldDefinition.datatypeProperties?.options || [];
@@ -39,7 +41,7 @@ export function SelectRenderer({
   if (displayMode === 'radio') {
     return (
       <FormControl component="fieldset" error={!!error} disabled={disabled} fullWidth>
-        <FormLabel component="legend" required={fieldDefinition.mandatory}>
+        <FormLabel component="legend" required={required}>
           {fieldDefinition.displayName}
         </FormLabel>
         <RadioGroup
@@ -66,7 +68,7 @@ export function SelectRenderer({
   // Default to dropdown
   return (
     <FormControl fullWidth error={!!error} disabled={disabled}>
-      <InputLabel required={fieldDefinition.mandatory}>
+      <InputLabel required={required}>
         {fieldDefinition.displayName}
       </InputLabel>
       <Select

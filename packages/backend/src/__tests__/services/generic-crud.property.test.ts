@@ -9,6 +9,8 @@ import {
 } from '../../types/metadata.types';
 
 describe('Generic CRUD Service - Property Tests', () => {
+  const createdTables: string[] = [];
+
   beforeAll(async () => {
     await db.initialize();
   });
@@ -33,6 +35,18 @@ describe('Generic CRUD Service - Property Tests', () => {
     }
   });
 
+  afterEach(async () => {
+    try {
+      // Drop any instance tables created during tests
+      for (const tableName of createdTables) {
+        await db.query(`DROP TABLE IF EXISTS ${tableName} CASCADE`);
+      }
+      createdTables.length = 0; // Clear the array
+    } catch (error) {
+      // Ignore cleanup errors
+    }
+  });
+
   // Feature: aws-web-app-framework, Property 9: CRUD Operations Universality
   describe('Property 9: CRUD Operations Universality', () => {
     test('all CRUD operations should be available for any registered object definition', async () => {
@@ -53,7 +67,6 @@ describe('Generic CRUD Service - Property Tests', () => {
               description: 'A test field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false
             };
             await metadataService.registerField(field);
 
@@ -71,6 +84,7 @@ describe('Generic CRUD Service - Property Tests', () => {
               ],
               displayProperties: {}
             };
+            createdTables.push(`instances_${objectDef.shortName}`);
             await metadataService.registerObject(objectDef);
 
             // Test CREATE operation
@@ -150,7 +164,6 @@ describe('Generic CRUD Service - Property Tests', () => {
               description: 'Name field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false
             };
             await metadataService.registerField(field);
 
@@ -161,6 +174,7 @@ describe('Generic CRUD Service - Property Tests', () => {
               fields: [{ fieldShortName: fieldShortName, mandatory: false, order: 1 }],
               displayProperties: {}
             };
+            createdTables.push(`instances_${objectDef.shortName}`);
             await metadataService.registerObject(objectDef);
 
             // Create instance
@@ -210,7 +224,6 @@ describe('Generic CRUD Service - Property Tests', () => {
               description: 'A required field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false // Will be overridden at object level
             };
             await metadataService.registerField(field);
 
@@ -221,12 +234,13 @@ describe('Generic CRUD Service - Property Tests', () => {
               fields: [
                 {
                   fieldShortName: fieldShortName,
-                  mandatory: true, // Make it mandatory at object level
+                  mandatory: true,
                   order: 1
                 }
               ],
               displayProperties: {}
             };
+            createdTables.push(`instances_${objectDef.shortName}`);
             await metadataService.registerObject(objectDef);
 
             if (testData.withMandatory) {
@@ -271,7 +285,6 @@ describe('Generic CRUD Service - Property Tests', () => {
               description: 'A number field',
               datatype: FieldDatatype.NUMBER,
               datatypeProperties: {},
-              mandatory: false
             };
             await metadataService.registerField(field);
 
@@ -284,6 +297,7 @@ describe('Generic CRUD Service - Property Tests', () => {
               ],
               displayProperties: {}
             };
+            createdTables.push(`instances_${objectDef.shortName}`);
             await metadataService.registerObject(objectDef);
 
             // Valid number should succeed
@@ -331,7 +345,6 @@ describe('Generic CRUD Service - Property Tests', () => {
               description: 'Name field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false
             };
             await metadataService.registerField(field);
 
@@ -345,6 +358,7 @@ describe('Generic CRUD Service - Property Tests', () => {
                 defaultSortField: fieldShortName
               }
             };
+            createdTables.push(`instances_${objectDef.shortName}`);
             await metadataService.registerObject(objectDef);
 
             // Create multiple instances

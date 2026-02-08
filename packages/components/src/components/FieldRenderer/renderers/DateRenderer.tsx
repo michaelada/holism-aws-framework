@@ -12,6 +12,7 @@ export interface DateRendererProps {
   onBlur?: () => void;
   error?: string | null;
   disabled?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function DateRenderer({
   onBlur,
   error,
   disabled = false,
+  required = false,
 }: DateRendererProps): JSX.Element {
   const dateValue = value ? new Date(value) : null;
 
@@ -37,7 +39,7 @@ export function DateRenderer({
       fullWidth
       error={!!error}
       helperText={error || fieldDefinition.description}
-      required={fieldDefinition.mandatory}
+      required={required}
       onBlur={onBlur}
     />
   );
@@ -52,7 +54,7 @@ export function DateRenderer({
         fullWidth: true,
         error: !!error,
         helperText: error || fieldDefinition.description,
-        required: fieldDefinition.mandatory,
+        required: required,
         onBlur,
       },
     },

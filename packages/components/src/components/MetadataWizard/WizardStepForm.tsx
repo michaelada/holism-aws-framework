@@ -118,16 +118,17 @@ export function WizardStepForm({
 
       {fields.map((field) => {
         const fieldRef = objectDef.fields.find((f) => f.fieldShortName === field.shortName);
-        const isMandatory = fieldRef?.mandatory ?? field.mandatory;
+        const isMandatory = fieldRef?.mandatory ?? false;
 
         return (
           <Box key={field.shortName} sx={{ mb: 2 }}>
             <FieldRenderer
-              fieldDefinition={{ ...field, mandatory: isMandatory }}
+              fieldDefinition={field}
               value={formData[field.shortName]}
               onChange={(value) => handleFieldChange(field.shortName, value)}
               error={errors[field.shortName]}
               disabled={submitting}
+              required={isMandatory}
             />
           </Box>
         );

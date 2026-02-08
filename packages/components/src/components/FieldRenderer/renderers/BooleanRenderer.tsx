@@ -9,6 +9,7 @@ export interface BooleanRendererProps {
   onBlur?: () => void;
   error?: string | null;
   disabled?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -21,6 +22,7 @@ export function BooleanRenderer({
   onBlur,
   error,
   disabled = false,
+  required = false,
 }: BooleanRendererProps): JSX.Element {
   return (
     <Box>

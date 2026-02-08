@@ -127,6 +127,11 @@ exports.up = (pgm) => {
       type: 'integer',
       notNull: true,
     },
+    in_table: {
+      type: 'boolean',
+      default: true,
+      notNull: true,
+    },
     created_at: {
       type: 'timestamp',
       notNull: true,

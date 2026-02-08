@@ -14,6 +14,7 @@ export interface FieldRendererProps {
   onChange: (value: any) => void;
   error?: string;
   disabled?: boolean;
+  required?: boolean;
   onBlur?: () => void;
 }
 
@@ -37,6 +38,7 @@ export function FieldRenderer({
   onChange,
   error: externalError,
   disabled = false,
+  required = false,
   onBlur,
 }: FieldRendererProps): JSX.Element {
   const { error: validationError, validate } = useFieldValidation(fieldDefinition);
@@ -59,6 +61,7 @@ export function FieldRenderer({
     onBlur: handleBlur,
     error: displayError,
     disabled,
+    required,
     fieldDefinition,
   };
 

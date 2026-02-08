@@ -13,11 +13,11 @@ export class MetadataService {
     const query = `
       INSERT INTO field_definitions (
         short_name, display_name, description, datatype, 
-        datatype_properties, validation_rules, mandatory
+        datatype_properties, validation_rules
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id, short_name, display_name, description, datatype, 
-                datatype_properties, validation_rules, mandatory, created_at, updated_at
+                datatype_properties, validation_rules, created_at, updated_at
     `;
 
     const values = [
@@ -26,8 +26,7 @@ export class MetadataService {
       field.description,
       field.datatype,
       JSON.stringify(field.datatypeProperties || {}),
-      JSON.stringify(field.validationRules || []),
-      field.mandatory
+      JSON.stringify(field.validationRules || [])
     ];
 
     const result = await db.query(query, values);
@@ -40,7 +39,7 @@ export class MetadataService {
   async getAllFields(): Promise<FieldDefinition[]> {
     const query = `
       SELECT id, short_name, display_name, description, datatype, 
-             datatype_properties, validation_rules, mandatory, created_at, updated_at
+             datatype_properties, validation_rules, created_at, updated_at
       FROM field_definitions
       ORDER BY created_at DESC
     `;
@@ -55,7 +54,7 @@ export class MetadataService {
   async getFieldByShortName(shortName: string): Promise<FieldDefinition | null> {
     const query = `
       SELECT id, short_name, display_name, description, datatype, 
-             datatype_properties, validation_rules, mandatory, created_at, updated_at
+             datatype_properties, validation_rules, created_at, updated_at
       FROM field_definitions
       WHERE short_name = $1
     `;
@@ -85,11 +84,10 @@ export class MetadataService {
           datatype = $3,
           datatype_properties = $4,
           validation_rules = $5,
-          mandatory = $6,
           updated_at = CURRENT_TIMESTAMP
-      WHERE short_name = $7
+      WHERE short_name = $6
       RETURNING id, short_name, display_name, description, datatype, 
-                datatype_properties, validation_rules, mandatory, created_at, updated_at
+                datatype_properties, validation_rules, created_at, updated_at
     `;
 
     const values = [
@@ -98,7 +96,6 @@ export class MetadataService {
       field.datatype ?? existing.datatype,
       JSON.stringify(field.datatypeProperties ?? existing.datatypeProperties),
       JSON.stringify(field.validationRules ?? existing.validationRules),
-      field.mandatory ?? existing.mandatory,
       shortName
     ];
 
@@ -163,7 +160,7 @@ export class MetadataService {
       for (const fieldRef of object.fields) {
         const fieldQuery = `
           SELECT id, short_name, display_name, description, datatype, 
-                 datatype_properties, validation_rules, mandatory, created_at, updated_at
+                 datatype_properties, validation_rules, created_at, updated_at
           FROM field_definitions WHERE short_name = $1
         `;
         const fieldResult = await client.query(fieldQuery, [fieldRef.fieldShortName]);
@@ -176,15 +173,16 @@ export class MetadataService {
         fieldDefinitions.push(this.mapFieldRow(fieldResult.rows[0]));
 
         const relationQuery = `
-          INSERT INTO object_fields (object_id, field_id, mandatory, display_order)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO object_fields (object_id, field_id, mandatory, display_order, in_table)
+          VALUES ($1, $2, $3, $4, $5)
         `;
 
         await client.query(relationQuery, [
           objectId,
           fieldId,
           fieldRef.mandatory,
-          fieldRef.order
+          fieldRef.order,
+          fieldRef.inTable !== undefined ? fieldRef.inTable : true
         ]);
       }
 
@@ -217,7 +215,8 @@ export class MetadataService {
           json_build_object(
             'fieldShortName', fd.short_name,
             'mandatory', of.mandatory,
-            'order', of.display_order
+            'order', of.display_order,
+            'inTable', of.in_table
           ) ORDER BY of.display_order
         ) as fields
       FROM object_definitions od
@@ -243,7 +242,8 @@ export class MetadataService {
           json_build_object(
             'fieldShortName', fd.short_name,
             'mandatory', of.mandatory,
-            'order', of.display_order
+            'order', of.display_order,
+            'inTable', of.in_table
           ) ORDER BY of.display_order
         ) as fields
       FROM object_definitions od
@@ -320,7 +320,7 @@ export class MetadataService {
         for (const fieldRef of existing.fields) {
           const fieldQuery = `
             SELECT id, short_name, display_name, description, datatype, 
-                   datatype_properties, validation_rules, mandatory, created_at, updated_at
+                   datatype_properties, validation_rules, created_at, updated_at
             FROM field_definitions WHERE short_name = $1
           `;
           const fieldResult = await client.query(fieldQuery, [fieldRef.fieldShortName]);
@@ -336,7 +336,7 @@ export class MetadataService {
         for (const fieldRef of object.fields) {
           const fieldQuery = `
             SELECT id, short_name, display_name, description, datatype, 
-                   datatype_properties, validation_rules, mandatory, created_at, updated_at
+                   datatype_properties, validation_rules, created_at, updated_at
             FROM field_definitions WHERE short_name = $1
           `;
           const fieldResult = await client.query(fieldQuery, [fieldRef.fieldShortName]);
@@ -349,15 +349,16 @@ export class MetadataService {
           newFieldDefinitions.push(this.mapFieldRow(fieldResult.rows[0]));
 
           const relationQuery = `
-            INSERT INTO object_fields (object_id, field_id, mandatory, display_order)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO object_fields (object_id, field_id, mandatory, display_order, in_table)
+            VALUES ($1, $2, $3, $4, $5)
           `;
 
           await client.query(relationQuery, [
             objectId,
             fieldId,
             fieldRef.mandatory,
-            fieldRef.order
+            fieldRef.order,
+            fieldRef.inTable !== undefined ? fieldRef.inTable : true
           ]);
         }
       } else if (object.displayProperties) {
@@ -368,7 +369,7 @@ export class MetadataService {
         for (const fieldRef of existing.fields) {
           const fieldQuery = `
             SELECT id, short_name, display_name, description, datatype, 
-                   datatype_properties, validation_rules, mandatory, created_at, updated_at
+                   datatype_properties, validation_rules, created_at, updated_at
             FROM field_definitions WHERE short_name = $1
           `;
           const fieldResult = await client.query(fieldQuery, [fieldRef.fieldShortName]);
@@ -441,7 +442,6 @@ export class MetadataService {
       validationRules: typeof row.validation_rules === 'string'
         ? JSON.parse(row.validation_rules)
         : row.validation_rules,
-      mandatory: row.mandatory,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };

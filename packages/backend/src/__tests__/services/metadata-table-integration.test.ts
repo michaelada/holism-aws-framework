@@ -4,6 +4,7 @@ import { FieldDatatype, FieldDefinition, ObjectDefinition } from '../../types/me
 
 describe('Metadata Service - Table Generation Integration', () => {
   let metadataService: MetadataService;
+  const createdTables: string[] = [];
 
   beforeAll(async () => {
     await db.initialize();
@@ -14,6 +15,12 @@ describe('Metadata Service - Table Generation Integration', () => {
     // Clean up test data
     await db.query('DELETE FROM object_definitions WHERE short_name LIKE $1', ['test_%']);
     await db.query('DELETE FROM field_definitions WHERE short_name LIKE $1', ['test_%']);
+    
+    // Drop any tracked instance tables
+    for (const tableName of createdTables) {
+      await db.query(`DROP TABLE IF EXISTS ${tableName} CASCADE`);
+    }
+    createdTables.length = 0; // Clear the array
     
     // Drop any test instance tables
     const tables = await db.query(`
@@ -39,7 +46,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test name field',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: true
       };
 
       const emailField: FieldDefinition = {
@@ -48,7 +54,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test email field',
         datatype: FieldDatatype.EMAIL,
         datatypeProperties: {},
-        mandatory: true
       };
 
       await metadataService.registerField(nameField);
@@ -66,6 +71,7 @@ describe('Metadata Service - Table Generation Integration', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
 
       // Verify instance table was created
@@ -111,7 +117,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test name field',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: true
       };
 
       await metadataService.registerField(nameField);
@@ -129,6 +134,7 @@ describe('Metadata Service - Table Generation Integration', () => {
         }
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
 
       // Verify index was created
@@ -152,7 +158,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test name field',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: true
       };
 
       await metadataService.registerField(nameField);
@@ -167,6 +172,7 @@ describe('Metadata Service - Table Generation Integration', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
 
       // Add new field
@@ -176,7 +182,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test email field',
         datatype: FieldDatatype.EMAIL,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(emailField);
@@ -208,7 +213,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test name field',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: true
       };
 
       const emailField: FieldDefinition = {
@@ -217,7 +221,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test email field',
         datatype: FieldDatatype.EMAIL,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(nameField);
@@ -234,6 +237,7 @@ describe('Metadata Service - Table Generation Integration', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
 
       // Update object to remove email field
@@ -262,7 +266,6 @@ describe('Metadata Service - Table Generation Integration', () => {
         description: 'Test name field',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: true
       };
 
       await metadataService.registerField(nameField);
@@ -277,6 +280,7 @@ describe('Metadata Service - Table Generation Integration', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
 
       // Update to add searchable field

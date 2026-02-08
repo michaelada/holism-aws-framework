@@ -145,8 +145,24 @@ export function MetadataTable({
       return [];
     }
 
-    // Use tableColumns from displayProperties if specified
-    const columnFields = objectDef.displayProperties.tableColumns || fields.map(f => f.shortName);
+    // Use fields with inTable=true, or fall back to tableColumns from displayProperties
+    let columnFields: string[];
+    
+    // Check if any field has inTable property defined
+    const hasInTableProperty = objectDef.fields.some(f => f.inTable !== undefined);
+    
+    if (hasInTableProperty) {
+      // Use inTable property to determine which fields to show
+      columnFields = objectDef.fields
+        .filter(f => f.inTable !== false)  // Show if inTable is true or undefined
+        .map(f => f.fieldShortName);
+    } else if (objectDef.displayProperties.tableColumns) {
+      // Fall back to tableColumns from displayProperties
+      columnFields = objectDef.displayProperties.tableColumns;
+    } else {
+      // Fall back to all fields
+      columnFields = fields.map(f => f.shortName);
+    }
 
     return columnFields.map(fieldShortName => {
       const field = fields.find(f => f.shortName === fieldShortName);

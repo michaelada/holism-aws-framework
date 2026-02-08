@@ -39,7 +39,6 @@ describe('Property 33: Wizard Progress Indication', () => {
             description: `Field for step ${i + 1}`,
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: false,
           }));
 
           const wizardConfig: WizardConfiguration = {
@@ -57,7 +56,6 @@ describe('Property 33: Wizard Progress Indication', () => {
             description: 'Test',
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},
@@ -119,7 +117,6 @@ describe('Property 33: Wizard Progress Indication', () => {
             description: `Field for step ${i + 1}`,
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: false,
           }));
 
           const wizardConfig: WizardConfiguration = {
@@ -137,7 +134,6 @@ describe('Property 33: Wizard Progress Indication', () => {
             description: 'Test',
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},
@@ -213,7 +209,6 @@ describe('Property 33: Wizard Progress Indication', () => {
             description: `Field for step ${i + 1}`,
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: false,
           }));
 
           const wizardConfig: WizardConfiguration = {
@@ -231,7 +226,6 @@ describe('Property 33: Wizard Progress Indication', () => {
             description: 'Test',
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},

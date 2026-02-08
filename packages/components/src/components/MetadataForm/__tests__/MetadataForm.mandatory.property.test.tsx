@@ -29,7 +29,6 @@ const fieldDefinitionArbitrary = fc
       FieldDatatype.NUMBER,
       FieldDatatype.EMAIL
     ),
-    mandatory: fc.boolean(),
   })
   .map((base): FieldDefinition => ({
     ...base,
@@ -76,7 +75,6 @@ describe('MetadataForm Property Tests - Mandatory Field Indication', () => {
               displayName: `Field ${fieldRef.fieldShortName}`,
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
-              mandatory: false, // Will be overridden by object definition
               datatypeProperties: {},
               validationRules: [],
             }));
@@ -146,16 +144,14 @@ describe('MetadataForm Property Tests - Mandatory Field Indication', () => {
           fc.tuple(
             fc.stringOf(fc.char(), { minLength: 3, maxLength: 20 })
               .filter(s => /^[a-zA-Z][a-zA-Z0-9_]*$/.test(s)),
-            fc.boolean(),
             fc.boolean()
           ),
-          async ([fieldShortName, fieldMandatory, objectMandatory]) => {
+          async ([fieldShortName, objectMandatory]) => {
             const field: FieldDefinition = {
               shortName: fieldShortName,
               displayName: `Test Field ${fieldShortName}`,
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
-              mandatory: fieldMandatory,
               datatypeProperties: {},
               validationRules: [],
             };
@@ -167,7 +163,7 @@ describe('MetadataForm Property Tests - Mandatory Field Indication', () => {
               fields: [
                 {
                   fieldShortName: field.shortName,
-                  mandatory: objectMandatory, // Override field's mandatory setting
+                  mandatory: objectMandatory, // Set mandatory at object field reference level
                   order: 0,
                 },
               ],
@@ -208,7 +204,6 @@ describe('MetadataForm Property Tests - Mandatory Field Indication', () => {
             });
 
             // The mandatory status should be determined by objectDef.fields[].mandatory
-            // not by field.mandatory
             if (objectMandatory) {
               const hasRequiredAttr = container.querySelector('[required]');
               const hasAsterisk = container.textContent?.includes('*');
@@ -235,7 +230,6 @@ describe('MetadataForm Property Tests - Mandatory Field Indication', () => {
               displayName: 'Test Field',
               description: 'Test field',
               datatype,
-              mandatory: false,
               datatypeProperties: {},
               validationRules: [],
             };
@@ -247,7 +241,7 @@ describe('MetadataForm Property Tests - Mandatory Field Indication', () => {
               fields: [
                 {
                   fieldShortName: field.shortName,
-                  mandatory: true, // Always mandatory for this test
+                  mandatory: true, // Set mandatory at object field reference level
                   order: 0,
                 },
               ],

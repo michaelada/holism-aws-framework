@@ -4,6 +4,7 @@ import { db } from '../../database/pool';
 
 describe('Field Grouping Tests', () => {
   let metadataService: MetadataService;
+  const createdTables: string[] = [];
 
   beforeAll(async () => {
     await db.initialize();
@@ -26,6 +27,12 @@ describe('Field Grouping Tests', () => {
 
   afterEach(async () => {
     try {
+      // Drop any instance tables created during tests
+      for (const tableName of createdTables) {
+        await db.query(`DROP TABLE IF EXISTS ${tableName} CASCADE`);
+      }
+      createdTables.length = 0; // Clear the array
+
       await db.query('DELETE FROM object_fields');
       await db.query('DELETE FROM object_definitions');
       await db.query('DELETE FROM field_definitions');
@@ -42,7 +49,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     const emailField: FieldDefinition = {
@@ -51,7 +57,6 @@ describe('Field Grouping Tests', () => {
       description: 'User email',
       datatype: FieldDatatype.EMAIL,
       datatypeProperties: {},
-      mandatory: true
     };
 
     const phoneField: FieldDefinition = {
@@ -60,7 +65,6 @@ describe('Field Grouping Tests', () => {
       description: 'User phone',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: false
     };
 
     await metadataService.registerField(nameField);
@@ -94,6 +98,7 @@ describe('Field Grouping Tests', () => {
       ]
     };
 
+    createdTables.push(`instances_${objectDef.shortName}`);
     const registered = await metadataService.registerObject(objectDef);
     expect(registered.fieldGroups).toBeDefined();
     expect(registered.fieldGroups).toHaveLength(2);
@@ -125,7 +130,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -148,6 +152,7 @@ describe('Field Grouping Tests', () => {
       ]
     };
 
+    // This should fail, so no table will be created
     await expect(metadataService.registerObject(objectDef)).rejects.toThrow(
       /does not exist in the object's fields list/
     );
@@ -163,7 +168,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -178,6 +182,7 @@ describe('Field Grouping Tests', () => {
       displayProperties: {}
     };
 
+    createdTables.push(`instances_${objectDef.shortName}`);
     const registered = await metadataService.registerObject(objectDef);
     expect(registered.fieldGroups).toBeUndefined();
 
@@ -193,7 +198,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     const emailField: FieldDefinition = {
@@ -202,7 +206,6 @@ describe('Field Grouping Tests', () => {
       description: 'User email',
       datatype: FieldDatatype.EMAIL,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -227,6 +230,7 @@ describe('Field Grouping Tests', () => {
       ]
     };
 
+    createdTables.push(`instances_${objectDef.shortName}`);
     await metadataService.registerObject(objectDef);
 
     // Update with new field groups
@@ -260,7 +264,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -297,7 +300,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -334,7 +336,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -371,7 +372,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -408,7 +408,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -459,7 +458,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     const emailField: FieldDefinition = {
@@ -468,7 +466,6 @@ describe('Field Grouping Tests', () => {
       description: 'User email',
       datatype: FieldDatatype.EMAIL,
       datatypeProperties: {},
-      mandatory: true
     };
 
     const phoneField: FieldDefinition = {
@@ -477,7 +474,6 @@ describe('Field Grouping Tests', () => {
       description: 'User phone',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: false
     };
 
     await metadataService.registerField(nameField);
@@ -504,6 +500,7 @@ describe('Field Grouping Tests', () => {
       ]
     };
 
+    createdTables.push(`instances_${objectDef.shortName}`);
     const registered = await metadataService.registerObject(objectDef);
     expect(registered.fieldGroups).toBeDefined();
     expect(registered.fieldGroups![0].fields).toHaveLength(3);
@@ -525,7 +522,6 @@ describe('Field Grouping Tests', () => {
       description: 'User name',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(nameField);
@@ -541,6 +537,7 @@ describe('Field Grouping Tests', () => {
       fieldGroups: []
     };
 
+    createdTables.push(`instances_${objectDef.shortName}`);
     const registered = await metadataService.registerObject(objectDef);
     expect(registered.fieldGroups).toBeDefined();
     expect(registered.fieldGroups).toHaveLength(0);
@@ -557,7 +554,6 @@ describe('Field Grouping Tests', () => {
       description: 'First field',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     const field2: FieldDefinition = {
@@ -566,7 +562,6 @@ describe('Field Grouping Tests', () => {
       description: 'Second field',
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
-      mandatory: true
     };
 
     await metadataService.registerField(field1);
@@ -597,6 +592,7 @@ describe('Field Grouping Tests', () => {
       ]
     };
 
+    createdTables.push(`instances_${objectDef.shortName}`);
     const registered = await metadataService.registerObject(objectDef);
     expect(registered.fieldGroups).toBeDefined();
     expect(registered.fieldGroups).toHaveLength(2);

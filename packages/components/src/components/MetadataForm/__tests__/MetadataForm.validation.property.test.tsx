@@ -33,7 +33,6 @@ describe('MetadataForm Property Tests - Client-Side Validation', () => {
               displayName: `Field ${i}`,
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
-              mandatory: false,
               datatypeProperties: {},
               validationRules: [],
             }));
@@ -44,7 +43,7 @@ describe('MetadataForm Property Tests - Client-Side Validation', () => {
               description: 'Test object',
               fields: fields.map((field, index) => ({
                 fieldShortName: field.shortName,
-                mandatory: true, // All fields are mandatory
+                mandatory: true, // Set mandatory at object field reference level
                 order: index,
               })),
               displayProperties: {},
@@ -115,7 +114,6 @@ describe('MetadataForm Property Tests - Client-Side Validation', () => {
               displayName: 'Test Field',
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
-              mandatory: false,
               datatypeProperties: {},
               validationRules: [],
             };
@@ -127,7 +125,7 @@ describe('MetadataForm Property Tests - Client-Side Validation', () => {
               fields: [
                 {
                   fieldShortName: field.shortName,
-                  mandatory: true,
+                  mandatory: true, // Set mandatory at object field reference level
                   order: 0,
                 },
               ],
@@ -194,7 +192,6 @@ describe('MetadataForm Property Tests - Client-Side Validation', () => {
         displayName: 'Email',
         description: 'Email field',
         datatype: FieldDatatype.EMAIL,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [
           {
@@ -211,7 +208,7 @@ describe('MetadataForm Property Tests - Client-Side Validation', () => {
         fields: [
           {
             fieldShortName: field.shortName,
-            mandatory: true,
+            mandatory: true, // Set mandatory at object field reference level
             order: 0,
           },
         ],

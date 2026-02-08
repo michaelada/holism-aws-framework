@@ -42,7 +42,6 @@ export interface FieldDefinition {
   description: string;
   datatype: FieldDatatype;
   datatypeProperties: Record<string, any>;
-  mandatory: boolean;
   validationRules?: ValidationRule[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -52,6 +51,7 @@ export interface ObjectFieldReference {
   fieldShortName: string;
   mandatory: boolean;
   order: number;
+  inTable?: boolean;  // Whether this field should appear as a column in table views (default: true)
 }
 
 export interface FieldGroup {

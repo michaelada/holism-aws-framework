@@ -395,3 +395,21 @@ The AWS Web Application Framework is a comprehensive base framework for deployin
 12. THE Metadata_Service SHALL validate that all field short names referenced in field groups exist in the object's field list
 13. WHEN an Object_Definition with field groups is updated, THE Framework SHALL validate the field group configuration
 14. THE field groups configuration SHALL be stored as part of the Object_Definition in the database
+
+
+### Requirement 27: Field-Level Table Visibility Control
+
+**User Story:** As a developer, I want to control which fields appear as columns in table views at the field assignment level, so that I can show only relevant summary information in tables while keeping detailed fields available in drill-down views.
+
+#### Acceptance Criteria
+
+1. THE ObjectFieldReference SHALL include an inTable property that controls whether the field appears as a table column
+2. WHEN inTable is set to true, THE field SHALL be displayed as a column in the MetadataTable component
+3. WHEN inTable is set to false, THE field SHALL NOT be displayed as a column in the MetadataTable component but SHALL be visible in detail/form views
+4. WHEN inTable is not specified, THE field SHALL default to being visible in table views (backward compatibility)
+5. THE MetadataTable component SHALL prioritize inTable property over displayProperties.tableColumns when determining which columns to display
+6. WHEN no fields have inTable=true, THE MetadataTable component SHALL fall back to displayProperties.tableColumns
+7. WHEN neither inTable properties nor displayProperties.tableColumns are specified, THE MetadataTable component SHALL display all fields
+8. THE Metadata_Service SHALL store the inTable property in the object_fields database table
+9. THE Metadata_Service SHALL return the inTable property when retrieving Object_Definitions
+10. THE test data generator SHALL create object definitions with various inTable configurations to demonstrate the feature

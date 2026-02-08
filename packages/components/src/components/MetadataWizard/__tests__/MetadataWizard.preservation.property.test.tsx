@@ -40,7 +40,6 @@ describe('Property 32: Wizard Data Preservation', () => {
               description: 'Field for step 1',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
             },
             {
               shortName: 'field_step2',
@@ -48,7 +47,6 @@ describe('Property 32: Wizard Data Preservation', () => {
               description: 'Field for step 2',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
             },
           ];
 
@@ -75,7 +73,6 @@ describe('Property 32: Wizard Data Preservation', () => {
             description: 'Test',
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},
@@ -177,7 +174,6 @@ describe('Property 32: Wizard Data Preservation', () => {
             description: `Field for step ${i + 1}`,
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: false,
           }));
 
           const wizardConfig: WizardConfiguration = {
@@ -195,7 +191,6 @@ describe('Property 32: Wizard Data Preservation', () => {
             description: 'Test',
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: false,
               order: i,
             })),
             displayProperties: {},

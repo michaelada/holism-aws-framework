@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FieldRenderer } from '../FieldRenderer';
-import { FieldDatatype, ValidationType, type FieldDefinition } from '../../../types';
+import { FieldDatatype, type FieldDefinition } from '../../../types';
 
 describe('FieldRenderer', () => {
   describe('TextRenderer', () => {
@@ -18,7 +18,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Text',
         description: 'A test text field',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -37,7 +36,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Textarea',
         description: 'A test textarea field',
         datatype: FieldDatatype.TEXT_AREA,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -56,7 +54,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Email',
         description: 'A test email field',
         datatype: FieldDatatype.EMAIL,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -75,7 +72,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Text',
         description: 'A test text field',
         datatype: FieldDatatype.TEXT,
-        mandatory: true,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -100,7 +96,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Number',
         description: 'A test number field',
         datatype: FieldDatatype.NUMBER,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -121,7 +116,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Number',
         description: 'A test number field',
         datatype: FieldDatatype.NUMBER,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -145,7 +139,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Boolean',
         description: 'A test boolean field',
         datatype: FieldDatatype.BOOLEAN,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -166,7 +159,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Boolean',
         description: 'A test boolean field',
         datatype: FieldDatatype.BOOLEAN,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -190,7 +182,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Date',
         description: 'A test date field',
         datatype: FieldDatatype.DATE,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -209,7 +200,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Time',
         description: 'A test time field',
         datatype: FieldDatatype.TIME,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -228,7 +218,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test DateTime',
         description: 'A test datetime field',
         datatype: FieldDatatype.DATETIME,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -249,7 +238,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Select',
         description: 'A test select field',
         datatype: FieldDatatype.SINGLE_SELECT,
-        mandatory: false,
         datatypeProperties: {
           displayMode: 'radio',
           options: [
@@ -274,7 +262,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Select',
         description: 'A test select field',
         datatype: FieldDatatype.SINGLE_SELECT,
-        mandatory: false,
         datatypeProperties: {
           displayMode: 'dropdown',
           options: [
@@ -303,7 +290,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Multi-Select',
         description: 'A test multi-select field',
         datatype: FieldDatatype.MULTI_SELECT,
-        mandatory: false,
         datatypeProperties: {
           options: [
             { value: 'option1', label: 'Option 1' },
@@ -330,7 +316,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Multi-Select',
         description: 'A test multi-select field',
         datatype: FieldDatatype.MULTI_SELECT,
-        mandatory: false,
         datatypeProperties: {
           options: [
             { value: 'option1', label: 'Option 1' },
@@ -360,13 +345,12 @@ describe('FieldRenderer', () => {
         displayName: 'Test Text',
         description: 'A test text field',
         datatype: FieldDatatype.TEXT,
-        mandatory: true,
         datatypeProperties: {},
         validationRules: [],
       };
 
       const { container } = render(
-        <FieldRenderer fieldDefinition={fieldDef} value="" onChange={() => {}} />
+        <FieldRenderer fieldDefinition={fieldDef} value="" onChange={() => {}} required={true} />
       );
 
       const input = container.querySelector('input');
@@ -381,7 +365,6 @@ describe('FieldRenderer', () => {
         displayName: 'Test Text',
         description: 'A test text field',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };

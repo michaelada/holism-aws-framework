@@ -9,6 +9,8 @@ export interface TextRendererProps {
   onBlur?: () => void;
   error?: string | null;
   disabled?: boolean;
+  required?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -21,6 +23,7 @@ export function TextRenderer({
   onBlur,
   error,
   disabled = false,
+  required = false,
 }: TextRendererProps): JSX.Element {
   const isTextArea = fieldDefinition.datatype === 'text_area';
   const isEmail = fieldDefinition.datatype === 'email';
@@ -36,7 +39,7 @@ export function TextRenderer({
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
       disabled={disabled}
-      required={fieldDefinition.mandatory}
+      required={required}
       multiline={isTextArea}
       rows={isTextArea ? 4 : undefined}
       type={isEmail ? 'email' : isUrl ? 'url' : 'text'}

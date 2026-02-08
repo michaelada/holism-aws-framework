@@ -252,6 +252,7 @@ interface ObjectFieldReference {
   fieldShortName: string;      // Reference to FieldDefinition
   mandatory: boolean;          // Override field's default mandatory setting
   order: number;               // Display order in forms
+  inTable: boolean;            // Whether field appears as column in table views (default: true)
 }
 ```
 
@@ -351,7 +352,44 @@ interface MetadataTableProps {
   customColumns?: ColumnDefinition[];
   pageSize?: number;
 }
+```
 
+**Table Column Visibility Control**:
+
+The MetadataTable component determines which fields to display as columns using a priority-based approach:
+
+1. **Primary: inTable Property** - If any field in the ObjectFieldReference has the `inTable` property defined, only fields with `inTable=true` are shown as columns
+2. **Fallback: displayProperties.tableColumns** - If no `inTable` properties are defined, uses the `tableColumns` array from displayProperties
+3. **Default: All Fields** - If neither is specified, displays all fields as columns
+
+This allows fine-grained control at the field assignment level while maintaining backward compatibility with existing configurations.
+
+**Example Usage**:
+
+```typescript
+// Object definition with inTable control
+const customerDef: ObjectDefinition = {
+  shortName: 'customer',
+  displayName: 'Customer',
+  fields: [
+    { fieldShortName: 'first_name', mandatory: true, order: 1, inTable: true },
+    { fieldShortName: 'last_name', mandatory: true, order: 2, inTable: true },
+    { fieldShortName: 'email', mandatory: true, order: 3, inTable: true },
+    { fieldShortName: 'phone', mandatory: false, order: 4, inTable: false },  // Hidden in table
+    { fieldShortName: 'address', mandatory: false, order: 5, inTable: false }, // Hidden in table
+    { fieldShortName: 'notes', mandatory: false, order: 6, inTable: false }    // Hidden in table
+  ],
+  displayProperties: {
+    searchableFields: ['first_name', 'last_name', 'email']
+  }
+};
+// Table will show: first_name, last_name, email
+// Detail view will show: all fields including phone, address, notes
+```
+
+**FieldRenderer Component**:
+
+```typescript
 // FieldRenderer: Renders individual fields based on datatype
 interface FieldRendererProps {
   fieldDefinition: FieldDefinition;
@@ -569,6 +607,7 @@ CREATE TABLE object_fields (
   field_id UUID NOT NULL REFERENCES field_definitions(id) ON DELETE RESTRICT,
   mandatory BOOLEAN DEFAULT FALSE,
   display_order INTEGER NOT NULL,
+  in_table BOOLEAN DEFAULT TRUE NOT NULL,  -- Controls table column visibility
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(object_id, field_id)
 );

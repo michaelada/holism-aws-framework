@@ -32,7 +32,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MIN_LENGTH, value: minLength }
               ]
@@ -72,7 +72,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MAX_LENGTH, value: maxLength }
               ]
@@ -112,7 +112,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Test field',
               datatype: FieldDatatype.NUMBER,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MIN_VALUE, value: minValue }
               ]
@@ -152,7 +152,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Test field',
               datatype: FieldDatatype.NUMBER,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MAX_VALUE, value: maxValue }
               ]
@@ -191,7 +191,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Test field',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MIN_LENGTH, value: 5 },
                 { type: ValidationType.MAX_LENGTH, value: 10 }
@@ -256,7 +256,7 @@ describe('Validation Service Property Tests', () => {
                 ? FieldDatatype.EMAIL 
                 : FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: testCase.rule.type === ValidationType.EMAIL ? [] : [testCase.rule]
             };
 
@@ -305,7 +305,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Test',
               datatype: FieldDatatype.NUMBER,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MIN_VALUE, value: 20 }
               ]
@@ -356,7 +356,7 @@ describe('Validation Service Property Tests', () => {
           description: 'Test',
           datatype: FieldDatatype.TEXT,
           datatypeProperties: {},
-          mandatory: false,
+          
           validationRules: [
             { type: ruleType, value: ruleType === ValidationType.PATTERN ? '^[a-z]+$' : 5 }
           ]
@@ -380,7 +380,7 @@ describe('Validation Service Property Tests', () => {
           description: 'Test',
           datatype: FieldDatatype.NUMBER,
           datatypeProperties: {},
-          mandatory: false,
+          
           validationRules: [
             { type: ruleType, value: 10 }
           ]
@@ -402,7 +402,6 @@ describe('Validation Service Property Tests', () => {
               description: 'Email field',
               datatype: FieldDatatype.EMAIL,
               datatypeProperties: {},
-              mandatory: false
             };
 
             const objectDef: ObjectDefinition = {
@@ -454,7 +453,6 @@ describe('Validation Service Property Tests', () => {
               description: 'Website URL',
               datatype: FieldDatatype.URL,
               datatypeProperties: {},
-              mandatory: false
             };
 
             const objectDef: ObjectDefinition = {
@@ -497,7 +495,7 @@ describe('Validation Service Property Tests', () => {
               description: 'Field used by multiple objects',
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: false,
+              
               validationRules: [
                 { type: ValidationType.MIN_LENGTH, value: minLength }
               ]
@@ -551,7 +549,7 @@ describe('Validation Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.NUMBER,
         datatypeProperties: {},
-        mandatory: false,
+        
         validationRules: [
           { type: ValidationType.MIN_VALUE, value: 10 }
         ]

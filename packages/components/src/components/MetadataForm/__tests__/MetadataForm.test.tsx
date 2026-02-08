@@ -27,7 +27,6 @@ describe('MetadataForm', () => {
           displayName: 'Name',
           description: 'User name',
           datatype: FieldDatatype.TEXT,
-          mandatory: false,
           datatypeProperties: {},
           validationRules: [],
         },
@@ -36,7 +35,6 @@ describe('MetadataForm', () => {
           displayName: 'Email',
           description: 'User email',
           datatype: FieldDatatype.EMAIL,
-          mandatory: false,
           datatypeProperties: {},
           validationRules: [],
         },
@@ -98,7 +96,6 @@ describe('MetadataForm', () => {
           displayName: 'First Name',
           description: 'First name',
           datatype: FieldDatatype.TEXT,
-          mandatory: false,
           datatypeProperties: {},
           validationRules: [],
         },
@@ -107,7 +104,6 @@ describe('MetadataForm', () => {
           displayName: 'Last Name',
           description: 'Last name',
           datatype: FieldDatatype.TEXT,
-          mandatory: false,
           datatypeProperties: {},
           validationRules: [],
         },
@@ -116,7 +112,6 @@ describe('MetadataForm', () => {
           displayName: 'Email',
           description: 'Email address',
           datatype: FieldDatatype.EMAIL,
-          mandatory: false,
           datatypeProperties: {},
           validationRules: [],
         },
@@ -193,7 +188,6 @@ describe('MetadataForm', () => {
         displayName: 'Name',
         description: 'User name',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -260,7 +254,6 @@ describe('MetadataForm', () => {
         displayName: 'Name',
         description: 'User name',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };
@@ -328,7 +321,6 @@ describe('MetadataForm', () => {
         displayName: 'Email',
         description: 'Email address',
         datatype: FieldDatatype.EMAIL,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [
           {
@@ -401,7 +393,6 @@ describe('MetadataForm', () => {
         displayName: 'Name',
         description: 'User name',
         datatype: FieldDatatype.TEXT,
-        mandatory: false,
         datatypeProperties: {},
         validationRules: [],
       };

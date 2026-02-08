@@ -9,6 +9,7 @@ export interface NumberRendererProps {
   onBlur?: () => void;
   error?: string | null;
   disabled?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -21,6 +22,7 @@ export function NumberRenderer({
   onBlur,
   error,
   disabled = false,
+  required = false,
 }: NumberRendererProps): JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -46,7 +48,7 @@ export function NumberRenderer({
       onChange={handleChange}
       onBlur={onBlur}
       disabled={disabled}
-      required={fieldDefinition.mandatory}
+      required={required}
       inputProps={{
         step: fieldDefinition.datatypeProperties?.step || 'any',
         min: fieldDefinition.datatypeProperties?.min,

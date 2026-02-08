@@ -5,6 +5,7 @@ import { db } from '../../database/pool';
 
 describe('Metadata Service Property Tests', () => {
   let metadataService: MetadataService;
+  const createdTables: string[] = [];
 
   beforeAll(async () => {
     await db.initialize();
@@ -18,6 +19,15 @@ describe('Metadata Service Property Tests', () => {
   beforeEach(async () => {
     // Clean up tables before each test - handle errors gracefully
     try {
+      // Drop all instance tables first to avoid foreign key issues
+      const tables = await db.query(`
+        SELECT tablename FROM pg_tables 
+        WHERE schemaname = 'public' AND tablename LIKE 'instances_%'
+      `);
+      for (const row of tables.rows) {
+        await db.query(`DROP TABLE IF EXISTS ${row.tablename} CASCADE`);
+      }
+      
       await db.query('DELETE FROM object_fields');
       await db.query('DELETE FROM object_definitions');
       await db.query('DELETE FROM field_definitions');
@@ -29,6 +39,21 @@ describe('Metadata Service Property Tests', () => {
   afterEach(async () => {
     // Clean up tables after each test to ensure no leftover data
     try {
+      // Drop any instance tables created during tests
+      for (const tableName of createdTables) {
+        await db.query(`DROP TABLE IF EXISTS ${tableName} CASCADE`);
+      }
+      createdTables.length = 0; // Clear the array
+
+      // Drop all instance tables first to avoid foreign key issues
+      const tables = await db.query(`
+        SELECT tablename FROM pg_tables 
+        WHERE schemaname = 'public' AND tablename LIKE 'instances_%'
+      `);
+      for (const row of tables.rows) {
+        await db.query(`DROP TABLE IF EXISTS ${row.tablename} CASCADE`);
+      }
+      
       await db.query('DELETE FROM object_fields');
       await db.query('DELETE FROM object_definitions');
       await db.query('DELETE FROM field_definitions');
@@ -80,7 +105,6 @@ describe('Metadata Service Property Tests', () => {
           expect(retrieved!.displayName).toBe(fieldDef.displayName);
           expect(retrieved!.description).toBe(fieldDef.description);
           expect(retrieved!.datatype).toBe(fieldDef.datatype);
-          expect(retrieved!.mandatory).toBe(fieldDef.mandatory);
           expect(retrieved!.datatypeProperties).toEqual(fieldDef.datatypeProperties);
           expect(retrieved!.validationRules).toEqual(fieldDef.validationRules);
 
@@ -104,7 +128,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       const field2: FieldDefinition = {
@@ -113,7 +136,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.NUMBER,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(field1);
@@ -135,6 +157,7 @@ describe('Metadata Service Property Tests', () => {
         }
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
       const retrieved = await metadataService.getObjectByShortName(objectDef.shortName);
 
@@ -175,7 +198,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(field);
@@ -188,6 +210,7 @@ describe('Metadata Service Property Tests', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
       const retrieved = await metadataService.getObjectByShortName(objectDef.shortName);
       expect(retrieved).toBeDefined();
@@ -211,7 +234,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(field);
@@ -227,6 +249,7 @@ describe('Metadata Service Property Tests', () => {
         }
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       const registered = await metadataService.registerObject(objectDef);
 
       expect(registered.shortName).toBeDefined();
@@ -265,7 +288,6 @@ describe('Metadata Service Property Tests', () => {
           expect(registered!.description).toBeDefined();
           expect(registered!.datatype).toBeDefined();
           expect(registered!.datatypeProperties).toBeDefined();
-          expect(typeof registered!.mandatory).toBe('boolean');
 
           await metadataService.deleteField(fieldDef.shortName);
         }),
@@ -290,7 +312,6 @@ describe('Metadata Service Property Tests', () => {
           description: 'Test field',
           datatype: datatype,
           datatypeProperties: {},
-          mandatory: false
         };
 
         const registered = await metadataService.registerField(fieldDef);
@@ -317,7 +338,6 @@ describe('Metadata Service Property Tests', () => {
           description: 'Test field',
           datatype: FieldDatatype.SINGLE_SELECT,
           datatypeProperties: { displayMode, options: ['option1', 'option2'] },
-          mandatory: false
         };
 
         const registered = await metadataService.registerField(fieldDef);
@@ -352,7 +372,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(field);
@@ -365,6 +384,7 @@ describe('Metadata Service Property Tests', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
       await expect(metadataService.registerObject(objectDef)).rejects.toThrow();
 
@@ -387,7 +407,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(field);
@@ -400,6 +419,7 @@ describe('Metadata Service Property Tests', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
       const deleted = await metadataService.deleteObject(objectDef.shortName);
       expect(deleted).toBe(true);
@@ -420,7 +440,6 @@ describe('Metadata Service Property Tests', () => {
         description: 'Test',
         datatype: FieldDatatype.TEXT,
         datatypeProperties: {},
-        mandatory: false
       };
 
       await metadataService.registerField(field);
@@ -433,6 +452,7 @@ describe('Metadata Service Property Tests', () => {
         displayProperties: {}
       };
 
+      createdTables.push(`instances_${objectDef.shortName}`);
       await metadataService.registerObject(objectDef);
       await expect(metadataService.deleteField(field.shortName)).rejects.toThrow();
 

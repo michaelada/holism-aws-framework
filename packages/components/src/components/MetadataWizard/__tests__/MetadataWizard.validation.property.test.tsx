@@ -41,7 +41,7 @@ describe('Property 31: Wizard Step Validation', () => {
               description: `Mandatory field ${i + 1}`,
               datatype: FieldDatatype.TEXT,
               datatypeProperties: {},
-              mandatory: true,
+              validationRules: [],
             })
           );
 
@@ -68,7 +68,7 @@ describe('Property 31: Wizard Step Validation', () => {
             description: 'Test',
             fields: fields.map((f, i) => ({
               fieldShortName: f.shortName,
-              mandatory: true,
+              mandatory: true, // Set mandatory at object field reference level
               order: i,
             })),
             displayProperties: {},
@@ -138,7 +138,7 @@ describe('Property 31: Wizard Step Validation', () => {
             description: 'A mandatory field',
             datatype: FieldDatatype.TEXT,
             datatypeProperties: {},
-            mandatory: true,
+            validationRules: [],
           };
 
           const wizardConfig: WizardConfiguration = {
@@ -165,7 +165,7 @@ describe('Property 31: Wizard Step Validation', () => {
             fields: [
               {
                 fieldShortName: 'mandatory_field',
-                mandatory: true,
+                mandatory: true, // Set mandatory at object field reference level
                 order: 0,
               },
             ],
