@@ -1,0 +1,313 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  test:
+    name: Run All Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linting
+        run: npm run lint
+      
+      - name: Run all tests
+        run: npm run test
+      
+      - name: Check test coverage
+        run: |
+          npm run test:backend -- --coverage
+          npm run test:frontend -- --coverage
+          npm run test:components -- --coverage
+      
+      - name: Build all packages
+        run: npm run build:all
+  
+  build-and-push:
+    name: Build and Push Production Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Extract metadata for backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/aws-web-framework-backend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+      
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./packages/backend
+          file: ./packages/backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-backend:buildcache,mode=max
+          target: production
+      
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/aws-web-framework-frontend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+      
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./packages/frontend
+          file: ./packages/frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-frontend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-frontend:buildcache,mode=max
+          target: production
+  
+  deploy-blue:
+    name: Deploy to Blue Environment
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: production-blue
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Get Blue environment instances
+        id: get-blue-instances
+        run: |
+          INSTANCE_IPS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=production" "Name=tag:Deployment,Values=blue" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[*].Instances[*].PublicIpAddress' \
+            --output text)
+          echo "instance_ips=$INSTANCE_IPS" >> $GITHUB_OUTPUT
+      
+      - name: Deploy to Blue instances
+        run: |
+          for IP in ${{ steps.get-blue-instances.outputs.instance_ips }}; do
+            echo "Deploying to Blue instance $IP"
+            ssh -o StrictHostKeyChecking=no ec2-user@$IP << 'EOF'
+              cd /opt/aws-web-framework
+              docker-compose pull
+              docker-compose up -d
+              docker-compose ps
+          EOF
+          done
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Wait for Blue deployment
+        run: sleep 30
+      
+      - name: Health check Blue environment
+        run: |
+          for IP in ${{ steps.get-blue-instances.outputs.instance_ips }}; do
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$IP:3000/health)
+            if [ $RESPONSE -ne 200 ]; then
+              echo "Blue environment health check failed for $IP with status $RESPONSE"
+              exit 1
+            fi
+            echo "Blue environment health check passed for $IP"
+          done
+  
+  smoke-tests-blue:
+    name: Run Smoke Tests on Blue
+    runs-on: ubuntu-latest
+    needs: deploy-blue
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Get Blue ALB DNS
+        id: get-blue-alb
+        run: |
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names production-blue-alb \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text)
+          echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
+      
+      - name: API smoke test - Health
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ steps.get-blue-alb.outputs.alb_dns }}/health)
+          if [ $RESPONSE -ne 200 ]; then
+            echo "Health check failed with status $RESPONSE"
+            exit 1
+          fi
+          echo "Health check passed"
+      
+      - name: API smoke test - Metadata service
+        run: |
+          RESPONSE=$(curl -s http://${{ steps.get-blue-alb.outputs.alb_dns }}/api/metadata/fields)
+          if [ -z "$RESPONSE" ]; then
+            echo "Metadata API smoke test failed"
+            exit 1
+          fi
+          echo "Metadata API smoke test passed"
+  
+  switch-traffic:
+    name: Switch Traffic to Blue
+    runs-on: ubuntu-latest
+    needs: smoke-tests-blue
+    environment:
+      name: production
+      url: https://production.example.com
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Get production ALB
+        id: get-alb
+        run: |
+          ALB_ARN=$(aws elbv2 describe-load-balancers \
+            --names production-alb \
+            --query 'LoadBalancers[0].LoadBalancerArn' \
+            --output text)
+          echo "alb_arn=$ALB_ARN" >> $GITHUB_OUTPUT
+      
+      - name: Get target groups
+        id: get-tgs
+        run: |
+          BLUE_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names production-blue-tg \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          GREEN_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names production-green-tg \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          echo "blue_tg_arn=$BLUE_TG_ARN" >> $GITHUB_OUTPUT
+          echo "green_tg_arn=$GREEN_TG_ARN" >> $GITHUB_OUTPUT
+      
+      - name: Get listener
+        id: get-listener
+        run: |
+          LISTENER_ARN=$(aws elbv2 describe-listeners \
+            --load-balancer-arn ${{ steps.get-alb.outputs.alb_arn }} \
+            --query 'Listeners[0].ListenerArn' \
+            --output text)
+          echo "listener_arn=$LISTENER_ARN" >> $GITHUB_OUTPUT
+      
+      - name: Switch traffic to Blue
+        run: |
+          aws elbv2 modify-listener \
+            --listener-arn ${{ steps.get-listener.outputs.listener_arn }} \
+            --default-actions Type=forward,TargetGroupArn=${{ steps.get-tgs.outputs.blue_tg_arn }}
+          echo "Traffic switched to Blue environment"
+      
+      - name: Wait for traffic switch
+        run: sleep 30
+      
+      - name: Verify production traffic
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://production.example.com/health)
+          if [ $RESPONSE -ne 200 ]; then
+            echo "Production health check failed with status $RESPONSE"
+            echo "Rolling back traffic to Green"
+            aws elbv2 modify-listener \
+              --listener-arn ${{ steps.get-listener.outputs.listener_arn }} \
+              --default-actions Type=forward,TargetGroupArn=${{ steps.get-tgs.outputs.green_tg_arn }}
+            exit 1
+          fi
+          echo "Production health check passed"
+  
+  cleanup-green:
+    name: Cleanup Green Environment
+    runs-on: ubuntu-latest
+    needs: switch-traffic
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Tag Green as previous
+        run: |
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=production" "Name=tag:Deployment,Values=green" \
+            --query 'Reservations[*].Instances[*].InstanceId' \
+            --output text)
+          for ID in $INSTANCE_IDS; do
+            aws ec2 create-tags --resources $ID --tags Key=Deployment,Value=previous
+          done
+          echo "Green environment tagged as previous"
+      
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Production deployment successful!"
+          echo "Version: ${GITHUB_REF#refs/tags/}"
+          echo "Environment URL: https://production.example.com"
+      
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "Production deployment failed!"
+          exit 1

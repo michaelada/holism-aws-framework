@@ -1,0 +1,105 @@
+/**
+ * Metadata types for the AWS Web Application Framework
+ */
+
+export enum FieldDatatype {
+  TEXT = 'text',
+  TEXT_AREA = 'text_area',
+  SINGLE_SELECT = 'single_select',
+  MULTI_SELECT = 'multi_select',
+  DATE = 'date',
+  TIME = 'time',
+  DATETIME = 'datetime',
+  NUMBER = 'number',
+  BOOLEAN = 'boolean',
+  EMAIL = 'email',
+  URL = 'url'
+}
+
+export enum ValidationType {
+  REQUIRED = 'required',
+  MIN_LENGTH = 'min_length',
+  MAX_LENGTH = 'max_length',
+  PATTERN = 'pattern',
+  MIN_VALUE = 'min_value',
+  MAX_VALUE = 'max_value',
+  EMAIL = 'email',
+  URL = 'url',
+  CUSTOM = 'custom'
+}
+
+export interface ValidationRule {
+  type: ValidationType;
+  value?: any;
+  message?: string;
+  customFunction?: string;
+}
+
+export interface FieldDefinition {
+  id?: string;
+  shortName: string;
+  displayName: string;
+  description: string;
+  datatype: FieldDatatype;
+  datatypeProperties: Record<string, any>;
+  mandatory: boolean;
+  validationRules?: ValidationRule[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface ObjectFieldReference {
+  fieldShortName: string;
+  mandatory: boolean;
+  order: number;
+}
+
+export interface WizardStep {
+  name: string;
+  description: string;
+  fields: string[];
+  order: number;
+}
+
+export interface WizardConfiguration {
+  steps: WizardStep[];
+}
+
+export interface FieldGroup {
+  name: string;
+  description: string;
+  fields: string[];
+  order: number;
+}
+
+export interface ObjectDefinition {
+  id?: string;
+  shortName: string;
+  displayName: string;
+  description: string;
+  fields: ObjectFieldReference[];
+  displayProperties: {
+    defaultSortField?: string;
+    defaultSortOrder?: 'asc' | 'desc';
+    searchableFields?: string[];
+    tableColumns?: string[];
+  };
+  wizardConfig?: WizardConfiguration;
+  fieldGroups?: FieldGroup[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface FieldError {
+  field: string;
+  message: string;
+  value?: any;
+}
+
+export interface ErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    details?: FieldError[];
+  };
+}

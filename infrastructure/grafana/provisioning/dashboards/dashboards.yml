@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'AWS Framework Dashboards'
+    orgId: 1
+    folder: 'AWS Framework'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

@@ -1,0 +1,39 @@
+# AWS Configuration
+aws_region   = "eu-west-1"
+project_name = "aws-web-framework"
+
+# Network Configuration
+vpc_cidr = "10.1.0.0/16"
+
+# Database Configuration
+database_name        = "appdb"
+db_master_username   = "dbadmin"
+db_instance_class    = "db.r5.large"
+db_allocated_storage = 200
+
+# Compute Configuration
+instance_type        = "t3.medium"
+asg_min_size         = 3
+asg_max_size         = 10
+asg_desired_capacity = 3
+
+# Monitoring Configuration
+monitoring_instance_type = "t3.medium"
+alarm_email_addresses    = ["ops@example.com", "oncall@example.com"]
+
+# SSL Configuration (REQUIRED for production)
+ssl_certificate_arn = "arn:aws:acm:eu-west-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+
+# Keycloak Configuration
+keycloak_url = "https://auth.example.com"
+
+# Secret Rotation
+enable_secret_rotation = true
+rotation_lambda_arn    = ""
+
+# Secrets (DO NOT COMMIT ACTUAL VALUES)
+# Set these via environment variables or secure parameter store
+# database_password      = "CHANGE_ME"
+# keycloak_client_secret = "CHANGE_ME"
+# jwt_signing_key        = "CHANGE_ME"
+# session_secret         = "CHANGE_ME"

@@ -1,0 +1,35 @@
+# AWS Configuration
+aws_region   = "eu-west-1"
+project_name = "aws-web-framework"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# Database Configuration
+database_name        = "appdb"
+db_master_username   = "dbadmin"
+db_instance_class    = "db.t3.small"
+db_allocated_storage = 50
+
+# Compute Configuration
+instance_type        = "t3.small"
+asg_min_size         = 1
+asg_max_size         = 3
+asg_desired_capacity = 1
+
+# Monitoring Configuration
+monitoring_instance_type = "t3.small"
+alarm_email_addresses    = ["devops@example.com"]
+
+# SSL Configuration (optional)
+ssl_certificate_arn = ""
+
+# Keycloak Configuration
+keycloak_url = "http://keycloak:8080"
+
+# Secrets (DO NOT COMMIT ACTUAL VALUES)
+# Set these via environment variables or secure parameter store
+# database_password      = "CHANGE_ME"
+# keycloak_client_secret = "CHANGE_ME"
+# jwt_signing_key        = "CHANGE_ME"
+# session_secret         = "CHANGE_ME"
