@@ -413,3 +413,24 @@ The AWS Web Application Framework is a comprehensive base framework for deployin
 8. THE Metadata_Service SHALL store the inTable property in the object_fields database table
 9. THE Metadata_Service SHALL return the inTable property when retrieving Object_Definitions
 10. THE test data generator SHALL create object definitions with various inTable configurations to demonstrate the feature
+
+### Requirement 28: Excel Export Functionality
+
+**User Story:** As a user, I want to export table data to Excel format, so that I can analyze data offline, share reports with stakeholders, and perform additional data processing in spreadsheet applications.
+
+#### Acceptance Criteria
+
+1. THE Frontend_App SHALL provide an "Export to Excel" button on object instance list pages
+2. WHEN the export button is clicked, THE Framework SHALL export all instances matching the current search criteria
+3. THE export SHALL include ALL fields from the Object_Definition, not just fields visible in the table view
+4. THE export SHALL respect the current search/filter criteria applied to the table
+5. THE export SHALL include up to 10,000 records in a single export operation
+6. THE exported Excel file SHALL use field display names as column headers
+7. THE exported Excel file SHALL format data appropriately for each datatype (dates, arrays, objects)
+8. THE exported Excel file SHALL be named using the pattern: `{ObjectDisplayName}_{YYYY-MM-DD}.xlsx`
+9. WHEN array values are exported, THE Framework SHALL join array elements with comma-space separator
+10. WHEN object values are exported, THE Framework SHALL serialize them as JSON strings
+11. WHEN null or undefined values are encountered, THE Framework SHALL export them as empty cells
+12. THE export button SHALL display a loading state while the export is in progress
+13. WHEN an export fails, THE Framework SHALL display a user-friendly error message
+14. THE Framework SHALL use the xlsx library for Excel file generation

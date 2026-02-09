@@ -164,8 +164,23 @@ export class GenericCrudService {
 
     // Build INSERT query
     const tableName = `instances_${objectType}`;
-    const fields = Object.keys(data);
-    const values = Object.values(data);
+    
+    // Process data to handle special field types
+    const processedData = Object.keys(data).reduce((obj, key) => {
+      const field = fieldDefinitions.find(f => f.shortName === key);
+      let value = data[key];
+      
+      // Convert arrays to JSON for JSONB columns (multi_select fields)
+      if (field && field.datatype === 'multi_select' && Array.isArray(value)) {
+        value = JSON.stringify(value);
+      }
+      
+      obj[key] = value;
+      return obj;
+    }, {} as Record<string, any>);
+    
+    const fields = Object.keys(processedData);
+    const values = Object.values(processedData);
     const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
 
     const query = `
@@ -211,8 +226,26 @@ export class GenericCrudService {
 
     // Build UPDATE query
     const tableName = `instances_${objectType}`;
-    const fields = Object.keys(data);
-    const values = Object.values(data);
+    
+    // Filter out system fields that shouldn't be updated
+    const systemFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by'];
+    const updateData = Object.keys(data)
+      .filter(key => !systemFields.includes(key))
+      .reduce((obj, key) => {
+        const field = fieldDefinitions.find(f => f.shortName === key);
+        let value = data[key];
+        
+        // Convert arrays to JSON for JSONB columns (multi_select fields)
+        if (field && field.datatype === 'multi_select' && Array.isArray(value)) {
+          value = JSON.stringify(value);
+        }
+        
+        obj[key] = value;
+        return obj;
+      }, {} as Record<string, any>);
+    
+    const fields = Object.keys(updateData);
+    const values = Object.values(updateData);
     const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
 
     const query = `

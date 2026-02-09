@@ -445,6 +445,108 @@ interface FieldRendererProps {
 └── tsconfig.json
 ```
 
+**Excel Export Functionality**:
+
+The framework provides Excel export capability for object instance data, allowing users to export table data for offline analysis and reporting.
+
+**Implementation Approach**:
+
+```typescript
+// ObjectInstancesPage component includes export functionality
+const handleExportToExcel = async () => {
+  // 1. Fetch all instances matching current search criteria
+  const allInstances = await instancesApi.listInstances(objectType, {
+    page: 1,
+    pageSize: 10000, // Large limit to get all results
+    search: currentSearchTerm || undefined,
+  });
+
+  // 2. Dynamically import xlsx library (code splitting)
+  const XLSX = await import('xlsx');
+
+  // 3. Prepare data - include ALL fields from object definition
+  const exportData = allInstances.data.map((instance: any) => {
+    const row: any = {};
+    
+    // Add all fields in order defined in object definition
+    objectDef.fields?.forEach((fieldRef) => {
+      const field = fields.find(f => f.shortName === fieldRef.fieldShortName);
+      if (field) {
+        const value = instance[field.shortName];
+        // Format value appropriately for Excel
+        row[field.displayName] = formatValueForExcel(value);
+      }
+    });
+
+    return row;
+  });
+
+  // 4. Create worksheet and workbook
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, objectDef.displayName);
+
+  // 5. Generate filename with timestamp
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `${objectDef.displayName}_${timestamp}.xlsx`;
+
+  // 6. Download file
+  XLSX.writeFile(workbook, filename);
+};
+
+// Value formatting for Excel export
+function formatValueForExcel(value: any): string {
+  if (value === null || value === undefined) {
+    return '';
+  } else if (Array.isArray(value)) {
+    return value.join(', ');
+  } else if (typeof value === 'object') {
+    return JSON.stringify(value);
+  } else {
+    return value;
+  }
+}
+```
+
+**Key Design Decisions**:
+
+1. **All Fields Exported**: Unlike the table view which may hide fields using `inTable: false`, the Excel export includes ALL fields from the object definition. This provides complete data for analysis.
+
+2. **Search Criteria Respected**: The export respects the current search/filter criteria, allowing users to export filtered subsets of data.
+
+3. **Dynamic Import**: The xlsx library is dynamically imported to reduce initial bundle size, as export is not a frequently used feature.
+
+4. **Field Display Names**: Column headers use field display names rather than short names for better readability.
+
+5. **Data Formatting**: Values are formatted appropriately:
+   - Arrays: Joined with comma-space separator
+   - Objects: Serialized as JSON strings
+   - Null/undefined: Empty cells
+   - Primitives: Direct values
+
+6. **Record Limit**: Exports up to 10,000 records to prevent performance issues and excessive memory usage.
+
+7. **Filename Convention**: Files are named using the pattern `{ObjectDisplayName}_{YYYY-MM-DD}.xlsx` for easy identification and sorting.
+
+**User Interface**:
+
+```typescript
+// Export button in ObjectInstancesPage
+<Button
+  variant="outlined"
+  startIcon={<DownloadIcon />}
+  onClick={handleExportToExcel}
+  disabled={exporting}
+>
+  {exporting ? 'Exporting...' : 'Export to Excel'}
+</Button>
+```
+
+**Dependencies**:
+
+- **xlsx**: SheetJS library for Excel file generation (client-side)
+- Installed in frontend package: `npm install xlsx`
+
 ### 4. Authentication & Authorization
 
 **Responsibility**: Integrate with Keycloak for SSO and protect API endpoints.
@@ -910,6 +1012,24 @@ interface SecretValues {
 **Property 41: Ungrouped Field Handling**
 *For any* Object_Definition with field groups, fields not assigned to any group should be rendered in a default ungrouped section.
 **Validates: Requirements 26.10**
+
+### Excel Export Properties
+
+**Property 42: Excel Export Completeness**
+*For any* object type with instances, exporting to Excel should include ALL fields from the Object_Definition, regardless of the inTable property or table column visibility settings.
+**Validates: Requirements 28.3**
+
+**Property 43: Excel Export Search Filtering**
+*For any* object type with a search term applied, exporting to Excel should only include instances that match the current search criteria.
+**Validates: Requirements 28.4**
+
+**Property 44: Excel Export Data Formatting**
+*For any* field value in an Excel export, the value should be formatted appropriately: arrays joined with comma-space, objects serialized as JSON, null/undefined as empty cells, and primitives as direct values.
+**Validates: Requirements 28.7, 28.9, 28.10, 28.11**
+
+**Property 45: Excel Export Column Headers**
+*For any* Excel export, column headers should use field display names rather than field short names.
+**Validates: Requirements 28.6**
 
 ## Error Handling
 

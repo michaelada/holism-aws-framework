@@ -36,6 +36,7 @@ export interface MetadataTableProps {
   onRowClick?: (instance: any) => void;
   onEdit?: (instance: any) => void;
   onDelete?: (instance: any) => void;
+  onSearchChange?: (searchTerm: string) => void;
   customColumns?: ColumnDefinition[];
   pageSize?: number;
 }
@@ -65,6 +66,7 @@ export function MetadataTable({
   onRowClick,
   onEdit,
   onDelete,
+  onSearchChange,
   customColumns,
   pageSize: initialPageSize = 20,
 }: MetadataTableProps): JSX.Element {
@@ -82,10 +84,14 @@ export function MetadataTable({
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      // Notify parent component of search term change
+      if (onSearchChange) {
+        onSearchChange(searchTerm);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, onSearchChange]);
 
   // Fetch instances when parameters change
   useEffect(() => {
@@ -196,8 +202,19 @@ export function MetadataTable({
       case 'boolean':
         return value ? 'Yes' : 'No';
       case 'multi_select':
-        return Array.isArray(value) ? value.join(', ') : String(value);
+        if (Array.isArray(value)) {
+          return value.join(', ');
+        } else if (typeof value === 'object') {
+          // Handle object case (e.g., JSONB from database)
+          return JSON.stringify(value);
+        } else {
+          return String(value);
+        }
       default:
+        // Handle any other object types
+        if (typeof value === 'object') {
+          return JSON.stringify(value);
+        }
         return String(value);
     }
   };

@@ -6,12 +6,13 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMetadataApi, useInstancesApi } from '../context';
 import {
   MetadataTable,
   ObjectDefinition,
+  FieldDefinition,
 } from '@aws-web-framework/components';
 import { ApiError, NetworkError } from '../api';
 
@@ -22,9 +23,12 @@ export default function ObjectInstancesPage() {
   const instancesApi = useInstancesApi();
   
   const [objectDef, setObjectDef] = useState<ObjectDefinition | null>(null);
+  const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [currentSearchTerm, setCurrentSearchTerm] = useState<string>('');
 
   useEffect(() => {
     if (!objectType) {
@@ -36,8 +40,15 @@ export default function ObjectInstancesPage() {
       try {
         setLoading(true);
         setError(null);
-        const objDef = await metadataApi.getObject(objectType);
+        const [objDef, fieldsData] = await Promise.all([
+          metadataApi.getObject(objectType),
+          metadataApi.getFields(),
+        ]);
         setObjectDef(objDef);
+        // Filter fields to only those used in this object
+        const objectFieldNames = objDef.fields?.map(f => f.fieldShortName) || [];
+        const relevantFields = fieldsData.filter(f => objectFieldNames.includes(f.shortName));
+        setFields(relevantFields);
       } catch (err) {
         if (err instanceof ApiError) {
           if (err.status === 404) {
@@ -82,6 +93,72 @@ export default function ObjectInstancesPage() {
     }
   };
 
+  const handleExportToExcel = async () => {
+    if (!objectDef || !objectType) return;
+
+    try {
+      setExporting(true);
+      setError(null);
+
+      // Fetch all instances matching current search criteria (no pagination)
+      const allInstances = await instancesApi.listInstances(objectType, {
+        page: 1,
+        pageSize: 10000, // Large number to get all results
+        search: currentSearchTerm || undefined,
+      });
+
+      // Dynamically import xlsx library
+      const XLSX = await import('xlsx');
+
+      // Prepare data for export - include ALL fields, not just those in table
+      const exportData = allInstances.data.map((instance: any) => {
+        const row: any = {};
+        
+        // Add all fields from object definition in order
+        objectDef.fields?.forEach((fieldRef) => {
+          const field = fields.find(f => f.shortName === fieldRef.fieldShortName);
+          if (field) {
+            const value = instance[field.shortName];
+            // Format the value for Excel
+            if (value === null || value === undefined) {
+              row[field.displayName] = '';
+            } else if (Array.isArray(value)) {
+              row[field.displayName] = value.join(', ');
+            } else if (typeof value === 'object') {
+              row[field.displayName] = JSON.stringify(value);
+            } else {
+              row[field.displayName] = value;
+            }
+          }
+        });
+
+        return row;
+      });
+
+      // Create worksheet and workbook
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, objectDef.displayName);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${objectDef.displayName}_${timestamp}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(workbook, filename);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof NetworkError) {
+        setError(err.message);
+      } else {
+        setError('Failed to export data');
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -115,6 +192,14 @@ export default function ObjectInstancesPage() {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={() => navigate('/objects')}>Back to Objects</Button>
           <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportToExcel}
+            disabled={exporting}
+          >
+            {exporting ? 'Exporting...' : 'Export to Excel'}
+          </Button>
+          <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate(`/objects/${objectType}/instances/new`)}
@@ -135,6 +220,7 @@ export default function ObjectInstancesPage() {
         objectType={objectType!}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onSearchChange={setCurrentSearchTerm}
         pageSize={20}
       />
     </Box>

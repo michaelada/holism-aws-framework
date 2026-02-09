@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
 
 interface AuthContextValue {
@@ -30,6 +30,10 @@ export function AuthProvider({ children, keycloakConfig }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use ref to track if initialization has started to prevent double initialization
+  const isInitializing = useRef(false);
+  const isInitialized = useRef(false);
 
   // Check if auth is disabled for development
   const authDisabled = import.meta.env.VITE_DISABLE_AUTH === 'true';
@@ -44,6 +48,15 @@ export function AuthProvider({ children, keycloakConfig }: AuthProviderProps) {
       return;
     }
 
+    // Prevent multiple initializations
+    if (isInitializing.current || isInitialized.current) {
+      console.log('Keycloak initialization already in progress or completed, skipping...');
+      return;
+    }
+
+    isInitializing.current = true;
+    console.log('Initializing Keycloak...');
+    
     const kc = new Keycloak({
       url: keycloakConfig.url,
       realm: keycloakConfig.realm,
@@ -51,20 +64,16 @@ export function AuthProvider({ children, keycloakConfig }: AuthProviderProps) {
     });
 
     kc.init({
-      // onLoad: 'login-required',
       onLoad: 'check-sso',
-      silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
       pkceMethod: 'S256',
-      checkLoginIframe: false, // Disable iframe check to avoid issues
-        // onLoad: 'check-sso',  // Change back to check-sso
-        // silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-        // pkceMethod: 'S256',
-        // checkLoginIframe: false,
-        // flow: 'standard',  // Add this
-        // responseMode: 'fragment',  // Add this
-
+      checkLoginIframe: false, // Disable iframe to avoid 3rd party cookie issues
+      enableLogging: true
     })
       .then((auth) => {
+        console.log('Keycloak initialized. Authenticated:', auth);
+        isInitialized.current = true;
+        isInitializing.current = false;
+        
         setKeycloak(kc);
         setAuthenticated(auth);
         setToken(kc.token || null);
@@ -72,27 +81,38 @@ export function AuthProvider({ children, keycloakConfig }: AuthProviderProps) {
         setLoading(false);
         setError(null);
 
-        // Setup token refresh
-        if (auth) {
-          setInterval(() => {
-            kc.updateToken(70)
-              .then((refreshed) => {
-                if (refreshed) {
-                  setToken(kc.token || null);
-                }
-              })
-              .catch(() => {
-                console.error('Failed to refresh token');
-              });
-          }, 60000); // Check every minute
+        // If not authenticated, trigger login
+        if (!auth) {
+          console.log('Not authenticated, redirecting to login...');
+          kc.login();
+          return;
         }
+
+        // Setup token refresh
+        const refreshInterval = setInterval(() => {
+          kc.updateToken(70)
+            .then((refreshed) => {
+              if (refreshed) {
+                console.log('Token refreshed');
+                setToken(kc.token || null);
+              }
+            })
+            .catch(() => {
+              console.error('Failed to refresh token');
+              clearInterval(refreshInterval);
+            });
+        }, 60000); // Check every minute
+
+        // Cleanup interval on unmount
+        return () => clearInterval(refreshInterval);
       })
       .catch((error) => {
         console.error('Keycloak initialization failed', error);
+        isInitializing.current = false;
         setError(error.message || 'Failed to initialize authentication');
         setLoading(false);
       });
-  }, [keycloakConfig, authDisabled]);
+  }, [authDisabled, keycloakConfig.url, keycloakConfig.realm, keycloakConfig.clientId]);
 
   const login = useCallback(() => {
     keycloak?.login();

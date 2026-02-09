@@ -157,8 +157,19 @@ export function VirtualizedMetadataTable({
       case 'boolean':
         return value ? 'Yes' : 'No';
       case 'multi_select':
-        return Array.isArray(value) ? value.join(', ') : String(value);
+        if (Array.isArray(value)) {
+          return value.join(', ');
+        } else if (typeof value === 'object') {
+          // Handle object case (e.g., JSONB from database)
+          return JSON.stringify(value);
+        } else {
+          return String(value);
+        }
       default:
+        // Handle any other object types
+        if (typeof value === 'object') {
+          return JSON.stringify(value);
+        }
         return String(value);
     }
   };
