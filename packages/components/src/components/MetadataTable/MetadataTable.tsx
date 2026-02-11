@@ -201,6 +201,14 @@ export function MetadataTable({
         return new Date(value).toLocaleTimeString();
       case 'boolean':
         return value ? 'Yes' : 'No';
+      case 'number':
+        // Format number with precision if specified
+        const precision = field.datatypeProperties?.precision ?? 0;
+        const numValue = Number(value);
+        if (!isNaN(numValue)) {
+          return numValue.toFixed(precision);
+        }
+        return String(value);
       case 'multi_select':
         if (Array.isArray(value)) {
           return value.join(', ');

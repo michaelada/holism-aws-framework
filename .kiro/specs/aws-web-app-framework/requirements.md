@@ -180,6 +180,10 @@ The AWS Web Application Framework is a comprehensive base framework for deployin
 5. THE Field_Definition SHALL include datatype-specific properties for rendering configuration
 6. THE Metadata_Service SHALL support these datatypes: text, text area, single select list, multi-select list, date picker, time picker, and datetime picker
 7. WHERE a Field_Definition specifies single select list datatype, THE Field_Definition SHALL include display mode property for radio or dropdown rendering
+8. WHERE a Field_Definition specifies number datatype, THE Field_Definition SHALL support an optional precision property that defaults to 0
+9. THE precision property SHALL specify the number of decimal places to display when rendering number fields
+10. WHEN precision is 0, THE Framework SHALL display numbers as integers
+11. WHEN precision is greater than 0, THE Framework SHALL display numbers with the specified number of decimal places
 
 ### Requirement 13: Generic REST API for CRUD Operations
 

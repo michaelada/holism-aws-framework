@@ -114,7 +114,7 @@ export function authenticateToken() {
         userId: 'dev-user-123',
         email: 'dev@example.com',
         username: 'dev-user',
-        roles: ['admin', 'user'],
+        roles: ['super-admin', 'admin', 'user'],
         groups: []
       };
       next();
@@ -335,4 +335,28 @@ export function optionalAuth() {
       next();
     }
   };
+}
+
+/**
+ * Convenience middleware for admin routes
+ * Combines authentication and admin role check
+ * 
+ * This middleware:
+ * 1. Verifies JWT token authentication
+ * 2. Checks that the user has the 'admin' realm role
+ * 
+ * @returns Express middleware function
+ */
+export function requireAuth() {
+  return authenticateToken();
+}
+
+/**
+ * Convenience middleware for admin role check
+ * Must be used after requireAuth middleware
+ * 
+ * @returns Express middleware function
+ */
+export function requireAdminRole() {
+  return requireRole('admin');
 }

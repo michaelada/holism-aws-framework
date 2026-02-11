@@ -43,6 +43,8 @@ describe('Authentication Middleware', () => {
     process.env.KEYCLOAK_URL = 'http://localhost:8080';
     process.env.KEYCLOAK_REALM = 'test-realm';
     process.env.KEYCLOAK_CLIENT_ID = 'test-client';
+    // Ensure auth is not disabled for these tests
+    delete process.env.DISABLE_AUTH;
   });
 
   afterEach(() => {

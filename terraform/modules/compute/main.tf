@@ -66,6 +66,31 @@ resource "aws_lb_target_group" "frontend" {
   )
 }
 
+# Target Group for Admin Frontend
+resource "aws_lb_target_group" "admin" {
+  name     = "${var.environment}-admin-tg"
+  port     = 5174
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    path                = "/admin"
+    matcher             = "200"
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.environment}-admin-tg"
+    }
+  )
+}
+
 # ALB Listener - HTTP (redirect to HTTPS)
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
@@ -116,6 +141,42 @@ resource "aws_lb_listener_rule" "api" {
   }
 }
 
+# Listener Rule for Admin API requests
+resource "aws_lb_listener_rule" "admin_api" {
+  count        = var.ssl_certificate_arn != "" ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 90
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/admin/*"]
+    }
+  }
+}
+
+# Listener Rule for Admin Frontend
+resource "aws_lb_listener_rule" "admin" {
+  count        = var.ssl_certificate_arn != "" ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 80
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.admin.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/admin", "/admin/*"]
+    }
+  }
+}
+
 # Launch Template for Application Servers
 resource "aws_launch_template" "app" {
   name_prefix   = "${var.environment}-app-"
@@ -156,7 +217,11 @@ resource "aws_launch_template" "app" {
 resource "aws_autoscaling_group" "app" {
   name                = "${var.environment}-app-asg"
   vpc_zone_identifier = var.private_subnet_ids
-  target_group_arns   = [aws_lb_target_group.backend.arn, aws_lb_target_group.frontend.arn]
+  target_group_arns   = [
+    aws_lb_target_group.backend.arn,
+    aws_lb_target_group.frontend.arn,
+    aws_lb_target_group.admin.arn
+  ]
   health_check_type   = "ELB"
   health_check_grace_period = 300
 

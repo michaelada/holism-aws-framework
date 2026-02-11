@@ -144,8 +144,8 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur
-              await user.click(document.body);
+              // Trigger blur by focusing out
+              input.blur();
 
               // Wait for validation error to appear
               await waitFor(
@@ -170,8 +170,8 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur
-              await user.click(document.body);
+              // Trigger blur by focusing out
+              input.blur();
 
               // Wait for validation error to appear
               await waitFor(
@@ -233,8 +233,8 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur
-              await user.click(document.body);
+              // Trigger blur by focusing out
+              input.blur();
 
               // Wait for validation error to appear
               await waitFor(
@@ -259,8 +259,8 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur
-              await user.click(document.body);
+              // Trigger blur by focusing out
+              input.blur();
 
               // Wait for validation error to appear
               await waitFor(
@@ -325,8 +325,8 @@ describe('FieldRenderer Validation Property Tests', () => {
               />
             );
 
-            // Trigger blur
-            await user.click(document.body);
+            // Trigger blur by focusing out
+            input.blur();
 
             // Wait for error message to appear
             await waitFor(
@@ -389,7 +389,7 @@ describe('FieldRenderer Validation Property Tests', () => {
                 onChange={handleChange}
               />
             );
-            await user.click(document.body);
+            input.blur();
 
             // Wait for error to appear
             await waitFor(() => {
@@ -406,7 +406,7 @@ describe('FieldRenderer Validation Property Tests', () => {
                 onChange={handleChange}
               />
             );
-            await user.click(document.body);
+            input.blur();
 
             // Error should be cleared
             await waitFor(

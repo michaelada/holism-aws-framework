@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { WizardConfiguration } from '../types';
 
 export interface WizardState {
@@ -45,12 +45,22 @@ export interface UseWizardResult {
  * ```
  */
 export function useWizard(wizardConfig: WizardConfiguration): UseWizardResult {
+  const totalSteps = wizardConfig.steps.length;
+  
   const [state, setState] = useState<WizardState>({
     currentStep: 0,
-    totalSteps: wizardConfig.steps.length,
+    totalSteps: totalSteps,
     stepData: {},
     completedSteps: new Set(),
   });
+
+  // Update totalSteps when wizardConfig changes
+  useEffect(() => {
+    setState((prev) => ({
+      ...prev,
+      totalSteps: totalSteps,
+    }));
+  }, [totalSteps]);
 
   const goToStep = useCallback((stepIndex: number) => {
     if (stepIndex >= 0 && stepIndex < state.totalSteps) {

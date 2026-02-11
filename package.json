@@ -6,21 +6,25 @@
   "workspaces": [
     "packages/backend",
     "packages/frontend",
-    "packages/components"
+    "packages/components",
+    "packages/admin"
   ],
   "scripts": {
     "install:all": "npm install",
     "dev:backend": "npm run dev --workspace=packages/backend",
     "dev:frontend": "npm run dev --workspace=packages/frontend",
+    "dev:admin": "npm run dev --workspace=packages/admin",
     "build:backend": "npm run build --workspace=packages/backend",
     "build:frontend": "npm run build --workspace=packages/frontend",
     "build:components": "npm run build --workspace=packages/components",
-    "build:all": "npm run build:components && npm run build:backend && npm run build:frontend",
+    "build:admin": "npm run build --workspace=packages/admin",
+    "build:all": "npm run build:components && npm run build:backend && npm run build:frontend && npm run build:admin",
     "test": "jest && npm run test --workspaces",
     "test:root": "jest",
     "test:backend": "npm run test --workspace=packages/backend",
     "test:frontend": "npm run test --workspace=packages/frontend",
     "test:components": "npm run test --workspace=packages/components",
+    "test:admin": "npm run test --workspace=packages/admin",
     "lint": "npm run lint --workspaces",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "docker:up": "docker-compose up -d",

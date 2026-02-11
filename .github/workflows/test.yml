@@ -58,6 +58,17 @@ jobs:
             exit 1
           fi
       
+      - name: Check test coverage - Admin
+        run: |
+          cd packages/admin
+          npm run test:coverage
+          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "Admin coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "Error: Admin test coverage is below 70%"
+            exit 1
+          fi
+      
       - name: Check test coverage - Components
         run: |
           cd packages/components
@@ -78,6 +89,9 @@ jobs:
       - name: Build frontend
         run: npm run build:frontend
       
+      - name: Build admin
+        run: npm run build:admin
+      
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +100,7 @@ jobs:
           path: |
             packages/backend/coverage/
             packages/frontend/coverage/
+            packages/admin/coverage/
             packages/components/coverage/
           retention-days: 7
       
@@ -97,5 +112,6 @@ jobs:
           path: |
             packages/backend/dist/
             packages/frontend/dist/
+            packages/admin/dist/
             packages/components/dist/
           retention-days: 1

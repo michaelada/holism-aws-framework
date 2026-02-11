@@ -21,6 +21,8 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  // Set up test environment before running tests
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest.setup.js'],
   // Run tests sequentially to avoid database conflicts
   maxWorkers: 1,
   // Force exit after tests complete to avoid hanging on open handles

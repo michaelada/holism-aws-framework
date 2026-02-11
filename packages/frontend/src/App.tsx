@@ -1,11 +1,33 @@
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
 import { BrowserRouter } from 'react-router-dom';
 import { useMemo } from 'react';
 import { ApiProvider, AuthProvider, NotificationProvider, useAuth } from './context';
 import { AppRoutes } from './routes';
 import { Layout, ErrorBoundary } from './components';
+import { neumorphicTheme } from './theme/neumorphicTheme';
 
-const theme = createTheme();
+const customTheme = createTheme({
+  ...neumorphicTheme,
+  // palette: {
+  //   ...neumorphicTheme.palette,
+  //   primary: {
+  //     main: '#ff5722', // Override primary color
+  //   },
+  // },
+  // components: {
+  //   MuiInputLabel: {
+  //     styleOverrides: {
+  //       root: {
+  //         formControl: {
+  //       "label + &": {
+  //         marginTop: "15px"
+  //       }
+  //     }
+  //     }
+  //   }
+  // }
+  // }
+});
 
 function AppContent() {
   const { getToken, logout, userName } = useAuth();
@@ -38,11 +60,6 @@ function AppContent() {
 
 function App() {
   // Memoize config objects to prevent unnecessary re-renders
-  const apiBaseURL = useMemo(() => 
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
-    []
-  );
-
   const keycloakConfig = useMemo(() => ({
     url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8080',
     realm: import.meta.env.VITE_KEYCLOAK_REALM || 'aws-framework',
@@ -50,7 +67,7 @@ function App() {
   }), []);
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={customTheme}>
       <CssBaseline />
       <BrowserRouter>
         <AuthProvider keycloakConfig={keycloakConfig}>

@@ -33,6 +33,7 @@ jobs:
         run: |
           npm run test:backend -- --coverage
           npm run test:frontend -- --coverage
+          npm run test:admin -- --coverage
           npm run test:components -- --coverage
       
       - name: Build all packages
@@ -104,6 +105,29 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-frontend:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-frontend:buildcache,mode=max
+          target: production
+      
+      - name: Extract metadata for admin
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/aws-web-framework-admin
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+      
+      - name: Build and push admin image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./packages/admin
+          file: ./packages/admin/Dockerfile
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-admin:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/aws-web-framework-admin:buildcache,mode=max
           target: production
   
   deploy-blue:

@@ -61,6 +61,24 @@ export class ForbiddenError extends AppError {
 }
 
 /**
+ * Conflict error (409 Conflict)
+ */
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super(409, 'CONFLICT', message);
+  }
+}
+
+/**
+ * Bad request error (400 Bad Request)
+ */
+export class BadRequestError extends AppError {
+  constructor(message: string, details?: any) {
+    super(400, 'BAD_REQUEST', message, details);
+  }
+}
+
+/**
  * Internal server error (500 Internal Server Error)
  */
 export class InternalError extends AppError {

@@ -9,6 +9,12 @@ import { secretsManager } from './config/secrets';
 import { errorHandler, requestLogger, metricsMiddleware } from './middleware';
 import metadataRoutes from './routes/metadata.routes';
 import genericCrudRoutes from './routes/generic-crud.routes';
+import adminRoutes from './routes/admin.routes';
+import capabilityRoutes from './routes/capability.routes';
+import organizationTypeRoutes from './routes/organization-type.routes';
+import organizationRoutes from './routes/organization.routes';
+import organizationUserRoutes from './routes/organization-user.routes';
+import organizationRoleRoutes from './routes/organization-role.routes';
 import { swaggerSpec } from './config/swagger';
 import { register } from './config/metrics';
 
@@ -117,6 +123,12 @@ app.get('/metrics', async (_req, res) => {
 // API routes
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/objects', genericCrudRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/capabilities', capabilityRoutes);
+app.use('/api/admin/organization-types', organizationTypeRoutes);
+app.use('/api/admin/organizations', organizationRoutes);
+app.use('/api/admin/organizations', organizationUserRoutes);
+app.use('/api/admin/organizations', organizationRoleRoutes);
 
 // 404 handler
 app.use((_req, res) => {

@@ -17,6 +17,11 @@ services:
       target: production
     restart: unless-stopped
 
+  admin:
+    build:
+      target: production
+    restart: unless-stopped
+
   nginx:
     volumes:
       # Use SSL-enabled configuration

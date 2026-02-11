@@ -1,0 +1,44 @@
+{
+  "name": "@aws-web-framework/admin",
+  "version": "1.0.0",
+  "description": "Admin frontend application for AWS Web Application Framework",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.9",
+    "@mui/material": "^5.15.9",
+    "@mui/x-date-pickers": "^6.19.4",
+    "@types/react-window": "^1.8.8",
+    "axios": "^1.6.7",
+    "date-fns": "^3.3.1",
+    "keycloak-js": "^23.0.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "react-window": "^2.2.6",
+    "yup": "^1.3.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^1.2.2",
+    "fast-check": "^3.15.1",
+    "jsdom": "^24.0.0",
+    "vite": "^5.1.0",
+    "vitest": "^1.2.2"
+  }
+}

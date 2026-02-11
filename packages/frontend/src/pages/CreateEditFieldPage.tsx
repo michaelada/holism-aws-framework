@@ -46,6 +46,7 @@ export default function CreateEditFieldPage() {
     description: '',
     datatype: 'text',
     options: [] as Array<{ value: string; label: string }>,
+    precision: 0,
   });
 
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function CreateEditFieldPage() {
         description: field.description || '',
         datatype: field.datatype,
         options: field.datatypeProperties?.options || [],
+        precision: field.datatypeProperties?.precision ?? 0,
       });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -96,6 +98,9 @@ export default function CreateEditFieldPage() {
       const datatypeProperties: Record<string, any> = {};
       if (formData.datatype === 'single_select' || formData.datatype === 'multi_select') {
         datatypeProperties.options = formData.options;
+      }
+      if (formData.datatype === 'number') {
+        datatypeProperties.precision = formData.precision;
       }
       
       const fieldData = {
@@ -212,6 +217,17 @@ export default function CreateEditFieldPage() {
                 </MenuItem>
               ))}
             </TextField>
+
+            {formData.datatype === 'number' && (
+              <TextField
+                type="number"
+                label="Precision"
+                value={formData.precision}
+                onChange={(e) => setFormData({ ...formData, precision: parseInt(e.target.value) || 0 })}
+                helperText="Number of decimal places to display (0 for integers)"
+                inputProps={{ min: 0, max: 10, step: 1 }}
+              />
+            )}
 
             {(formData.datatype === 'single_select' || formData.datatype === 'multi_select') && (
               <Box>

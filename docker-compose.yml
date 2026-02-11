@@ -59,6 +59,13 @@ services:
       KEYCLOAK_CLIENT_ID: aws-framework-client
       API_PORT: 3000
       LOG_LEVEL: debug
+      # Keycloak Admin Configuration for admin operations
+      KEYCLOAK_ADMIN_CLIENT_ID: admin-cli
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_REALM: aws-framework
+      # Development: Disable authentication
+      DISABLE_AUTH: true
     ports:
       - "3000:3000"
     depends_on:
@@ -95,6 +102,25 @@ services:
   #     - ./packages/frontend/public:/app/public:ro
   #   command: npm run dev
 
+  # Admin Frontend - For local development, run outside Docker to access monorepo packages
+  # Uncomment to run in Docker (will have limited functionality without components package)
+  # admin:
+  #   build:
+  #     context: ./packages/admin
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: aws-framework-admin
+  #   environment:
+  #     VITE_API_BASE_URL: http://localhost/api
+  #     VITE_KEYCLOAK_URL: http://localhost/auth
+  #     VITE_KEYCLOAK_REALM: aws-framework
+  #     VITE_KEYCLOAK_CLIENT_ID: aws-framework-admin
+  #   ports:
+  #     - "5174:5174"
+  #   volumes:
+  #     - ./packages/admin/src:/app/src:ro
+  #   command: npm run dev
+
   nginx:
     image: nginx:alpine
     container_name: aws-framework-nginx
@@ -104,8 +130,6 @@ services:
     volumes:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infrastructure/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      # Mount frontend build output for production serving
-      - ./packages/frontend/dist:/usr/share/nginx/html:ro
     depends_on:
       - keycloak
       - backend

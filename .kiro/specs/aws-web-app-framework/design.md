@@ -180,6 +180,21 @@ interface FieldDefinition {
   updatedAt: Date;
 }
 
+// Datatype-specific properties examples:
+// For NUMBER datatype:
+// {
+//   precision: 0,              // Number of decimal places (default: 0 for integers)
+//   min: number,               // Minimum value (optional)
+//   max: number,               // Maximum value (optional)
+//   step: number               // Step increment (optional)
+// }
+//
+// For SINGLE_SELECT/MULTI_SELECT datatypes:
+// {
+//   options: Array<{value: string, label: string}>, // Available options
+//   displayMode: 'radio' | 'dropdown'  // How to render (single_select only)
+// }
+
 interface ValidationRule {
   type: ValidationType;
   value?: any;                 // Value for the rule (e.g., max length)
@@ -398,6 +413,12 @@ interface FieldRendererProps {
   error?: string;
   disabled?: boolean;
 }
+
+// NumberRenderer: Renders number fields with precision support
+// - Uses datatypeProperties.precision to format display (default: 0)
+// - precision=0: displays as integer (e.g., 42)
+// - precision=2: displays with 2 decimal places (e.g., 42.50)
+// - Automatically sets step based on precision (e.g., 0.01 for precision=2)
 ```
 
 **Component Library Structure**:

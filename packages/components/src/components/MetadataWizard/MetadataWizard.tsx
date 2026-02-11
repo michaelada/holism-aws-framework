@@ -49,7 +49,13 @@ export function MetadataWizard({
   const { objectDef, fields, loading, error } = useMetadata(objectType);
   const [allStepData, setAllStepData] = useState<Record<string, any>>(initialValues);
 
-  // Check if wizard config exists
+  // Always call useWizard hook, but with a fallback config
+  // This ensures hooks are called in the same order every render
+  const fallbackConfig = { steps: [] };
+  const wizardConfig = objectDef?.wizardConfig || fallbackConfig;
+  const wizard = useWizard(wizardConfig);
+
+  // Check if wizard config exists after hooks are called
   if (!loading && objectDef && !objectDef.wizardConfig) {
     return (
       <Alert severity="error">
@@ -58,10 +64,8 @@ export function MetadataWizard({
     );
   }
 
-  const wizard = objectDef?.wizardConfig ? useWizard(objectDef.wizardConfig) : null;
-
   const handleStepSubmit = async (stepData: Record<string, any>) => {
-    if (!wizard || !objectDef) return;
+    if (!objectDef) return;
 
     // Update step data in wizard state
     wizard.updateStepData(wizard.currentStep, stepData);
@@ -80,8 +84,6 @@ export function MetadataWizard({
   };
 
   const handleCancel = () => {
-    if (!wizard) return;
-
     if (wizard.isFirstStep) {
       onCancel();
     } else {
@@ -105,10 +107,19 @@ export function MetadataWizard({
     );
   }
 
-  if (!objectDef || !fields || !wizard) {
+  if (!objectDef || !fields) {
     return (
       <Alert severity="error">
-        Object definition or wizard configuration not found
+        Object definition not found
+      </Alert>
+    );
+  }
+
+  // Additional check for wizard config
+  if (!objectDef.wizardConfig) {
+    return (
+      <Alert severity="error">
+        Object type "{objectType}" does not have wizard configuration
       </Alert>
     );
   }

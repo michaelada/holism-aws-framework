@@ -14,6 +14,7 @@ export interface NumberRendererProps {
 
 /**
  * NumberRenderer for number datatype
+ * Supports precision property to control decimal places display
  */
 export function NumberRenderer({
   fieldDefinition,
@@ -24,6 +25,8 @@ export function NumberRenderer({
   disabled = false,
   required = false,
 }: NumberRendererProps): JSX.Element {
+  const precision = fieldDefinition.datatypeProperties?.precision ?? 0;
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     // Allow empty string or valid numbers
@@ -37,6 +40,11 @@ export function NumberRenderer({
     }
   };
 
+  // Format display value with precision
+  const displayValue = value !== null && value !== undefined && value !== ''
+    ? Number(value).toFixed(precision)
+    : '';
+
   return (
     <TextField
       fullWidth
@@ -44,13 +52,13 @@ export function NumberRenderer({
       label={fieldDefinition.displayName}
       helperText={error || fieldDefinition.description}
       error={!!error}
-      value={value ?? ''}
+      value={displayValue}
       onChange={handleChange}
       onBlur={onBlur}
       disabled={disabled}
       required={required}
       inputProps={{
-        step: fieldDefinition.datatypeProperties?.step || 'any',
+        step: fieldDefinition.datatypeProperties?.step || (precision > 0 ? Math.pow(10, -precision) : 1),
         min: fieldDefinition.datatypeProperties?.min,
         max: fieldDefinition.datatypeProperties?.max,
       }}
