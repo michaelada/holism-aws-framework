@@ -1429,8 +1429,8 @@ The implementation follows this structure:
     - Test renewal logic
     - _Requirements: 3.5.1_
 
-- [ ] 23. Implement Merchandise Management service
-  - [ ] 23.1 Create MerchandiseService class with comprehensive functionality
+- [x] 23. Implement Merchandise Management service
+  - [x] 23.1 Create MerchandiseService class with comprehensive functionality
     - Create `packages/backend/src/services/merchandise.service.ts`
     - Implement getMerchandiseTypesByOrganisation()
     - Implement createMerchandiseType() with all attributes (options, stock, delivery, quantity rules)
@@ -1447,7 +1447,7 @@ The implementation follows this structure:
     - Implement validateQuantity() (min, max, increments)
     - _Requirements: 2.5.2, 2.5.3, 2.5.5, 2.5.6, 2.5.7, 2.5.9_
   
-  - [ ] 23.2 Create MerchandiseOptionService class
+  - [x] 23.2 Create MerchandiseOptionService class
     - Create `packages/backend/src/services/merchandise-option.service.ts`
     - Implement createOptionType()
     - Implement updateOptionType()
@@ -1460,7 +1460,7 @@ The implementation follows this structure:
     - Implement getAllCombinations() (generate all option combinations)
     - _Requirements: 2.5.3_
   
-  - [ ] 23.3 Create DeliveryRuleService class
+  - [x] 23.3 Create DeliveryRuleService class
     - Create `packages/backend/src/services/delivery-rule.service.ts`
     - Implement createDeliveryRule()
     - Implement updateDeliveryRule()
@@ -1469,7 +1469,7 @@ The implementation follows this structure:
     - Implement validateRules() (check for overlapping ranges)
     - _Requirements: 2.5.6_
   
-  - [ ] 23.4 Create merchandise routes
+  - [x] 23.4 Create merchandise routes
     - Create `packages/backend/src/routes/merchandise.routes.ts`
     - Add authentication and capability check middleware
     - Define REST endpoints:
@@ -1490,7 +1490,7 @@ The implementation follows this structure:
       - POST /api/orgadmin/merchandise-types/:id/stock/adjust
     - _Requirements: 3.2.2_
   
-  - [ ] 23.5 Write unit tests for merchandise services
+  - [x] 23.5 Write unit tests for merchandise services
     - Test merchandise type CRUD operations with all attributes
     - Test option type and value management
     - Test option combination generation
