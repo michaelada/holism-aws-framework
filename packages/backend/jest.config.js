@@ -18,6 +18,9 @@ module.exports = {
     },
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleNameMapper: {
+    '^exceljs$': '<rootDir>/__mocks__/exceljs.js',
+  },
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },

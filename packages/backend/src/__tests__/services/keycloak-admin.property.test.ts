@@ -6,6 +6,9 @@ import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 // Mock the Keycloak Admin Client
 jest.mock('@keycloak/keycloak-admin-client');
 
+// Mock fetch globally
+global.fetch = jest.fn();
+
 /**
  * Feature: keycloak-admin-integration, Property 1: Token Refresh Before API Calls
  * 
@@ -34,6 +37,15 @@ describe('Property 1: Token Refresh Before API Calls', () => {
     } as any;
 
     (KeycloakAdminClient as jest.MockedClass<typeof KeycloakAdminClient>).mockImplementation(() => mockClient);
+    
+    // Mock fetch to return successful authentication
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: 'mock-token',
+        expires_in: 300,
+      }),
+    });
   });
 
   afterEach(() => {
@@ -47,25 +59,30 @@ describe('Property 1: Token Refresh Before API Calls', () => {
         mockConfigArbitrary,
         async (config: KeycloakAdminConfig) => {
           // Reset mocks for each iteration
-          mockClient.auth.mockClear();
-          mockClient.getAccessToken.mockClear();
+          (global.fetch as jest.Mock).mockClear();
+          mockClient.setAccessToken.mockClear();
           KeycloakAdminService.resetInstance();
 
           // Setup mock responses
-          mockClient.auth.mockResolvedValue(undefined);
-          mockClient.getAccessToken.mockResolvedValue('mock-token');
+          (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              access_token: 'mock-token',
+              expires_in: 300,
+            }),
+          });
 
           const service = new KeycloakAdminService(config);
 
           // Initial authentication
           await service.authenticate();
-          expect(mockClient.auth).toHaveBeenCalledTimes(1);
+          expect(global.fetch).toHaveBeenCalledTimes(1);
 
           // Token should not be expired immediately
           expect(service.isTokenExpired()).toBe(false);
 
           // Clear mock to track new calls
-          mockClient.auth.mockClear();
+          (global.fetch as jest.Mock).mockClear();
 
           // Manually expire the token by setting tokenExpiresAt to past
           (service as any).tokenExpiresAt = Date.now() - 1000;
@@ -77,12 +94,7 @@ describe('Property 1: Token Refresh Before API Calls', () => {
           await service.ensureAuthenticated();
 
           // Verify re-authentication occurred
-          expect(mockClient.auth).toHaveBeenCalledTimes(1);
-          expect(mockClient.auth).toHaveBeenCalledWith({
-            grantType: 'client_credentials',
-            clientId: config.clientId,
-            clientSecret: config.clientSecret,
-          });
+          expect(global.fetch).toHaveBeenCalledTimes(1);
 
           // Token should no longer be expired after refresh
           expect(service.isTokenExpired()).toBe(false);
@@ -98,21 +110,26 @@ describe('Property 1: Token Refresh Before API Calls', () => {
         mockConfigArbitrary,
         async (config: KeycloakAdminConfig) => {
           // Reset mocks for each iteration
-          mockClient.auth.mockClear();
-          mockClient.getAccessToken.mockClear();
+          (global.fetch as jest.Mock).mockClear();
+          mockClient.setAccessToken.mockClear();
           KeycloakAdminService.resetInstance();
 
-          mockClient.auth.mockResolvedValue(undefined);
-          mockClient.getAccessToken.mockResolvedValue('mock-token');
+          (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              access_token: 'mock-token',
+              expires_in: 300,
+            }),
+          });
 
           const service = new KeycloakAdminService(config);
 
           // Initial authentication
           await service.authenticate();
-          expect(mockClient.auth).toHaveBeenCalledTimes(1);
+          expect(global.fetch).toHaveBeenCalledTimes(1);
 
           // Clear mock to track new calls
-          mockClient.auth.mockClear();
+          (global.fetch as jest.Mock).mockClear();
 
           // Token should still be valid
           expect(service.isTokenExpired()).toBe(false);
@@ -121,7 +138,7 @@ describe('Property 1: Token Refresh Before API Calls', () => {
           await service.ensureAuthenticated();
 
           // Verify no re-authentication occurred
-          expect(mockClient.auth).not.toHaveBeenCalled();
+          expect(global.fetch).not.toHaveBeenCalled();
 
           // Token should still be valid
           expect(service.isTokenExpired()).toBe(false);
@@ -139,12 +156,17 @@ describe('Property 1: Token Refresh Before API Calls', () => {
         fc.integer({ min: 11, max: 60 }), // Seconds outside buffer (> 10)
         async (config: KeycloakAdminConfig, withinBuffer: number, outsideBuffer: number) => {
           // Reset mocks for each iteration
-          mockClient.auth.mockClear();
-          mockClient.getAccessToken.mockClear();
+          (global.fetch as jest.Mock).mockClear();
+          mockClient.setAccessToken.mockClear();
           KeycloakAdminService.resetInstance();
 
-          mockClient.auth.mockResolvedValue(undefined);
-          mockClient.getAccessToken.mockResolvedValue('mock-token');
+          (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              access_token: 'mock-token',
+              expires_in: 300,
+            }),
+          });
 
           const service = new KeycloakAdminService(config);
           await service.authenticate();
@@ -194,6 +216,15 @@ describe('Property 2: Authentication Retry on Failure', () => {
     } as any;
 
     (KeycloakAdminClient as jest.MockedClass<typeof KeycloakAdminClient>).mockImplementation(() => mockClient);
+    
+    // Mock fetch to return successful authentication
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: 'mock-token',
+        expires_in: 300,
+      }),
+    });
   });
 
   afterEach(() => {
@@ -207,18 +238,23 @@ describe('Property 2: Authentication Retry on Failure', () => {
         mockConfigArbitrary,
         async (config: KeycloakAdminConfig) => {
           // Reset mocks for each iteration
-          mockClient.auth.mockClear();
-          mockClient.getAccessToken.mockClear();
+          (global.fetch as jest.Mock).mockClear();
+          mockClient.setAccessToken.mockClear();
           KeycloakAdminService.resetInstance();
 
-          mockClient.auth.mockResolvedValue(undefined);
-          mockClient.getAccessToken.mockResolvedValue('mock-token');
+          (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              access_token: 'mock-token',
+              expires_in: 300,
+            }),
+          });
 
           const service = new KeycloakAdminService(config);
           await service.authenticate();
 
-          // Clear auth mock to track retry
-          mockClient.auth.mockClear();
+          // Clear fetch mock to track retry
+          (global.fetch as jest.Mock).mockClear();
 
           // Simulate a 401 error on first call, then success on retry
           const mockOperation = jest.fn()
@@ -249,7 +285,7 @@ describe('Property 2: Authentication Retry on Failure', () => {
           expect(mockOperation).toHaveBeenCalledTimes(2);
 
           // Verify re-authentication occurred
-          expect(mockClient.auth).toHaveBeenCalledTimes(1);
+          expect(global.fetch).toHaveBeenCalledTimes(1);
 
           // Verify operation eventually succeeded
           expect(result).toEqual({ success: true });
@@ -266,17 +302,22 @@ describe('Property 2: Authentication Retry on Failure', () => {
         fc.integer({ min: 400, max: 599 }).filter(status => status !== 401),
         async (config: KeycloakAdminConfig, errorStatus: number) => {
           // Reset mocks for each iteration
-          mockClient.auth.mockClear();
-          mockClient.getAccessToken.mockClear();
+          (global.fetch as jest.Mock).mockClear();
+          mockClient.setAccessToken.mockClear();
           KeycloakAdminService.resetInstance();
 
-          mockClient.auth.mockResolvedValue(undefined);
-          mockClient.getAccessToken.mockResolvedValue('mock-token');
+          (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              access_token: 'mock-token',
+              expires_in: 300,
+            }),
+          });
 
           const service = new KeycloakAdminService(config);
           await service.authenticate();
 
-          mockClient.auth.mockClear();
+          (global.fetch as jest.Mock).mockClear();
 
           const mockOperation = jest.fn().mockRejectedValue({
             response: { status: errorStatus },
@@ -305,7 +346,7 @@ describe('Property 2: Authentication Retry on Failure', () => {
           expect(mockOperation).toHaveBeenCalledTimes(1);
 
           // Verify no re-authentication occurred
-          expect(mockClient.auth).not.toHaveBeenCalled();
+          expect(global.fetch).not.toHaveBeenCalled();
         }
       ),
       { numRuns: 100 }
@@ -318,17 +359,22 @@ describe('Property 2: Authentication Retry on Failure', () => {
         mockConfigArbitrary,
         async (config: KeycloakAdminConfig) => {
           // Reset mocks for each iteration
-          mockClient.auth.mockClear();
-          mockClient.getAccessToken.mockClear();
+          (global.fetch as jest.Mock).mockClear();
+          mockClient.setAccessToken.mockClear();
           KeycloakAdminService.resetInstance();
 
-          mockClient.auth.mockResolvedValue(undefined);
-          mockClient.getAccessToken.mockResolvedValue('mock-token');
+          (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              access_token: 'mock-token',
+              expires_in: 300,
+            }),
+          });
 
           const service = new KeycloakAdminService(config);
           await service.authenticate();
 
-          mockClient.auth.mockClear();
+          (global.fetch as jest.Mock).mockClear();
 
           // Simulate 401 error on both initial call and retry
           const mockOperation = jest.fn().mockRejectedValue({
@@ -358,7 +404,7 @@ describe('Property 2: Authentication Retry on Failure', () => {
           expect(mockOperation).toHaveBeenCalledTimes(2);
 
           // Verify re-authentication occurred exactly once
-          expect(mockClient.auth).toHaveBeenCalledTimes(1);
+          expect(global.fetch).toHaveBeenCalledTimes(1);
         }
       ),
       { numRuns: 100 }

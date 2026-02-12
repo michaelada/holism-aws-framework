@@ -15,6 +15,8 @@ import organizationTypeRoutes from './routes/organization-type.routes';
 import organizationRoutes from './routes/organization.routes';
 import organizationUserRoutes from './routes/organization-user.routes';
 import organizationRoleRoutes from './routes/organization-role.routes';
+import eventRoutes from './routes/event.routes';
+import membershipRoutes from './routes/membership.routes';
 import { swaggerSpec } from './config/swagger';
 import { register } from './config/metrics';
 
@@ -129,6 +131,8 @@ app.use('/api/admin/organization-types', organizationTypeRoutes);
 app.use('/api/admin/organizations', organizationRoutes);
 app.use('/api/admin/organizations', organizationUserRoutes);
 app.use('/api/admin/organizations', organizationRoleRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/orgadmin', membershipRoutes);
 
 // 404 handler
 app.use((_req, res) => {

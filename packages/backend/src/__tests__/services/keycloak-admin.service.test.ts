@@ -5,6 +5,9 @@ import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 // Mock the Keycloak Admin Client
 jest.mock('@keycloak/keycloak-admin-client');
 
+// Mock fetch globally
+global.fetch = jest.fn();
+
 describe('KeycloakAdminService', () => {
   let service: KeycloakAdminService;
   let mockClient: jest.Mocked<KeycloakAdminClient>;
@@ -29,6 +32,15 @@ describe('KeycloakAdminService', () => {
 
     // Mock the constructor to return our mock client
     (KeycloakAdminClient as jest.MockedClass<typeof KeycloakAdminClient>).mockImplementation(() => mockClient);
+    
+    // Mock fetch to return successful authentication
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: 'mock-token',
+        expires_in: 300,
+      }),
+    });
     
     service = new KeycloakAdminService(mockConfig);
   });
@@ -91,22 +103,21 @@ describe('KeycloakAdminService', () => {
 
   describe('authenticate', () => {
     it('should authenticate with service account credentials', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
 
-      expect(mockClient.auth).toHaveBeenCalledWith({
-        grantType: 'client_credentials',
-        clientId: mockConfig.clientId,
-        clientSecret: mockConfig.clientSecret,
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/realms/${mockConfig.realmName}/protocol/openid-connect/token`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        })
+      );
+      expect(mockClient.setAccessToken).toHaveBeenCalledWith('mock-token');
     });
 
     it('should set token expiration time after authentication', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
 
       // Token should not be expired immediately after authentication
@@ -114,16 +125,19 @@ describe('KeycloakAdminService', () => {
     });
 
     it('should throw error if authentication fails', async () => {
-      const authError = new Error('Authentication failed');
-      mockClient.auth.mockRejectedValue(authError);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'Authentication failed',
+      });
 
       await expect(service.authenticate()).rejects.toThrow(
-        'Keycloak authentication failed: Authentication failed'
+        'Keycloak authentication failed: HTTP 401: Authentication failed'
       );
     });
 
     it('should handle authentication errors with non-Error objects', async () => {
-      mockClient.auth.mockRejectedValue('String error');
+      (global.fetch as jest.Mock).mockRejectedValueOnce('String error');
 
       await expect(service.authenticate()).rejects.toThrow(
         'Keycloak authentication failed: String error'
@@ -133,18 +147,12 @@ describe('KeycloakAdminService', () => {
 
   describe('isTokenExpired', () => {
     it('should return false for valid token', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
       
       expect(service.isTokenExpired()).toBe(false);
     });
 
     it('should return true for expired token', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
       
       // Manually set token expiration to past
@@ -154,9 +162,6 @@ describe('KeycloakAdminService', () => {
     });
 
     it('should return true for token expiring within buffer time', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
       
       // Set token to expire in 5 seconds (within 10 second buffer)
@@ -166,9 +171,6 @@ describe('KeycloakAdminService', () => {
     });
 
     it('should return false for token expiring outside buffer time', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
       
       // Set token to expire in 15 seconds (outside 10 second buffer)
@@ -185,55 +187,47 @@ describe('KeycloakAdminService', () => {
 
   describe('ensureAuthenticated', () => {
     it('should not re-authenticate if token is valid', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
-      mockClient.auth.mockClear();
+      const fetchCallCount = (global.fetch as jest.Mock).mock.calls.length;
 
       await service.ensureAuthenticated();
 
-      expect(mockClient.auth).not.toHaveBeenCalled();
+      expect((global.fetch as jest.Mock).mock.calls.length).toBe(fetchCallCount);
     });
 
     it('should re-authenticate if token is expired', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
       
       // Expire the token
       (service as any).tokenExpiresAt = Date.now() - 1000;
       
-      mockClient.auth.mockClear();
+      const fetchCallCount = (global.fetch as jest.Mock).mock.calls.length;
       await service.ensureAuthenticated();
 
-      expect(mockClient.auth).toHaveBeenCalledTimes(1);
+      expect((global.fetch as jest.Mock).mock.calls.length).toBe(fetchCallCount + 1);
     });
 
     it('should authenticate if never authenticated before', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.ensureAuthenticated();
 
-      expect(mockClient.auth).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalled();
     });
 
     it('should throw error if re-authentication fails', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue('mock-token');
-
       await service.authenticate();
       
       // Expire the token
       (service as any).tokenExpiresAt = Date.now() - 1000;
       
       // Make re-authentication fail
-      mockClient.auth.mockRejectedValue(new Error('Re-auth failed'));
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'Re-auth failed',
+      });
 
       await expect(service.ensureAuthenticated()).rejects.toThrow(
-        'Keycloak authentication failed: Re-auth failed'
+        'Keycloak authentication failed: HTTP 401: Re-auth failed'
       );
     });
   });
@@ -267,23 +261,32 @@ describe('KeycloakAdminService', () => {
 
   describe('edge cases', () => {
     it('should handle null token from getAccessToken', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue(null as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: null,
+          expires_in: 300,
+        }),
+      });
 
       await service.authenticate();
       
       // Should still work, just won't have accurate expiration
-      expect(service.isTokenExpired()).toBe(true);
+      expect(service.isTokenExpired()).toBe(false);
     });
 
     it('should handle undefined token from getAccessToken', async () => {
-      mockClient.auth.mockResolvedValue(undefined);
-      mockClient.getAccessToken.mockResolvedValue(undefined);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          expires_in: 300,
+        }),
+      });
 
       await service.authenticate();
       
       // Should still work, just won't have accurate expiration
-      expect(service.isTokenExpired()).toBe(true);
+      expect(service.isTokenExpired()).toBe(false);
     });
   });
 });

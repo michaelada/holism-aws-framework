@@ -14,3 +14,4 @@ export { OrganizationTypeService, organizationTypeService } from './organization
 export { OrganizationService, organizationService } from './organization.service';
 export { OrganizationUserService, organizationUserService } from './organization-user.service';
 export { OrganizationAdminRoleService, organizationAdminRoleService } from './organization-admin-role.service';
+export { MembershipService, membershipService } from './membership.service';
