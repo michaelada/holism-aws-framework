@@ -52,7 +52,7 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
   const handleDelete = async () => {
     try {
       // TODO: Implement API call
-      navigate('/orgadmin/merchandise');
+      navigate('/merchandise');
     } catch (error) {
       console.error('Failed to delete merchandise type:', error);
     }

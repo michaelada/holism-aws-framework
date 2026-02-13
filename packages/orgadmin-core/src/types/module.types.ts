@@ -35,5 +35,6 @@ export interface ModuleRegistration {
   card: ModuleCard;
   routes: ModuleRoute[];
   menuItem?: MenuItem;
+  subMenuItems?: MenuItem[];
   order?: number;
 }

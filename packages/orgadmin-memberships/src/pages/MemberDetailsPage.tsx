@@ -99,7 +99,7 @@ const MemberDetailsPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/members');
+    navigate('/members');
   };
 
   const handleEdit = () => {

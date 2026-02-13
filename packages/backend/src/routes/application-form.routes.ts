@@ -238,6 +238,30 @@ router.delete(
 /**
  * @swagger
  * /api/orgadmin/application-fields:
+ *   get:
+ *     summary: Get all application fields for an organisation
+ *     tags: [Application Fields]
+ *     responses:
+ *       200:
+ *         description: List of application fields
+ */
+router.get(
+  '/application-fields',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const fields = await applicationFormService.getAllApplicationFields();
+      res.json(fields);
+    } catch (error) {
+      logger.error('Error in GET /application-fields:', error);
+      res.status(500).json({ error: 'Failed to fetch application fields' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/application-fields:
  *   post:
  *     summary: Create a new application field
  *     tags: [Application Fields]
@@ -256,6 +280,13 @@ router.post(
   authenticateToken(),
   async (req: Request, res: Response) => {
     try {
+      // Extract organisationId from request body
+      const organisationId = req.body.organisationId;
+      
+      if (!organisationId) {
+        return res.status(400).json({ error: 'organisationId is required' });
+      }
+
       const field = await applicationFormService.createApplicationField(req.body);
       res.status(201).json(field);
     } catch (error) {
@@ -337,6 +368,14 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      
+      // Extract organisationId from request body if provided
+      const organisationId = req.body.organisationId;
+      
+      if (!organisationId) {
+        return res.status(400).json({ error: 'organisationId is required' });
+      }
+
       const field = await applicationFormService.updateApplicationField(id, req.body);
       res.json(field);
     } catch (error) {

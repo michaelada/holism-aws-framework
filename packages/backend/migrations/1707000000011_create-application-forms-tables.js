@@ -72,13 +72,12 @@ exports.up = (pgm) => {
       type: 'varchar(255)',
       notNull: true,
     },
+    description: {
+      type: 'text',
+    },
     datatype: {
       type: 'varchar(50)',
       notNull: true,
-    },
-    required: {
-      type: 'boolean',
-      default: false,
     },
     validation: {
       type: 'jsonb',

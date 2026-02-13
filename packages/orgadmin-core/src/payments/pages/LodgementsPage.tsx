@@ -90,7 +90,7 @@ const LodgementsPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/payments');
+    navigate('/payments');
   };
 
   const formatDate = (dateString: string) => {

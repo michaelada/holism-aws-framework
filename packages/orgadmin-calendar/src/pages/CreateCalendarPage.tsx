@@ -89,7 +89,7 @@ const CreateCalendarPage: React.FC = () => {
         // await api.post('/api/orgadmin/calendars', formData);
       }
 
-      navigate('/orgadmin/calendar');
+      navigate('/calendar');
     } catch (error) {
       console.error('Failed to save calendar:', error);
     } finally {
@@ -98,7 +98,7 @@ const CreateCalendarPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/orgadmin/calendar');
+    navigate('/calendar');
   };
 
   if (loading) {

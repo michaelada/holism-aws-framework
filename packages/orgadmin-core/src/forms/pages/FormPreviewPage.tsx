@@ -202,7 +202,7 @@ const FormPreviewPage: React.FC = () => {
         <Alert severity="error">{error || 'Form not found'}</Alert>
         <Button
           startIcon={<BackIcon />}
-          onClick={() => navigate('/orgadmin/forms')}
+          onClick={() => navigate('/forms')}
           sx={{ mt: 2 }}
         >
           Back to Forms
@@ -225,7 +225,7 @@ const FormPreviewPage: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             startIcon={<BackIcon />}
-            onClick={() => navigate('/orgadmin/forms')}
+            onClick={() => navigate('/forms')}
           >
             Back to Forms
           </Button>

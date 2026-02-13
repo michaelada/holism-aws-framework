@@ -96,7 +96,7 @@ const EventsListPage: React.FC = () => {
   };
 
   const handleCreateEvent = () => {
-    navigate('/orgadmin/events/new');
+    navigate('/events/new');
   };
 
   const handleEditEvent = (eventId: string) => {

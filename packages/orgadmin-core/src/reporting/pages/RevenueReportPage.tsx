@@ -158,7 +158,7 @@ const RevenueReportPage: React.FC = () => {
         <Box>
           <Button
             startIcon={<BackIcon />}
-            onClick={() => navigate('/orgadmin/reporting')}
+            onClick={() => navigate('/reporting')}
             sx={{ mb: 1 }}
           >
             Back to Reports

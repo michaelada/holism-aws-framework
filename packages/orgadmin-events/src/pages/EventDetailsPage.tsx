@@ -94,14 +94,14 @@ const EventDetailsPage: React.FC = () => {
   const handleDelete = async () => {
     try {
       await execute();
-      navigate('/orgadmin/events');
+      navigate('/events');
     } catch (error) {
       console.error('Failed to delete event:', error);
     }
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/events');
+    navigate('/events');
   };
 
   const formatDate = (dateString: Date | string) => {

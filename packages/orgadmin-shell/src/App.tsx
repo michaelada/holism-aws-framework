@@ -211,7 +211,7 @@ const App: React.FC = () => {
       <AuthTokenContext.Provider value={getToken}>
         <OrganisationProvider organisation={organisation}>
           <CapabilityProvider capabilities={capabilities}>
-            <Layout>
+            <Layout modules={availableModules} onLogout={logout}>
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
                   {/* Dashboard (landing page) */}
@@ -222,7 +222,7 @@ const App: React.FC = () => {
                     module.routes.map(route => (
                       <Route
                         key={route.path}
-                        path={route.path.replace('/orgadmin', '')}
+                        path={route.path}
                         element={<route.component />}
                       />
                     ))

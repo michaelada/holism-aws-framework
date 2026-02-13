@@ -116,12 +116,12 @@ const MembershipTypesListPage: React.FC = () => {
 
   const handleCreateSingle = () => {
     handleCreateMenuClose();
-    navigate('/orgadmin/members/types/new/single');
+    navigate('/members/types/new/single');
   };
 
   const handleCreateGroup = () => {
     handleCreateMenuClose();
-    navigate('/orgadmin/members/types/new/group');
+    navigate('/members/types/new/group');
   };
 
   const handleEditType = (typeId: string) => {

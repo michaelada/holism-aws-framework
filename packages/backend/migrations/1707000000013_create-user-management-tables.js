@@ -16,7 +16,7 @@ exports.up = (pgm) => {
   pgm.createView('org_admin_users', {}, `
     SELECT 
       id,
-      organisation_id,
+      organization_id,
       keycloak_user_id,
       email,
       first_name,
@@ -34,7 +34,7 @@ exports.up = (pgm) => {
   pgm.createView('account_users', {}, `
     SELECT 
       id,
-      organisation_id,
+      organization_id,
       keycloak_user_id,
       email,
       first_name,

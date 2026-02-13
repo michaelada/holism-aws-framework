@@ -77,14 +77,14 @@ const RegistrationTypeDetailsPage: React.FC = () => {
         method: 'DELETE',
         url: `/api/orgadmin/registration-types/${id}`,
       });
-      navigate('/orgadmin/registrations/types');
+      navigate('/registrations/types');
     } catch (error) {
       console.error('Failed to delete registration type:', error);
     }
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/registrations/types');
+    navigate('/registrations/types');
   };
 
   if (loading) {

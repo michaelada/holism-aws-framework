@@ -221,7 +221,7 @@ const CreateRegistrationTypePage: React.FC = () => {
         });
       }
 
-      navigate('/orgadmin/registrations/types');
+      navigate('/registrations/types');
     } catch (error) {
       console.error('Failed to save registration type:', error);
       setError('Failed to save registration type. Please try again.');
@@ -231,7 +231,7 @@ const CreateRegistrationTypePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/orgadmin/registrations/types');
+    navigate('/registrations/types');
   };
 
   return (

@@ -99,15 +99,15 @@ const FormsListPage: React.FC = () => {
   };
 
   const handleCreateForm = () => {
-    navigate('/orgadmin/forms/new');
+    navigate('/forms/new');
   };
 
   const handleEditForm = (formId: string) => {
-    navigate(`/orgadmin/forms/${formId}/edit`);
+    navigate(`/forms/${formId}/edit`);
   };
 
   const handlePreviewForm = (formId: string) => {
-    navigate(`/orgadmin/forms/${formId}/preview`);
+    navigate(`/forms/${formId}/preview`);
   };
 
   const formatDate = (dateString: string) => {

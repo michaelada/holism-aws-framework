@@ -26,19 +26,19 @@ export const usersModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/users',
+      path: 'users',
       component: lazy(() => import('./pages/OrgAdminUsersListPage')),
     },
     {
-      path: '/users/admins',
+      path: 'users/admins',
       component: lazy(() => import('./pages/OrgAdminUsersListPage')),
     },
     {
-      path: '/users/accounts',
+      path: 'users/accounts',
       component: lazy(() => import('./pages/AccountUsersListPage')),
     },
     {
-      path: '/users/:type/:id',
+      path: 'users/:type/:id',
       component: lazy(() => import('./pages/UserDetailsPage')),
     },
   ],

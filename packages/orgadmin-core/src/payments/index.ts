@@ -25,15 +25,15 @@ export const paymentsModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/payments',
+      path: 'payments',
       component: lazy(() => import('./pages/PaymentsListPage')),
     },
     {
-      path: '/payments/:id',
+      path: 'payments/:id',
       component: lazy(() => import('./pages/PaymentDetailsPage')),
     },
     {
-      path: '/payments/lodgements',
+      path: 'payments/lodgements',
       component: lazy(() => import('./pages/LodgementsPage')),
     },
   ],

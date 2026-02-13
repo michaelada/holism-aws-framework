@@ -22,8 +22,8 @@ export interface ApplicationField {
   organisationId: string;
   name: string;
   label: string;
+  description?: string;
   datatype: string;
-  required: boolean;
   validation?: any;
   options?: any;
   allowedFileTypes?: string[];
@@ -87,8 +87,8 @@ export interface CreateApplicationFieldDto {
   organisationId: string;
   name: string;
   label: string;
+  description?: string;
   datatype: string;
-  required?: boolean;
   validation?: any;
   options?: any;
   allowedFileTypes?: string[];
@@ -101,8 +101,8 @@ export interface CreateApplicationFieldDto {
 export interface UpdateApplicationFieldDto {
   name?: string;
   label?: string;
+  description?: string;
   datatype?: string;
-  required?: boolean;
   validation?: any;
   options?: any;
   allowedFileTypes?: string[];
@@ -150,8 +150,8 @@ export class ApplicationFormService {
       organisationId: row.organisation_id,
       name: row.name,
       label: row.label,
+      description: row.description,
       datatype: row.datatype,
-      required: row.required,
       validation: row.validation,
       options: row.options,
       allowedFileTypes: row.allowed_file_types,
@@ -353,15 +353,15 @@ export class ApplicationFormService {
 
       const result = await db.query(
         `INSERT INTO application_fields 
-         (organisation_id, name, label, datatype, required, validation, options, allowed_file_types, max_file_size)
+         (organisation_id, name, label, description, datatype, validation, options, allowed_file_types, max_file_size)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           data.organisationId,
           data.name,
           data.label,
+          data.description || null,
           data.datatype,
-          data.required || false,
           data.validation ? JSON.stringify(data.validation) : null,
           data.options ? JSON.stringify(data.options) : null,
           data.allowedFileTypes ? JSON.stringify(data.allowedFileTypes) : null,
@@ -414,13 +414,13 @@ export class ApplicationFormService {
         updates.push(`label = $${paramCount++}`);
         values.push(data.label);
       }
+      if (data.description !== undefined) {
+        updates.push(`description = $${paramCount++}`);
+        values.push(data.description || null);
+      }
       if (data.datatype !== undefined) {
         updates.push(`datatype = $${paramCount++}`);
         values.push(data.datatype);
-      }
-      if (data.required !== undefined) {
-        updates.push(`required = $${paramCount++}`);
-        values.push(data.required);
       }
       if (data.validation !== undefined) {
         updates.push(`validation = $${paramCount++}`);
@@ -478,6 +478,29 @@ export class ApplicationFormService {
       return this.rowToField(result.rows[0]);
     } catch (error) {
       logger.error('Error getting application field by ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all application fields for an organisation
+   */
+  async getAllApplicationFields(organisationId?: string): Promise<ApplicationField[]> {
+    try {
+      let query = 'SELECT * FROM application_fields';
+      const params: any[] = [];
+
+      if (organisationId) {
+        query += ' WHERE organisation_id = $1';
+        params.push(organisationId);
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      const result = await db.query(query, params);
+      return result.rows.map(row => this.rowToField(row));
+    } catch (error) {
+      logger.error('Error getting all application fields:', error);
       throw error;
     }
   }

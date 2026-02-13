@@ -99,7 +99,7 @@ const RegistrationTypesListPage: React.FC = () => {
   };
 
   const handleCreateType = () => {
-    navigate('/orgadmin/registrations/types/new');
+    navigate('/registrations/types/new');
   };
 
   const handleEditType = (typeId: string) => {

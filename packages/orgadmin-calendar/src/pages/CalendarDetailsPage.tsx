@@ -68,7 +68,7 @@ const CalendarDetailsPage: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<CalendarIcon />}
-            onClick={() => navigate('/orgadmin/calendar/bookings')}
+            onClick={() => navigate('/calendar/bookings')}
           >
             View Bookings
           </Button>

@@ -89,7 +89,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
         method: 'DELETE',
         url: `/api/orgadmin/membership-types/${id}`,
       });
-      navigate('/orgadmin/members/types');
+      navigate('/members/types');
     } catch (error) {
       console.error('Failed to delete membership type:', error);
       setError('Failed to delete membership type');
@@ -98,7 +98,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/members/types');
+    navigate('/members/types');
   };
 
   const formatDate = (dateString: Date | string) => {

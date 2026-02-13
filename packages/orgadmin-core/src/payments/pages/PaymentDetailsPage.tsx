@@ -86,7 +86,7 @@ const PaymentDetailsPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/payments');
+    navigate('/payments');
   };
 
   const handleOpenRefundDialog = () => {

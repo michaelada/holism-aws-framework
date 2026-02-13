@@ -25,19 +25,19 @@ export const reportingModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/reporting',
+      path: 'reporting',
       component: lazy(() => import('./pages/ReportingDashboardPage')),
     },
     {
-      path: '/reporting/events',
+      path: 'reporting/events',
       component: lazy(() => import('./pages/EventsReportPage')),
     },
     {
-      path: '/reporting/members',
+      path: 'reporting/members',
       component: lazy(() => import('./pages/MembersReportPage')),
     },
     {
-      path: '/reporting/revenue',
+      path: 'reporting/revenue',
       component: lazy(() => import('./pages/RevenueReportPage')),
     },
   ],

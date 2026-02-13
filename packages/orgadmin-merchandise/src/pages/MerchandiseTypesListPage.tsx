@@ -141,7 +141,7 @@ const MerchandiseTypesListPage: React.FC = () => {
   };
 
   const handleCreateType = () => {
-    navigate('/orgadmin/merchandise/new');
+    navigate('/merchandise/new');
   };
 
   const handleEditType = (typeId: string) => {

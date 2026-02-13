@@ -41,5 +41,6 @@ export interface ModuleRegistration {
   card: ModuleCard;
   routes: ModuleRoute[];
   menuItem?: MenuItem;                 // Optional menu item for navigation drawer
+  subMenuItems?: MenuItem[];           // Optional sub-menu items for nested navigation
   order?: number;                      // Display order (lower = first)
 }

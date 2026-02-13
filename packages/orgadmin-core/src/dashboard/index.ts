@@ -25,7 +25,7 @@ export const dashboardModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/dashboard',
+      path: 'dashboard',
       component: lazy(() => import('./pages/DashboardPage')),
     },
   ],

@@ -211,7 +211,7 @@ const FormBuilderPage: React.FC = () => {
         });
       }
 
-      navigate('/orgadmin/forms');
+      navigate('/forms');
     } catch (err) {
       setError('Failed to save form');
       console.error(err);
@@ -314,7 +314,7 @@ const FormBuilderPage: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="outlined"
-            onClick={() => navigate('/orgadmin/forms')}
+            onClick={() => navigate('/forms')}
             disabled={saving}
           >
             Cancel

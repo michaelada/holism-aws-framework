@@ -208,7 +208,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
         });
       }
 
-      navigate('/orgadmin/members/types');
+      navigate('/members/types');
     } catch (error) {
       console.error('Failed to save membership type:', error);
       setError('Failed to save membership type');
@@ -218,7 +218,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/orgadmin/members/types');
+    navigate('/members/types');
   };
 
   return (

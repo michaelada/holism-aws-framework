@@ -165,7 +165,7 @@ const CreateEventPage: React.FC = () => {
         });
       }
 
-      navigate('/orgadmin/events');
+      navigate('/events');
     } catch (error) {
       console.error('Failed to save event:', error);
       setError('Failed to save event');
@@ -175,7 +175,7 @@ const CreateEventPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/orgadmin/events');
+    navigate('/events');
   };
 
   return (

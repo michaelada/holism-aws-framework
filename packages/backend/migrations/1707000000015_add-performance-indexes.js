@@ -9,10 +9,10 @@ exports.shorthands = undefined;
 
 exports.up = (pgm) => {
   // Events module indexes
-  pgm.createIndex('events', ['organization_id', 'status'], {
+  pgm.createIndex('events', ['organisation_id', 'status'], {
     name: 'idx_events_org_status',
   });
-  pgm.createIndex('events', ['organization_id', 'start_date'], {
+  pgm.createIndex('events', ['organisation_id', 'start_date'], {
     name: 'idx_events_org_start_date',
   });
   pgm.createIndex('events', 'created_at', {
@@ -34,20 +34,20 @@ exports.up = (pgm) => {
   });
 
   // Membership module indexes
-  pgm.createIndex('membership_types', ['organization_id', 'membership_status'], {
+  pgm.createIndex('membership_types', ['organisation_id', 'membership_status'], {
     name: 'idx_membership_types_org_status',
   });
   pgm.createIndex('membership_types', 'membership_type_category', {
     name: 'idx_membership_types_category',
   });
 
-  pgm.createIndex('members', ['organization_id', 'status'], {
+  pgm.createIndex('members', ['organisation_id', 'status'], {
     name: 'idx_members_org_status',
   });
-  pgm.createIndex('members', ['organization_id', 'date_last_renewed'], {
+  pgm.createIndex('members', ['organisation_id', 'date_last_renewed'], {
     name: 'idx_members_org_renewed',
   });
-  pgm.createIndex('members', ['organization_id', 'valid_until'], {
+  pgm.createIndex('members', ['organisation_id', 'valid_until'], {
     name: 'idx_members_org_valid_until',
   });
   pgm.createIndex('members', ['membership_type_id', 'status'], {
@@ -61,14 +61,14 @@ exports.up = (pgm) => {
   });
 
   // Merchandise module indexes
-  pgm.createIndex('merchandise_types', ['organization_id', 'status'], {
+  pgm.createIndex('merchandise_types', ['organisation_id', 'status'], {
     name: 'idx_merchandise_types_org_status',
   });
 
-  pgm.createIndex('merchandise_orders', ['organization_id', 'order_status'], {
+  pgm.createIndex('merchandise_orders', ['organisation_id', 'order_status'], {
     name: 'idx_merchandise_orders_org_status',
   });
-  pgm.createIndex('merchandise_orders', ['organization_id', 'payment_status'], {
+  pgm.createIndex('merchandise_orders', ['organisation_id', 'payment_status'], {
     name: 'idx_merchandise_orders_org_payment',
   });
   pgm.createIndex('merchandise_orders', ['user_id', 'order_date'], {
@@ -79,7 +79,7 @@ exports.up = (pgm) => {
   });
 
   // Calendar module indexes
-  pgm.createIndex('calendars', ['organization_id', 'status'], {
+  pgm.createIndex('calendars', ['organisation_id', 'status'], {
     name: 'idx_calendars_org_status',
   });
 
@@ -97,11 +97,11 @@ exports.up = (pgm) => {
   });
 
   // Registration module indexes
-  pgm.createIndex('registration_types', ['organization_id', 'registration_status'], {
+  pgm.createIndex('registration_types', ['organisation_id', 'registration_status'], {
     name: 'idx_registration_types_org_status',
   });
 
-  pgm.createIndex('registrations', ['organization_id', 'status'], {
+  pgm.createIndex('registrations', ['organisation_id', 'status'], {
     name: 'idx_registrations_org_status',
   });
   pgm.createIndex('registrations', ['registration_type_id', 'status'], {
@@ -114,36 +114,26 @@ exports.up = (pgm) => {
     name: 'idx_registrations_created_at',
   });
 
-  // Ticketing module indexes
-  pgm.createIndex('ticketing_events', ['organization_id', 'status'], {
-    name: 'idx_ticketing_events_org_status',
+  // Electronic tickets indexes (from ticketing module)
+  pgm.createIndex('electronic_tickets', ['event_id', 'status'], {
+    name: 'idx_electronic_tickets_event_status',
   });
-  pgm.createIndex('ticketing_events', ['organization_id', 'event_date'], {
-    name: 'idx_ticketing_events_org_date',
-  });
-
-  pgm.createIndex('tickets', ['ticketing_event_id', 'ticket_status'], {
-    name: 'idx_tickets_event_status',
-  });
-  pgm.createIndex('tickets', ['user_id', 'created_at'], {
-    name: 'idx_tickets_user_created',
-  });
-  pgm.createIndex('tickets', 'qr_code', {
-    name: 'idx_tickets_qr_code',
+  pgm.createIndex('electronic_tickets', ['user_id', 'created_at'], {
+    name: 'idx_electronic_tickets_user_created',
   });
 
   // Application forms and submissions indexes
-  pgm.createIndex('application_forms', ['organization_id', 'status'], {
+  pgm.createIndex('application_forms', ['organisation_id', 'status'], {
     name: 'idx_application_forms_org_status',
   });
   pgm.createIndex('application_forms', 'created_at', {
     name: 'idx_application_forms_created_at',
   });
 
-  pgm.createIndex('form_submissions', ['organization_id', 'context_type'], {
+  pgm.createIndex('form_submissions', ['organisation_id', 'submission_type'], {
     name: 'idx_form_submissions_org_context',
   });
-  pgm.createIndex('form_submissions', ['context_type', 'context_id'], {
+  pgm.createIndex('form_submissions', ['submission_type', 'context_id'], {
     name: 'idx_form_submissions_context',
   });
   pgm.createIndex('form_submissions', 'created_at', {
@@ -151,10 +141,10 @@ exports.up = (pgm) => {
   });
 
   // Payment module indexes
-  pgm.createIndex('payments', ['organization_id', 'payment_status'], {
+  pgm.createIndex('payments', ['organisation_id', 'payment_status'], {
     name: 'idx_payments_org_status',
   });
-  pgm.createIndex('payments', ['organization_id', 'payment_date'], {
+  pgm.createIndex('payments', ['organisation_id', 'payment_date'], {
     name: 'idx_payments_org_date',
   });
   pgm.createIndex('payments', ['user_id', 'payment_date'], {
@@ -165,7 +155,7 @@ exports.up = (pgm) => {
   });
 
   // Reports module indexes
-  pgm.createIndex('reports', ['organization_id', 'report_type'], {
+  pgm.createIndex('reports', ['organisation_id', 'report_type'], {
     name: 'idx_reports_org_type',
   });
   pgm.createIndex('reports', 'created_at', {
@@ -212,12 +202,8 @@ exports.down = (pgm) => {
   pgm.dropIndex('application_forms', 'idx_application_forms_created_at');
   pgm.dropIndex('application_forms', 'idx_application_forms_org_status');
   
-  pgm.dropIndex('tickets', 'idx_tickets_qr_code');
-  pgm.dropIndex('tickets', 'idx_tickets_user_created');
-  pgm.dropIndex('tickets', 'idx_tickets_event_status');
-  
-  pgm.dropIndex('ticketing_events', 'idx_ticketing_events_org_date');
-  pgm.dropIndex('ticketing_events', 'idx_ticketing_events_org_status');
+  pgm.dropIndex('electronic_tickets', 'idx_electronic_tickets_user_created');
+  pgm.dropIndex('electronic_tickets', 'idx_electronic_tickets_event_status');
   
   pgm.dropIndex('registrations', 'idx_registrations_created_at');
   pgm.dropIndex('registrations', 'idx_registrations_processed');

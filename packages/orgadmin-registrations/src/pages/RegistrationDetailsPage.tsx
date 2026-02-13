@@ -80,7 +80,7 @@ const RegistrationDetailsPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/orgadmin/registrations');
+    navigate('/registrations');
   };
 
   const handleEdit = () => {

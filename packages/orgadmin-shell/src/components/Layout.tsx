@@ -71,7 +71,27 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
   };
 
   // Sort modules by order for consistent menu display
-  const sortedModules = [...modules].sort((a, b) => (a.order || 999) - (b.order || 999));
+  const sortedModules = [...modules].sort((a, b) => (a.order || 999) - (b.order || 99));
+
+  // Determine which module is currently active based on the route
+  const currentModule = React.useMemo(() => {
+    // If on dashboard, return null (show all modules)
+    if (location.pathname === '/') {
+      return null;
+    }
+
+    // Find the module that matches the current path
+    return sortedModules.find(module => {
+      // Check if any of the module's routes match the current path
+      return module.routes.some(route => {
+        const routePath = `/${route.path}`;
+        return location.pathname.startsWith(routePath);
+      });
+    });
+  }, [location.pathname, sortedModules]);
+
+  // Filter modules to show only the current module's menu items
+  const visibleModules = currentModule ? [currentModule] : [];
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -111,7 +131,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
 
       {/* Navigation Menu */}
       <List sx={{ flexGrow: 1, pt: 2 }}>
-        {/* Dashboard Link */}
+        {/* Back to Main Page Link */}
         <ListItem disablePadding>
           <ListItemButton
             selected={location.pathname === '/'}
@@ -120,12 +140,41 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
             <ListItemIcon>
               <DashboardIcon />
             </ListItemIcon>
-            <ListItemText primary="Dashboard" />
+            <ListItemText primary="Back to Main Page" />
           </ListItemButton>
         </ListItem>
 
-        {/* Module Menu Items */}
-        {sortedModules.map((module) => {
+        {/* Module Menu Items - only show current module's items */}
+        {visibleModules.map((module) => {
+          // If module has sub-menu items, render them
+          if (module.subMenuItems && module.subMenuItems.length > 0) {
+            return (
+              <React.Fragment key={module.id}>
+                {module.subMenuItems.map((subItem) => {
+                  const Icon = subItem.icon || DashboardIcon;
+                  // Use exact match for sub-items to avoid highlighting multiple items
+                  const isActive = location.pathname === subItem.path;
+
+                  return (
+                    <ListItem key={`${module.id}-${subItem.path}`} disablePadding>
+                      <ListItemButton
+                        selected={isActive}
+                        onClick={() => handleNavigation(subItem.path)}
+                        sx={{ pl: 4 }} // Indent sub-items
+                      >
+                        <ListItemIcon>
+                          <Icon />
+                        </ListItemIcon>
+                        <ListItemText primary={subItem.label} />
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+              </React.Fragment>
+            );
+          }
+
+          // Otherwise, render the main menu item
           if (!module.menuItem) return null;
 
           const Icon = module.menuItem.icon || DashboardIcon;

@@ -111,9 +111,9 @@ const AccountUsersListPage: React.FC = () => {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
     if (newValue === 0) {
-      navigate('/orgadmin/users/admins');
+      navigate('/users/admins');
     } else {
-      navigate('/orgadmin/users/accounts');
+      navigate('/users/accounts');
     }
   };
 

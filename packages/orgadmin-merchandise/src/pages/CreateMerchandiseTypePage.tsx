@@ -58,7 +58,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
     try {
       // TODO: Implement API call
       console.log('Saving merchandise type:', formData);
-      navigate('/orgadmin/merchandise');
+      navigate('/merchandise');
     } catch (error) {
       console.error('Failed to save merchandise type:', error);
     } finally {
@@ -73,7 +73,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
           {isEdit ? 'Edit Merchandise Type' : 'Create Merchandise Type'}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button onClick={() => navigate('/orgadmin/merchandise')}>
+          <Button onClick={() => navigate('/merchandise')}>
             Cancel
           </Button>
           <Button

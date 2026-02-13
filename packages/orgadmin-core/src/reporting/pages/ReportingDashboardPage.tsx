@@ -324,7 +324,7 @@ const ReportingDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<EventIcon />}
-                href="/orgadmin/reporting/events"
+                href="/reporting/events"
                 sx={{ py: 2 }}
               >
                 Events Report
@@ -335,7 +335,7 @@ const ReportingDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<PeopleIcon />}
-                href="/orgadmin/reporting/members"
+                href="/reporting/members"
                 sx={{ py: 2 }}
               >
                 Members Report
@@ -346,7 +346,7 @@ const ReportingDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<TrendingUpIcon />}
-                href="/orgadmin/reporting/revenue"
+                href="/reporting/revenue"
                 sx={{ py: 2 }}
               >
                 Revenue Report

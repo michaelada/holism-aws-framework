@@ -102,7 +102,7 @@ const CalendarsListPage: React.FC = () => {
   };
 
   const handleCreateCalendar = () => {
-    navigate('/orgadmin/calendar/new');
+    navigate('/calendar/new');
   };
 
   const handleEditCalendar = (calendarId: string) => {

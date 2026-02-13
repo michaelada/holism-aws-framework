@@ -25,7 +25,7 @@ export const settingsModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/settings',
+      path: 'settings',
       component: lazy(() => import('./pages/SettingsPage')),
     },
   ],
