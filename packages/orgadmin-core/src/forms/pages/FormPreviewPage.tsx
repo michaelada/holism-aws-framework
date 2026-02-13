@@ -16,9 +16,20 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  Paper,
+  TextField,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  FormControl,
+  InputLabel,
+  ToggleButtonGroup,
+  ToggleButton,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material';
-import { ArrowBack as BackIcon } from '@mui/icons-material';
+import { ArrowBack as BackIcon, ViewList as ViewListIcon, ViewModule as ViewModuleIcon } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 
 interface ApplicationForm {
@@ -32,18 +43,18 @@ interface ApplicationForm {
 }
 
 interface ApplicationFormField {
-  fieldId: string;
-  fieldName: string;
-  fieldLabel: string;
-  fieldType: string;
+  id: string;
+  name: string;
+  label: string;
+  datatype: string;
   order: number;
-  required: boolean;
   groupName?: string;
   groupOrder?: number;
   wizardStep?: number;
   wizardStepTitle?: string;
-  options?: string[];
+  options?: any;
   validation?: any;
+  description?: string;
 }
 
 interface FieldGroup {
@@ -72,6 +83,8 @@ const FormPreviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<ApplicationForm | null>(null);
+  const [previewMode, setPreviewMode] = useState<'grouped' | 'wizard'>('grouped');
+  const [currentWizardStep, setCurrentWizardStep] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -86,8 +99,10 @@ const FormPreviewPage: React.FC = () => {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: `/api/orgadmin/application-forms/${id}`,
+        url: `/api/orgadmin/application-forms/${id}/with-fields`,
       });
+      console.log('Form data received:', response);
+      console.log('Fields:', response.fields);
       setForm(response);
     } catch (err) {
       setError('Failed to load form');
@@ -98,50 +113,154 @@ const FormPreviewPage: React.FC = () => {
   };
 
   const renderField = (field: ApplicationFormField) => {
-    // Simple field renderer for preview
-    // In a real implementation, this would use the actual FieldRenderer component
+    // Render actual form controls based on field type
+    const renderControl = () => {
+      switch (field.datatype) {
+        case 'text':
+          return (
+            <TextField
+              fullWidth
+              label={field.label}
+              helperText={field.description}
+              disabled
+              placeholder="Text input"
+            />
+          );
+        
+        case 'text_area':
+          return (
+            <TextField
+              fullWidth
+              label={field.label}
+              helperText={field.description}
+              multiline
+              rows={4}
+              disabled
+              placeholder="Multi-line text input"
+            />
+          );
+        
+        case 'number':
+          return (
+            <TextField
+              fullWidth
+              label={field.label}
+              helperText={field.description}
+              type="number"
+              disabled
+              placeholder="Number input"
+            />
+          );
+        
+        case 'date':
+          return (
+            <TextField
+              fullWidth
+              label={field.label}
+              helperText={field.description}
+              type="date"
+              disabled
+              InputLabelProps={{ shrink: true }}
+            />
+          );
+        
+        case 'single_select':
+          return (
+            <FormControl fullWidth disabled>
+              <InputLabel>{field.label}</InputLabel>
+              <Select label={field.label} value="">
+                {field.options && Array.isArray(field.options) ? (
+                  field.options.map((option: string, idx: number) => (
+                    <MenuItem key={idx} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem value="">No options available</MenuItem>
+                )}
+              </Select>
+              {field.description && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                  {field.description}
+                </Typography>
+              )}
+            </FormControl>
+          );
+        
+        case 'multi_select':
+          return (
+            <FormControl fullWidth disabled>
+              <InputLabel>{field.label}</InputLabel>
+              <Select label={field.label} multiple value={[]}>
+                {field.options && Array.isArray(field.options) ? (
+                  field.options.map((option: string, idx: number) => (
+                    <MenuItem key={idx} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem value="">No options available</MenuItem>
+                )}
+              </Select>
+              {field.description && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                  {field.description}
+                </Typography>
+              )}
+            </FormControl>
+          );
+        
+        case 'boolean':
+          return (
+            <Box>
+              <FormControlLabel
+                control={<Checkbox disabled />}
+                label={field.label}
+              />
+              {field.description && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4 }}>
+                  {field.description}
+                </Typography>
+              )}
+            </Box>
+          );
+        
+        case 'document_upload':
+          return (
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                {field.label}
+              </Typography>
+              {field.description && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  {field.description}
+                </Typography>
+              )}
+              <Button variant="outlined" disabled component="span">
+                Choose File
+              </Button>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                No file selected
+              </Typography>
+            </Box>
+          );
+        
+        default:
+          return (
+            <TextField
+              fullWidth
+              label={field.label}
+              helperText={field.description}
+              disabled
+              placeholder="Text input"
+            />
+          );
+      }
+    };
     
     return (
-      <Box key={field.fieldId} sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          {field.fieldLabel}
-          {field.required && <span style={{ color: 'red' }}> *</span>}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-          Type: {field.fieldType}
-        </Typography>
-        
-        {/* Simplified field display for preview */}
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 2,
-            backgroundColor: '#f5f5f5',
-            minHeight: field.fieldType === 'text_area' ? 100 : 40,
-          }}
-        >
-          {field.fieldType === 'document_upload' ? (
-            <Typography variant="body2" color="text.secondary">
-              [File upload field - users can upload documents here]
-            </Typography>
-          ) : field.fieldType === 'single_select' || field.fieldType === 'multi_select' ? (
-            <Typography variant="body2" color="text.secondary">
-              [Dropdown/Select field{field.options ? ` with ${field.options.length} options` : ''}]
-            </Typography>
-          ) : field.fieldType === 'boolean' ? (
-            <Typography variant="body2" color="text.secondary">
-              [Checkbox field]
-            </Typography>
-          ) : field.fieldType === 'date' ? (
-            <Typography variant="body2" color="text.secondary">
-              [Date picker field]
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              [Text input field]
-            </Typography>
-          )}
-        </Paper>
+      <Box key={field.id} sx={{ mb: 3 }}>
+        {renderControl()}
       </Box>
     );
   };
@@ -162,27 +281,6 @@ const FormPreviewPage: React.FC = () => {
           )}
           <Divider sx={{ mb: 2 }} />
           {groupFields.map(renderField)}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderWizardStep = (step: WizardStep, stepFields: ApplicationFormField[]) => {
-    if (stepFields.length === 0) return null;
-    
-    return (
-      <Card key={step.name} sx={{ mb: 3 }} variant="outlined">
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Step {step.order}: {step.name}
-          </Typography>
-          {step.description && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {step.description}
-            </Typography>
-          )}
-          <Divider sx={{ mb: 2 }} />
-          {stepFields.map(renderField)}
         </CardContent>
       </Card>
     );
@@ -212,11 +310,31 @@ const FormPreviewPage: React.FC = () => {
   }
 
   // Organize fields
-  const sortedFields = [...form.fields].sort((a, b) => a.order - b.order);
+  const sortedFields = form.fields && form.fields.length > 0 
+    ? [...form.fields].sort((a, b) => a.order - b.order)
+    : [];
+  
+  console.log('Sorted fields:', sortedFields);
   
   // Check if form uses groups or wizard
   const hasGroups = form.fieldGroups && form.fieldGroups.length > 0;
   const hasWizard = form.wizardConfig && form.wizardConfig.steps.length > 0;
+
+  // Wizard navigation handlers
+  const handleNextStep = () => {
+    if (form?.wizardConfig && currentWizardStep < form.wizardConfig.steps.length - 1) {
+      setCurrentWizardStep(currentWizardStep + 1);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (currentWizardStep > 0) {
+      setCurrentWizardStep(currentWizardStep - 1);
+    }
+  };
+
+  const isFirstStep = currentWizardStep === 0;
+  const isLastStep = form?.wizardConfig ? currentWizardStep === form.wizardConfig.steps.length - 1 : false;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -231,7 +349,7 @@ const FormPreviewPage: React.FC = () => {
           </Button>
           <Button
             variant="outlined"
-            onClick={() => navigate(`/orgadmin/forms/${id}/edit`)}
+            onClick={() => navigate(`/forms/${id}/edit`)}
           >
             Edit Form
           </Button>
@@ -259,29 +377,102 @@ const FormPreviewPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {hasWizard ? (
-        // Render as wizard steps
+      {/* Preview mode toggle - only show if wizard steps exist */}
+      {hasWizard && (
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+          <ToggleButtonGroup
+            value={previewMode}
+            exclusive
+            onChange={(_, newMode) => {
+              if (newMode !== null) {
+                setPreviewMode(newMode);
+                setCurrentWizardStep(0); // Reset to first step when switching modes
+              }
+            }}
+            aria-label="preview mode"
+          >
+            <ToggleButton value="grouped" aria-label="grouped view">
+              <ViewListIcon sx={{ mr: 1 }} />
+              Grouped View
+            </ToggleButton>
+            <ToggleButton value="wizard" aria-label="wizard view">
+              <ViewModuleIcon sx={{ mr: 1 }} />
+              Step-by-Step Wizard
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      )}
+
+      {/* Render based on preview mode */}
+      {previewMode === 'wizard' && hasWizard ? (
+        // Wizard step-by-step view
         <Box>
-          <Typography variant="h6" gutterBottom>
-            Multi-Step Form (Wizard)
-          </Typography>
-          {form.wizardConfig!.steps
-            .sort((a, b) => a.order - b.order)
-            .map((step) => {
-              const stepFields = sortedFields.filter((f) =>
-                step.fields.includes(f.fieldName)
-              );
-              return renderWizardStep(step, stepFields);
-            })}
+          {/* Stepper showing all steps */}
+          <Stepper activeStep={currentWizardStep} sx={{ mb: 4 }}>
+            {form.wizardConfig!.steps
+              .sort((a, b) => a.order - b.order)
+              .map((step, index) => (
+                <Step key={index}>
+                  <StepLabel>{step.name}</StepLabel>
+                </Step>
+              ))}
+          </Stepper>
+
+          {/* Current step content */}
+          {(() => {
+            const sortedSteps = [...form.wizardConfig!.steps].sort((a, b) => a.order - b.order);
+            const currentStep = sortedSteps[currentWizardStep];
+            const stepFields = sortedFields.filter((f) =>
+              currentStep.fields.includes(f.name)
+            );
+
+            return (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {currentStep.name}
+                  </Typography>
+                  
+                  {currentStep.description && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      {currentStep.description}
+                    </Typography>
+                  )}
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  {stepFields.map(renderField)}
+
+                  {/* Wizard navigation buttons */}
+                  <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'space-between' }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handlePreviousStep}
+                      disabled={isFirstStep}
+                    >
+                      {isFirstStep ? 'Cancel (Preview Only)' : 'Back'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleNextStep}
+                      disabled={isLastStep}
+                    >
+                      {isLastStep ? 'Submit (Preview Only)' : 'Next'}
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </Box>
       ) : hasGroups ? (
-        // Render with field groups
+        // Grouped view
         <Box>
           {form.fieldGroups!
             .sort((a, b) => a.order - b.order)
             .map((group) => {
               const groupFields = sortedFields.filter((f) =>
-                group.fields.includes(f.fieldName)
+                group.fields.includes(f.name)
               );
               return renderFieldGroup(group, groupFields);
             })}
@@ -292,7 +483,7 @@ const FormPreviewPage: React.FC = () => {
               form.fieldGroups!.flatMap((g) => g.fields)
             );
             const ungroupedFields = sortedFields.filter(
-              (f) => !groupedFieldNames.has(f.fieldName)
+              (f) => !groupedFieldNames.has(f.name)
             );
             
             if (ungroupedFields.length > 0) {
@@ -302,6 +493,7 @@ const FormPreviewPage: React.FC = () => {
                     <Typography variant="h6" gutterBottom>
                       Additional Information
                     </Typography>
+                    <Divider sx={{ mb: 2 }} />
                     {ungroupedFields.map(renderField)}
                   </CardContent>
                 </Card>
@@ -309,27 +501,40 @@ const FormPreviewPage: React.FC = () => {
             }
             return null;
           })()}
+
+          {/* Submit buttons for grouped view */}
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button variant="contained" disabled>
+              Submit (Preview Only)
+            </Button>
+            <Button variant="outlined" disabled>
+              Cancel (Preview Only)
+            </Button>
+          </Box>
         </Box>
       ) : (
-        // Render as simple list
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Form Fields
-            </Typography>
-            {sortedFields.map(renderField)}
-          </CardContent>
-        </Card>
-      )}
+        // Simple list view (no groups)
+        <Box>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Form Fields
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              {sortedFields.map(renderField)}
+            </CardContent>
+          </Card>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        <Button variant="contained" disabled>
-          Submit (Preview Only)
-        </Button>
-        <Button variant="outlined" disabled>
-          Cancel (Preview Only)
-        </Button>
-      </Box>
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button variant="contained" disabled>
+              Submit (Preview Only)
+            </Button>
+            <Button variant="outlined" disabled>
+              Cancel (Preview Only)
+            </Button>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };

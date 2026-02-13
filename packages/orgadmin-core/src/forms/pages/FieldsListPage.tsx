@@ -48,6 +48,7 @@ interface ApplicationField {
   label: string;
   description?: string;
   datatype: string;
+  options?: string[];
   organisationId: string;
   createdAt: string;
   updatedAt: string;
@@ -91,6 +92,8 @@ const FieldsListPage: React.FC = () => {
   const [fieldLabel, setFieldLabel] = useState('');
   const [fieldDescription, setFieldDescription] = useState('');
   const [fieldType, setFieldType] = useState('text');
+  const [fieldOptions, setFieldOptions] = useState<string[]>([]);
+  const [newOption, setNewOption] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -101,6 +104,24 @@ const FieldsListPage: React.FC = () => {
       .trim()
       .replace(/[^a-z0-9\s]/g, '') // Remove special characters
       .replace(/\s+/g, '_'); // Replace spaces with underscores
+  };
+
+  // Check if field type requires options
+  const requiresOptions = (type: string): boolean => {
+    return ['select', 'multiselect', 'radio', 'checkbox'].includes(type);
+  };
+
+  // Handle adding an option
+  const handleAddOption = () => {
+    if (newOption.trim() && !fieldOptions.includes(newOption.trim())) {
+      setFieldOptions([...fieldOptions, newOption.trim()]);
+      setNewOption('');
+    }
+  };
+
+  // Handle removing an option
+  const handleRemoveOption = (option: string) => {
+    setFieldOptions(fieldOptions.filter(o => o !== option));
   };
 
   useEffect(() => {
@@ -163,6 +184,12 @@ const FieldsListPage: React.FC = () => {
       return;
     }
 
+    // Validate options for field types that require them
+    if (requiresOptions(fieldType) && fieldOptions.length === 0) {
+      setError(`Field type "${fieldType}" requires at least one option`);
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
@@ -176,6 +203,7 @@ const FieldsListPage: React.FC = () => {
           label: fieldLabel,
           description: fieldDescription || undefined,
           datatype: fieldType,
+          options: requiresOptions(fieldType) ? fieldOptions : undefined,
         },
       });
 
@@ -207,6 +235,12 @@ const FieldsListPage: React.FC = () => {
       return;
     }
 
+    // Validate options for field types that require them
+    if (requiresOptions(fieldType) && fieldOptions.length === 0) {
+      setError(`Field type "${fieldType}" requires at least one option`);
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
@@ -220,6 +254,7 @@ const FieldsListPage: React.FC = () => {
           label: fieldLabel,
           description: fieldDescription || undefined,
           datatype: fieldType,
+          options: requiresOptions(fieldType) ? fieldOptions : undefined,
         },
       });
 
@@ -267,6 +302,7 @@ const FieldsListPage: React.FC = () => {
     setFieldLabel(field.label);
     setFieldDescription(field.description || '');
     setFieldType(field.datatype);
+    setFieldOptions(field.options || []);
     setEditDialogOpen(true);
   };
 
@@ -279,6 +315,8 @@ const FieldsListPage: React.FC = () => {
     setFieldLabel('');
     setFieldDescription('');
     setFieldType('text');
+    setFieldOptions([]);
+    setNewOption('');
     setSelectedField(null);
     setError(null);
   };
@@ -344,7 +382,6 @@ const FieldsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
               <TableCell>Label</TableCell>
               <TableCell>Description</TableCell>
               <TableCell>Type</TableCell>
@@ -361,7 +398,7 @@ const FieldsListPage: React.FC = () => {
               </TableRow>
             ) : filteredFields.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={5} align="center">
                   {searchTerm || typeFilter !== 'all'
                     ? 'No fields match your filters'
                     : 'No fields yet. Create your first field to get started.'}
@@ -370,11 +407,6 @@ const FieldsListPage: React.FC = () => {
             ) : (
               filteredFields.map((field) => (
                 <TableRow key={field.id} hover>
-                  <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" color="text.secondary">
-                      {field.name}
-                    </Typography>
-                  </TableCell>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">
                       {field.label}
@@ -446,7 +478,13 @@ const FieldsListPage: React.FC = () => {
             <Select
               value={fieldType}
               label="Field Type"
-              onChange={(e) => setFieldType(e.target.value)}
+              onChange={(e) => {
+                setFieldType(e.target.value);
+                // Clear options when changing to a type that doesn't need them
+                if (!requiresOptions(e.target.value)) {
+                  setFieldOptions([]);
+                }
+              }}
             >
               {FIELD_TYPES.map((type) => (
                 <MenuItem key={type} value={type}>
@@ -455,6 +493,54 @@ const FieldsListPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Options section for select, multiselect, radio, checkbox */}
+          {requiresOptions(fieldType) && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Options {fieldOptions.length === 0 && <span style={{ color: 'red' }}>*</span>}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Add option"
+                  value={newOption}
+                  onChange={(e) => setNewOption(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddOption();
+                    }
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddOption}
+                  disabled={!newOption.trim()}
+                >
+                  Add
+                </Button>
+              </Box>
+              {fieldOptions.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {fieldOptions.map((option, index) => (
+                    <Chip
+                      key={index}
+                      label={option}
+                      onDelete={() => handleRemoveOption(option)}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  At least one option is required for {fieldType} fields
+                </Alert>
+              )}
+            </Box>
+          )}
+
           {fieldLabel && (
             <Alert severity="info" sx={{ mt: 2 }}>
               Field name will be: <strong>{generateFieldName(fieldLabel) || '(invalid)'}</strong>
@@ -504,7 +590,13 @@ const FieldsListPage: React.FC = () => {
             <Select
               value={fieldType}
               label="Field Type"
-              onChange={(e) => setFieldType(e.target.value)}
+              onChange={(e) => {
+                setFieldType(e.target.value);
+                // Clear options when changing to a type that doesn't need them
+                if (!requiresOptions(e.target.value)) {
+                  setFieldOptions([]);
+                }
+              }}
             >
               {FIELD_TYPES.map((type) => (
                 <MenuItem key={type} value={type}>
@@ -513,6 +605,54 @@ const FieldsListPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Options section for select, multiselect, radio, checkbox */}
+          {requiresOptions(fieldType) && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Options {fieldOptions.length === 0 && <span style={{ color: 'red' }}>*</span>}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Add option"
+                  value={newOption}
+                  onChange={(e) => setNewOption(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddOption();
+                    }
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddOption}
+                  disabled={!newOption.trim()}
+                >
+                  Add
+                </Button>
+              </Box>
+              {fieldOptions.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {fieldOptions.map((option, index) => (
+                    <Chip
+                      key={index}
+                      label={option}
+                      onDelete={() => handleRemoveOption(option)}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <Alert severity="warning" sx={{ mt: 1 }}>
+                  At least one option is required for {fieldType} fields
+                </Alert>
+              )}
+            </Box>
+          )}
+
           {fieldLabel && (
             <Alert severity="info" sx={{ mt: 2 }}>
               Field name will be: <strong>{generateFieldName(fieldLabel) || '(invalid)'}</strong>

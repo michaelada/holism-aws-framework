@@ -35,6 +35,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 
 interface ApplicationForm {
   id: string;
@@ -48,6 +49,7 @@ interface ApplicationForm {
 const FormsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   
   const [forms, setForms] = useState<ApplicationForm[]>([]);
   const [filteredForms, setFilteredForms] = useState<ApplicationForm[]>([]);
@@ -56,19 +58,23 @@ const FormsListPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
 
   useEffect(() => {
-    loadForms();
-  }, []);
+    if (organisation?.id) {
+      loadForms();
+    }
+  }, [organisation?.id]);
 
   useEffect(() => {
     filterForms();
   }, [forms, searchTerm, statusFilter]);
 
   const loadForms = async () => {
+    if (!organisation?.id) return;
+    
     try {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/application-forms',
+        url: `/api/orgadmin/organisations/${organisation.id}/application-forms`,
       });
       setForms(response || []);
     } catch (error) {

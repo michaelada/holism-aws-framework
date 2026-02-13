@@ -74,10 +74,7 @@ export function MetadataForm({
 
   // Set initial values if provided
   useEffect(() => {
-    if (initialValues && Object.keys(initialValues).length > 0) {
-      setFormData(initialValues);
-    }
-  }, []); // Only run once on mount
+    if (initialValues && Object.
 
   const handleFieldChange = (fieldShortName: string, value: any) => {
     setFormData((prev) => ({

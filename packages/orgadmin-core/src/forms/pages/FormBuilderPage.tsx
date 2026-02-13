@@ -31,13 +31,19 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Checkbox,
+  FormControlLabel,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   DragIndicator as DragIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 
 interface ApplicationForm {
   id?: string;
@@ -112,6 +118,7 @@ const FormBuilderPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -159,14 +166,29 @@ const FormBuilderPage: React.FC = () => {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: `/api/orgadmin/application-forms/${id}`,
+        url: `/api/orgadmin/application-forms/${id}/with-fields`,
       });
       const form = response;
       
       if (form) {
         setFormName(form.name);
         setFormDescription(form.description);
-        setSelectedFields(form.fields || []);
+        
+        // Convert backend field format to frontend format
+        const fields: ApplicationFormField[] = (form.fields || []).map((f: any) => ({
+          fieldId: f.id,
+          fieldName: f.name,
+          fieldLabel: f.label,
+          fieldType: f.datatype,
+          order: f.order,
+          required: false, // Backend doesn't store this yet
+          groupName: f.groupName,
+          groupOrder: f.groupOrder,
+          wizardStep: f.wizardStep,
+          wizardStepTitle: f.wizardStepTitle,
+        }));
+        
+        setSelectedFields(fields);
         setFieldGroups(form.fieldGroups || []);
         setWizardConfig(form.wizardConfig);
       }
@@ -178,9 +200,14 @@ const FormBuilderPage: React.FC = () => {
     }
   };
 
-  const handleSave = async (status: 'draft' | 'published') => {
+  const handleSave = async () => {
     if (!formName.trim()) {
       setError('Form name is required');
+      return;
+    }
+
+    if (!organisation?.id) {
+      setError('Organisation context is missing');
       return;
     }
 
@@ -188,15 +215,17 @@ const FormBuilderPage: React.FC = () => {
       setSaving(true);
       setError(null);
 
-      const formData: ApplicationForm = {
+      const formData = {
         name: formName,
         description: formDescription,
-        status,
-        fields: selectedFields,
-        fieldGroups: fieldGroups.length > 0 ? fieldGroups : undefined,
-        wizardConfig,
+        status: 'draft' as const,
+        fieldGroups: fieldGroups,
+        wizardConfig: wizardConfig,
       };
 
+      let formId = id;
+
+      // Step 1: Create or update the form
       if (id) {
         await execute({
           method: 'PUT',
@@ -204,11 +233,35 @@ const FormBuilderPage: React.FC = () => {
           data: formData,
         });
       } else {
-        await execute({
+        const createdForm = await execute({
           method: 'POST',
           url: '/api/orgadmin/application-forms',
-          data: formData,
+          data: {
+            ...formData,
+            organisationId: organisation.id,
+          },
         });
+        formId = createdForm.id;
+      }
+
+      // Step 2: Save field associations
+      // For now, we'll need to delete existing associations and recreate them
+      // This is a simplified approach - a better approach would be to diff and update
+      if (formId && selectedFields.length > 0) {
+        for (const field of selectedFields) {
+          await execute({
+            method: 'POST',
+            url: `/api/orgadmin/application-forms/${formId}/fields`,
+            data: {
+              fieldId: field.fieldId,
+              order: field.order,
+              groupName: field.groupName,
+              groupOrder: field.groupOrder,
+              wizardStep: field.wizardStep,
+              wizardStepTitle: field.wizardStepTitle,
+            },
+          });
+        }
       }
 
       navigate('/forms');
@@ -220,7 +273,7 @@ const FormBuilderPage: React.FC = () => {
     }
   };
 
-  const handleAddField = (fieldId: string) => {
+  const handleAddField = (fieldId: string, required: boolean) => {
     const field = availableFields.find(f => f.id === fieldId);
     if (!field) return;
 
@@ -230,7 +283,7 @@ const FormBuilderPage: React.FC = () => {
       fieldLabel: field.label,
       fieldType: field.datatype,
       order: selectedFields.length + 1,
-      required: false,
+      required,
     };
 
     setSelectedFields([...selectedFields, newField]);
@@ -249,19 +302,61 @@ const FormBuilderPage: React.FC = () => {
     );
   };
 
-  const handleAddGroup = (groupName: string, groupDescription: string) => {
+  const handleMoveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const newFields = [...selectedFields];
+    [newFields[index - 1], newFields[index]] = [newFields[index], newFields[index - 1]];
+    // Update order numbers
+    newFields.forEach((field, idx) => {
+      field.order = idx + 1;
+    });
+    setSelectedFields(newFields);
+  };
+
+  const handleMoveFieldDown = (index: number) => {
+    if (index === selectedFields.length - 1) return;
+    const newFields = [...selectedFields];
+    [newFields[index], newFields[index + 1]] = [newFields[index + 1], newFields[index]];
+    // Update order numbers
+    newFields.forEach((field, idx) => {
+      field.order = idx + 1;
+    });
+    setSelectedFields(newFields);
+  };
+
+  const handleAddGroup = (groupName: string, groupDescription: string, selectedFieldIds: string[]) => {
     const newGroup: FieldGroup = {
       name: groupName,
       description: groupDescription,
-      fields: [],
+      fields: selectedFieldIds,
       order: fieldGroups.length + 1,
     };
     setFieldGroups([...fieldGroups, newGroup]);
+    
+    // Automatically create a corresponding wizard step
+    const newStep: WizardStep = {
+      name: groupName,
+      description: groupDescription,
+      fields: selectedFieldIds,
+      order: (wizardConfig?.steps.length || 0) + 1,
+    };
+    
+    setWizardConfig({
+      steps: [...(wizardConfig?.steps || []), newStep],
+    });
+    
     setAddGroupDialogOpen(false);
   };
 
   const handleRemoveGroup = (groupName: string) => {
     setFieldGroups(fieldGroups.filter(g => g.name !== groupName));
+    
+    // Also remove the corresponding wizard step
+    if (wizardConfig) {
+      setWizardConfig({
+        steps: wizardConfig.steps.filter(s => s.name !== groupName),
+      });
+    }
   };
 
   // Placeholder for future implementation
@@ -275,11 +370,11 @@ const FormBuilderPage: React.FC = () => {
   //   );
   // };
 
-  const handleAddWizardStep = (stepName: string, stepDescription: string) => {
+  const handleAddWizardStep = (stepName: string, stepDescription: string, selectedFieldIds: string[]) => {
     const newStep: WizardStep = {
       name: stepName,
       description: stepDescription,
-      fields: [],
+      fields: selectedFieldIds,
       order: (wizardConfig?.steps.length || 0) + 1,
     };
     
@@ -320,18 +415,11 @@ const FormBuilderPage: React.FC = () => {
             Cancel
           </Button>
           <Button
-            variant="outlined"
-            onClick={() => handleSave('draft')}
-            disabled={saving}
-          >
-            Save as Draft
-          </Button>
-          <Button
             variant="contained"
-            onClick={() => handleSave('published')}
+            onClick={handleSave}
             disabled={saving}
           >
-            {saving ? 'Publishing...' : 'Publish'}
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </Box>
       </Box>
@@ -392,9 +480,9 @@ const FormBuilderPage: React.FC = () => {
               </Alert>
             ) : (
               <List>
-                {selectedFields.map((field) => (
+                {selectedFields.map((field, index) => (
                   <ListItem key={field.fieldId}>
-                    <IconButton size="small" sx={{ mr: 1 }}>
+                    <IconButton size="small" sx={{ mr: 1 }} disabled>
                       <DragIcon />
                     </IconButton>
                     <ListItemText
@@ -402,15 +490,33 @@ const FormBuilderPage: React.FC = () => {
                       secondary={`${field.fieldType} • ${field.required ? 'Required' : 'Optional'}`}
                     />
                     <ListItemSecondaryAction>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleMoveFieldUp(index)}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        <ArrowUpIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleMoveFieldDown(index)}
+                        disabled={index === selectedFields.length - 1}
+                        title="Move down"
+                      >
+                        <ArrowDownIcon />
+                      </IconButton>
                       <Button
                         size="small"
                         onClick={() => handleToggleRequired(field.fieldId)}
+                        sx={{ ml: 1 }}
                       >
                         {field.required ? 'Make Optional' : 'Make Required'}
                       </Button>
                       <IconButton
                         edge="end"
                         onClick={() => handleRemoveField(field.fieldId)}
+                        sx={{ ml: 1 }}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -439,22 +545,41 @@ const FormBuilderPage: React.FC = () => {
               </Alert>
             ) : (
               <List>
-                {fieldGroups.map((group) => (
-                  <ListItem key={group.name}>
-                    <ListItemText
-                      primary={group.name}
-                      secondary={`${group.description} • ${group.fields.length} fields`}
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleRemoveGroup(group.name)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
+                {fieldGroups.map((group) => {
+                  const groupFieldLabels = group.fields
+                    .map(fieldId => selectedFields.find(f => f.fieldId === fieldId)?.fieldLabel)
+                    .filter(Boolean);
+                  
+                  return (
+                    <ListItem key={group.name}>
+                      <ListItemText
+                        primary={group.name}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {group.description}
+                            </Typography>
+                            {groupFieldLabels.length > 0 && (
+                              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {groupFieldLabels.map((label, idx) => (
+                                  <Chip key={idx} label={label} size="small" />
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleRemoveGroup(group.name)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  );
+                })}
               </List>
             )}
           </TabPanel>
@@ -477,22 +602,41 @@ const FormBuilderPage: React.FC = () => {
               </Alert>
             ) : (
               <List>
-                {wizardConfig.steps.map((step) => (
-                  <ListItem key={step.name}>
-                    <ListItemText
-                      primary={`Step ${step.order}: ${step.name}`}
-                      secondary={`${step.description} • ${step.fields.length} fields`}
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleRemoveWizardStep(step.name)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
+                {wizardConfig.steps.map((step) => {
+                  const stepFieldLabels = step.fields
+                    .map(fieldId => selectedFields.find(f => f.fieldId === fieldId)?.fieldLabel)
+                    .filter(Boolean);
+                  
+                  return (
+                    <ListItem key={step.name}>
+                      <ListItemText
+                        primary={`Step ${step.order}: ${step.name}`}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {step.description}
+                            </Typography>
+                            {stepFieldLabels.length > 0 && (
+                              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {stepFieldLabels.map((label, idx) => (
+                                  <Chip key={idx} label={label} size="small" />
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleRemoveWizardStep(step.name)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  );
+                })}
               </List>
             )}
           </TabPanel>
@@ -500,35 +644,22 @@ const FormBuilderPage: React.FC = () => {
       </Card>
 
       {/* Add Field Dialog */}
-      <Dialog open={addFieldDialogOpen} onClose={() => setAddFieldDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Field</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Select Field</InputLabel>
-            <Select
-              label="Select Field"
-              onChange={(e) => handleAddField(e.target.value as string)}
-            >
-              {availableFields
-                .filter(f => !selectedFields.some(sf => sf.fieldId === f.id))
-                .map((field) => (
-                  <MenuItem key={field.id} value={field.id}>
-                    {field.label} ({field.datatype})
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddFieldDialogOpen(false)}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
+      <AddFieldDialog
+        open={addFieldDialogOpen}
+        onClose={() => setAddFieldDialogOpen(false)}
+        onAdd={handleAddField}
+        availableFields={availableFields}
+        selectedFields={selectedFields}
+      />
 
       {/* Add Group Dialog */}
       <AddGroupDialog
         open={addGroupDialogOpen}
         onClose={() => setAddGroupDialogOpen(false)}
         onAdd={handleAddGroup}
+        availableFields={selectedFields.filter(field => 
+          !fieldGroups.some(group => group.fields.includes(field.fieldId))
+        )}
       />
 
       {/* Add Wizard Step Dialog */}
@@ -536,26 +667,112 @@ const FormBuilderPage: React.FC = () => {
         open={addWizardStepDialogOpen}
         onClose={() => setAddWizardStepDialogOpen(false)}
         onAdd={handleAddWizardStep}
+        availableFields={selectedFields.filter(field => 
+          !wizardConfig?.steps.some(step => step.fields.includes(field.fieldId))
+        )}
       />
     </Box>
   );
 };
 
 // Helper dialog components
+const AddFieldDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onAdd: (fieldId: string, required: boolean) => void;
+  availableFields: AvailableField[];
+  selectedFields: ApplicationFormField[];
+}> = ({ open, onClose, onAdd, availableFields, selectedFields }) => {
+  const [selectedFieldId, setSelectedFieldId] = useState('');
+  const [required, setRequired] = useState(false);
+
+  const handleAdd = () => {
+    if (selectedFieldId) {
+      onAdd(selectedFieldId, required);
+      setSelectedFieldId('');
+      setRequired(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Add Field</DialogTitle>
+      <DialogContent>
+        <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
+          <InputLabel>Select Field</InputLabel>
+          <Select
+            label="Select Field"
+            value={selectedFieldId}
+            onChange={(e) => setSelectedFieldId(e.target.value as string)}
+          >
+            {availableFields
+              .filter(f => !selectedFields.some(sf => sf.fieldId === f.id))
+              .map((field) => (
+                <MenuItem key={field.id} value={field.id}>
+                  {field.label} ({field.datatype})
+                </MenuItem>
+              ))}
+          </Select>
+        </FormControl>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={required}
+              onChange={(e) => setRequired(e.target.checked)}
+            />
+          }
+          label="Mandatory field"
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleAdd} variant="contained" disabled={!selectedFieldId}>
+          Add
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const AddGroupDialog: React.FC<{
   open: boolean;
   onClose: () => void;
-  onAdd: (name: string, description: string) => void;
-}> = ({ open, onClose, onAdd }) => {
+  onAdd: (name: string, description: string, selectedFieldIds: string[]) => void;
+  availableFields: ApplicationFormField[];
+}> = ({ open, onClose, onAdd, availableFields }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
 
   const handleAdd = () => {
     if (name.trim()) {
-      onAdd(name, description);
+      onAdd(name, description, selectedFieldIds);
       setName('');
       setDescription('');
+      setSelectedFieldIds([]);
     }
+  };
+
+  const handleToggleField = (fieldId: string) => {
+    setSelectedFieldIds(prev =>
+      prev.includes(fieldId)
+        ? prev.filter(id => id !== fieldId)
+        : [...prev, fieldId]
+    );
+  };
+
+  const handleMoveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index - 1], newIds[index]] = [newIds[index], newIds[index - 1]];
+    setSelectedFieldIds(newIds);
+  };
+
+  const handleMoveFieldDown = (index: number) => {
+    if (index === selectedFieldIds.length - 1) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index], newIds[index + 1]] = [newIds[index + 1], newIds[index]];
+    setSelectedFieldIds(newIds);
   };
 
   return (
@@ -576,11 +793,74 @@ const AddGroupDialog: React.FC<{
           onChange={(e) => setDescription(e.target.value)}
           multiline
           rows={2}
+          sx={{ mb: 2 }}
         />
+        <Typography variant="subtitle2" gutterBottom>
+          Select Fields for this Group
+        </Typography>
+        {availableFields.length === 0 ? (
+          <Alert severity="info">
+            No fields available. Add fields to the form first.
+          </Alert>
+        ) : (
+          <Box>
+            <Box sx={{ maxHeight: 300, overflow: 'auto', mb: 2 }}>
+              {availableFields.map((field) => (
+                <FormControlLabel
+                  key={field.fieldId}
+                  control={
+                    <Checkbox
+                      checked={selectedFieldIds.includes(field.fieldId)}
+                      onChange={() => handleToggleField(field.fieldId)}
+                    />
+                  }
+                  label={field.fieldLabel}
+                />
+              ))}
+            </Box>
+            {selectedFieldIds.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Field Order in Group
+                </Typography>
+                <List dense>
+                  {selectedFieldIds.map((fieldId, index) => {
+                    const field = availableFields.find(f => f.fieldId === fieldId);
+                    return (
+                      <ListItem key={fieldId}>
+                        <ListItemText primary={field?.fieldLabel} />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldUp(index)}
+                            disabled={index === 0}
+                            title="Move up"
+                          >
+                            <ArrowUpIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldDown(index)}
+                            disabled={index === selectedFieldIds.length - 1}
+                            title="Move down"
+                          >
+                            <ArrowDownIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+            )}
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleAdd} variant="contained">Add</Button>
+        <Button onClick={handleAdd} variant="contained" disabled={!name.trim()}>
+          Add
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -589,17 +869,42 @@ const AddGroupDialog: React.FC<{
 const AddWizardStepDialog: React.FC<{
   open: boolean;
   onClose: () => void;
-  onAdd: (name: string, description: string) => void;
-}> = ({ open, onClose, onAdd }) => {
+  onAdd: (name: string, description: string, selectedFieldIds: string[]) => void;
+  availableFields: ApplicationFormField[];
+}> = ({ open, onClose, onAdd, availableFields }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
 
   const handleAdd = () => {
     if (name.trim()) {
-      onAdd(name, description);
+      onAdd(name, description, selectedFieldIds);
       setName('');
       setDescription('');
+      setSelectedFieldIds([]);
     }
+  };
+
+  const handleToggleField = (fieldId: string) => {
+    setSelectedFieldIds(prev =>
+      prev.includes(fieldId)
+        ? prev.filter(id => id !== fieldId)
+        : [...prev, fieldId]
+    );
+  };
+
+  const handleMoveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index - 1], newIds[index]] = [newIds[index], newIds[index - 1]];
+    setSelectedFieldIds(newIds);
+  };
+
+  const handleMoveFieldDown = (index: number) => {
+    if (index === selectedFieldIds.length - 1) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index], newIds[index + 1]] = [newIds[index + 1], newIds[index]];
+    setSelectedFieldIds(newIds);
   };
 
   return (
@@ -620,11 +925,74 @@ const AddWizardStepDialog: React.FC<{
           onChange={(e) => setDescription(e.target.value)}
           multiline
           rows={2}
+          sx={{ mb: 2 }}
         />
+        <Typography variant="subtitle2" gutterBottom>
+          Select Fields for this Step
+        </Typography>
+        {availableFields.length === 0 ? (
+          <Alert severity="info">
+            No fields available. Add fields to the form first.
+          </Alert>
+        ) : (
+          <Box>
+            <Box sx={{ maxHeight: 300, overflow: 'auto', mb: 2 }}>
+              {availableFields.map((field) => (
+                <FormControlLabel
+                  key={field.fieldId}
+                  control={
+                    <Checkbox
+                      checked={selectedFieldIds.includes(field.fieldId)}
+                      onChange={() => handleToggleField(field.fieldId)}
+                    />
+                  }
+                  label={field.fieldLabel}
+                />
+              ))}
+            </Box>
+            {selectedFieldIds.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Field Order in Step
+                </Typography>
+                <List dense>
+                  {selectedFieldIds.map((fieldId, index) => {
+                    const field = availableFields.find(f => f.fieldId === fieldId);
+                    return (
+                      <ListItem key={fieldId}>
+                        <ListItemText primary={field?.fieldLabel} />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldUp(index)}
+                            disabled={index === 0}
+                            title="Move up"
+                          >
+                            <ArrowUpIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldDown(index)}
+                            disabled={index === selectedFieldIds.length - 1}
+                            title="Move down"
+                          >
+                            <ArrowDownIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+            )}
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleAdd} variant="contained">Add</Button>
+        <Button onClick={handleAdd} variant="contained" disabled={!name.trim()}>
+          Add
+        </Button>
       </DialogActions>
     </Dialog>
   );

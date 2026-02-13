@@ -10,6 +10,8 @@ export interface ApplicationForm {
   name: string;
   description?: string;
   status: 'draft' | 'published';
+  fieldGroups?: any[];
+  wizardConfig?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +71,8 @@ export interface CreateApplicationFormDto {
   name: string;
   description?: string;
   status?: 'draft' | 'published';
+  fieldGroups?: any[];
+  wizardConfig?: any;
 }
 
 /**
@@ -78,6 +82,8 @@ export interface UpdateApplicationFormDto {
   name?: string;
   description?: string;
   status?: 'draft' | 'published';
+  fieldGroups?: any[];
+  wizardConfig?: any;
 }
 
 /**
@@ -136,6 +142,8 @@ export class ApplicationFormService {
       name: row.name,
       description: row.description,
       status: row.status,
+      fieldGroups: row.field_groups,
+      wizardConfig: row.wizard_config,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -252,14 +260,16 @@ export class ApplicationFormService {
     try {
       const result = await db.query(
         `INSERT INTO application_forms 
-         (organisation_id, name, description, status)
-         VALUES ($1, $2, $3, $4)
+         (organisation_id, name, description, status, field_groups, wizard_config)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
         [
           data.organisationId,
           data.name,
           data.description || null,
           data.status || 'draft',
+          JSON.stringify(data.fieldGroups || []),
+          data.wizardConfig ? JSON.stringify(data.wizardConfig) : null,
         ]
       );
 
@@ -291,6 +301,14 @@ export class ApplicationFormService {
       if (data.status !== undefined) {
         updates.push(`status = $${paramCount++}`);
         values.push(data.status);
+      }
+      if (data.fieldGroups !== undefined) {
+        updates.push(`field_groups = $${paramCount++}`);
+        values.push(JSON.stringify(data.fieldGroups));
+      }
+      if (data.wizardConfig !== undefined) {
+        updates.push(`wizard_config = $${paramCount++}`);
+        values.push(data.wizardConfig ? JSON.stringify(data.wizardConfig) : null);
       }
 
       values.push(id);

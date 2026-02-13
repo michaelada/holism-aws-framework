@@ -75,16 +75,17 @@ export const neumorphicTheme = createTheme({
             transition: 'all 0.5s 0.1s cubic-bezier(0.55, 0, 0.1, 1)',
             zIndex: -1,
           },
+          '&:hover': {
+            color: '#ffffff',
+          },
           '&:hover::before': {
             top: '-35%',
             backgroundColor: '#009087',
-            color: '#fff',
             transform: 'translateX(-50%) scaleY(1.3) scaleX(0.8)',
           },
           '&:hover::after': {
             top: '-45%',
             backgroundColor: '#009087',
-            color: '#fff',
             transform: 'translateX(-50%) scaleY(1.3) scaleX(0.8)',
           },
         },
@@ -127,6 +128,13 @@ export const neumorphicTheme = createTheme({
         text: {
           '&:hover': {
             backgroundColor: 'rgba(0, 144, 135, 0.08)',
+            color: '#ffffff',
+          },
+          '&:hover::before': {
+            backgroundColor: '#009087',
+          },
+          '&:hover::after': {
+            backgroundColor: '#009087',
           },
         },
       },
