@@ -40,7 +40,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useOrganisation } from '@orgadmin/shell/context/OrganisationContext';
+import { useOrganisation } from '../../context/OrganisationContext';
 
 interface ApplicationField {
   id: string;
@@ -152,6 +152,11 @@ const FieldsListPage: React.FC = () => {
       return;
     }
 
+    if (!organisation) {
+      setError('Organisation context not available');
+      return;
+    }
+
     const generatedName = generateFieldName(fieldLabel);
     if (!generatedName) {
       setError('Field label must contain at least one alphanumeric character');
@@ -188,6 +193,11 @@ const FieldsListPage: React.FC = () => {
   const handleEditField = async () => {
     if (!selectedField || !fieldLabel.trim()) {
       setError('Field label is required');
+      return;
+    }
+
+    if (!organisation) {
+      setError('Organisation context not available');
       return;
     }
 

@@ -22,7 +22,7 @@ import {
   Dashboard as DashboardIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useOrganisation } from '../context/OrganisationContext';
+import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { ModuleRegistration } from '../types/module.types';
 
 const DRAWER_WIDTH = 260;
@@ -123,7 +123,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
           Organisation
         </Typography>
         <Typography variant="body2" fontWeight="medium" noWrap>
-          {organisation.displayName}
+          {organisation?.displayName || 'Loading...'}
         </Typography>
       </Box>
 
@@ -252,7 +252,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
             sx={{ display: { xs: 'none', md: 'block' } }}
             color="text.secondary"
           >
-            {organisation.displayName}
+            {organisation?.displayName || 'Loading...'}
           </Typography>
         </Toolbar>
       </AppBar>

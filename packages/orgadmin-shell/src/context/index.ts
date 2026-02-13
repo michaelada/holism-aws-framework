@@ -1,3 +1,2 @@
 export { CapabilityProvider, useCapabilities } from './CapabilityContext';
-export { OrganisationProvider, useOrganisation } from './OrganisationContext';
-export type { Organisation } from './OrganisationContext';
+export { OrganisationProvider, useOrganisation, type Organisation } from '@aws-web-framework/orgadmin-core';

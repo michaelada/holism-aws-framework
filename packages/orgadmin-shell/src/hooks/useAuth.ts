@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
 import axios from 'axios';
-import { Organisation } from '../context/OrganisationContext';
+import { Organisation } from '@aws-web-framework/orgadmin-core';
 
 interface UseAuthReturn {
   keycloak: Keycloak | null;
@@ -105,15 +105,15 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
         userName: 'dev-admin',
       });
       setOrganisation({
-        id: 'dev-org-1',
-        organizationTypeId: 'dev-type-1',
+        id: 'd5a5a5ca-c4b4-436d-8981-627ab3556433',
+        organizationTypeId: '00000000-0000-0000-0000-000000000002',
         keycloakGroupId: 'dev-group-1',
-        name: 'dev-org',
-        displayName: 'Development Organisation',
+        name: 'athlone-swim-club',
+        displayName: 'Athlone Swimming Club',
         status: 'active',
-        currency: 'USD',
+        currency: 'EUR',
         language: 'en',
-        enabledCapabilities: ['event-management', 'memberships'],
+        enabledCapabilities: ['event-management', 'memberships', 'merchandise', 'calendar', 'registrations', 'ticketing'],
         settings: {},
         createdAt: new Date(),
         updatedAt: new Date(),

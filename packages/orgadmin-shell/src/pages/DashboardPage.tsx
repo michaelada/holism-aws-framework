@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Grid } from '@mui/material';
-import { useOrganisation } from '../context/OrganisationContext';
+import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useCapabilities } from '../context/CapabilityContext';
 import { DashboardCard } from '../components/DashboardCard';
 import { ModuleRegistration } from '../types/module.types';
@@ -53,7 +53,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
             color: 'text.primary',
           }}
         >
-          Welcome to {organisation.displayName}
+          Welcome to {organisation?.displayName || 'ItsPlainSailing'}
         </Typography>
         <Typography
           variant="body1"

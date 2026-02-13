@@ -2,9 +2,11 @@ import React, { Suspense, useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import { useAuth } from './hooks/useAuth';
-import { OrganisationProvider } from './context/OrganisationContext';
 import { CapabilityProvider } from './context/CapabilityContext';
-import { AuthTokenContext } from '@aws-web-framework/orgadmin-core';
+import { 
+  AuthTokenContext,
+  OrganisationProvider,
+} from '@aws-web-framework/orgadmin-core';
 import { Layout } from './components/Layout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ModuleRegistration } from './types/module.types';

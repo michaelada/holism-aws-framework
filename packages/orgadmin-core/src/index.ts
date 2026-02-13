@@ -17,6 +17,10 @@ export * from './hooks';
 // Shared utilities
 export * from './utils';
 
+// Shared context
+export { OrganisationProvider, useOrganisation } from './context/OrganisationContext';
+export type { Organisation } from './context/OrganisationContext';
+
 // Module exports
 export * from './dashboard';
 export * from './forms';
