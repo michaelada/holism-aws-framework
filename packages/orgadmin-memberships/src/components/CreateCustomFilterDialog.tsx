@@ -30,7 +30,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import type { CreateMemberFilterDto, MemberStatus } from '../types/membership.types';
+import type { CreateMemberFilterDto } from '../types/membership.types';
 
 interface CreateCustomFilterDialogProps {
   open: boolean;

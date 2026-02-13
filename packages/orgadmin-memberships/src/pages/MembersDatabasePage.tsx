@@ -47,7 +47,7 @@ import BatchOperationsDialog from '../components/BatchOperationsDialog';
 
 // Mock API hook
 const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
+  execute: async (_params: { method: string; url: string }) => {
     return [];
   },
 });
@@ -155,7 +155,7 @@ const MembersDatabasePage: React.FC = () => {
     navigate(`/orgadmin/members/${memberId}/edit`);
   };
 
-  const handleToggleProcessed = async (memberId: string, currentStatus: boolean) => {
+  const handleToggleProcessed = async (memberId: string, _currentStatus: boolean) => {
     try {
       await execute({
         method: 'PATCH',

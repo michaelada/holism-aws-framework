@@ -40,7 +40,7 @@ import type { MembershipType } from '../types/membership.types';
 
 // Mock API hook - will be replaced with actual implementation
 const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
+  execute: async (_params: { method: string; url: string }) => {
     // Mock data for development
     return [];
   },
@@ -147,7 +147,7 @@ const MembershipTypesListPage: React.FC = () => {
     return category === 'single' ? 'Single' : 'Group';
   };
 
-  const getPricingDisplay = (type: MembershipType) => {
+  const getPricingDisplay = (_type: MembershipType) => {
     // This will be enhanced when payment integration is complete
     return 'Configured';
   };

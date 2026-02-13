@@ -18,7 +18,7 @@
  */
 
 import { lazy } from 'react';
-import { CardMembership as MembershipIcon } from '@mui/icons-material';
+import { People as MembershipIcon } from '@mui/icons-material';
 import type { ModuleRegistration } from './types/module.types';
 
 export const membershipsModule: ModuleRegistration = {
@@ -32,7 +32,7 @@ export const membershipsModule: ModuleRegistration = {
     title: 'Membership Management',
     description: 'Manage membership types and members for your organisation',
     icon: MembershipIcon,
-    color: '#2e7d32',
+    color: '#ff9966',
     path: '/members',
   },
   routes: [

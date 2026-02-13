@@ -30,13 +30,13 @@ import {
 import {
   ArrowBack as BackIcon,
   Edit as EditIcon,
-  Download as DownloadIcon,
+  // Download as DownloadIcon,
 } from '@mui/icons-material';
 import type { Member } from '../types/membership.types';
 
 // Mock API hook
 const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
+  execute: async (_params: { method: string; url: string }) => {
     return null;
   },
 });

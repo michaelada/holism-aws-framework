@@ -22,7 +22,7 @@ import {
   TextField,
   Typography,
   Alert,
-  Autocomplete,
+  // Autocomplete,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -181,7 +181,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
     return null;
   };
 
-  const handleSave = async (publish: boolean = false) => {
+  const handleSave = async (/* publish: boolean = false */) => {
     try {
       setLoading(true);
       setError(null);
@@ -508,7 +508,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<SaveIcon />}
-            onClick={() => handleSave(false)}
+            onClick={() => handleSave()}
             disabled={loading}
           >
             {isEditMode ? 'Save Changes' : 'Save'}
@@ -518,7 +518,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
               variant="contained"
               color="success"
               startIcon={<PublishIcon />}
-              onClick={() => handleSave(true)}
+              onClick={() => handleSave()}
               disabled={loading}
             >
               Save and Publish
