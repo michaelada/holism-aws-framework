@@ -1,9 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Bundle analyzer - generates stats.html in dist folder
+    visualizer({
+      filename: './dist/stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ],
   
   // Base path for the application
   base: '/orgadmin',
@@ -13,6 +23,13 @@ export default defineConfig({
     alias: {
       '@aws-web-framework/components': path.resolve(__dirname, '../components/src'),
       '@aws-web-framework/orgadmin-core': path.resolve(__dirname, '../orgadmin-core/src'),
+      // Mock capability modules for tests (they don't have built dist folders)
+      '@aws-web-framework/orgadmin-events': path.resolve(__dirname, './src/test/mocks/orgadmin-events.ts'),
+      '@aws-web-framework/orgadmin-memberships': path.resolve(__dirname, './src/test/mocks/orgadmin-memberships.ts'),
+      '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, './src/test/mocks/orgadmin-merchandise.ts'),
+      '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, './src/test/mocks/orgadmin-calendar.ts'),
+      '@aws-web-framework/orgadmin-registrations': path.resolve(__dirname, './src/test/mocks/orgadmin-registrations.ts'),
+      '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, './src/test/mocks/orgadmin-ticketing.ts'),
     },
   },
   
@@ -45,20 +62,73 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual chunks for better code splitting
-        manualChunks: {
+        manualChunks: (id) => {
           // Vendor chunk for React and related libraries
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          if (id.includes('node_modules/react') || 
+              id.includes('node_modules/react-dom') || 
+              id.includes('node_modules/react-router-dom') ||
+              id.includes('node_modules/scheduler')) {
+            return 'vendor-react';
+          }
           
-          // Vendor chunk for Material-UI
-          'vendor-mui': [
-            '@mui/material',
-            '@mui/icons-material',
-            '@emotion/react',
-            '@emotion/styled',
-          ],
+          // Vendor chunk for Material-UI core
+          if (id.includes('node_modules/@mui/material') ||
+              id.includes('node_modules/@mui/system') ||
+              id.includes('node_modules/@mui/base')) {
+            return 'vendor-mui-core';
+          }
+          
+          // Vendor chunk for Material-UI icons (separate to allow lazy loading)
+          if (id.includes('node_modules/@mui/icons-material')) {
+            return 'vendor-mui-icons';
+          }
+          
+          // Vendor chunk for Material-UI date pickers
+          if (id.includes('node_modules/@mui/x-date-pickers')) {
+            return 'vendor-mui-pickers';
+          }
+          
+          // Vendor chunk for Emotion styling
+          if (id.includes('node_modules/@emotion')) {
+            return 'vendor-emotion';
+          }
           
           // Vendor chunk for utilities
-          'vendor-utils': ['axios', 'date-fns', 'keycloak-js'],
+          if (id.includes('node_modules/axios') ||
+              id.includes('node_modules/date-fns') ||
+              id.includes('node_modules/keycloak-js')) {
+            return 'vendor-utils';
+          }
+          
+          // Core modules chunk
+          if (id.includes('orgadmin-core')) {
+            return 'orgadmin-core';
+          }
+          
+          // Capability modules - each in separate chunk for lazy loading
+          if (id.includes('orgadmin-events')) {
+            return 'module-events';
+          }
+          if (id.includes('orgadmin-memberships')) {
+            return 'module-memberships';
+          }
+          if (id.includes('orgadmin-merchandise')) {
+            return 'module-merchandise';
+          }
+          if (id.includes('orgadmin-calendar')) {
+            return 'module-calendar';
+          }
+          if (id.includes('orgadmin-registrations')) {
+            return 'module-registrations';
+          }
+          if (id.includes('orgadmin-ticketing')) {
+            return 'module-ticketing';
+          }
+          
+          // Shared components
+          if (id.includes('packages/components')) {
+            return 'shared-components';
+          }
         },
         
         // Asset file naming
@@ -81,8 +151,8 @@ export default defineConfig({
       },
     },
     
-    // Chunk size warning limit (500 KB)
-    chunkSizeWarningLimit: 500,
+    // Chunk size warning limit (200 KB for shell, 150 KB for modules)
+    chunkSizeWarningLimit: 200,
     
     // Minification
     minify: 'terser',
@@ -90,8 +160,22 @@ export default defineConfig({
       compress: {
         drop_console: true, // Remove console.log in production
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+        passes: 2, // Multiple passes for better compression
+      },
+      mangle: {
+        safari10: true, // Safari 10 compatibility
+      },
+      format: {
+        comments: false, // Remove all comments
       },
     },
+    
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    
+    // Optimize asset inlining threshold (4KB)
+    assetsInlineLimit: 4096,
   },
   
   // Test configuration

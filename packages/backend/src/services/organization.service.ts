@@ -9,8 +9,11 @@ import {
 import { capabilityService } from './capability.service';
 import { organizationTypeService } from './organization-type.service';
 import { KeycloakAdminService } from './keycloak-admin.service';
+import cacheService from './cache.service';
 
 export class OrganizationService {
+  private readonly CACHE_TTL = 300000; // 5 minutes
+  
   constructor(private kcAdmin: KeycloakAdminService) {}
 
   /**
@@ -82,6 +85,14 @@ export class OrganizationService {
    */
   async getOrganizationById(id: string): Promise<Organization | null> {
     try {
+      // Check cache first
+      const cacheKey = `org:${id}`;
+      const cached = cacheService.get<Organization>(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for organization ${id}`);
+        return cached;
+      }
+
       const result = await db.query(
         `SELECT o.*, ot.name as org_type_name, ot.display_name as org_type_display_name
          FROM organizations o
@@ -97,11 +108,16 @@ export class OrganizationService {
       const org = this.rowToOrganization(result.rows[0]);
       const stats = await this.getOrganizationStats(id);
       
-      return {
+      const fullOrg = {
         ...org,
         adminUserCount: stats.adminUserCount,
         accountUserCount: stats.accountUserCount
       };
+
+      // Cache the result
+      cacheService.set(cacheKey, fullOrg, this.CACHE_TTL);
+
+      return fullOrg;
     } catch (error) {
       logger.error('Error getting organization by ID:', error);
       throw error;
@@ -318,6 +334,9 @@ export class OrganizationService {
         throw new Error('Organization not found');
       }
 
+      // Invalidate cache
+      cacheService.delete(`org:${id}`);
+
       logger.info(`Organization updated: ${id}`);
       return this.rowToOrganization(result.rows[0]);
     } catch (error) {
@@ -361,6 +380,9 @@ export class OrganizationService {
       if (result.rowCount === 0) {
         throw new Error('Organization not found');
       }
+
+      // Invalidate cache
+      cacheService.delete(`org:${id}`);
 
       logger.info(`Organization deleted: ${id}`);
     } catch (error) {

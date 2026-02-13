@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useContext, createContext } from 'react';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
 /**
@@ -19,10 +19,29 @@ export interface ApiCallOptions extends AxiosRequestConfig {
   showErrorMessage?: boolean;
   onSuccess?: (data: any) => void;
   onError?: (error: string) => void;
+  retryCount?: number; // Number of retries on failure (default: 2)
+  retryDelay?: number; // Delay between retries in ms (default: 1000)
 }
 
 /**
+ * Auth token context for API calls
+ * This allows the shell to provide the auth token to all API calls
+ */
+export const AuthTokenContext = createContext<(() => string | null) | undefined>(undefined);
+
+/**
+ * Sleep utility for retry delays
+ */
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
  * Custom hook for making API calls with loading and error states
+ * 
+ * Features:
+ * - Automatic authentication token injection
+ * - Retry logic with exponential backoff
+ * - Loading and error state management
+ * - Success/error callbacks
  * 
  * @example
  * const { data, error, loading, execute } = useApi<Event[]>();
@@ -32,6 +51,7 @@ export interface ApiCallOptions extends AxiosRequestConfig {
  *   method: 'GET',
  *   url: '/api/orgadmin/events',
  *   showSuccessMessage: false,
+ *   retryCount: 3,
  * });
  */
 export function useApi<T = any>() {
@@ -39,51 +59,93 @@ export function useApi<T = any>() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Get authentication token provider from context if available
+  const getToken = useContext(AuthTokenContext);
+
   /**
-   * Execute an API call
+   * Execute an API call with retry logic
    */
   const execute = useCallback(async (options: ApiCallOptions): Promise<T | null> => {
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await axios({
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      });
+    const {
+      retryCount = 2,
+      retryDelay = 1000,
+      onSuccess,
+      onError,
+      ...axiosOptions
+    } = options;
 
-      setData(response.data);
-      setLoading(false);
+    let lastError: string = '';
+    let attempt = 0;
 
-      // Call success callback if provided
-      if (options.onSuccess) {
-        options.onSuccess(response.data);
+    while (attempt <= retryCount) {
+      try {
+        // Get authentication token if available
+        const token = getToken?.();
+        const headers: Record<string, string> = {
+          ...(axiosOptions.headers as Record<string, string>),
+        };
+
+        // Set Content-Type if not already set
+        if (!headers['Content-Type']) {
+          headers['Content-Type'] = 'application/json';
+        }
+
+        // Add authorization header if token is available
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await axios({
+          ...axiosOptions,
+          headers,
+        });
+
+        setData(response.data);
+        setLoading(false);
+
+        // Call success callback if provided
+        if (onSuccess) {
+          onSuccess(response.data);
+        }
+
+        return response.data;
+      } catch (err) {
+        const axiosError = err as AxiosError<{ error?: string; message?: string }>;
+        lastError =
+          axiosError.response?.data?.error ||
+          axiosError.response?.data?.message ||
+          axiosError.message ||
+          'An unexpected error occurred';
+
+        // Don't retry on 4xx errors (client errors)
+        if (axiosError.response?.status && axiosError.response.status >= 400 && axiosError.response.status < 500) {
+          break;
+        }
+
+        // Retry on 5xx errors or network errors
+        attempt++;
+        if (attempt <= retryCount) {
+          // Exponential backoff: delay * 2^attempt
+          await sleep(retryDelay * Math.pow(2, attempt - 1));
+        }
       }
-
-      return response.data;
-    } catch (err) {
-      const axiosError = err as AxiosError<{ error?: string; message?: string }>;
-      const errorMessage =
-        axiosError.response?.data?.error ||
-        axiosError.response?.data?.message ||
-        axiosError.message ||
-        'An unexpected error occurred';
-
-      setError(errorMessage);
-      setData(null);
-      setLoading(false);
-
-      // Call error callback if provided
-      if (options.onError) {
-        options.onError(errorMessage);
-      }
-
-      return null;
     }
-  }, []);
+
+    // All retries failed
+    setError(lastError);
+    setData(null);
+    setLoading(false);
+
+    // Call error callback if provided
+    if (onError) {
+      onError(lastError);
+    }
+
+    return null;
+  }, [getToken]);
 
   /**
    * Reset the API state

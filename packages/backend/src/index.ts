@@ -1,12 +1,23 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import { db } from './database/pool';
 import { logger } from './config/logger';
 import { secretsManager } from './config/secrets';
-import { errorHandler, requestLogger, metricsMiddleware } from './middleware';
+import {
+  errorHandler,
+  requestLogger,
+  metricsMiddleware,
+  sanitizeBody,
+  sanitizeQuery,
+  sanitizeParams,
+  apiRateLimit,
+  xssSecurityHeaders,
+  xssDetection
+} from './middleware';
 import metadataRoutes from './routes/metadata.routes';
 import genericCrudRoutes from './routes/generic-crud.routes';
 import adminRoutes from './routes/admin.routes';
@@ -35,10 +46,55 @@ dotenv.config();
 const app = express();
 const PORT = process.env.API_PORT || 3000;
 
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// XSS protection headers
+app.use(xssSecurityHeaders());
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
+}));
+
+// Body parsing and cookie parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
+
+// Input sanitization middleware
+app.use(sanitizeBody());
+app.use(sanitizeQuery());
+app.use(sanitizeParams());
+
+// XSS detection (logs potential attacks)
+app.use(xssDetection());
+
+// Rate limiting middleware
+app.use('/api', apiRateLimit);
+
+// Logging and metrics
 app.use(metricsMiddleware);
 app.use(requestLogger);
 

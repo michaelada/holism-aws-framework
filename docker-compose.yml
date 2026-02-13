@@ -121,6 +121,29 @@ services:
   #     - ./packages/admin/src:/app/src:ro
   #   command: npm run dev
 
+  # OrgAdmin Frontend - For local development, run outside Docker to access monorepo packages
+  # Uncomment to run in Docker (will have limited functionality without components package)
+  # orgadmin:
+  #   build:
+  #     context: ./packages/orgadmin-shell
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: aws-framework-orgadmin
+  #   environment:
+  #     VITE_API_BASE_URL: http://localhost/api
+  #     VITE_KEYCLOAK_URL: http://localhost/auth
+  #     VITE_KEYCLOAK_REALM: aws-framework
+  #     VITE_KEYCLOAK_CLIENT_ID: aws-framework-orgadmin
+  #     VITE_APP_NAME: ItsPlainSailing
+  #   ports:
+  #     - "5175:5175"
+  #   volumes:
+  #     - ./packages/orgadmin-shell/src:/app/src:ro
+  #   depends_on:
+  #     - backend
+  #     - keycloak
+  #   command: npm run dev
+
   nginx:
     image: nginx:alpine
     container_name: aws-framework-nginx

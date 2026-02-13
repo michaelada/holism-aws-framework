@@ -7,6 +7,7 @@ import { SelectRenderer } from './renderers/SelectRenderer';
 import { MultiSelectRenderer } from './renderers/MultiSelectRenderer';
 import { NumberRenderer } from './renderers/NumberRenderer';
 import { BooleanRenderer } from './renderers/BooleanRenderer';
+import { DocumentUploadRenderer } from './renderers/DocumentUploadRenderer';
 
 export interface FieldRendererProps {
   fieldDefinition: FieldDefinition;
@@ -89,6 +90,9 @@ export function FieldRenderer({
 
     case 'boolean':
       return <BooleanRenderer {...commonProps} />;
+
+    case 'document_upload':
+      return <DocumentUploadRenderer {...commonProps} />;
 
     default:
       return <TextRenderer {...commonProps} />;

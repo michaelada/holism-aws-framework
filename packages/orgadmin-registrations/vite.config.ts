@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import { getModuleBuildConfig, getModuleResolveConfig, sharedOptimizeDeps } from '../vite.config.shared';
 
 // Plugin to mock CSS imports in tests
 const mockCssPlugin = () => ({
@@ -29,38 +29,13 @@ export default defineConfig({
   plugins: [react(), mockCssPlugin()],
   
   // Path resolution
-  resolve: {
-    alias: {
-      '@aws-web-framework/components': path.resolve(__dirname, '../components/src'),
-      '@aws-web-framework/orgadmin-shell': path.resolve(__dirname, '../orgadmin-shell/src'),
-    },
-  },
+  resolve: getModuleResolveConfig(__dirname),
   
   // Optimize dependencies
-  optimizeDeps: {
-    exclude: ['@aws-web-framework/components', '@aws-web-framework/orgadmin-shell'],
-  },
+  optimizeDeps: sharedOptimizeDeps,
   
   // Build configuration for library
-  build: {
-    lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
-      name: 'OrgAdminRegistrations',
-      formats: ['es'],
-      fileName: 'index',
-    },
-    rollupOptions: {
-      external: ['react', 'react-dom', 'react-router-dom'],
-      output: {
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'react-router-dom': 'ReactRouterDOM',
-        },
-      },
-    },
-    sourcemap: true,
-  },
+  build: getModuleBuildConfig('OrgAdminRegistrations', __dirname),
   
   // Test configuration
   test: {

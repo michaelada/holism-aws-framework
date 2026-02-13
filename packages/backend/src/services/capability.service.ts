@@ -1,8 +1,11 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { Capability, CreateCapabilityDto, CapabilityCategory } from '../types/organization.types';
+import cacheService from './cache.service';
 
 export class CapabilityService {
+  private readonly CACHE_TTL = 600000; // 10 minutes (capabilities change rarely)
+  
   /**
    * Convert database row to Capability object
    */
@@ -23,6 +26,14 @@ export class CapabilityService {
    */
   async getAllCapabilities(category?: CapabilityCategory): Promise<Capability[]> {
     try {
+      // Check cache first
+      const cacheKey = `capabilities:all:${category || 'all'}`;
+      const cached = cacheService.get<Capability[]>(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for capabilities ${category || 'all'}`);
+        return cached;
+      }
+
       let query = 'SELECT * FROM capabilities WHERE is_active = true';
       const params: any[] = [];
 
@@ -34,7 +45,12 @@ export class CapabilityService {
       query += ' ORDER BY category, display_name';
 
       const result = await db.query(query, params);
-      return result.rows.map((row: any) => this.rowToCapability(row));
+      const capabilities = result.rows.map((row: any) => this.rowToCapability(row));
+
+      // Cache the result
+      cacheService.set(cacheKey, capabilities, this.CACHE_TTL);
+
+      return capabilities;
     } catch (error) {
       logger.error('Error getting capabilities:', error);
       throw error;

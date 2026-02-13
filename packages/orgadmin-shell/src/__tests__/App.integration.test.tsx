@@ -20,6 +20,77 @@ vi.mock('../pages/DashboardPage', () => ({
   ),
 }));
 
+// Mock all core module registrations from orgadmin-core
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@aws-web-framework/orgadmin-core')>();
+  return {
+    ...actual,
+    // Override only the module registrations for testing
+    dashboardModule: {
+      id: 'dashboard',
+      name: 'Dashboard',
+      title: 'Dashboard',
+      description: 'View high-level metrics',
+      capability: undefined,
+      order: 1,
+      card: { title: 'Dashboard', description: 'View metrics', icon: () => null, path: '/dashboard' },
+      routes: [{ path: '/dashboard', component: vi.fn() }],
+    },
+    formsModule: {
+      id: 'forms',
+      name: 'Forms',
+      title: 'Form Builder',
+      description: 'Create forms',
+      capability: undefined,
+      order: 2,
+      card: { title: 'Forms', description: 'Create forms', icon: () => null, path: '/forms' },
+      routes: [{ path: '/forms', component: vi.fn() }],
+    },
+    settingsModule: {
+      id: 'settings',
+      name: 'Settings',
+      title: 'Settings',
+      description: 'Manage settings',
+      capability: undefined,
+      order: 3,
+      card: { title: 'Settings', description: 'Manage settings', icon: () => null, path: '/settings' },
+      routes: [{ path: '/settings', component: vi.fn() }],
+    },
+    paymentsModule: {
+      id: 'payments',
+      name: 'Payments',
+      title: 'Payments',
+      description: 'Manage payments',
+      capability: undefined,
+      order: 4,
+      card: { title: 'Payments', description: 'Manage payments', icon: () => null, path: '/payments' },
+      routes: [{ path: '/payments', component: vi.fn() }],
+    },
+    reportingModule: {
+      id: 'reporting',
+      name: 'Reporting',
+      title: 'Reporting',
+      description: 'View reports',
+      capability: undefined,
+      order: 5,
+      card: { title: 'Reporting', description: 'View reports', icon: () => null, path: '/reporting' },
+      routes: [{ path: '/reporting', component: vi.fn() }],
+    },
+    usersModule: {
+      id: 'users',
+      name: 'Users',
+      title: 'Users',
+      description: 'Manage users',
+      capability: undefined,
+      order: 6,
+      card: { title: 'Users', description: 'Manage users', icon: () => null, path: '/users' },
+      routes: [{ path: '/users', component: vi.fn() }],
+    },
+  };
+});
+
+// Note: Capability module mocks are now in src/test/setup.ts
+
 // Mock window.location for BrowserRouter
 const originalLocation = window.location;
 
@@ -138,6 +209,7 @@ describe('App Integration Tests', () => {
         capabilities: ['event-management', 'memberships', 'merchandise'],
         isOrgAdmin: true,
         logout: vi.fn(),
+        getToken: () => 'mock-token',
       });
 
       render(<App />);
@@ -161,6 +233,7 @@ describe('App Integration Tests', () => {
         capabilities: ['event-management'], // Only one capability
         isOrgAdmin: true,
         logout: vi.fn(),
+        getToken: () => 'mock-token',
       });
 
       render(<App />);
@@ -183,6 +256,7 @@ describe('App Integration Tests', () => {
         capabilities: [], // No capabilities
         isOrgAdmin: true,
         logout: vi.fn(),
+        getToken: () => 'mock-token',
       });
 
       render(<App />);
@@ -193,8 +267,8 @@ describe('App Integration Tests', () => {
 
       // Dashboard should render (core modules are always available)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument();
-      // Should show "Dashboard with 0 modules" since ALL_MODULES is empty in current implementation
-      expect(screen.getByText(/Dashboard with 0 modules/)).toBeInTheDocument();
+      // Should show "Dashboard with 6 modules" (6 core modules)
+      expect(screen.getByText(/Dashboard with 6 modules/)).toBeInTheDocument();
     });
   });
 
@@ -209,6 +283,7 @@ describe('App Integration Tests', () => {
         capabilities: ['event-management'],
         isOrgAdmin: true,
         logout: vi.fn(),
+        getToken: () => 'mock-token',
       });
 
       render(<App />);

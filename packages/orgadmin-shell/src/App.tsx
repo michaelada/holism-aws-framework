@@ -4,6 +4,7 @@ import { CircularProgress, Box, Typography } from '@mui/material';
 import { useAuth } from './hooks/useAuth';
 import { OrganisationProvider } from './context/OrganisationContext';
 import { CapabilityProvider } from './context/CapabilityContext';
+import { AuthTokenContext } from '@aws-web-framework/orgadmin-core';
 import { Layout } from './components/Layout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ModuleRegistration } from './types/module.types';
@@ -159,7 +160,7 @@ const App: React.FC = () => {
     clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'orgadmin-client',
   };
 
-  const { loading, error, authenticated, user, organisation, capabilities, isOrgAdmin, logout } = useAuth(keycloakConfig);
+  const { loading, error, authenticated, user, organisation, capabilities, isOrgAdmin, logout, getToken } = useAuth(keycloakConfig);
 
   // Filter modules based on user's capabilities
   const availableModules = useMemo(() => {
@@ -207,32 +208,34 @@ const App: React.FC = () => {
   // Authenticated and authorized - render main application
   return (
     <BrowserRouter basename="/orgadmin">
-      <OrganisationProvider organisation={organisation}>
-        <CapabilityProvider capabilities={capabilities}>
-          <Layout>
-            <Suspense fallback={<LoadingScreen />}>
-              <Routes>
-                {/* Dashboard (landing page) */}
-                <Route path="/" element={<DashboardPage modules={availableModules} />} />
+      <AuthTokenContext.Provider value={getToken}>
+        <OrganisationProvider organisation={organisation}>
+          <CapabilityProvider capabilities={capabilities}>
+            <Layout>
+              <Suspense fallback={<LoadingScreen />}>
+                <Routes>
+                  {/* Dashboard (landing page) */}
+                  <Route path="/" element={<DashboardPage modules={availableModules} />} />
 
-                {/* Dynamic routes from module registrations */}
-                {availableModules.flatMap(module =>
-                  module.routes.map(route => (
-                    <Route
-                      key={route.path}
-                      path={route.path.replace('/orgadmin', '')}
-                      element={<route.component />}
-                    />
-                  ))
-                )}
+                  {/* Dynamic routes from module registrations */}
+                  {availableModules.flatMap(module =>
+                    module.routes.map(route => (
+                      <Route
+                        key={route.path}
+                        path={route.path.replace('/orgadmin', '')}
+                        element={<route.component />}
+                      />
+                    ))
+                  )}
 
-                {/* 404 Not Found */}
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </Suspense>
-          </Layout>
-        </CapabilityProvider>
-      </OrganisationProvider>
+                  {/* 404 Not Found */}
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </Suspense>
+            </Layout>
+          </CapabilityProvider>
+        </OrganisationProvider>
+      </AuthTokenContext.Provider>
     </BrowserRouter>
   );
 };

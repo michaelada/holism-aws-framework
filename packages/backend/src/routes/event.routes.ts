@@ -2,54 +2,10 @@ import { Router, Request, Response } from 'express';
 import { eventService } from '../services/event.service';
 import { eventActivityService } from '../services/event-activity.service';
 import { eventEntryService } from '../services/event-entry.service';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateToken, requireOrgAdminCapability } from '../middleware';
 import { logger } from '../config/logger';
-import { db } from '../database/pool';
 
 const router = Router();
-
-/**
- * Middleware to check if organisation has event-management capability
- */
-async function requireEventManagementCapability(
-  req: Request,
-  res: Response,
-  next: Function
-): Promise<void> {
-  try {
-    const organisationId = req.params.organisationId || req.body.organisationId;
-    
-    if (!organisationId) {
-      res.status(400).json({ error: 'Organisation ID is required' });
-      return;
-    }
-
-    // Check if organisation has event-management capability
-    const result = await db.query(
-      `SELECT enabled_capabilities FROM organizations WHERE id = $1`,
-      [organisationId]
-    );
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Organisation not found' });
-      return;
-    }
-
-    const enabledCapabilities = result.rows[0].enabled_capabilities || [];
-    
-    if (!enabledCapabilities.includes('event-management')) {
-      res.status(403).json({ 
-        error: 'Organisation does not have event-management capability enabled' 
-      });
-      return;
-    }
-
-    next();
-  } catch (error) {
-    logger.error('Error checking event-management capability:', error);
-    res.status(500).json({ error: 'Failed to verify capability' });
-  }
-}
 
 /**
  * @swagger
@@ -70,7 +26,7 @@ async function requireEventManagementCapability(
 router.get(
   '/organisations/:organisationId/events',
   authenticateToken(),
-  requireEventManagementCapability,
+  ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -140,7 +96,7 @@ router.get(
 router.post(
   '/events',
   authenticateToken(),
-  requireEventManagementCapability,
+  ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
       const event = await eventService.createEvent(req.body);

@@ -24,6 +24,9 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(isomorphic-dompurify|@exodus/bytes)/)',
+  ],
   // Set up test environment before running tests
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest.setup.js'],
   // Run tests sequentially to avoid database conflicts
