@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { merchandiseService } from '../services/merchandise.service';
 import { merchandiseOptionService } from '../services/merchandise-option.service';
-import { deliveryRuleService } from '../services/delivery-rule.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';

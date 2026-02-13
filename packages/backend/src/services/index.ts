@@ -15,3 +15,6 @@ export { OrganizationService, organizationService } from './organization.service
 export { OrganizationUserService, organizationUserService } from './organization-user.service';
 export { OrganizationAdminRoleService, organizationAdminRoleService } from './organization-admin-role.service';
 export { MembershipService, membershipService } from './membership.service';
+export { ApplicationFormService, applicationFormService } from './application-form.service';
+export { FormSubmissionService, formSubmissionService } from './form-submission.service';
+

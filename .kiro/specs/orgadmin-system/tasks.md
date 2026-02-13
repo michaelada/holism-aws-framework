@@ -1503,8 +1503,8 @@ The implementation follows this structure:
     - Test delivery rule validation (overlapping ranges)
     - _Requirements: 3.5.1_
 
-- [ ] 24. Implement Calendar Bookings service
-  - [ ] 24.1 Create CalendarService class
+- [x] 24. Implement Calendar Bookings service
+  - [x] 24.1 Create CalendarService class
     - Create `packages/backend/src/services/calendar.service.ts`
     - Implement getCalendarsByOrganisation()
     - Implement createCalendar()
@@ -1514,20 +1514,20 @@ The implementation follows this structure:
     - Implement createBooking()
     - _Requirements: 2.6.2, 2.6.3, 2.6.5_
   
-  - [ ] 24.2 Create calendar routes
+  - [x] 24.2 Create calendar routes
     - Create `packages/backend/src/routes/calendar.routes.ts`
     - Add authentication and capability check middleware
     - Define REST endpoints for calendars and bookings
     - _Requirements: 3.2.2_
   
-  - [ ] 24.3 Write unit tests for calendar service
+  - [x] 24.3 Write unit tests for calendar service
     - Test calendar CRUD operations
     - Test booking management
     - Test time slot validation
     - _Requirements: 3.5.1_
 
-- [ ] 25. Implement Registration Management service
-  - [ ] 25.1 Create RegistrationService class
+- [x] 25. Implement Registration Management service
+  - [x] 25.1 Create RegistrationService class
     - Create `packages/backend/src/services/registration.service.ts`
     - Implement getRegistrationTypesByOrganisation()
     - Implement createRegistrationType() with all attributes (entity name, rolling/fixed period, labels)
@@ -1546,7 +1546,7 @@ The implementation follows this structure:
     - Implement automaticStatusUpdate() (nightly job: Active → Elapsed for expired registrations)
     - _Requirements: 2.7.2, 2.7.3, 2.7.5, 2.7.6, 2.7.7, 2.7.8, 2.7.9, 2.7.12_
   
-  - [ ] 25.2 Create registration routes
+  - [x] 25.2 Create registration routes
     - Create `packages/backend/src/routes/registration.routes.ts`
     - Add authentication and capability check middleware
     - Define REST endpoints:
@@ -1567,7 +1567,7 @@ The implementation follows this structure:
       - POST /api/orgadmin/registrations/filters
     - _Requirements: 3.2.2_
   
-  - [ ] 25.3 Write unit tests for registration service
+  - [x] 25.3 Write unit tests for registration service
     - Test registration type CRUD operations with all attributes
     - Test entity name field handling
     - Test rolling vs fixed-period registration logic
@@ -1579,8 +1579,8 @@ The implementation follows this structure:
     - _Requirements: 3.5.1, 2.7.12_
 
 
-- [ ] 26. Implement Event Ticketing service
-  - [ ] 26.1 Create TicketingService class
+- [x] 26. Implement Event Ticketing service
+  - [x] 26.1 Create TicketingService class
     - Create `packages/backend/src/services/ticketing.service.ts`
     - Implement getTicketedEventsByOrganisation()
     - Implement createTicketedEvent()
@@ -1589,20 +1589,20 @@ The implementation follows this structure:
     - Implement getTicketSalesByEvent()
     - _Requirements: 2.8.2, 2.8.3, 2.8.5_
   
-  - [ ] 26.2 Create ticketing routes
+  - [x] 26.2 Create ticketing routes
     - Create `packages/backend/src/routes/ticketing.routes.ts`
     - Add authentication and capability check middleware
     - Define REST endpoints for ticketed events and sales
     - _Requirements: 3.2.2_
   
-  - [ ] 26.3 Write unit tests for ticketing service
+  - [x] 26.3 Write unit tests for ticketing service
     - Test ticketed event CRUD operations
     - Test ticket type management
     - Test capacity validation
     - _Requirements: 3.5.1_
 
-- [ ] 27. Implement Application Form services (separate from Metadata)
-  - [ ] 27.1 Create ApplicationFormService class
+- [x] 27. Implement Application Form services (separate from Metadata)
+  - [x] 27.1 Create ApplicationFormService class
     - Create `packages/backend/src/services/application-form.service.ts`
     - Implement getApplicationFormsByOrganisation()
     - Implement createApplicationForm() with document_upload field support
@@ -1612,7 +1612,7 @@ The implementation follows this structure:
     - Similar to MetadataService but for application forms
     - _Requirements: 2.9.2, 2.9.9_
   
-  - [ ] 27.2 Create FormSubmissionService class (unified across contexts)
+  - [x] 27.2 Create FormSubmissionService class (unified across contexts)
     - Create `packages/backend/src/services/form-submission.service.ts`
     - Implement getSubmissionsByOrganisation() with filters (submission_type, context_id, status)
     - Implement createSubmission() for all contexts (event_entry, membership_application, calendar_booking, merchandise_order, registration)
@@ -1623,14 +1623,14 @@ The implementation follows this structure:
     - Link to FormSubmissionFile for uploaded documents
     - _Requirements: 2.9.10_
   
-  - [ ] 27.3 Create application form routes
+  - [x] 27.3 Create application form routes
     - Create `packages/backend/src/routes/application-form.routes.ts`
     - Add authentication middleware
     - Define REST endpoints for application forms, fields, and submissions
     - Separate from metadata routes
     - _Requirements: 5.4_
   
-  - [ ] 27.4 Write unit tests for application form services
+  - [x] 27.4 Write unit tests for application form services
     - Test application form CRUD operations
     - Test field management including document_upload fields
     - Test form validation
@@ -1638,8 +1638,8 @@ The implementation follows this structure:
     - Test submission filtering by type and context
     - _Requirements: 3.5.1_
 
-- [ ] 27a. Implement File Upload service (S3 integration)
-  - [ ] 27a.1 Create FileUploadService class
+- [x] 27a. Implement File Upload service (S3 integration)
+  - [x] 27a.1 Create FileUploadService class
     - Create `packages/backend/src/services/file-upload.service.ts`
     - Implement uploadFile() with S3 SDK
     - Generate S3 key: /org-id/form-id/field-id/filename
@@ -1648,14 +1648,14 @@ The implementation follows this structure:
     - Implement file validation (type, size, virus scan)
     - _Requirements: 2.9.7, 5.5_
   
-  - [ ] 27a.2 Configure AWS S3 client
+  - [x] 27a.2 Configure AWS S3 client
     - Create `packages/backend/src/config/aws.config.ts`
     - Initialize S3 client with credentials
     - Configure bucket name and region
     - Set up CORS for file uploads
     - _Requirements: 2.9.7_
   
-  - [ ] 27a.3 Create file upload routes
+  - [x] 27a.3 Create file upload routes
     - Create `packages/backend/src/routes/file-upload.routes.ts`
     - Add authentication middleware
     - POST /api/orgadmin/files/upload (multipart)
@@ -1663,7 +1663,7 @@ The implementation follows this structure:
     - DELETE /api/orgadmin/files/:fileId
     - _Requirements: 5.5_
   
-  - [ ] 27a.4 Write unit tests for file upload service
+  - [x] 27a.4 Write unit tests for file upload service
     - Test file upload to S3
     - Test S3 key generation with org segregation
     - Test signed URL generation
@@ -1671,8 +1671,8 @@ The implementation follows this structure:
     - Test file validation
     - _Requirements: 3.5.1_
 
-- [ ] 28. Implement Payment Management service
-  - [ ] 28.1 Create PaymentService class
+- [x] 28. Implement Payment Management service
+  - [x] 28.1 Create PaymentService class
     - Create `packages/backend/src/services/payment.service.ts`
     - Implement getPaymentsByOrganisation()
     - Implement getPaymentById()
@@ -1681,20 +1681,20 @@ The implementation follows this structure:
     - Implement getLodgementsByOrganisation()
     - _Requirements: 2.11.2, 2.11.3, 2.11.4, 2.11.5_
   
-  - [ ] 28.2 Create payment routes
+  - [x] 28.2 Create payment routes
     - Create `packages/backend/src/routes/payment.routes.ts`
     - Add authentication middleware
     - Define REST endpoints for payments, refunds, lodgements
     - _Requirements: 5.5_
   
-  - [ ] 28.3 Write unit tests for payment service
+  - [x] 28.3 Write unit tests for payment service
     - Test payment retrieval
     - Test refund processing
     - Test export functionality
     - _Requirements: 3.5.1_
 
-- [ ] 29. Implement Reporting service
-  - [ ] 29.1 Create ReportingService class
+- [x] 29. Implement Reporting service
+  - [x] 29.1 Create ReportingService class
     - Create `packages/backend/src/services/reporting.service.ts`
     - Implement getDashboardMetrics()
     - Implement getEventsReport()
@@ -1703,20 +1703,20 @@ The implementation follows this structure:
     - Implement exportReport()
     - _Requirements: 2.12.2, 2.12.3, 2.12.4_
   
-  - [ ] 29.2 Create reporting routes
+  - [x] 29.2 Create reporting routes
     - Create `packages/backend/src/routes/reporting.routes.ts`
     - Add authentication middleware
     - Define REST endpoints for reports
     - _Requirements: 5.8_
   
-  - [ ] 29.3 Write unit tests for reporting service
+  - [x] 29.3 Write unit tests for reporting service
     - Test metric calculations
     - Test report generation
     - Test export functionality
     - _Requirements: 3.5.1_
 
-- [ ] 29a. Implement User Management services
-  - [ ] 29a.1 Create OrgAdminUserService class
+- [x] 29a. Implement User Management services
+  - [x] 29a.1 Create OrgAdminUserService class
     - Create `packages/backend/src/services/org-admin-user.service.ts`
     - Implement getAdminUsersByOrganisation()
     - Implement createAdminUser()
@@ -1725,7 +1725,7 @@ The implementation follows this structure:
     - Implement assignRoles()
     - _Requirements: 2.13.3, 2.13.4, 2.13.5_
   
-  - [ ] 29a.2 Create AccountUserService class
+  - [x] 29a.2 Create AccountUserService class
     - Create `packages/backend/src/services/account-user.service.ts`
     - Implement getAccountUsersByOrganisation()
     - Implement createAccountUser()
@@ -1733,20 +1733,20 @@ The implementation follows this structure:
     - Implement deleteAccountUser()
     - _Requirements: 2.13.6, 2.13.7_
   
-  - [ ] 29a.3 Create user management routes
+  - [x] 29a.3 Create user management routes
     - Create `packages/backend/src/routes/user-management.routes.ts`
     - Add authentication middleware
     - Define REST endpoints for admin users and account users
     - Separate routes: /api/orgadmin/users/admins/* and /api/orgadmin/users/accounts/*
     - _Requirements: 5.6_
   
-  - [ ] 29a.4 Write unit tests for user management services
+  - [x] 29a.4 Write unit tests for user management services
     - Test admin user CRUD operations
     - Test account user CRUD operations
     - Test role assignment for admin users
     - _Requirements: 3.5.1_
 
-- [ ] 30. Checkpoint - Backend services complete
+- [x] 30. Checkpoint - Backend services complete
   - Verify all API endpoints are functional
   - Verify authentication and authorization
   - Ensure all tests pass

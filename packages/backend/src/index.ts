@@ -17,6 +17,15 @@ import organizationUserRoutes from './routes/organization-user.routes';
 import organizationRoleRoutes from './routes/organization-role.routes';
 import eventRoutes from './routes/event.routes';
 import membershipRoutes from './routes/membership.routes';
+import merchandiseRoutes from './routes/merchandise.routes';
+import calendarRoutes from './routes/calendar.routes';
+import registrationRoutes from './routes/registration.routes';
+import ticketingRoutes from './routes/ticketing.routes';
+import applicationFormRoutes from './routes/application-form.routes';
+import fileUploadRoutes from './routes/file-upload.routes';
+import paymentRoutes from './routes/payment.routes';
+import reportingRoutes from './routes/reporting.routes';
+import userManagementRoutes from './routes/user-management.routes';
 import { swaggerSpec } from './config/swagger';
 import { register } from './config/metrics';
 
@@ -133,6 +142,15 @@ app.use('/api/admin/organizations', organizationUserRoutes);
 app.use('/api/admin/organizations', organizationRoleRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/orgadmin', membershipRoutes);
+app.use('/api/orgadmin', merchandiseRoutes);
+app.use('/api/orgadmin', calendarRoutes);
+app.use('/api/orgadmin', registrationRoutes);
+app.use('/api/orgadmin', ticketingRoutes);
+app.use('/api/orgadmin', applicationFormRoutes);
+app.use('/api/orgadmin', paymentRoutes);
+app.use('/api/orgadmin', reportingRoutes);
+app.use('/api/orgadmin/files', fileUploadRoutes);
+app.use('/api/orgadmin/users', userManagementRoutes);
 
 // 404 handler
 app.use((_req, res) => {
