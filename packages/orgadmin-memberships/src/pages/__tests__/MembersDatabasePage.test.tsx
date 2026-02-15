@@ -1,26 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderWithI18n, screen } from '../../test/i18n-test-utils';
+import { MemoryRouter } from 'react-router-dom';
 import MembersDatabasePage from '../MembersDatabasePage';
-
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-  };
-});
 
 describe('MembersDatabasePage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Clear any mocks if needed
   });
 
   it('renders members database page', () => {
-    render(
-      <BrowserRouter>
+    renderWithI18n(
+      <MemoryRouter>
         <MembersDatabasePage />
-      </BrowserRouter>
+      </MemoryRouter>
     );
     
     expect(screen.getByText('Members Database')).toBeInTheDocument();
@@ -28,10 +20,10 @@ describe('MembersDatabasePage', () => {
   });
 
   it('displays filter buttons', () => {
-    render(
-      <BrowserRouter>
+    renderWithI18n(
+      <MemoryRouter>
         <MembersDatabasePage />
-      </BrowserRouter>
+      </MemoryRouter>
     );
     
     expect(screen.getByText('Current')).toBeInTheDocument();
@@ -40,10 +32,10 @@ describe('MembersDatabasePage', () => {
   });
 
   it('displays search field', () => {
-    render(
-      <BrowserRouter>
+    renderWithI18n(
+      <MemoryRouter>
         <MembersDatabasePage />
-      </BrowserRouter>
+      </MemoryRouter>
     );
     
     expect(screen.getByPlaceholderText(/search by name or membership number/i)).toBeInTheDocument();

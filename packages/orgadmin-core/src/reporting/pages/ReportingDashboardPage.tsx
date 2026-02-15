@@ -26,6 +26,8 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useApiGet } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
  * Reporting dashboard metrics data structure
@@ -81,6 +83,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
   trendPercentage,
   loading = false,
 }) => {
+  const { t } = useTranslation();
+
   const getTrendColor = () => {
     if (trend === 'up') return '#2e7d32';
     if (trend === 'down') return '#d32f2f';
@@ -142,7 +146,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
                   {getTrendIcon()} {Math.abs(trendPercentage)}%
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  vs previous period
+                  {t('reporting.dashboard.vsPreviousPeriod')}
                 </Typography>
               </Box>
             )}
@@ -163,6 +167,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
  * Reporting Dashboard Page Component
  */
 const ReportingDashboardPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
+
   // Date range state
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date();
@@ -182,14 +188,6 @@ const ReportingDashboardPage: React.FC = () => {
     execute();
   }, [execute, startDate, endDate]);
 
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
-
   // Handle export
   const handleExport = () => {
     // TODO: Implement export functionality
@@ -201,10 +199,10 @@ const ReportingDashboardPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography variant="h4" gutterBottom>
-            Reports & Analytics
+            {t('reporting.dashboard.title')}
           </Typography>
           <Typography variant="body1" color="textSecondary">
-            High-level metrics and trends for your organisation
+            {t('reporting.dashboard.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -213,7 +211,7 @@ const ReportingDashboardPage: React.FC = () => {
           onClick={handleExport}
           disabled={loading || !data}
         >
-          Export Report
+          {t('reporting.dashboard.exportReport')}
         </Button>
       </Box>
 
@@ -221,11 +219,11 @@ const ReportingDashboardPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Date Range
+            {t('reporting.dashboard.dateRange')}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="Start Date"
+              label={t('reporting.dashboard.startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -233,7 +231,7 @@ const ReportingDashboardPage: React.FC = () => {
               fullWidth
             />
             <TextField
-              label="End Date"
+              label={t('reporting.dashboard.endDate')}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -274,9 +272,13 @@ const ReportingDashboardPage: React.FC = () => {
           {/* Events metric */}
           <Grid item xs={12} md={4}>
             <MetricCard
-              title="Events"
+              title={t('reporting.metrics.events')}
               value={data.events.total}
-              subtitle={`${data.events.upcoming} upcoming, ${data.events.completed} completed, ${data.events.totalAttendance} total attendance`}
+              subtitle={t('reporting.metrics.eventsSubtitle', {
+                upcoming: data.events.upcoming,
+                completed: data.events.completed,
+                totalAttendance: data.events.totalAttendance,
+              })}
               icon={<EventIcon sx={{ color: '#1976d2', fontSize: 32 }} />}
               color="#1976d2"
               trend={data.events.trend}
@@ -287,9 +289,13 @@ const ReportingDashboardPage: React.FC = () => {
           {/* Members metric */}
           <Grid item xs={12} md={4}>
             <MetricCard
-              title="Members"
+              title={t('reporting.metrics.members')}
               value={data.members.total}
-              subtitle={`${data.members.active} active, ${data.members.new} new, ${data.members.renewals} renewals`}
+              subtitle={t('reporting.metrics.membersSubtitle', {
+                active: data.members.active,
+                new: data.members.new,
+                renewals: data.members.renewals,
+              })}
               icon={<PeopleIcon sx={{ color: '#2e7d32', fontSize: 32 }} />}
               color="#2e7d32"
               trend={data.members.trend}
@@ -300,9 +306,13 @@ const ReportingDashboardPage: React.FC = () => {
           {/* Revenue metric */}
           <Grid item xs={12} md={4}>
             <MetricCard
-              title="Revenue"
-              value={formatCurrency(data.revenue.total)}
-              subtitle={`Events: ${formatCurrency(data.revenue.events)}, Memberships: ${formatCurrency(data.revenue.memberships)}, Merchandise: ${formatCurrency(data.revenue.merchandise)}`}
+              title={t('reporting.metrics.revenue')}
+              value={formatCurrency(data.revenue.total, 'EUR', i18n.language)}
+              subtitle={t('reporting.metrics.revenueSubtitle', {
+                events: formatCurrency(data.revenue.events, 'EUR', i18n.language),
+                memberships: formatCurrency(data.revenue.memberships, 'EUR', i18n.language),
+                merchandise: formatCurrency(data.revenue.merchandise, 'EUR', i18n.language),
+              })}
               icon={<MoneyIcon sx={{ color: '#ed6c02', fontSize: 32 }} />}
               color="#ed6c02"
               trend={data.revenue.trend}
@@ -316,7 +326,7 @@ const ReportingDashboardPage: React.FC = () => {
       {!loading && data && (
         <Box sx={{ mt: 4 }}>
           <Typography variant="h5" gutterBottom>
-            Detailed Reports
+            {t('reporting.dashboard.detailedReports')}
           </Typography>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={4}>
@@ -327,7 +337,7 @@ const ReportingDashboardPage: React.FC = () => {
                 href="/reporting/events"
                 sx={{ py: 2 }}
               >
-                Events Report
+                {t('reporting.reports.eventsReport')}
               </Button>
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -338,7 +348,7 @@ const ReportingDashboardPage: React.FC = () => {
                 href="/reporting/members"
                 sx={{ py: 2 }}
               >
-                Members Report
+                {t('reporting.reports.membersReport')}
               </Button>
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -349,7 +359,7 @@ const ReportingDashboardPage: React.FC = () => {
                 href="/reporting/revenue"
                 sx={{ py: 2 }}
               >
-                Revenue Report
+                {t('reporting.reports.revenueReport')}
               </Button>
             </Grid>
           </Grid>
@@ -359,7 +369,7 @@ const ReportingDashboardPage: React.FC = () => {
       {/* Empty state - no data available */}
       {!loading && !error && !data && (
         <Alert severity="info" sx={{ mt: 3 }}>
-          No reporting data available for the selected date range. Please try a different date range.
+          {t('reporting.dashboard.noData')}
         </Alert>
       )}
     </Box>

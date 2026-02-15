@@ -29,6 +29,15 @@ const LANGUAGES = [
   { code: 'ja', name: 'Japanese' },
 ];
 
+const LOCALES = [
+  { code: 'en-GB', name: 'English (UK)' },
+  { code: 'fr-FR', name: 'Français (France)' },
+  { code: 'es-ES', name: 'Español (España)' },
+  { code: 'it-IT', name: 'Italiano (Italia)' },
+  { code: 'de-DE', name: 'Deutsch (Deutschland)' },
+  { code: 'pt-PT', name: 'Português (Portugal)' },
+];
+
 export const CreateOrganizationTypePage: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
@@ -43,6 +52,7 @@ export const CreateOrganizationTypePage: React.FC = () => {
     description: '',
     currency: 'USD',
     language: 'en',
+    defaultLocale: 'en-GB',
     defaultCapabilities: [],
   });
 
@@ -158,6 +168,22 @@ export const CreateOrganizationTypePage: React.FC = () => {
                 {LANGUAGES.map((lang) => (
                   <MenuItem key={lang.code} value={lang.code}>
                     {lang.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField
+                select
+                label="Default Locale"
+                value={formData.defaultLocale}
+                onChange={(e) => handleChange('defaultLocale', e.target.value)}
+                helperText="The default language and regional format for organisations of this type"
+                required
+                fullWidth
+              >
+                {LOCALES.map((locale) => (
+                  <MenuItem key={locale.code} value={locale.code}>
+                    {locale.name}
                   </MenuItem>
                 ))}
               </TextField>

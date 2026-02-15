@@ -72,6 +72,7 @@ export const OrganizationTypesPage: React.FC = () => {
                   <TableCell>Name</TableCell>
                   <TableCell>Currency</TableCell>
                   <TableCell>Language</TableCell>
+                  <TableCell>Locale</TableCell>
                   <TableCell>Organisations</TableCell>
                   <TableCell>Default Capabilities</TableCell>
                   <TableCell>Status</TableCell>
@@ -81,7 +82,7 @@ export const OrganizationTypesPage: React.FC = () => {
               <TableBody>
                 {organizationTypes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
+                    <TableCell colSpan={8} align="center">
                       <Typography variant="body2" color="textSecondary">
                         No organisation types found. Create one to get started.
                       </Typography>
@@ -100,6 +101,7 @@ export const OrganizationTypesPage: React.FC = () => {
                       </TableCell>
                       <TableCell>{type.currency}</TableCell>
                       <TableCell>{type.language}</TableCell>
+                      <TableCell>{type.defaultLocale || 'en-GB'}</TableCell>
                       <TableCell>{type.organizationCount || 0}</TableCell>
                       <TableCell>{type.defaultCapabilities.length}</TableCell>
                       <TableCell>

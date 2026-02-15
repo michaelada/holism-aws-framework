@@ -21,6 +21,8 @@ import {
   Close as CloseIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
+import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
 import type { EventEntry } from '../types/event.types';
 
 interface EventEntryDetailsDialogProps {
@@ -59,6 +61,8 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
   onClose,
 }) => {
   const { execute } = useApi();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   const [submission, setSubmission] = useState<FormSubmission | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -109,9 +113,9 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Entry Details</Typography>
+          <Typography variant="h6">{t('events.entryDetails.title')}</Typography>
           <Button onClick={onClose} startIcon={<CloseIcon />}>
-            Close
+            {t('common.actions.close')}
           </Button>
         </Box>
       </DialogTitle>
@@ -120,7 +124,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
-              First Name
+              {t('events.entryDetails.firstName')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {entry.firstName}
@@ -129,7 +133,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
 
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
-              Last Name
+              {t('events.entryDetails.lastName')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {entry.lastName}
@@ -138,7 +142,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
 
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
-              Email
+              {t('events.entryDetails.email')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {entry.email}
@@ -147,7 +151,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
 
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
-              Quantity
+              {t('events.entryDetails.quantity')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {entry.quantity}
@@ -156,10 +160,10 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
 
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
-              Payment Status
+              {t('events.entryDetails.paymentStatus')}
             </Typography>
             <Chip
-              label={entry.paymentStatus}
+              label={t(`common.status.${entry.paymentStatus}`)}
               color={getPaymentStatusColor(entry.paymentStatus)}
               size="small"
             />
@@ -168,7 +172,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
           {entry.paymentMethod && (
             <Grid item xs={12} sm={6}>
               <Typography variant="body2" color="textSecondary">
-                Payment Method
+                {t('events.entryDetails.paymentMethod')}
               </Typography>
               <Typography variant="body1" fontWeight="medium">
                 {entry.paymentMethod}
@@ -178,10 +182,10 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
 
           <Grid item xs={12} sm={6}>
             <Typography variant="body2" color="textSecondary">
-              Entry Date
+              {t('events.entryDetails.entryDate')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {new Date(entry.entryDate).toLocaleString('en-GB')}
+              {formatDateTime(entry.entryDate, locale)}
             </Typography>
           </Grid>
         </Grid>
@@ -191,11 +195,11 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
             <Divider sx={{ my: 3 }} />
 
             <Typography variant="h6" gutterBottom>
-              Form Submission Data
+              {t('events.entryDetails.formSubmission')}
             </Typography>
 
             {loading ? (
-              <Typography>Loading submission data...</Typography>
+              <Typography>{t('events.entryDetails.loadingSubmission')}</Typography>
             ) : (
               <Box sx={{ mt: 2 }}>
                 {Object.entries(submission.submissionData).map(([key, value]) => (
@@ -216,7 +220,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
                 <Divider sx={{ my: 3 }} />
 
                 <Typography variant="h6" gutterBottom>
-                  Uploaded Files
+                  {t('events.entryDetails.uploadedFiles')}
                 </Typography>
 
                 <Box sx={{ mt: 2 }}>
@@ -246,7 +250,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
                         startIcon={<DownloadIcon />}
                         onClick={() => handleDownloadFile(file.id)}
                       >
-                        Download
+                        {t('common.actions.download')}
                       </Button>
                     </Box>
                   ))}
@@ -258,7 +262,7 @@ const EventEntryDetailsDialog: React.FC<EventEntryDetailsDialogProps> = ({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t('common.actions.close')}</Button>
       </DialogActions>
     </Dialog>
   );

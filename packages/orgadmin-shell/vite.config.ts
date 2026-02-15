@@ -23,9 +23,10 @@ export default defineConfig({
     alias: {
       '@aws-web-framework/components': path.resolve(__dirname, '../components/src'),
       '@aws-web-framework/orgadmin-core': path.resolve(__dirname, '../orgadmin-core/src'),
-      // Mock capability modules for tests (they don't have built dist folders)
-      '@aws-web-framework/orgadmin-events': path.resolve(__dirname, './src/test/mocks/orgadmin-events.ts'),
-      '@aws-web-framework/orgadmin-memberships': path.resolve(__dirname, './src/test/mocks/orgadmin-memberships.ts'),
+      // Use actual capability modules
+      '@aws-web-framework/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
+      '@aws-web-framework/orgadmin-memberships': path.resolve(__dirname, '../orgadmin-memberships/src'),
+      // Mock capability modules for development (they don't have built dist folders yet)
       '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, './src/test/mocks/orgadmin-merchandise.ts'),
       '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, './src/test/mocks/orgadmin-calendar.ts'),
       '@aws-web-framework/orgadmin-registrations': path.resolve(__dirname, './src/test/mocks/orgadmin-registrations.ts'),
@@ -35,7 +36,12 @@ export default defineConfig({
   
   // Optimize dependencies
   optimizeDeps: {
-    exclude: ['@aws-web-framework/components', '@aws-web-framework/orgadmin-core'],
+    exclude: [
+      '@aws-web-framework/components', 
+      '@aws-web-framework/orgadmin-core', 
+      '@aws-web-framework/orgadmin-events', 
+      '@aws-web-framework/orgadmin-memberships'
+    ],
   },
   
   // Development server configuration

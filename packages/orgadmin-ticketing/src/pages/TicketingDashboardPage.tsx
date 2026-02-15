@@ -38,7 +38,8 @@ import {
   FileDownload as ExportIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@orgadmin/shell/utils/dateFormatting';
 import type { ElectronicTicket, TicketFilters } from '../types/ticketing.types';
 import TicketingStatsCards from '../components/TicketingStatsCards';
 import TicketDetailsDialog from '../components/TicketDetailsDialog';
@@ -53,6 +54,7 @@ const useApi = () => ({
 
 const TicketingDashboardPage: React.FC = () => {
   const { execute } = useApi();
+  const { t, i18n } = useTranslation();
 
   const [tickets, setTickets] = useState<ElectronicTicket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<ElectronicTicket[]>([]);
@@ -200,14 +202,14 @@ const TicketingDashboardPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Event Ticketing</Typography>
+        <Typography variant="h4">{t('ticketing.title')}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={handleRefresh}
           >
-            Refresh
+            {t('ticketing.actions.refresh')}
           </Button>
           <Button
             variant="contained"
@@ -215,7 +217,7 @@ const TicketingDashboardPage: React.FC = () => {
             onClick={handleExportToExcel}
             disabled={filteredTickets.length === 0}
           >
-            Export to Excel
+            {t('ticketing.actions.exportToExcel')}
           </Button>
         </Box>
       </Box>
@@ -227,40 +229,40 @@ const TicketingDashboardPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Filters
+            {t('ticketing.filters.title')}
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
             <FormControl fullWidth size="small">
-              <InputLabel>Event</InputLabel>
+              <InputLabel>{t('ticketing.filters.event')}</InputLabel>
               <Select
                 value={eventFilter}
-                label="Event"
+                label={t('ticketing.filters.event')}
                 onChange={(e: SelectChangeEvent) => setEventFilter(e.target.value)}
               >
-                <MenuItem value="">All Events</MenuItem>
+                <MenuItem value="">{t('ticketing.filters.allEvents')}</MenuItem>
                 {/* Event options would be populated from API */}
               </Select>
             </FormControl>
 
             <FormControl fullWidth size="small">
-              <InputLabel>Event Activity</InputLabel>
+              <InputLabel>{t('ticketing.filters.eventActivity')}</InputLabel>
               <Select
                 value={activityFilter}
-                label="Event Activity"
+                label={t('ticketing.filters.eventActivity')}
                 onChange={(e: SelectChangeEvent) => setActivityFilter(e.target.value)}
                 disabled={!eventFilter}
               >
-                <MenuItem value="">All Activities</MenuItem>
+                <MenuItem value="">{t('ticketing.filters.allActivities')}</MenuItem>
                 {/* Activity options would be populated from API */}
               </Select>
             </FormControl>
 
             <FormControl fullWidth size="small">
-              <InputLabel>Scan Status</InputLabel>
+              <InputLabel>{t('ticketing.filters.scanStatus')}</InputLabel>
               <Select
                 multiple
                 value={scanStatusFilter}
-                label="Scan Status"
+                label={t('ticketing.filters.scanStatus')}
                 onChange={(e: SelectChangeEvent<string[]>) => {
                   const value = e.target.value;
                   setScanStatusFilter(typeof value === 'string' ? value.split(',') : value);
@@ -268,20 +270,20 @@ const TicketingDashboardPage: React.FC = () => {
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.map((value) => (
-                      <Chip key={value} label={value === 'scanned' ? 'Scanned' : 'Not Scanned'} size="small" />
+                      <Chip key={value} label={value === 'scanned' ? t('ticketing.scanStatus.scanned') : t('ticketing.scanStatus.notScanned')} size="small" />
                     ))}
                   </Box>
                 )}
               >
-                <MenuItem value="scanned">Scanned</MenuItem>
-                <MenuItem value="not_scanned">Not Scanned</MenuItem>
+                <MenuItem value="scanned">{t('ticketing.scanStatus.scanned')}</MenuItem>
+                <MenuItem value="not_scanned">{t('ticketing.scanStatus.notScanned')}</MenuItem>
               </Select>
             </FormControl>
 
             <TextField
               fullWidth
               size="small"
-              label="Date From"
+              label={t('ticketing.filters.dateFrom')}
               type="date"
               value={dateRangeStart}
               onChange={(e) => setDateRangeStart(e.target.value)}
@@ -291,7 +293,7 @@ const TicketingDashboardPage: React.FC = () => {
             <TextField
               fullWidth
               size="small"
-              label="Date To"
+              label={t('ticketing.filters.dateTo')}
               type="date"
               value={dateRangeEnd}
               onChange={(e) => setDateRangeEnd(e.target.value)}
@@ -301,7 +303,7 @@ const TicketingDashboardPage: React.FC = () => {
             <TextField
               fullWidth
               size="small"
-              placeholder="Search by name, email, or ticket reference..."
+              placeholder={t('ticketing.searchPlaceholder')}
               value={filters.searchTerm}
               onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
               InputProps={{
@@ -322,7 +324,7 @@ const TicketingDashboardPage: React.FC = () => {
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="body1">
-                {selectedTickets.length} ticket(s) selected
+                {t('ticketing.batch.selectedTickets', { count: selectedTickets.length })}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
@@ -330,14 +332,14 @@ const TicketingDashboardPage: React.FC = () => {
                   color="success"
                   onClick={() => handleBatchOperation('mark_scanned')}
                 >
-                  Mark as Scanned
+                  {t('ticketing.batch.markScanned')}
                 </Button>
                 <Button
                   variant="contained"
                   color="warning"
                   onClick={() => handleBatchOperation('mark_not_scanned')}
                 >
-                  Mark as Not Scanned
+                  {t('ticketing.batch.markNotScanned')}
                 </Button>
               </Box>
             </Box>
@@ -357,28 +359,28 @@ const TicketingDashboardPage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>Ticket Reference</TableCell>
-              <TableCell>Event Name</TableCell>
-              <TableCell>Event Activity</TableCell>
-              <TableCell>Customer Name</TableCell>
-              <TableCell>Customer Email</TableCell>
-              <TableCell>Issue Date</TableCell>
-              <TableCell>Scan Status</TableCell>
-              <TableCell>Scan Date</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>{t('ticketing.table.ticketReference')}</TableCell>
+              <TableCell>{t('ticketing.table.eventName')}</TableCell>
+              <TableCell>{t('ticketing.table.eventActivity')}</TableCell>
+              <TableCell>{t('ticketing.table.customerName')}</TableCell>
+              <TableCell>{t('ticketing.table.customerEmail')}</TableCell>
+              <TableCell>{t('ticketing.table.issueDate')}</TableCell>
+              <TableCell>{t('ticketing.table.scanStatus')}</TableCell>
+              <TableCell>{t('ticketing.table.scanDate')}</TableCell>
+              <TableCell>{t('ticketing.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={10} align="center">
-                  Loading tickets...
+                  {t('ticketing.loadingTickets')}
                 </TableCell>
               </TableRow>
             ) : filteredTickets.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} align="center">
-                  No tickets found
+                  {t('ticketing.noTicketsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -395,27 +397,27 @@ const TicketingDashboardPage: React.FC = () => {
                       {ticket.ticketReference}
                     </Typography>
                   </TableCell>
-                  <TableCell>{ticket.ticketData?.eventName || 'N/A'}</TableCell>
-                  <TableCell>{ticket.ticketData?.activityName || 'N/A'}</TableCell>
+                  <TableCell>{ticket.ticketData?.eventName || t('ticketing.details.notAvailable')}</TableCell>
+                  <TableCell>{ticket.ticketData?.activityName || t('ticketing.details.notAvailable')}</TableCell>
                   <TableCell>{ticket.customerName}</TableCell>
                   <TableCell>{ticket.customerEmail}</TableCell>
-                  <TableCell>{format(new Date(ticket.issueDate), 'MMM dd, yyyy HH:mm')}</TableCell>
+                  <TableCell>{formatDateTime(new Date(ticket.issueDate), i18n.language)}</TableCell>
                   <TableCell>
                     <Chip
                       icon={getScanStatusIcon(ticket.scanStatus)}
-                      label={ticket.scanStatus === 'scanned' ? 'Scanned' : 'Not Scanned'}
+                      label={ticket.scanStatus === 'scanned' ? t('ticketing.scanStatus.scanned') : t('ticketing.scanStatus.notScanned')}
                       color={getScanStatusColor(ticket.scanStatus)}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
-                    {ticket.scanDate ? format(new Date(ticket.scanDate), 'MMM dd, yyyy HH:mm') : '-'}
+                    {ticket.scanDate ? formatDateTime(new Date(ticket.scanDate), i18n.language) : '-'}
                   </TableCell>
                   <TableCell>
                     <IconButton
                       size="small"
                       onClick={() => handleViewTicket(ticket)}
-                      title="View Ticket Details"
+                      title={t('ticketing.tooltips.viewTicketDetails')}
                     >
                       <ViewIcon />
                     </IconButton>

@@ -21,6 +21,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import type { BatchTicketOperationResult } from '../types/ticketing.types';
 
 interface BatchTicketOperationsDialogProps {
@@ -52,6 +53,7 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
   onComplete,
 }) => {
   const { execute } = useApi();
+  const { t } = useTranslation();
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<BatchTicketOperationResult | null>(null);
   const [progress, setProgress] = useState(0);
@@ -59,20 +61,20 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
   const getOperationTitle = () => {
     switch (operation) {
       case 'mark_scanned':
-        return 'Mark Tickets as Scanned';
+        return t('ticketing.batchOperations.markScannedTitle');
       case 'mark_not_scanned':
-        return 'Mark Tickets as Not Scanned';
+        return t('ticketing.batchOperations.markNotScannedTitle');
       default:
-        return 'Batch Operation';
+        return t('ticketing.batch.selectedTickets', { count: ticketIds.length });
     }
   };
 
   const getOperationDescription = () => {
     switch (operation) {
       case 'mark_scanned':
-        return `Mark ${ticketIds.length} ticket(s) as scanned?`;
+        return t('ticketing.batchOperations.markScannedDescription', { count: ticketIds.length });
       case 'mark_not_scanned':
-        return `Mark ${ticketIds.length} ticket(s) as not scanned?`;
+        return t('ticketing.batchOperations.markNotScannedDescription', { count: ticketIds.length });
       default:
         return '';
     }
@@ -144,17 +146,17 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
               {getOperationDescription()}
             </Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-              This action will update the scan status for all selected tickets.
+              {t('ticketing.batchOperations.updateMessage')}
             </Typography>
 
             {processing && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="body2" gutterBottom>
-                  Processing...
+                  {t('ticketing.batchOperations.processing')}
                 </Typography>
                 <LinearProgress variant="determinate" value={progress} />
                 <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                  {progress}% complete
+                  {t('ticketing.batchOperations.progressComplete', { progress })}
                 </Typography>
               </Box>
             )}
@@ -164,27 +166,27 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
             {result.success && result.failedCount === 0 ? (
               <Alert severity="success" icon={<SuccessIcon />}>
                 <Typography variant="body1" fontWeight="medium">
-                  Operation completed successfully!
+                  {t('ticketing.batchOperations.successTitle')}
                 </Typography>
                 <Typography variant="body2">
-                  {result.processedCount} ticket(s) updated
+                  {t('ticketing.batchOperations.successMessage', { count: result.processedCount })}
                 </Typography>
               </Alert>
             ) : (
               <Box>
                 <Alert severity="warning" icon={<ErrorIcon />} sx={{ mb: 2 }}>
                   <Typography variant="body1" fontWeight="medium">
-                    Operation completed with errors
+                    {t('ticketing.batchOperations.errorTitle')}
                   </Typography>
                   <Typography variant="body2">
-                    Processed: {result.processedCount} | Failed: {result.failedCount}
+                    {t('ticketing.batchOperations.errorMessage', { processed: result.processedCount, failed: result.failedCount })}
                   </Typography>
                 </Alert>
 
                 {result.errors && result.errors.length > 0 && (
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>
-                      Errors:
+                      {t('ticketing.batchOperations.errors')}
                     </Typography>
                     <Box
                       sx={{
@@ -197,7 +199,7 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
                     >
                       {result.errors.map((error, index) => (
                         <Typography key={index} variant="caption" display="block">
-                          Ticket {error.ticketId}: {error.error}
+                          {t('ticketing.batchOperations.ticketError', { ticketId: error.ticketId, error: error.error })}
                         </Typography>
                       ))}
                     </Box>
@@ -213,7 +215,7 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
         {!result ? (
           <>
             <Button onClick={handleClose} disabled={processing}>
-              Cancel
+              {t('ticketing.batchOperations.cancel')}
             </Button>
             <Button
               variant="contained"
@@ -221,12 +223,12 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
               disabled={processing}
               startIcon={processing ? <CircularProgress size={16} /> : undefined}
             >
-              {processing ? 'Processing...' : 'Confirm'}
+              {processing ? t('ticketing.batchOperations.processing') : t('ticketing.batchOperations.confirm')}
             </Button>
           </>
         ) : (
           <Button onClick={handleClose} variant="contained">
-            Close
+            {t('ticketing.batchOperations.close')}
           </Button>
         )}
       </DialogActions>

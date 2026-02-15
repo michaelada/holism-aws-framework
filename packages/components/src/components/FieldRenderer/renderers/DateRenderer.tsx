@@ -1,7 +1,10 @@
 import React from 'react';
-import { DatePicker, TimePicker, DateTimePicker } from '@mui/x-date-pickers';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale';
 import { TextField } from '@mui/material';
 import type { FieldDefinition } from '../../../types';
 
@@ -49,19 +52,11 @@ export function DateRenderer({
     value: dateValue,
     onChange: handleChange,
     disabled,
-    slotProps: {
-      textField: {
-        fullWidth: true,
-        error: !!error,
-        helperText: error || fieldDefinition.description,
-        required: required,
-        onBlur,
-      },
-    },
+    renderInput,
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
       {fieldDefinition.datatype === 'date' && <DatePicker {...commonProps} />}
       {fieldDefinition.datatype === 'time' && <TimePicker {...commonProps} />}
       {fieldDefinition.datatype === 'datetime' && <DateTimePicker {...commonProps} />}

@@ -33,6 +33,10 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
+import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
 
 interface Payment {
   id: string;
@@ -48,6 +52,8 @@ interface Payment {
 const PaymentsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
@@ -139,14 +145,22 @@ const PaymentsListPage: React.FC = () => {
   };
 
   const convertToCSV = (data: Payment[]): string => {
-    const headers = ['Date', 'Customer Name', 'Customer Email', 'Amount', 'Status', 'Type', 'Payment Method'];
+    const headers = [
+      t('payments.table.date'),
+      t('payments.table.customer'),
+      t('common.labels.email'),
+      t('payments.table.amount'),
+      t('payments.table.status'),
+      t('payments.table.type'),
+      t('payments.table.paymentMethod')
+    ];
     const rows = data.map(payment => [
-      formatDate(payment.date),
+      formatDate(new Date(payment.date), 'dd MMM yyyy', locale),
       payment.customerName,
       payment.customerEmail,
-      formatCurrency(payment.amount),
-      payment.status,
-      payment.type,
+      formatCurrency(payment.amount, 'GBP', locale),
+      t(`common.status.${payment.status}`),
+      t(`payments.paymentTypes.${payment.type}`),
       payment.paymentMethod,
     ]);
     
@@ -154,21 +168,6 @@ const PaymentsListPage: React.FC = () => {
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n');
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-    }).format(amount);
   };
 
   const getStatusColor = (status: Payment['status']) => {
@@ -186,22 +185,10 @@ const PaymentsListPage: React.FC = () => {
     }
   };
 
-  const getTypeLabel = (type: Payment['type']) => {
-    const labels: Record<Payment['type'], string> = {
-      event: 'Event',
-      membership: 'Membership',
-      merchandise: 'Merchandise',
-      calendar: 'Booking',
-      registration: 'Registration',
-      ticket: 'Ticket',
-    };
-    return labels[type] || type;
-  };
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Payments</Typography>
+        <Typography variant="h4">{t('payments.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
@@ -209,7 +196,7 @@ const PaymentsListPage: React.FC = () => {
           onClick={handleExportCSV}
           disabled={filteredPayments.length === 0}
         >
-          Export to CSV
+          {t('payments.actions.exportToCSV')}
         </Button>
       </Box>
 
@@ -217,7 +204,7 @@ const PaymentsListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              label="Start Date"
+              label={t('payments.filters.startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -225,7 +212,7 @@ const PaymentsListPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="End Date"
+              label={t('payments.filters.endDate')}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -233,30 +220,30 @@ const PaymentsListPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('payments.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('payments.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="paid">Paid</MenuItem>
-                <MenuItem value="refunded">Refunded</MenuItem>
-                <MenuItem value="failed">Failed</MenuItem>
+                <MenuItem value="all">{t('payments.statusOptions.all')}</MenuItem>
+                <MenuItem value="pending">{t('payments.statusOptions.pending')}</MenuItem>
+                <MenuItem value="paid">{t('payments.statusOptions.paid')}</MenuItem>
+                <MenuItem value="refunded">{t('payments.statusOptions.refunded')}</MenuItem>
+                <MenuItem value="failed">{t('payments.statusOptions.failed')}</MenuItem>
               </Select>
             </FormControl>
             <FormControl sx={{ minWidth: 180 }}>
-              <InputLabel>Payment Method</InputLabel>
+              <InputLabel>{t('payments.filters.paymentMethod')}</InputLabel>
               <Select
                 value={paymentMethodFilter}
-                label="Payment Method"
+                label={t('payments.filters.paymentMethod')}
                 onChange={(e) => setPaymentMethodFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="card">Card</MenuItem>
-                <MenuItem value="cheque">Cheque</MenuItem>
-                <MenuItem value="offline">Offline</MenuItem>
+                <MenuItem value="all">{t('payments.paymentMethodOptions.all')}</MenuItem>
+                <MenuItem value="card">{t('payments.paymentMethodOptions.card')}</MenuItem>
+                <MenuItem value="cheque">{t('payments.paymentMethodOptions.cheque')}</MenuItem>
+                <MenuItem value="offline">{t('payments.paymentMethodOptions.offline')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -267,34 +254,34 @@ const PaymentsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Customer</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Payment Method</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('payments.table.date')}</TableCell>
+              <TableCell>{t('payments.table.customer')}</TableCell>
+              <TableCell>{t('payments.table.amount')}</TableCell>
+              <TableCell>{t('payments.table.status')}</TableCell>
+              <TableCell>{t('payments.table.type')}</TableCell>
+              <TableCell>{t('payments.table.paymentMethod')}</TableCell>
+              <TableCell align="right">{t('payments.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={7} align="center">
-                  Loading payments...
+                  {t('payments.loadingPayments')}
                 </TableCell>
               </TableRow>
             ) : filteredPayments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center">
                   {statusFilter !== 'all' || paymentMethodFilter !== 'all' || startDate || endDate
-                    ? 'No payments match your filters'
-                    : 'No payments yet.'}
+                    ? t('payments.noMatchingPayments')
+                    : t('payments.noPaymentsFound')}
                 </TableCell>
               </TableRow>
             ) : (
               filteredPayments.map((payment) => (
                 <TableRow key={payment.id} hover>
-                  <TableCell>{formatDate(payment.date)}</TableCell>
+                  <TableCell>{formatDate(new Date(payment.date), 'dd MMM yyyy', locale)}</TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
                       {payment.customerName}
@@ -305,25 +292,25 @@ const PaymentsListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {formatCurrency(payment.amount)}
+                      {formatCurrency(payment.amount, 'GBP', locale)}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={payment.status}
+                      label={t(`common.status.${payment.status}`)}
                       color={getStatusColor(payment.status)}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{getTypeLabel(payment.type)}</TableCell>
+                  <TableCell>{t(`payments.paymentTypes.${payment.type}`)}</TableCell>
                   <TableCell sx={{ textTransform: 'capitalize' }}>
-                    {payment.paymentMethod}
+                    {t(`payments.paymentMethodOptions.${payment.paymentMethod}`)}
                   </TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
                       onClick={() => handleViewPayment(payment.id)}
-                      title="View Details"
+                      title={t('payments.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>

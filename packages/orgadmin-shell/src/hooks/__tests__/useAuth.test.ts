@@ -97,7 +97,7 @@ describe('useAuth', () => {
         userName: 'dev-admin',
       });
       expect(result.current.organisation).toBeDefined();
-      expect(result.current.organisation?.displayName).toBe('Development Organisation');
+      expect(result.current.organisation?.displayName).toBe('Athlone Swimming Club');
       expect(result.current.capabilities).toEqual(['event-management', 'memberships']);
       expect(result.current.isOrgAdmin).toBe(true);
       expect(MockedKeycloak).not.toHaveBeenCalled();

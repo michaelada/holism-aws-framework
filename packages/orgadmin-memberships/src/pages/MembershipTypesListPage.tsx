@@ -36,6 +36,7 @@ import {
   Search as SearchIcon,
   ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import type { MembershipType } from '../types/membership.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -49,6 +50,7 @@ const useApi = () => ({
 const MembershipTypesListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [membershipTypes, setMembershipTypes] = useState<MembershipType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<MembershipType[]>([]);
@@ -144,18 +146,18 @@ const MembershipTypesListPage: React.FC = () => {
   };
 
   const getCategoryLabel = (category: string) => {
-    return category === 'single' ? 'Single' : 'Group';
+    return category === 'single' ? t('memberships.typeOptions.single') : t('memberships.typeOptions.group');
   };
 
   const getPricingDisplay = (_type: MembershipType) => {
     // This will be enhanced when payment integration is complete
-    return 'Configured';
+    return t('common.labels.configured');
   };
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Membership Types</Typography>
+        <Typography variant="h4">{t('memberships.membershipTypes')}</Typography>
         <Button
           variant="contained"
           color="primary"
@@ -163,15 +165,15 @@ const MembershipTypesListPage: React.FC = () => {
           endIcon={<ArrowDropDownIcon />}
           onClick={handleCreateMenuOpen}
         >
-          Create Membership Type
+          {t('memberships.createMembershipType')}
         </Button>
         <Menu
           anchorEl={createMenuAnchor}
           open={Boolean(createMenuAnchor)}
           onClose={handleCreateMenuClose}
         >
-          <MenuItem onClick={handleCreateSingle}>Single Membership</MenuItem>
-          <MenuItem onClick={handleCreateGroup}>Group Membership</MenuItem>
+          <MenuItem onClick={handleCreateSingle}>{t('memberships.typeOptions.singleMembership')}</MenuItem>
+          <MenuItem onClick={handleCreateGroup}>{t('memberships.typeOptions.groupMembership')}</MenuItem>
         </Menu>
       </Box>
 
@@ -179,7 +181,7 @@ const MembershipTypesListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search membership types..."
+              placeholder={t('memberships.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -192,27 +194,27 @@ const MembershipTypesListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('memberships.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('memberships.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="open">Open</MenuItem>
-                <MenuItem value="closed">Closed</MenuItem>
+                <MenuItem value="all">{t('memberships.statusOptions.all')}</MenuItem>
+                <MenuItem value="open">{t('memberships.statusOptions.open')}</MenuItem>
+                <MenuItem value="closed">{t('memberships.statusOptions.closed')}</MenuItem>
               </Select>
             </FormControl>
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Type</InputLabel>
+              <InputLabel>{t('memberships.filters.type')}</InputLabel>
               <Select
                 value={categoryFilter}
-                label="Type"
+                label={t('memberships.filters.type')}
                 onChange={(e) => setCategoryFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="single">Single</MenuItem>
-                <MenuItem value="group">Group</MenuItem>
+                <MenuItem value="all">{t('memberships.typeOptions.all')}</MenuItem>
+                <MenuItem value="single">{t('memberships.typeOptions.single')}</MenuItem>
+                <MenuItem value="group">{t('memberships.typeOptions.group')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -223,26 +225,26 @@ const MembershipTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Pricing</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('memberships.table.name')}</TableCell>
+              <TableCell>{t('memberships.table.status')}</TableCell>
+              <TableCell>{t('memberships.table.type')}</TableCell>
+              <TableCell>{t('memberships.table.pricing')}</TableCell>
+              <TableCell align="right">{t('memberships.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading membership types...
+                  {t('memberships.loadingTypes')}
                 </TableCell>
               </TableRow>
             ) : filteredTypes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
-                    ? 'No membership types match your filters'
-                    : 'No membership types yet. Create your first membership type to get started.'}
+                    ? t('memberships.noMatchingTypes')
+                    : t('memberships.noTypesFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -277,14 +279,14 @@ const MembershipTypesListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleViewType(type.id)}
-                      title="View Details"
+                      title={t('memberships.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditType(type.id)}
-                      title="Edit"
+                      title={t('memberships.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>

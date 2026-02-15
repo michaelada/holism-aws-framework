@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense, useMemo, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import { useAuth } from './hooks/useAuth';
@@ -10,6 +10,8 @@ import {
 import { Layout } from './components/Layout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ModuleRegistration } from './types/module.types';
+import { initializeI18n } from './i18n/config';
+import { LocaleProvider } from './context/LocaleContext';
 
 // Import all core module registrations
 import {
@@ -156,6 +158,8 @@ const NotFoundPage: React.FC = () => (
  * - Dynamic route generation from module registrations
  */
 const App: React.FC = () => {
+  const [i18nReady, setI18nReady] = useState(false);
+  
   const keycloakConfig = {
     url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8080',
     realm: import.meta.env.VITE_KEYCLOAK_REALM || 'aws-web-framework',
@@ -163,6 +167,31 @@ const App: React.FC = () => {
   };
 
   const { loading, error, authenticated, user, organisation, capabilities, isOrgAdmin, logout, getToken } = useAuth(keycloakConfig);
+
+  // Initialize i18n on mount - MUST complete before rendering LocaleProvider
+  useEffect(() => {
+    const initI18n = async () => {
+      try {
+        await initializeI18n();
+        setI18nReady(true);
+      } catch (error) {
+        console.error('Failed to initialize i18n:', error);
+        // App will continue with fallback behavior
+        setI18nReady(true); // Set to true anyway to allow app to render
+      }
+    };
+    initI18n();
+  }, []);
+
+  // Extract organization locale from organization data
+  const organizationLocale = useMemo(() => {
+    // Check if organization has organizationType with defaultLocale
+    if (organisation && (organisation as any).organizationType?.defaultLocale) {
+      return (organisation as any).organizationType.defaultLocale;
+    }
+    // Fallback to 'en-GB' if not available
+    return 'en-GB';
+  }, [organisation]);
 
   // Filter modules based on user's capabilities
   const availableModules = useMemo(() => {
@@ -176,8 +205,8 @@ const App: React.FC = () => {
     });
   }, [capabilities]);
 
-  // Loading state
-  if (loading) {
+  // Loading state - show loading screen while auth or i18n is loading
+  if (loading || !i18nReady) {
     return <LoadingScreen />;
   }
 
@@ -210,34 +239,36 @@ const App: React.FC = () => {
   // Authenticated and authorized - render main application
   return (
     <BrowserRouter basename="/orgadmin">
-      <AuthTokenContext.Provider value={getToken}>
-        <OrganisationProvider organisation={organisation}>
-          <CapabilityProvider capabilities={capabilities}>
-            <Layout modules={availableModules} onLogout={logout}>
-              <Suspense fallback={<LoadingScreen />}>
-                <Routes>
-                  {/* Dashboard (landing page) */}
-                  <Route path="/" element={<DashboardPage modules={availableModules} />} />
+      <LocaleProvider organizationLocale={organizationLocale}>
+        <AuthTokenContext.Provider value={getToken}>
+          <OrganisationProvider organisation={organisation}>
+            <CapabilityProvider capabilities={capabilities}>
+              <Layout modules={availableModules} onLogout={logout}>
+                <Suspense fallback={<LoadingScreen />}>
+                  <Routes>
+                    {/* Dashboard (landing page) */}
+                    <Route path="/" element={<DashboardPage modules={availableModules} />} />
 
-                  {/* Dynamic routes from module registrations */}
-                  {availableModules.flatMap(module =>
-                    module.routes.map(route => (
-                      <Route
-                        key={route.path}
-                        path={route.path}
-                        element={<route.component />}
-                      />
-                    ))
-                  )}
+                    {/* Dynamic routes from module registrations */}
+                    {availableModules.flatMap(module =>
+                      module.routes.map(route => (
+                        <Route
+                          key={route.path}
+                          path={route.path}
+                          element={<route.component />}
+                        />
+                      ))
+                    )}
 
-                  {/* 404 Not Found */}
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-              </Suspense>
-            </Layout>
-          </CapabilityProvider>
-        </OrganisationProvider>
-      </AuthTokenContext.Provider>
+                    {/* 404 Not Found */}
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </CapabilityProvider>
+          </OrganisationProvider>
+        </AuthTokenContext.Provider>
+      </LocaleProvider>
     </BrowserRouter>
   );
 };

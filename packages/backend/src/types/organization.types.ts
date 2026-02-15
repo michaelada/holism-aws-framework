@@ -45,6 +45,7 @@ export interface OrganizationType {
   description?: string;
   currency: string;
   language: string;
+  defaultLocale: string;
   defaultCapabilities: string[];
   status: string;
   createdAt: Date;
@@ -59,6 +60,7 @@ export interface CreateOrganizationTypeDto {
   description?: string;
   currency: string;
   language: string;
+  defaultLocale?: string;
   defaultCapabilities: string[];
 }
 
@@ -67,6 +69,7 @@ export interface UpdateOrganizationTypeDto {
   description?: string;
   currency?: string;
   language?: string;
+  defaultLocale?: string;
   defaultCapabilities?: string[];
   status?: string;
 }
@@ -92,7 +95,12 @@ export interface Organization {
   updatedBy?: string;
   
   // Populated fields
-  organizationType?: OrganizationType;
+  organizationType?: {
+    id: string;
+    name: string;
+    displayName: string;
+    defaultLocale: string;
+  };
   adminUserCount?: number;
   accountUserCount?: number;
 }

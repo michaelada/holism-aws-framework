@@ -16,7 +16,7 @@
  */
 
 import { lazy } from 'react';
-import { Event as EventIcon } from '@mui/icons-material';
+import { Festival as EventIcon } from '@mui/icons-material';
 import type { ModuleRegistration } from './types/module.types';
 
 export const eventsModule: ModuleRegistration = {
@@ -30,7 +30,7 @@ export const eventsModule: ModuleRegistration = {
     title: 'Event Management',
     description: 'Manage events, activities, and entries for your organisation',
     icon: EventIcon,
-    color: '#1976d2',
+    color: '#d84315',
     path: '/events',
   },
   routes: [

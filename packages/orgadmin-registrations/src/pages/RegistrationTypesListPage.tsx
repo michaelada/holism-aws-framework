@@ -34,6 +34,7 @@ import {
   Visibility as ViewIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { RegistrationType } from '../types/registration.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -47,6 +48,7 @@ const useApi = () => ({
 const RegistrationTypesListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [registrationTypes, setRegistrationTypes] = useState<RegistrationType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<RegistrationType[]>([]);
@@ -123,20 +125,20 @@ const RegistrationTypesListPage: React.FC = () => {
 
   const getPricingDisplay = (type: RegistrationType) => {
     // This will be enhanced when payment integration is complete
-    return 'Configured';
+    return t('common.labels.configured');
   };
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Registration Types</Typography>
+        <Typography variant="h4">{t('registrations.registrationTypes')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreateType}
         >
-          Create Registration Type
+          {t('registrations.createRegistrationType')}
         </Button>
       </Box>
 
@@ -144,7 +146,7 @@ const RegistrationTypesListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search registration types..."
+              placeholder={t('registrations.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -157,15 +159,15 @@ const RegistrationTypesListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('registrations.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('registrations.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="open">Open</MenuItem>
-                <MenuItem value="closed">Closed</MenuItem>
+                <MenuItem value="all">{t('registrations.statusOptions.all')}</MenuItem>
+                <MenuItem value="open">{t('registrations.statusOptions.open')}</MenuItem>
+                <MenuItem value="closed">{t('registrations.statusOptions.closed')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -176,26 +178,26 @@ const RegistrationTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Entity Name</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Pricing</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('registrations.table.name')}</TableCell>
+              <TableCell>{t('registrations.table.entityName')}</TableCell>
+              <TableCell>{t('registrations.table.status')}</TableCell>
+              <TableCell>{t('registrations.table.pricing')}</TableCell>
+              <TableCell align="right">{t('registrations.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading registration types...
+                  {t('registrations.loadingTypes')}
                 </TableCell>
               </TableRow>
             ) : filteredTypes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || statusFilter !== 'all'
-                    ? 'No registration types match your filters'
-                    : 'No registration types yet. Create your first registration type to get started.'}
+                    ? t('registrations.noMatchingTypes')
+                    : t('registrations.noTypesFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -231,14 +233,14 @@ const RegistrationTypesListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleViewType(type.id)}
-                      title="View Details"
+                      title={t('registrations.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditType(type.id)}
-                      title="Edit"
+                      title={t('registrations.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>

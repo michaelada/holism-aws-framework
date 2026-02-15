@@ -38,6 +38,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { useTranslation, formatCurrency } from '@aws-web-framework/orgadmin-shell';
 import type { MerchandiseType, StockLevel } from '../types/merchandise.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -51,6 +52,7 @@ const useApi = () => ({
 const MerchandiseTypesListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [merchandiseTypes, setMerchandiseTypes] = useState<MerchandiseType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<MerchandiseType[]>([]);
@@ -165,30 +167,30 @@ const MerchandiseTypesListPage: React.FC = () => {
 
   const getPriceRange = (type: MerchandiseType): string => {
     if (type.optionTypes.length === 0) {
-      return 'No options configured';
+      return t('merchandise.pricing.noOptions');
     }
     
     const prices = type.optionTypes.flatMap(ot => 
       ot.optionValues.map(ov => ov.price)
     );
     
-    if (prices.length === 0) return 'No pricing';
+    if (prices.length === 0) return t('merchandise.pricing.noPricing');
     
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
     
     if (minPrice === maxPrice) {
-      return `€${minPrice.toFixed(2)}`;
+      return formatCurrency(minPrice, 'EUR');
     }
     
-    return `€${minPrice.toFixed(2)} - €${maxPrice.toFixed(2)}`;
+    return `${formatCurrency(minPrice, 'EUR')} - ${formatCurrency(maxPrice, 'EUR')}`;
   };
 
   const renderStockIndicator = (type: MerchandiseType) => {
     if (!type.trackStockLevels) {
       return (
         <Chip
-          label="Not Tracked"
+          label={t('merchandise.stock.notTracked')}
           size="small"
           variant="outlined"
         />
@@ -202,7 +204,7 @@ const MerchandiseTypesListPage: React.FC = () => {
         return (
           <Chip
             icon={<CheckCircleIcon />}
-            label="In Stock"
+            label={t('merchandise.stock.inStock')}
             color="success"
             size="small"
           />
@@ -211,7 +213,7 @@ const MerchandiseTypesListPage: React.FC = () => {
         return (
           <Chip
             icon={<WarningIcon />}
-            label="Low Stock"
+            label={t('merchandise.stock.lowStock')}
             color="warning"
             size="small"
           />
@@ -220,7 +222,7 @@ const MerchandiseTypesListPage: React.FC = () => {
         return (
           <Chip
             icon={<WarningIcon />}
-            label="Out of Stock"
+            label={t('merchandise.stock.outOfStock')}
             color="error"
             size="small"
           />
@@ -233,14 +235,14 @@ const MerchandiseTypesListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Merchandise Types</Typography>
+        <Typography variant="h4">{t('merchandise.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreateType}
         >
-          Create Merchandise Type
+          {t('merchandise.createMerchandiseType')}
         </Button>
       </Box>
 
@@ -248,7 +250,7 @@ const MerchandiseTypesListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search merchandise types..."
+              placeholder={t('merchandise.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -261,28 +263,28 @@ const MerchandiseTypesListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('merchandise.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('merchandise.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="all">{t('merchandise.statusOptions.all')}</MenuItem>
+                <MenuItem value="active">{t('merchandise.statusOptions.active')}</MenuItem>
+                <MenuItem value="inactive">{t('merchandise.statusOptions.inactive')}</MenuItem>
               </Select>
             </FormControl>
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Stock Level</InputLabel>
+              <InputLabel>{t('merchandise.filters.stockLevel')}</InputLabel>
               <Select
                 value={stockFilter}
-                label="Stock Level"
+                label={t('merchandise.filters.stockLevel')}
                 onChange={(e) => setStockFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="in_stock">In Stock</MenuItem>
-                <MenuItem value="low_stock">Low Stock</MenuItem>
-                <MenuItem value="out_of_stock">Out of Stock</MenuItem>
+                <MenuItem value="all">{t('merchandise.stockOptions.all')}</MenuItem>
+                <MenuItem value="in_stock">{t('merchandise.stockOptions.inStock')}</MenuItem>
+                <MenuItem value="low_stock">{t('merchandise.stockOptions.lowStock')}</MenuItem>
+                <MenuItem value="out_of_stock">{t('merchandise.stockOptions.outOfStock')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -293,26 +295,26 @@ const MerchandiseTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Price Range</TableCell>
-              <TableCell>Stock Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('merchandise.table.name')}</TableCell>
+              <TableCell>{t('merchandise.table.status')}</TableCell>
+              <TableCell>{t('merchandise.table.priceRange')}</TableCell>
+              <TableCell>{t('merchandise.table.stockStatus')}</TableCell>
+              <TableCell align="right">{t('merchandise.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading merchandise types...
+                  {t('merchandise.loadingTypes')}
                 </TableCell>
               </TableRow>
             ) : filteredTypes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || statusFilter !== 'all' || stockFilter !== 'all'
-                    ? 'No merchandise types match your filters'
-                    : 'No merchandise types yet. Create your first merchandise type to get started.'}
+                    ? t('merchandise.noMatchingTypes')
+                    : t('merchandise.noTypesFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -343,14 +345,14 @@ const MerchandiseTypesListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleViewType(type.id)}
-                      title="View Details"
+                      title={t('merchandise.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditType(type.id)}
-                      title="Edit"
+                      title={t('merchandise.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>

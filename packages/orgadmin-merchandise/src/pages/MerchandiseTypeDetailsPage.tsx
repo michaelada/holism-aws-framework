@@ -20,11 +20,13 @@ import {
   DialogActions,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { useTranslation, formatCurrency } from '@aws-web-framework/orgadmin-shell';
 import type { MerchandiseType } from '../types/merchandise.types';
 
 const MerchandiseTypeDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { t } = useTranslation();
   const [merchandiseType, setMerchandiseType] = useState<MerchandiseType | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -61,7 +63,7 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading...</Typography>
+        <Typography>{t('common.messages.loading')}</Typography>
       </Box>
     );
   }
@@ -69,7 +71,7 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
   if (!merchandiseType) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Merchandise type not found</Typography>
+        <Typography>{t('merchandise.typeNotFound')}</Typography>
       </Box>
     );
   }
@@ -80,14 +82,14 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
         <Typography variant="h4">{merchandiseType.name}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button startIcon={<EditIcon />} onClick={handleEdit}>
-            Edit
+            {t('common.actions.edit')}
           </Button>
           <Button
             startIcon={<DeleteIcon />}
             color="error"
             onClick={() => setDeleteDialogOpen(true)}
           >
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </Box>
       </Box>
@@ -96,7 +98,7 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
         <Grid item xs={12} md={8}>
           <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Basic Information</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.basicInfo')}</Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
                 {merchandiseType.description}
               </Typography>
@@ -109,7 +111,7 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
 
           <Card>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Options & Pricing</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.optionsAndPricing')}</Typography>
               {merchandiseType.optionTypes.map((optionType) => (
                 <Box key={optionType.id} sx={{ mb: 2 }}>
                   <Typography variant="subtitle1" fontWeight="medium">
@@ -119,7 +121,7 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
                     {optionType.optionValues.map((value) => (
                       <Chip
                         key={value.id}
-                        label={`${value.name} - €${value.price.toFixed(2)}`}
+                        label={`${value.name} - ${formatCurrency(value.price, 'EUR')}`}
                         variant="outlined"
                       />
                     ))}
@@ -133,12 +135,12 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Order Statistics</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.orderStatistics')}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Total Orders: 0
+                {t('merchandise.orders.totalOrders', { count: 0 })}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Total Revenue: €0.00
+                {t('merchandise.orders.totalRevenue', { amount: '0.00' })}
               </Typography>
             </CardContent>
           </Card>
@@ -146,14 +148,14 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
       </Grid>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Merchandise Type</DialogTitle>
+        <DialogTitle>{t('merchandise.delete.title')}</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete this merchandise type? This action cannot be undone.
+          {t('merchandise.delete.message')}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('common.actions.cancel')}</Button>
           <Button onClick={handleDelete} color="error">
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </DialogActions>
       </Dialog>

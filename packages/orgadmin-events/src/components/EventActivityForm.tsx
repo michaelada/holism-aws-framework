@@ -4,7 +4,7 @@
  * Form for creating or editing event activities with enhanced attributes
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Checkbox,
@@ -26,6 +26,9 @@ import {
 } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell';
 import type { EventActivityFormData } from '../types/event.types';
 
 interface EventActivityFormProps {
@@ -35,17 +38,10 @@ interface EventActivityFormProps {
   onRemove: () => void;
 }
 
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async () => {
-    // Mock application forms data
-    return [
-      { id: '1', name: 'Standard Entry Form' },
-      { id: '2', name: 'Junior Entry Form' },
-      { id: '3', name: 'Family Entry Form' },
-    ];
-  },
-});
+interface ApplicationForm {
+  id: string;
+  name: string;
+}
 
 const EventActivityForm: React.FC<EventActivityFormProps> = ({
   activity,
@@ -54,22 +50,33 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
   onRemove,
 }) => {
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
-  const [applicationForms, setApplicationForms] = useState<Array<{ id: string; name: string }>>([]);
+  const [applicationForms, setApplicationForms] = useState<ApplicationForm[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadApplicationForms();
-  }, []);
-
-  const loadApplicationForms = async () => {
+  const loadApplicationForms = useCallback(async () => {
+    if (!organisation?.id) return;
+    
     try {
-      const response = await execute();
+      setLoading(true);
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation.id}/application-forms`,
+      });
       setApplicationForms(response || []);
     } catch (error) {
       console.error('Failed to load application forms:', error);
       setApplicationForms([]);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [organisation?.id, execute]);
+
+  useEffect(() => {
+    loadApplicationForms();
+  }, [loadApplicationForms]);
 
   const handleChange = (field: keyof EventActivityFormData, value: any) => {
     onChange({ ...activity, [field]: value });
@@ -79,7 +86,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
     <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="subtitle1" fontWeight="medium">
-          Activity {index + 1}: {activity.name || 'Untitled Activity'}
+          {t('events.activities.activity.activityNumber', { number: index + 1 })}: {activity.name || t('events.activities.activity.untitled')}
         </Typography>
         <Box>
           <IconButton size="small" onClick={() => setExpanded(!expanded)}>
@@ -97,10 +104,10 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             <TextField
               fullWidth
               required
-              label="Activity Name"
+              label={t('events.activities.activity.name')}
               value={activity.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              helperText="Activity name as it appears to members on public website"
+              helperText={t('events.activities.activity.nameHelper')}
             />
           </Grid>
 
@@ -109,10 +116,10 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
               fullWidth
               multiline
               rows={2}
-              label="Description"
+              label={t('events.activities.activity.description')}
               value={activity.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              helperText="Detailed description of this specific activity"
+              helperText={t('events.activities.activity.descriptionHelper')}
             />
           </Grid>
 
@@ -124,20 +131,21 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                   onChange={(e) => handleChange('showPublicly', e.target.checked)}
                 />
               }
-              label="Show Publicly"
+              label={t('events.activities.activity.showPublicly')}
             />
           </Grid>
 
           <Grid item xs={12}>
             <FormControl fullWidth required>
-              <InputLabel>Application Form</InputLabel>
+              <InputLabel>{t('events.activities.activity.applicationForm')}</InputLabel>
               <Select
                 value={activity.applicationFormId || ''}
-                label="Application Form"
+                label={t('events.activities.activity.applicationForm')}
                 onChange={(e) => handleChange('applicationFormId', e.target.value)}
+                disabled={loading}
               >
                 <MenuItem value="">
-                  <em>Select a form</em>
+                  <em>{loading ? t('events.activities.activity.loadingForms') : t('events.activities.activity.selectForm')}</em>
                 </MenuItem>
                 {applicationForms.map((form) => (
                   <MenuItem key={form.id} value={form.id}>
@@ -156,7 +164,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                   onChange={(e) => handleChange('limitApplicants', e.target.checked)}
                 />
               }
-              label="Limit Number of Applicants"
+              label={t('events.activities.activity.limitApplicants')}
             />
           </Grid>
 
@@ -165,10 +173,10 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
               <TextField
                 fullWidth
                 type="number"
-                label="Application Limit"
+                label={t('events.activities.activity.applicantsLimit')}
                 value={activity.applicantsLimit || ''}
                 onChange={(e) => handleChange('applicantsLimit', parseInt(e.target.value) || undefined)}
-                helperText="Maximum number of applicants for this activity"
+                helperText={t('events.activities.activity.applicantsLimitHelper')}
               />
             </Grid>
           )}
@@ -181,7 +189,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                   onChange={(e) => handleChange('allowSpecifyQuantity', e.target.checked)}
                 />
               }
-              label="Allow Specify Quantity"
+              label={t('events.activities.activity.allowSpecifyQuantity')}
             />
           </Grid>
 
@@ -193,14 +201,14 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                   onChange={(e) => handleChange('useTermsAndConditions', e.target.checked)}
                 />
               }
-              label="Use Terms and Conditions"
+              label={t('events.activities.activity.useTermsAndConditions')}
             />
           </Grid>
 
           {activity.useTermsAndConditions && (
             <Grid item xs={12}>
               <Typography variant="body2" color="textSecondary" gutterBottom>
-                Terms and Conditions
+                {t('events.activities.activity.termsAndConditions')}
               </Typography>
               <ReactQuill
                 value={activity.termsAndConditions || ''}
@@ -222,10 +230,10 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             <TextField
               fullWidth
               type="number"
-              label="Fee"
+              label={t('events.activities.activity.fee')}
               value={activity.fee}
               onChange={(e) => handleChange('fee', parseFloat(e.target.value) || 0)}
-              helperText="Entry fee for this activity (0.00 for free)"
+              helperText={t('events.activities.activity.feeHelper')}
               inputProps={{ min: 0, step: 0.01 }}
             />
           </Grid>
@@ -234,15 +242,15 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             <>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>Allowed Payment Method</InputLabel>
+                  <InputLabel>{t('events.activities.activity.allowedPaymentMethod')}</InputLabel>
                   <Select
                     value={activity.allowedPaymentMethod}
-                    label="Allowed Payment Method"
+                    label={t('events.activities.activity.allowedPaymentMethod')}
                     onChange={(e) => handleChange('allowedPaymentMethod', e.target.value)}
                   >
-                    <MenuItem value="card">Card Only</MenuItem>
-                    <MenuItem value="cheque">Cheque/Offline Only</MenuItem>
-                    <MenuItem value="both">Both</MenuItem>
+                    <MenuItem value="card">{t('events.activities.activity.paymentMethods.card')}</MenuItem>
+                    <MenuItem value="cheque">{t('events.activities.activity.paymentMethods.cheque')}</MenuItem>
+                    <MenuItem value="both">{t('events.activities.activity.paymentMethods.both')}</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -256,7 +264,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                         onChange={(e) => handleChange('handlingFeeIncluded', e.target.checked)}
                       />
                     }
-                    label="Handling Fee Included"
+                    label={t('events.activities.activity.handlingFeeIncluded')}
                   />
                 </Grid>
               )}
@@ -267,10 +275,10 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                     fullWidth
                     multiline
                     rows={3}
-                    label="Cheque/Offline Payment Instructions"
+                    label={t('events.activities.activity.chequePaymentInstructions')}
                     value={activity.chequePaymentInstructions || ''}
                     onChange={(e) => handleChange('chequePaymentInstructions', e.target.value)}
-                    helperText="Instructions for cheque/offline payment (who to make cheque to, bank transfer details, etc.)"
+                    helperText={t('events.activities.activity.chequePaymentInstructionsHelper')}
                   />
                 </Grid>
               )}

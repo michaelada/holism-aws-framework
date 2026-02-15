@@ -45,7 +45,10 @@ export class OrganizationService {
   async getAllOrganizations(organizationTypeId?: string): Promise<Organization[]> {
     try {
       let query = `
-        SELECT o.*, ot.name as org_type_name, ot.display_name as org_type_display_name
+        SELECT o.*, 
+               ot.name as org_type_name, 
+               ot.display_name as org_type_display_name,
+               ot.default_locale as org_type_default_locale
         FROM organizations o
         LEFT JOIN organization_types ot ON o.organization_type_id = ot.id
       `;
@@ -67,6 +70,12 @@ export class OrganizationService {
           const stats = await this.getOrganizationStats(org.id);
           return {
             ...org,
+            organizationType: row.org_type_name ? {
+              id: org.organizationTypeId,
+              name: row.org_type_name,
+              displayName: row.org_type_display_name,
+              defaultLocale: row.org_type_default_locale || 'en-GB'
+            } : undefined,
             adminUserCount: stats.adminUserCount,
             accountUserCount: stats.accountUserCount
           };
@@ -94,7 +103,10 @@ export class OrganizationService {
       }
 
       const result = await db.query(
-        `SELECT o.*, ot.name as org_type_name, ot.display_name as org_type_display_name
+        `SELECT o.*, 
+                ot.name as org_type_name, 
+                ot.display_name as org_type_display_name,
+                ot.default_locale as org_type_default_locale
          FROM organizations o
          LEFT JOIN organization_types ot ON o.organization_type_id = ot.id
          WHERE o.id = $1`,
@@ -110,6 +122,12 @@ export class OrganizationService {
       
       const fullOrg = {
         ...org,
+        organizationType: result.rows[0].org_type_name ? {
+          id: org.organizationTypeId,
+          name: result.rows[0].org_type_name,
+          displayName: result.rows[0].org_type_display_name,
+          defaultLocale: result.rows[0].org_type_default_locale || 'en-GB'
+        } : undefined,
         adminUserCount: stats.adminUserCount,
         accountUserCount: stats.accountUserCount
       };

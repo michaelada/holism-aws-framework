@@ -1,0 +1,1600 @@
+{
+  "common": {
+    "actions": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "create": "Erstellen",
+      "search": "Suchen",
+      "filter": "Filtern",
+      "export": "Exportieren",
+      "import": "Importieren",
+      "close": "Schließen",
+      "submit": "Absenden",
+      "reset": "Zurücksetzen",
+      "back": "Zurück",
+      "next": "Weiter",
+      "previous": "Vorherige",
+      "confirm": "Bestätigen",
+      "view": "Ansehen",
+      "download": "Herunterladen",
+      "upload": "Hochladen"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "pending": "Ausstehend",
+      "completed": "Abgeschlossen",
+      "draft": "Entwurf",
+      "published": "Veröffentlicht",
+      "archived": "Archiviert",
+      "cancelled": "Abgebrochen",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt"
+    },
+    "validation": {
+      "required": "Dieses Feld ist erforderlich",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "invalidDate": "Bitte geben Sie ein gültiges Datum ein",
+      "invalidUrl": "Bitte geben Sie eine gültige URL ein",
+      "minLength": "Muss mindestens {{min}} Zeichen lang sein",
+      "maxLength": "Darf nicht mehr als {{max}} Zeichen enthalten",
+      "minValue": "Muss mindestens {{min}} sein",
+      "maxValue": "Darf nicht mehr als {{max}} sein",
+      "invalidFormat": "Ungültiges Format",
+      "passwordMismatch": "Passwörter stimmen nicht überein"
+    },
+    "messages": {
+      "loading": "Laden...",
+      "saving": "Speichern...",
+      "saved": "Erfolgreich gespeichert",
+      "error": "Ein Fehler ist aufgetreten",
+      "success": "Vorgang erfolgreich abgeschlossen",
+      "noData": "Keine Daten verfügbar",
+      "confirmDelete": "Sind Sie sicher, dass Sie dieses Element löschen möchten?",
+      "unsavedChanges": "Sie haben nicht gespeicherte Änderungen. Sind Sie sicher, dass Sie fortfahren möchten?"
+    },
+    "labels": {
+      "all": "Alle",
+      "unlimited": "Unbegrenzt",
+      "max": "max",
+      "free": "Kostenlos",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "entries": "Anmeldungen",
+      "activity": "Aktivität",
+      "activities": "Aktivitäten",
+      "configured": "konfiguriert"
+    },
+    "accessibility": {
+      "openDrawer": "Navigationsmenü öffnen",
+      "closeDrawer": "Navigationsmenü schließen",
+      "logout": "Abmelden",
+      "menu": "Menü",
+      "required": "Pflichtfeld",
+      "loading": "Inhalt wird geladen",
+      "error": "Fehlermeldung",
+      "success": "Erfolgsmeldung",
+      "warning": "Warnmeldung",
+      "info": "Informationsmeldung"
+    }
+  },
+  "events": {
+    "title": "Veranstaltungen",
+    "createEvent": "Veranstaltung erstellen",
+    "editEvent": "Veranstaltung bearbeiten",
+    "eventDetails": "Veranstaltungsdetails",
+    "searchPlaceholder": "Veranstaltungen suchen...",
+    "noEventsFound": "Noch keine Veranstaltungen. Erstellen Sie Ihre erste Veranstaltung, um zu beginnen.",
+    "noMatchingEvents": "Keine Veranstaltungen entsprechen Ihren Filtern",
+    "loadingEvents": "Veranstaltungen werden geladen...",
+    "failedToLoad": "Fehler beim Laden der Veranstaltungen",
+    "failedToSave": "Fehler beim Speichern der Veranstaltung",
+    "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler vor dem Speichern",
+    "table": {
+      "eventName": "Veranstaltungsname",
+      "dates": "Termine",
+      "status": "Status",
+      "entryLimit": "Anmeldelimit",
+      "actions": "Aktionen"
+    },
+    "tooltips": {
+      "viewEntries": "Anmeldungen anzeigen",
+      "viewDetails": "Details anzeigen",
+      "edit": "Bearbeiten"
+    },
+    "wizard": {
+      "steps": {
+        "basicInfo": "Grundinformationen",
+        "eventDates": "Veranstaltungstermine",
+        "ticketingSettings": "Ticketing-Einstellungen",
+        "activities": "Aktivitäten",
+        "reviewConfirm": "Überprüfen und bestätigen"
+      }
+    },
+    "basicInfo": {
+      "title": "Grundinformationen",
+      "description": "Geben Sie die grundlegenden Details Ihrer Veranstaltung ein",
+      "eventName": "Veranstaltungsname",
+      "eventNameHelper": "Name, wie er den Mitgliedern auf der öffentlichen Website angezeigt wird",
+      "eventNameTooltip": "Der Name Ihrer Veranstaltung, wie er den Mitgliedern auf der öffentlichen Website angezeigt wird",
+      "eventDescription": "Beschreibung",
+      "eventDescriptionHelper": "Detaillierte Veranstaltungsinformationen einschließlich Startzeit, Ort, Parken usw.",
+      "eventDescriptionTooltip": "Geben Sie detaillierte Informationen zur Veranstaltung an, einschließlich Startzeit, Ort, Parkanweisungen und anderen relevanten Details",
+      "emailNotifications": "E-Mail-Benachrichtigungen",
+      "emailNotificationsHelper": "Durch Kommas getrennte E-Mail-Adressen, die Benachrichtigungen erhalten, wenn sich jemand für die Veranstaltung anmeldet",
+      "emailNotificationsTooltip": "Geben Sie durch Kommas getrennte E-Mail-Adressen ein, die Benachrichtigungen erhalten, wenn sich jemand für diese Veranstaltung registriert",
+      "limitEntries": "Anzahl der Veranstaltungsanmeldungen begrenzen",
+      "limitEntriesTooltip": "Aktivieren Sie dies, um eine maximale Anzahl von Anmeldungen für diese Veranstaltung über alle Aktivitäten hinweg festzulegen",
+      "entriesLimit": "Veranstaltungsanmeldelimit",
+      "entriesLimitHelper": "Maximale Anzahl von Anmeldungen über alle Veranstaltungsaktivitäten hinweg",
+      "entriesLimitTooltip": "Die maximale Gesamtzahl von Anmeldungen über alle Veranstaltungsaktivitäten hinweg",
+      "addConfirmationMessage": "Nachricht zur Bestätigungs-E-Mail hinzufügen",
+      "addConfirmationMessageTooltip": "Fügen Sie eine benutzerdefinierte Nachricht hinzu, die in der Bestätigungs-E-Mail an Personen enthalten ist, die sich für diese Veranstaltung registrieren",
+      "confirmationMessage": "Bestätigungs-E-Mail-Nachricht",
+      "confirmationMessageHelper": "Benutzerdefinierter Text für Bestätigungs-E-Mails an Teilnehmer",
+      "confirmationMessageTooltip": "Dieser benutzerdefinierte Text wird in Bestätigungs-E-Mails an Teilnehmer aufgenommen",
+      "validation": {
+        "nameRequired": "Veranstaltungsname ist erforderlich",
+        "descriptionRequired": "Veranstaltungsbeschreibung ist erforderlich"
+      }
+    },
+    "dates": {
+      "title": "Veranstaltungstermine",
+      "description": "Legen Sie die Veranstaltungstermine und Öffnungs-/Schließzeiten für Anmeldungen fest",
+      "startDate": "Veranstaltungsbeginn",
+      "startDateTooltip": "Der erste Tag Ihrer Veranstaltung",
+      "endDate": "Veranstaltungsende",
+      "endDateHelper": "Muss am oder nach dem Startdatum liegen",
+      "endDateTooltip": "Der letzte Tag Ihrer Veranstaltung (muss am oder nach dem Startdatum liegen)",
+      "openDateEntries": "Anmeldungsbeginn",
+      "openDateEntriesHelper": "Datum und Uhrzeit, vor der Personen keine Anmeldungen einreichen können",
+      "openDateEntriesTooltip": "Das Datum und die Uhrzeit, zu der die Registrierung öffnet - Personen können vor diesem Zeitpunkt keine Anmeldungen einreichen",
+      "entriesClosingDate": "Anmeldeschluss",
+      "entriesClosingDateHelper": "Muss nach dem Anmeldungsbeginn liegen",
+      "entriesClosingDateTooltip": "Das Datum und die Uhrzeit, zu der die Registrierung schließt - Anmeldungen werden zu diesem Zeitpunkt automatisch geschlossen"
+    },
+    "ticketing": {
+      "title": "Ticketing-Einstellungen",
+      "description": "Konfigurieren Sie elektronische Tickets mit QR-Codes für diese Veranstaltung",
+      "generateTickets": "Elektronische Tickets generieren",
+      "generateTicketsHelper": "Automatisch Tickets mit QR-Codes für alle Buchungen generieren",
+      "generateTicketsTooltip": "Automatische Generierung elektronischer Tickets mit QR-Codes für alle Buchungen aktivieren",
+      "headerText": "Ticket-Kopfzeilentext",
+      "headerTextHelper": "Text, der oben auf dem Ticket angezeigt wird (optional)",
+      "headerTextTooltip": "Optionaler Text, der oben auf dem Ticket angezeigt wird",
+      "instructions": "Ticket-Anweisungen",
+      "instructionsHelper": "Anweisungen für Ticketinhaber (z.B. 'Bitte zeigen Sie diesen QR-Code am Eingang vor')",
+      "instructionsTooltip": "Anweisungen für Ticketinhaber, wie 'Bitte zeigen Sie diesen QR-Code am Eingang vor'",
+      "footerText": "Ticket-Fußzeilentext",
+      "footerTextHelper": "Text, der unten auf dem Ticket angezeigt wird (optional)",
+      "footerTextTooltip": "Optionaler Text, der unten auf dem Ticket angezeigt wird",
+      "validityPeriod": "Ticket-Gültigkeitsdauer (Stunden)",
+      "validityPeriodHelper": "Stunden vor Veranstaltungsbeginn, in denen das Ticket gültig wird (optional)",
+      "validityPeriodTooltip": "Anzahl der Stunden vor Veranstaltungsbeginn, in denen das Ticket gültig wird",
+      "backgroundColor": "Ticket-Hintergrundfarbe",
+      "backgroundColorHelper": "Hintergrundfarbe für das Ticket (optional)",
+      "backgroundColorTooltip": "Wählen Sie eine Hintergrundfarbe für das Ticket",
+      "includeLogo": "Veranstaltungslogo einschließen",
+      "includeLogoHelper": "Organisationslogo auf dem Ticket anzeigen",
+      "includeLogoTooltip": "Zeigen Sie das Logo Ihrer Organisation auf dem Ticket an"
+    },
+    "activities": {
+      "title": "Veranstaltungsaktivitäten",
+      "description": "Fügen Sie Aktivitäten hinzu, für die sich Personen registrieren können",
+      "addActivity": "Aktivität hinzufügen",
+      "noActivities": "Fügen Sie mindestens eine Aktivität hinzu, um die Einrichtung Ihrer Veranstaltung abzuschließen",
+      "validation": {
+        "atLeastOne": "Mindestens eine Aktivität ist erforderlich"
+      },
+      "activity": {
+        "untitled": "Unbenannte Aktivität",
+        "activityNumber": "Aktivität {{number}}",
+        "name": "Aktivitätsname",
+        "nameHelper": "Aktivitätsname, wie er den Mitgliedern auf der öffentlichen Website angezeigt wird",
+        "description": "Beschreibung",
+        "descriptionHelper": "Detaillierte Beschreibung dieser spezifischen Aktivität",
+        "showPublicly": "Öffentlich anzeigen",
+        "applicationForm": "Bewerbungsformular",
+        "selectForm": "Formular auswählen",
+        "loadingForms": "Formulare werden geladen...",
+        "limitApplicants": "Anzahl der Bewerber begrenzen",
+        "applicantsLimit": "Bewerbungslimit",
+        "applicantsLimitHelper": "Maximale Anzahl von Bewerbern für diese Aktivität",
+        "allowSpecifyQuantity": "Mengenangabe erlauben",
+        "useTermsAndConditions": "Allgemeine Geschäftsbedingungen verwenden",
+        "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+        "fee": "Gebühr",
+        "feeHelper": "Anmeldegebühr für diese Aktivität (0,00 für kostenlos)",
+        "allowedPaymentMethod": "Zulässige Zahlungsmethode",
+        "paymentMethods": {
+          "card": "Nur Karte",
+          "cheque": "Nur Scheck/Offline",
+          "both": "Beides"
+        },
+        "handlingFeeIncluded": "Bearbeitungsgebühr inbegriffen",
+        "chequePaymentInstructions": "Scheck-/Offline-Zahlungsanweisungen",
+        "chequePaymentInstructionsHelper": "Anweisungen für Scheck-/Offline-Zahlung (an wen der Scheck ausgestellt werden soll, Bankverbindung usw.)"
+      }
+    },
+    "review": {
+      "title": "Überprüfen und bestätigen",
+      "description": "Beschreibung:",
+      "basicInfo": "Grundinformationen",
+      "eventName": "Veranstaltungsname:",
+      "emailNotifications": "E-Mail-Benachrichtigungen:",
+      "entryLimit": "Anmeldelimit:",
+      "eventDates": "Veranstaltungstermine",
+      "eventPeriod": "Veranstaltungszeitraum:",
+      "entriesOpen": "Anmeldungsbeginn:",
+      "entriesClose": "Anmeldeschluss:",
+      "ticketing": "Ticketing",
+      "electronicTickets": "Elektronische Tickets:",
+      "activities": "Aktivitäten",
+      "activitiesConfigured": "{{count}} {{type}} konfiguriert"
+    },
+    "actions": {
+      "saveAsDraft": "Als Entwurf speichern",
+      "publishEvent": "Veranstaltung veröffentlichen"
+    },
+    "entryDetails": {
+      "title": "Anmeldungsdetails",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "E-Mail",
+      "quantity": "Menge",
+      "paymentStatus": "Zahlungsstatus",
+      "paymentMethod": "Zahlungsmethode",
+      "entryDate": "Anmeldedatum",
+      "formSubmission": "Formularübermittlungsdaten",
+      "loadingSubmission": "Übermittlungsdaten werden geladen...",
+      "uploadedFiles": "Hochgeladene Dateien"
+    }
+  },
+  "memberships": {
+    "title": "Mitgliedschaften",
+    "membershipTypes": "Mitgliedschaftstypen",
+    "members": "Mitglieder",
+    "membersDatabase": "Mitgliederdatenbank",
+    "createMembershipType": "Mitgliedschaftstyp erstellen",
+    "searchPlaceholder": "Mitgliedschaftstypen suchen...",
+    "noTypesFound": "Noch keine Mitgliedschaftstypen. Erstellen Sie Ihren ersten Typ.",
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "type": "Typ",
+      "actions": "Aktionen"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "open": "Offen",
+      "closed": "Geschlossen"
+    },
+    "typeOptions": {
+      "all": "Alle",
+      "single": "Einzel",
+      "group": "Gruppe"
+    }
+  },
+  "calendar": {
+    "title": "Kalender",
+    "calendars": "Kalender",
+    "bookings": "Buchungen",
+    "createCalendar": "Kalender erstellen",
+    "editCalendar": "Kalender bearbeiten",
+    "calendarDetails": "Kalenderdetails",
+    "bookingDetails": "Buchungsdetails",
+    "searchCalendarsPlaceholder": "Kalender suchen...",
+    "searchBookingsPlaceholder": "Buchungen suchen...",
+    "noCalendarsFound": "Noch keine Kalender. Erstellen Sie Ihren ersten Kalender, um zu beginnen.",
+    "noMatchingCalendars": "Keine Kalender entsprechen Ihren Filtern",
+    "noBookingsFound": "Keine Buchungen gefunden",
+    "loadingCalendars": "Kalender werden geladen...",
+    "loadingBookings": "Buchungen werden geladen...",
+    "failedToLoad": "Fehler beim Laden der Kalender",
+    "failedToToggleStatus": "Fehler beim Ändern des Kalenderstatus",
+    "table": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "status": "Status",
+      "actions": "Aktionen",
+      "bookingReference": "Buchungsreferenz",
+      "calendar": "Kalender",
+      "user": "Benutzer",
+      "date": "Datum",
+      "time": "Zeit",
+      "duration": "Dauer",
+      "price": "Preis",
+      "bookingStatus": "Status"
+    },
+    "tooltips": {
+      "viewDetails": "Details anzeigen",
+      "edit": "Kalender bearbeiten",
+      "closeCalendar": "Kalender schließen",
+      "openCalendar": "Kalender öffnen",
+      "viewBooking": "Buchung anzeigen"
+    },
+    "filters": {
+      "status": "Status",
+      "all": "Alle"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "open": "Offen",
+      "closed": "Geschlossen"
+    },
+    "sections": {
+      "basicInfo": "Grundinformationen",
+      "automatedSchedule": "Automatisierte Öffnung/Schließung",
+      "bookingWindow": "Buchungsfenster-Konfiguration",
+      "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "cancellationPolicy": "Stornierungsbedingungen",
+      "emailNotifications": "E-Mail-Benachrichtigungen"
+    },
+    "fields": {
+      "calendarName": "Kalendername",
+      "description": "Beschreibung",
+      "displayColour": "Anzeigefarbe",
+      "status": "Status",
+      "enableAutomatedSchedule": "Automatisierten Zeitplan aktivieren",
+      "minDaysInAdvance": "Mindestanzahl Tage im Voraus",
+      "maxDaysInAdvance": "Maximale Anzahl Tage im Voraus",
+      "useTermsAndConditions": "Allgemeine Geschäftsbedingungen verwenden",
+      "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "allowCancellations": "Stornierungen zulassen",
+      "cancelDaysInAdvance": "Stornierungstage im Voraus",
+      "refundPaymentAutomatically": "Zahlung automatisch erstatten",
+      "adminNotificationEmails": "Administrator-Benachrichtigungs-E-Mails",
+      "adminNotificationEmailsPlaceholder": "email1@beispiel.de, email2@beispiel.de",
+      "sendReminderEmails": "Erinnerungs-E-Mails senden",
+      "reminderHoursBefore": "Erinnerungsstunden vorher",
+      "bookingReference": "Buchungsreferenz",
+      "userName": "Benutzername",
+      "bookingDate": "Buchungsdatum",
+      "startTime": "Startzeit",
+      "duration": "Dauer",
+      "totalPrice": "Gesamtpreis",
+      "bookingStatus": "Buchungsstatus",
+      "paymentStatus": "Zahlungsstatus",
+      "cancellationReason": "Stornierungsgrund",
+      "processRefund": "Rückerstattung verarbeiten"
+    },
+    "actions": {
+      "exportToExcel": "Nach Excel exportieren"
+    },
+    "cancelBooking": {
+      "title": "Buchung stornieren",
+      "message": "Sind Sie sicher, dass Sie die Buchung {{reference}} stornieren möchten?",
+      "confirmButton": "Stornierung bestätigen"
+    },
+    "duration": {
+      "minutes": "{{count}} Min"
+    }
+  },
+  "registrations": {
+    "title": "Registrierungen",
+    "registrationTypes": "Registrierungstypen",
+    "registrationsDatabase": "Registrierungsdatenbank",
+    "createRegistrationType": "Registrierungstyp erstellen",
+    "editRegistrationType": "Registrierungstyp bearbeiten",
+    "registrationDetails": "Registrierungsdetails",
+    "searchPlaceholder": "Registrierungstypen suchen...",
+    "searchRegistrationsPlaceholder": "Nach Entitätsname oder Eigentümername suchen...",
+    "noTypesFound": "Noch keine Registrierungstypen. Erstellen Sie Ihren ersten Registrierungstyp.",
+    "noMatchingTypes": "Keine Registrierungstypen entsprechen Ihren Filtern",
+    "noRegistrationsFound": "Noch keine Registrierungen.",
+    "noMatchingRegistrations": "Keine Registrierungen entsprechen Ihren Filtern",
+    "loadingTypes": "Registrierungstypen werden geladen...",
+    "loadingRegistrations": "Registrierungen werden geladen...",
+    "loadingRegistration": "Registrierung wird geladen...",
+    "loadingType": "Registrierungstyp wird geladen...",
+    "failedToLoad": "Registrierungstyp konnte nicht geladen werden",
+    "failedToLoadRegistrations": "Registrierungen konnten nicht geladen werden",
+    "failedToSave": "Registrierungstyp konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "failedToDelete": "Registrierungstyp konnte nicht gelöscht werden",
+    "failedToUpdate": "Verarbeitungsstatus konnte nicht aktualisiert werden",
+    "failedToExport": "Registrierungen konnten nicht exportiert werden",
+    "typeNotFound": "Registrierungstyp nicht gefunden",
+    "registrationNotFound": "Registrierung nicht gefunden",
+    "table": {
+      "name": "Name",
+      "entityName": "Entitätsname",
+      "status": "Status",
+      "pricing": "Preise",
+      "actions": "Aktionen",
+      "registrationType": "Registrierungstyp",
+      "registrationNumber": "Registrierungsnummer",
+      "ownerName": "Eigentümername",
+      "dateLastRenewed": "Datum der letzten Erneuerung",
+      "validUntil": "Gültig bis",
+      "labels": "Etiketten",
+      "processed": "Verarbeitet"
+    },
+    "tooltips": {
+      "viewDetails": "Details anzeigen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "markProcessed": "Als verarbeitet markieren",
+      "markUnprocessed": "Als unverarbeitet markieren"
+    },
+    "filters": {
+      "status": "Status",
+      "customFilter": "Benutzerdefinierter Filter",
+      "createFilter": "Filter erstellen",
+      "none": "Keine"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "open": "Offen",
+      "closed": "Geschlossen",
+      "openAccepting": "Offen (Akzeptiert Bewerbungen)",
+      "closedNotAccepting": "Geschlossen (Sichtbar, aber akzeptiert nicht)",
+      "current": "Aktuell",
+      "elapsed": "Abgelaufen"
+    },
+    "registrationStatus": {
+      "active": "Aktiv",
+      "pending": "Ausstehend",
+      "elapsed": "Abgelaufen"
+    },
+    "sections": {
+      "basicInfo": "Grundinformationen",
+      "registrationForm": "Registrierungsformular",
+      "duration": "Dauereinstellungen",
+      "approval": "Genehmigungseinstellungen",
+      "labels": "Registrierungsetiketten",
+      "payment": "Zahlungskonfiguration",
+      "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "statusAndDates": "Status und Daten",
+      "paymentInfo": "Zahlungsinformationen",
+      "formData": "Registrierungsformulardaten"
+    },
+    "fields": {
+      "name": "Name",
+      "nameHelper": "Anzeigename für diesen Registrierungstyp (z.B. 'Pferderegistrierung 2026')",
+      "description": "Beschreibung",
+      "descriptionHelper": "Detaillierte Beschreibung, die Kontobenutzern angezeigt wird",
+      "entityName": "Entitätsname",
+      "entityNameHelper": "Name der zu registrierenden Sache (z.B. 'Pferd', 'Boot', 'Ausrüstung')",
+      "registrationStatus": "Registrierungsstatus",
+      "applicationForm": "Bewerbungsformular",
+      "applicationFormHelper": "Wählen Sie das Formular aus, das die erforderlichen Felder für die Entitätsregistrierung definiert",
+      "isRollingRegistration": "Ist fortlaufende Registrierung",
+      "rollingRegistrationHelper": "Fortlaufende Registrierungen sind für eine bestimmte Anzahl von Monaten ab Zahlungsdatum gültig. Registrierungen mit festem Zeitraum haben ein bestimmtes Enddatum.",
+      "validUntil": "Gültig bis",
+      "validUntilHelper": "Enddatum für Registrierungen mit festem Zeitraum",
+      "numberOfMonths": "Anzahl der Monate",
+      "numberOfMonthsHelper": "Dauer in Monaten für fortlaufende Registrierungen",
+      "automaticallyApprove": "Bewerbungen automatisch genehmigen",
+      "automaticallyApproveHelper": "Wenn aktiviert, werden neue Bewerbungen automatisch als \"Aktiv\" markiert. Wenn deaktiviert, erfordern Bewerbungen eine manuelle Überprüfung und werden als \"Ausstehend\" markiert.",
+      "registrationLabels": "Registrierungsetiketten",
+      "registrationLabelsHelper": "Etiketten, die automatisch Registrierungen zugewiesen werden, die diesen Typ verwenden",
+      "supportedPaymentMethods": "Unterstützte Zahlungsmethoden",
+      "useTermsAndConditions": "Allgemeine Geschäftsbedingungen verwenden",
+      "termsAndConditionsContent": "Inhalt der Allgemeinen Geschäftsbedingungen",
+      "registrationNumber": "Registrierungsnummer",
+      "ownerName": "Eigentümername",
+      "registrationType": "Registrierungstyp",
+      "dateLastRenewed": "Datum der letzten Erneuerung",
+      "validUntilDate": "Gültig bis",
+      "status": "Status",
+      "processed": "Verarbeitet",
+      "processedStatus": "Verarbeitungsstatus",
+      "paymentStatus": "Zahlungsstatus",
+      "paymentMethod": "Zahlungsmethode",
+      "addLabel": "Etikett hinzufügen",
+      "labels": "Etiketten",
+      "labelsToAdd": "Hinzuzufügende Etiketten",
+      "labelsToRemove": "Zu entfernende Etiketten",
+      "manageLabels": "Etiketten verwalten",
+      "changeStatus": "Status ändern"
+    },
+    "duration": {
+      "rolling": "Fortlaufende Registrierung",
+      "fixedPeriod": "Registrierung mit festem Zeitraum",
+      "type": "Registrierungstyp",
+      "duration": "Dauer",
+      "months": "{{count}} Monate ab Zahlungsdatum",
+      "notSet": "Nicht festgelegt"
+    },
+    "approval": {
+      "yes": "Bewerbungen werden automatisch genehmigt und als Aktiv markiert",
+      "no": "Bewerbungen erfordern manuelle Überprüfung und werden als Ausstehend markiert",
+      "autoApprove": "Automatische Genehmigung zu Aktiv",
+      "manualReview": "Manuelle Genehmigung erforderlich"
+    },
+    "labels": {
+      "noLabels": "Keine Etiketten konfiguriert",
+      "noLabelsAssigned": "Keine Etiketten zugewiesen"
+    },
+    "details": {
+      "backToTypes": "Zurück zur Liste",
+      "backToDatabase": "Zurück zur Datenbank"
+    },
+    "delete": {
+      "title": "Registrierungstyp löschen",
+      "message": "Sind Sie sicher, dass Sie diesen Registrierungstyp löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden. Alle zugehörigen Registrierungen bleiben erhalten, sind aber nicht mehr mit diesem Typ verknüpft."
+    },
+    "validation": {
+      "nameRequired": "Name ist erforderlich",
+      "descriptionRequired": "Beschreibung ist erforderlich",
+      "entityNameRequired": "Entitätsname ist erforderlich",
+      "formRequired": "Registrierungsformular ist erforderlich",
+      "validUntilRequired": "Datum Gültig bis ist für Registrierungen mit festem Zeitraum erforderlich",
+      "numberOfMonthsRequired": "Anzahl der Monate ist für fortlaufende Registrierungen erforderlich",
+      "paymentMethodRequired": "Mindestens eine Zahlungsmethode ist erforderlich",
+      "termsRequired": "Inhalt der Allgemeinen Geschäftsbedingungen ist erforderlich, wenn aktiviert"
+    },
+    "actions": {
+      "saveAsDraft": "Als Entwurf speichern",
+      "saveAndPublish": "Speichern und veröffentlichen",
+      "update": "Aktualisieren",
+      "exportToExcel": "Nach Excel exportieren",
+      "markProcessed": "Als verarbeitet markieren",
+      "markUnprocessed": "Als unverarbeitet markieren",
+      "addLabels": "Etiketten hinzufügen",
+      "removeLabels": "Etiketten entfernen",
+      "execute": "Ausführen",
+      "add": "Hinzufügen",
+      "saveLabels": "Etiketten speichern",
+      "saveChanges": "Änderungen speichern"
+    },
+    "batch": {
+      "markProcessed": {
+        "title": "Als verarbeitet markieren",
+        "message": "{{count}} Registrierung(en) als verarbeitet markieren?"
+      },
+      "markUnprocessed": {
+        "title": "Als unverarbeitet markieren",
+        "message": "{{count}} Registrierung(en) als unverarbeitet markieren?"
+      },
+      "addLabels": {
+        "title": "Etiketten hinzufügen",
+        "message": "Ausgewählte Etiketten zu {{count}} Registrierung(en) hinzufügen?"
+      },
+      "removeLabels": {
+        "title": "Etiketten entfernen",
+        "message": "Ausgewählte Etiketten von {{count}} Registrierung(en) entfernen?"
+      },
+      "selectedRegistrations": "Ausgewählte Registrierungen: {{count}}",
+      "processing": "Wird verarbeitet...",
+      "batchOperation": "Stapelverarbeitung"
+    },
+    "customFilter": {
+      "title": "Benutzerdefinierten Filter erstellen",
+      "filterName": "Filtername",
+      "filterNameHelper": "Geben Sie diesem Filter einen beschreibenden Namen",
+      "registrationStatus": "Registrierungsstatus",
+      "registrationTypes": "Registrierungstypen",
+      "registrationLabels": "Registrierungsetiketten",
+      "dateLastRenewedFilters": "Filter für Datum der letzten Erneuerung",
+      "validUntilFilters": "Filter für Gültig bis",
+      "beforeDate": "Vor Datum",
+      "beforeDateHelper": "Registrierungen anzeigen, die vor diesem Datum erneuert wurden",
+      "afterDate": "Nach Datum",
+      "afterDateHelper": "Registrierungen anzeigen, die nach diesem Datum erneuert wurden",
+      "expiringBeforeHelper": "Registrierungen anzeigen, die vor diesem Datum ablaufen",
+      "expiringAfterHelper": "Registrierungen anzeigen, die nach diesem Datum ablaufen",
+      "saveFilter": "Filter speichern"
+    },
+    "paymentMethods": {
+      "payOffline": "Offline bezahlen",
+      "stripe": "Kartenzahlung (Stripe)"
+    },
+    "paymentStatus": {
+      "paid": "Bezahlt",
+      "pending": "Ausstehend",
+      "notSpecified": "Nicht angegeben"
+    },
+    "processedStatus": {
+      "processed": "Verarbeitet",
+      "unprocessed": "Unverarbeitet"
+    },
+    "formSubmission": {
+      "title": "Formularübermittlungsdaten würden hier basierend auf den Bewerbungsformularfeldern angezeigt. Dies umfasst alle benutzerdefinierten Felder, die im Registrierungsformular definiert sind.",
+      "uploadedFiles": "Hochgeladene Dateien",
+      "downloadFile": "{{filename}} herunterladen"
+    }
+  },
+  "merchandise": {
+    "title": "Waren",
+    "merchandiseTypes": "Warentypen",
+    "orders": {
+      "title": "Warenbestellungen",
+      "exportToExcel": "Nach Excel exportieren",
+      "selectedOrders": "{{count}} Bestellung{{plural}} ausgewählt",
+      "updateStatus": "Status aktualisieren",
+      "loadingOrders": "Bestellungen werden geladen...",
+      "noOrders": "Keine Bestellungen gefunden",
+      "totalOrders": "Gesamtbestellungen: {{count}}",
+      "totalRevenue": "Gesamtumsatz: €{{amount}}"
+    },
+    "createMerchandiseType": "Warentyp erstellen",
+    "editMerchandiseType": "Warentyp bearbeiten",
+    "merchandiseTypeDetails": "Warentyp-Details",
+    "searchPlaceholder": "Warentypen suchen...",
+    "searchOrdersPlaceholder": "Nach Kundenname suchen...",
+    "noTypesFound": "Noch keine Warentypen. Erstellen Sie Ihren ersten Warentyp, um zu beginnen.",
+    "noMatchingTypes": "Keine Warentypen entsprechen Ihren Filtern",
+    "noOrdersFound": "Keine Bestellungen gefunden",
+    "loadingTypes": "Warentypen werden geladen...",
+    "loadingOrders": "Bestellungen werden geladen...",
+    "failedToLoad": "Warentyp konnte nicht geladen werden",
+    "failedToSave": "Warentyp konnte nicht gespeichert werden",
+    "failedToDelete": "Warentyp konnte nicht gelöscht werden",
+    "typeNotFound": "Warentyp nicht gefunden",
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "priceRange": "Preisspanne",
+      "stockStatus": "Lagerstatus",
+      "actions": "Aktionen",
+      "orderId": "Bestell-ID",
+      "customer": "Kunde",
+      "merchandise": "Ware",
+      "quantity": "Menge",
+      "total": "Gesamt",
+      "payment": "Zahlung",
+      "orderStatus": "Status",
+      "date": "Datum"
+    },
+    "tooltips": {
+      "viewDetails": "Details anzeigen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "viewOrder": "Bestellung anzeigen"
+    },
+    "filters": {
+      "status": "Status",
+      "stockLevel": "Lagerbestand",
+      "paymentStatus": "Zahlungsstatus",
+      "orderStatus": "Bestellstatus",
+      "all": "Alle"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "stockOptions": {
+      "all": "Alle",
+      "inStock": "Auf Lager",
+      "lowStock": "Niedriger Lagerbestand",
+      "outOfStock": "Nicht vorrätig",
+      "notTracked": "Nicht verfolgt"
+    },
+    "orderStatusOptions": {
+      "all": "Alle",
+      "pending": "Ausstehend",
+      "processing": "In Bearbeitung",
+      "shipped": "Versandt",
+      "delivered": "Geliefert",
+      "cancelled": "Storniert"
+    },
+    "paymentStatusOptions": {
+      "all": "Alle",
+      "pending": "Ausstehend",
+      "paid": "Bezahlt",
+      "refunded": "Erstattet"
+    },
+    "pricing": {
+      "noOptions": "Keine Optionen konfiguriert",
+      "noPricing": "Keine Preisgestaltung",
+      "priceRange": "€{{min}} - €{{max}}",
+      "singlePrice": "€{{price}}"
+    },
+    "stock": {
+      "inStock": "Auf Lager",
+      "lowStock": "Niedriger Lagerbestand",
+      "outOfStock": "Nicht vorrätig",
+      "notTracked": "Nicht verfolgt"
+    },
+    "sections": {
+      "basicInfo": "Grundinformationen",
+      "images": "Produktbilder",
+      "options": "Optionskonfiguration",
+      "stockManagement": "Lagerverwaltung",
+      "delivery": "Lieferkonfiguration",
+      "quantityRules": "Bestellmengenregeln",
+      "applicationForm": "Bewerbungsformular",
+      "payment": "Zahlungskonfiguration",
+      "emailNotifications": "E-Mail-Benachrichtigungen",
+      "optionsAndPricing": "Optionen und Preise",
+      "orderStatistics": "Bestellstatistiken"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "status": "Status",
+      "images": "Bilder",
+      "trackStockLevels": "Lagerbestände verfolgen",
+      "lowStockAlert": "Schwellenwert für niedrigen Lagerbestand",
+      "lowStockAlertHelper": "Warnung, wenn der Lagerbestand unter diese Menge fällt",
+      "outOfStockBehavior": "Verhalten bei Nicht-Verfügbarkeit",
+      "deliveryType": "Lieferart",
+      "deliveryFee": "Liefergebühr",
+      "requireApplicationForm": "Bewerbungsformular erforderlich",
+      "applicationForm": "Bewerbungsformular",
+      "selectForm": "Formular auswählen...",
+      "useTermsAndConditions": "Allgemeine Geschäftsbedingungen verwenden",
+      "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "adminNotificationEmails": "Administrator-Benachrichtigungs-E-Mails",
+      "adminNotificationEmailsPlaceholder": "email1@beispiel.com, email2@beispiel.com",
+      "adminNotificationEmailsHelper": "Durch Kommas getrennte E-Mail-Adressen",
+      "customConfirmationMessage": "Benutzerdefinierte Bestätigungsnachricht",
+      "customConfirmationMessagePlaceholder": "Benutzerdefinierte Nachricht für Bestellbestätigungs-E-Mails",
+      "minOrderQuantity": "Mindestbestellmenge",
+      "minOrderQuantityHelper": "Mindestanzahl der zu bestellenden Artikel",
+      "maxOrderQuantity": "Maximale Bestellmenge",
+      "maxOrderQuantityHelper": "Maximale Anzahl der pro Bestellung zulässigen Artikel (leer lassen für kein Limit)",
+      "quantityIncrements": "Mengenerhöhungen",
+      "quantityIncrementsHelper": "Muss in Vielfachen dieser Zahl bestellt werden (z.B. 6 für 6er-Packungen)",
+      "noLimit": "Kein Limit",
+      "anyQuantity": "Beliebige Menge"
+    },
+    "images": {
+      "title": "Produktbilder",
+      "uploadImages": "Bilder hochladen",
+      "uploading": "Hochladen...",
+      "mainImage": "Hauptbild",
+      "setAsMain": "Als Hauptbild festlegen",
+      "imageCount": "{{current}} / {{max}} Bilder",
+      "noImages": "Noch keine Bilder hochgeladen. Laden Sie mindestens ein Produktbild hoch.",
+      "productImage": "Produktbild {{number}}"
+    },
+    "options": {
+      "title": "Optionskonfiguration",
+      "addOptionType": "Optionstyp hinzufügen",
+      "optionTypeName": "Optionstyp-Name",
+      "optionTypeNamePlaceholder": "z.B. Größe, Farbe, Packungstyp",
+      "optionValues": "Optionswerte",
+      "addOptionValue": "Optionswert hinzufügen",
+      "name": "Name",
+      "namePlaceholder": "z.B. Klein, Mittel, Groß",
+      "price": "Preis",
+      "sku": "SKU",
+      "skuPlaceholder": "Optional",
+      "stockQuantity": "Lagermenge",
+      "noOptions": "Keine Optionstypen konfiguriert. Klicken Sie auf \"Optionstyp hinzufügen\", um zu beginnen."
+    },
+    "delivery": {
+      "title": "Lieferkonfiguration",
+      "deliveryType": "Lieferart",
+      "freeDelivery": "Kostenlose Lieferung",
+      "fixedFee": "Feste Liefergebühr",
+      "quantityBased": "Mengenbasierte Lieferung",
+      "deliveryFee": "Liefergebühr",
+      "deliveryRules": "Lieferregeln",
+      "addRule": "Regel hinzufügen",
+      "minQuantity": "Mindestmenge",
+      "maxQuantity": "Maximale Menge",
+      "maxQuantityPlaceholder": "Kein Limit"
+    },
+    "stockManagement": {
+      "title": "Lagerverwaltung",
+      "trackStockLevels": "Lagerbestände verfolgen",
+      "lowStockAlert": "Schwellenwert für niedrigen Lagerbestand",
+      "outOfStockBehavior": "Verhalten bei Nicht-Verfügbarkeit",
+      "hideFromCustomers": "Vor Kunden verbergen",
+      "showAsUnavailable": "Als nicht verfügbar anzeigen"
+    },
+    "quantityRules": {
+      "title": "Bestellmengenregeln"
+    },
+    "batchOperations": {
+      "title": "Stapelaktualisierung von Bestellungen",
+      "updatingCount": "Aktualisierung von {{count}} Bestellung{{plural}}",
+      "newStatus": "Neuer Status",
+      "notes": "Notizen (optional)",
+      "notesPlaceholder": "Notizen zu dieser Stapelaktualisierung hinzufügen...",
+      "processing": "Verarbeitung...",
+      "updateButton": "{{count}} Bestellung{{plural}} aktualisieren"
+    },
+    "details": {
+      "backToList": "Zurück zu Warentypen",
+      "orderStatistics": "Bestellstatistiken"
+    },
+    "delete": {
+      "title": "Warentyp löschen",
+      "message": "Sind Sie sicher, dass Sie diesen Warentyp löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "validation": {
+      "nameRequired": "Name ist erforderlich",
+      "descriptionRequired": "Beschreibung ist erforderlich",
+      "imagesRequired": "Mindestens ein Bild ist erforderlich"
+    },
+    "actions": {
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "cancel": "Abbrechen"
+    }
+  },
+  "ticketing": {
+    "title": "Veranstaltungstickets",
+    "dashboard": "Ticketing-Dashboard",
+    "searchPlaceholder": "Suche nach Name, E-Mail oder Ticketreferenz...",
+    "noTicketsFound": "Keine Tickets gefunden",
+    "loadingTickets": "Tickets werden geladen...",
+    "table": {
+      "ticketReference": "Ticketreferenz",
+      "eventName": "Veranstaltungsname",
+      "eventActivity": "Veranstaltungsaktivität",
+      "customerName": "Kundenname",
+      "customerEmail": "Kunden-E-Mail",
+      "issueDate": "Ausstellungsdatum",
+      "scanStatus": "Scan-Status",
+      "scanDate": "Scan-Datum",
+      "actions": "Aktionen"
+    },
+    "tooltips": {
+      "viewTicketDetails": "Ticketdetails anzeigen"
+    },
+    "filters": {
+      "title": "Filter",
+      "event": "Veranstaltung",
+      "eventActivity": "Veranstaltungsaktivität",
+      "scanStatus": "Scan-Status",
+      "dateFrom": "Datum von",
+      "dateTo": "Datum bis",
+      "allEvents": "Alle Veranstaltungen",
+      "allActivities": "Alle Aktivitäten"
+    },
+    "scanStatus": {
+      "scanned": "Gescannt",
+      "notScanned": "Nicht gescannt"
+    },
+    "actions": {
+      "refresh": "Aktualisieren",
+      "exportToExcel": "Nach Excel exportieren",
+      "markAsScanned": "Als gescannt markieren",
+      "markAsNotScanned": "Als nicht gescannt markieren",
+      "resendEmail": "E-Mail erneut senden",
+      "downloadPDF": "PDF herunterladen"
+    },
+    "batch": {
+      "selectedTickets": "{{count}} Ticket(s) ausgewählt",
+      "markScanned": "Als gescannt markieren",
+      "markNotScanned": "Als nicht gescannt markieren"
+    },
+    "details": {
+      "title": "Ticketdetails",
+      "ticketInformation": "Ticketinformationen",
+      "eventDetails": "Veranstaltungsdetails",
+      "customerInformation": "Kundeninformationen",
+      "scanStatusSection": "Scan-Status",
+      "scanHistory": "Scan-Verlauf",
+      "qrCode": "QR-Code",
+      "ticketReference": "Ticketreferenz",
+      "status": "Status",
+      "issueDate": "Ausstellungsdatum",
+      "validUntil": "Gültig bis",
+      "eventName": "Veranstaltungsname",
+      "eventActivity": "Veranstaltungsaktivität",
+      "name": "Name",
+      "email": "E-Mail",
+      "scanStatus": "Status",
+      "scanDate": "Scan-Datum",
+      "scanLocation": "Scan-Ort",
+      "scanCount": "Anzahl Scans",
+      "scanResult": "Ergebnis",
+      "notes": "Notizen",
+      "notAvailable": "N/V"
+    },
+    "scanHistory": {
+      "scanDate": "Scan-Datum",
+      "result": "Ergebnis",
+      "location": "Ort",
+      "notes": "Notizen",
+      "noLocation": "-",
+      "noNotes": "-"
+    },
+    "batchOperations": {
+      "markScannedTitle": "Tickets als gescannt markieren",
+      "markNotScannedTitle": "Tickets als nicht gescannt markieren",
+      "markScannedDescription": "{{count}} Ticket(s) als gescannt markieren?",
+      "markNotScannedDescription": "{{count}} Ticket(s) als nicht gescannt markieren?",
+      "updateMessage": "Diese Aktion aktualisiert den Scan-Status für alle ausgewählten Tickets.",
+      "processing": "Verarbeitung läuft...",
+      "progressComplete": "{{progress}}% abgeschlossen",
+      "successTitle": "Vorgang erfolgreich abgeschlossen!",
+      "successMessage": "{{count}} Ticket(s) aktualisiert",
+      "errorTitle": "Vorgang mit Fehlern abgeschlossen",
+      "errorMessage": "Verarbeitet: {{processed}} | Fehlgeschlagen: {{failed}}",
+      "errors": "Fehler:",
+      "ticketError": "Ticket {{ticketId}}: {{error}}",
+      "confirm": "Bestätigen",
+      "cancel": "Abbrechen",
+      "close": "Schließen"
+    },
+    "stats": {
+      "totalIssued": "Gesamt ausgestellte Tickets",
+      "scanned": "Gescannte Tickets",
+      "notScanned": "Nicht gescannte Tickets",
+      "lastScanTime": "Letzte Scan-Zeit",
+      "percentOfTotal": "{{percent}}% der Gesamtzahl",
+      "noScansYet": "Noch keine Scans"
+    },
+    "messages": {
+      "exportSuccess": "Export erfolgreich",
+      "exportFailed": "Export der Tickets fehlgeschlagen",
+      "resendSuccess": "Ticket-E-Mail erfolgreich erneut gesendet",
+      "resendFailed": "Senden der Ticket-E-Mail fehlgeschlagen",
+      "downloadFailed": "Download der Ticket-PDF fehlgeschlagen",
+      "markScannedFailed": "Markieren des Tickets als gescannt fehlgeschlagen",
+      "markNotScannedFailed": "Markieren des Tickets als nicht gescannt fehlgeschlagen",
+      "loadScanHistoryFailed": "Laden des Scan-Verlaufs fehlgeschlagen",
+      "generateQRCodeFailed": "Generierung des QR-Codes fehlgeschlagen",
+      "batchOperationFailed": "Vorgang fehlgeschlagen"
+    }
+  },
+  "forms": {
+    "title": "Bewerbungsformulare",
+    "createForm": "Formular erstellen",
+    "editForm": "Formular bearbeiten",
+    "formDetails": "Formulardetails",
+    "formName": "Formularname",
+    "description": "Beschreibung",
+    "searchPlaceholder": "Formulare suchen...",
+    "noFormsFound": "Noch keine Formulare. Erstellen Sie Ihr erstes Formular, um zu beginnen.",
+    "noMatchingForms": "Keine Formulare entsprechen Ihren Filtern",
+    "loadingForms": "Formulare werden geladen...",
+    "failedToLoad": "Laden des Formulars fehlgeschlagen",
+    "failedToSave": "Speichern des Formulars fehlgeschlagen",
+    "formNameRequired": "Formularname ist erforderlich",
+    "organisationContextMissing": "Organisationskontext fehlt",
+    "table": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "status": "Status",
+      "created": "Erstellt",
+      "actions": "Aktionen"
+    },
+    "tooltips": {
+      "preview": "Vorschau",
+      "edit": "Bearbeiten"
+    },
+    "builder": {
+      "title": "Formular-Builder",
+      "saving": "Speichern...",
+      "tabs": {
+        "fields": "Felder",
+        "fieldGroups": "Feldgruppen",
+        "wizardSteps": "Assistentenschritte"
+      },
+      "fields": {
+        "title": "Formularfelder",
+        "addField": "Feld hinzufügen",
+        "noFields": "Noch keine Felder hinzugefügt. Klicken Sie auf \"Feld hinzufügen\", um zu beginnen.",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "makeRequired": "Pflichtfeld machen",
+        "makeOptional": "Optional machen",
+        "required": "Erforderlich",
+        "optional": "Optional"
+      },
+      "groups": {
+        "title": "Feldgruppen",
+        "addGroup": "Gruppe hinzufügen",
+        "noGroups": "Keine Feldgruppen definiert. Gruppen helfen, Felder in Abschnitte zu organisieren.",
+        "groupName": "Gruppenname",
+        "selectFields": "Felder für diese Gruppe auswählen",
+        "noFieldsAvailable": "Keine Felder verfügbar. Fügen Sie zuerst Felder zum Formular hinzu.",
+        "fieldOrder": "Feldreihenfolge in der Gruppe"
+      },
+      "wizard": {
+        "title": "Assistentenschritte",
+        "addStep": "Schritt hinzufügen",
+        "noSteps": "Keine Assistentenschritte definiert. Assistentenschritte erstellen ein mehrstufiges Formularerlebnis.",
+        "stepName": "Schrittname",
+        "stepNumber": "Schritt {{number}}",
+        "selectFields": "Felder für diesen Schritt auswählen",
+        "noFieldsAvailable": "Keine Felder verfügbar. Fügen Sie zuerst Felder zum Formular hinzu.",
+        "fieldOrder": "Feldreihenfolge im Schritt"
+      },
+      "dialogs": {
+        "addField": {
+          "title": "Feld hinzufügen",
+          "selectField": "Feld auswählen",
+          "mandatoryField": "Pflichtfeld"
+        },
+        "addGroup": {
+          "title": "Feldgruppe hinzufügen"
+        },
+        "addWizardStep": {
+          "title": "Assistentenschritt hinzufügen"
+        }
+      }
+    },
+    "preview": {
+      "title": "Formularvorschau",
+      "backToForms": "Zurück zu Formularen",
+      "editForm": "Formular bearbeiten",
+      "infoMessage": "Dies ist eine Live-Vorschau Ihres Formulars. Sie können mit allen Feldern interagieren, um zu sehen, wie sie für Endbenutzer funktionieren. Hier vorgenommene Änderungen werden nicht gespeichert.",
+      "statusLabel": "Status:",
+      "modes": {
+        "grouped": "Gruppierte Ansicht",
+        "wizard": "Schritt-für-Schritt-Assistent"
+      },
+      "formFields": "Formularfelder",
+      "additionalInformation": "Zusätzliche Informationen",
+      "submitPreview": "Absenden (Nur Vorschau)",
+      "cancelPreview": "Abbrechen (Nur Vorschau)",
+      "backButton": "Zurück",
+      "nextButton": "Weiter",
+      "formNotFound": "Formular nicht gefunden"
+    },
+    "fields": {
+      "title": "Felddefinitionen",
+      "createField": "Feld erstellen",
+      "searchPlaceholder": "Felder suchen...",
+      "noFieldsFound": "Noch keine Felder. Erstellen Sie Ihr erstes Feld, um zu beginnen.",
+      "noMatchingFields": "Keine Felder entsprechen Ihren Filtern",
+      "loadingFields": "Felder werden geladen...",
+      "failedToCreate": "Erstellen des Feldes fehlgeschlagen",
+      "failedToUpdate": "Aktualisieren des Feldes fehlgeschlagen",
+      "failedToDelete": "Löschen des Feldes fehlgeschlagen",
+      "fieldLabelRequired": "Feldbezeichnung ist erforderlich",
+      "organisationContextNotAvailable": "Organisationskontext ist nicht verfügbar",
+      "invalidFieldLabel": "Feldbezeichnung muss mindestens ein alphanumerisches Zeichen enthalten",
+      "optionsRequired": "Feldtyp \"{{type}}\" erfordert mindestens eine Option",
+      "table": {
+        "label": "Bezeichnung",
+        "description": "Beschreibung",
+        "type": "Typ",
+        "created": "Erstellt",
+        "actions": "Aktionen"
+      },
+      "filters": {
+        "type": "Typ",
+        "allTypes": "Alle Typen"
+      },
+      "dialogs": {
+        "create": {
+          "title": "Felddefinition erstellen",
+          "fieldLabel": "Feldbezeichnung",
+          "fieldLabelHelper": "Anzeigebezeichnung (z.B. Vorname) - Feldname wird automatisch generiert",
+          "descriptionHelper": "Optionale detaillierte Erklärung, wofür dieses Feld dient",
+          "fieldType": "Feldtyp",
+          "options": "Optionen",
+          "addOption": "Option hinzufügen",
+          "optionsWarning": "Mindestens eine Option ist für {{type}}-Felder erforderlich",
+          "fieldNamePreview": "Feldname wird sein: {{name}}",
+          "fieldNameInvalid": "Feldname wird sein: (ungültig)",
+          "creating": "Erstellen..."
+        },
+        "edit": {
+          "title": "Felddefinition bearbeiten",
+          "saving": "Speichern..."
+        },
+        "delete": {
+          "title": "Felddefinition löschen",
+          "confirmMessage": "Sind Sie sicher, dass Sie das Feld \"{{label}}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+          "deleting": "Löschen..."
+        }
+      }
+    }
+  },
+  "payments": {
+    "title": "Zahlungen",
+    "paymentDetails": "Zahlungsdetails",
+    "lodgements": {
+      "title": "Einzahlungen",
+      "totalLodged": "Gesamt eingezahlt",
+      "cardPayments": "Kartenzahlungen",
+      "chequePayments": "Scheckzahlungen",
+      "offlinePayments": "Offline-Zahlungen",
+      "lodgementsCount": "{{count}} Einzahlungen",
+      "percentOfTotal": "{{percent}}% der Gesamtsumme"
+    },
+    "searchPlaceholder": "Zahlungen suchen...",
+    "noPaymentsFound": "Noch keine Zahlungen.",
+    "noMatchingPayments": "Keine Zahlungen entsprechen Ihren Filtern",
+    "loadingPayments": "Zahlungen werden geladen...",
+    "loadingPayment": "Zahlungsdetails werden geladen...",
+    "loadingLodgements": "Einzahlungen werden geladen...",
+    "noLodgementsFound": "Noch keine Einzahlungen.",
+    "failedToLoad": "Fehler beim Laden der Zahlungen",
+    "failedToExport": "Fehler beim Exportieren der Zahlungen",
+    "failedToRefund": "Fehler bei der Rückerstattung",
+    "paymentNotFound": "Zahlung nicht gefunden",
+    "table": {
+      "date": "Datum",
+      "customer": "Kunde",
+      "amount": "Betrag",
+      "status": "Status",
+      "type": "Typ",
+      "paymentMethod": "Zahlungsmethode",
+      "actions": "Aktionen",
+      "totalAmount": "Gesamtbetrag",
+      "card": "Karte",
+      "cheque": "Scheck",
+      "offline": "Offline",
+      "transactions": "Transaktionen"
+    },
+    "tooltips": {
+      "viewDetails": "Details anzeigen"
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "status": "Status",
+      "paymentMethod": "Zahlungsmethode",
+      "all": "Alle"
+    },
+    "statusOptions": {
+      "all": "Alle",
+      "pending": "Ausstehend",
+      "paid": "Bezahlt",
+      "refunded": "Erstattet",
+      "failed": "Fehlgeschlagen"
+    },
+    "paymentMethodOptions": {
+      "all": "Alle",
+      "card": "Karte",
+      "cheque": "Scheck",
+      "offline": "Offline"
+    },
+    "paymentTypes": {
+      "event": "Veranstaltung",
+      "membership": "Mitgliedschaft",
+      "merchandise": "Waren",
+      "calendar": "Buchung",
+      "registration": "Registrierung",
+      "ticket": "Ticket"
+    },
+    "actions": {
+      "exportToCSV": "Als CSV exportieren",
+      "requestRefund": "Rückerstattung anfordern",
+      "backToPayments": "Zurück zu Zahlungen"
+    },
+    "details": {
+      "paymentInformation": "Zahlungsinformationen",
+      "customerInformation": "Kundeninformationen",
+      "relatedTransaction": "Zugehörige Transaktion",
+      "refundInformation": "Rückerstattungsinformationen",
+      "paymentId": "Zahlungs-ID",
+      "amount": "Betrag",
+      "status": "Status",
+      "paymentMethod": "Zahlungsmethode",
+      "date": "Datum",
+      "transactionId": "Transaktions-ID",
+      "name": "Name",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "type": "Typ",
+      "transactionName": "Name",
+      "refundDate": "Rückerstattungsdatum",
+      "refundReason": "Grund"
+    },
+    "refund": {
+      "title": "Rückerstattung anfordern",
+      "message": "Sind Sie sicher, dass Sie diese Zahlung von {{amount}} erstatten möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "reasonLabel": "Grund für Rückerstattung",
+      "reasonPlaceholder": "Bitte geben Sie einen Grund für die Rückerstattung an...",
+      "reasonRequired": "Grund für Rückerstattung ist erforderlich",
+      "confirmButton": "Rückerstattung bestätigen",
+      "processing": "Wird verarbeitet..."
+    },
+    "lodgements": {
+      "title": "Einzahlungen",
+      "totalLodged": "Gesamt eingezahlt",
+      "cardPayments": "Kartenzahlungen",
+      "chequePayments": "Scheckzahlungen",
+      "offlinePayments": "Offline-Zahlungen",
+      "lodgementsCount": "{{count}} Einzahlungen",
+      "percentOfTotal": "{{percent}}% der Gesamtsumme"
+    }
+  },
+  "reporting": {
+    "title": "Berichte und Analysen",
+    "subtitle": "Übergeordnete Metriken und Trends für Ihre Organisation",
+    "dashboard": {
+      "title": "Berichte und Analysen",
+      "subtitle": "Übergeordnete Metriken und Trends für Ihre Organisation",
+      "dateRange": "Datumsbereich",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "exportReport": "Bericht exportieren",
+      "detailedReports": "Detaillierte Berichte",
+      "noData": "Keine Berichtsdaten für den ausgewählten Datumsbereich verfügbar. Bitte versuchen Sie einen anderen Datumsbereich.",
+      "vsPreviousPeriod": "vs vorheriger Zeitraum"
+    },
+    "metrics": {
+      "events": "Veranstaltungen",
+      "members": "Mitglieder",
+      "revenue": "Einnahmen",
+      "eventsSubtitle": "{{upcoming}} bevorstehend, {{completed}} abgeschlossen, {{totalAttendance}} Gesamtteilnahme",
+      "membersSubtitle": "{{active}} aktiv, {{new}} neu, {{renewals}} Verlängerungen",
+      "revenueSubtitle": "Veranstaltungen: {{events}}, Mitgliedschaften: {{memberships}}, Waren: {{merchandise}}"
+    },
+    "reports": {
+      "eventsReport": "Veranstaltungsbericht",
+      "membersReport": "Mitgliederbericht",
+      "revenueReport": "Einnahmenbericht"
+    },
+    "events": {
+      "title": "Veranstaltungsbericht",
+      "subtitle": "Analyse der Teilnahme und Einnahmen von Veranstaltungen",
+      "backToReports": "Zurück zu Berichten",
+      "exportToCSV": "Als CSV exportieren",
+      "filters": "Filter",
+      "eventDetails": "Veranstaltungsdetails",
+      "summary": {
+        "totalEvents": "Gesamte Veranstaltungen",
+        "totalEntries": "Gesamte Anmeldungen",
+        "totalRevenue": "Gesamteinnahmen"
+      },
+      "table": {
+        "eventName": "Veranstaltungsname",
+        "dateRange": "Datumsbereich",
+        "status": "Status",
+        "entries": "Anmeldungen",
+        "revenue": "Einnahmen",
+        "activities": "Aktivitäten",
+        "activitiesCount": "{{count}} Aktivitäten"
+      },
+      "noData": "Keine Veranstaltungen für die ausgewählten Filter gefunden. Versuchen Sie, Ihren Datumsbereich oder Statusfilter anzupassen."
+    },
+    "members": {
+      "title": "Mitgliederbericht",
+      "subtitle": "Analyse des Mitgliederwachstums und der Bindung",
+      "backToReports": "Zurück zu Berichten",
+      "exportToCSV": "Als CSV exportieren",
+      "filters": "Filter",
+      "membershipTypeBreakdown": "Aufschlüsselung nach Mitgliedschaftstyp",
+      "summary": {
+        "totalMembers": "Gesamte Mitglieder",
+        "activeMembers": "{{count}} aktiv",
+        "newMembers": "Neue Mitglieder",
+        "growthRate": "{{rate}} Wachstum",
+        "renewals": "Verlängerungen",
+        "retentionRate": "{{rate}} Bindung",
+        "totalRevenue": "Gesamteinnahmen",
+        "expiringSoon": "{{count}} läuft bald ab"
+      },
+      "table": {
+        "membershipType": "Mitgliedschaftstyp",
+        "total": "Gesamt",
+        "active": "Aktiv",
+        "new": "Neu",
+        "renewals": "Verlängerungen",
+        "expiring": "Ablaufend",
+        "revenue": "Einnahmen"
+      },
+      "noData": "Keine Mitgliedschaftsdaten für die ausgewählten Filter gefunden. Versuchen Sie, Ihren Datumsbereich oder Statusfilter anzupassen."
+    },
+    "revenue": {
+      "title": "Einnahmenbericht",
+      "subtitle": "Aufschlüsselung der Einnahmen nach Quelle und Trends",
+      "backToReports": "Zurück zu Berichten",
+      "exportToCSV": "Als CSV exportieren",
+      "dateRange": "Datumsbereich",
+      "revenueBySource": "Einnahmen nach Quelle",
+      "monthlyBreakdown": "Monatliche Aufschlüsselung",
+      "summary": {
+        "totalRevenue": "Gesamteinnahmen",
+        "totalTransactions": "Gesamte Transaktionen",
+        "avgTransaction": "Durchschn. Transaktion",
+        "topSource": "Hauptquelle"
+      },
+      "sources": {
+        "events": "Veranstaltungen",
+        "memberships": "Mitgliedschaften",
+        "merchandise": "Waren",
+        "calendar": "Kalender",
+        "registrations": "Registrierungen",
+        "tickets": "Tickets"
+      },
+      "table": {
+        "month": "Monat",
+        "events": "Veranstaltungen",
+        "memberships": "Mitgliedschaften",
+        "merchandise": "Waren",
+        "calendar": "Kalender",
+        "registrations": "Registrierungen",
+        "tickets": "Tickets",
+        "total": "Gesamt",
+        "transactions": "{{count}} Transaktionen"
+      },
+      "noData": "Keine Einnahmendaten für den ausgewählten Datumsbereich gefunden.",
+      "noMonthlyData": "Keine monatlichen Aufschlüsselungsdaten für den ausgewählten Datumsbereich verfügbar."
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "status": "Status",
+      "all": "Alle",
+      "draft": "Entwurf",
+      "published": "Veröffentlicht",
+      "completed": "Abgeschlossen",
+      "cancelled": "Abgesagt",
+      "active": "Aktiv",
+      "expired": "Abgelaufen"
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "organisationDetails": {
+      "title": "Organisationsdetails",
+      "subtitle": "Verwalten Sie die grundlegenden Informationen und Kontaktdaten Ihrer Organisation",
+      "sections": {
+        "basicInfo": "Grundinformationen",
+        "contactInfo": "Kontaktinformationen"
+      },
+      "fields": {
+        "organisationName": "Organisationsname",
+        "organisationNameHelper": "Der Organisationsname kann nicht geändert werden",
+        "displayName": "Anzeigename",
+        "domain": "Domain",
+        "domainPlaceholder": "beispiel.de",
+        "currency": "Währung",
+        "language": "Sprache",
+        "address": "Adresse",
+        "city": "Stadt",
+        "postcode": "Postleitzahl",
+        "country": "Land",
+        "phone": "Telefon",
+        "email": "E-Mail",
+        "website": "Website",
+        "websitePlaceholder": "https://beispiel.de"
+      },
+      "currencies": {
+        "gbp": "£ GBP - Britisches Pfund",
+        "eur": "€ EUR - Euro",
+        "usd": "$ USD - US-Dollar",
+        "aud": "$ AUD - Australischer Dollar",
+        "cad": "$ CAD - Kanadischer Dollar"
+      },
+      "languages": {
+        "enGB": "Englisch (UK)",
+        "enUS": "Englisch (US)",
+        "frFR": "Französisch",
+        "deDE": "Deutsch",
+        "esES": "Spanisch"
+      },
+      "messages": {
+        "loadFailed": "Fehler beim Laden der Organisationsdetails",
+        "saveFailed": "Fehler beim Speichern der Organisationsdetails",
+        "saveSuccess": "Organisationsdetails erfolgreich gespeichert"
+      }
+    },
+    "paymentSettings": {
+      "title": "Zahlungseinstellungen",
+      "subtitle": "Konfigurieren Sie die Zahlungsabwicklung und akzeptierte Zahlungsmethoden",
+      "sections": {
+        "stripeConfig": "Stripe-Konfiguration",
+        "paymentConfig": "Zahlungskonfiguration",
+        "offlinePayments": "Offline-Zahlungen"
+      },
+      "fields": {
+        "stripeEnabled": "Stripe-Zahlungen aktivieren",
+        "stripePublishableKey": "Stripe Publishable Key",
+        "stripePublishableKeyPlaceholder": "pk_live_...",
+        "stripePublishableKeyHelper": "Ihr Stripe Publishable Key (beginnt mit pk_)",
+        "stripeSecretKey": "Stripe Secret Key",
+        "stripeSecretKeyPlaceholder": "sk_live_...",
+        "stripeSecretKeyHelper": "Ihr Stripe Secret Key (beginnt mit sk_)",
+        "stripeWebhookSecret": "Stripe Webhook Secret",
+        "stripeWebhookSecretPlaceholder": "whsec_...",
+        "stripeWebhookSecretHelper": "Ihr Stripe Webhook Signing Secret (optional)",
+        "defaultCurrency": "Standardwährung",
+        "handlingFeePercentage": "Bearbeitungsgebühr (%)",
+        "handlingFeePercentageHelper": "Prozentuale Gebühr, die zu Kartenzahlungen hinzugefügt wird",
+        "handlingFeeFixed": "Feste Bearbeitungsgebühr",
+        "handlingFeeFixedHelper": "Feste Gebühr, die zu Kartenzahlungen hinzugefügt wird",
+        "chequePaymentsEnabled": "Scheck-/Offline-Zahlungen aktivieren",
+        "chequePaymentInstructions": "Scheck-Zahlungsanweisungen",
+        "chequePaymentInstructionsPlaceholder": "Bitte stellen Sie Schecks aus an...",
+        "chequePaymentInstructionsHelper": "Anweisungen, die Benutzern angezeigt werden, wenn sie Scheck-/Offline-Zahlung auswählen"
+      },
+      "validation": {
+        "stripeKeysRequired": "Stripe Publishable Key und Secret Key sind erforderlich, wenn Stripe aktiviert ist"
+      },
+      "messages": {
+        "loadFailed": "Fehler beim Laden der Zahlungseinstellungen",
+        "saveFailed": "Fehler beim Speichern der Zahlungseinstellungen",
+        "saveSuccess": "Zahlungseinstellungen erfolgreich gespeichert"
+      }
+    },
+    "branding": {
+      "title": "Branding",
+      "subtitle": "Passen Sie die visuelle Identität Ihrer Organisation an",
+      "sections": {
+        "logo": "Logo",
+        "themeColours": "Themenfarben",
+        "preview": "Vorschau"
+      },
+      "fields": {
+        "logoUrl": "Logo",
+        "uploadLogo": "Logo hochladen",
+        "uploading": "Wird hochgeladen...",
+        "removeLogo": "Entfernen",
+        "logoHelper": "Empfohlen: PNG oder SVG, max. 2MB",
+        "primaryColour": "Primärfarbe",
+        "secondaryColour": "Sekundärfarbe",
+        "accentColour": "Akzentfarbe",
+        "backgroundColour": "Hintergrundfarbe",
+        "textColour": "Textfarbe",
+        "resetColours": "Auf Standardfarben zurücksetzen"
+      },
+      "preview": {
+        "organisationName": "Organisationsname",
+        "primaryButton": "Primärer Button",
+        "secondaryButton": "Sekundärer Button",
+        "accentButton": "Akzent-Button"
+      },
+      "validation": {
+        "invalidFileType": "Bitte wählen Sie eine Bilddatei aus",
+        "fileTooLarge": "Bildgröße muss kleiner als 2MB sein"
+      },
+      "messages": {
+        "loadFailed": "Fehler beim Laden der Branding-Einstellungen",
+        "saveFailed": "Fehler beim Speichern der Branding-Einstellungen",
+        "saveSuccess": "Branding-Einstellungen erfolgreich gespeichert",
+        "uploadFailed": "Fehler beim Hochladen des Logos"
+      }
+    },
+    "emailTemplates": {
+      "title": "E-Mail-Vorlagen",
+      "subtitle": "Passen Sie E-Mail-Vorlagen an, die an Benutzer gesendet werden",
+      "fields": {
+        "templateType": "Vorlagentyp",
+        "subject": "Betreff",
+        "subjectPlaceholder": "E-Mail-Betreffzeile",
+        "body": "Text",
+        "bodyPlaceholder": "E-Mail-Textinhalt",
+        "resetToDefault": "Auf Standard zurücksetzen"
+      },
+      "templateTypes": {
+        "welcome": "Willkommens-E-Mail",
+        "eventConfirmation": "Veranstaltungsanmeldungsbestätigung",
+        "paymentReceipt": "Zahlungsbeleg",
+        "membershipConfirmation": "Mitgliedschaftsbestätigung",
+        "passwordReset": "Passwort zurücksetzen"
+      },
+      "variables": {
+        "title": "Verfügbare Variablen",
+        "description": "Sie können die folgenden Variablen in Ihren Vorlagen verwenden:",
+        "organisationName": "Organisationsname",
+        "userName": "Vollständiger Name des Benutzers",
+        "userEmail": "E-Mail-Adresse des Benutzers",
+        "eventName": "Veranstaltungsname (Veranstaltungs-E-Mails)",
+        "eventDate": "Veranstaltungsdatum (Veranstaltungs-E-Mails)",
+        "activityName": "Aktivitätsname (Veranstaltungs-E-Mails)",
+        "amount": "Zahlungsbetrag (Zahlungs-E-Mails)",
+        "reference": "Zahlungsreferenz (Zahlungs-E-Mails)",
+        "membershipType": "Mitgliedschaftstyp (Mitgliedschafts-E-Mails)",
+        "expiryDate": "Ablaufdatum (Mitgliedschafts-E-Mails)",
+        "resetLink": "Passwort-Zurücksetzen-Link (Passwort zurücksetzen)"
+      },
+      "messages": {
+        "loadFailed": "Fehler beim Laden der E-Mail-Vorlagen",
+        "saveFailed": "Fehler beim Speichern der E-Mail-Vorlage",
+        "saveSuccess": "E-Mail-Vorlage erfolgreich gespeichert"
+      }
+    },
+    "actions": {
+      "saveChanges": "Änderungen speichern",
+      "saving": "Wird gespeichert...",
+      "cancel": "Abbrechen"
+    }
+  },
+  "navigation": {
+    "organisation": "Organisation",
+    "loading": "Wird geladen...",
+    "backToMainPage": "Zurück zur Hauptseite",
+    "logout": "Abmelden",
+    "appName": "ItsPlainSailing"
+  },
+  "dashboard": {
+    "welcomeTo": "Willkommen bei {{organisationName}}",
+    "selectArea": "Wählen Sie unten einen Bereich aus, um zu beginnen",
+    "noModulesAvailable": "Keine Module verfügbar",
+    "contactAdministrator": "Wenden Sie sich an Ihren Administrator, um Funktionen für Ihre Organisation zu aktivieren.",
+    "debugInfo": "Debug: {{capabilitiesCount}} Funktionen aktiviert, {{modulesCount}} Module verfügbar"
+  },
+  "components": {
+    "orgDataTable": {
+      "searchPlaceholder": "Suchen...",
+      "exportCSV": "CSV exportieren",
+      "noDataAvailable": "Keine Daten verfügbar",
+      "loading": "Wird geladen...",
+      "rowsPerPage": "Zeilen pro Seite"
+    },
+    "metadataForm": {
+      "create": "{{name}} erstellen",
+      "edit": "{{name}} bearbeiten",
+      "submitting": "Wird übermittelt...",
+      "update": "Aktualisieren",
+      "create_action": "Erstellen",
+      "cancel": "Abbrechen",
+      "additionalInformation": "Zusätzliche Informationen",
+      "failedToLoadMetadata": "Fehler beim Laden der Metadaten: {{error}}",
+      "objectDefinitionNotFound": "Objektdefinition nicht gefunden",
+      "missingFieldDefinitions": "Einige Felddefinitionen fehlen: {{fields}}. Bitte erstellen Sie diese Felddefinitionen zuerst."
+    },
+    "fieldRenderer": {
+      "required": "Erforderlich"
+    },
+    "fileUpload": {
+      "dragAndDrop": "Dateien hier ablegen",
+      "dropFilesHere": "Dateien hier ablegen",
+      "or": "oder",
+      "chooseFiles": "Dateien auswählen",
+      "maximumFileSize": "Maximale Dateigröße: {{size}}",
+      "maximumFiles": "Maximal {{count}} Datei",
+      "maximumFiles_plural": "Maximal {{count}} Dateien",
+      "fileSizeExceeds": "Dateigröße überschreitet das Maximum von {{size}}",
+      "uploadFailed": "Upload fehlgeschlagen"
+    },
+    "imageUpload": {
+      "dragAndDrop": "Bilder hier ablegen",
+      "dropImagesHere": "Bilder hier ablegen",
+      "or": "oder",
+      "chooseImages": "Bilder auswählen",
+      "maximumFileSize": "Maximale Dateigröße: {{size}}",
+      "maximumImages": "Maximal {{count}} Bild",
+      "maximumImages_plural": "Maximal {{count}} Bilder",
+      "addMoreImages": "Weitere Bilder hinzufügen",
+      "fileMustBeImage": "Datei muss ein Bild sein",
+      "imageSizeExceeds": "Bildgröße überschreitet das Maximum von {{size}}",
+      "imagePreview": "Bildvorschau",
+      "close": "Schließen"
+    },
+    "timeSlotPicker": {
+      "noTimeSlotsAvailable": "Keine Zeitfenster verfügbar",
+      "min": "Min",
+      "hr": "Std",
+      "hrs": "Std",
+      "placesRemaining": "{{count}} Platz verfügbar",
+      "placesRemaining_plural": "{{count}} Plätze verfügbar",
+      "lastPlaceAvailable": "Letzter Platz verfügbar",
+      "unavailableTimeSlots": "Nicht verfügbare Zeitfenster",
+      "unavailable": "Nicht verfügbar",
+      "timesShownIn": "Zeiten in Zeitzone {{timezone}} angezeigt"
+    },
+    "paymentList": {
+      "noPaymentsFound": "Keine Zahlungen gefunden",
+      "card": "Karte",
+      "bankTransfer": "Banküberweisung",
+      "cash": "Bargeld",
+      "cheque": "Scheck",
+      "offline": "Offline",
+      "ref": "Ref: {{reference}}"
+    },
+    "paymentDetails": {
+      "cardPayment": "Kartenzahlung",
+      "bankTransfer": "Banküberweisung",
+      "cashPayment": "Barzahlung",
+      "chequePayment": "Scheckzahlung",
+      "offlinePayment": "Offline-Zahlung",
+      "paymentDate": "Zahlungsdatum",
+      "referenceNumber": "Referenznummer",
+      "transactionId": "Transaktions-ID",
+      "payerName": "Name des Zahlers",
+      "payerEmail": "E-Mail des Zahlers",
+      "description": "Beschreibung",
+      "notes": "Notizen",
+      "additionalInformation": "Zusätzliche Informationen"
+    },
+    "refundDialog": {
+      "processRefund": "Rückerstattung verarbeiten",
+      "warningMessage": "Diese Aktion verarbeitet eine Rückerstattung für Zahlung {{paymentId}}. Dies kann nicht rückgängig gemacht werden.",
+      "originalPaymentAmount": "Ursprünglicher Zahlungsbetrag",
+      "refundAmount": "Rückerstattungsbetrag",
+      "partialRefund": "Teilrückerstattung: {{refundAmount}} von {{totalAmount}}",
+      "fullRefund": "Vollständige Rückerstattung",
+      "reasonForRefund": "Grund für Rückerstattung",
+      "reasonPlaceholder": "Bitte geben Sie einen Grund für diese Rückerstattung an...",
+      "sendNotification": "Rückerstattungsbenachrichtigung per E-Mail an Kunden senden",
+      "cancel": "Abbrechen",
+      "processRefund_action": "Rückerstattung verarbeiten",
+      "processing": "Wird verarbeitet...",
+      "validAmountError": "Bitte geben Sie einen gültigen Rückerstattungsbetrag ein",
+      "exceedsAmountError": "Der Rückerstattungsbetrag kann den ursprünglichen Zahlungsbetrag nicht überschreiten",
+      "reasonRequiredError": "Bitte geben Sie einen Grund für die Rückerstattung an",
+      "failedToProcess": "Fehler beim Verarbeiten der Rückerstattung"
+    }
+  }
+}

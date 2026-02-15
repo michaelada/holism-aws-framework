@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { DeliveryType } from '../types/merchandise.types';
 
 interface DeliveryRule {
@@ -38,6 +39,8 @@ const DeliveryConfigurationSection: React.FC<DeliveryConfigurationSectionProps> 
   deliveryRules = [],
   onChange,
 }) => {
+  const { t } = useTranslation();
+
   const handleAddRule = () => {
     onChange('deliveryRules', [...deliveryRules, { minQuantity: 1, deliveryFee: 0 }]);
   };
@@ -56,25 +59,25 @@ const DeliveryConfigurationSection: React.FC<DeliveryConfigurationSectionProps> 
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2 }}>
-        Delivery Configuration
+        {t('merchandise.delivery.title')}
       </Typography>
 
       <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Delivery Type</InputLabel>
+        <InputLabel>{t('merchandise.delivery.deliveryType')}</InputLabel>
         <Select
           value={deliveryType}
-          label="Delivery Type"
+          label={t('merchandise.delivery.deliveryType')}
           onChange={(e) => onChange('deliveryType', e.target.value)}
         >
-          <MenuItem value="free">Free Delivery</MenuItem>
-          <MenuItem value="fixed">Fixed Delivery Fee</MenuItem>
-          <MenuItem value="quantity_based">Quantity-Based Delivery</MenuItem>
+          <MenuItem value="free">{t('merchandise.delivery.freeDelivery')}</MenuItem>
+          <MenuItem value="fixed">{t('merchandise.delivery.fixedFee')}</MenuItem>
+          <MenuItem value="quantity_based">{t('merchandise.delivery.quantityBased')}</MenuItem>
         </Select>
       </FormControl>
 
       {deliveryType === 'fixed' && (
         <TextField
-          label="Delivery Fee"
+          label={t('merchandise.delivery.deliveryFee')}
           type="number"
           value={deliveryFee || 0}
           onChange={(e) => onChange('deliveryFee', parseFloat(e.target.value) || 0)}
@@ -87,12 +90,12 @@ const DeliveryConfigurationSection: React.FC<DeliveryConfigurationSectionProps> 
       {deliveryType === 'quantity_based' && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Delivery Rules
+            {t('merchandise.delivery.deliveryRules')}
           </Typography>
           {deliveryRules.map((rule, index) => (
             <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
               <TextField
-                label="Min Quantity"
+                label={t('merchandise.delivery.minQuantity')}
                 type="number"
                 value={rule.minQuantity}
                 onChange={(e) => handleRuleChange(index, 'minQuantity', parseInt(e.target.value) || 1)}
@@ -100,15 +103,15 @@ const DeliveryConfigurationSection: React.FC<DeliveryConfigurationSectionProps> 
                 required
               />
               <TextField
-                label="Max Quantity"
+                label={t('merchandise.delivery.maxQuantity')}
                 type="number"
                 value={rule.maxQuantity || ''}
                 onChange={(e) => handleRuleChange(index, 'maxQuantity', e.target.value ? parseInt(e.target.value) : undefined)}
                 inputProps={{ min: 1 }}
-                placeholder="No limit"
+                placeholder={t('merchandise.delivery.maxQuantityPlaceholder')}
               />
               <TextField
-                label="Delivery Fee"
+                label={t('merchandise.delivery.deliveryFee')}
                 type="number"
                 value={rule.deliveryFee}
                 onChange={(e) => handleRuleChange(index, 'deliveryFee', parseFloat(e.target.value) || 0)}
@@ -121,7 +124,7 @@ const DeliveryConfigurationSection: React.FC<DeliveryConfigurationSectionProps> 
             </Box>
           ))}
           <Button startIcon={<AddIcon />} onClick={handleAddRule} size="small">
-            Add Rule
+            {t('merchandise.delivery.addRule')}
           </Button>
         </Box>
       )}

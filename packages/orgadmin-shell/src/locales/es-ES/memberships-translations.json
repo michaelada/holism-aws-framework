@@ -1,0 +1,242 @@
+{
+  "memberships": {
+    "title": "Membresías",
+    "membershipTypes": "Tipos de membresía",
+    "members": "Miembros",
+    "membersDatabase": "Base de datos de miembros",
+    "createMembershipType": "Crear tipo de membresía",
+    "editMembershipType": "Editar tipo de membresía",
+    "searchPlaceholder": "Buscar tipos de membresía...",
+    "searchMembersPlaceholder": "Buscar por nombre o número de membresía...",
+    "noTypesFound": "Aún no hay tipos de membresía. Crea tu primer tipo de membresía para comenzar.",
+    "noMatchingTypes": "Ningún tipo de membresía coincide con tus filtros",
+    "noMembersFound": "No se encontraron miembros",
+    "loadingTypes": "Cargando tipos de membresía...",
+    "loadingMembers": "Cargando miembros...",
+    "loadingMember": "Cargando miembro...",
+    "loadingType": "Cargando tipo de membresía...",
+    "failedToLoad": "Error al cargar el tipo de membresía",
+    "failedToLoadMembers": "Error al cargar los miembros",
+    "failedToSave": "Error al guardar el tipo de membresía",
+    "failedToDelete": "Error al eliminar el tipo de membresía",
+    "failedToUpdate": "Error al actualizar el estado de procesamiento",
+    "failedToExport": "Error al exportar miembros",
+    "typeNotFound": "Tipo de membresía no encontrado",
+    "memberNotFound": "Miembro no encontrado",
+    "table": {
+      "name": "Nombre",
+      "status": "Estado",
+      "type": "Tipo",
+      "pricing": "Precios",
+      "actions": "Acciones",
+      "membershipType": "Tipo de membresía",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "membershipNumber": "Número de membresía",
+      "dateLastRenewed": "Fecha de última renovación",
+      "validUntil": "Válido hasta",
+      "labels": "Etiquetas",
+      "processed": "Procesado",
+      "paymentStatus": "Estado del pago",
+      "paymentMethod": "Método de pago"
+    },
+    "tooltips": {
+      "viewDetails": "Ver detalles",
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "filters": {
+      "status": "Estado",
+      "type": "Tipo",
+      "customFilter": "Filtro personalizado",
+      "createFilter": "Crear filtro",
+      "none": "Ninguno"
+    },
+    "statusOptions": {
+      "all": "Todos",
+      "open": "Abierto",
+      "closed": "Cerrado",
+      "openAccepting": "Abierto (Aceptando solicitudes)",
+      "closedNotAccepting": "Cerrado (Visible pero no acepta)",
+      "current": "Actual",
+      "elapsed": "Vencido"
+    },
+    "typeOptions": {
+      "all": "Todos",
+      "single": "Individual",
+      "group": "Grupo",
+      "singleMembership": "Membresía individual",
+      "groupMembership": "Membresía de grupo"
+    },
+    "memberStatus": {
+      "active": "Activo",
+      "pending": "Pendiente",
+      "elapsed": "Vencido"
+    },
+    "paymentStatus": {
+      "paid": "Pagado",
+      "pending": "Pendiente",
+      "notSpecified": "No especificado"
+    },
+    "create": {
+      "single": {
+        "title": "Crear tipo de membresía individual",
+        "editTitle": "Editar tipo de membresía individual"
+      },
+      "group": {
+        "title": "Crear tipo de membresía de grupo",
+        "editTitle": "Editar tipo de membresía de grupo"
+      }
+    },
+    "sections": {
+      "basicInfo": "Información básica",
+      "groupConfig": "Configuración del grupo",
+      "personConfig": "Configuración de personas",
+      "fieldConfig": "Configuración de campos",
+      "duration": "Duración de la membresía",
+      "applicationSettings": "Configuración de solicitud",
+      "paymentSettings": "Configuración de pago",
+      "termsAndConditions": "Términos y condiciones",
+      "membershipInfo": "Información de membresía",
+      "statusManagement": "Gestión de estado"
+    },
+    "fields": {
+      "name": "Nombre",
+      "nameHelper": "Nombre para mostrar de este tipo de membresía (ej., 'Membresía de adulto')",
+      "description": "Descripción",
+      "descriptionHelper": "Descripción detallada mostrada a los miembros al elegir la membresía",
+      "membershipForm": "Formulario de membresía",
+      "membershipStatus": "Estado de membresía",
+      "isRollingMembership": "Es membresía renovable",
+      "rollingMembershipHelper": "Las membresías renovables son válidas por un número específico de meses desde la fecha de pago. Las membresías de período fijo tienen una fecha de finalización específica.",
+      "validUntil": "Válido hasta",
+      "validUntilHelper": "Fecha de finalización para membresías de período fijo",
+      "numberOfMonths": "Número de meses",
+      "numberOfMonthsHelper": "Duración en meses para membresías renovables",
+      "automaticallyApprove": "Aprobar automáticamente las solicitudes",
+      "automaticallyApproveHelper": "Si está habilitado, las nuevas solicitudes se marcan automáticamente como \"Activo\". Si está deshabilitado, las solicitudes requieren aprobación manual y comienzan como \"Pendiente\".",
+      "memberLabels": "Etiquetas de miembro",
+      "memberLabelsHelper": "Etiquetas asignadas automáticamente a los miembros que usan este tipo de membresía",
+      "supportedPaymentMethods": "Métodos de pago admitidos",
+      "useTermsAndConditions": "Usar términos y condiciones",
+      "useTermsAndConditionsHelper": "Si está habilitado, los solicitantes deben aceptar los términos y condiciones antes de enviar",
+      "termsAndConditionsContent": "Contenido de términos y condiciones",
+      "maxPeople": "Número máximo de personas",
+      "maxPeopleHelper": "Número máximo de personas permitidas en la solicitud de grupo",
+      "minPeople": "Número mínimo de personas",
+      "minPeopleHelper": "Número mínimo de personas requeridas en la solicitud de grupo",
+      "personConfigHelper": "Configure títulos y etiquetas opcionales para cada espacio de persona en el grupo",
+      "fieldConfigHelper": "Configure si cada campo del formulario es común para todos los miembros del grupo o único para cada persona",
+      "membershipNumber": "Número de membresía",
+      "membershipType": "Tipo de membresía",
+      "dateLastRenewed": "Fecha de última renovación",
+      "validUntilDate": "Válido hasta",
+      "status": "Estado",
+      "processed": "Procesado",
+      "addLabel": "Agregar etiqueta",
+      "title": "Título",
+      "titleOptional": "Título (Opcional)",
+      "titlePlaceholder": "ej., \"Padre/Tutor Uno\", \"Niño 1\"",
+      "labelsOptional": "Etiquetas (Opcional)",
+      "fieldName": "Nombre del campo",
+      "fieldType": "Tipo",
+      "required": "Requerido",
+      "configuration": "Configuración",
+      "yes": "Sí",
+      "no": "No"
+    },
+    "personConfig": {
+      "person": "Persona {{number}}",
+      "setMaxPeople": "Establece el número máximo de personas para configurar los espacios de personas",
+      "selectForm": "Selecciona un formulario de membresía para configurar el uso compartido de campos"
+    },
+    "fieldConfig": {
+      "commonToAll": "Común para todos",
+      "uniqueForEach": "Único para cada uno"
+    },
+    "duration": {
+      "rolling": "Membresía renovable",
+      "fixedPeriod": "Membresía de período fijo",
+      "type": "Tipo",
+      "duration": "Duración",
+      "months": "{{count}} meses",
+      "notSet": "No establecido"
+    },
+    "approval": {
+      "yes": "Sí (Aprobación automática a Activo)",
+      "no": "No (Se requiere aprobación manual)"
+    },
+    "labels": {
+      "noLabels": "No hay etiquetas configuradas",
+      "noLabelsAssigned": "No hay etiquetas asignadas"
+    },
+    "details": {
+      "backToTypes": "Volver a tipos de membresía",
+      "backToMembers": "Volver a miembros"
+    },
+    "delete": {
+      "title": "Eliminar tipo de membresía",
+      "message": "¿Estás seguro de que deseas eliminar \"{{name}}\"? Esta acción no se puede deshacer."
+    },
+    "validation": {
+      "nameRequired": "El nombre del tipo de membresía es obligatorio",
+      "descriptionRequired": "La descripción es obligatoria",
+      "formRequired": "El formulario de membresía es obligatorio",
+      "validUntilRequired": "La fecha Válido hasta es obligatoria para membresías de período fijo",
+      "numberOfMonthsRequired": "El número de meses es obligatorio para membresías renovables",
+      "paymentMethodRequired": "Se requiere al menos un método de pago",
+      "termsRequired": "El contenido de términos y condiciones es obligatorio cuando está habilitado",
+      "maxPeopleMin": "El número máximo de personas debe ser al menos 2 para membresías de grupo",
+      "minPeopleMin": "El número mínimo de personas debe ser al menos 2 para membresías de grupo",
+      "minMaxMismatch": "El número mínimo de personas no puede exceder el máximo"
+    },
+    "actions": {
+      "saveChanges": "Guardar cambios",
+      "saveAndPublish": "Guardar y publicar",
+      "exportToExcel": "Exportar a Excel",
+      "markProcessed": "Marcar como procesado",
+      "markUnprocessed": "Marcar como no procesado",
+      "addLabels": "Agregar etiquetas",
+      "removeLabels": "Eliminar etiquetas",
+      "execute": "Ejecutar",
+      "add": "Agregar"
+    },
+    "batch": {
+      "markProcessed": {
+        "title": "Marcar como procesado",
+        "message": "¿Marcar {{count}} miembro(s) seleccionado(s) como procesado?"
+      },
+      "markUnprocessed": {
+        "title": "Marcar como no procesado",
+        "message": "¿Marcar {{count}} miembro(s) seleccionado(s) como no procesado?"
+      },
+      "addLabels": {
+        "title": "Agregar etiquetas",
+        "message": "¿Agregar etiquetas a {{count}} miembro(s) seleccionado(s)?",
+        "labelsToAdd": "Etiquetas para agregar"
+      },
+      "removeLabels": {
+        "title": "Eliminar etiquetas",
+        "message": "¿Eliminar etiquetas de {{count}} miembro(s) seleccionado(s)?",
+        "labelsToRemove": "Etiquetas para eliminar"
+      },
+      "processing": "Procesando..."
+    },
+    "customFilter": {
+      "title": "Crear filtro personalizado",
+      "filterName": "Nombre del filtro",
+      "filterNameHelper": "Dale a este filtro un nombre descriptivo",
+      "memberStatus": "Estado del miembro",
+      "dateLastRenewedFilters": "Filtros de fecha de última renovación",
+      "validUntilFilters": "Filtros de Válido hasta",
+      "beforeDate": "Antes de la fecha",
+      "afterDate": "Después de la fecha",
+      "memberLabels": "Etiquetas de miembro",
+      "saveFilter": "Guardar filtro"
+    },
+    "paymentMethods": {
+      "payOffline": "Pagar fuera de línea",
+      "stripe": "Pago con tarjeta (Stripe)"
+    }
+  }
+}

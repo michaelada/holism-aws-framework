@@ -22,6 +22,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { BatchOperationType } from '../types/membership.types';
 
 interface BatchOperationsDialogProps {
@@ -39,6 +40,7 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
   selectedMembers,
   onComplete,
 }) => {
+  const { t } = useTranslation();
   const [labels, setLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,13 +78,13 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
   const getTitle = () => {
     switch (operation) {
       case 'mark_processed':
-        return 'Mark as Processed';
+        return t('memberships.batch.markProcessed.title');
       case 'mark_unprocessed':
-        return 'Mark as Unprocessed';
+        return t('memberships.batch.markUnprocessed.title');
       case 'add_labels':
-        return 'Add Labels';
+        return t('memberships.batch.addLabels.title');
       case 'remove_labels':
-        return 'Remove Labels';
+        return t('memberships.batch.removeLabels.title');
       default:
         return 'Batch Operation';
     }
@@ -92,13 +94,13 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
     const count = selectedMembers.length;
     switch (operation) {
       case 'mark_processed':
-        return `Mark ${count} selected member(s) as processed?`;
+        return t('memberships.batch.markProcessed.message', { count });
       case 'mark_unprocessed':
-        return `Mark ${count} selected member(s) as unprocessed?`;
+        return t('memberships.batch.markUnprocessed.message', { count });
       case 'add_labels':
-        return `Add labels to ${count} selected member(s)?`;
+        return t('memberships.batch.addLabels.message', { count });
       case 'remove_labels':
-        return `Remove labels from ${count} selected member(s)?`;
+        return t('memberships.batch.removeLabels.message', { count });
       default:
         return '';
     }
@@ -118,7 +120,7 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
         {needsLabels && (
           <Box>
             <Typography variant="subtitle2" gutterBottom>
-              {operation === 'add_labels' ? 'Labels to Add' : 'Labels to Remove'}
+              {operation === 'add_labels' ? t('memberships.batch.addLabels.labelsToAdd') : t('memberships.batch.removeLabels.labelsToRemove')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', minHeight: 40 }}>
               {labels.map((label) => (
@@ -132,7 +134,7 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
                 size="small"
-                placeholder="Add label"
+                placeholder={t('memberships.fields.addLabel')}
                 value={labelInput}
                 onChange={(e) => setLabelInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -143,7 +145,7 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
                 }}
                 sx={{ flexGrow: 1 }}
               />
-              <Button onClick={handleAddLabel}>Add</Button>
+              <Button onClick={handleAddLabel}>{t('memberships.actions.add')}</Button>
             </Box>
           </Box>
         )}
@@ -152,21 +154,21 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
           <Box sx={{ mt: 2 }}>
             <LinearProgress />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Processing...
+              {t('memberships.batch.processing')}
             </Typography>
           </Box>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>
-          Cancel
+          {t('common.actions.cancel')}
         </Button>
         <Button
           onClick={handleExecute}
           variant="contained"
           disabled={loading || !canExecute}
         >
-          Execute
+          {t('memberships.actions.execute')}
         </Button>
       </DialogActions>
     </Dialog>

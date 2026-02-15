@@ -84,14 +84,15 @@ export function DateRangePicker({
               disabled={disabled}
               minDate={minDate}
               maxDate={maxDate}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  required,
-                  error: !!error,
-                  helperText: error || helperText,
-                },
-              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  required={required}
+                  error={!!error}
+                  helperText={error || helperText}
+                />
+              )}
             />
           </Box>
 
@@ -103,14 +104,15 @@ export function DateRangePicker({
               disabled={disabled}
               minDate={value.startDate || minDate}
               maxDate={maxDate}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  required,
-                  error: !!getEndDateError(),
-                  helperText: getEndDateError() || helperText,
-                },
-              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  required={required}
+                  error={!!getEndDateError()}
+                  helperText={getEndDateError() || helperText}
+                />
+              )}
             />
           </Box>
         </Box>

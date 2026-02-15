@@ -41,6 +41,7 @@ import {
   Label as LabelIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
+import { useTranslation, formatDate } from '@aws-web-framework/orgadmin-shell';
 import type { Registration, RegistrationFilter } from '../types/registration.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
@@ -55,6 +56,7 @@ const useApi = () => ({
 const RegistrationsDatabasePage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
 
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [filteredRegistrations, setFilteredRegistrations] = useState<Registration[]>([]);
@@ -205,14 +207,14 @@ const RegistrationsDatabasePage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Registrations Database</Typography>
+        <Typography variant="h4">{t('registrations.registrationsDatabase')}</Typography>
         <Button
           variant="outlined"
           startIcon={<ExportIcon />}
           onClick={handleExport}
           disabled={filteredRegistrations.length === 0}
         >
-          Export to Excel
+          {t('registrations.actions.exportToExcel')}
         </Button>
       </Box>
 

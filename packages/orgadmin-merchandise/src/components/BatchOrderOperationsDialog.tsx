@@ -20,6 +20,7 @@ import {
   LinearProgress,
   Box,
 } from '@mui/material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { OrderStatus } from '../types/merchandise.types';
 
 interface BatchOrderOperationsDialogProps {
@@ -35,6 +36,7 @@ const BatchOrderOperationsDialog: React.FC<BatchOrderOperationsDialogProps> = ({
   onClose,
   onUpdate,
 }) => {
+  const { t } = useTranslation();
   const [newStatus, setNewStatus] = useState<OrderStatus>('processing');
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -62,35 +64,38 @@ const BatchOrderOperationsDialog: React.FC<BatchOrderOperationsDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Batch Update Orders</DialogTitle>
+      <DialogTitle>{t('merchandise.batchOperations.title')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Updating {selectedOrderIds.length} order{selectedOrderIds.length !== 1 ? 's' : ''}
+          {t('merchandise.batchOperations.updatingCount', { 
+            count: selectedOrderIds.length,
+            plural: selectedOrderIds.length !== 1 ? 's' : ''
+          })}
         </Typography>
 
         <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>New Status</InputLabel>
+          <InputLabel>{t('merchandise.batchOperations.newStatus')}</InputLabel>
           <Select
             value={newStatus}
-            label="New Status"
+            label={t('merchandise.batchOperations.newStatus')}
             onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
             disabled={processing}
           >
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="processing">Processing</MenuItem>
-            <MenuItem value="shipped">Shipped</MenuItem>
-            <MenuItem value="delivered">Delivered</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
+            <MenuItem value="pending">{t('merchandise.orderStatusOptions.pending')}</MenuItem>
+            <MenuItem value="processing">{t('merchandise.orderStatusOptions.processing')}</MenuItem>
+            <MenuItem value="shipped">{t('merchandise.orderStatusOptions.shipped')}</MenuItem>
+            <MenuItem value="delivered">{t('merchandise.orderStatusOptions.delivered')}</MenuItem>
+            <MenuItem value="cancelled">{t('merchandise.orderStatusOptions.cancelled')}</MenuItem>
           </Select>
         </FormControl>
 
         <TextField
-          label="Notes (Optional)"
+          label={t('merchandise.batchOperations.notes')}
           multiline
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add notes about this batch update..."
+          placeholder={t('merchandise.batchOperations.notesPlaceholder')}
           fullWidth
           disabled={processing}
         />
@@ -99,14 +104,14 @@ const BatchOrderOperationsDialog: React.FC<BatchOrderOperationsDialogProps> = ({
           <Box sx={{ mt: 2 }}>
             <LinearProgress variant="determinate" value={progress} />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-              Processing...
+              {t('merchandise.batchOperations.processing')}
             </Typography>
           </Box>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={processing}>
-          Cancel
+          {t('common.actions.cancel')}
         </Button>
         <Button
           onClick={handleUpdate}
@@ -114,7 +119,10 @@ const BatchOrderOperationsDialog: React.FC<BatchOrderOperationsDialogProps> = ({
           color="primary"
           disabled={processing}
         >
-          Update {selectedOrderIds.length} Order{selectedOrderIds.length !== 1 ? 's' : ''}
+          {t('merchandise.batchOperations.updateButton', { 
+            count: selectedOrderIds.length,
+            plural: selectedOrderIds.length !== 1 ? 's' : ''
+          })}
         </Button>
       </DialogActions>
     </Dialog>

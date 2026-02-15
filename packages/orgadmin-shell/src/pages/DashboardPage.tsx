@@ -3,6 +3,7 @@ import { Box, Typography, Grid } from '@mui/material';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useCapabilities } from '../context/CapabilityContext';
 import { DashboardCard } from '../components/DashboardCard';
+import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
 
 interface DashboardPageProps {
@@ -24,10 +25,17 @@ interface DashboardPageProps {
 export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
   const { organisation } = useOrganisation();
   const { capabilities, hasCapability } = useCapabilities();
+  const { t } = useTranslation();
 
   // Filter modules based on enabled capabilities
   // Core modules (no capability requirement) are always shown
+  // Exclude dashboard module from landing page cards
   const availableModules = modules.filter((module) => {
+    // Exclude dashboard module from landing page
+    if (module.id === 'dashboard') {
+      return false;
+    }
+    
     if (!module.capability) {
       // Core module - always available
       return true;
@@ -53,7 +61,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
             color: 'text.primary',
           }}
         >
-          Welcome to {organisation?.displayName || 'ItsPlainSailing'}
+          {t('dashboard.welcomeTo', { organisationName: organisation?.displayName || 'ItsPlainSailing' })}
         </Typography>
         <Typography
           variant="body1"
@@ -61,7 +69,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
           paragraph
           sx={{ fontSize: '1.1rem' }}
         >
-          Select an area below to get started
+          {t('dashboard.selectArea')}
         </Typography>
       </Box>
 
@@ -83,10 +91,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
           }}
         >
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            No modules available
+            {t('dashboard.noModulesAvailable')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Contact your administrator to enable capabilities for your organisation.
+            {t('dashboard.contactAdministrator')}
           </Typography>
         </Box>
       )}
@@ -95,7 +103,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
       {import.meta.env.DEV && (
         <Box sx={{ mt: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
           <Typography variant="caption" color="text.secondary">
-            Debug: {capabilities.length} capabilities enabled, {sortedModules.length} modules available
+            {t('dashboard.debugInfo', { capabilitiesCount: capabilities.length, modulesCount: sortedModules.length })}
           </Typography>
         </Box>
       )}

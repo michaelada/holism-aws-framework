@@ -25,6 +25,10 @@ import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
+import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
 
 interface Lodgement {
   id: string;
@@ -48,6 +52,8 @@ interface LodgementSummary {
 const LodgementsPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   
   const [lodgements, setLodgements] = useState<Lodgement[]>([]);
   const [summary, setSummary] = useState<LodgementSummary | null>(null);
@@ -93,28 +99,13 @@ const LodgementsPage: React.FC = () => {
     navigate('/payments');
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-    }).format(amount);
-  };
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <IconButton onClick={handleBack}>
           <BackIcon />
         </IconButton>
-        <Typography variant="h4">Lodgements</Typography>
+        <Typography variant="h4">{t('payments.lodgements.title')}</Typography>
       </Box>
 
       {summary && (
@@ -123,13 +114,13 @@ const LodgementsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Total Lodged
+                  {t('payments.lodgements.totalLodged')}
                 </Typography>
                 <Typography variant="h5" color="primary">
-                  {formatCurrency(summary.totalLodged)}
+                  {formatCurrency(summary.totalLodged, 'GBP', locale)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  {summary.lodgementCount} lodgements
+                  {t('payments.lodgements.lodgementsCount', { count: summary.lodgementCount })}
                 </Typography>
               </CardContent>
             </Card>
@@ -139,15 +130,15 @@ const LodgementsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Card Payments
+                  {t('payments.lodgements.cardPayments')}
                 </Typography>
                 <Typography variant="h5">
-                  {formatCurrency(summary.totalCard)}
+                  {formatCurrency(summary.totalCard, 'GBP', locale)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {summary.totalLodged > 0 
-                    ? `${((summary.totalCard / summary.totalLodged) * 100).toFixed(1)}% of total`
-                    : '0% of total'}
+                    ? t('payments.lodgements.percentOfTotal', { percent: ((summary.totalCard / summary.totalLodged) * 100).toFixed(1) })
+                    : t('payments.lodgements.percentOfTotal', { percent: '0' })}
                 </Typography>
               </CardContent>
             </Card>
@@ -157,15 +148,15 @@ const LodgementsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Cheque Payments
+                  {t('payments.lodgements.chequePayments')}
                 </Typography>
                 <Typography variant="h5">
-                  {formatCurrency(summary.totalCheque)}
+                  {formatCurrency(summary.totalCheque, 'GBP', locale)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {summary.totalLodged > 0 
-                    ? `${((summary.totalCheque / summary.totalLodged) * 100).toFixed(1)}% of total`
-                    : '0% of total'}
+                    ? t('payments.lodgements.percentOfTotal', { percent: ((summary.totalCheque / summary.totalLodged) * 100).toFixed(1) })
+                    : t('payments.lodgements.percentOfTotal', { percent: '0' })}
                 </Typography>
               </CardContent>
             </Card>
@@ -175,15 +166,15 @@ const LodgementsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Offline Payments
+                  {t('payments.lodgements.offlinePayments')}
                 </Typography>
                 <Typography variant="h5">
-                  {formatCurrency(summary.totalOffline)}
+                  {formatCurrency(summary.totalOffline, 'GBP', locale)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {summary.totalLodged > 0 
-                    ? `${((summary.totalOffline / summary.totalLodged) * 100).toFixed(1)}% of total`
-                    : '0% of total'}
+                    ? t('payments.lodgements.percentOfTotal', { percent: ((summary.totalOffline / summary.totalLodged) * 100).toFixed(1) })
+                    : t('payments.lodgements.percentOfTotal', { percent: '0' })}
                 </Typography>
               </CardContent>
             </Card>
@@ -195,51 +186,51 @@ const LodgementsPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Total Amount</TableCell>
-              <TableCell align="right">Card</TableCell>
-              <TableCell align="right">Cheque</TableCell>
-              <TableCell align="right">Offline</TableCell>
-              <TableCell align="right">Transactions</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell>{t('payments.table.date')}</TableCell>
+              <TableCell align="right">{t('payments.table.totalAmount')}</TableCell>
+              <TableCell align="right">{t('payments.table.card')}</TableCell>
+              <TableCell align="right">{t('payments.table.cheque')}</TableCell>
+              <TableCell align="right">{t('payments.table.offline')}</TableCell>
+              <TableCell align="right">{t('payments.table.transactions')}</TableCell>
+              <TableCell>{t('payments.table.status')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={7} align="center">
-                  Loading lodgements...
+                  {t('payments.loadingLodgements')}
                 </TableCell>
               </TableRow>
             ) : lodgements.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center">
-                  No lodgements yet.
+                  {t('payments.noLodgementsFound')}
                 </TableCell>
               </TableRow>
             ) : (
               lodgements.map((lodgement) => (
                 <TableRow key={lodgement.id} hover>
-                  <TableCell>{formatDate(lodgement.date)}</TableCell>
+                  <TableCell>{formatDate(new Date(lodgement.date), 'dd MMM yyyy', locale)}</TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" fontWeight="medium">
-                      {formatCurrency(lodgement.totalAmount)}
+                      {formatCurrency(lodgement.totalAmount, 'GBP', locale)}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(lodgement.cardAmount)}
+                    {formatCurrency(lodgement.cardAmount, 'GBP', locale)}
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(lodgement.chequeAmount)}
+                    {formatCurrency(lodgement.chequeAmount, 'GBP', locale)}
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(lodgement.offlineAmount)}
+                    {formatCurrency(lodgement.offlineAmount, 'GBP', locale)}
                   </TableCell>
                   <TableCell align="right">
                     {lodgement.transactionCount}
                   </TableCell>
                   <TableCell sx={{ textTransform: 'capitalize' }}>
-                    {lodgement.status}
+                    {t(`common.status.${lodgement.status}`)}
                   </TableCell>
                 </TableRow>
               ))

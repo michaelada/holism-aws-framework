@@ -1,90 +1,76 @@
-# Navigation Fix Summary - URL Doubling Issue
+# Org Admin UI i18n Initialization Fix
 
 ## Issue
-When clicking navigation buttons throughout the OrgAdmin application (e.g., "+ Create Form", "Back", "Edit", etc.), URLs were doubling the `/orgadmin` prefix, resulting in paths like `/orgadmin/orgadmin/forms/new` instead of `/orgadmin/forms/new`, causing 404 errors.
+When accessing http://localhost:5176/orgadmin/, the application flashes the landing page but then goes white with the error:
+```
+Uncaught TypeError: Cannot read properties of undefined (reading 'hasLanguageSomeTranslations')
+at setLng (chunk-FXPUQAHK.js?v=46099c06:1999:28)
+at _I18n.changeLanguage (chunk-FXPUQAHK.js?v=46099c06:2020:7)
+at LocaleContext.tsx:35:12
+```
 
 ## Root Cause
-The application uses `BrowserRouter` with `basename="/orgadmin"`, which automatically prefixes all routes. However, navigation handlers were using absolute paths that already included `/orgadmin`, causing the basename to be added twice.
+The `LocaleProvider` component was trying to call `i18n.changeLanguage()` before i18n was fully initialized. The initialization happens in `App.tsx` in a `useEffect` hook, but `LocaleProvider` mounts and tries to use i18n immediately, causing the error.
 
-## Solution
-Fixed all navigation calls across the entire application to use paths relative to the basename by removing the `/orgadmin` prefix from all `navigate()` and `href` calls.
+## Solution Applied
 
-## Files Fixed (31 total)
+### 1. Added Initialization Check in LocaleContext
+Updated `packages/orgadmin-shell/src/context/LocaleContext.tsx` to check if i18n is initialized before trying to change the language:
 
-### Core Modules (11 files)
-- `packages/orgadmin-core/src/forms/pages/FormsListPage.tsx`
-- `packages/orgadmin-core/src/forms/pages/FormBuilderPage.tsx`
-- `packages/orgadmin-core/src/forms/pages/FormPreviewPage.tsx`
-- `packages/orgadmin-core/src/users/pages/OrgAdminUsersListPage.tsx`
-- `packages/orgadmin-core/src/users/pages/AccountUsersListPage.tsx`
-- `packages/orgadmin-core/src/payments/pages/PaymentDetailsPage.tsx`
-- `packages/orgadmin-core/src/payments/pages/LodgementsPage.tsx`
-- `packages/orgadmin-core/src/reporting/pages/RevenueReportPage.tsx`
-- `packages/orgadmin-core/src/reporting/pages/EventsReportPage.tsx`
-- `packages/orgadmin-core/src/reporting/pages/MembersReportPage.tsx`
-- `packages/orgadmin-core/src/reporting/pages/ReportingDashboardPage.tsx`
-
-### Events Module (3 files)
-- `packages/orgadmin-events/src/pages/EventsListPage.tsx`
-- `packages/orgadmin-events/src/pages/CreateEventPage.tsx`
-- `packages/orgadmin-events/src/pages/EventDetailsPage.tsx`
-
-### Memberships Module (5 files)
-- `packages/orgadmin-memberships/src/pages/MembershipTypesListPage.tsx`
-- `packages/orgadmin-memberships/src/pages/CreateSingleMembershipTypePage.tsx`
-- `packages/orgadmin-memberships/src/pages/CreateGroupMembershipTypePage.tsx`
-- `packages/orgadmin-memberships/src/pages/MembershipTypeDetailsPage.tsx`
-- `packages/orgadmin-memberships/src/pages/MemberDetailsPage.tsx`
-
-### Merchandise Module (3 files)
-- `packages/orgadmin-merchandise/src/pages/MerchandiseTypesListPage.tsx`
-- `packages/orgadmin-merchandise/src/pages/CreateMerchandiseTypePage.tsx`
-- `packages/orgadmin-merchandise/src/pages/MerchandiseTypeDetailsPage.tsx`
-
-### Calendar Module (3 files)
-- `packages/orgadmin-calendar/src/pages/CalendarsListPage.tsx`
-- `packages/orgadmin-calendar/src/pages/CreateCalendarPage.tsx`
-- `packages/orgadmin-calendar/src/pages/CalendarDetailsPage.tsx`
-
-### Registrations Module (4 files)
-- `packages/orgadmin-registrations/src/pages/RegistrationTypesListPage.tsx`
-- `packages/orgadmin-registrations/src/pages/CreateRegistrationTypePage.tsx`
-- `packages/orgadmin-registrations/src/pages/RegistrationTypeDetailsPage.tsx`
-- `packages/orgadmin-registrations/src/pages/RegistrationDetailsPage.tsx`
-
-### Ticketing Module
-- No navigation issues found (module doesn't have navigation with /orgadmin prefix)
-
-## Changes Made
-
-### Before (Broken):
+**In the useEffect that updates i18n language:**
 ```typescript
-navigate('/orgadmin/forms/new');  // Results in /orgadmin/orgadmin/forms/new
+// Only change language if i18n is initialized
+if (i18n.isInitialized && i18n.language !== locale) {
+  i18n.changeLanguage(locale).catch((error) => {
+    console.error('Failed to change language:', error);
+  });
+}
 ```
 
-### After (Fixed):
+**In the setLocale function:**
 ```typescript
-navigate('/forms/new');  // Results in /orgadmin/forms/new
+// Wait for i18n to be initialized
+if (!i18n.isInitialized) {
+  console.warn('i18n not initialized yet, waiting...');
+  // Set locale state anyway, it will be applied when i18n initializes
+  setLocaleState(newLocale);
+  return;
+}
 ```
 
-## Verification
-- ✅ All `navigate()` calls with `/orgadmin/` prefix have been removed
-- ✅ All `href` attributes with `/orgadmin/` prefix have been removed
-- ✅ All `to` props with `/orgadmin/` prefix have been removed
-- ✅ Application starts successfully on port 5176
-- ✅ No TypeScript or build errors
+## Current Status
 
-## Testing Recommendations
-1. Navigate to Forms module and click "+ Create Form" - should go to `/orgadmin/forms/new`
-2. Test all "Back" buttons in detail pages - should return to list pages correctly
-3. Test tab navigation in Users module - should switch between admins and accounts
-4. Test all "Create" buttons across all modules
-5. Test all "Edit" and "Delete" navigation flows
-6. Test reporting dashboard quick links
+### ✅ Fixed
+- Added i18n initialization checks to prevent errors
+- LocaleContext now gracefully handles uninitialized i18n
+- Dev server running on http://localhost:5176/orgadmin (port changed from 5175)
 
-## Status
-✅ **COMPLETE** - All navigation issues have been resolved across all modules.
+### 🧪 Testing Required
+1. Navigate to http://localhost:5176/orgadmin
+2. Verify the app loads without errors
+3. Check browser console for any warnings
+4. Test language switching if available
 
----
-**Date:** February 13, 2026  
-**Fixed by:** Kiro AI Assistant
+## Files Modified
+- `packages/orgadmin-shell/src/context/LocaleContext.tsx`
+
+## Previous Issues Fixed
+- Import errors for `formatCurrency` (see NAVIGATION_FIX_SUMMARY.md)
+
+## Next Steps
+
+### For Org Admin UI:
+1. Test the application at http://localhost:5176/orgadmin
+2. Verify authentication flow works
+3. Test all module pages load correctly
+
+### For Super Admin UI:
+Once org admin is verified working, return to fixing the super admin 401 error by:
+1. Opening Keycloak Admin Console (http://localhost:8080)
+2. Configuring the `aws-framework-admin` client with audience mapper
+3. Following the guide in `docs/KEYCLOAK_ADMIN_CLIENT_AUDIENCE_FIX.md`
+
+## Related Documentation
+- `ADMIN_AUTH_FIX_SUMMARY.md` - Super admin authentication fix guide
+- `docs/KEYCLOAK_ADMIN_CLIENT_AUDIENCE_FIX.md` - Detailed Keycloak configuration
+- `docs/KEYCLOAK_SETUP.md` - Complete Keycloak setup guide

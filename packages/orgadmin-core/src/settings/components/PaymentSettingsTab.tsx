@@ -24,6 +24,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
 
 interface PaymentSettings {
@@ -39,16 +40,9 @@ interface PaymentSettings {
   chequePaymentInstructions: string;
 }
 
-const CURRENCIES = [
-  { value: 'GBP', label: '£ GBP - British Pound' },
-  { value: 'EUR', label: '€ EUR - Euro' },
-  { value: 'USD', label: '$ USD - US Dollar' },
-  { value: 'AUD', label: '$ AUD - Australian Dollar' },
-  { value: 'CAD', label: '$ CAD - Canadian Dollar' },
-];
-
 const PaymentSettingsTab: React.FC = () => {
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,6 +64,14 @@ const PaymentSettingsTab: React.FC = () => {
     chequePaymentsEnabled: false,
     chequePaymentInstructions: '',
   });
+
+  const CURRENCIES = [
+    { value: 'GBP', label: t('settings.organisationDetails.currencies.gbp') },
+    { value: 'EUR', label: t('settings.organisationDetails.currencies.eur') },
+    { value: 'USD', label: t('settings.organisationDetails.currencies.usd') },
+    { value: 'AUD', label: t('settings.organisationDetails.currencies.aud') },
+    { value: 'CAD', label: t('settings.organisationDetails.currencies.cad') },
+  ];
 
   useEffect(() => {
     loadPaymentSettings();
@@ -100,7 +102,7 @@ const PaymentSettingsTab: React.FC = () => {
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load payment settings');
+      setError(err.message || t('settings.paymentSettings.messages.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,7 @@ const PaymentSettingsTab: React.FC = () => {
       // Validate Stripe keys if enabled
       if (formData.stripeEnabled) {
         if (!formData.stripePublishableKey || !formData.stripeSecretKey) {
-          setError('Stripe publishable key and secret key are required when Stripe is enabled');
+          setError(t('settings.paymentSettings.validation.stripeKeysRequired'));
           setSaving(false);
           return;
         }
@@ -138,7 +140,7 @@ const PaymentSettingsTab: React.FC = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save payment settings');
+      setError(err.message || t('settings.paymentSettings.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -155,10 +157,10 @@ const PaymentSettingsTab: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Payment Settings
+        {t('settings.paymentSettings.title')}
       </Typography>
       <Typography variant="body2" color="textSecondary" paragraph>
-        Configure payment processing and accepted payment methods
+        {t('settings.paymentSettings.subtitle')}
       </Typography>
 
       {error && (
@@ -169,14 +171,14 @@ const PaymentSettingsTab: React.FC = () => {
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
-          Payment settings saved successfully
+          {t('settings.paymentSettings.messages.saveSuccess')}
         </Alert>
       )}
 
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Stripe Configuration
+            {t('settings.paymentSettings.sections.stripeConfig')}
           </Typography>
         </Grid>
 
@@ -188,7 +190,7 @@ const PaymentSettingsTab: React.FC = () => {
                 onChange={(e) => handleChange('stripeEnabled', e.target.checked)}
               />
             }
-            label="Enable Stripe Payments"
+            label={t('settings.paymentSettings.fields.stripeEnabled')}
           />
         </Grid>
 
@@ -197,25 +199,25 @@ const PaymentSettingsTab: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Stripe Publishable Key"
+                label={t('settings.paymentSettings.fields.stripePublishableKey')}
                 value={formData.stripePublishableKey}
                 onChange={(e) => handleChange('stripePublishableKey', e.target.value)}
-                placeholder="pk_live_..."
+                placeholder={t('settings.paymentSettings.fields.stripePublishableKeyPlaceholder')}
                 required
-                helperText="Your Stripe publishable key (starts with pk_)"
+                helperText={t('settings.paymentSettings.fields.stripePublishableKeyHelper')}
               />
             </Grid>
 
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Stripe Secret Key"
+                label={t('settings.paymentSettings.fields.stripeSecretKey')}
                 type={showSecretKey ? 'text' : 'password'}
                 value={formData.stripeSecretKey}
                 onChange={(e) => handleChange('stripeSecretKey', e.target.value)}
-                placeholder="sk_live_..."
+                placeholder={t('settings.paymentSettings.fields.stripeSecretKeyPlaceholder')}
                 required
-                helperText="Your Stripe secret key (starts with sk_)"
+                helperText={t('settings.paymentSettings.fields.stripeSecretKeyHelper')}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -234,12 +236,12 @@ const PaymentSettingsTab: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Stripe Webhook Secret"
+                label={t('settings.paymentSettings.fields.stripeWebhookSecret')}
                 type={showWebhookSecret ? 'text' : 'password'}
                 value={formData.stripeWebhookSecret}
                 onChange={(e) => handleChange('stripeWebhookSecret', e.target.value)}
-                placeholder="whsec_..."
-                helperText="Your Stripe webhook signing secret (optional)"
+                placeholder={t('settings.paymentSettings.fields.stripeWebhookSecretPlaceholder')}
+                helperText={t('settings.paymentSettings.fields.stripeWebhookSecretHelper')}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -259,7 +261,7 @@ const PaymentSettingsTab: React.FC = () => {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Payment Configuration
+            {t('settings.paymentSettings.sections.paymentConfig')}
           </Typography>
         </Grid>
 
@@ -267,7 +269,7 @@ const PaymentSettingsTab: React.FC = () => {
           <TextField
             fullWidth
             select
-            label="Default Currency"
+            label={t('settings.paymentSettings.fields.defaultCurrency')}
             value={formData.defaultCurrency}
             onChange={(e) => handleChange('defaultCurrency', e.target.value)}
           >
@@ -282,19 +284,19 @@ const PaymentSettingsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Handling Fee (%)"
+            label={t('settings.paymentSettings.fields.handlingFeePercentage')}
             type="number"
             value={formData.handlingFeePercentage}
             onChange={(e) => handleChange('handlingFeePercentage', parseFloat(e.target.value) || 0)}
             inputProps={{ min: 0, max: 100, step: 0.1 }}
-            helperText="Percentage fee added to card payments"
+            helperText={t('settings.paymentSettings.fields.handlingFeePercentageHelper')}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Fixed Handling Fee"
+            label={t('settings.paymentSettings.fields.handlingFeeFixed')}
             type="number"
             value={formData.handlingFeeFixed}
             onChange={(e) => handleChange('handlingFeeFixed', parseFloat(e.target.value) || 0)}
@@ -302,13 +304,13 @@ const PaymentSettingsTab: React.FC = () => {
             InputProps={{
               startAdornment: <InputAdornment position="start">£</InputAdornment>,
             }}
-            helperText="Fixed fee added to card payments"
+            helperText={t('settings.paymentSettings.fields.handlingFeeFixedHelper')}
           />
         </Grid>
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Offline Payments
+            {t('settings.paymentSettings.sections.offlinePayments')}
           </Typography>
         </Grid>
 
@@ -320,7 +322,7 @@ const PaymentSettingsTab: React.FC = () => {
                 onChange={(e) => handleChange('chequePaymentsEnabled', e.target.checked)}
               />
             }
-            label="Enable Cheque/Offline Payments"
+            label={t('settings.paymentSettings.fields.chequePaymentsEnabled')}
           />
         </Grid>
 
@@ -328,13 +330,13 @@ const PaymentSettingsTab: React.FC = () => {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Cheque Payment Instructions"
+              label={t('settings.paymentSettings.fields.chequePaymentInstructions')}
               value={formData.chequePaymentInstructions}
               onChange={(e) => handleChange('chequePaymentInstructions', e.target.value)}
               multiline
               rows={4}
-              placeholder="Please make cheques payable to..."
-              helperText="Instructions shown to users when selecting cheque/offline payment"
+              placeholder={t('settings.paymentSettings.fields.chequePaymentInstructionsPlaceholder')}
+              helperText={t('settings.paymentSettings.fields.chequePaymentInstructionsHelper')}
             />
           </Grid>
         )}
@@ -348,7 +350,7 @@ const PaymentSettingsTab: React.FC = () => {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('settings.actions.saving') : t('settings.actions.saveChanges')}
             </Button>
           </Box>
         </Grid>

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { renderWithI18n, screen } from '../../test/i18n-test-utils';
 import FieldConfigurationTable from '../FieldConfigurationTable';
 
 describe('FieldConfigurationTable', () => {
   it('renders empty state when no fields', () => {
-    render(
+    renderWithI18n(
       <FieldConfigurationTable
         fields={[]}
         fieldConfiguration={{}}
@@ -21,7 +21,7 @@ describe('FieldConfigurationTable', () => {
       { id: '2', name: 'email', label: 'Email', datatype: 'email', required: true },
     ];
     
-    render(
+    renderWithI18n(
       <FieldConfigurationTable
         fields={fields}
         fieldConfiguration={{ '1': 'common', '2': 'unique' }}

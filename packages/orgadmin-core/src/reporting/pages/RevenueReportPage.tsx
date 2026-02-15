@@ -36,6 +36,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
  * Revenue source data structure
@@ -74,6 +76,7 @@ interface RevenueReportData {
  */
 const RevenueReportPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   // Filter state
   const [startDate, setStartDate] = useState<string>(() => {
@@ -93,14 +96,6 @@ const RevenueReportPage: React.FC = () => {
   useEffect(() => {
     execute();
   }, [execute, startDate, endDate]);
-
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
 
   // Format percentage
   const formatPercentage = (value: number): string => {
@@ -161,13 +156,13 @@ const RevenueReportPage: React.FC = () => {
             onClick={() => navigate('/reporting')}
             sx={{ mb: 1 }}
           >
-            Back to Reports
+            {t('reporting.revenue.backToReports')}
           </Button>
           <Typography variant="h4" gutterBottom>
-            Revenue Report
+            {t('reporting.revenue.title')}
           </Typography>
           <Typography variant="body1" color="textSecondary">
-            Revenue breakdown by source and trends
+            {t('reporting.revenue.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -176,7 +171,7 @@ const RevenueReportPage: React.FC = () => {
           onClick={handleExport}
           disabled={loading || !data}
         >
-          Export to CSV
+          {t('reporting.revenue.exportToCSV')}
         </Button>
       </Box>
 
@@ -184,11 +179,11 @@ const RevenueReportPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Date Range
+            {t('reporting.revenue.dateRange')}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="Start Date"
+              label={t('reporting.filters.startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -196,7 +191,7 @@ const RevenueReportPage: React.FC = () => {
               fullWidth
             />
             <TextField
-              label="End Date"
+              label={t('reporting.filters.endDate')}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -222,10 +217,10 @@ const RevenueReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Total Revenue
+                    {t('reporting.revenue.summary.totalRevenue')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(data.summary.totalRevenue)}
+                    {formatCurrency(data.summary.totalRevenue, 'EUR', i18n.language)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -234,7 +229,7 @@ const RevenueReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Total Transactions
+                    {t('reporting.revenue.summary.totalTransactions')}
                   </Typography>
                   <Typography variant="h4">{data.summary.totalTransactions}</Typography>
                 </CardContent>
@@ -244,10 +239,10 @@ const RevenueReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Avg Transaction
+                    {t('reporting.revenue.summary.avgTransaction')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(data.summary.averageTransactionValue)}
+                    {formatCurrency(data.summary.averageTransactionValue, 'EUR', i18n.language)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -256,10 +251,10 @@ const RevenueReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Top Source
+                    {t('reporting.revenue.summary.topSource')}
                   </Typography>
                   <Typography variant="h4" sx={{ textTransform: 'capitalize' }}>
-                    {data.summary.topSource}
+                    {t(`reporting.revenue.sources.${data.summary.topSource}`)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -272,7 +267,7 @@ const RevenueReportPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Revenue by Source
+            {t('reporting.revenue.revenueBySource')}
           </Typography>
 
           {loading && (
@@ -299,15 +294,15 @@ const RevenueReportPage: React.FC = () => {
                         {getSourceIcon(source.source)}
                       </Box>
                       <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
-                        {source.source}
+                        {t(`reporting.revenue.sources.${source.source}`)}
                       </Typography>
                     </Box>
                     <Box textAlign="right">
                       <Typography variant="body1" fontWeight="medium">
-                        {formatCurrency(source.amount)}
+                        {formatCurrency(source.amount, 'EUR', i18n.language)}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        {source.transactionCount} transactions
+                        {t('reporting.revenue.table.transactions', { count: source.transactionCount })}
                       </Typography>
                     </Box>
                   </Box>
@@ -336,7 +331,7 @@ const RevenueReportPage: React.FC = () => {
 
           {!loading && data && data.sources.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              No revenue data found for the selected date range.
+              {t('reporting.revenue.noData')}
             </Alert>
           )}
         </CardContent>
@@ -346,7 +341,7 @@ const RevenueReportPage: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Monthly Breakdown
+            {t('reporting.revenue.monthlyBreakdown')}
           </Typography>
 
           {loading && (
@@ -362,14 +357,14 @@ const RevenueReportPage: React.FC = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Month</TableCell>
-                    <TableCell align="right">Events</TableCell>
-                    <TableCell align="right">Memberships</TableCell>
-                    <TableCell align="right">Merchandise</TableCell>
-                    <TableCell align="right">Calendar</TableCell>
-                    <TableCell align="right">Registrations</TableCell>
-                    <TableCell align="right">Tickets</TableCell>
-                    <TableCell align="right">Total</TableCell>
+                    <TableCell>{t('reporting.revenue.table.month')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.events')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.memberships')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.merchandise')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.calendar')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.registrations')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.tickets')}</TableCell>
+                    <TableCell align="right">{t('reporting.revenue.table.total')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -382,37 +377,37 @@ const RevenueReportPage: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(month.events)}
+                          {formatCurrency(month.events, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(month.memberships)}
+                          {formatCurrency(month.memberships, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(month.merchandise)}
+                          {formatCurrency(month.merchandise, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(month.calendar)}
+                          {formatCurrency(month.calendar, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(month.registrations)}
+                          {formatCurrency(month.registrations, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(month.tickets)}
+                          {formatCurrency(month.tickets, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" fontWeight="bold">
-                          {formatCurrency(month.total)}
+                          {formatCurrency(month.total, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -424,7 +419,7 @@ const RevenueReportPage: React.FC = () => {
 
           {!loading && data && data.monthlyBreakdown.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              No monthly breakdown data available for the selected date range.
+              {t('reporting.revenue.noMonthlyData')}
             </Alert>
           )}
         </CardContent>

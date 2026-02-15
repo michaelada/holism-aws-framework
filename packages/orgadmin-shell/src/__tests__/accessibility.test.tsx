@@ -606,4 +606,119 @@ describe('Accessibility Tests', () => {
       expect(parseInt(styles.minHeight)).toBeGreaterThanOrEqual(44);
     });
   });
+
+  describe('Language and Locale Accessibility', () => {
+    it('should update HTML lang attribute when locale changes', async () => {
+      const { LocaleProvider } = await import('../context/LocaleContext');
+      
+      // Initial render with en-GB locale
+      const { rerender } = render(
+        <LocaleProvider organizationLocale="en-GB">
+          <div>Content</div>
+        </LocaleProvider>
+      );
+
+      // Verify initial lang attribute
+      expect(document.documentElement.lang).toBe('en-gb');
+
+      // Change to French locale
+      rerender(
+        <LocaleProvider organizationLocale="fr-FR">
+          <div>Content</div>
+        </LocaleProvider>
+      );
+
+      // Wait for locale change to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Verify lang attribute updated
+      expect(document.documentElement.lang).toBe('fr-fr');
+    });
+
+    it('should set default lang attribute to en-gb when no locale provided', async () => {
+      const { LocaleProvider } = await import('../context/LocaleContext');
+      
+      render(
+        <LocaleProvider>
+          <div>Content</div>
+        </LocaleProvider>
+      );
+
+      // Verify default lang attribute
+      expect(document.documentElement.lang).toBe('en-gb');
+    });
+
+    it('should update lang attribute for all supported locales', async () => {
+      const { LocaleProvider } = await import('../context/LocaleContext');
+      
+      const supportedLocales = ['en-GB', 'fr-FR', 'es-ES', 'it-IT', 'de-DE', 'pt-PT'];
+      
+      for (const locale of supportedLocales) {
+        const { rerender, unmount } = render(
+          <LocaleProvider organizationLocale={locale}>
+            <div>Content</div>
+          </LocaleProvider>
+        );
+
+        // Wait for locale change to propagate
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Verify lang attribute matches locale (lowercase)
+        expect(document.documentElement.lang).toBe(locale.toLowerCase());
+        
+        unmount();
+      }
+    });
+
+    it('should maintain lang attribute consistency across navigation', async () => {
+      const { LocaleProvider } = await import('../context/LocaleContext');
+      
+      render(
+        <BrowserRouter>
+          <LocaleProvider organizationLocale="de-DE">
+            <Layout>
+              <div>Content</div>
+            </Layout>
+          </LocaleProvider>
+        </BrowserRouter>
+      );
+
+      // Wait for locale to be set
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Verify lang attribute is set
+      expect(document.documentElement.lang).toBe('de-de');
+
+      // Simulate navigation (lang should persist)
+      const link = screen.getByText(/Dashboard/i);
+      await userEvent.click(link);
+
+      // Lang attribute should still be set
+      expect(document.documentElement.lang).toBe('de-de');
+    });
+
+    it('should announce locale changes to screen readers via lang attribute', async () => {
+      const { LocaleProvider } = await import('../context/LocaleContext');
+      
+      const { rerender } = render(
+        <LocaleProvider organizationLocale="en-GB">
+          <div>English content</div>
+        </LocaleProvider>
+      );
+
+      expect(document.documentElement.lang).toBe('en-gb');
+
+      // Change to Spanish
+      rerender(
+        <LocaleProvider organizationLocale="es-ES">
+          <div>Contenido en español</div>
+        </LocaleProvider>
+      );
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Screen readers will detect the lang change via the HTML attribute
+      expect(document.documentElement.lang).toBe('es-es');
+    });
+  });
 });

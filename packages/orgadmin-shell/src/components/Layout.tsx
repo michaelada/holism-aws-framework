@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
 
 const DRAWER_WIDTH = 260;
@@ -52,6 +53,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
   const navigate = useNavigate();
   const location = useLocation();
   const { organisation } = useOrganisation();
+  const { t } = useTranslation();
+
+  // Check if we're on the landing page
+  const isLandingPage = location.pathname === '/';
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -90,6 +95,32 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
     });
   }, [location.pathname, sortedModules]);
 
+  // Create gradient background based on module color (same as DashboardCard)
+  const getGradientBackground = (color: string) => {
+    // Lighten the color for gradient effect
+    const lightenColor = (hex: string, percent: number) => {
+      const num = parseInt(hex.replace('#', ''), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return '#' + (
+        0x1000000 +
+        (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+        (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+        (B < 255 ? (B < 1 ? 0 : B) : 255)
+      ).toString(16).slice(1);
+    };
+
+    const lightColor = lightenColor(color, 40);
+    // Use the same opacity values as the card: 15 (~8% opacity) and 25 (~15% opacity)
+    return `linear-gradient(135deg, ${color}15 0%, ${lightColor}25 100%)`;
+  };
+
+  // Get the current module's color for theming
+  const moduleColor = currentModule?.card?.color;
+  const moduleGradient = moduleColor ? getGradientBackground(moduleColor) : undefined;
+
   // Filter modules to show only the current module's menu items
   const visibleModules = currentModule ? [currentModule] : [];
 
@@ -107,11 +138,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
       >
         <Avatar
           src={SMALL_LOGO_URL}
-          alt="ItsPlainSailing"
+          alt={t('navigation.appName')}
           sx={{ width: 48, height: 48, mr: 1 }}
         />
         <Typography variant="h6" noWrap component="div">
-          ItsPlainSailing
+          {t('navigation.appName')}
         </Typography>
       </Box>
 
@@ -120,10 +151,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
       {/* Organisation Name */}
       <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
         <Typography variant="caption" color="text.secondary">
-          Organisation
+          {t('navigation.organisation')}
         </Typography>
         <Typography variant="body2" fontWeight="medium" noWrap>
-          {organisation?.displayName || 'Loading...'}
+          {organisation?.displayName || t('navigation.loading')}
         </Typography>
       </Box>
 
@@ -140,7 +171,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
             <ListItemIcon>
               <DashboardIcon />
             </ListItemIcon>
-            <ListItemText primary="Back to Main Page" />
+            <ListItemText primary={t('navigation.backToMainPage')} />
           </ListItemButton>
         </ListItem>
 
@@ -205,7 +236,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
             <ListItemIcon>
               <LogoutIcon />
             </ListItemIcon>
-            <ListItemText primary="Logout" />
+            <ListItemText primary={t('navigation.logout')} />
           </ListItemButton>
         </ListItem>
       </List>
@@ -218,84 +249,109 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { md: `${DRAWER_WIDTH}px` },
+          width: isLandingPage ? '100%' : { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: isLandingPage ? 0 : { md: `${DRAWER_WIDTH}px` },
+          ...(moduleGradient && {
+            background: moduleGradient,
+          }),
         }}
       >
         <Toolbar>
-          {/* Mobile Menu Toggle */}
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
+          {/* Mobile Menu Toggle - only show when not on landing page */}
+          {!isLandingPage && (
+            <IconButton
+              color="inherit"
+              aria-label={t('common.accessibility.openDrawer')}
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
 
           {/* App Title */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <Avatar
               src={SMALL_LOGO_URL}
-              alt="ItsPlainSailing"
+              alt={t('navigation.appName')}
               sx={{ width: 32, height: 32, mr: 1, display: { xs: 'none', sm: 'block' } }}
             />
             <Typography variant="h6" noWrap component="div">
-              ItsPlainSailing
+              {t('navigation.appName')}
             </Typography>
           </Box>
 
           {/* Organisation Name in AppBar (desktop only) */}
           <Typography
             variant="body2"
-            sx={{ display: { xs: 'none', md: 'block' } }}
+            sx={{ display: { xs: 'none', md: 'block' }, mr: 2 }}
             color="text.secondary"
           >
-            {organisation?.displayName || 'Loading...'}
+            {organisation?.displayName || t('navigation.loading')}
           </Typography>
+
+          {/* Logout Button - only show on landing page */}
+          {isLandingPage && (
+            <IconButton
+              color="inherit"
+              onClick={handleLogout}
+              aria-label={t('common.accessibility.logout')}
+              sx={{ ml: 1 }}
+            >
+              <LogoutIcon />
+            </IconButton>
+          )}
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Drawer */}
-      <Box
-        component="nav"
-        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
-      >
-        {/* Mobile Drawer */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better mobile performance
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
-            },
-          }}
+      {/* Navigation Drawer - hide on landing page */}
+      {!isLandingPage && (
+        <Box
+          component="nav"
+          sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
         >
-          {drawerContent}
-        </Drawer>
+          {/* Mobile Drawer */}
+          <Drawer
+            variant="temporary"
+            open={mobileOpen}
+            onClose={handleDrawerToggle}
+            ModalProps={{
+              keepMounted: true, // Better mobile performance
+            }}
+            sx={{
+              display: { xs: 'block', md: 'none' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: DRAWER_WIDTH,
+                ...(moduleGradient && {
+                  background: moduleGradient,
+                }),
+              },
+            }}
+          >
+            {drawerContent}
+          </Drawer>
 
-        {/* Desktop Drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
-            },
-          }}
-          open
-        >
-          {drawerContent}
-        </Drawer>
-      </Box>
+          {/* Desktop Drawer */}
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: DRAWER_WIDTH,
+                ...(moduleGradient && {
+                  background: moduleGradient,
+                }),
+              },
+            }}
+            open
+          >
+            {drawerContent}
+          </Drawer>
+        </Box>
+      )}
 
       {/* Main Content */}
       <Box
@@ -303,7 +359,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          width: isLandingPage ? '100%' : { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           mt: 8, // Account for AppBar height
         }}
       >

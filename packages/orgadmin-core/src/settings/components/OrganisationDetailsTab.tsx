@@ -16,6 +16,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
 
 interface OrganisationDetails {
@@ -36,24 +37,9 @@ interface OrganisationDetails {
   };
 }
 
-const CURRENCIES = [
-  { value: 'GBP', label: '£ GBP - British Pound' },
-  { value: 'EUR', label: '€ EUR - Euro' },
-  { value: 'USD', label: '$ USD - US Dollar' },
-  { value: 'AUD', label: '$ AUD - Australian Dollar' },
-  { value: 'CAD', label: '$ CAD - Canadian Dollar' },
-];
-
-const LANGUAGES = [
-  { value: 'en-GB', label: 'English (UK)' },
-  { value: 'en-US', label: 'English (US)' },
-  { value: 'fr-FR', label: 'French' },
-  { value: 'de-DE', label: 'German' },
-  { value: 'es-ES', label: 'Spanish' },
-];
-
 const OrganisationDetailsTab: React.FC = () => {
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,6 +63,22 @@ const OrganisationDetailsTab: React.FC = () => {
       website: '',
     },
   });
+
+  const CURRENCIES = [
+    { value: 'GBP', label: t('settings.organisationDetails.currencies.gbp') },
+    { value: 'EUR', label: t('settings.organisationDetails.currencies.eur') },
+    { value: 'USD', label: t('settings.organisationDetails.currencies.usd') },
+    { value: 'AUD', label: t('settings.organisationDetails.currencies.aud') },
+    { value: 'CAD', label: t('settings.organisationDetails.currencies.cad') },
+  ];
+
+  const LANGUAGES = [
+    { value: 'en-GB', label: t('settings.organisationDetails.languages.enGB') },
+    { value: 'en-US', label: t('settings.organisationDetails.languages.enUS') },
+    { value: 'fr-FR', label: t('settings.organisationDetails.languages.frFR') },
+    { value: 'de-DE', label: t('settings.organisationDetails.languages.deDE') },
+    { value: 'es-ES', label: t('settings.organisationDetails.languages.esES') },
+  ];
 
   useEffect(() => {
     loadOrganisationDetails();
@@ -111,7 +113,7 @@ const OrganisationDetailsTab: React.FC = () => {
         },
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to load organisation details');
+      setError(err.message || t('settings.organisationDetails.messages.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -157,7 +159,7 @@ const OrganisationDetailsTab: React.FC = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save organisation details');
+      setError(err.message || t('settings.organisationDetails.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -174,10 +176,10 @@ const OrganisationDetailsTab: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Organisation Details
+        {t('settings.organisationDetails.title')}
       </Typography>
       <Typography variant="body2" color="textSecondary" paragraph>
-        Manage your organisation's basic information and contact details
+        {t('settings.organisationDetails.subtitle')}
       </Typography>
 
       {error && (
@@ -188,7 +190,7 @@ const OrganisationDetailsTab: React.FC = () => {
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
-          Organisation details saved successfully
+          {t('settings.organisationDetails.messages.saveSuccess')}
         </Alert>
       )}
 
@@ -196,17 +198,17 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Organisation Name"
+            label={t('settings.organisationDetails.fields.organisationName')}
             value={formData.name}
             disabled
-            helperText="Organisation name cannot be changed"
+            helperText={t('settings.organisationDetails.fields.organisationNameHelper')}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Display Name"
+            label={t('settings.organisationDetails.fields.displayName')}
             value={formData.displayName}
             onChange={(e) => handleChange('displayName', e.target.value)}
             required
@@ -216,10 +218,10 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Domain"
+            label={t('settings.organisationDetails.fields.domain')}
             value={formData.domain}
             onChange={(e) => handleChange('domain', e.target.value)}
-            placeholder="example.com"
+            placeholder={t('settings.organisationDetails.fields.domainPlaceholder')}
           />
         </Grid>
 
@@ -227,7 +229,7 @@ const OrganisationDetailsTab: React.FC = () => {
           <TextField
             fullWidth
             select
-            label="Currency"
+            label={t('settings.organisationDetails.fields.currency')}
             value={formData.currency}
             onChange={(e) => handleChange('currency', e.target.value)}
           >
@@ -243,7 +245,7 @@ const OrganisationDetailsTab: React.FC = () => {
           <TextField
             fullWidth
             select
-            label="Language"
+            label={t('settings.organisationDetails.fields.language')}
             value={formData.language}
             onChange={(e) => handleChange('language', e.target.value)}
           >
@@ -257,14 +259,14 @@ const OrganisationDetailsTab: React.FC = () => {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Contact Information
+            {t('settings.organisationDetails.sections.contactInfo')}
           </Typography>
         </Grid>
 
         <Grid item xs={12}>
           <TextField
             fullWidth
-            label="Address"
+            label={t('settings.organisationDetails.fields.address')}
             value={formData.settings.address}
             onChange={(e) => handleChange('settings.address', e.target.value)}
             multiline
@@ -275,7 +277,7 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="City"
+            label={t('settings.organisationDetails.fields.city')}
             value={formData.settings.city}
             onChange={(e) => handleChange('settings.city', e.target.value)}
           />
@@ -284,7 +286,7 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Postcode"
+            label={t('settings.organisationDetails.fields.postcode')}
             value={formData.settings.postcode}
             onChange={(e) => handleChange('settings.postcode', e.target.value)}
           />
@@ -293,7 +295,7 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Country"
+            label={t('settings.organisationDetails.fields.country')}
             value={formData.settings.country}
             onChange={(e) => handleChange('settings.country', e.target.value)}
           />
@@ -302,7 +304,7 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Phone"
+            label={t('settings.organisationDetails.fields.phone')}
             value={formData.settings.phone}
             onChange={(e) => handleChange('settings.phone', e.target.value)}
             type="tel"
@@ -312,7 +314,7 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Email"
+            label={t('settings.organisationDetails.fields.email')}
             value={formData.settings.email}
             onChange={(e) => handleChange('settings.email', e.target.value)}
             type="email"
@@ -322,11 +324,11 @@ const OrganisationDetailsTab: React.FC = () => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Website"
+            label={t('settings.organisationDetails.fields.website')}
             value={formData.settings.website}
             onChange={(e) => handleChange('settings.website', e.target.value)}
             type="url"
-            placeholder="https://example.com"
+            placeholder={t('settings.organisationDetails.fields.websitePlaceholder')}
           />
         </Grid>
 
@@ -339,7 +341,7 @@ const OrganisationDetailsTab: React.FC = () => {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('settings.actions.saving') : t('settings.actions.saveChanges')}
             </Button>
           </Box>
         </Grid>

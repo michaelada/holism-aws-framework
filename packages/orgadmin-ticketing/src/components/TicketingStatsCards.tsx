@@ -19,7 +19,8 @@ import {
   RadioButtonUnchecked as NotScannedIcon,
   Schedule as TimeIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import { formatTime, formatDate } from '@orgadmin/shell/utils/dateFormatting';
 import type { ElectronicTicket } from '../types/ticketing.types';
 
 interface TicketingStatsCardsProps {
@@ -95,6 +96,8 @@ const StatCard: React.FC<StatCardProps> = ({
 };
 
 const TicketingStatsCards: React.FC<TicketingStatsCardsProps> = ({ tickets }) => {
+  const { t, i18n } = useTranslation();
+  
   const stats = useMemo(() => {
     const totalIssued = tickets.length;
     const scanned = tickets.filter(t => t.scanStatus === 'scanned').length;
@@ -124,7 +127,7 @@ const TicketingStatsCards: React.FC<TicketingStatsCardsProps> = ({ tickets }) =>
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Tickets Issued"
+            title={t('ticketing.stats.totalIssued')}
             value={stats.totalIssued}
             icon={<TicketIcon sx={{ fontSize: 32, color: '#1976d2' }} />}
             color="#1976d2"
@@ -133,9 +136,9 @@ const TicketingStatsCards: React.FC<TicketingStatsCardsProps> = ({ tickets }) =>
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Tickets Scanned"
+            title={t('ticketing.stats.scanned')}
             value={stats.scanned}
-            subtitle={`${stats.scanPercentage}% of total`}
+            subtitle={t('ticketing.stats.percentOfTotal', { percent: stats.scanPercentage })}
             icon={<ScannedIcon sx={{ fontSize: 32, color: '#2e7d32' }} />}
             color="#2e7d32"
             progress={stats.scanPercentage}
@@ -144,9 +147,9 @@ const TicketingStatsCards: React.FC<TicketingStatsCardsProps> = ({ tickets }) =>
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Tickets Not Scanned"
+            title={t('ticketing.stats.notScanned')}
             value={stats.notScanned}
-            subtitle={`${100 - stats.scanPercentage}% of total`}
+            subtitle={t('ticketing.stats.percentOfTotal', { percent: 100 - stats.scanPercentage })}
             icon={<NotScannedIcon sx={{ fontSize: 32, color: '#ed6c02' }} />}
             color="#ed6c02"
           />
@@ -154,9 +157,9 @@ const TicketingStatsCards: React.FC<TicketingStatsCardsProps> = ({ tickets }) =>
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Last Scan Time"
-            value={stats.lastScan ? format(stats.lastScan, 'HH:mm') : 'N/A'}
-            subtitle={stats.lastScan ? format(stats.lastScan, 'MMM dd, yyyy') : 'No scans yet'}
+            title={t('ticketing.stats.lastScanTime')}
+            value={stats.lastScan ? formatTime(stats.lastScan, i18n.language) : t('ticketing.details.notAvailable')}
+            subtitle={stats.lastScan ? formatDate(stats.lastScan, 'PPP', i18n.language) : t('ticketing.stats.noScansYet')}
             icon={<TimeIcon sx={{ fontSize: 32, color: '#9c27b0' }} />}
             color="#9c27b0"
           />

@@ -20,6 +20,7 @@ import {
   Star as StarIcon,
   StarBorder as StarBorderIcon,
 } from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 
 interface ImageGalleryUploadProps {
   images: string[];
@@ -33,6 +34,7 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
   maxImages = 10,
 }) => {
   const [uploading, setUploading] = useState(false);
+  const { t } = useTranslation();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -80,7 +82,7 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2 }}>
-        Product Images
+        {t('merchandise.images.title')}
       </Typography>
 
       <Grid container spacing={2}>
@@ -91,7 +93,7 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
                 component="img"
                 height="200"
                 image={image}
-                alt={`Product image ${index + 1}`}
+                alt={t('merchandise.images.productImage', { number: index + 1 })}
                 sx={{ objectFit: 'cover' }}
               />
               <Box
@@ -107,7 +109,7 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
                   size="small"
                   onClick={() => handleSetMainImage(index)}
                   sx={{ bgcolor: 'background.paper' }}
-                  title={index === 0 ? 'Main image' : 'Set as main image'}
+                  title={index === 0 ? t('merchandise.images.mainImage') : t('merchandise.images.setAsMain')}
                 >
                   {index === 0 ? <StarIcon color="primary" /> : <StarBorderIcon />}
                 </IconButton>
@@ -134,7 +136,7 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
                     fontSize: '0.75rem',
                   }}
                 >
-                  Main Image
+                  {t('merchandise.images.mainImage')}
                 </Box>
               )}
             </Card>
@@ -157,10 +159,10 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
             >
               <UploadIcon fontSize="large" />
               <Typography>
-                {uploading ? 'Uploading...' : 'Upload Images'}
+                {uploading ? t('merchandise.images.uploading') : t('merchandise.images.uploadImages')}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {images.length} / {maxImages} images
+                {t('merchandise.images.imageCount', { current: images.length, max: maxImages })}
               </Typography>
               <input
                 type="file"
@@ -176,7 +178,7 @@ const ImageGalleryUpload: React.FC<ImageGalleryUploadProps> = ({
 
       {images.length === 0 && (
         <Typography color="text.secondary" align="center" sx={{ mt: 2 }}>
-          No images uploaded yet. Upload at least one product image.
+          {t('merchandise.images.noImages')}
         </Typography>
       )}
     </Box>

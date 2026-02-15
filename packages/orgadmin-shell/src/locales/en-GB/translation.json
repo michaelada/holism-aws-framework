@@ -1,0 +1,1812 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "search": "Search",
+      "filter": "Filter",
+      "export": "Export",
+      "import": "Import",
+      "close": "Close",
+      "submit": "Submit",
+      "reset": "Reset",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "confirm": "Confirm",
+      "view": "View",
+      "download": "Download",
+      "upload": "Upload",
+      "add": "Add"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "completed": "Completed",
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived",
+      "cancelled": "Cancelled",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    },
+    "validation": {
+      "required": "This field is required",
+      "invalidEmail": "Please enter a valid email address",
+      "invalidDate": "Please enter a valid date",
+      "invalidUrl": "Please enter a valid URL",
+      "minLength": "Must be at least {{min}} characters",
+      "maxLength": "Must be no more than {{max}} characters",
+      "minValue": "Must be at least {{min}}",
+      "maxValue": "Must be no more than {{max}}",
+      "invalidFormat": "Invalid format",
+      "passwordMismatch": "Passwords do not match"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "saved": "Saved successfully",
+      "error": "An error occurred",
+      "success": "Operation completed successfully",
+      "noData": "No data available",
+      "confirmDelete": "Are you sure you want to delete this item?",
+      "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?"
+    },
+    "labels": {
+      "all": "All",
+      "unlimited": "Unlimited",
+      "max": "max",
+      "free": "Free",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "entries": "entries",
+      "activity": "activity",
+      "activities": "activities",
+      "configured": "configured"
+    },
+    "accessibility": {
+      "openDrawer": "Open navigation menu",
+      "closeDrawer": "Close navigation menu",
+      "logout": "Log out",
+      "menu": "Menu",
+      "required": "Required field",
+      "loading": "Loading content",
+      "error": "Error message",
+      "success": "Success message",
+      "warning": "Warning message",
+      "info": "Information message"
+    }
+  },
+  "events": {
+    "title": "Events",
+    "createEvent": "Create Event",
+    "editEvent": "Edit Event",
+    "eventDetails": "Event Details",
+    "searchPlaceholder": "Search events...",
+    "noEventsFound": "No events yet. Create your first event to get started.",
+    "noMatchingEvents": "No events match your filters",
+    "loadingEvents": "Loading events...",
+    "failedToLoad": "Failed to load events",
+    "failedToSave": "Failed to save event",
+    "fixValidationErrors": "Please fix the validation errors before saving",
+    "table": {
+      "eventName": "Event Name",
+      "dates": "Dates",
+      "status": "Status",
+      "entryLimit": "Entry Limit",
+      "actions": "Actions"
+    },
+    "tooltips": {
+      "viewEntries": "View Entries",
+      "viewDetails": "View Details",
+      "edit": "Edit"
+    },
+    "wizard": {
+      "steps": {
+        "basicInfo": "Basic Information",
+        "eventDates": "Event Dates",
+        "ticketingSettings": "Ticketing Settings",
+        "activities": "Activities",
+        "reviewConfirm": "Review & Confirm"
+      }
+    },
+    "basicInfo": {
+      "title": "Basic Information",
+      "description": "Enter the basic details for your event",
+      "eventName": "Event Name",
+      "eventNameHelper": "Name as it appears to members on public website",
+      "eventNameTooltip": "The name of your event as it will appear to members on the public website",
+      "eventDescription": "Description",
+      "eventDescriptionHelper": "Detailed event information including start time, location, parking, etc.",
+      "eventDescriptionTooltip": "Provide detailed information about the event including start time, location, parking instructions, and any other relevant details",
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsHelper": "Comma-separated email addresses that receive notifications when someone enters the event",
+      "emailNotificationsTooltip": "Enter comma-separated email addresses that will receive notifications whenever someone registers for this event",
+      "limitEntries": "Limit Number Of Event Entries",
+      "limitEntriesTooltip": "Enable this to set a maximum number of entries allowed for this event across all activities",
+      "entriesLimit": "Event Entries Limit",
+      "entriesLimitHelper": "Maximum number of entries allowed across all event activities",
+      "entriesLimitTooltip": "The maximum total number of entries allowed across all event activities",
+      "addConfirmationMessage": "Add Message To Confirmation Email",
+      "addConfirmationMessageTooltip": "Add a custom message that will be included in the confirmation email sent to people who register for this event",
+      "confirmationMessage": "Confirmation Email Message",
+      "confirmationMessageHelper": "Custom text to include in confirmation emails sent to entrants",
+      "confirmationMessageTooltip": "This custom text will be included in confirmation emails sent to entrants",
+      "validation": {
+        "nameRequired": "Event name is required",
+        "descriptionRequired": "Event description is required"
+      }
+    },
+    "dates": {
+      "title": "Event Dates",
+      "description": "Set the event dates and entry opening/closing times",
+      "startDate": "Event Start Date",
+      "startDateTooltip": "The first day of your event",
+      "endDate": "Event End Date",
+      "endDateHelper": "Must be on or after start date",
+      "endDateTooltip": "The last day of your event (must be on or after the start date)",
+      "openDateEntries": "Open Date Entries",
+      "openDateEntriesHelper": "Date and time before which people may not submit entries",
+      "openDateEntriesTooltip": "The date and time when registration opens - people cannot submit entries before this time",
+      "entriesClosingDate": "Entries Closing Date",
+      "entriesClosingDateHelper": "Must be after entries opening date",
+      "entriesClosingDateTooltip": "The date and time when registration closes - entries will automatically close at this time"
+    },
+    "ticketing": {
+      "title": "Ticketing Settings",
+      "description": "Configure electronic tickets with QR codes for this event",
+      "generateTickets": "Generate Electronic Tickets",
+      "generateTicketsHelper": "Automatically generate tickets with QR codes for all bookings",
+      "generateTicketsTooltip": "Enable automatic generation of electronic tickets with QR codes for all bookings",
+      "headerText": "Ticket Header Text",
+      "headerTextHelper": "Text displayed at top of ticket (optional)",
+      "headerTextTooltip": "Optional text to display at the top of the ticket",
+      "instructions": "Ticket Instructions",
+      "instructionsHelper": "Instructions for ticket holders (e.g., 'Please present this QR code at the entrance')",
+      "instructionsTooltip": "Instructions for ticket holders, such as 'Please present this QR code at the entrance'",
+      "footerText": "Ticket Footer Text",
+      "footerTextHelper": "Text displayed at bottom of ticket (optional)",
+      "footerTextTooltip": "Optional text to display at the bottom of the ticket",
+      "validityPeriod": "Ticket Validity Period (hours)",
+      "validityPeriodHelper": "Hours before event start that ticket becomes valid (optional)",
+      "validityPeriodTooltip": "Number of hours before the event starts that the ticket becomes valid",
+      "backgroundColor": "Ticket Background Color",
+      "backgroundColorHelper": "Background color for ticket (optional)",
+      "backgroundColorTooltip": "Choose a background color for the ticket",
+      "includeLogo": "Include Event Logo",
+      "includeLogoHelper": "Show organisation logo on ticket",
+      "includeLogoTooltip": "Display your organisation's logo on the ticket"
+    },
+    "activities": {
+      "title": "Event Activities",
+      "description": "Add activities that people can register for",
+      "addActivity": "Add Activity",
+      "noActivities": "Add at least one activity to complete your event setup",
+      "validation": {
+        "atLeastOne": "At least one activity is required"
+      },
+      "activity": {
+        "untitled": "Untitled Activity",
+        "activityNumber": "Activity {{number}}",
+        "name": "Activity Name",
+        "nameHelper": "Activity name as it appears to members on public website",
+        "description": "Description",
+        "descriptionHelper": "Detailed description of this specific activity",
+        "showPublicly": "Show Publicly",
+        "applicationForm": "Application Form",
+        "selectForm": "Select a form",
+        "loadingForms": "Loading forms...",
+        "limitApplicants": "Limit Number of Applicants",
+        "applicantsLimit": "Application Limit",
+        "applicantsLimitHelper": "Maximum number of applicants for this activity",
+        "allowSpecifyQuantity": "Allow Specify Quantity",
+        "useTermsAndConditions": "Use Terms and Conditions",
+        "termsAndConditions": "Terms and Conditions",
+        "fee": "Fee",
+        "feeHelper": "Entry fee for this activity (0.00 for free)",
+        "allowedPaymentMethod": "Allowed Payment Method",
+        "paymentMethods": {
+          "card": "Card Only",
+          "cheque": "Cheque/Offline Only",
+          "both": "Both"
+        },
+        "handlingFeeIncluded": "Handling Fee Included",
+        "chequePaymentInstructions": "Cheque/Offline Payment Instructions",
+        "chequePaymentInstructionsHelper": "Instructions for cheque/offline payment (who to make cheque to, bank transfer details, etc.)"
+      }
+    },
+    "review": {
+      "title": "Review & Confirm",
+      "description": "Please review your event details before publishing",
+      "basicInfo": "Basic Information",
+      "eventName": "Event Name:",
+      "description": "Description:",
+      "emailNotifications": "Email Notifications:",
+      "entryLimit": "Entry Limit:",
+      "eventDates": "Event Dates",
+      "eventPeriod": "Event Period:",
+      "entriesOpen": "Entries Open:",
+      "entriesClose": "Entries Close:",
+      "ticketing": "Ticketing",
+      "electronicTickets": "Electronic Tickets:",
+      "activities": "Activities",
+      "activitiesConfigured": "{{count}} {{type}} configured"
+    },
+    "actions": {
+      "saveAsDraft": "Save as Draft",
+      "publishEvent": "Publish Event"
+    },
+    "entryDetails": {
+      "title": "Entry Details",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "quantity": "Quantity",
+      "paymentStatus": "Payment Status",
+      "paymentMethod": "Payment Method",
+      "entryDate": "Entry Date",
+      "formSubmission": "Form Submission Data",
+      "loadingSubmission": "Loading submission data...",
+      "uploadedFiles": "Uploaded Files"
+    }
+  },
+  "memberships": {
+    "title": "Memberships",
+    "membershipTypes": "Membership Types",
+    "members": "Members",
+    "membersDatabase": "Members Database",
+    "createMembershipType": "Create Membership Type",
+    "editMembershipType": "Edit Membership Type",
+    "searchPlaceholder": "Search membership types...",
+    "searchMembersPlaceholder": "Search by name or membership number...",
+    "noTypesFound": "No membership types yet. Create your first membership type to get started.",
+    "noMatchingTypes": "No membership types match your filters",
+    "noMembersFound": "No members found",
+    "loadingTypes": "Loading membership types...",
+    "loadingMembers": "Loading members...",
+    "loadingMember": "Loading member...",
+    "loadingType": "Loading membership type...",
+    "failedToLoad": "Failed to load membership type",
+    "failedToLoadMembers": "Failed to load members",
+    "failedToSave": "Failed to save membership type",
+    "failedToDelete": "Failed to delete membership type",
+    "failedToUpdate": "Failed to update processed status",
+    "failedToExport": "Failed to export members",
+    "typeNotFound": "Membership type not found",
+    "memberNotFound": "Member not found",
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "type": "Type",
+      "pricing": "Pricing",
+      "actions": "Actions",
+      "membershipType": "Membership Type",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "membershipNumber": "Membership Number",
+      "dateLastRenewed": "Date Last Renewed",
+      "validUntil": "Valid Until",
+      "labels": "Labels",
+      "processed": "Processed",
+      "paymentStatus": "Payment Status",
+      "paymentMethod": "Payment Method"
+    },
+    "tooltips": {
+      "viewDetails": "View Details",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "filters": {
+      "status": "Status",
+      "type": "Type",
+      "customFilter": "Custom Filter",
+      "createFilter": "Create Filter",
+      "none": "None"
+    },
+    "statusOptions": {
+      "all": "All",
+      "open": "Open",
+      "closed": "Closed",
+      "openAccepting": "Open (Accepting Applications)",
+      "closedNotAccepting": "Closed (Visible but Not Accepting)",
+      "current": "Current",
+      "elapsed": "Elapsed"
+    },
+    "typeOptions": {
+      "all": "All",
+      "single": "Single",
+      "group": "Group",
+      "singleMembership": "Single Membership",
+      "groupMembership": "Group Membership"
+    },
+    "memberStatus": {
+      "active": "Active",
+      "pending": "Pending",
+      "elapsed": "Elapsed"
+    },
+    "paymentStatus": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "notSpecified": "Not specified"
+    },
+    "create": {
+      "single": {
+        "title": "Create Single Membership Type",
+        "editTitle": "Edit Single Membership Type"
+      },
+      "group": {
+        "title": "Create Group Membership Type",
+        "editTitle": "Edit Group Membership Type"
+      }
+    },
+    "sections": {
+      "basicInfo": "Basic Information",
+      "groupConfig": "Group Configuration",
+      "personConfig": "Person Configuration",
+      "fieldConfig": "Field Configuration",
+      "duration": "Membership Duration",
+      "applicationSettings": "Application Settings",
+      "paymentSettings": "Payment Settings",
+      "termsAndConditions": "Terms and Conditions",
+      "membershipInfo": "Membership Information",
+      "statusManagement": "Status Management"
+    },
+    "fields": {
+      "name": "Name",
+      "nameHelper": "Display name for this membership type (e.g., 'Adult Membership')",
+      "description": "Description",
+      "descriptionHelper": "Detailed description displayed to members when choosing membership",
+      "membershipForm": "Membership Form",
+      "membershipStatus": "Membership Status",
+      "isRollingMembership": "Is Rolling Membership",
+      "rollingMembershipHelper": "Rolling memberships are valid for a specified number of months from payment date. Fixed-period memberships have a specific end date.",
+      "validUntil": "Valid Until",
+      "validUntilHelper": "End date for fixed-period memberships",
+      "numberOfMonths": "Number of Months",
+      "numberOfMonthsHelper": "Duration in months for rolling memberships",
+      "automaticallyApprove": "Automatically Approve Applications",
+      "automaticallyApproveHelper": "If enabled, new applications are automatically marked as \"Active\". If disabled, applications require manual approval and start as \"Pending\".",
+      "memberLabels": "Member Labels",
+      "memberLabelsHelper": "Tags automatically assigned to members using this membership type",
+      "supportedPaymentMethods": "Supported Payment Methods",
+      "useTermsAndConditions": "Use Terms and Conditions",
+      "useTermsAndConditionsHelper": "If enabled, applicants must agree to terms and conditions before submitting",
+      "termsAndConditionsContent": "Terms and Conditions Content",
+      "maxPeople": "Maximum Number of People",
+      "maxPeopleHelper": "Maximum people allowed in group application",
+      "minPeople": "Minimum Number of People",
+      "minPeopleHelper": "Minimum people required in group application",
+      "personConfigHelper": "Configure optional titles and labels for each person slot in the group",
+      "fieldConfigHelper": "Configure whether each form field is common to all group members or unique for each person",
+      "membershipNumber": "Membership Number",
+      "membershipType": "Membership Type",
+      "dateLastRenewed": "Date Last Renewed",
+      "validUntilDate": "Valid Until",
+      "status": "Status",
+      "processed": "Processed",
+      "addLabel": "Add label",
+      "title": "Title",
+      "titleOptional": "Title (Optional)",
+      "titlePlaceholder": "e.g., \"Father/Guardian One\", \"Child 1\"",
+      "labelsOptional": "Labels (Optional)",
+      "fieldName": "Field Name",
+      "fieldType": "Type",
+      "required": "Required",
+      "configuration": "Configuration",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "personConfig": {
+      "person": "Person {{number}}",
+      "setMaxPeople": "Set the maximum number of people to configure person slots",
+      "selectForm": "Select a membership form to configure field sharing"
+    },
+    "fieldConfig": {
+      "commonToAll": "Common to all",
+      "uniqueForEach": "Unique for each"
+    },
+    "duration": {
+      "rolling": "Rolling Membership",
+      "fixedPeriod": "Fixed-Period Membership",
+      "type": "Type",
+      "duration": "Duration",
+      "months": "{{count}} months",
+      "notSet": "Not set"
+    },
+    "approval": {
+      "yes": "Yes (Auto-approve to Active)",
+      "no": "No (Manual approval required)"
+    },
+    "labels": {
+      "noLabels": "No labels configured",
+      "noLabelsAssigned": "No labels assigned"
+    },
+    "details": {
+      "backToTypes": "Back to Membership Types",
+      "backToMembers": "Back to Members"
+    },
+    "delete": {
+      "title": "Delete Membership Type",
+      "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    },
+    "validation": {
+      "nameRequired": "Membership type name is required",
+      "descriptionRequired": "Description is required",
+      "formRequired": "Membership form is required",
+      "validUntilRequired": "Valid Until date is required for fixed-period memberships",
+      "numberOfMonthsRequired": "Number of months is required for rolling memberships",
+      "paymentMethodRequired": "At least one payment method is required",
+      "termsRequired": "Terms and conditions content is required when enabled",
+      "maxPeopleMin": "Maximum number of people must be at least 2 for group memberships",
+      "minPeopleMin": "Minimum number of people must be at least 2 for group memberships",
+      "minMaxMismatch": "Minimum number of people cannot exceed maximum"
+    },
+    "actions": {
+      "saveChanges": "Save Changes",
+      "saveAndPublish": "Save and Publish",
+      "exportToExcel": "Export to Excel",
+      "markProcessed": "Mark Processed",
+      "markUnprocessed": "Mark Unprocessed",
+      "addLabels": "Add Labels",
+      "removeLabels": "Remove Labels",
+      "execute": "Execute",
+      "add": "Add"
+    },
+    "batch": {
+      "markProcessed": {
+        "title": "Mark as Processed",
+        "message": "Mark {{count}} selected member(s) as processed?"
+      },
+      "markUnprocessed": {
+        "title": "Mark as Unprocessed",
+        "message": "Mark {{count}} selected member(s) as unprocessed?"
+      },
+      "addLabels": {
+        "title": "Add Labels",
+        "message": "Add labels to {{count}} selected member(s)?",
+        "labelsToAdd": "Labels to Add"
+      },
+      "removeLabels": {
+        "title": "Remove Labels",
+        "message": "Remove labels from {{count}} selected member(s)?",
+        "labelsToRemove": "Labels to Remove"
+      },
+      "processing": "Processing..."
+    },
+    "customFilter": {
+      "title": "Create Custom Filter",
+      "filterName": "Filter Name",
+      "filterNameHelper": "Give this filter a descriptive name",
+      "memberStatus": "Member Status",
+      "dateLastRenewedFilters": "Date Last Renewed Filters",
+      "validUntilFilters": "Valid Until Filters",
+      "beforeDate": "Before Date",
+      "afterDate": "After Date",
+      "memberLabels": "Member Labels",
+      "saveFilter": "Save Filter"
+    },
+    "paymentMethods": {
+      "payOffline": "Pay Offline",
+      "stripe": "Card Payment (Stripe)"
+    }
+  },
+  "calendar": {
+    "title": "Calendar",
+    "calendars": "Calendars",
+    "bookings": "Bookings",
+    "createCalendar": "Create Calendar",
+    "editCalendar": "Edit Calendar",
+    "calendarDetails": "Calendar Details",
+    "bookingDetails": "Booking Details",
+    "searchCalendarsPlaceholder": "Search calendars...",
+    "searchBookingsPlaceholder": "Search bookings...",
+    "noCalendarsFound": "No calendars yet. Create your first calendar to get started.",
+    "noMatchingCalendars": "No calendars match your filters",
+    "noBookingsFound": "No bookings found",
+    "loadingCalendars": "Loading calendars...",
+    "loadingBookings": "Loading bookings...",
+    "failedToLoad": "Failed to load calendars",
+    "failedToToggleStatus": "Failed to toggle calendar status",
+    "table": {
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "actions": "Actions",
+      "bookingReference": "Booking Reference",
+      "calendar": "Calendar",
+      "user": "User",
+      "date": "Date",
+      "time": "Time",
+      "duration": "Duration",
+      "price": "Price",
+      "bookingStatus": "Status"
+    },
+    "tooltips": {
+      "viewDetails": "View Details",
+      "edit": "Edit Calendar",
+      "closeCalendar": "Close Calendar",
+      "openCalendar": "Open Calendar",
+      "viewBooking": "View Booking"
+    },
+    "filters": {
+      "status": "Status",
+      "all": "All"
+    },
+    "statusOptions": {
+      "all": "All",
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "sections": {
+      "basicInfo": "Basic Information",
+      "automatedSchedule": "Automated Opening/Closing",
+      "bookingWindow": "Booking Window Configuration",
+      "termsAndConditions": "Terms and Conditions",
+      "cancellationPolicy": "Cancellation Policy",
+      "emailNotifications": "Email Notifications"
+    },
+    "fields": {
+      "calendarName": "Calendar Name",
+      "description": "Description",
+      "displayColour": "Display Colour",
+      "status": "Status",
+      "enableAutomatedSchedule": "Enable Automated Schedule",
+      "minDaysInAdvance": "Minimum Days In Advance",
+      "maxDaysInAdvance": "Maximum Days In Advance",
+      "useTermsAndConditions": "Use Terms and Conditions",
+      "termsAndConditions": "Terms and Conditions",
+      "allowCancellations": "Allow Cancellations",
+      "cancelDaysInAdvance": "Cancel Days In Advance",
+      "refundPaymentAutomatically": "Refund Payment Automatically",
+      "adminNotificationEmails": "Admin Notification Emails",
+      "adminNotificationEmailsPlaceholder": "email1@example.com, email2@example.com",
+      "sendReminderEmails": "Send Reminder Emails",
+      "reminderHoursBefore": "Reminder Hours Before",
+      "bookingReference": "Booking Reference",
+      "userName": "User Name",
+      "bookingDate": "Booking Date",
+      "startTime": "Start Time",
+      "duration": "Duration",
+      "totalPrice": "Total Price",
+      "bookingStatus": "Booking Status",
+      "paymentStatus": "Payment Status",
+      "cancellationReason": "Cancellation Reason",
+      "processRefund": "Process refund"
+    },
+    "actions": {
+      "exportToExcel": "Export to Excel"
+    },
+    "cancelBooking": {
+      "title": "Cancel Booking",
+      "message": "Are you sure you want to cancel booking {{reference}}?",
+      "confirmButton": "Confirm Cancellation"
+    },
+    "duration": {
+      "minutes": "{{count}} min"
+    }
+  },
+  "registrations": {
+    "title": "Registrations",
+    "registrationTypes": "Registration Types",
+    "registrationsDatabase": "Registrations Database",
+    "createRegistrationType": "Create Registration Type",
+    "editRegistrationType": "Edit Registration Type",
+    "registrationDetails": "Registration Details",
+    "searchPlaceholder": "Search registration types...",
+    "searchRegistrationsPlaceholder": "Search by entity name or owner name...",
+    "noTypesFound": "No registration types yet. Create your first registration type to get started.",
+    "noMatchingTypes": "No registration types match your filters",
+    "noRegistrationsFound": "No registrations yet.",
+    "noMatchingRegistrations": "No registrations match your filters",
+    "loadingTypes": "Loading registration types...",
+    "loadingRegistrations": "Loading registrations...",
+    "loadingRegistration": "Loading registration...",
+    "loadingType": "Loading registration type...",
+    "failedToLoad": "Failed to load registration type",
+    "failedToLoadRegistrations": "Failed to load registrations",
+    "failedToSave": "Failed to save registration type. Please try again.",
+    "failedToDelete": "Failed to delete registration type",
+    "failedToUpdate": "Failed to update processed status",
+    "failedToExport": "Failed to export registrations",
+    "typeNotFound": "Registration type not found",
+    "registrationNotFound": "Registration not found",
+    "table": {
+      "name": "Name",
+      "entityName": "Entity Name",
+      "status": "Status",
+      "pricing": "Pricing",
+      "actions": "Actions",
+      "registrationType": "Registration Type",
+      "registrationNumber": "Registration Number",
+      "ownerName": "Owner Name",
+      "dateLastRenewed": "Date Last Renewed",
+      "validUntil": "Valid Until",
+      "labels": "Labels",
+      "processed": "Processed"
+    },
+    "tooltips": {
+      "viewDetails": "View Details",
+      "edit": "Edit",
+      "delete": "Delete",
+      "markProcessed": "Mark Processed",
+      "markUnprocessed": "Mark Unprocessed"
+    },
+    "filters": {
+      "status": "Status",
+      "customFilter": "Custom Filter",
+      "createFilter": "Create Filter",
+      "none": "None"
+    },
+    "statusOptions": {
+      "all": "All",
+      "open": "Open",
+      "closed": "Closed",
+      "openAccepting": "Open (Accepting Applications)",
+      "closedNotAccepting": "Closed (Visible but Not Accepting)",
+      "current": "Current",
+      "elapsed": "Elapsed"
+    },
+    "registrationStatus": {
+      "active": "Active",
+      "pending": "Pending",
+      "elapsed": "Elapsed"
+    },
+    "sections": {
+      "basicInfo": "Basic Information",
+      "registrationForm": "Registration Form",
+      "duration": "Duration Settings",
+      "approval": "Approval Settings",
+      "labels": "Registration Labels",
+      "payment": "Payment Configuration",
+      "termsAndConditions": "Terms and Conditions",
+      "statusAndDates": "Status and Dates",
+      "paymentInfo": "Payment Information",
+      "formData": "Registration Form Data"
+    },
+    "fields": {
+      "name": "Name",
+      "nameHelper": "Display name for this registration type (e.g., '2026 Horse Registration')",
+      "description": "Description",
+      "descriptionHelper": "Detailed description displayed to account users",
+      "entityName": "Entity Name",
+      "entityNameHelper": "Name of the thing being registered (e.g., 'Horse', 'Boat', 'Equipment')",
+      "registrationStatus": "Registration Status",
+      "applicationForm": "Application Form",
+      "applicationFormHelper": "Select the form that defines required fields for entity registration",
+      "isRollingRegistration": "Is Rolling Registration",
+      "rollingRegistrationHelper": "Rolling registrations are valid for a specified number of months from payment date. Fixed-period registrations have a specific end date.",
+      "validUntil": "Valid Until",
+      "validUntilHelper": "End date for fixed-period registrations",
+      "numberOfMonths": "Number of Months",
+      "numberOfMonthsHelper": "Duration in months for rolling registrations",
+      "automaticallyApprove": "Automatically Approve Applications",
+      "automaticallyApproveHelper": "When enabled, new applications are automatically marked as \"Active\". When disabled, applications require manual review and are marked as \"Pending\".",
+      "registrationLabels": "Registration Labels",
+      "registrationLabelsHelper": "Tags automatically assigned to registrations using this type",
+      "supportedPaymentMethods": "Supported Payment Methods",
+      "useTermsAndConditions": "Use Terms and Conditions",
+      "termsAndConditionsContent": "Terms and Conditions Content",
+      "registrationNumber": "Registration Number",
+      "ownerName": "Owner Name",
+      "registrationType": "Registration Type",
+      "dateLastRenewed": "Date Last Renewed",
+      "validUntilDate": "Valid Until",
+      "status": "Status",
+      "processed": "Processed",
+      "processedStatus": "Processed Status",
+      "paymentStatus": "Payment Status",
+      "paymentMethod": "Payment Method",
+      "addLabel": "Add Label",
+      "labels": "Labels",
+      "labelsToAdd": "Labels to Add",
+      "labelsToRemove": "Labels to Remove",
+      "manageLabels": "Manage Labels",
+      "changeStatus": "Change Status"
+    },
+    "duration": {
+      "rolling": "Rolling Registration",
+      "fixedPeriod": "Fixed-Period Registration",
+      "type": "Registration Type",
+      "duration": "Duration",
+      "months": "{{count}} months from payment date",
+      "notSet": "Not set"
+    },
+    "approval": {
+      "yes": "Applications are automatically approved and marked as Active",
+      "no": "Applications require manual review and are marked as Pending",
+      "autoApprove": "Auto-approve to Active",
+      "manualReview": "Manual approval required"
+    },
+    "labels": {
+      "noLabels": "No labels configured",
+      "noLabelsAssigned": "No labels assigned"
+    },
+    "details": {
+      "backToTypes": "Back to List",
+      "backToDatabase": "Back to Database"
+    },
+    "delete": {
+      "title": "Delete Registration Type",
+      "message": "Are you sure you want to delete this registration type? This action cannot be undone. All associated registrations will remain but will no longer be linked to this type."
+    },
+    "validation": {
+      "nameRequired": "Name is required",
+      "descriptionRequired": "Description is required",
+      "entityNameRequired": "Entity Name is required",
+      "formRequired": "Registration Form is required",
+      "validUntilRequired": "Valid Until date is required for fixed-period registrations",
+      "numberOfMonthsRequired": "Number of Months is required for rolling registrations",
+      "paymentMethodRequired": "At least one payment method is required",
+      "termsRequired": "Terms and Conditions content is required when enabled"
+    },
+    "actions": {
+      "saveAsDraft": "Save as Draft",
+      "saveAndPublish": "Save and Publish",
+      "update": "Update",
+      "exportToExcel": "Export to Excel",
+      "markProcessed": "Mark Processed",
+      "markUnprocessed": "Mark Unprocessed",
+      "addLabels": "Add Labels",
+      "removeLabels": "Remove Labels",
+      "execute": "Execute",
+      "add": "Add",
+      "saveLabels": "Save Labels",
+      "saveChanges": "Save Changes"
+    },
+    "batch": {
+      "markProcessed": {
+        "title": "Mark as Processed",
+        "message": "Mark {{count}} registration(s) as processed?"
+      },
+      "markUnprocessed": {
+        "title": "Mark as Unprocessed",
+        "message": "Mark {{count}} registration(s) as unprocessed?"
+      },
+      "addLabels": {
+        "title": "Add Labels",
+        "message": "Add selected labels to {{count}} registration(s)?"
+      },
+      "removeLabels": {
+        "title": "Remove Labels",
+        "message": "Remove selected labels from {{count}} registration(s)?"
+      },
+      "selectedRegistrations": "Selected registrations: {{count}}",
+      "processing": "Processing...",
+      "batchOperation": "Batch Operation"
+    },
+    "customFilter": {
+      "title": "Create Custom Filter",
+      "filterName": "Filter Name",
+      "filterNameHelper": "Give this filter a descriptive name",
+      "registrationStatus": "Registration Status",
+      "registrationTypes": "Registration Types",
+      "registrationLabels": "Registration Labels",
+      "dateLastRenewedFilters": "Date Last Renewed Filters",
+      "validUntilFilters": "Valid Until Filters",
+      "beforeDate": "Before Date",
+      "beforeDateHelper": "Show registrations renewed before this date",
+      "afterDate": "After Date",
+      "afterDateHelper": "Show registrations renewed after this date",
+      "expiringBeforeHelper": "Show registrations expiring before this date",
+      "expiringAfterHelper": "Show registrations expiring after this date",
+      "saveFilter": "Save Filter"
+    },
+    "paymentMethods": {
+      "payOffline": "Pay Offline",
+      "stripe": "Card Payment (Stripe)"
+    },
+    "paymentStatus": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "notSpecified": "Not specified"
+    },
+    "processedStatus": {
+      "processed": "Processed",
+      "unprocessed": "Unprocessed"
+    },
+    "formSubmission": {
+      "title": "Form submission data would be displayed here based on the application form fields. This includes all custom fields defined in the registration form.",
+      "uploadedFiles": "Uploaded Files",
+      "downloadFile": "Download {{filename}}"
+    }
+  },
+  "merchandise": {
+    "title": "Merchandise",
+    "merchandiseTypes": "Merchandise Types",
+    "orders": "Orders",
+    "createMerchandiseType": "Create Merchandise Type",
+    "editMerchandiseType": "Edit Merchandise Type",
+    "merchandiseTypeDetails": "Merchandise Type Details",
+    "searchPlaceholder": "Search merchandise types...",
+    "searchOrdersPlaceholder": "Search by customer name...",
+    "noTypesFound": "No merchandise types yet. Create your first merchandise type to get started.",
+    "noMatchingTypes": "No merchandise types match your filters",
+    "noOrdersFound": "No orders found",
+    "loadingTypes": "Loading merchandise types...",
+    "loadingOrders": "Loading orders...",
+    "failedToLoad": "Failed to load merchandise type",
+    "failedToSave": "Failed to save merchandise type",
+    "failedToDelete": "Failed to delete merchandise type",
+    "typeNotFound": "Merchandise type not found",
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "priceRange": "Price Range",
+      "stockStatus": "Stock Status",
+      "actions": "Actions",
+      "orderId": "Order ID",
+      "customer": "Customer",
+      "merchandise": "Merchandise",
+      "quantity": "Quantity",
+      "total": "Total",
+      "payment": "Payment",
+      "orderStatus": "Status",
+      "date": "Date"
+    },
+    "tooltips": {
+      "viewDetails": "View Details",
+      "edit": "Edit",
+      "delete": "Delete",
+      "viewOrder": "View Order"
+    },
+    "filters": {
+      "status": "Status",
+      "stockLevel": "Stock Level",
+      "paymentStatus": "Payment Status",
+      "orderStatus": "Order Status",
+      "all": "All"
+    },
+    "statusOptions": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "stockOptions": {
+      "all": "All",
+      "inStock": "In Stock",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock",
+      "notTracked": "Not Tracked"
+    },
+    "orderStatusOptions": {
+      "all": "All",
+      "pending": "Pending",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "paymentStatusOptions": {
+      "all": "All",
+      "pending": "Pending",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    },
+    "pricing": {
+      "noOptions": "No options configured",
+      "noPricing": "No pricing",
+      "priceRange": "€{{min}} - €{{max}}",
+      "singlePrice": "€{{price}}"
+    },
+    "stock": {
+      "inStock": "In Stock",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock",
+      "notTracked": "Not Tracked"
+    },
+    "sections": {
+      "basicInfo": "Basic Information",
+      "images": "Product Images",
+      "options": "Options Configuration",
+      "stockManagement": "Stock Management",
+      "delivery": "Delivery Configuration",
+      "quantityRules": "Order Quantity Rules",
+      "applicationForm": "Application Form",
+      "payment": "Payment Configuration",
+      "emailNotifications": "Email Notifications",
+      "optionsAndPricing": "Options & Pricing",
+      "orderStatistics": "Order Statistics"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "images": "Images",
+      "trackStockLevels": "Track Stock Levels",
+      "lowStockAlert": "Low Stock Alert Threshold",
+      "lowStockAlertHelper": "Alert when stock falls below this quantity",
+      "outOfStockBehavior": "Out of Stock Behavior",
+      "deliveryType": "Delivery Type",
+      "deliveryFee": "Delivery Fee",
+      "requireApplicationForm": "Require Application Form",
+      "applicationForm": "Application Form",
+      "selectForm": "Select a form...",
+      "useTermsAndConditions": "Use Terms and Conditions",
+      "termsAndConditions": "Terms and Conditions",
+      "adminNotificationEmails": "Admin Notification Emails",
+      "adminNotificationEmailsPlaceholder": "email1@example.com, email2@example.com",
+      "adminNotificationEmailsHelper": "Comma-separated email addresses",
+      "customConfirmationMessage": "Custom Confirmation Message",
+      "customConfirmationMessagePlaceholder": "Custom message to include in order confirmation emails",
+      "minOrderQuantity": "Minimum Order Quantity",
+      "minOrderQuantityHelper": "Minimum items that must be ordered",
+      "maxOrderQuantity": "Maximum Order Quantity",
+      "maxOrderQuantityHelper": "Maximum items allowed per order (leave empty for no limit)",
+      "quantityIncrements": "Quantity Increments",
+      "quantityIncrementsHelper": "Must order in multiples of this number (e.g., 6 for packs of 6)",
+      "noLimit": "No limit",
+      "anyQuantity": "Any quantity"
+    },
+    "images": {
+      "title": "Product Images",
+      "uploadImages": "Upload Images",
+      "uploading": "Uploading...",
+      "mainImage": "Main Image",
+      "setAsMain": "Set as main image",
+      "imageCount": "{{current}} / {{max}} images",
+      "noImages": "No images uploaded yet. Upload at least one product image.",
+      "productImage": "Product image {{number}}"
+    },
+    "options": {
+      "title": "Options Configuration",
+      "addOptionType": "Add Option Type",
+      "optionTypeName": "Option Type Name",
+      "optionTypeNamePlaceholder": "e.g., Size, Color, Pack Type",
+      "optionValues": "Option Values",
+      "addOptionValue": "Add Option Value",
+      "name": "Name",
+      "namePlaceholder": "e.g., Small, Medium, Large",
+      "price": "Price",
+      "sku": "SKU",
+      "skuPlaceholder": "Optional",
+      "stockQuantity": "Stock Quantity",
+      "noOptions": "No option types configured. Click \"Add Option Type\" to get started."
+    },
+    "delivery": {
+      "title": "Delivery Configuration",
+      "deliveryType": "Delivery Type",
+      "freeDelivery": "Free Delivery",
+      "fixedFee": "Fixed Delivery Fee",
+      "quantityBased": "Quantity-Based Delivery",
+      "deliveryFee": "Delivery Fee",
+      "deliveryRules": "Delivery Rules",
+      "addRule": "Add Rule",
+      "minQuantity": "Min Quantity",
+      "maxQuantity": "Max Quantity",
+      "maxQuantityPlaceholder": "No limit"
+    },
+    "stockManagement": {
+      "title": "Stock Management",
+      "trackStockLevels": "Track Stock Levels",
+      "lowStockAlert": "Low Stock Alert Threshold",
+      "outOfStockBehavior": "Out of Stock Behavior",
+      "hideFromCustomers": "Hide from customers",
+      "showAsUnavailable": "Show as unavailable"
+    },
+    "quantityRules": {
+      "title": "Order Quantity Rules"
+    },
+    "orders": {
+      "title": "Merchandise Orders",
+      "exportToExcel": "Export to Excel",
+      "selectedOrders": "{{count}} order{{plural}} selected",
+      "updateStatus": "Update Status",
+      "loadingOrders": "Loading orders...",
+      "noOrders": "No orders found",
+      "totalOrders": "Total Orders: {{count}}",
+      "totalRevenue": "Total Revenue: €{{amount}}"
+    },
+    "batchOperations": {
+      "title": "Batch Update Orders",
+      "updatingCount": "Updating {{count}} order{{plural}}",
+      "newStatus": "New Status",
+      "notes": "Notes (Optional)",
+      "notesPlaceholder": "Add notes about this batch update...",
+      "processing": "Processing...",
+      "updateButton": "Update {{count}} Order{{plural}}"
+    },
+    "details": {
+      "backToList": "Back to Merchandise Types",
+      "orderStatistics": "Order Statistics"
+    },
+    "delete": {
+      "title": "Delete Merchandise Type",
+      "message": "Are you sure you want to delete this merchandise type? This action cannot be undone."
+    },
+    "validation": {
+      "nameRequired": "Name is required",
+      "descriptionRequired": "Description is required",
+      "imagesRequired": "At least one image is required"
+    },
+    "actions": {
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel"
+    }
+  },
+  "ticketing": {
+    "title": "Event Ticketing",
+    "dashboard": "Ticketing Dashboard",
+    "searchPlaceholder": "Search by name, email, or ticket reference...",
+    "noTicketsFound": "No tickets found",
+    "loadingTickets": "Loading tickets...",
+    "table": {
+      "ticketReference": "Ticket Reference",
+      "eventName": "Event Name",
+      "eventActivity": "Event Activity",
+      "customerName": "Customer Name",
+      "customerEmail": "Customer Email",
+      "issueDate": "Issue Date",
+      "scanStatus": "Scan Status",
+      "scanDate": "Scan Date",
+      "actions": "Actions"
+    },
+    "tooltips": {
+      "viewTicketDetails": "View Ticket Details"
+    },
+    "filters": {
+      "title": "Filters",
+      "event": "Event",
+      "eventActivity": "Event Activity",
+      "scanStatus": "Scan Status",
+      "dateFrom": "Date From",
+      "dateTo": "Date To",
+      "allEvents": "All Events",
+      "allActivities": "All Activities"
+    },
+    "scanStatus": {
+      "scanned": "Scanned",
+      "notScanned": "Not Scanned"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "exportToExcel": "Export to Excel",
+      "markAsScanned": "Mark as Scanned",
+      "markAsNotScanned": "Mark as Not Scanned",
+      "resendEmail": "Resend Email",
+      "downloadPDF": "Download PDF"
+    },
+    "batch": {
+      "selectedTickets": "{{count}} ticket(s) selected",
+      "markScanned": "Mark as Scanned",
+      "markNotScanned": "Mark as Not Scanned"
+    },
+    "details": {
+      "title": "Ticket Details",
+      "ticketInformation": "Ticket Information",
+      "eventDetails": "Event Details",
+      "customerInformation": "Customer Information",
+      "scanStatusSection": "Scan Status",
+      "scanHistory": "Scan History",
+      "qrCode": "QR Code",
+      "ticketReference": "Ticket Reference",
+      "status": "Status",
+      "issueDate": "Issue Date",
+      "validUntil": "Valid Until",
+      "eventName": "Event Name",
+      "eventActivity": "Event Activity",
+      "name": "Name",
+      "email": "Email",
+      "scanStatus": "Status",
+      "scanDate": "Scan Date",
+      "scanLocation": "Scan Location",
+      "scanCount": "Scan Count",
+      "scanResult": "Result",
+      "notes": "Notes",
+      "notAvailable": "N/A"
+    },
+    "scanHistory": {
+      "scanDate": "Scan Date",
+      "result": "Result",
+      "location": "Location",
+      "notes": "Notes",
+      "noLocation": "-",
+      "noNotes": "-"
+    },
+    "batchOperations": {
+      "markScannedTitle": "Mark Tickets as Scanned",
+      "markNotScannedTitle": "Mark Tickets as Not Scanned",
+      "markScannedDescription": "Mark {{count}} ticket(s) as scanned?",
+      "markNotScannedDescription": "Mark {{count}} ticket(s) as not scanned?",
+      "updateMessage": "This action will update the scan status for all selected tickets.",
+      "processing": "Processing...",
+      "progressComplete": "{{progress}}% complete",
+      "successTitle": "Operation completed successfully!",
+      "successMessage": "{{count}} ticket(s) updated",
+      "errorTitle": "Operation completed with errors",
+      "errorMessage": "Processed: {{processed}} | Failed: {{failed}}",
+      "errors": "Errors:",
+      "ticketError": "Ticket {{ticketId}}: {{error}}",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "stats": {
+      "totalIssued": "Total Tickets Issued",
+      "scanned": "Tickets Scanned",
+      "notScanned": "Tickets Not Scanned",
+      "lastScanTime": "Last Scan Time",
+      "percentOfTotal": "{{percent}}% of total",
+      "noScansYet": "No scans yet"
+    },
+    "messages": {
+      "exportSuccess": "Export successful",
+      "exportFailed": "Failed to export tickets",
+      "resendSuccess": "Ticket email resent successfully",
+      "resendFailed": "Failed to resend ticket email",
+      "downloadFailed": "Failed to download ticket PDF",
+      "markScannedFailed": "Failed to mark ticket as scanned",
+      "markNotScannedFailed": "Failed to mark ticket as not scanned",
+      "loadScanHistoryFailed": "Failed to load scan history",
+      "generateQRCodeFailed": "Failed to generate QR code",
+      "batchOperationFailed": "Operation failed"
+    }
+  },
+  "forms": {
+    "title": "Application Forms",
+    "createForm": "Create Form",
+    "editForm": "Edit Form",
+    "formDetails": "Form Details",
+    "formName": "Form Name",
+    "description": "Description",
+    "searchPlaceholder": "Search forms...",
+    "noFormsFound": "No forms yet. Create your first form to get started.",
+    "noMatchingForms": "No forms match your filters",
+    "loadingForms": "Loading forms...",
+    "failedToLoad": "Failed to load form",
+    "failedToSave": "Failed to save form",
+    "formNameRequired": "Form name is required",
+    "organisationContextMissing": "Organisation context is missing",
+    "table": {
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "tooltips": {
+      "preview": "Preview",
+      "edit": "Edit"
+    },
+    "builder": {
+      "title": "Form Builder",
+      "saving": "Saving...",
+      "tabs": {
+        "fields": "Fields",
+        "fieldGroups": "Field Groups",
+        "wizardSteps": "Wizard Steps"
+      },
+      "fields": {
+        "title": "Form Fields",
+        "addField": "Add Field",
+        "noFields": "No fields added yet. Click \"Add Field\" to get started.",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "makeRequired": "Make Required",
+        "makeOptional": "Make Optional",
+        "required": "Required",
+        "optional": "Optional"
+      },
+      "groups": {
+        "title": "Field Groups",
+        "addGroup": "Add Group",
+        "noGroups": "No field groups defined. Groups help organise fields into sections.",
+        "groupName": "Group Name",
+        "selectFields": "Select Fields for this Group",
+        "noFieldsAvailable": "No fields available. Add fields to the form first.",
+        "fieldOrder": "Field Order in Group"
+      },
+      "wizard": {
+        "title": "Wizard Steps",
+        "addStep": "Add Step",
+        "noSteps": "No wizard steps defined. Wizard steps create a multi-step form experience.",
+        "stepName": "Step Name",
+        "stepNumber": "Step {{number}}",
+        "selectFields": "Select Fields for this Step",
+        "noFieldsAvailable": "No fields available. Add fields to the form first.",
+        "fieldOrder": "Field Order in Step"
+      },
+      "dialogs": {
+        "addField": {
+          "title": "Add Field",
+          "selectField": "Select Field",
+          "mandatoryField": "Mandatory field"
+        },
+        "addGroup": {
+          "title": "Add Field Group"
+        },
+        "addWizardStep": {
+          "title": "Add Wizard Step"
+        }
+      }
+    },
+    "preview": {
+      "title": "Form Preview",
+      "backToForms": "Back to Forms",
+      "editForm": "Edit Form",
+      "infoMessage": "This is a live preview of your form. You can interact with all fields to see how they will work for end users. Changes made here are not saved.",
+      "statusLabel": "Status:",
+      "modes": {
+        "grouped": "Grouped View",
+        "wizard": "Step-by-Step Wizard"
+      },
+      "formFields": "Form Fields",
+      "additionalInformation": "Additional Information",
+      "submitPreview": "Submit (Preview Only)",
+      "cancelPreview": "Cancel (Preview Only)",
+      "backButton": "Back",
+      "nextButton": "Next",
+      "formNotFound": "Form not found"
+    },
+    "fields": {
+      "title": "Field Definitions",
+      "createField": "Create Field",
+      "searchPlaceholder": "Search fields...",
+      "noFieldsFound": "No fields yet. Create your first field to get started.",
+      "noMatchingFields": "No fields match your filters",
+      "loadingFields": "Loading fields...",
+      "failedToCreate": "Failed to create field",
+      "failedToUpdate": "Failed to update field",
+      "failedToDelete": "Failed to delete field",
+      "fieldLabelRequired": "Field label is required",
+      "organisationContextNotAvailable": "Organisation context not available",
+      "invalidFieldLabel": "Field label must contain at least one alphanumeric character",
+      "optionsRequired": "Field type \"{{type}}\" requires at least one option",
+      "table": {
+        "label": "Label",
+        "description": "Description",
+        "type": "Type",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "All Types"
+      },
+      "dialogs": {
+        "create": {
+          "title": "Create Field Definition",
+          "fieldLabel": "Field Label",
+          "fieldLabelHelper": "Display label (e.g., First Name) - field name will be auto-generated",
+          "descriptionHelper": "Optional detailed explanation of what this field is for",
+          "fieldType": "Field Type",
+          "options": "Options",
+          "addOption": "Add option",
+          "optionsWarning": "At least one option is required for {{type}} fields",
+          "fieldNamePreview": "Field name will be: {{name}}",
+          "fieldNameInvalid": "Field name will be: (invalid)",
+          "creating": "Creating..."
+        },
+        "edit": {
+          "title": "Edit Field Definition",
+          "saving": "Saving..."
+        },
+        "delete": {
+          "title": "Delete Field Definition",
+          "confirmMessage": "Are you sure you want to delete the field \"{{label}}\"? This action cannot be undone.",
+          "deleting": "Deleting..."
+        }
+      }
+    }
+  },
+  "payments": {
+    "title": "Payments",
+    "paymentDetails": "Payment Details",
+    "lodgements": "Lodgements",
+    "searchPlaceholder": "Search payments...",
+    "noPaymentsFound": "No payments yet.",
+    "noMatchingPayments": "No payments match your filters",
+    "loadingPayments": "Loading payments...",
+    "loadingPayment": "Loading payment details...",
+    "loadingLodgements": "Loading lodgements...",
+    "noLodgementsFound": "No lodgements yet.",
+    "failedToLoad": "Failed to load payments",
+    "failedToExport": "Failed to export payments",
+    "failedToRefund": "Failed to process refund",
+    "paymentNotFound": "Payment not found",
+    "table": {
+      "date": "Date",
+      "customer": "Customer",
+      "amount": "Amount",
+      "status": "Status",
+      "type": "Type",
+      "paymentMethod": "Payment Method",
+      "actions": "Actions",
+      "totalAmount": "Total Amount",
+      "card": "Card",
+      "cheque": "Cheque",
+      "offline": "Offline",
+      "transactions": "Transactions"
+    },
+    "tooltips": {
+      "viewDetails": "View Details"
+    },
+    "filters": {
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "status": "Status",
+      "paymentMethod": "Payment Method",
+      "all": "All"
+    },
+    "statusOptions": {
+      "all": "All",
+      "pending": "Pending",
+      "paid": "Paid",
+      "refunded": "Refunded",
+      "failed": "Failed"
+    },
+    "paymentMethodOptions": {
+      "all": "All",
+      "card": "Card",
+      "cheque": "Cheque",
+      "offline": "Offline"
+    },
+    "paymentTypes": {
+      "event": "Event",
+      "membership": "Membership",
+      "merchandise": "Merchandise",
+      "calendar": "Booking",
+      "registration": "Registration",
+      "ticket": "Ticket"
+    },
+    "actions": {
+      "exportToCSV": "Export to CSV",
+      "requestRefund": "Request Refund",
+      "backToPayments": "Back to Payments"
+    },
+    "details": {
+      "paymentInformation": "Payment Information",
+      "customerInformation": "Customer Information",
+      "relatedTransaction": "Related Transaction",
+      "refundInformation": "Refund Information",
+      "paymentId": "Payment ID",
+      "amount": "Amount",
+      "status": "Status",
+      "paymentMethod": "Payment Method",
+      "date": "Date",
+      "transactionId": "Transaction ID",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "type": "Type",
+      "transactionName": "Name",
+      "refundDate": "Refund Date",
+      "refundReason": "Reason"
+    },
+    "refund": {
+      "title": "Request Refund",
+      "message": "Are you sure you want to refund this payment of {{amount}}? This action cannot be undone.",
+      "reasonLabel": "Refund Reason",
+      "reasonPlaceholder": "Please provide a reason for the refund...",
+      "reasonRequired": "Refund reason is required",
+      "confirmButton": "Confirm Refund",
+      "processing": "Processing..."
+    },
+    "lodgements": {
+      "title": "Lodgements",
+      "totalLodged": "Total Lodged",
+      "cardPayments": "Card Payments",
+      "chequePayments": "Cheque Payments",
+      "offlinePayments": "Offline Payments",
+      "lodgementsCount": "{{count}} lodgements",
+      "percentOfTotal": "{{percent}}% of total"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "organisationDetails": {
+      "title": "Organisation Details",
+      "subtitle": "Manage your organisation's basic information and contact details",
+      "sections": {
+        "basicInfo": "Basic Information",
+        "contactInfo": "Contact Information"
+      },
+      "fields": {
+        "organisationName": "Organisation Name",
+        "organisationNameHelper": "Organisation name cannot be changed",
+        "displayName": "Display Name",
+        "domain": "Domain",
+        "domainPlaceholder": "example.com",
+        "currency": "Currency",
+        "language": "Language",
+        "address": "Address",
+        "city": "City",
+        "postcode": "Postcode",
+        "country": "Country",
+        "phone": "Phone",
+        "email": "Email",
+        "website": "Website",
+        "websitePlaceholder": "https://example.com"
+      },
+      "currencies": {
+        "gbp": "£ GBP - British Pound",
+        "eur": "€ EUR - Euro",
+        "usd": "$ USD - US Dollar",
+        "aud": "$ AUD - Australian Dollar",
+        "cad": "$ CAD - Canadian Dollar"
+      },
+      "languages": {
+        "enGB": "English (UK)",
+        "enUS": "English (US)",
+        "frFR": "French",
+        "deDE": "German",
+        "esES": "Spanish"
+      },
+      "messages": {
+        "loadFailed": "Failed to load organisation details",
+        "saveFailed": "Failed to save organisation details",
+        "saveSuccess": "Organisation details saved successfully"
+      }
+    },
+    "paymentSettings": {
+      "title": "Payment Settings",
+      "subtitle": "Configure payment processing and accepted payment methods",
+      "sections": {
+        "stripeConfig": "Stripe Configuration",
+        "paymentConfig": "Payment Configuration",
+        "offlinePayments": "Offline Payments"
+      },
+      "fields": {
+        "stripeEnabled": "Enable Stripe Payments",
+        "stripePublishableKey": "Stripe Publishable Key",
+        "stripePublishableKeyPlaceholder": "pk_live_...",
+        "stripePublishableKeyHelper": "Your Stripe publishable key (starts with pk_)",
+        "stripeSecretKey": "Stripe Secret Key",
+        "stripeSecretKeyPlaceholder": "sk_live_...",
+        "stripeSecretKeyHelper": "Your Stripe secret key (starts with sk_)",
+        "stripeWebhookSecret": "Stripe Webhook Secret",
+        "stripeWebhookSecretPlaceholder": "whsec_...",
+        "stripeWebhookSecretHelper": "Your Stripe webhook signing secret (optional)",
+        "defaultCurrency": "Default Currency",
+        "handlingFeePercentage": "Handling Fee (%)",
+        "handlingFeePercentageHelper": "Percentage fee added to card payments",
+        "handlingFeeFixed": "Fixed Handling Fee",
+        "handlingFeeFixedHelper": "Fixed fee added to card payments",
+        "chequePaymentsEnabled": "Enable Cheque/Offline Payments",
+        "chequePaymentInstructions": "Cheque Payment Instructions",
+        "chequePaymentInstructionsPlaceholder": "Please make cheques payable to...",
+        "chequePaymentInstructionsHelper": "Instructions shown to users when selecting cheque/offline payment"
+      },
+      "validation": {
+        "stripeKeysRequired": "Stripe publishable key and secret key are required when Stripe is enabled"
+      },
+      "messages": {
+        "loadFailed": "Failed to load payment settings",
+        "saveFailed": "Failed to save payment settings",
+        "saveSuccess": "Payment settings saved successfully"
+      }
+    },
+    "branding": {
+      "title": "Branding",
+      "subtitle": "Customise your organisation's visual identity",
+      "sections": {
+        "logo": "Logo",
+        "themeColours": "Theme Colours",
+        "preview": "Preview"
+      },
+      "fields": {
+        "logoUrl": "Logo",
+        "uploadLogo": "Upload Logo",
+        "uploading": "Uploading...",
+        "removeLogo": "Remove",
+        "logoHelper": "Recommended: PNG or SVG, max 2MB",
+        "primaryColour": "Primary Colour",
+        "secondaryColour": "Secondary Colour",
+        "accentColour": "Accent Colour",
+        "backgroundColour": "Background Colour",
+        "textColour": "Text Colour",
+        "resetColours": "Reset to Default Colours"
+      },
+      "preview": {
+        "organisationName": "Organisation Name",
+        "primaryButton": "Primary Button",
+        "secondaryButton": "Secondary Button",
+        "accentButton": "Accent Button"
+      },
+      "validation": {
+        "invalidFileType": "Please select an image file",
+        "fileTooLarge": "Image size must be less than 2MB"
+      },
+      "messages": {
+        "loadFailed": "Failed to load branding settings",
+        "saveFailed": "Failed to save branding settings",
+        "saveSuccess": "Branding settings saved successfully",
+        "uploadFailed": "Failed to upload logo"
+      }
+    },
+    "emailTemplates": {
+      "title": "Email Templates",
+      "subtitle": "Customise email templates sent to users",
+      "fields": {
+        "templateType": "Template Type",
+        "subject": "Subject",
+        "subjectPlaceholder": "Email subject line",
+        "body": "Body",
+        "bodyPlaceholder": "Email body content",
+        "resetToDefault": "Reset to Default"
+      },
+      "templateTypes": {
+        "welcome": "Welcome Email",
+        "eventConfirmation": "Event Entry Confirmation",
+        "paymentReceipt": "Payment Receipt",
+        "membershipConfirmation": "Membership Confirmation",
+        "passwordReset": "Password Reset"
+      },
+      "variables": {
+        "title": "Available Variables",
+        "description": "You can use the following variables in your templates:",
+        "organisationName": "Organisation name",
+        "userName": "User's full name",
+        "userEmail": "User's email address",
+        "eventName": "Event name (event emails)",
+        "eventDate": "Event date (event emails)",
+        "activityName": "Activity name (event emails)",
+        "amount": "Payment amount (payment emails)",
+        "reference": "Payment reference (payment emails)",
+        "membershipType": "Membership type (membership emails)",
+        "expiryDate": "Expiry date (membership emails)",
+        "resetLink": "Password reset link (password reset)"
+      },
+      "messages": {
+        "loadFailed": "Failed to load email templates",
+        "saveFailed": "Failed to save email template",
+        "saveSuccess": "Email template saved successfully"
+      }
+    },
+    "actions": {
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "cancel": "Cancel"
+    }
+  },
+  "reporting": {
+    "title": "Reports & Analytics",
+    "subtitle": "High-level metrics and trends for your organisation",
+    "dashboard": {
+      "title": "Reports & Analytics",
+      "subtitle": "High-level metrics and trends for your organisation",
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "exportReport": "Export Report",
+      "detailedReports": "Detailed Reports",
+      "noData": "No reporting data available for the selected date range. Please try a different date range.",
+      "vsPreviousPeriod": "vs previous period"
+    },
+    "metrics": {
+      "events": "Events",
+      "members": "Members",
+      "revenue": "Revenue",
+      "eventsSubtitle": "{{upcoming}} upcoming, {{completed}} completed, {{totalAttendance}} total attendance",
+      "membersSubtitle": "{{active}} active, {{new}} new, {{renewals}} renewals",
+      "revenueSubtitle": "Events: {{events}}, Memberships: {{memberships}}, Merchandise: {{merchandise}}"
+    },
+    "reports": {
+      "eventsReport": "Events Report",
+      "membersReport": "Members Report",
+      "revenueReport": "Revenue Report"
+    },
+    "events": {
+      "title": "Events Report",
+      "subtitle": "Event attendance and revenue analysis",
+      "backToReports": "Back to Reports",
+      "exportToCSV": "Export to CSV",
+      "filters": "Filters",
+      "eventDetails": "Event Details",
+      "summary": {
+        "totalEvents": "Total Events",
+        "totalEntries": "Total Entries",
+        "totalRevenue": "Total Revenue"
+      },
+      "table": {
+        "eventName": "Event Name",
+        "dateRange": "Date Range",
+        "status": "Status",
+        "entries": "Entries",
+        "revenue": "Revenue",
+        "activities": "Activities",
+        "activitiesCount": "{{count}} activities"
+      },
+      "noData": "No events found for the selected filters. Try adjusting your date range or status filter."
+    },
+    "members": {
+      "title": "Members Report",
+      "subtitle": "Membership growth and retention analysis",
+      "backToReports": "Back to Reports",
+      "exportToCSV": "Export to CSV",
+      "filters": "Filters",
+      "membershipTypeBreakdown": "Membership Type Breakdown",
+      "summary": {
+        "totalMembers": "Total Members",
+        "activeMembers": "{{count}} active",
+        "newMembers": "New Members",
+        "growthRate": "{{rate}} growth",
+        "renewals": "Renewals",
+        "retentionRate": "{{rate}} retention",
+        "totalRevenue": "Total Revenue",
+        "expiringSoon": "{{count}} expiring soon"
+      },
+      "table": {
+        "membershipType": "Membership Type",
+        "total": "Total",
+        "active": "Active",
+        "new": "New",
+        "renewals": "Renewals",
+        "expiring": "Expiring",
+        "revenue": "Revenue"
+      },
+      "noData": "No membership data found for the selected filters. Try adjusting your date range or status filter."
+    },
+    "revenue": {
+      "title": "Revenue Report",
+      "subtitle": "Revenue breakdown by source and trends",
+      "backToReports": "Back to Reports",
+      "exportToCSV": "Export to CSV",
+      "dateRange": "Date Range",
+      "revenueBySource": "Revenue by Source",
+      "monthlyBreakdown": "Monthly Breakdown",
+      "summary": {
+        "totalRevenue": "Total Revenue",
+        "totalTransactions": "Total Transactions",
+        "avgTransaction": "Avg Transaction",
+        "topSource": "Top Source"
+      },
+      "sources": {
+        "events": "Events",
+        "memberships": "Memberships",
+        "merchandise": "Merchandise",
+        "calendar": "Calendar",
+        "registrations": "Registrations",
+        "tickets": "Tickets"
+      },
+      "table": {
+        "month": "Month",
+        "events": "Events",
+        "memberships": "Memberships",
+        "merchandise": "Merchandise",
+        "calendar": "Calendar",
+        "registrations": "Registrations",
+        "tickets": "Tickets",
+        "total": "Total",
+        "transactions": "{{count}} transactions"
+      },
+      "noData": "No revenue data found for the selected date range.",
+      "noMonthlyData": "No monthly breakdown data available for the selected date range."
+    },
+    "filters": {
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "status": "Status",
+      "all": "All",
+      "draft": "Draft",
+      "published": "Published",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "active": "Active",
+      "expired": "Expired"
+    }
+  },
+  "navigation": {
+    "organisation": "Organisation",
+    "loading": "Loading...",
+    "backToMainPage": "Back to Main Page",
+    "logout": "Logout",
+    "appName": "ItsPlainSailing"
+  },
+  "dashboard": {
+    "welcomeTo": "Welcome to {{organisationName}}",
+    "selectArea": "Select an area below to get started",
+    "noModulesAvailable": "No modules available",
+    "contactAdministrator": "Contact your administrator to enable capabilities for your organisation.",
+    "debugInfo": "Debug: {{capabilitiesCount}} capabilities enabled, {{modulesCount}} modules available"
+  },
+  "components": {
+    "orgDataTable": {
+      "searchPlaceholder": "Search...",
+      "exportCSV": "Export CSV",
+      "noDataAvailable": "No data available",
+      "loading": "Loading...",
+      "rowsPerPage": "Rows per page"
+    },
+    "metadataForm": {
+      "create": "Create {{name}}",
+      "edit": "Edit {{name}}",
+      "submitting": "Submitting...",
+      "update": "Update",
+      "create_action": "Create",
+      "cancel": "Cancel",
+      "additionalInformation": "Additional Information",
+      "failedToLoadMetadata": "Failed to load metadata: {{error}}",
+      "objectDefinitionNotFound": "Object definition not found",
+      "missingFieldDefinitions": "Some field definitions are missing: {{fields}}. Please create these field definitions first."
+    },
+    "fieldRenderer": {
+      "required": "Required"
+    },
+    "fileUpload": {
+      "dragAndDrop": "Drag and drop files here",
+      "dropFilesHere": "Drop files here",
+      "or": "or",
+      "chooseFiles": "Choose Files",
+      "maximumFileSize": "Maximum file size: {{size}}",
+      "maximumFiles": "Maximum {{count}} file",
+      "maximumFiles_plural": "Maximum {{count}} files",
+      "fileSizeExceeds": "File size exceeds maximum of {{size}}",
+      "uploadFailed": "Upload failed"
+    },
+    "imageUpload": {
+      "dragAndDrop": "Drag and drop images here",
+      "dropImagesHere": "Drop images here",
+      "or": "or",
+      "chooseImages": "Choose Images",
+      "maximumFileSize": "Maximum file size: {{size}}",
+      "maximumImages": "Maximum {{count}} image",
+      "maximumImages_plural": "Maximum {{count}} images",
+      "addMoreImages": "Add More Images",
+      "fileMustBeImage": "File must be an image",
+      "imageSizeExceeds": "Image size exceeds maximum of {{size}}",
+      "imagePreview": "Image Preview",
+      "close": "Close"
+    },
+    "timeSlotPicker": {
+      "noTimeSlotsAvailable": "No time slots available",
+      "min": "min",
+      "hr": "hr",
+      "hrs": "hrs",
+      "placesRemaining": "{{count}} place remaining",
+      "placesRemaining_plural": "{{count}} places remaining",
+      "lastPlaceAvailable": "Last place available",
+      "unavailableTimeSlots": "Unavailable Time Slots",
+      "unavailable": "Unavailable",
+      "timesShownIn": "Times shown in {{timezone}} timezone"
+    },
+    "paymentList": {
+      "noPaymentsFound": "No payments found",
+      "card": "Card",
+      "bankTransfer": "Bank Transfer",
+      "cash": "Cash",
+      "cheque": "Cheque",
+      "offline": "Offline",
+      "ref": "Ref: {{reference}}"
+    },
+    "paymentDetails": {
+      "cardPayment": "Card Payment",
+      "bankTransfer": "Bank Transfer",
+      "cashPayment": "Cash Payment",
+      "chequePayment": "Cheque Payment",
+      "offlinePayment": "Offline Payment",
+      "paymentDate": "Payment Date",
+      "referenceNumber": "Reference Number",
+      "transactionId": "Transaction ID",
+      "payerName": "Payer Name",
+      "payerEmail": "Payer Email",
+      "description": "Description",
+      "notes": "Notes",
+      "additionalInformation": "Additional Information"
+    },
+    "refundDialog": {
+      "processRefund": "Process Refund",
+      "warningMessage": "This action will process a refund for payment {{paymentId}}. This cannot be undone.",
+      "originalPaymentAmount": "Original Payment Amount",
+      "refundAmount": "Refund Amount",
+      "partialRefund": "Partial refund: {{refundAmount}} of {{totalAmount}}",
+      "fullRefund": "Full refund",
+      "reasonForRefund": "Reason for Refund",
+      "reasonPlaceholder": "Please provide a reason for this refund...",
+      "sendNotification": "Send refund notification email to customer",
+      "cancel": "Cancel",
+      "processRefund_action": "Process Refund",
+      "processing": "Processing...",
+      "validAmountError": "Please enter a valid refund amount",
+      "exceedsAmountError": "Refund amount cannot exceed the original payment amount",
+      "reasonRequiredError": "Please provide a reason for the refund",
+      "failedToProcess": "Failed to process refund"
+    }
+  }
+}

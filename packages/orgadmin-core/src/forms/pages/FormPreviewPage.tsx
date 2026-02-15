@@ -16,13 +16,6 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  TextField,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  FormControl,
-  InputLabel,
   ToggleButtonGroup,
   ToggleButton,
   Stepper,
@@ -30,6 +23,7 @@ import {
   StepLabel,
 } from '@mui/material';
 import { ArrowBack as BackIcon, ViewList as ViewListIcon, ViewModule as ViewModuleIcon } from '@mui/icons-material';
+import { FieldRenderer } from '@aws-web-framework/components';
 import { useApi } from '../../hooks/useApi';
 
 interface ApplicationForm {
@@ -85,6 +79,7 @@ const FormPreviewPage: React.FC = () => {
   const [form, setForm] = useState<ApplicationForm | null>(null);
   const [previewMode, setPreviewMode] = useState<'grouped' | 'wizard'>('grouped');
   const [currentWizardStep, setCurrentWizardStep] = useState(0);
+  const [formData, setFormData] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (id) {
@@ -113,154 +108,25 @@ const FormPreviewPage: React.FC = () => {
   };
 
   const renderField = (field: ApplicationFormField) => {
-    // Render actual form controls based on field type
-    const renderControl = () => {
-      switch (field.datatype) {
-        case 'text':
-          return (
-            <TextField
-              fullWidth
-              label={field.label}
-              helperText={field.description}
-              disabled
-              placeholder="Text input"
-            />
-          );
-        
-        case 'text_area':
-          return (
-            <TextField
-              fullWidth
-              label={field.label}
-              helperText={field.description}
-              multiline
-              rows={4}
-              disabled
-              placeholder="Multi-line text input"
-            />
-          );
-        
-        case 'number':
-          return (
-            <TextField
-              fullWidth
-              label={field.label}
-              helperText={field.description}
-              type="number"
-              disabled
-              placeholder="Number input"
-            />
-          );
-        
-        case 'date':
-          return (
-            <TextField
-              fullWidth
-              label={field.label}
-              helperText={field.description}
-              type="date"
-              disabled
-              InputLabelProps={{ shrink: true }}
-            />
-          );
-        
-        case 'single_select':
-          return (
-            <FormControl fullWidth disabled>
-              <InputLabel>{field.label}</InputLabel>
-              <Select label={field.label} value="">
-                {field.options && Array.isArray(field.options) ? (
-                  field.options.map((option: string, idx: number) => (
-                    <MenuItem key={idx} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="">No options available</MenuItem>
-                )}
-              </Select>
-              {field.description && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
-                  {field.description}
-                </Typography>
-              )}
-            </FormControl>
-          );
-        
-        case 'multi_select':
-          return (
-            <FormControl fullWidth disabled>
-              <InputLabel>{field.label}</InputLabel>
-              <Select label={field.label} multiple value={[]}>
-                {field.options && Array.isArray(field.options) ? (
-                  field.options.map((option: string, idx: number) => (
-                    <MenuItem key={idx} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="">No options available</MenuItem>
-                )}
-              </Select>
-              {field.description && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
-                  {field.description}
-                </Typography>
-              )}
-            </FormControl>
-          );
-        
-        case 'boolean':
-          return (
-            <Box>
-              <FormControlLabel
-                control={<Checkbox disabled />}
-                label={field.label}
-              />
-              {field.description && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4 }}>
-                  {field.description}
-                </Typography>
-              )}
-            </Box>
-          );
-        
-        case 'document_upload':
-          return (
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                {field.label}
-              </Typography>
-              {field.description && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                  {field.description}
-                </Typography>
-              )}
-              <Button variant="outlined" disabled component="span">
-                Choose File
-              </Button>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                No file selected
-              </Typography>
-            </Box>
-          );
-        
-        default:
-          return (
-            <TextField
-              fullWidth
-              label={field.label}
-              helperText={field.description}
-              disabled
-              placeholder="Text input"
-            />
-          );
-      }
+    // Convert ApplicationFormField to FieldDefinition format expected by FieldRenderer
+    const fieldDefinition = {
+      shortName: field.name,
+      displayName: field.label,
+      description: field.description || '',
+      datatype: field.datatype as any,
+      datatypeProperties: field.options || {},
+      validationRules: field.validation?.rules || [],
     };
-    
+
     return (
       <Box key={field.id} sx={{ mb: 3 }}>
-        {renderControl()}
+        <FieldRenderer
+          fieldDefinition={fieldDefinition}
+          value={formData[field.name] || ''}
+          onChange={(value) => setFormData({ ...formData, [field.name]: value })}
+          disabled={false}
+          required={field.validation?.required || false}
+        />
       </Box>
     );
   };
@@ -357,8 +223,8 @@ const FormPreviewPage: React.FC = () => {
       </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        This is a preview of how your form will appear to end users. The actual form will include
-        interactive fields and validation.
+        This is a live preview of your form. You can interact with all fields to see how they will work for end users.
+        Changes made here are not saved.
       </Alert>
 
       <Card sx={{ mb: 3 }}>

@@ -34,6 +34,9 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
+import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
 
 /**
  * Event report data structure
@@ -67,6 +70,7 @@ interface EventsReportData {
  */
 const EventsReportPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   // Filter state
   const [startDate, setStartDate] = useState<string>(() => {
@@ -87,23 +91,6 @@ const EventsReportPage: React.FC = () => {
   useEffect(() => {
     execute();
   }, [execute, startDate, endDate, statusFilter]);
-
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
-
-  // Format date
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-IE', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   // Get status color
   const getStatusColor = (status: string): 'default' | 'primary' | 'success' | 'error' => {
@@ -135,13 +122,13 @@ const EventsReportPage: React.FC = () => {
             onClick={() => navigate('/reporting')}
             sx={{ mb: 1 }}
           >
-            Back to Reports
+            {t('reporting.events.backToReports')}
           </Button>
           <Typography variant="h4" gutterBottom>
-            Events Report
+            {t('reporting.events.title')}
           </Typography>
           <Typography variant="body1" color="textSecondary">
-            Event attendance and revenue analysis
+            {t('reporting.events.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -150,7 +137,7 @@ const EventsReportPage: React.FC = () => {
           onClick={handleExport}
           disabled={loading || !data}
         >
-          Export to CSV
+          {t('reporting.events.exportToCSV')}
         </Button>
       </Box>
 
@@ -158,11 +145,11 @@ const EventsReportPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Filters
+            {t('reporting.events.filters')}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="Start Date"
+              label={t('reporting.filters.startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -170,7 +157,7 @@ const EventsReportPage: React.FC = () => {
               fullWidth
             />
             <TextField
-              label="End Date"
+              label={t('reporting.filters.endDate')}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -178,17 +165,17 @@ const EventsReportPage: React.FC = () => {
               fullWidth
             />
             <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('reporting.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('reporting.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="draft">Draft</MenuItem>
-                <MenuItem value="published">Published</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="all">{t('reporting.filters.all')}</MenuItem>
+                <MenuItem value="draft">{t('reporting.filters.draft')}</MenuItem>
+                <MenuItem value="published">{t('reporting.filters.published')}</MenuItem>
+                <MenuItem value="completed">{t('reporting.filters.completed')}</MenuItem>
+                <MenuItem value="cancelled">{t('reporting.filters.cancelled')}</MenuItem>
               </Select>
             </FormControl>
           </Stack>
@@ -209,7 +196,7 @@ const EventsReportPage: React.FC = () => {
             <Card sx={{ flex: 1 }}>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Total Events
+                  {t('reporting.events.summary.totalEvents')}
                 </Typography>
                 <Typography variant="h4">{data.summary.totalEvents}</Typography>
               </CardContent>
@@ -217,7 +204,7 @@ const EventsReportPage: React.FC = () => {
             <Card sx={{ flex: 1 }}>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Total Entries
+                  {t('reporting.events.summary.totalEntries')}
                 </Typography>
                 <Typography variant="h4">{data.summary.totalEntries}</Typography>
               </CardContent>
@@ -225,10 +212,10 @@ const EventsReportPage: React.FC = () => {
             <Card sx={{ flex: 1 }}>
               <CardContent>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Total Revenue
+                  {t('reporting.events.summary.totalRevenue')}
                 </Typography>
                 <Typography variant="h4">
-                  {formatCurrency(data.summary.totalRevenue)}
+                  {formatCurrency(data.summary.totalRevenue, 'EUR', i18n.language)}
                 </Typography>
               </CardContent>
             </Card>
@@ -240,7 +227,7 @@ const EventsReportPage: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Event Details
+            {t('reporting.events.eventDetails')}
           </Typography>
 
           {loading && (
@@ -256,12 +243,12 @@ const EventsReportPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Event Name</TableCell>
-                    <TableCell>Date Range</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="right">Entries</TableCell>
-                    <TableCell align="right">Revenue</TableCell>
-                    <TableCell>Activities</TableCell>
+                    <TableCell>{t('reporting.events.table.eventName')}</TableCell>
+                    <TableCell>{t('reporting.events.table.dateRange')}</TableCell>
+                    <TableCell>{t('reporting.events.table.status')}</TableCell>
+                    <TableCell align="right">{t('reporting.events.table.entries')}</TableCell>
+                    <TableCell align="right">{t('reporting.events.table.revenue')}</TableCell>
+                    <TableCell>{t('reporting.events.table.activities')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -274,7 +261,7 @@ const EventsReportPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                          {formatDate(new Date(event.startDate), 'dd MMM yyyy', i18n.language)} - {formatDate(new Date(event.endDate), 'dd MMM yyyy', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -289,12 +276,12 @@ const EventsReportPage: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(event.totalRevenue)}
+                          {formatCurrency(event.totalRevenue, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="textSecondary">
-                          {event.activities.length} activities
+                          {t('reporting.events.table.activitiesCount', { count: event.activities.length })}
                         </Typography>
                         {event.activities.map((activity, idx) => (
                           <Typography
@@ -303,7 +290,7 @@ const EventsReportPage: React.FC = () => {
                             display="block"
                             color="textSecondary"
                           >
-                            {activity.name}: {activity.entries} entries, {formatCurrency(activity.revenue)}
+                            {activity.name}: {activity.entries} {t('reporting.events.table.entries').toLowerCase()}, {formatCurrency(activity.revenue, 'EUR', i18n.language)}
                           </Typography>
                         ))}
                       </TableCell>
@@ -316,7 +303,7 @@ const EventsReportPage: React.FC = () => {
 
           {!loading && data && data.events.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              No events found for the selected filters. Try adjusting your date range or status filter.
+              {t('reporting.events.noData')}
             </Alert>
           )}
         </CardContent>

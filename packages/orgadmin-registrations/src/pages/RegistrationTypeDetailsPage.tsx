@@ -27,6 +27,7 @@ import {
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { RegistrationType } from '../types/registration.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -41,6 +42,7 @@ const RegistrationTypeDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t } = useTranslation();
 
   const [registrationType, setRegistrationType] = useState<RegistrationType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,7 @@ const RegistrationTypeDetailsPage: React.FC = () => {
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading registration type...</Typography>
+        <Typography>{t('registrations.loadingType')}</Typography>
       </Box>
     );
   }
@@ -98,9 +100,9 @@ const RegistrationTypeDetailsPage: React.FC = () => {
   if (!registrationType) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Registration type not found</Typography>
+        <Typography>{t('registrations.typeNotFound')}</Typography>
         <Button onClick={handleBack} sx={{ mt: 2 }}>
-          Back to List
+          {t('registrations.details.backToTypes')}
         </Button>
       </Box>
     );
@@ -111,7 +113,7 @@ const RegistrationTypeDetailsPage: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button startIcon={<ArrowBackIcon />} onClick={handleBack}>
-            Back
+            {t('common.actions.back')}
           </Button>
           <Typography variant="h4">{registrationType.name}</Typography>
         </Box>
@@ -121,7 +123,7 @@ const RegistrationTypeDetailsPage: React.FC = () => {
             startIcon={<EditIcon />}
             onClick={handleEdit}
           >
-            Edit
+            {t('common.actions.edit')}
           </Button>
           <Button
             variant="outlined"
@@ -129,7 +131,7 @@ const RegistrationTypeDetailsPage: React.FC = () => {
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteDialogOpen(true)}
           >
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </Box>
       </Box>
@@ -294,17 +296,16 @@ const RegistrationTypeDetailsPage: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Registration Type</DialogTitle>
+        <DialogTitle>{t('registrations.delete.title')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete this registration type? This action cannot be undone.
-            All associated registrations will remain but will no longer be linked to this type.
+            {t('registrations.delete.message')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('common.actions.cancel')}</Button>
           <Button onClick={handleDelete} color="error" variant="contained">
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </DialogActions>
       </Dialog>

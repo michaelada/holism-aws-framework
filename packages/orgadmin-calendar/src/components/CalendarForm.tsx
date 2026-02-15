@@ -19,6 +19,7 @@ import {
   Typography,
   Divider,
 } from '@mui/material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { CalendarFormData } from '../types/calendar.types';
 import ScheduleRulesSection from './ScheduleRulesSection';
 
@@ -28,6 +29,8 @@ interface CalendarFormProps {
 }
 
 const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
+  const { t } = useTranslation();
+
   const handleChange = (field: keyof CalendarFormData, value: any) => {
     onChange({ ...formData, [field]: value });
   };
@@ -37,17 +40,17 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
       {/* Basic Information */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Basic Information</Typography>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.basicInfo')}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Calendar Name"
+              label={t('calendar.fields.calendarName')}
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               required
               fullWidth
             />
             <TextField
-              label="Description"
+              label={t('calendar.fields.description')}
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
               required
@@ -56,21 +59,21 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
               fullWidth
             />
             <TextField
-              label="Display Colour"
+              label={t('calendar.fields.displayColour')}
               type="color"
               value={formData.displayColour}
               onChange={(e) => handleChange('displayColour', e.target.value)}
               fullWidth
             />
             <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('calendar.fields.status')}</InputLabel>
               <Select
                 value={formData.status}
-                label="Status"
+                label={t('calendar.fields.status')}
                 onChange={(e) => handleChange('status', e.target.value)}
               >
-                <MenuItem value="open">Open</MenuItem>
-                <MenuItem value="closed">Closed</MenuItem>
+                <MenuItem value="open">{t('calendar.statusOptions.open')}</MenuItem>
+                <MenuItem value="closed">{t('calendar.statusOptions.closed')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -80,7 +83,7 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
       {/* Automated Opening/Closing */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Automated Opening/Closing</Typography>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.automatedSchedule')}</Typography>
           <FormControlLabel
             control={
               <Switch
@@ -88,7 +91,7 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
                 onChange={(e) => handleChange('enableAutomatedSchedule', e.target.checked)}
               />
             }
-            label="Enable Automated Schedule"
+            label={t('calendar.fields.enableAutomatedSchedule')}
           />
           {formData.enableAutomatedSchedule && (
             <Box sx={{ mt: 2 }}>
@@ -104,17 +107,17 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
       {/* Booking Window Configuration */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Booking Window Configuration</Typography>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.bookingWindow')}</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
-              label="Minimum Days In Advance"
+              label={t('calendar.fields.minDaysInAdvance')}
               type="number"
               value={formData.minDaysInAdvance}
               onChange={(e) => handleChange('minDaysInAdvance', parseInt(e.target.value))}
               fullWidth
             />
             <TextField
-              label="Maximum Days In Advance"
+              label={t('calendar.fields.maxDaysInAdvance')}
               type="number"
               value={formData.maxDaysInAdvance}
               onChange={(e) => handleChange('maxDaysInAdvance', parseInt(e.target.value))}
@@ -127,7 +130,7 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
       {/* Terms and Conditions */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Terms and Conditions</Typography>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.termsAndConditions')}</Typography>
           <FormControlLabel
             control={
               <Switch
@@ -135,11 +138,11 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
                 onChange={(e) => handleChange('useTermsAndConditions', e.target.checked)}
               />
             }
-            label="Use Terms and Conditions"
+            label={t('calendar.fields.useTermsAndConditions')}
           />
           {formData.useTermsAndConditions && (
             <TextField
-              label="Terms and Conditions"
+              label={t('calendar.fields.termsAndConditions')}
               value={formData.termsAndConditions}
               onChange={(e) => handleChange('termsAndConditions', e.target.value)}
               multiline
@@ -154,7 +157,7 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
       {/* Cancellation Policy */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Cancellation Policy</Typography>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.cancellationPolicy')}</Typography>
           <FormControlLabel
             control={
               <Switch
@@ -162,12 +165,12 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
                 onChange={(e) => handleChange('allowCancellations', e.target.checked)}
               />
             }
-            label="Allow Cancellations"
+            label={t('calendar.fields.allowCancellations')}
           />
           {formData.allowCancellations && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
               <TextField
-                label="Cancel Days In Advance"
+                label={t('calendar.fields.cancelDaysInAdvance')}
                 type="number"
                 value={formData.cancelDaysInAdvance}
                 onChange={(e) => handleChange('cancelDaysInAdvance', parseInt(e.target.value))}
@@ -180,7 +183,7 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
                     onChange={(e) => handleChange('refundPaymentAutomatically', e.target.checked)}
                   />
                 }
-                label="Refund Payment Automatically"
+                label={t('calendar.fields.refundPaymentAutomatically')}
               />
             </Box>
           )}
@@ -190,13 +193,13 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
       {/* Email Notifications */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Email Notifications</Typography>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.emailNotifications')}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Admin Notification Emails"
+              label={t('calendar.fields.adminNotificationEmails')}
               value={formData.adminNotificationEmails}
               onChange={(e) => handleChange('adminNotificationEmails', e.target.value)}
-              placeholder="email1@example.com, email2@example.com"
+              placeholder={t('calendar.fields.adminNotificationEmailsPlaceholder')}
               fullWidth
             />
             <FormControlLabel
@@ -206,11 +209,11 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
                   onChange={(e) => handleChange('sendReminderEmails', e.target.checked)}
                 />
               }
-              label="Send Reminder Emails"
+              label={t('calendar.fields.sendReminderEmails')}
             />
             {formData.sendReminderEmails && (
               <TextField
-                label="Reminder Hours Before"
+                label={t('calendar.fields.reminderHoursBefore')}
                 type="number"
                 value={formData.reminderHoursBefore}
                 onChange={(e) => handleChange('reminderHoursBefore', parseInt(e.target.value))}

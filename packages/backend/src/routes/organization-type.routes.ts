@@ -102,6 +102,10 @@ router.get('/:id', authenticateToken(), async (req: Request, res: Response) => {
  *                 type: string
  *               language:
  *                 type: string
+ *               defaultLocale:
+ *                 type: string
+ *                 description: Default locale for organizations of this type (e.g., en-GB, fr-FR)
+ *                 default: en-GB
  *               defaultCapabilities:
  *                 type: array
  *                 items:
@@ -109,6 +113,8 @@ router.get('/:id', authenticateToken(), async (req: Request, res: Response) => {
  *     responses:
  *       201:
  *         description: Organization type created
+ *       400:
+ *         description: Invalid locale format or unsupported locale
  */
 router.post(
   '/',
@@ -124,7 +130,11 @@ router.post(
       res.status(201).json(type);
     } catch (error) {
       logger.error('Error in POST /organization-types:', error);
-      res.status(500).json({ error: 'Failed to create organization type' });
+      if (error instanceof Error && error.message.includes('locale')) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to create organization type' });
+      }
     }
   }
 );
@@ -147,9 +157,27 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               displayName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               currency:
+ *                 type: string
+ *               language:
+ *                 type: string
+ *               defaultLocale:
+ *                 type: string
+ *                 description: Default locale for organizations of this type (e.g., en-GB, fr-FR)
+ *               defaultCapabilities:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Organization type updated
+ *       400:
+ *         description: Invalid locale format or unsupported locale
  *       404:
  *         description: Organization type not found
  */
@@ -169,7 +197,13 @@ router.put(
       res.json(type);
     } catch (error) {
       logger.error('Error in PUT /organization-types/:id:', error);
-      res.status(500).json({ error: 'Failed to update organization type' });
+      if (error instanceof Error && error.message.includes('locale')) {
+        res.status(400).json({ error: error.message });
+      } else if (error instanceof Error && error.message.includes('not found')) {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to update organization type' });
+      }
     }
   }
 );

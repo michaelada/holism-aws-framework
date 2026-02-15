@@ -36,6 +36,9 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
+import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
 
 interface ApplicationForm {
   id: string;
@@ -50,6 +53,8 @@ const FormsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { organisation } = useOrganisation();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   
   const [forms, setForms] = useState<ApplicationForm[]>([]);
   const [filteredForms, setFilteredForms] = useState<ApplicationForm[]>([]);
@@ -116,14 +121,6 @@ const FormsListPage: React.FC = () => {
     navigate(`/forms/${formId}/preview`);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   const getStatusColor = (status: string) => {
     return status === 'published' ? 'success' : 'default';
   };
@@ -131,14 +128,14 @@ const FormsListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Application Forms</Typography>
+        <Typography variant="h4">{t('forms.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreateForm}
         >
-          Create Form
+          {t('forms.createForm')}
         </Button>
       </Box>
 
@@ -146,7 +143,7 @@ const FormsListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search forms..."
+              placeholder={t('forms.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -159,15 +156,15 @@ const FormsListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('common.status.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('common.status.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="draft">Draft</MenuItem>
-                <MenuItem value="published">Published</MenuItem>
+                <MenuItem value="all">{t('common.labels.all')}</MenuItem>
+                <MenuItem value="draft">{t('common.status.draft')}</MenuItem>
+                <MenuItem value="published">{t('common.status.published')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -178,26 +175,26 @@ const FormsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('forms.table.name')}</TableCell>
+              <TableCell>{t('forms.table.description')}</TableCell>
+              <TableCell>{t('forms.table.status')}</TableCell>
+              <TableCell>{t('forms.table.created')}</TableCell>
+              <TableCell align="right">{t('forms.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading forms...
+                  {t('forms.loadingForms')}
                 </TableCell>
               </TableRow>
             ) : filteredForms.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || statusFilter !== 'all'
-                    ? 'No forms match your filters'
-                    : 'No forms yet. Create your first form to get started.'}
+                    ? t('forms.noMatchingForms')
+                    : t('forms.noFormsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -215,24 +212,24 @@ const FormsListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={form.status}
+                      label={t(`common.status.${form.status}`)}
                       color={getStatusColor(form.status)}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{formatDate(form.createdAt)}</TableCell>
+                  <TableCell>{formatDate(new Date(form.createdAt), 'dd MMM yyyy', locale)}</TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
                       onClick={() => handlePreviewForm(form.id)}
-                      title="Preview"
+                      title={t('forms.tooltips.preview')}
                     >
                       <PreviewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditForm(form.id)}
-                      title="Edit"
+                      title={t('forms.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>

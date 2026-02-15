@@ -4,8 +4,73 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+import i18n from 'i18next';
 import PaymentSettingsTab from '../PaymentSettingsTab';
 import * as useApiModule from '../../../hooks/useApi';
+
+// Initialize i18n for testing
+i18n.init({
+  lng: 'en-GB',
+  fallbackLng: 'en-GB',
+  resources: {
+    'en-GB': {
+      translation: {
+        settings: {
+          paymentSettings: {
+            title: 'Payment Settings',
+            subtitle: 'Configure payment processing and accepted payment methods',
+            sections: {
+              stripeConfig: 'Stripe Configuration',
+              paymentConfig: 'Payment Configuration',
+              offlinePayments: 'Offline Payments',
+            },
+            fields: {
+              stripeEnabled: 'Enable Stripe Payments',
+              stripePublishableKey: 'Stripe Publishable Key',
+              stripeSecretKey: 'Stripe Secret Key',
+              stripeWebhookSecret: 'Stripe Webhook Secret',
+              defaultCurrency: 'Default Currency',
+              handlingFeePercentage: 'Handling Fee (%)',
+              handlingFeeFixed: 'Fixed Handling Fee',
+              chequePaymentsEnabled: 'Enable Cheque/Offline Payments',
+              chequePaymentInstructions: 'Cheque Payment Instructions',
+            },
+            validation: {
+              stripeKeysRequired: 'Stripe publishable key and secret key are required when Stripe is enabled',
+            },
+            messages: {
+              loadFailed: 'Failed to load payment settings',
+              saveFailed: 'Failed to save payment settings',
+              saveSuccess: 'Payment settings saved successfully',
+            },
+          },
+          organisationDetails: {
+            currencies: {
+              gbp: '£ GBP - British Pound',
+              eur: '€ EUR - Euro',
+              usd: '$ USD - US Dollar',
+              aud: '$ AUD - Australian Dollar',
+              cad: '$ CAD - Canadian Dollar',
+            },
+          },
+          actions: {
+            saveChanges: 'Save Changes',
+            saving: 'Saving...',
+          },
+        },
+      },
+    },
+  },
+});
+
+const renderWithI18n = (component: React.ReactElement) => {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      {component}
+    </I18nextProvider>
+  );
+};
 
 describe('PaymentSettingsTab', () => {
   const mockExecute = vi.fn();
@@ -36,7 +101,7 @@ describe('PaymentSettingsTab', () => {
   it('should load payment settings on mount', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -55,7 +120,7 @@ describe('PaymentSettingsTab', () => {
       reset: vi.fn(),
     });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
     
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
@@ -63,7 +128,7 @@ describe('PaymentSettingsTab', () => {
   it('should display payment settings after loading', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('pk_test_123')).toBeInTheDocument();
@@ -76,7 +141,7 @@ describe('PaymentSettingsTab', () => {
   it('should toggle Stripe enabled switch', async () => {
     mockExecute.mockResolvedValueOnce({ ...mockPaymentSettings, stripeEnabled: false });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       const stripeSwitch = screen.getByRole('checkbox', { name: /enable stripe payments/i });
@@ -92,7 +157,7 @@ describe('PaymentSettingsTab', () => {
   it('should show Stripe fields when Stripe is enabled', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/stripe publishable key/i)).toBeInTheDocument();
@@ -105,7 +170,7 @@ describe('PaymentSettingsTab', () => {
   it('should hide Stripe fields when Stripe is disabled', async () => {
     mockExecute.mockResolvedValueOnce({ ...mockPaymentSettings, stripeEnabled: false });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       const stripeSwitch = screen.getByRole('checkbox', { name: /enable stripe payments/i });
@@ -120,7 +185,7 @@ describe('PaymentSettingsTab', () => {
       .mockResolvedValueOnce({ ...mockPaymentSettings, stripePublishableKey: '', stripeSecretKey: '' })
       .mockResolvedValueOnce({ success: true });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(screen.getByRole('checkbox', { name: /enable stripe payments/i })).toBeChecked();
@@ -139,7 +204,7 @@ describe('PaymentSettingsTab', () => {
       .mockResolvedValueOnce(mockPaymentSettings)
       .mockResolvedValueOnce({ success: true });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     // Wait for component to finish loading
     await waitFor(() => {
@@ -168,7 +233,7 @@ describe('PaymentSettingsTab', () => {
       .mockResolvedValueOnce(mockPaymentSettings)
       .mockResolvedValueOnce({ success: true });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     // Wait for component to finish loading
     await waitFor(() => {
@@ -189,7 +254,7 @@ describe('PaymentSettingsTab', () => {
   it('should toggle password visibility for secret key', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -206,7 +271,7 @@ describe('PaymentSettingsTab', () => {
   it('should toggle cheque payments enabled switch', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -233,7 +298,7 @@ describe('PaymentSettingsTab', () => {
   it('should show cheque instructions when cheque payments enabled', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -253,7 +318,7 @@ describe('PaymentSettingsTab', () => {
   it('should update handling fee percentage', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('2.5')).toBeInTheDocument();
@@ -268,7 +333,7 @@ describe('PaymentSettingsTab', () => {
   it('should update fixed handling fee', async () => {
     mockExecute.mockResolvedValueOnce(mockPaymentSettings);
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('0.3')).toBeInTheDocument();
@@ -293,7 +358,7 @@ describe('PaymentSettingsTab', () => {
       reset: vi.fn(),
     });
 
-    render(<PaymentSettingsTab />);
+    renderWithI18n(<PaymentSettingsTab />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/stripe publishable key/i)).toBeInTheDocument();

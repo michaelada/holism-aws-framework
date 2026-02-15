@@ -163,13 +163,14 @@ const RegistrationTypeForm: React.FC<RegistrationTypeFormProps> = ({
                     label="Valid Until"
                     value={formData.validUntil || null}
                     onChange={(date) => onChange('validUntil', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        required: true,
-                        helperText: 'End date for fixed-period registrations',
-                      },
-                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        required
+                        helperText="End date for fixed-period registrations"
+                      />
+                    )}
                   />
                 </Grid>
               ) : (

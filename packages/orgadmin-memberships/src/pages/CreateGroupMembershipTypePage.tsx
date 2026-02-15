@@ -28,6 +28,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale';
 import { Save as SaveIcon, Cancel as CancelIcon, Publish as PublishIcon } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -310,7 +311,7 @@ const CreateGroupMembershipTypePage: React.FC = () => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
           {isEditMode ? 'Edit Group Membership Type' : 'Create Group Membership Type'}
@@ -493,13 +494,14 @@ const CreateGroupMembershipTypePage: React.FC = () => {
                     label="Valid Until"
                     value={formData.validUntil ? new Date(formData.validUntil) : null}
                     onChange={(date) => handleChange('validUntil', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        required: true,
-                        helperText: 'End date for fixed-period memberships',
-                      },
-                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        required
+                        helperText="End date for fixed-period memberships"
+                      />
+                    )}
                   />
                 </Grid>
               ) : (

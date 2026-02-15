@@ -30,6 +30,8 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 import type { CreateMemberFilterDto } from '../types/membership.types';
 
 interface CreateCustomFilterDialogProps {
@@ -43,6 +45,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
   onClose,
   onSave,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<CreateMemberFilterDto>({
     name: '',
     memberStatus: [],
@@ -99,30 +102,30 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>Create Custom Filter</DialogTitle>
+        <DialogTitle>{t('memberships.customFilter.title')}</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 required
-                label="Filter Name"
+                label={t('memberships.customFilter.filterName')}
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                helperText="Give this filter a descriptive name"
+                helperText={t('memberships.customFilter.filterNameHelper')}
               />
             </Grid>
 
             <Grid item xs={12}>
               <FormControl fullWidth>
-                <InputLabel>Member Status</InputLabel>
+                <InputLabel>{t('memberships.customFilter.memberStatus')}</InputLabel>
                 <Select
                   multiple
                   value={formData.memberStatus}
                   onChange={(e) => handleChange('memberStatus', e.target.value)}
-                  input={<OutlinedInput label="Member Status" />}
+                  input={<OutlinedInput label={t('memberships.customFilter.memberStatus')} />}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => (
@@ -131,64 +134,64 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                     </Box>
                   )}
                 >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="elapsed">Elapsed</MenuItem>
+                  <MenuItem value="active">{t('memberships.memberStatus.active')}</MenuItem>
+                  <MenuItem value="pending">{t('memberships.memberStatus.pending')}</MenuItem>
+                  <MenuItem value="elapsed">{t('memberships.memberStatus.elapsed')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
 
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>
-                Date Last Renewed Filters
+                {t('memberships.customFilter.dateLastRenewedFilters')}
               </Typography>
             </Grid>
 
             <Grid item xs={12} md={6}>
               <DatePicker
-                label="Before Date"
+                label={t('memberships.customFilter.beforeDate')}
                 value={formData.dateLastRenewedBefore ? new Date(formData.dateLastRenewedBefore) : null}
                 onChange={(date) => handleChange('dateLastRenewedBefore', date)}
-                slotProps={{ textField: { fullWidth: true } }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
 
             <Grid item xs={12} md={6}>
               <DatePicker
-                label="After Date"
+                label={t('memberships.customFilter.afterDate')}
                 value={formData.dateLastRenewedAfter ? new Date(formData.dateLastRenewedAfter) : null}
                 onChange={(date) => handleChange('dateLastRenewedAfter', date)}
-                slotProps={{ textField: { fullWidth: true } }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
 
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>
-                Valid Until Filters
+                {t('memberships.customFilter.validUntilFilters')}
               </Typography>
             </Grid>
 
             <Grid item xs={12} md={6}>
               <DatePicker
-                label="Before Date"
+                label={t('memberships.customFilter.beforeDate')}
                 value={formData.validUntilBefore ? new Date(formData.validUntilBefore) : null}
                 onChange={(date) => handleChange('validUntilBefore', date)}
-                slotProps={{ textField: { fullWidth: true } }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
 
             <Grid item xs={12} md={6}>
               <DatePicker
-                label="After Date"
+                label={t('memberships.customFilter.afterDate')}
                 value={formData.validUntilAfter ? new Date(formData.validUntilAfter) : null}
                 onChange={(date) => handleChange('validUntilAfter', date)}
-                slotProps={{ textField: { fullWidth: true } }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Grid>
 
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>
-                Member Labels
+                {t('memberships.customFilter.memberLabels')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                 {formData.memberLabels.map((label) => (
@@ -202,7 +205,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <TextField
                   size="small"
-                  placeholder="Add label"
+                  placeholder={t('memberships.fields.addLabel')}
                   value={labelInput}
                   onChange={(e) => setLabelInput(e.target.value)}
                   onKeyPress={(e) => {
@@ -213,15 +216,15 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                   }}
                   sx={{ flexGrow: 1 }}
                 />
-                <Button onClick={handleAddLabel}>Add</Button>
+                <Button onClick={handleAddLabel}>{t('memberships.actions.add')}</Button>
               </Box>
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleClose}>{t('common.actions.cancel')}</Button>
           <Button onClick={handleSave} variant="contained" disabled={!formData.name.trim()}>
-            Save Filter
+            {t('memberships.customFilter.saveFilter')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { renderWithI18n, screen } from '../../test/i18n-test-utils';
 import BatchOperationsDialog from '../BatchOperationsDialog';
 
 describe('BatchOperationsDialog', () => {
   it('renders mark processed dialog', () => {
-    render(
+    renderWithI18n(
       <BatchOperationsDialog
         open={true}
         operation="mark_processed"
@@ -18,7 +18,7 @@ describe('BatchOperationsDialog', () => {
   });
 
   it('renders add labels dialog with label input', () => {
-    render(
+    renderWithI18n(
       <BatchOperationsDialog
         open={true}
         operation="add_labels"

@@ -38,6 +38,7 @@ import {
   ToggleOn as ToggleOnIcon,
   ToggleOff as ToggleOffIcon,
 } from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { Calendar, CalendarStatus } from '../types/calendar.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -51,6 +52,7 @@ const useApi = () => ({
 const CalendarsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [filteredCalendars, setFilteredCalendars] = useState<Calendar[]>([]);
@@ -146,14 +148,14 @@ const CalendarsListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Calendars</Typography>
+        <Typography variant="h4">{t('calendar.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreateCalendar}
         >
-          Create Calendar
+          {t('calendar.createCalendar')}
         </Button>
       </Box>
 
@@ -161,7 +163,7 @@ const CalendarsListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search calendars..."
+              placeholder={t('calendar.searchCalendarsPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -174,15 +176,15 @@ const CalendarsListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('calendar.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('calendar.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="open">Open</MenuItem>
-                <MenuItem value="closed">Closed</MenuItem>
+                <MenuItem value="all">{t('calendar.statusOptions.all')}</MenuItem>
+                <MenuItem value="open">{t('calendar.statusOptions.open')}</MenuItem>
+                <MenuItem value="closed">{t('calendar.statusOptions.closed')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -194,25 +196,25 @@ const CalendarsListPage: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell width={60}></TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('calendar.table.name')}</TableCell>
+              <TableCell>{t('calendar.table.description')}</TableCell>
+              <TableCell>{t('calendar.table.status')}</TableCell>
+              <TableCell align="right">{t('calendar.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading calendars...
+                  {t('calendar.loadingCalendars')}
                 </TableCell>
               </TableRow>
             ) : filteredCalendars.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || statusFilter !== 'all'
-                    ? 'No calendars match your filters'
-                    : 'No calendars yet. Create your first calendar to get started.'}
+                    ? t('calendar.noMatchingCalendars')
+                    : t('calendar.noCalendarsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -241,7 +243,7 @@ const CalendarsListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={calendar.status}
+                      label={t(`calendar.statusOptions.${calendar.status}`)}
                       color={getStatusColor(calendar.status)}
                       size="small"
                     />
@@ -250,21 +252,21 @@ const CalendarsListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleViewCalendar(calendar.id)}
-                      title="View Details"
+                      title={t('calendar.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditCalendar(calendar.id)}
-                      title="Edit Calendar"
+                      title={t('calendar.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleToggleStatus(calendar)}
-                      title={calendar.status === 'open' ? 'Close Calendar' : 'Open Calendar'}
+                      title={calendar.status === 'open' ? t('calendar.tooltips.closeCalendar') : t('calendar.tooltips.openCalendar')}
                       color={calendar.status === 'open' ? 'success' : 'default'}
                     >
                       {calendar.status === 'open' ? <ToggleOnIcon /> : <ToggleOffIcon />}

@@ -31,7 +31,8 @@ import {
   Email as EmailIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@orgadmin/shell/utils/dateFormatting';
 import QRCode from 'qrcode';
 import type { ElectronicTicket, TicketScanHistory } from '../types/ticketing.types';
 
@@ -56,6 +57,7 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
   onUpdate,
 }) => {
   const { execute } = useApi();
+  const { t, i18n } = useTranslation();
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [scanHistory, setScanHistory] = useState<TicketScanHistory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -166,7 +168,7 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Ticket Details</Typography>
+          <Typography variant="h6">{t('ticketing.details.title')}</Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
@@ -179,13 +181,13 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="subtitle2" gutterBottom>
-                QR Code
+                {t('ticketing.details.qrCode')}
               </Typography>
               {qrCodeDataUrl && (
                 <Box sx={{ mt: 2 }}>
                   <img
                     src={qrCodeDataUrl}
-                    alt="Ticket QR Code"
+                    alt={t('ticketing.details.qrCode')}
                     style={{ width: '100%', maxWidth: 300 }}
                   />
                 </Box>

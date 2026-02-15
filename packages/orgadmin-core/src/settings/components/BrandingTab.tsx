@@ -23,6 +23,7 @@ import {
   Upload as UploadIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
 
 interface BrandingSettings {
@@ -44,6 +45,7 @@ const DEFAULT_COLORS = {
 
 const BrandingTab: React.FC = () => {
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,7 +83,7 @@ const BrandingTab: React.FC = () => {
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load branding settings');
+      setError(err.message || t('settings.branding.messages.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -101,13 +103,13 @@ const BrandingTab: React.FC = () => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+      setError(t('settings.branding.validation.invalidFileType'));
       return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image size must be less than 2MB');
+      setError(t('settings.branding.validation.fileTooLarge'));
       return;
     }
 
@@ -134,7 +136,7 @@ const BrandingTab: React.FC = () => {
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to upload logo');
+      setError(err.message || t('settings.branding.messages.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -159,7 +161,7 @@ const BrandingTab: React.FC = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save branding settings');
+      setError(err.message || t('settings.branding.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -183,10 +185,10 @@ const BrandingTab: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Branding
+        {t('settings.branding.title')}
       </Typography>
       <Typography variant="body2" color="textSecondary" paragraph>
-        Customize your organisation's visual identity
+        {t('settings.branding.subtitle')}
       </Typography>
 
       {error && (
@@ -197,14 +199,14 @@ const BrandingTab: React.FC = () => {
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
-          Branding settings saved successfully
+          {t('settings.branding.messages.saveSuccess')}
         </Alert>
       )}
 
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom>
-            Logo
+            {t('settings.branding.sections.logo')}
           </Typography>
         </Grid>
 
@@ -242,7 +244,7 @@ const BrandingTab: React.FC = () => {
                   startIcon={<UploadIcon />}
                   disabled={uploading}
                 >
-                  {uploading ? 'Uploading...' : 'Upload Logo'}
+                  {uploading ? t('settings.branding.fields.uploading') : t('settings.branding.fields.uploadLogo')}
                 </Button>
               </label>
               {formData.logoUrl && (
@@ -253,11 +255,11 @@ const BrandingTab: React.FC = () => {
                   onClick={handleRemoveLogo}
                   sx={{ ml: 1 }}
                 >
-                  Remove
+                  {t('settings.branding.fields.removeLogo')}
                 </Button>
               )}
               <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                Recommended: PNG or SVG, max 2MB
+                {t('settings.branding.fields.logoHelper')}
               </Typography>
             </Box>
           </Box>
@@ -265,7 +267,7 @@ const BrandingTab: React.FC = () => {
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Theme Colours
+            {t('settings.branding.sections.themeColours')}
           </Typography>
         </Grid>
 
@@ -279,7 +281,7 @@ const BrandingTab: React.FC = () => {
             />
             <TextField
               fullWidth
-              label="Primary Colour"
+              label={t('settings.branding.fields.primaryColour')}
               value={formData.primaryColor}
               onChange={(e) => handleChange('primaryColor', e.target.value)}
               placeholder="#1976d2"
@@ -297,7 +299,7 @@ const BrandingTab: React.FC = () => {
             />
             <TextField
               fullWidth
-              label="Secondary Colour"
+              label={t('settings.branding.fields.secondaryColour')}
               value={formData.secondaryColor}
               onChange={(e) => handleChange('secondaryColor', e.target.value)}
               placeholder="#dc004e"
@@ -315,7 +317,7 @@ const BrandingTab: React.FC = () => {
             />
             <TextField
               fullWidth
-              label="Accent Colour"
+              label={t('settings.branding.fields.accentColour')}
               value={formData.accentColor}
               onChange={(e) => handleChange('accentColor', e.target.value)}
               placeholder="#ff9800"
@@ -333,7 +335,7 @@ const BrandingTab: React.FC = () => {
             />
             <TextField
               fullWidth
-              label="Background Colour"
+              label={t('settings.branding.fields.backgroundColour')}
               value={formData.backgroundColor}
               onChange={(e) => handleChange('backgroundColor', e.target.value)}
               placeholder="#ffffff"
@@ -351,7 +353,7 @@ const BrandingTab: React.FC = () => {
             />
             <TextField
               fullWidth
-              label="Text Colour"
+              label={t('settings.branding.fields.textColour')}
               value={formData.textColor}
               onChange={(e) => handleChange('textColor', e.target.value)}
               placeholder="#000000"
@@ -365,13 +367,13 @@ const BrandingTab: React.FC = () => {
             onClick={handleResetColors}
             size="small"
           >
-            Reset to Default Colours
+            {t('settings.branding.fields.resetColours')}
           </Button>
         </Grid>
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Preview
+            {t('settings.branding.sections.preview')}
           </Typography>
         </Grid>
 
@@ -394,7 +396,7 @@ const BrandingTab: React.FC = () => {
                     variant="rounded"
                   />
                 )}
-                <Typography variant="h6">Organisation Name</Typography>
+                <Typography variant="h6">{t('settings.branding.preview.organisationName')}</Typography>
               </Box>
               
               <Button
@@ -409,7 +411,7 @@ const BrandingTab: React.FC = () => {
                   },
                 }}
               >
-                Primary Button
+                {t('settings.branding.preview.primaryButton')}
               </Button>
               
               <Button
@@ -424,7 +426,7 @@ const BrandingTab: React.FC = () => {
                   },
                 }}
               >
-                Secondary Button
+                {t('settings.branding.preview.secondaryButton')}
               </Button>
               
               <Button
@@ -438,7 +440,7 @@ const BrandingTab: React.FC = () => {
                   },
                 }}
               >
-                Accent Button
+                {t('settings.branding.preview.accentButton')}
               </Button>
             </CardContent>
           </Card>
@@ -453,7 +455,7 @@ const BrandingTab: React.FC = () => {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('settings.actions.saving') : t('settings.actions.saveChanges')}
             </Button>
           </Box>
         </Grid>

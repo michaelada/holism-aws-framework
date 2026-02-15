@@ -125,7 +125,7 @@ describe('OrganizationTypeService', () => {
 
       expect(mockCapabilityService.validateCapabilities).toHaveBeenCalledWith(newType.defaultCapabilities);
       expect(result.name).toBe('tennis-club');
-      expect(logger.info).toHaveBeenCalledWith('Organization type created: tennis-club');
+      expect(logger.info).toHaveBeenCalledWith('Organization type created: tennis-club with locale: en-GB');
     });
 
     it('should throw error for invalid capabilities', async () => {

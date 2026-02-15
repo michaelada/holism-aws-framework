@@ -6,6 +6,7 @@ import { UsersPage } from '../pages/UsersPage';
 import { RolesPage } from '../pages/RolesPage';
 import { AccessDeniedPage } from '../pages/AccessDeniedPage';
 import { OrganizationTypesPage } from '../pages/OrganizationTypesPage';
+import { OrganizationTypeDetailsPage } from '../pages/OrganizationTypeDetailsPage';
 import { CreateOrganizationTypePage } from '../pages/CreateOrganizationTypePage';
 import { EditOrganizationTypePage } from '../pages/EditOrganizationTypePage';
 import { OrganizationsPage } from '../pages/OrganizationsPage';
@@ -71,7 +72,7 @@ export function AppRoutes() {
         path="/organization-types/:id"
         element={
           <ProtectedRoute>
-            <OrganizationTypesPage />
+            <OrganizationTypeDetailsPage />
           </ProtectedRoute>
         }
       />

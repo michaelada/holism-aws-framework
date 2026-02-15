@@ -41,6 +41,8 @@ import {
   Label as LabelIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
 import type { Member, MemberFilter } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
@@ -55,6 +57,7 @@ const useApi = () => ({
 const MembersDatabasePage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
@@ -181,12 +184,10 @@ const MembersDatabasePage: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+  const { i18n } = useTranslation();
+  
+  const formatDateLocale = (dateString: Date | string) => {
+    return formatDate(new Date(dateString), 'dd MMM yyyy', i18n.language);
   };
 
   const getStatusColor = (status: string) => {
@@ -205,13 +206,13 @@ const MembersDatabasePage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Members Database</Typography>
+        <Typography variant="h4">{t('memberships.membersDatabase')}</Typography>
         <Button
           variant="outlined"
           startIcon={<ExportIcon />}
           onClick={handleExport}
         >
-          Export to Excel
+          {t('memberships.actions.exportToExcel')}
         </Button>
       </Box>
 
@@ -219,7 +220,7 @@ const MembersDatabasePage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             <TextField
-              placeholder="Search by name or membership number..."
+              placeholder={t('memberships.searchMembersPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -232,13 +233,13 @@ const MembersDatabasePage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Custom Filter</InputLabel>
+              <InputLabel>{t('memberships.filters.customFilter')}</InputLabel>
               <Select
                 value={selectedCustomFilter}
-                label="Custom Filter"
+                label={t('memberships.filters.customFilter')}
                 onChange={(e) => setSelectedCustomFilter(e.target.value)}
               >
-                <MenuItem value="">None</MenuItem>
+                <MenuItem value="">{t('memberships.filters.none')}</MenuItem>
                 {customFilters.map((filter) => (
                   <MenuItem key={filter.id} value={filter.id}>
                     {filter.name}
@@ -251,7 +252,7 @@ const MembersDatabasePage: React.FC = () => {
               startIcon={<FilterIcon />}
               onClick={() => setFilterDialogOpen(true)}
             >
-              Create Filter
+              {t('memberships.filters.createFilter')}
             </Button>
           </Box>
 
@@ -262,9 +263,9 @@ const MembersDatabasePage: React.FC = () => {
               onChange={(_, value) => value && setStatusFilter(value)}
               size="small"
             >
-              <ToggleButton value="current">Current</ToggleButton>
-              <ToggleButton value="elapsed">Elapsed</ToggleButton>
-              <ToggleButton value="all">All</ToggleButton>
+              <ToggleButton value="current">{t('memberships.statusOptions.current')}</ToggleButton>
+              <ToggleButton value="elapsed">{t('memberships.statusOptions.elapsed')}</ToggleButton>
+              <ToggleButton value="all">{t('memberships.statusOptions.all')}</ToggleButton>
             </ToggleButtonGroup>
 
             {selectedMembers.length > 0 && (
@@ -273,27 +274,27 @@ const MembersDatabasePage: React.FC = () => {
                   size="small"
                   onClick={() => handleBatchOperation('mark_processed')}
                 >
-                  Mark Processed
+                  {t('memberships.actions.markProcessed')}
                 </Button>
                 <Button
                   size="small"
                   onClick={() => handleBatchOperation('mark_unprocessed')}
                 >
-                  Mark Unprocessed
+                  {t('memberships.actions.markUnprocessed')}
                 </Button>
                 <Button
                   size="small"
                   startIcon={<LabelIcon />}
                   onClick={() => handleBatchOperation('add_labels')}
                 >
-                  Add Labels
+                  {t('memberships.actions.addLabels')}
                 </Button>
                 <Button
                   size="small"
                   startIcon={<LabelIcon />}
                   onClick={() => handleBatchOperation('remove_labels')}
                 >
-                  Remove Labels
+                  {t('memberships.actions.removeLabels')}
                 </Button>
               </Box>
             )}
@@ -312,29 +313,29 @@ const MembersDatabasePage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>Membership Type</TableCell>
-              <TableCell>First Name</TableCell>
-              <TableCell>Last Name</TableCell>
-              <TableCell>Membership Number</TableCell>
-              <TableCell>Date Last Renewed</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Valid Until</TableCell>
-              <TableCell>Labels</TableCell>
-              <TableCell>Processed</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('memberships.table.membershipType')}</TableCell>
+              <TableCell>{t('memberships.table.firstName')}</TableCell>
+              <TableCell>{t('memberships.table.lastName')}</TableCell>
+              <TableCell>{t('memberships.table.membershipNumber')}</TableCell>
+              <TableCell>{t('memberships.table.dateLastRenewed')}</TableCell>
+              <TableCell>{t('memberships.table.status')}</TableCell>
+              <TableCell>{t('memberships.table.validUntil')}</TableCell>
+              <TableCell>{t('memberships.table.labels')}</TableCell>
+              <TableCell>{t('memberships.table.processed')}</TableCell>
+              <TableCell align="right">{t('memberships.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={11} align="center">
-                  Loading members...
+                  {t('memberships.loadingMembers')}
                 </TableCell>
               </TableRow>
             ) : filteredMembers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} align="center">
-                  No members found
+                  {t('memberships.noMembersFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -350,7 +351,7 @@ const MembersDatabasePage: React.FC = () => {
                   <TableCell>{member.firstName}</TableCell>
                   <TableCell>{member.lastName}</TableCell>
                   <TableCell>{member.membershipNumber}</TableCell>
-                  <TableCell>{formatDate(member.dateLastRenewed)}</TableCell>
+                  <TableCell>{formatDateLocale(member.dateLastRenewed)}</TableCell>
                   <TableCell>
                     <Chip
                       label={member.status}
@@ -358,7 +359,7 @@ const MembersDatabasePage: React.FC = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{formatDate(member.validUntil)}</TableCell>
+                  <TableCell>{formatDateLocale(member.validUntil)}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       {member.labels.slice(0, 2).map((label) => (
@@ -381,14 +382,14 @@ const MembersDatabasePage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleViewMember(member.id)}
-                      title="View"
+                      title={t('memberships.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditMember(member.id)}
-                      title="Edit"
+                      title={t('memberships.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>

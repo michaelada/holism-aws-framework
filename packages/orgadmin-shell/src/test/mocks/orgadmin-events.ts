@@ -1,18 +1,30 @@
 // Mock module for @aws-web-framework/orgadmin-events
-// Used in tests when the actual package is not built
+// Used in development when the actual package is not built
+
+import { lazy } from 'react';
+import { Festival } from '@mui/icons-material';
 
 export const eventsModule = {
   id: 'events',
   name: 'Events',
-  title: 'Events',
-  description: 'Manage events',
+  title: 'Event Management',
+  description: 'Manage events, activities, and entries for your organisation',
   capability: 'event-management',
   order: 10,
   card: { 
-    title: 'Events', 
-    description: 'Manage events', 
-    icon: () => null, 
+    title: 'Event Management', 
+    description: 'Manage events, activities, and entries for your organisation', 
+    icon: Festival,
+    color: '#d84315',
     path: '/events' 
   },
-  routes: [{ path: '/events', component: () => null }],
+  routes: [{ 
+    path: 'events', 
+    component: lazy(() => import('./EventsPlaceholder'))
+  }],
+  menuItem: {
+    label: 'Events',
+    path: '/events',
+    icon: Festival,
+  },
 };

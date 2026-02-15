@@ -18,6 +18,7 @@ import {
   CardContent,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
 
 interface EmailTemplate {
@@ -26,14 +27,6 @@ interface EmailTemplate {
   subject: string;
   body: string;
 }
-
-const TEMPLATE_TYPES = [
-  { value: 'welcome', label: 'Welcome Email' },
-  { value: 'event_confirmation', label: 'Event Entry Confirmation' },
-  { value: 'payment_receipt', label: 'Payment Receipt' },
-  { value: 'membership_confirmation', label: 'Membership Confirmation' },
-  { value: 'password_reset', label: 'Password Reset' },
-];
 
 const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
   welcome: {
@@ -60,6 +53,7 @@ const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
 
 const EmailTemplatesTab: React.FC = () => {
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,6 +67,14 @@ const EmailTemplatesTab: React.FC = () => {
     subject: '',
     body: '',
   });
+
+  const TEMPLATE_TYPES = [
+    { value: 'welcome', label: t('settings.emailTemplates.templateTypes.welcome') },
+    { value: 'event_confirmation', label: t('settings.emailTemplates.templateTypes.eventConfirmation') },
+    { value: 'payment_receipt', label: t('settings.emailTemplates.templateTypes.paymentReceipt') },
+    { value: 'membership_confirmation', label: t('settings.emailTemplates.templateTypes.membershipConfirmation') },
+    { value: 'password_reset', label: t('settings.emailTemplates.templateTypes.passwordReset') },
+  ];
 
   useEffect(() => {
     loadEmailTemplates();
@@ -114,7 +116,7 @@ const EmailTemplatesTab: React.FC = () => {
         setTemplates(templatesMap);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load email templates');
+      setError(err.message || t('settings.emailTemplates.messages.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -158,7 +160,7 @@ const EmailTemplatesTab: React.FC = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save email template');
+      setError(err.message || t('settings.emailTemplates.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -185,10 +187,10 @@ const EmailTemplatesTab: React.FC = () => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Email Templates
+        {t('settings.emailTemplates.title')}
       </Typography>
       <Typography variant="body2" color="textSecondary" paragraph>
-        Customize email templates sent to users
+        {t('settings.emailTemplates.subtitle')}
       </Typography>
 
       {error && (
@@ -199,7 +201,7 @@ const EmailTemplatesTab: React.FC = () => {
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
-          Email template saved successfully
+          {t('settings.emailTemplates.messages.saveSuccess')}
         </Alert>
       )}
 
@@ -208,7 +210,7 @@ const EmailTemplatesTab: React.FC = () => {
           <TextField
             fullWidth
             select
-            label="Template Type"
+            label={t('settings.emailTemplates.fields.templateType')}
             value={selectedTemplate}
             onChange={(e) => setSelectedTemplate(e.target.value)}
           >
@@ -223,22 +225,22 @@ const EmailTemplatesTab: React.FC = () => {
         <Grid item xs={12}>
           <TextField
             fullWidth
-            label="Subject"
+            label={t('settings.emailTemplates.fields.subject')}
             value={formData.subject}
             onChange={(e) => handleChange('subject', e.target.value)}
-            placeholder="Email subject line"
+            placeholder={t('settings.emailTemplates.fields.subjectPlaceholder')}
           />
         </Grid>
 
         <Grid item xs={12}>
           <TextField
             fullWidth
-            label="Body"
+            label={t('settings.emailTemplates.fields.body')}
             value={formData.body}
             onChange={(e) => handleChange('body', e.target.value)}
             multiline
             rows={12}
-            placeholder="Email body content"
+            placeholder={t('settings.emailTemplates.fields.bodyPlaceholder')}
           />
         </Grid>
 
@@ -246,22 +248,22 @@ const EmailTemplatesTab: React.FC = () => {
           <Card sx={{ bgcolor: 'grey.50' }}>
             <CardContent>
               <Typography variant="subtitle2" gutterBottom>
-                Available Variables
+                {t('settings.emailTemplates.variables.title')}
               </Typography>
               <Typography variant="body2" component="div">
-                You can use the following variables in your templates:
+                {t('settings.emailTemplates.variables.description')}
                 <ul style={{ marginTop: 8, marginBottom: 0 }}>
-                  <li><code>{'{{organisation_name}}'}</code> - Organisation name</li>
-                  <li><code>{'{{user_name}}'}</code> - User's full name</li>
-                  <li><code>{'{{user_email}}'}</code> - User's email address</li>
-                  <li><code>{'{{event_name}}'}</code> - Event name (event emails)</li>
-                  <li><code>{'{{event_date}}'}</code> - Event date (event emails)</li>
-                  <li><code>{'{{activity_name}}'}</code> - Activity name (event emails)</li>
-                  <li><code>{'{{amount}}'}</code> - Payment amount (payment emails)</li>
-                  <li><code>{'{{reference}}'}</code> - Payment reference (payment emails)</li>
-                  <li><code>{'{{membership_type}}'}</code> - Membership type (membership emails)</li>
-                  <li><code>{'{{expiry_date}}'}</code> - Expiry date (membership emails)</li>
-                  <li><code>{'{{reset_link}}'}</code> - Password reset link (password reset)</li>
+                  <li><code>{'{{organisation_name}}'}</code> - {t('settings.emailTemplates.variables.organisationName')}</li>
+                  <li><code>{'{{user_name}}'}</code> - {t('settings.emailTemplates.variables.userName')}</li>
+                  <li><code>{'{{user_email}}'}</code> - {t('settings.emailTemplates.variables.userEmail')}</li>
+                  <li><code>{'{{event_name}}'}</code> - {t('settings.emailTemplates.variables.eventName')}</li>
+                  <li><code>{'{{event_date}}'}</code> - {t('settings.emailTemplates.variables.eventDate')}</li>
+                  <li><code>{'{{activity_name}}'}</code> - {t('settings.emailTemplates.variables.activityName')}</li>
+                  <li><code>{'{{amount}}'}</code> - {t('settings.emailTemplates.variables.amount')}</li>
+                  <li><code>{'{{reference}}'}</code> - {t('settings.emailTemplates.variables.reference')}</li>
+                  <li><code>{'{{membership_type}}'}</code> - {t('settings.emailTemplates.variables.membershipType')}</li>
+                  <li><code>{'{{expiry_date}}'}</code> - {t('settings.emailTemplates.variables.expiryDate')}</li>
+                  <li><code>{'{{reset_link}}'}</code> - {t('settings.emailTemplates.variables.resetLink')}</li>
                 </ul>
               </Typography>
             </CardContent>
@@ -274,7 +276,7 @@ const EmailTemplatesTab: React.FC = () => {
               variant="outlined"
               onClick={handleReset}
             >
-              Reset to Default
+              {t('settings.emailTemplates.fields.resetToDefault')}
             </Button>
             <Button
               variant="contained"
@@ -283,7 +285,7 @@ const EmailTemplatesTab: React.FC = () => {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Saving...' : 'Save Template'}
+              {saving ? t('settings.actions.saving') : t('settings.actions.saveChanges')}
             </Button>
           </Box>
         </Grid>

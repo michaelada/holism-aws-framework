@@ -35,6 +35,8 @@ import {
   People as EntriesIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
+import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { formatDate } from '@aws-web-framework/orgadmin-shell';
 import type { Event } from '../types/event.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -48,6 +50,8 @@ const useApi = () => ({
 const EventsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
@@ -69,7 +73,7 @@ const EventsListPage: React.FC = () => {
       const response = await execute();
       setEvents(response || []);
     } catch (error) {
-      console.error('Failed to load events:', error);
+      console.error(t('events.failedToLoad'), error);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -111,17 +115,13 @@ const EventsListPage: React.FC = () => {
     navigate(`/orgadmin/events/${eventId}/entries`);
   };
 
-  const formatDate = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+  const formatDateLocale = (dateString: Date | string) => {
+    return formatDate(dateString, 'dd MMM yyyy', locale);
   };
 
   const formatDateRange = (startDate: Date | string, endDate: Date | string) => {
-    const start = formatDate(startDate);
-    const end = formatDate(endDate);
+    const start = formatDateLocale(startDate);
+    const end = formatDateLocale(endDate);
     return start === end ? start : `${start} - ${end}`;
   };
 
@@ -143,14 +143,14 @@ const EventsListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Events</Typography>
+        <Typography variant="h4">{t('events.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreateEvent}
         >
-          Create Event
+          {t('events.createEvent')}
         </Button>
       </Box>
 
@@ -158,7 +158,7 @@ const EventsListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search events..."
+              placeholder={t('events.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -171,17 +171,17 @@ const EventsListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('events.table.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('events.table.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="draft">Draft</MenuItem>
-                <MenuItem value="published">Published</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="all">{t('common.labels.all')}</MenuItem>
+                <MenuItem value="draft">{t('common.status.draft')}</MenuItem>
+                <MenuItem value="published">{t('common.status.published')}</MenuItem>
+                <MenuItem value="cancelled">{t('common.status.cancelled')}</MenuItem>
+                <MenuItem value="completed">{t('common.status.completed')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -192,26 +192,26 @@ const EventsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Event Name</TableCell>
-              <TableCell>Dates</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Entry Limit</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('events.table.eventName')}</TableCell>
+              <TableCell>{t('events.table.dates')}</TableCell>
+              <TableCell>{t('events.table.status')}</TableCell>
+              <TableCell>{t('events.table.entryLimit')}</TableCell>
+              <TableCell align="right">{t('events.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading events...
+                  {t('events.loadingEvents')}
                 </TableCell>
               </TableRow>
             ) : filteredEvents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || statusFilter !== 'all'
-                    ? 'No events match your filters'
-                    : 'No events yet. Create your first event to get started.'}
+                    ? t('events.noMatchingEvents')
+                    : t('events.noEventsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -227,35 +227,35 @@ const EventsListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={event.status}
+                      label={t(`common.status.${event.status}`)}
                       color={getStatusColor(event.status)}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
                     {event.limitEntries && event.entriesLimit
-                      ? `${event.entriesLimit} max`
-                      : 'Unlimited'}
+                      ? `${event.entriesLimit} ${t('common.labels.max')}`
+                      : t('common.labels.unlimited')}
                   </TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
                       onClick={() => handleViewEntries(event.id)}
-                      title="View Entries"
+                      title={t('events.tooltips.viewEntries')}
                     >
                       <EntriesIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleViewEvent(event.id)}
-                      title="View Details"
+                      title={t('events.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEditEvent(event.id)}
-                      title="Edit"
+                      title={t('events.tooltips.edit')}
                     >
                       <EditIcon />
                     </IconButton>

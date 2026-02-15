@@ -195,7 +195,50 @@ Each role grants specific permissions for admin operations:
 - `manage-realm`
 - `view-realm`
 
-## Step 9: Configure Backend Environment
+## Step 9: Create Admin Frontend Client
+
+This client is used by the super admin interface to manage organization types, organizations, and capabilities.
+
+1. Click "Clients" in the left sidebar
+2. Click "Create client"
+3. Configure the client:
+   - **Client type**: OpenID Connect
+   - **Client ID**: `aws-framework-admin`
+   - Click "Next"
+
+4. **Capability config**:
+   - Enable "Client authentication": OFF (public client)
+   - Enable "Authorization**: OFF
+   - Enable "Standard flow**: ON
+   - Enable "Direct access grants**: ON
+   - Click "Next"
+
+5. **Login settings**:
+   - **Valid redirect URIs**: 
+     - `http://localhost:5176/*`
+   - **Valid post logout redirect URIs**: 
+     - `http://localhost:5176/*`
+   - **Web origins**: 
+     - `http://localhost:5176`
+   - Click "Save"
+
+6. **Configure Audience Mapper** (Critical for API access):
+   - Click on the **Client scopes** tab
+   - Click on `aws-framework-admin-dedicated` (the dedicated scope for this client)
+   - Click the **Mappers** tab
+   - Click **Add mapper** → **By configuration**
+   - Select **Audience**
+   - Configure the mapper:
+     - **Name**: `backend-audience`
+     - **Mapper Type**: Audience
+     - **Included Client Audience**: Select `aws-framework-backend` from dropdown
+     - **Add to ID token**: OFF (leave unchecked)
+     - **Add to access token**: ON (check this)
+   - Click **Save**
+
+**Why is this needed?** The admin frontend gets tokens from the `aws-framework-admin` client, but the backend validates tokens against the `aws-framework-backend` client. The audience mapper adds the backend client to the token's audience claim, allowing the backend to accept tokens from the admin frontend.
+
+## Step 10: Configure Backend Environment
 
 Update your backend `.env` file with both the backend client secret and admin client secret:
 
@@ -213,7 +256,18 @@ KEYCLOAK_ADMIN_BASE_URL=http://localhost:8080
 KEYCLOAK_ADMIN_REALM=aws-framework
 ```
 
-## Step 10: Restart Services
+## Step 11: Configure Admin Frontend Environment
+
+Create or update `packages/admin/.env`:
+
+```bash
+VITE_API_URL=http://localhost:3000
+VITE_KEYCLOAK_URL=http://localhost:8080
+VITE_KEYCLOAK_REALM=aws-framework
+VITE_KEYCLOAK_CLIENT_ID=aws-framework-admin
+```
+
+## Step 12: Restart Services
 
 1. Restart the backend (if running in Docker):
    ```bash
@@ -225,7 +279,7 @@ KEYCLOAK_ADMIN_REALM=aws-framework
    npm run dev:frontend
    ```
 
-## Step 11: Test Authentication
+## Step 13: Test Authentication
 
 1. Open http://localhost:5173 in your browser
 2. You should be redirected to the Keycloak login page
@@ -234,7 +288,7 @@ KEYCLOAK_ADMIN_REALM=aws-framework
    - Password: `password` (or what you set)
 4. You should be redirected back to the application and logged in
 
-## Step 12: Test Admin Service Account (Optional)
+## Step 14: Test Admin Service Account (Optional)
 
 You can verify that the admin service account is configured correctly by testing the token endpoint:
 

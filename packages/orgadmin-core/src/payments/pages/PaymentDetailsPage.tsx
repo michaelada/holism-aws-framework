@@ -29,6 +29,10 @@ import {
   Undo as RefundIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatDateTime } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
+import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
 
 interface Payment {
   id: string;
@@ -56,6 +60,8 @@ const PaymentDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
   
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,23 +129,6 @@ const PaymentDetailsPage: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-    }).format(amount);
-  };
-
   const getStatusColor = (status: Payment['status']) => {
     switch (status) {
       case 'paid':
@@ -155,22 +144,10 @@ const PaymentDetailsPage: React.FC = () => {
     }
   };
 
-  const getTypeLabel = (type: Payment['type']) => {
-    const labels: Record<Payment['type'], string> = {
-      event: 'Event',
-      membership: 'Membership',
-      merchandise: 'Merchandise',
-      calendar: 'Booking',
-      registration: 'Registration',
-      ticket: 'Ticket',
-    };
-    return labels[type] || type;
-  };
-
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading payment details...</Typography>
+        <Typography>{t('payments.loadingPayment')}</Typography>
       </Box>
     );
   }
@@ -178,9 +155,9 @@ const PaymentDetailsPage: React.FC = () => {
   if (!payment) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Payment not found</Typography>
+        <Typography>{t('payments.paymentNotFound')}</Typography>
         <Button onClick={handleBack} sx={{ mt: 2 }}>
-          Back to Payments
+          {t('payments.actions.backToPayments')}
         </Button>
       </Box>
     );
@@ -195,7 +172,7 @@ const PaymentDetailsPage: React.FC = () => {
           <IconButton onClick={handleBack}>
             <BackIcon />
           </IconButton>
-          <Typography variant="h4">Payment Details</Typography>
+          <Typography variant="h4">{t('payments.paymentDetails')}</Typography>
         </Box>
         {canRefund && (
           <Button
@@ -204,7 +181,7 @@ const PaymentDetailsPage: React.FC = () => {
             startIcon={<RefundIcon />}
             onClick={handleOpenRefundDialog}
           >
-            Request Refund
+            {t('payments.actions.requestRefund')}
           </Button>
         )}
       </Box>
@@ -214,32 +191,32 @@ const PaymentDetailsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Payment Information
+                {t('payments.details.paymentInformation')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Payment ID
+                  {t('payments.details.paymentId')}
                 </Typography>
                 <Typography variant="body1">{payment.id}</Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Amount
+                  {t('payments.details.amount')}
                 </Typography>
                 <Typography variant="h5" color="primary">
-                  {formatCurrency(payment.amount)}
+                  {formatCurrency(payment.amount, 'GBP', locale)}
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Status
+                  {t('payments.details.status')}
                 </Typography>
                 <Chip
-                  label={payment.status}
+                  label={t(`common.status.${payment.status}`)}
                   color={getStatusColor(payment.status)}
                   sx={{ mt: 0.5 }}
                 />
@@ -247,24 +224,24 @@ const PaymentDetailsPage: React.FC = () => {
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Payment Method
+                  {t('payments.details.paymentMethod')}
                 </Typography>
                 <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
-                  {payment.paymentMethod}
+                  {t(`payments.paymentMethodOptions.${payment.paymentMethod}`)}
                 </Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Date
+                  {t('payments.details.date')}
                 </Typography>
-                <Typography variant="body1">{formatDate(payment.date)}</Typography>
+                <Typography variant="body1">{formatDateTime(new Date(payment.date), locale)}</Typography>
               </Box>
 
               {payment.transactionId && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="textSecondary">
-                    Transaction ID
+                    {t('payments.details.transactionId')}
                   </Typography>
                   <Typography variant="body1" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
                     {payment.transactionId}
@@ -279,20 +256,20 @@ const PaymentDetailsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Customer Information
+                {t('payments.details.customerInformation')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Name
+                  {t('payments.details.name')}
                 </Typography>
                 <Typography variant="body1">{payment.customerName}</Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Email
+                  {t('payments.details.email')}
                 </Typography>
                 <Typography variant="body1">{payment.customerEmail}</Typography>
               </Box>
@@ -300,7 +277,7 @@ const PaymentDetailsPage: React.FC = () => {
               {payment.customerPhone && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="textSecondary">
-                    Phone
+                    {t('payments.details.phone')}
                   </Typography>
                   <Typography variant="body1">{payment.customerPhone}</Typography>
                 </Box>
@@ -311,27 +288,27 @@ const PaymentDetailsPage: React.FC = () => {
           <Card sx={{ mt: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Related Transaction
+                {t('payments.details.relatedTransaction')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Type
+                  {t('payments.details.type')}
                 </Typography>
-                <Typography variant="body1">{getTypeLabel(payment.type)}</Typography>
+                <Typography variant="body1">{t(`payments.paymentTypes.${payment.type}`)}</Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Name
+                  {t('payments.details.transactionName')}
                 </Typography>
                 <Typography variant="body1">{payment.relatedTransaction.name}</Typography>
               </Box>
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="textSecondary">
-                  Transaction ID
+                  {t('payments.details.transactionId')}
                 </Typography>
                 <Typography variant="body1">{payment.relatedTransaction.id}</Typography>
               </Box>
@@ -344,22 +321,22 @@ const PaymentDetailsPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Refund Information
+                  {t('payments.details.refundInformation')}
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="textSecondary">
-                    Refund Date
+                    {t('payments.details.refundDate')}
                   </Typography>
                   <Typography variant="body1">
-                    {payment.refundedAt ? formatDate(payment.refundedAt) : 'N/A'}
+                    {payment.refundedAt ? formatDateTime(new Date(payment.refundedAt), locale) : 'N/A'}
                   </Typography>
                 </Box>
 
                 <Box>
                   <Typography variant="body2" color="textSecondary">
-                    Reason
+                    {t('payments.details.refundReason')}
                   </Typography>
                   <Typography variant="body1">{payment.refundReason}</Typography>
                 </Box>
@@ -371,27 +348,26 @@ const PaymentDetailsPage: React.FC = () => {
 
       {/* Refund Confirmation Dialog */}
       <Dialog open={refundDialogOpen} onClose={handleCloseRefundDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Request Refund</DialogTitle>
+        <DialogTitle>{t('payments.refund.title')}</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Are you sure you want to refund this payment of {formatCurrency(payment.amount)}?
-            This action cannot be undone.
+            {t('payments.refund.message', { amount: formatCurrency(payment.amount, 'GBP', locale) })}
           </DialogContentText>
           <TextField
             autoFocus
             fullWidth
             multiline
             rows={3}
-            label="Refund Reason"
+            label={t('payments.refund.reasonLabel')}
             value={refundReason}
             onChange={(e) => setRefundReason(e.target.value)}
-            placeholder="Please provide a reason for the refund..."
+            placeholder={t('payments.refund.reasonPlaceholder')}
             required
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseRefundDialog} disabled={refundProcessing}>
-            Cancel
+            {t('common.actions.cancel')}
           </Button>
           <Button
             onClick={handleRefund}
@@ -399,7 +375,7 @@ const PaymentDetailsPage: React.FC = () => {
             variant="contained"
             disabled={!refundReason.trim() || refundProcessing}
           >
-            {refundProcessing ? 'Processing...' : 'Confirm Refund'}
+            {refundProcessing ? t('payments.refund.processing') : t('payments.refund.confirmButton')}
           </Button>
         </DialogActions>
       </Dialog>

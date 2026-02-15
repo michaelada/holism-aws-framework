@@ -32,6 +32,8 @@ import {
   Edit as EditIcon,
   // Download as DownloadIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
 import type { Member } from '../types/membership.types';
 
 // Mock API hook
@@ -45,6 +47,7 @@ const MemberDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t, i18n } = useTranslation();
 
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +69,7 @@ const MemberDetailsPage: React.FC = () => {
       setMember(response);
     } catch (error) {
       console.error('Failed to load member:', error);
-      setError('Failed to load member');
+      setError(t('memberships.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -106,18 +109,10 @@ const MemberDetailsPage: React.FC = () => {
     navigate(`/orgadmin/members/${id}/edit`);
   };
 
-  const formatDate = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading member...</Typography>
+        <Typography>{t('memberships.loadingMember')}</Typography>
       </Box>
     );
   }
@@ -125,9 +120,9 @@ const MemberDetailsPage: React.FC = () => {
   if (error || !member) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error || 'Member not found'}</Alert>
+        <Alert severity="error">{error || t('memberships.memberNotFound')}</Alert>
         <Button onClick={handleBack} sx={{ mt: 2 }}>
-          Back to Members
+          {t('memberships.details.backToMembers')}
         </Button>
       </Box>
     );
@@ -143,10 +138,10 @@ const MemberDetailsPage: React.FC = () => {
           <Typography variant="h4">
             {member.firstName} {member.lastName}
           </Typography>
-          <Chip label={member.status} color={member.status === 'active' ? 'success' : 'default'} />
+          <Chip label={t(`memberships.memberStatus.${member.status}`)} color={member.status === 'active' ? 'success' : 'default'} />
         </Box>
         <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEdit}>
-          Edit
+          {t('common.actions.edit')}
         </Button>
       </Box>
 
@@ -155,32 +150,32 @@ const MemberDetailsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Membership Information
+                {t('memberships.sections.membershipInfo')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Membership Number
+                    {t('memberships.fields.membershipNumber')}
                   </Typography>
                   <Typography variant="body1">{member.membershipNumber}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Membership Type
+                    {t('memberships.fields.membershipType')}
                   </Typography>
                   <Typography variant="body1">{member.membershipTypeId}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Date Last Renewed
+                    {t('memberships.fields.dateLastRenewed')}
                   </Typography>
-                  <Typography variant="body1">{formatDate(member.dateLastRenewed)}</Typography>
+                  <Typography variant="body1">{formatDate(member.dateLastRenewed, 'dd MMM yyyy', i18n.language)}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Valid Until
+                    {t('memberships.fields.validUntilDate')}
                   </Typography>
-                  <Typography variant="body1">{formatDate(member.validUntil)}</Typography>
+                  <Typography variant="body1">{formatDate(member.validUntil, 'dd MMM yyyy', i18n.language)}</Typography>
                 </Grid>
               </Grid>
             </CardContent>
@@ -191,20 +186,20 @@ const MemberDetailsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Status Management
+                {t('memberships.sections.statusManagement')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <FormControl fullWidth>
-                    <InputLabel>Status</InputLabel>
+                    <InputLabel>{t('memberships.fields.status')}</InputLabel>
                     <Select
                       value={member.status}
-                      label="Status"
+                      label={t('memberships.fields.status')}
                       onChange={(e) => handleStatusChange(e.target.value)}
                     >
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="active">Active</MenuItem>
-                      <MenuItem value="elapsed">Elapsed</MenuItem>
+                      <MenuItem value="pending">{t('memberships.memberStatus.pending')}</MenuItem>
+                      <MenuItem value="active">{t('memberships.memberStatus.active')}</MenuItem>
+                      <MenuItem value="elapsed">{t('memberships.memberStatus.elapsed')}</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -216,7 +211,7 @@ const MemberDetailsPage: React.FC = () => {
                         onChange={handleProcessedToggle}
                       />
                     }
-                    label="Processed"
+                    label={t('memberships.fields.processed')}
                   />
                 </Grid>
               </Grid>
@@ -228,7 +223,7 @@ const MemberDetailsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Labels
+                {t('memberships.table.labels')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {member.labels.length > 0 ? (
@@ -237,7 +232,7 @@ const MemberDetailsPage: React.FC = () => {
                   ))
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    No labels assigned
+                    {t('memberships.labels.noLabelsAssigned')}
                   </Typography>
                 )}
               </Box>
@@ -249,23 +244,23 @@ const MemberDetailsPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Payment Information
+                {t('memberships.table.paymentStatus')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Payment Status
+                    {t('memberships.table.paymentStatus')}
                   </Typography>
                   <Chip
-                    label={member.paymentStatus}
+                    label={t(`memberships.paymentStatus.${member.paymentStatus}`)}
                     color={member.paymentStatus === 'paid' ? 'success' : 'default'}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Payment Method
+                    {t('memberships.table.paymentMethod')}
                   </Typography>
-                  <Typography variant="body1">{member.paymentMethod || 'Not specified'}</Typography>
+                  <Typography variant="body1">{member.paymentMethod || t('memberships.paymentStatus.notSpecified')}</Typography>
                 </Grid>
               </Grid>
             </CardContent>

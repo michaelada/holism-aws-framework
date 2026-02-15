@@ -4,8 +4,61 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+import i18n from 'i18next';
 import EmailTemplatesTab from '../EmailTemplatesTab';
 import * as useApiModule from '../../../hooks/useApi';
+
+// Initialize i18n for testing
+i18n.init({
+  lng: 'en-GB',
+  fallbackLng: 'en-GB',
+  resources: {
+    'en-GB': {
+      translation: {
+        settings: {
+          emailTemplates: {
+            title: 'Email Templates',
+            subtitle: 'Customise email templates sent to users',
+            fields: {
+              templateType: 'Template Type',
+              subject: 'Subject',
+              body: 'Body',
+              resetToDefault: 'Reset to Default',
+            },
+            templateTypes: {
+              welcome: 'Welcome Email',
+              eventConfirmation: 'Event Entry Confirmation',
+              paymentReceipt: 'Payment Receipt',
+              membershipConfirmation: 'Membership Confirmation',
+              passwordReset: 'Password Reset',
+            },
+            variables: {
+              title: 'Available Variables',
+            },
+            messages: {
+              loadFailed: 'Failed to load email templates',
+              saveFailed: 'Failed to save email template',
+              saveSuccess: 'Email template saved successfully',
+            },
+          },
+          actions: {
+            saveChanges: 'Save Changes',
+            saving: 'Saving...',
+          },
+        },
+      },
+    },
+  },
+});
+
+const renderWithI18n = (component: React.ReactElement) => {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      {component}
+    </I18nextProvider>
+  );
+};
 
 describe('EmailTemplatesTab', () => {
   const mockExecute = vi.fn();
@@ -38,7 +91,7 @@ describe('EmailTemplatesTab', () => {
   it('should load email templates on mount', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -57,7 +110,7 @@ describe('EmailTemplatesTab', () => {
       reset: vi.fn(),
     });
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
     
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
@@ -65,7 +118,7 @@ describe('EmailTemplatesTab', () => {
   it('should display template selector with options', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/template type/i)).toBeInTheDocument();
@@ -75,7 +128,7 @@ describe('EmailTemplatesTab', () => {
   it('should display welcome template by default', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Welcome to {{organisation_name}}')).toBeInTheDocument();
@@ -87,7 +140,7 @@ describe('EmailTemplatesTab', () => {
   it('should switch templates when selector changed', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/template type/i)).toBeInTheDocument();
@@ -107,7 +160,7 @@ describe('EmailTemplatesTab', () => {
   it('should update subject field', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Welcome to {{organisation_name}}')).toBeInTheDocument();
@@ -122,7 +175,7 @@ describe('EmailTemplatesTab', () => {
   it('should update body field', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/body/i)).toBeInTheDocument();
@@ -139,13 +192,13 @@ describe('EmailTemplatesTab', () => {
       .mockResolvedValueOnce(mockTemplates)
       .mockResolvedValueOnce({ success: true });
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Welcome to {{organisation_name}}')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /save template/i });
+    const saveButton = screen.getByRole('button', { name: /save changes/i });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -165,13 +218,13 @@ describe('EmailTemplatesTab', () => {
       .mockResolvedValueOnce(mockTemplates)
       .mockResolvedValueOnce({ success: true });
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Welcome to {{organisation_name}}')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /save template/i });
+    const saveButton = screen.getByRole('button', { name: /save changes/i });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -188,7 +241,7 @@ describe('EmailTemplatesTab', () => {
       },
     ]);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Custom Subject')).toBeInTheDocument();
@@ -205,7 +258,7 @@ describe('EmailTemplatesTab', () => {
   it('should display available variables information', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByText('Available Variables')).toBeInTheDocument();
@@ -220,13 +273,13 @@ describe('EmailTemplatesTab', () => {
       .mockResolvedValueOnce(mockTemplates)
       .mockRejectedValueOnce({ message: 'Failed to save email template' });
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Welcome to {{organisation_name}}')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /save template/i });
+    const saveButton = screen.getByRole('button', { name: /save changes/i });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -237,7 +290,7 @@ describe('EmailTemplatesTab', () => {
   it('should use default template when no custom template exists', async () => {
     mockExecute.mockResolvedValueOnce([]);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Welcome to {{organisation_name}}')).toBeInTheDocument();
@@ -249,7 +302,7 @@ describe('EmailTemplatesTab', () => {
       message: 'Failed to load email templates',
     });
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByText('Failed to load email templates')).toBeInTheDocument();
@@ -259,7 +312,7 @@ describe('EmailTemplatesTab', () => {
   it('should show all template type options', async () => {
     mockExecute.mockResolvedValueOnce(mockTemplates);
 
-    render(<EmailTemplatesTab />);
+    renderWithI18n(<EmailTemplatesTab />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/template type/i)).toBeInTheDocument();

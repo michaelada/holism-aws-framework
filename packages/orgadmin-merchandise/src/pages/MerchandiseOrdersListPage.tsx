@@ -34,11 +34,13 @@ import {
   Visibility as ViewIcon,
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
+import { useTranslation, formatCurrency, formatDate } from '@aws-web-framework/orgadmin-shell';
 import BatchOrderOperationsDialog from '../components/BatchOrderOperationsDialog';
 import type { MerchandiseOrder, OrderStatus, PaymentStatus } from '../types/merchandise.types';
 
 const MerchandiseOrdersListPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<MerchandiseOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<MerchandiseOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,9 +119,9 @@ const MerchandiseOrdersListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Merchandise Orders</Typography>
+        <Typography variant="h4">{t('merchandise.orders.title')}</Typography>
         <Button startIcon={<ExportIcon />} onClick={handleExport}>
-          Export to Excel
+          {t('merchandise.orders.exportToExcel')}
         </Button>
       </Box>
 
@@ -127,7 +129,7 @@ const MerchandiseOrdersListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             <TextField
-              placeholder="Search by customer name..."
+              placeholder={t('merchandise.searchOrdersPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -140,31 +142,31 @@ const MerchandiseOrdersListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Payment Status</InputLabel>
+              <InputLabel>{t('merchandise.filters.paymentStatus')}</InputLabel>
               <Select
                 value={paymentStatusFilter}
-                label="Payment Status"
+                label={t('merchandise.filters.paymentStatus')}
                 onChange={(e) => setPaymentStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="paid">Paid</MenuItem>
-                <MenuItem value="refunded">Refunded</MenuItem>
+                <MenuItem value="all">{t('merchandise.paymentStatusOptions.all')}</MenuItem>
+                <MenuItem value="pending">{t('merchandise.paymentStatusOptions.pending')}</MenuItem>
+                <MenuItem value="paid">{t('merchandise.paymentStatusOptions.paid')}</MenuItem>
+                <MenuItem value="refunded">{t('merchandise.paymentStatusOptions.refunded')}</MenuItem>
               </Select>
             </FormControl>
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Order Status</InputLabel>
+              <InputLabel>{t('merchandise.filters.orderStatus')}</InputLabel>
               <Select
                 value={orderStatusFilter}
-                label="Order Status"
+                label={t('merchandise.filters.orderStatus')}
                 onChange={(e) => setOrderStatusFilter(e.target.value as any)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="processing">Processing</MenuItem>
-                <MenuItem value="shipped">Shipped</MenuItem>
-                <MenuItem value="delivered">Delivered</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="all">{t('merchandise.orderStatusOptions.all')}</MenuItem>
+                <MenuItem value="pending">{t('merchandise.orderStatusOptions.pending')}</MenuItem>
+                <MenuItem value="processing">{t('merchandise.orderStatusOptions.processing')}</MenuItem>
+                <MenuItem value="shipped">{t('merchandise.orderStatusOptions.shipped')}</MenuItem>
+                <MenuItem value="delivered">{t('merchandise.orderStatusOptions.delivered')}</MenuItem>
+                <MenuItem value="cancelled">{t('merchandise.orderStatusOptions.cancelled')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -172,14 +174,17 @@ const MerchandiseOrdersListPage: React.FC = () => {
           {selectedOrderIds.length > 0 && (
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Typography variant="body2">
-                {selectedOrderIds.length} order{selectedOrderIds.length !== 1 ? 's' : ''} selected
+                {t('merchandise.orders.selectedOrders', { 
+                  count: selectedOrderIds.length,
+                  plural: selectedOrderIds.length !== 1 ? 's' : ''
+                })}
               </Typography>
               <Button
                 size="small"
                 variant="outlined"
                 onClick={() => setBatchDialogOpen(true)}
               >
-                Update Status
+                {t('merchandise.orders.updateStatus')}
               </Button>
             </Box>
           )}
@@ -197,28 +202,28 @@ const MerchandiseOrdersListPage: React.FC = () => {
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </TableCell>
-              <TableCell>Order ID</TableCell>
-              <TableCell>Customer</TableCell>
-              <TableCell>Merchandise</TableCell>
-              <TableCell>Quantity</TableCell>
-              <TableCell>Total</TableCell>
-              <TableCell>Payment</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('merchandise.table.orderId')}</TableCell>
+              <TableCell>{t('merchandise.table.customer')}</TableCell>
+              <TableCell>{t('merchandise.table.merchandise')}</TableCell>
+              <TableCell>{t('merchandise.table.quantity')}</TableCell>
+              <TableCell>{t('merchandise.table.total')}</TableCell>
+              <TableCell>{t('merchandise.table.payment')}</TableCell>
+              <TableCell>{t('merchandise.table.orderStatus')}</TableCell>
+              <TableCell>{t('merchandise.table.date')}</TableCell>
+              <TableCell align="right">{t('merchandise.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={10} align="center">
-                  Loading orders...
+                  {t('merchandise.loadingOrders')}
                 </TableCell>
               </TableRow>
             ) : filteredOrders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} align="center">
-                  No orders found
+                  {t('merchandise.noOrdersFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -234,14 +239,14 @@ const MerchandiseOrdersListPage: React.FC = () => {
                   <TableCell>{order.customerName || 'N/A'}</TableCell>
                   <TableCell>{order.merchandiseType?.name || 'N/A'}</TableCell>
                   <TableCell>{order.quantity}</TableCell>
-                  <TableCell>€{order.totalPrice.toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(order.totalPrice, 'EUR')}</TableCell>
                   <TableCell>
                     <Chip label={order.paymentStatus} size="small" />
                   </TableCell>
                   <TableCell>
                     <Chip label={order.orderStatus} size="small" />
                   </TableCell>
-                  <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{formatDate(new Date(order.orderDate))}</TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => handleViewOrder(order.id)}>
                       <ViewIcon />

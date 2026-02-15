@@ -37,6 +37,8 @@ import {
   Delete as DeleteIcon,
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
 import type { MembershipType } from '../types/membership.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -51,6 +53,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t, i18n } = useTranslation();
 
   const [membershipType, setMembershipType] = useState<MembershipType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +76,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
       setMembershipType(response);
     } catch (error) {
       console.error('Failed to load membership type:', error);
-      setError('Failed to load membership type');
+      setError(t('memberships.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -92,7 +95,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
       navigate('/members/types');
     } catch (error) {
       console.error('Failed to delete membership type:', error);
-      setError('Failed to delete membership type');
+      setError(t('memberships.failedToDelete'));
     }
     setDeleteDialogOpen(false);
   };
@@ -101,18 +104,10 @@ const MembershipTypeDetailsPage: React.FC = () => {
     navigate('/members/types');
   };
 
-  const formatDate = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading membership type...</Typography>
+        <Typography>{t('memberships.loadingType')}</Typography>
       </Box>
     );
   }
@@ -120,9 +115,9 @@ const MembershipTypeDetailsPage: React.FC = () => {
   if (error || !membershipType) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error || 'Membership type not found'}</Alert>
+        <Alert severity="error">{error || t('memberships.typeNotFound')}</Alert>
         <Button onClick={handleBack} sx={{ mt: 2 }}>
-          Back to Membership Types
+          {t('memberships.details.backToTypes')}
         </Button>
       </Box>
     );
@@ -139,11 +134,11 @@ const MembershipTypeDetailsPage: React.FC = () => {
           </IconButton>
           <Typography variant="h4">{membershipType.name}</Typography>
           <Chip
-            label={membershipType.membershipStatus}
+            label={t(`memberships.statusOptions.${membershipType.membershipStatus}`)}
             color={membershipType.membershipStatus === 'open' ? 'success' : 'default'}
           />
           <Chip
-            label={isGroupMembership ? 'Group' : 'Single'}
+            label={isGroupMembership ? t('memberships.typeOptions.group') : t('memberships.typeOptions.single')}
             variant="outlined"
           />
         </Box>
@@ -153,7 +148,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
             startIcon={<EditIcon />}
             onClick={handleEdit}
           >
-            Edit
+            {t('common.actions.edit')}
           </Button>
           <Button
             variant="outlined"
@@ -161,7 +156,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteDialogOpen(true)}
           >
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </Box>
       </Box>
@@ -170,12 +165,12 @@ const MembershipTypeDetailsPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Basic Information
+            {t('memberships.sections.basicInfo')}
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <Typography variant="subtitle2" color="text.secondary">
-                Description
+                {t('memberships.fields.description')}
               </Typography>
               <Typography variant="body1">
                 {membershipType.description}
@@ -183,7 +178,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" color="text.secondary">
-                Membership Form
+                {t('memberships.fields.membershipForm')}
               </Typography>
               <Typography variant="body1">
                 {membershipType.membershipFormId}
@@ -191,10 +186,10 @@ const MembershipTypeDetailsPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" color="text.secondary">
-                Status
+                {t('memberships.fields.status')}
               </Typography>
               <Typography variant="body1">
-                {membershipType.membershipStatus === 'open' ? 'Open (Accepting Applications)' : 'Closed (Not Accepting)'}
+                {t(`memberships.statusOptions.${membershipType.membershipStatus}Accepting`)}
               </Typography>
             </Grid>
           </Grid>
@@ -206,12 +201,12 @@ const MembershipTypeDetailsPage: React.FC = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Group Configuration
+              {t('memberships.sections.groupConfig')}
             </Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  Maximum Number of People
+                  {t('memberships.fields.maxPeople')}
                 </Typography>
                 <Typography variant="body1">
                   {membershipType.maxPeopleInApplication}
@@ -219,7 +214,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  Minimum Number of People
+                  {t('memberships.fields.minPeople')}
                 </Typography>
                 <Typography variant="body1">
                   {membershipType.minPeopleInApplication}
@@ -235,7 +230,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Person Configuration
+              {t('memberships.sections.personConfig')}
             </Typography>
             <Grid container spacing={2}>
               {membershipType.personTitles.map((title, index) => (
@@ -243,10 +238,10 @@ const MembershipTypeDetailsPage: React.FC = () => {
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="subtitle2" gutterBottom>
-                        Person {index + 1}
+                        {t('memberships.personConfig.person', { number: index + 1 })}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Title: {title || '(Not set)'}
+                        {t('memberships.fields.title')}: {title || '(Not set)'}
                       </Typography>
                       {membershipType.personLabels && membershipType.personLabels[index] && (
                         <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
@@ -269,14 +264,14 @@ const MembershipTypeDetailsPage: React.FC = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Field Configuration
+              {t('memberships.sections.fieldConfig')}
             </Typography>
             <TableContainer component={Paper} variant="outlined">
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Field ID</TableCell>
-                    <TableCell>Configuration</TableCell>
+                    <TableCell>{t('memberships.fields.fieldName')}</TableCell>
+                    <TableCell>{t('memberships.fields.configuration')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -285,7 +280,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
                       <TableCell>{fieldId}</TableCell>
                       <TableCell>
                         <Chip
-                          label={config === 'common' ? 'Common to all' : 'Unique for each'}
+                          label={t(`memberships.fieldConfig.${config === 'common' ? 'commonToAll' : 'uniqueForEach'}`)}
                           size="small"
                           color={config === 'common' ? 'primary' : 'default'}
                         />
@@ -303,25 +298,25 @@ const MembershipTypeDetailsPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Membership Duration
+            {t('memberships.sections.duration')}
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" color="text.secondary">
-                Type
+                {t('memberships.duration.type')}
               </Typography>
               <Typography variant="body1">
-                {membershipType.isRollingMembership ? 'Rolling Membership' : 'Fixed-Period Membership'}
+                {t(`memberships.duration.${membershipType.isRollingMembership ? 'rolling' : 'fixedPeriod'}`)}
               </Typography>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" color="text.secondary">
-                {membershipType.isRollingMembership ? 'Duration' : 'Valid Until'}
+                {membershipType.isRollingMembership ? t('memberships.duration.duration') : t('memberships.fields.validUntil')}
               </Typography>
               <Typography variant="body1">
                 {membershipType.isRollingMembership
-                  ? `${membershipType.numberOfMonths} months`
-                  : membershipType.validUntil ? formatDate(membershipType.validUntil) : 'Not set'}
+                  ? t('memberships.duration.months', { count: membershipType.numberOfMonths })
+                  : membershipType.validUntil ? formatDate(membershipType.validUntil, 'dd MMM yyyy', i18n.language) : t('memberships.duration.notSet')}
               </Typography>
             </Grid>
           </Grid>
@@ -332,20 +327,20 @@ const MembershipTypeDetailsPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Application Settings
+            {t('memberships.sections.applicationSettings')}
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle2" color="text.secondary">
-                Automatic Approval
+                {t('memberships.fields.automaticallyApprove')}
               </Typography>
               <Typography variant="body1">
-                {membershipType.automaticallyApprove ? 'Yes (Auto-approve to Active)' : 'No (Manual approval required)'}
+                {t(`memberships.approval.${membershipType.automaticallyApprove ? 'yes' : 'no'}`)}
               </Typography>
             </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle2" color="text.secondary">
-                Member Labels
+                {t('memberships.fields.memberLabels')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
                 {membershipType.memberLabels.length > 0 ? (
@@ -354,7 +349,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
                   ))
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    No labels configured
+                    {t('memberships.labels.noLabels')}
                   </Typography>
                 )}
               </Box>
@@ -367,12 +362,12 @@ const MembershipTypeDetailsPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Payment Settings
+            {t('memberships.sections.paymentSettings')}
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <Typography variant="subtitle2" color="text.secondary">
-                Supported Payment Methods
+                {t('memberships.fields.supportedPaymentMethods')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
                 {membershipType.supportedPaymentMethods.map((methodId) => (
@@ -389,7 +384,7 @@ const MembershipTypeDetailsPage: React.FC = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Terms and Conditions
+              {t('memberships.sections.termsAndConditions')}
             </Typography>
             <Box
               sx={{ mt: 2 }}
@@ -401,16 +396,16 @@ const MembershipTypeDetailsPage: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Membership Type</DialogTitle>
+        <DialogTitle>{t('memberships.delete.title')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{membershipType.name}"? This action cannot be undone.
+            {t('memberships.delete.message', { name: membershipType.name })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('common.actions.cancel')}</Button>
           <Button onClick={handleDelete} color="error" variant="contained">
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </DialogActions>
       </Dialog>

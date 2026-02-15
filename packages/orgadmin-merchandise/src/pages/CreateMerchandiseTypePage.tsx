@@ -22,6 +22,7 @@ import {
   Divider,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import ImageGalleryUpload from '../components/ImageGalleryUpload';
 import OptionsConfigurationSection from '../components/OptionsConfigurationSection';
 import StockManagementSection from '../components/StockManagementSection';
@@ -33,6 +34,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState<MerchandiseTypeFormData>({
     name: '',
@@ -70,11 +72,11 @@ const CreateMerchandiseTypePage: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">
-          {isEdit ? 'Edit Merchandise Type' : 'Create Merchandise Type'}
+          {isEdit ? t('merchandise.editMerchandiseType') : t('merchandise.createMerchandiseType')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button onClick={() => navigate('/merchandise')}>
-            Cancel
+            {t('common.actions.cancel')}
           </Button>
           <Button
             variant="contained"
@@ -82,7 +84,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
             onClick={handleSave}
             disabled={saving || !formData.name || formData.images.length === 0}
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? t('merchandise.actions.saving') : t('merchandise.actions.save')}
           </Button>
         </Box>
       </Box>
@@ -90,17 +92,17 @@ const CreateMerchandiseTypePage: React.FC = () => {
       {/* Basic Information */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Basic Information</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.basicInfo')}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Name"
+              label={t('merchandise.fields.name')}
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
               required
               fullWidth
             />
             <TextField
-              label="Description"
+              label={t('merchandise.fields.description')}
               value={formData.description}
               onChange={(e) => handleFieldChange('description', e.target.value)}
               multiline
@@ -109,14 +111,14 @@ const CreateMerchandiseTypePage: React.FC = () => {
               fullWidth
             />
             <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('merchandise.fields.status')}</InputLabel>
               <Select
                 value={formData.status}
-                label="Status"
+                label={t('merchandise.fields.status')}
                 onChange={(e) => handleFieldChange('status', e.target.value)}
               >
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="active">{t('common.status.active')}</MenuItem>
+                <MenuItem value="inactive">{t('common.status.inactive')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -183,7 +185,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
       {/* Application Form */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Application Form</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.applicationForm')}</Typography>
           <FormControlLabel
             control={
               <Switch
@@ -191,18 +193,18 @@ const CreateMerchandiseTypePage: React.FC = () => {
                 onChange={(e) => handleFieldChange('requireApplicationForm', e.target.checked)}
               />
             }
-            label="Require Application Form"
+            label={t('merchandise.fields.requireApplicationForm')}
           />
           {formData.requireApplicationForm && (
             <TextField
-              label="Application Form"
+              label={t('merchandise.fields.applicationForm')}
               select
               value={formData.applicationFormId || ''}
               onChange={(e) => handleFieldChange('applicationFormId', e.target.value)}
               fullWidth
               sx={{ mt: 2 }}
             >
-              <MenuItem value="">Select a form...</MenuItem>
+              <MenuItem value="">{t('merchandise.fields.selectForm')}</MenuItem>
             </TextField>
           )}
         </CardContent>
@@ -211,7 +213,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
       {/* Payment Configuration */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Payment Configuration</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.payment')}</Typography>
           <FormControlLabel
             control={
               <Switch
@@ -219,11 +221,11 @@ const CreateMerchandiseTypePage: React.FC = () => {
                 onChange={(e) => handleFieldChange('useTermsAndConditions', e.target.checked)}
               />
             }
-            label="Use Terms and Conditions"
+            label={t('merchandise.fields.useTermsAndConditions')}
           />
           {formData.useTermsAndConditions && (
             <TextField
-              label="Terms and Conditions"
+              label={t('merchandise.fields.termsAndConditions')}
               value={formData.termsAndConditions || ''}
               onChange={(e) => handleFieldChange('termsAndConditions', e.target.value)}
               multiline
@@ -238,23 +240,23 @@ const CreateMerchandiseTypePage: React.FC = () => {
       {/* Email Notifications */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Email Notifications</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.emailNotifications')}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Admin Notification Emails"
+              label={t('merchandise.fields.adminNotificationEmails')}
               value={formData.adminNotificationEmails || ''}
               onChange={(e) => handleFieldChange('adminNotificationEmails', e.target.value)}
-              placeholder="email1@example.com, email2@example.com"
-              helperText="Comma-separated email addresses"
+              placeholder={t('merchandise.fields.adminNotificationEmailsPlaceholder')}
+              helperText={t('merchandise.fields.adminNotificationEmailsHelper')}
               fullWidth
             />
             <TextField
-              label="Custom Confirmation Message"
+              label={t('merchandise.fields.customConfirmationMessage')}
               value={formData.customConfirmationMessage || ''}
               onChange={(e) => handleFieldChange('customConfirmationMessage', e.target.value)}
               multiline
               rows={3}
-              placeholder="Custom message to include in order confirmation emails"
+              placeholder={t('merchandise.fields.customConfirmationMessagePlaceholder')}
               fullWidth
             />
           </Box>

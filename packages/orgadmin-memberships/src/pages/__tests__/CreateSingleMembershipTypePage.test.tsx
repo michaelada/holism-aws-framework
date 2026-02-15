@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { renderWithI18n, screen } from '../../test/i18n-test-utils';
+import { MemoryRouter } from 'react-router-dom';
 import CreateSingleMembershipTypePage from '../CreateSingleMembershipTypePage';
 
 // Mock ReactQuill
@@ -14,31 +14,22 @@ vi.mock('react-quill', () => ({
   ),
 }));
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-    useParams: () => ({}),
-  };
-});
-
 describe('CreateSingleMembershipTypePage', () => {
   it('renders create single membership type form', () => {
-    render(
-      <BrowserRouter>
+    renderWithI18n(
+      <MemoryRouter>
         <CreateSingleMembershipTypePage />
-      </BrowserRouter>
+      </MemoryRouter>
     );
     
     expect(screen.getByText('Create Single Membership Type')).toBeInTheDocument();
   });
 
   it('displays all required form fields', () => {
-    render(
-      <BrowserRouter>
+    renderWithI18n(
+      <MemoryRouter>
         <CreateSingleMembershipTypePage />
-      </BrowserRouter>
+      </MemoryRouter>
     );
     
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();

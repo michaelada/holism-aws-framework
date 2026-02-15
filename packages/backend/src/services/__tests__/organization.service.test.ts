@@ -140,6 +140,7 @@ describe('OrganizationService', () => {
       currency: 'USD',
       language: 'en',
       defaultCapabilities: ['event-management', 'memberships', 'registrations'],
+      defaultLocale: 'en-GB',
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -285,6 +286,7 @@ describe('OrganizationService', () => {
         name: 'swimming-club',
         displayName: 'Swimming Club',
         defaultCapabilities: ['event-management', 'memberships'],
+        defaultLocale: 'en-GB',
         status: 'active',
         currency: 'USD',
         language: 'en',
@@ -472,6 +474,7 @@ describe('OrganizationService', () => {
         name: 'swimming-club',
         displayName: 'Swimming Club',
         defaultCapabilities: ['event-management', 'memberships', 'registrations'],
+        defaultLocale: 'en-GB',
         status: 'active',
         currency: 'USD',
         language: 'en',

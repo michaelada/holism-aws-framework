@@ -17,6 +17,7 @@ export interface OrganizationType {
   description?: string;
   currency: string;
   language: string;
+  defaultLocale: string;
   defaultCapabilities: string[];
   status: 'active' | 'inactive';
   createdAt: string;
@@ -80,6 +81,7 @@ export interface CreateOrganizationTypeDto {
   description?: string;
   currency: string;
   language: string;
+  defaultLocale?: string;
   defaultCapabilities: string[];
 }
 
@@ -88,6 +90,7 @@ export interface UpdateOrganizationTypeDto {
   description?: string;
   currency?: string;
   language?: string;
+  defaultLocale?: string;
   defaultCapabilities?: string[];
   status?: 'active' | 'inactive';
 }

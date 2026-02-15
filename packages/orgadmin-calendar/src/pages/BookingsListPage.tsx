@@ -29,10 +29,12 @@ import {
   Email as EmailIcon,
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
+import { useTranslation, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
 import type { Booking, BookingsFilterOptions } from '../types/calendar.types';
 
 const BookingsListPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<BookingsFilterOptions>({});
@@ -64,14 +66,14 @@ const BookingsListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Bookings</Typography>
+        <Typography variant="h4">{t('calendar.bookings')}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<ExportIcon />}
             onClick={handleExport}
           >
-            Export to Excel
+            {t('calendar.actions.exportToExcel')}
           </Button>
         </Box>
       </Box>
@@ -88,25 +90,25 @@ const BookingsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Booking Reference</TableCell>
-              <TableCell>Calendar</TableCell>
-              <TableCell>User</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Time</TableCell>
-              <TableCell>Duration</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('calendar.table.bookingReference')}</TableCell>
+              <TableCell>{t('calendar.table.calendar')}</TableCell>
+              <TableCell>{t('calendar.table.user')}</TableCell>
+              <TableCell>{t('calendar.table.date')}</TableCell>
+              <TableCell>{t('calendar.table.time')}</TableCell>
+              <TableCell>{t('calendar.table.duration')}</TableCell>
+              <TableCell>{t('calendar.table.price')}</TableCell>
+              <TableCell>{t('calendar.table.bookingStatus')}</TableCell>
+              <TableCell align="right">{t('calendar.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">Loading bookings...</TableCell>
+                <TableCell colSpan={9} align="center">{t('calendar.loadingBookings')}</TableCell>
               </TableRow>
             ) : bookings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">No bookings found</TableCell>
+                <TableCell colSpan={9} align="center">{t('calendar.noBookingsFound')}</TableCell>
               </TableRow>
             ) : (
               bookings.map((booking) => (
@@ -114,15 +116,15 @@ const BookingsListPage: React.FC = () => {
                   <TableCell>{booking.bookingReference}</TableCell>
                   <TableCell>{booking.calendar?.name}</TableCell>
                   <TableCell>{booking.userName}</TableCell>
-                  <TableCell>{new Date(booking.bookingDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{formatDate(new Date(booking.bookingDate), 'dd/MM/yyyy')}</TableCell>
                   <TableCell>{booking.startTime}</TableCell>
-                  <TableCell>{booking.duration} min</TableCell>
-                  <TableCell>€{booking.totalPrice.toFixed(2)}</TableCell>
+                  <TableCell>{t('calendar.duration.minutes', { count: booking.duration })}</TableCell>
+                  <TableCell>{formatCurrency(booking.totalPrice, 'EUR')}</TableCell>
                   <TableCell>
                     <Chip label={booking.bookingStatus} size="small" />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" onClick={() => handleViewBooking(booking.id)}>
+                    <IconButton size="small" onClick={() => handleViewBooking(booking.id)} title={t('calendar.tooltips.viewBooking')}>
                       <ViewIcon />
                     </IconButton>
                   </TableCell>

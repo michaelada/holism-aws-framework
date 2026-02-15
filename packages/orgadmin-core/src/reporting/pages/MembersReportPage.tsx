@@ -37,6 +37,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
  * Membership type report data structure
@@ -71,6 +73,7 @@ interface MembersReportData {
  */
 const MembersReportPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   // Filter state
   const [startDate, setStartDate] = useState<string>(() => {
@@ -91,14 +94,6 @@ const MembersReportPage: React.FC = () => {
   useEffect(() => {
     execute();
   }, [execute, startDate, endDate, statusFilter]);
-
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
 
   // Format percentage
   const formatPercentage = (value: number): string => {
@@ -121,13 +116,13 @@ const MembersReportPage: React.FC = () => {
             onClick={() => navigate('/reporting')}
             sx={{ mb: 1 }}
           >
-            Back to Reports
+            {t('reporting.members.backToReports')}
           </Button>
           <Typography variant="h4" gutterBottom>
-            Members Report
+            {t('reporting.members.title')}
           </Typography>
           <Typography variant="body1" color="textSecondary">
-            Membership growth and retention analysis
+            {t('reporting.members.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -136,7 +131,7 @@ const MembersReportPage: React.FC = () => {
           onClick={handleExport}
           disabled={loading || !data}
         >
-          Export to CSV
+          {t('reporting.members.exportToCSV')}
         </Button>
       </Box>
 
@@ -144,11 +139,11 @@ const MembersReportPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Filters
+            {t('reporting.members.filters')}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label="Start Date"
+              label={t('reporting.filters.startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -156,7 +151,7 @@ const MembersReportPage: React.FC = () => {
               fullWidth
             />
             <TextField
-              label="End Date"
+              label={t('reporting.filters.endDate')}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -164,16 +159,16 @@ const MembersReportPage: React.FC = () => {
               fullWidth
             />
             <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+              <InputLabel>{t('reporting.filters.status')}</InputLabel>
               <Select
                 value={statusFilter}
-                label="Status"
+                label={t('reporting.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="expired">Expired</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="all">{t('reporting.filters.all')}</MenuItem>
+                <MenuItem value="active">{t('reporting.filters.active')}</MenuItem>
+                <MenuItem value="expired">{t('reporting.filters.expired')}</MenuItem>
+                <MenuItem value="cancelled">{t('reporting.filters.cancelled')}</MenuItem>
               </Select>
             </FormControl>
           </Stack>
@@ -195,11 +190,11 @@ const MembersReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Total Members
+                    {t('reporting.members.summary.totalMembers')}
                   </Typography>
                   <Typography variant="h4">{data.summary.totalMembers}</Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {data.summary.activeMembers} active
+                    {t('reporting.members.summary.activeMembers', { count: data.summary.activeMembers })}
                   </Typography>
                 </CardContent>
               </Card>
@@ -208,7 +203,7 @@ const MembersReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    New Members
+                    {t('reporting.members.summary.newMembers')}
                   </Typography>
                   <Typography variant="h4">{data.summary.newMembers}</Typography>
                   <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
@@ -221,7 +216,7 @@ const MembersReportPage: React.FC = () => {
                       variant="caption"
                       color={data.summary.growthRate >= 0 ? 'success.main' : 'error.main'}
                     >
-                      {formatPercentage(Math.abs(data.summary.growthRate))} growth
+                      {t('reporting.members.summary.growthRate', { rate: formatPercentage(Math.abs(data.summary.growthRate)) })}
                     </Typography>
                   </Box>
                 </CardContent>
@@ -231,11 +226,11 @@ const MembersReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Renewals
+                    {t('reporting.members.summary.renewals')}
                   </Typography>
                   <Typography variant="h4">{data.summary.renewals}</Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {formatPercentage(data.summary.retentionRate)} retention
+                    {t('reporting.members.summary.retentionRate', { rate: formatPercentage(data.summary.retentionRate) })}
                   </Typography>
                 </CardContent>
               </Card>
@@ -244,13 +239,13 @@ const MembersReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    Total Revenue
+                    {t('reporting.members.summary.totalRevenue')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(data.summary.totalRevenue)}
+                    {formatCurrency(data.summary.totalRevenue, 'EUR', i18n.language)}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {data.summary.expiringMembers} expiring soon
+                    {t('reporting.members.summary.expiringSoon', { count: data.summary.expiringMembers })}
                   </Typography>
                 </CardContent>
               </Card>
@@ -263,7 +258,7 @@ const MembersReportPage: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Membership Type Breakdown
+            {t('reporting.members.membershipTypeBreakdown')}
           </Typography>
 
           {loading && (
@@ -279,13 +274,13 @@ const MembersReportPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Membership Type</TableCell>
-                    <TableCell align="right">Total</TableCell>
-                    <TableCell align="right">Active</TableCell>
-                    <TableCell align="right">New</TableCell>
-                    <TableCell align="right">Renewals</TableCell>
-                    <TableCell align="right">Expiring</TableCell>
-                    <TableCell align="right">Revenue</TableCell>
+                    <TableCell>{t('reporting.members.table.membershipType')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.total')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.active')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.new')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.renewals')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.expiring')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.revenue')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -327,7 +322,7 @@ const MembersReportPage: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" fontWeight="medium">
-                          {formatCurrency(type.revenue)}
+                          {formatCurrency(type.revenue, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -339,7 +334,7 @@ const MembersReportPage: React.FC = () => {
 
           {!loading && data && data.membershipTypes.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              No membership data found for the selected filters. Try adjusting your date range or status filter.
+              {t('reporting.members.noData')}
             </Alert>
           )}
         </CardContent>

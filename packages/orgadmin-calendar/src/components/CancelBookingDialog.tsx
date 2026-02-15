@@ -17,6 +17,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { Booking, CancellationValidation } from '../types/calendar.types';
 
 interface CancelBookingDialogProps {
@@ -32,6 +33,7 @@ const CancelBookingDialog: React.FC<CancelBookingDialogProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [refund, setRefund] = useState(false);
 
@@ -45,14 +47,14 @@ const CancelBookingDialog: React.FC<CancelBookingDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Cancel Booking</DialogTitle>
+      <DialogTitle>{t('calendar.cancelBooking.title')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" paragraph>
-          Are you sure you want to cancel booking {booking.bookingReference}?
+          {t('calendar.cancelBooking.message', { reference: booking.bookingReference })}
         </Typography>
         
         <TextField
-          label="Cancellation Reason"
+          label={t('calendar.fields.cancellationReason')}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           multiline
@@ -69,14 +71,14 @@ const CancelBookingDialog: React.FC<CancelBookingDialogProps> = ({
                 onChange={(e) => setRefund(e.target.checked)}
               />
             }
-            label="Process refund"
+            label={t('calendar.fields.processRefund')}
           />
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('common.actions.cancel')}</Button>
         <Button onClick={handleConfirm} color="error" variant="contained">
-          Confirm Cancellation
+          {t('calendar.cancelBooking.confirmButton')}
         </Button>
       </DialogActions>
     </Dialog>

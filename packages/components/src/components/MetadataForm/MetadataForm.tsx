@@ -19,6 +19,19 @@ export interface MetadataFormProps {
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
   initialValues?: Record<string, any>;
+  // i18n support
+  translations?: {
+    create?: string; // "Create {{name}}"
+    edit?: string; // "Edit {{name}}"
+    submitting?: string;
+    update?: string;
+    create_action?: string;
+    cancel?: string;
+    additionalInformation?: string;
+    failedToLoadMetadata?: string;
+    objectDefinitionNotFound?: string;
+    missingFieldDefinitions?: string;
+  };
 }
 
 /**
@@ -46,6 +59,7 @@ export function MetadataForm({
   onSubmit,
   onCancel,
   initialValues = {},
+  translations,
 }: MetadataFormProps): JSX.Element {
   const { objectDef, fields, loading: metadataLoading, error: metadataError } = useMetadata(objectType);
   const { getInstance } = useObjectInstances(objectType);
@@ -54,6 +68,20 @@ export function MetadataForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [loadingInstance, setLoadingInstance] = useState(false);
+
+  // Translation helpers
+  const t = {
+    create: (name: string) => translations?.create?.replace('{{name}}', name) || `Create ${name}`,
+    edit: (name: string) => translations?.edit?.replace('{{name}}', name) || `Edit ${name}`,
+    submitting: translations?.submitting || 'Submitting...',
+    update: translations?.update || 'Update',
+    create_action: translations?.create_action || 'Create',
+    cancel: translations?.cancel || 'Cancel',
+    additionalInformation: translations?.additionalInformation || 'Additional Information',
+    failedToLoadMetadata: (error: string) => translations?.failedToLoadMetadata?.replace('{{error}}', error) || `Failed to load metadata: ${error}`,
+    objectDefinitionNotFound: translations?.objectDefinitionNotFound || 'Object definition not found',
+    missingFieldDefinitions: (fields: string) => translations?.missingFieldDefinitions?.replace('{{fields}}', fields) || `Some field definitions are missing: ${fields}. Please create these field definitions first.`,
+  };
 
   // Load existing instance for edit mode
   useEffect(() => {
@@ -74,7 +102,10 @@ export function MetadataForm({
 
   // Set initial values if provided
   useEffect(() => {
-    if (initialValues && Object.
+    if (initialValues && Object.keys(initialValues).length > 0) {
+      setFormData(initialValues);
+    }
+  }, [initialValues]);
 
   const handleFieldChange = (fieldShortName: string, value: any) => {
     setFormData((prev) => ({
@@ -225,7 +256,7 @@ export function MetadataForm({
   if (metadataError) {
     return (
       <Alert severity="error">
-        Failed to load metadata: {metadataError.message}
+        {t.failedToLoadMetadata(metadataError.message)}
       </Alert>
     );
   }
@@ -233,7 +264,7 @@ export function MetadataForm({
   if (!objectDef || !fields) {
     return (
       <Alert severity="error">
-        Object definition not found
+        {t.objectDefinitionNotFound}
       </Alert>
     );
   }
@@ -248,7 +279,7 @@ export function MetadataForm({
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
       <Typography variant="h5" gutterBottom>
-        {instanceId ? `Edit ${objectDef.displayName}` : `Create ${objectDef.displayName}`}
+        {instanceId ? t.edit(objectDef.displayName) : t.create(objectDef.displayName)}
       </Typography>
       
       {objectDef.description && (
@@ -265,8 +296,7 @@ export function MetadataForm({
 
       {missingFields.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Some field definitions are missing: {missingFields.join(', ')}. 
-          Please create these field definitions first.
+          {t.missingFieldDefinitions(missingFields.join(', '))}
         </Alert>
       )}
 
@@ -280,7 +310,7 @@ export function MetadataForm({
         <Box sx={{ mb: 3 }}>
           {grouped.size > 0 && (
             <Typography variant="h6" gutterBottom>
-              Additional Information
+              {t.additionalInformation}
             </Typography>
           )}
           {ungrouped.map(renderField)}
@@ -293,14 +323,14 @@ export function MetadataForm({
           variant="contained"
           disabled={submitting}
         >
-          {submitting ? 'Submitting...' : instanceId ? 'Update' : 'Create'}
+          {submitting ? t.submitting : instanceId ? t.update : t.create_action}
         </Button>
         <Button
           variant="outlined"
           onClick={onCancel}
           disabled={submitting}
         >
-          Cancel
+          {t.cancel}
         </Button>
       </Box>
     </Box>

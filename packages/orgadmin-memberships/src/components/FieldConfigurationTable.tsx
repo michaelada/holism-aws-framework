@@ -20,6 +20,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { FieldConfiguration } from '../types/membership.types';
 
 interface ApplicationField {
@@ -41,11 +42,13 @@ const FieldConfigurationTable: React.FC<FieldConfigurationTableProps> = ({
   fieldConfiguration,
   onChange,
 }) => {
+  const { t } = useTranslation();
+  
   if (fields.length === 0) {
     return (
       <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
         <Typography variant="body2">
-          Select a membership form to configure field sharing
+          {t('memberships.personConfig.selectForm')}
         </Typography>
       </Box>
     );
@@ -56,10 +59,10 @@ const FieldConfigurationTable: React.FC<FieldConfigurationTableProps> = ({
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Field Name</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Required</TableCell>
-            <TableCell align="center">Configuration</TableCell>
+            <TableCell>{t('memberships.fields.fieldName')}</TableCell>
+            <TableCell>{t('memberships.fields.fieldType')}</TableCell>
+            <TableCell>{t('memberships.fields.required')}</TableCell>
+            <TableCell align="center">{t('memberships.fields.configuration')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -76,7 +79,7 @@ const FieldConfigurationTable: React.FC<FieldConfigurationTableProps> = ({
                 </Typography>
               </TableCell>
               <TableCell>
-                {field.required ? 'Yes' : 'No'}
+                {field.required ? t('memberships.fields.yes') : t('memberships.fields.no')}
               </TableCell>
               <TableCell align="center">
                 <ToggleButtonGroup
@@ -90,10 +93,10 @@ const FieldConfigurationTable: React.FC<FieldConfigurationTableProps> = ({
                   size="small"
                 >
                   <ToggleButton value="common">
-                    Common to all
+                    {t('memberships.fieldConfig.commonToAll')}
                   </ToggleButton>
                   <ToggleButton value="unique">
-                    Unique for each
+                    {t('memberships.fieldConfig.uniqueForEach')}
                   </ToggleButton>
                 </ToggleButtonGroup>
               </TableCell>

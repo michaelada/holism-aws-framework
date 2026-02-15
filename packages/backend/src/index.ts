@@ -196,7 +196,7 @@ app.use('/api/admin/organization-types', organizationTypeRoutes);
 app.use('/api/admin/organizations', organizationRoutes);
 app.use('/api/admin/organizations', organizationUserRoutes);
 app.use('/api/admin/organizations', organizationRoleRoutes);
-app.use('/api/events', eventRoutes);
+app.use('/api/orgadmin', eventRoutes);
 app.use('/api/orgadmin', membershipRoutes);
 app.use('/api/orgadmin', merchandiseRoutes);
 app.use('/api/orgadmin', calendarRoutes);

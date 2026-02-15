@@ -54,6 +54,13 @@ export interface OrgDataTableProps<T = any> {
   defaultRowsPerPage?: number;
   emptyMessage?: string;
   loading?: boolean;
+  // i18n support
+  translations?: {
+    searchPlaceholder?: string;
+    exportCSV?: string;
+    noDataAvailable?: string;
+    loading?: string;
+  };
 }
 
 type Order = 'asc' | 'desc';
@@ -63,7 +70,7 @@ export function OrgDataTable<T extends Record<string, any>>({
   data,
   title,
   searchable = true,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
   exportable = true,
   exportFilename = 'export',
   selectable = false,
@@ -73,11 +80,20 @@ export function OrgDataTable<T extends Record<string, any>>({
   defaultSortDirection = 'asc',
   rowsPerPageOptions = [10, 25, 50, 100],
   defaultRowsPerPage = 10,
-  emptyMessage = 'No data available',
+  emptyMessage,
   loading = false,
+  translations,
 }: OrgDataTableProps<T>) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Use translations or fallback to defaults
+  const t = {
+    searchPlaceholder: translations?.searchPlaceholder || searchPlaceholder || 'Search...',
+    exportCSV: translations?.exportCSV || 'Export CSV',
+    noDataAvailable: translations?.noDataAvailable || emptyMessage || 'No data available',
+    loading: translations?.loading || 'Loading...',
+  };
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
@@ -230,7 +246,7 @@ export function OrgDataTable<T extends Record<string, any>>({
               {searchable && (
                 <TextField
                   size="small"
-                  placeholder={searchPlaceholder}
+                  placeholder={t.searchPlaceholder}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   InputProps={{
@@ -253,7 +269,7 @@ export function OrgDataTable<T extends Record<string, any>>({
             <Card>
               <CardContent>
                 <Typography color="textSecondary" align="center">
-                  {emptyMessage}
+                  {t.noDataAvailable}
                 </Typography>
               </CardContent>
             </Card>
@@ -316,7 +332,7 @@ export function OrgDataTable<T extends Record<string, any>>({
           {searchable && (
             <TextField
               size="small"
-              placeholder={searchPlaceholder}
+              placeholder={t.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -332,7 +348,7 @@ export function OrgDataTable<T extends Record<string, any>>({
               onClick={handleExport}
               disabled={filteredAndSortedData.length === 0}
             >
-              Export CSV
+              {t.exportCSV}
             </Button>
           )}
         </Toolbar>
@@ -381,13 +397,13 @@ export function OrgDataTable<T extends Record<string, any>>({
             {loading ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center">
-                  <Typography color="textSecondary">Loading...</Typography>
+                  <Typography color="textSecondary">{t.loading}</Typography>
                 </TableCell>
               </TableRow>
             ) : paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (selectable ? 1 : 0)} align="center">
-                  <Typography color="textSecondary">{emptyMessage}</Typography>
+                  <Typography color="textSecondary">{t.noDataAvailable}</Typography>
                 </TableCell>
               </TableRow>
             ) : (

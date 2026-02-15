@@ -27,7 +27,9 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale';
 import { Save as SaveIcon, Cancel as CancelIcon, Publish as PublishIcon } from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import type { RegistrationTypeFormData } from '../types/registration.types';
@@ -54,6 +56,7 @@ const CreateRegistrationTypePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t } = useTranslation();
   const isEditMode = Boolean(id);
 
   const [loading, setLoading] = useState(false);
@@ -158,35 +161,35 @@ const CreateRegistrationTypePage: React.FC = () => {
 
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
-      setError('Name is required');
+      setError(t('registrations.validation.nameRequired'));
       return false;
     }
     if (!formData.description.trim()) {
-      setError('Description is required');
+      setError(t('registrations.validation.descriptionRequired'));
       return false;
     }
     if (!formData.entityName.trim()) {
-      setError('Entity Name is required');
+      setError(t('registrations.validation.entityNameRequired'));
       return false;
     }
     if (!formData.registrationFormId) {
-      setError('Registration Form is required');
+      setError(t('registrations.validation.formRequired'));
       return false;
     }
     if (!formData.isRollingRegistration && !formData.validUntil) {
-      setError('Valid Until date is required for fixed-period registrations');
+      setError(t('registrations.validation.validUntilRequired'));
       return false;
     }
     if (formData.isRollingRegistration && !formData.numberOfMonths) {
-      setError('Number of Months is required for rolling registrations');
+      setError(t('registrations.validation.numberOfMonthsRequired'));
       return false;
     }
     if (formData.supportedPaymentMethods.length === 0) {
-      setError('At least one payment method is required');
+      setError(t('registrations.validation.paymentMethodRequired'));
       return false;
     }
     if (formData.useTermsAndConditions && !formData.termsAndConditions?.trim()) {
-      setError('Terms and Conditions content is required when enabled');
+      setError(t('registrations.validation.termsRequired'));
       return false;
     }
     return true;
@@ -224,7 +227,7 @@ const CreateRegistrationTypePage: React.FC = () => {
       navigate('/registrations/types');
     } catch (error) {
       console.error('Failed to save registration type:', error);
-      setError('Failed to save registration type. Please try again.');
+      setError(t('registrations.failedToSave'));
     } finally {
       setLoading(false);
     }
@@ -235,10 +238,10 @@ const CreateRegistrationTypePage: React.FC = () => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          {isEditMode ? 'Edit Registration Type' : 'Create Registration Type'}
+          {isEditMode ? t('registrations.editRegistrationType') : t('registrations.createRegistrationType')}
         </Typography>
 
         {error && (
@@ -253,7 +256,7 @@ const CreateRegistrationTypePage: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Basic Information
+                  {t('registrations.sections.basicInfo')}
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
@@ -363,13 +366,14 @@ const CreateRegistrationTypePage: React.FC = () => {
                         label="Valid Until"
                         value={formData.validUntil || null}
                         onChange={(date) => handleChange('validUntil', date)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            required: true,
-                            helperText: 'End date for fixed-period registrations',
-                          },
-                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            fullWidth
+                            required
+                            helperText="End date for fixed-period registrations"
+                          />
+                        )}
                       />
                     </Grid>
                   ) : (
@@ -527,7 +531,7 @@ const CreateRegistrationTypePage: React.FC = () => {
                 onClick={handleCancel}
                 disabled={loading}
               >
-                Cancel
+                {t('common.actions.cancel')}
               </Button>
               <Button
                 variant="outlined"
@@ -535,7 +539,7 @@ const CreateRegistrationTypePage: React.FC = () => {
                 onClick={() => handleSave(false)}
                 disabled={loading}
               >
-                Save as Draft
+                {t('registrations.actions.saveAsDraft')}
               </Button>
               <Button
                 variant="contained"
@@ -543,7 +547,7 @@ const CreateRegistrationTypePage: React.FC = () => {
                 onClick={() => handleSave(true)}
                 disabled={loading}
               >
-                {isEditMode ? 'Update' : 'Save and Publish'}
+                {isEditMode ? t('registrations.actions.update') : t('registrations.actions.saveAndPublish')}
               </Button>
             </Box>
           </Grid>

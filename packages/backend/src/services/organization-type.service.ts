@@ -8,6 +8,51 @@ import {
 import { capabilityService } from './capability.service';
 
 export class OrganizationTypeService {
+  // Supported locales for validation
+  private readonly SUPPORTED_LOCALES = [
+    'en-GB',
+    'fr-FR',
+    'es-ES',
+    'it-IT',
+    'de-DE',
+    'pt-PT'
+  ];
+
+  // Default locale fallback
+  private readonly DEFAULT_LOCALE = 'en-GB';
+
+  /**
+   * Validate locale format and support
+   */
+  validateLocale(locale: string): boolean {
+    // Check format: xx-XX (language-REGION)
+    const localeFormatRegex = /^[a-z]{2}-[A-Z]{2}$/;
+    if (!localeFormatRegex.test(locale)) {
+      return false;
+    }
+
+    // Check if locale is in supported list
+    return this.SUPPORTED_LOCALES.includes(locale);
+  }
+
+  /**
+   * Get fallback locale for invalid locales
+   */
+  private getFallbackLocale(locale?: string): string {
+    if (!locale) {
+      return this.DEFAULT_LOCALE;
+    }
+
+    // If locale is valid, return it
+    if (this.validateLocale(locale)) {
+      return locale;
+    }
+
+    // Otherwise, return default
+    logger.warn(`Invalid locale '${locale}', falling back to '${this.DEFAULT_LOCALE}'`);
+    return this.DEFAULT_LOCALE;
+  }
+
   /**
    * Convert database row to OrganizationType object
    */
@@ -19,6 +64,7 @@ export class OrganizationTypeService {
       description: row.description,
       currency: row.currency,
       language: row.language,
+      defaultLocale: this.getFallbackLocale(row.default_locale),
       defaultCapabilities: row.default_capabilities || [],
       status: row.status || 'active',
       createdAt: row.created_at,
@@ -101,11 +147,17 @@ export class OrganizationTypeService {
           throw new Error('Invalid capabilities provided');
         }
       }
+
+      // Validate and set locale
+      const locale = data.defaultLocale || this.DEFAULT_LOCALE;
+      if (!this.validateLocale(locale)) {
+        throw new Error(`Invalid or unsupported locale: ${locale}. Supported locales: ${this.SUPPORTED_LOCALES.join(', ')}`);
+      }
       
       const result = await db.query(
         `INSERT INTO organization_types 
-         (name, display_name, description, currency, language, default_capabilities, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (name, display_name, description, currency, language, default_locale, default_capabilities, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           data.name,
@@ -113,13 +165,14 @@ export class OrganizationTypeService {
           data.description,
           data.currency,
           data.language,
+          locale,
           JSON.stringify(data.defaultCapabilities),
           userId,
           userId
         ]
       );
 
-      logger.info(`Organization type created: ${data.name}`);
+      logger.info(`Organization type created: ${data.name} with locale: ${locale}`);
       return this.rowToOrganizationType(result.rows[0]);
     } catch (error) {
       logger.error('Error creating organization type:', error);
@@ -144,6 +197,11 @@ export class OrganizationTypeService {
         }
       }
 
+      // Validate locale if provided
+      if (data.defaultLocale !== undefined && !this.validateLocale(data.defaultLocale)) {
+        throw new Error(`Invalid or unsupported locale: ${data.defaultLocale}. Supported locales: ${this.SUPPORTED_LOCALES.join(', ')}`);
+      }
+
       const updates: string[] = ['updated_at = NOW()'];
       const values: any[] = [];
       let paramCount = 1;
@@ -163,6 +221,10 @@ export class OrganizationTypeService {
       if (data.language !== undefined) {
         updates.push(`language = $${paramCount++}`);
         values.push(data.language);
+      }
+      if (data.defaultLocale !== undefined) {
+        updates.push(`default_locale = $${paramCount++}`);
+        values.push(data.defaultLocale);
       }
       if (data.defaultCapabilities !== undefined) {
         updates.push(`default_capabilities = $${paramCount++}`);

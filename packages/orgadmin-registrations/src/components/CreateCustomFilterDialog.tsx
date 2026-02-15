@@ -25,6 +25,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale';
 
 interface CreateCustomFilterDialogProps {
   open: boolean;
@@ -100,7 +101,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>Create Custom Filter</DialogTitle>
         <DialogContent>
@@ -201,12 +202,13 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label="Before Date"
                 value={dateLastRenewedBefore}
                 onChange={(date) => setDateLastRenewedBefore(date)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    helperText: 'Show registrations renewed before this date',
-                  },
-                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    helperText="Show registrations renewed before this date"
+                  />
+                )}
               />
             </Grid>
 
@@ -215,12 +217,13 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label="After Date"
                 value={dateLastRenewedAfter}
                 onChange={(date) => setDateLastRenewedAfter(date)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    helperText: 'Show registrations renewed after this date',
-                  },
-                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    helperText="Show registrations renewed after this date"
+                  />
+                )}
               />
             </Grid>
 
@@ -235,12 +238,13 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label="Before Date"
                 value={validUntilBefore}
                 onChange={(date) => setValidUntilBefore(date)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    helperText: 'Show registrations expiring before this date',
-                  },
-                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    helperText="Show registrations expiring before this date"
+                  />
+                )}
               />
             </Grid>
 
@@ -249,12 +253,13 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label="After Date"
                 value={validUntilAfter}
                 onChange={(date) => setValidUntilAfter(date)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    helperText: 'Show registrations expiring after this date',
-                  },
-                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    helperText="Show registrations expiring after this date"
+                  />
+                )}
               />
             </Grid>
           </Grid>

@@ -25,6 +25,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { useTranslation } from 'react-i18next';
 import type { CreateMembershipTypeDto } from '../types/membership.types';
 
 interface MembershipTypeFormProps {
@@ -40,6 +41,8 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
   applicationForms,
   paymentMethods,
 }) => {
+  const { t } = useTranslation();
+  
   return (
     <Box>
       <Grid container spacing={3}>
@@ -47,7 +50,7 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
           <TextField
             fullWidth
             required
-            label="Name"
+            label={t('memberships.fields.name')}
             value={formData.name}
             onChange={(e) => onChange('name', e.target.value)}
           />
@@ -59,7 +62,7 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
             required
             multiline
             rows={3}
-            label="Description"
+            label={t('memberships.fields.description')}
             value={formData.description}
             onChange={(e) => onChange('description', e.target.value)}
           />
@@ -67,10 +70,10 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
 
         <Grid item xs={12} md={6}>
           <FormControl fullWidth required>
-            <InputLabel>Membership Form</InputLabel>
+            <InputLabel>{t('memberships.fields.membershipForm')}</InputLabel>
             <Select
               value={formData.membershipFormId}
-              label="Membership Form"
+              label={t('memberships.fields.membershipForm')}
               onChange={(e) => onChange('membershipFormId', e.target.value)}
             >
               {applicationForms.map((form) => (
@@ -84,14 +87,14 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
 
         <Grid item xs={12} md={6}>
           <FormControl fullWidth required>
-            <InputLabel>Membership Status</InputLabel>
+            <InputLabel>{t('memberships.fields.membershipStatus')}</InputLabel>
             <Select
               value={formData.membershipStatus}
-              label="Membership Status"
+              label={t('memberships.fields.membershipStatus')}
               onChange={(e) => onChange('membershipStatus', e.target.value)}
             >
-              <MenuItem value="open">Open</MenuItem>
-              <MenuItem value="closed">Closed</MenuItem>
+              <MenuItem value="open">{t('memberships.statusOptions.openAccepting')}</MenuItem>
+              <MenuItem value="closed">{t('memberships.statusOptions.closedNotAccepting')}</MenuItem>
             </Select>
           </FormControl>
         </Grid>
@@ -104,17 +107,17 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
                 onChange={(e) => onChange('isRollingMembership', e.target.checked)}
               />
             }
-            label="Is Rolling Membership"
+            label={t('memberships.fields.isRollingMembership')}
           />
         </Grid>
 
         {!formData.isRollingMembership ? (
           <Grid item xs={12} md={6}>
             <DatePicker
-              label="Valid Until"
+              label={t('memberships.fields.validUntil')}
               value={formData.validUntil ? new Date(formData.validUntil) : null}
               onChange={(date) => onChange('validUntil', date)}
-              slotProps={{ textField: { fullWidth: true, required: true } }}
+              renderInput={(params) => <TextField {...params} fullWidth required />}
             />
           </Grid>
         ) : (
@@ -123,7 +126,7 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
               fullWidth
               required
               type="number"
-              label="Number of Months"
+              label={t('memberships.fields.numberOfMonths')}
               value={formData.numberOfMonths || ''}
               onChange={(e) => onChange('numberOfMonths', parseInt(e.target.value) || undefined)}
               inputProps={{ min: 1, max: 120 }}
@@ -139,17 +142,17 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
                 onChange={(e) => onChange('automaticallyApprove', e.target.checked)}
               />
             }
-            label="Automatically Approve Applications"
+            label={t('memberships.fields.automaticallyApprove')}
           />
         </Grid>
 
         <Grid item xs={12}>
           <FormControl fullWidth required>
-            <InputLabel>Supported Payment Methods</InputLabel>
+            <InputLabel>{t('memberships.fields.supportedPaymentMethods')}</InputLabel>
             <Select
               multiple
               value={formData.supportedPaymentMethods}
-              label="Supported Payment Methods"
+              label={t('memberships.fields.supportedPaymentMethods')}
               onChange={(e) => onChange('supportedPaymentMethods', e.target.value)}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -177,14 +180,14 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
                 onChange={(e) => onChange('useTermsAndConditions', e.target.checked)}
               />
             }
-            label="Use Terms and Conditions"
+            label={t('memberships.fields.useTermsAndConditions')}
           />
         </Grid>
 
         {formData.useTermsAndConditions && (
           <Grid item xs={12}>
             <Typography variant="subtitle2" gutterBottom>
-              Terms and Conditions Content
+              {t('memberships.fields.termsAndConditionsContent')}
             </Typography>
             <ReactQuill
               theme="snow"

@@ -4,8 +4,77 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+import i18n from 'i18next';
 import OrganisationDetailsTab from '../OrganisationDetailsTab';
 import * as useApiModule from '../../../hooks/useApi';
+
+// Initialize i18n for testing
+i18n.init({
+  lng: 'en-GB',
+  fallbackLng: 'en-GB',
+  resources: {
+    'en-GB': {
+      translation: {
+        settings: {
+          organisationDetails: {
+            title: 'Organisation Details',
+            subtitle: 'Manage your organisation\'s basic information and contact details',
+            sections: {
+              contactInfo: 'Contact Information',
+            },
+            fields: {
+              organisationName: 'Organisation Name',
+              organisationNameHelper: 'Organisation name cannot be changed',
+              displayName: 'Display Name',
+              domain: 'Domain',
+              currency: 'Currency',
+              language: 'Language',
+              address: 'Address',
+              city: 'City',
+              postcode: 'Postcode',
+              country: 'Country',
+              phone: 'Phone',
+              email: 'Email',
+              website: 'Website',
+            },
+            currencies: {
+              gbp: '£ GBP - British Pound',
+              eur: '€ EUR - Euro',
+              usd: '$ USD - US Dollar',
+              aud: '$ AUD - Australian Dollar',
+              cad: '$ CAD - Canadian Dollar',
+            },
+            languages: {
+              enGB: 'English (UK)',
+              enUS: 'English (US)',
+              frFR: 'French',
+              deDE: 'German',
+              esES: 'Spanish',
+            },
+            messages: {
+              loadFailed: 'Failed to load organisation details',
+              saveFailed: 'Failed to save organisation details',
+              saveSuccess: 'Organisation details saved successfully',
+            },
+          },
+          actions: {
+            saveChanges: 'Save Changes',
+            saving: 'Saving...',
+          },
+        },
+      },
+    },
+  },
+});
+
+const renderWithI18n = (component: React.ReactElement) => {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      {component}
+    </I18nextProvider>
+  );
+};
 
 describe('OrganisationDetailsTab', () => {
   const mockExecute = vi.fn();
@@ -41,7 +110,7 @@ describe('OrganisationDetailsTab', () => {
   it('should load organisation details on mount', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -60,7 +129,7 @@ describe('OrganisationDetailsTab', () => {
       reset: vi.fn(),
     });
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
     
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
@@ -68,7 +137,7 @@ describe('OrganisationDetailsTab', () => {
   it('should display organisation details after loading', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -84,7 +153,7 @@ describe('OrganisationDetailsTab', () => {
       message: 'Failed to load organisation details',
     });
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByText('Failed to load organisation details')).toBeInTheDocument();
@@ -94,7 +163,7 @@ describe('OrganisationDetailsTab', () => {
   it('should validate required display name field', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -107,7 +176,7 @@ describe('OrganisationDetailsTab', () => {
   it('should update form field when changed', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -124,7 +193,7 @@ describe('OrganisationDetailsTab', () => {
       .mockResolvedValueOnce(mockOrganisationData)
       .mockResolvedValueOnce({ success: true });
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -152,7 +221,7 @@ describe('OrganisationDetailsTab', () => {
       .mockResolvedValueOnce(mockOrganisationData)
       .mockResolvedValueOnce({ success: true });
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -171,7 +240,7 @@ describe('OrganisationDetailsTab', () => {
       .mockResolvedValueOnce(mockOrganisationData)
       .mockRejectedValueOnce({ message: 'Failed to save' });
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -188,7 +257,7 @@ describe('OrganisationDetailsTab', () => {
   it('should disable organisation name field', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('test-org')).toBeInTheDocument();
@@ -201,7 +270,7 @@ describe('OrganisationDetailsTab', () => {
   it('should update nested settings fields', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('London')).toBeInTheDocument();
@@ -216,7 +285,7 @@ describe('OrganisationDetailsTab', () => {
   it('should render currency dropdown with options', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();
@@ -229,7 +298,7 @@ describe('OrganisationDetailsTab', () => {
   it('should render language dropdown with options', async () => {
     mockExecute.mockResolvedValueOnce(mockOrganisationData);
 
-    render(<OrganisationDetailsTab />);
+    renderWithI18n(<OrganisationDetailsTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Test Organisation')).toBeInTheDocument();

@@ -18,6 +18,12 @@ export interface Organisation {
   settings: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
+  organizationType?: {
+    id: string;
+    name: string;
+    displayName: string;
+    defaultLocale: string;
+  };
 }
 
 interface OrganisationContextType {
