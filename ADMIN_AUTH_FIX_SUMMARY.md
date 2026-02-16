@@ -1,19 +1,43 @@
 # Admin Authentication 401 Fix - Summary
 
 ## Issue
-Super admin interface was returning 401 Unauthorized when accessing `/api/admin/organization-types` and other backend endpoints after successful Keycloak login.
+Super admin interface was returning 401 Unauthorized and CORS errors when accessing `/api/admin/organization-types` and other backend endpoints after successful Keycloak login.
 
-## Root Cause
-**Token Audience Mismatch**:
+## Root Causes
+**1. Token Audience Mismatch**:
 - Admin frontend uses Keycloak client: `aws-framework-admin`
 - Backend expects tokens with audience: `aws-framework-backend`
 - Tokens from admin client only had audience `aws-framework-admin`
 - Backend auth middleware rejected tokens without matching audience
 
+**2. CORS Configuration Missing**:
+- Admin frontend runs on `http://localhost:5174`
+- Backend CORS was only allowing `http://localhost:3000`
+- Browser blocked requests due to CORS policy violation
+
 ## Solution Applied
+**Fix 1: Configure Keycloak Audience Mapper** (requires manual configuration)
 Configure Keycloak to add the backend client as an audience in tokens issued by the admin client.
 
+**Fix 2: Update Backend CORS Configuration** (completed)
+Added admin frontend URL to allowed origins in backend `.env` file.
+
 ## Implementation Steps
+
+### Part A: Backend CORS Configuration (Completed)
+
+Updated `packages/backend/.env` to include admin frontend origin:
+```env
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5174,http://localhost:5175
+```
+
+After updating, restart the backend server:
+```bash
+cd packages/backend
+npm run dev
+```
+
+### Part B: Keycloak Audience Mapper (Manual Configuration Required)
 
 ### 1. Access Keycloak Admin Console
 ```

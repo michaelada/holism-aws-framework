@@ -11,6 +11,7 @@ import {
   AssignRoleDto,
   Role,
   CreateRoleDto,
+  Organization,
 } from '../types/admin.types';
 
 export class ApiError extends Error {
@@ -184,5 +185,12 @@ export class AdminApiService {
 
   async deleteRole(id: string): Promise<void> {
     await this.client.delete(`/api/admin/roles/${id}`);
+  }
+
+  // Organization API Methods
+
+  async getOrganizationsByType(typeId: string): Promise<Organization[]> {
+    const response = await this.client.get<Organization[]>(`/api/admin/organizations/by-type/${typeId}`);
+    return response.data;
   }
 }

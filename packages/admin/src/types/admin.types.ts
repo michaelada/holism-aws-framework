@@ -103,3 +103,23 @@ export interface CreateRoleDto {
   description?: string;
   permissions?: string[];
 }
+
+// Organization Types
+export interface Organization {
+  id: string;
+  organizationTypeId: string;
+  name: string;
+  displayName: string;
+  domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
+  status: 'active' | 'inactive' | 'blocked';
+  enabledCapabilities?: string[];
+  currency?: string;
+  language?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}

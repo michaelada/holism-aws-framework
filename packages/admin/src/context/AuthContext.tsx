@@ -82,6 +82,9 @@ export function AuthProvider({ children, keycloakConfig }: AuthProviderProps) {
         setToken(kc.token || null);
         setUserName(kc.tokenParsed?.preferred_username || null);
         
+        // Expose Keycloak instance globally for API interceptors
+        (window as any).keycloak = kc;
+        
         // Check if user has admin role
         const hasAdminRole = kc.hasRealmRole('admin');
         setIsAdmin(hasAdminRole);

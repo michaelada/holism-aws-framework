@@ -137,7 +137,7 @@ This implementation plan breaks down the i18n feature into discrete, incremental
   - Test date and currency formatting utilities work correctly
   - Ask user if any questions or issues arise
 
-- [-] 6. Pilot Module: Translate Events module
+- [x] 6. Pilot Module: Translate Events module
   - [x] 6.1 Extract Events module text into translation keys
     - Audit all text in packages/orgadmin-events/src/
     - Create translation keys following naming convention: events.{feature}.{element}

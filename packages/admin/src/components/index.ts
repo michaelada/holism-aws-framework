@@ -9,3 +9,4 @@ export { PasswordResetDialog } from './PasswordResetDialog';
 export { RoleList } from './RoleList';
 export { RoleForm } from './RoleForm';
 export { RetryDialog } from './RetryDialog';
+export { OrganizationList } from './OrganizationList';

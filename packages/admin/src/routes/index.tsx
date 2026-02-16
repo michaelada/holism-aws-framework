@@ -12,6 +12,7 @@ import { EditOrganizationTypePage } from '../pages/EditOrganizationTypePage';
 import { OrganizationsPage } from '../pages/OrganizationsPage';
 import { OrganizationDetailsPage } from '../pages/OrganizationDetailsPage';
 import { EditOrganizationPage } from '../pages/EditOrganizationPage';
+import { CreateOrganizationPage } from '../pages/CreateOrganizationPage';
 
 // Placeholder components - will be implemented in later tasks
 function DashboardPage() {
@@ -81,6 +82,14 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrganizationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/organizations/new"
+        element={
+          <ProtectedRoute>
+            <CreateOrganizationPage />
           </ProtectedRoute>
         }
       />

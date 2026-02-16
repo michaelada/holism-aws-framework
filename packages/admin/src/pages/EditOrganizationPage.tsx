@@ -46,6 +46,9 @@ export const EditOrganizationPage: React.FC = () => {
   const [formData, setFormData] = useState<UpdateOrganizationDto>({
     displayName: '',
     domain: '',
+    contactName: '',
+    contactEmail: '',
+    contactMobile: '',
     status: 'active',
     enabledCapabilities: [],
   });
@@ -72,6 +75,9 @@ export const EditOrganizationPage: React.FC = () => {
       setFormData({
         displayName: orgData.displayName,
         domain: orgData.domain || '',
+        contactName: orgData.contactName || '',
+        contactEmail: orgData.contactEmail || '',
+        contactMobile: orgData.contactMobile || '',
         status: orgData.status,
         enabledCapabilities: orgData.enabledCapabilities,
       });
@@ -163,6 +169,31 @@ export const EditOrganizationPage: React.FC = () => {
                 value={formData.domain}
                 onChange={(e) => handleChange('domain', e.target.value)}
                 placeholder="e.g., riverside-swim.example.com"
+                fullWidth
+              />
+
+              <TextField
+                label="Contact Name"
+                value={formData.contactName}
+                onChange={(e) => handleChange('contactName', e.target.value)}
+                placeholder="Primary contact person"
+                fullWidth
+              />
+
+              <TextField
+                label="Contact Email"
+                type="email"
+                value={formData.contactEmail}
+                onChange={(e) => handleChange('contactEmail', e.target.value)}
+                placeholder="contact@example.com"
+                fullWidth
+              />
+
+              <TextField
+                label="Contact Mobile Number"
+                value={formData.contactMobile}
+                onChange={(e) => handleChange('contactMobile', e.target.value)}
+                placeholder="+44 7700 900000"
                 fullWidth
               />
 

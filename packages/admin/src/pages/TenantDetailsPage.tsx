@@ -4,10 +4,11 @@ import { Box, Typography, Button, Paper, Tabs, Tab, CircularProgress } from '@mu
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { UserList } from '../components/UserList';
 import { UserForm } from '../components/UserForm';
+import { OrganizationList } from '../components/OrganizationList';
 import { PasswordResetDialog } from '../components/PasswordResetDialog';
 import { RetryDialog } from '../components/RetryDialog';
 import { useApi } from '../context';
-import { Tenant, User, CreateUserDto, UpdateUserDto, Role, ResetPasswordDto } from '../types/admin.types';
+import { Tenant, User, CreateUserDto, UpdateUserDto, Role, ResetPasswordDto, Organization } from '../types/admin.types';
 import { useApiCall } from '../hooks/useApiCall';
 
 type ViewMode = 'list' | 'create' | 'edit';
@@ -44,10 +45,12 @@ export function TenantDetailsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [organizationsLoading, setOrganizationsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [retryDialog, setRetryDialog] = useState<{
     open: boolean;
@@ -127,11 +130,39 @@ export function TenantDetailsPage() {
     }
   }, [api, executeApiCall]);
 
+  const loadOrganizations = useCallback(async () => {
+    if (!tenantId) return;
+
+    setOrganizationsLoading(true);
+    const result = await executeApiCall(
+      () => api.getOrganizationsByType(tenantId),
+      {
+        errorMessage: 'Failed to load organizations',
+        showSuccess: false,
+      }
+    );
+    setOrganizationsLoading(false);
+
+    if (result.data) {
+      setOrganizations(result.data);
+    } else if (result.isNetworkError && result.retry) {
+      setRetryDialog({
+        open: true,
+        message: 'Unable to load organizations. Please check your connection.',
+        onRetry: async () => {
+          setRetryDialog((prev) => ({ ...prev, open: false }));
+          await loadOrganizations();
+        },
+      });
+    }
+  }, [tenantId, api, executeApiCall]);
+
   useEffect(() => {
     loadTenant();
     loadUsers();
     loadRoles();
-  }, [loadTenant, loadUsers, loadRoles]);
+    loadOrganizations();
+  }, [loadTenant, loadUsers, loadRoles, loadOrganizations]);
 
   const handleBack = () => {
     navigate('/tenants');
@@ -168,7 +199,7 @@ export function TenantDetailsPage() {
     // Ensure the user is assigned to this tenant
     const userData: CreateUserDto = {
       ...(data as CreateUserDto),
-      tenantIds: [tenantId],
+      tenantId: tenantId,
     };
 
     setSubmitting(true);
@@ -278,6 +309,22 @@ export function TenantDetailsPage() {
     }
   };
 
+  const handleViewOrganization = (organization: Organization) => {
+    // Navigate to organization details page (if it exists)
+    // For now, we'll just log it
+    console.log('View organization:', organization);
+    // TODO: Implement navigation to organization details page
+    // navigate(`/organizations/${organization.id}`);
+  };
+
+  const handleEditOrganization = (organization: Organization) => {
+    // Navigate to organization edit page (if it exists)
+    // For now, we'll just log it
+    console.log('Edit organization:', organization);
+    // TODO: Implement navigation to organization edit page
+    // navigate(`/organizations/${organization.id}/edit`);
+  };
+
   if (loading && !tenant) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -312,6 +359,7 @@ export function TenantDetailsPage() {
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={handleTabChange}>
             <Tab label="Overview" />
+            <Tab label="Organizations" />
             <Tab label="Members" />
           </Tabs>
         </Box>
@@ -365,6 +413,22 @@ export function TenantDetailsPage() {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
+          <Box>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">
+                Organizations ({organizations.length})
+              </Typography>
+            </Box>
+            <OrganizationList
+              organizations={organizations}
+              loading={organizationsLoading}
+              onViewClick={handleViewOrganization}
+              onEditClick={handleEditOrganization}
+            />
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
           {viewMode === 'list' && (
             <UserList
               users={users}

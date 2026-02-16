@@ -32,6 +32,9 @@ export interface Organization {
   name: string;
   displayName: string;
   domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   status: 'active' | 'inactive' | 'blocked';
   currency: string;
   language: string;
@@ -100,12 +103,18 @@ export interface CreateOrganizationDto {
   name: string;
   displayName: string;
   domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   enabledCapabilities: string[];
 }
 
 export interface UpdateOrganizationDto {
   displayName?: string;
   domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   status?: 'active' | 'inactive' | 'blocked';
   enabledCapabilities?: string[];
   settings?: Record<string, any>;

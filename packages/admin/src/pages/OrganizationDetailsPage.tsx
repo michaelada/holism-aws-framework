@@ -310,6 +310,30 @@ export const OrganizationDetailsPage: React.FC = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="textSecondary">
+                  Contact Name
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  {organization.contactName || 'Not set'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Contact Email
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  {organization.contactEmail || 'Not set'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Contact Mobile
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  {organization.contactMobile || 'Not set'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" color="textSecondary">
                   Currency
                 </Typography>
                 <Typography variant="body1" gutterBottom>

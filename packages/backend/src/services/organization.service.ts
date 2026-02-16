@@ -27,6 +27,9 @@ export class OrganizationService {
       name: row.name,
       displayName: row.display_name,
       domain: row.domain,
+      contactName: row.contact_name,
+      contactEmail: row.contact_email,
+      contactMobile: row.contact_mobile,
       status: row.status,
       currency: row.currency,
       language: row.language,
@@ -235,9 +238,10 @@ export class OrganizationService {
       // Insert into database
       const result = await db.query(
         `INSERT INTO organizations 
-         (organization_type_id, keycloak_group_id, name, display_name, domain, status,
+         (organization_type_id, keycloak_group_id, name, display_name, domain, 
+          contact_name, contact_email, contact_mobile, status,
           currency, language, enabled_capabilities, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING *`,
         [
           data.organizationTypeId,
@@ -245,6 +249,9 @@ export class OrganizationService {
           data.name,
           data.displayName,
           data.domain,
+          data.contactName,
+          data.contactEmail,
+          data.contactMobile,
           data.status || 'active',
           data.currency || orgType.currency,
           data.language || orgType.language,
@@ -266,102 +273,114 @@ export class OrganizationService {
    * Update organization
    */
   async updateOrganization(
-    id: string,
-    data: UpdateOrganizationDto,
-    userId?: string
-  ): Promise<Organization> {
-    try {
-      // Validate capabilities if provided
-      if (data.enabledCapabilities) {
-        const org = await this.getOrganizationById(id);
-        if (!org) {
+      id: string,
+      data: UpdateOrganizationDto,
+      userId?: string
+    ): Promise<Organization> {
+      try {
+        // Validate capabilities if provided
+        if (data.enabledCapabilities) {
+          const org = await this.getOrganizationById(id);
+          if (!org) {
+            throw new Error('Organization not found');
+          }
+
+          const orgType = await organizationTypeService.getOrganizationTypeById(
+            org.organizationTypeId
+          );
+
+          if (data.enabledCapabilities.length > 0) {
+            const valid = await capabilityService.validateCapabilities(data.enabledCapabilities);
+            if (!valid) {
+              throw new Error('Invalid capabilities provided');
+            }
+
+            // Ensure capabilities are subset of org type defaults
+            const invalidCaps = data.enabledCapabilities.filter(
+              cap => !orgType!.defaultCapabilities.includes(cap)
+            );
+            if (invalidCaps.length > 0) {
+              throw new Error(
+                `Capabilities not in organization type defaults: ${invalidCaps.join(', ')}`
+              );
+            }
+          }
+        }
+
+        const updates: string[] = ['updated_at = NOW()'];
+        const values: any[] = [];
+        let paramCount = 1;
+
+        if (data.displayName !== undefined) {
+          updates.push(`display_name = $${paramCount++}`);
+          values.push(data.displayName);
+        }
+        if (data.domain !== undefined) {
+          updates.push(`domain = $${paramCount++}`);
+          values.push(data.domain);
+        }
+        if (data.contactName !== undefined) {
+          updates.push(`contact_name = $${paramCount++}`);
+          values.push(data.contactName);
+        }
+        if (data.contactEmail !== undefined) {
+          updates.push(`contact_email = $${paramCount++}`);
+          values.push(data.contactEmail);
+        }
+        if (data.contactMobile !== undefined) {
+          updates.push(`contact_mobile = $${paramCount++}`);
+          values.push(data.contactMobile);
+        }
+        if (data.status !== undefined) {
+          updates.push(`status = $${paramCount++}`);
+          values.push(data.status);
+        }
+        if (data.currency !== undefined) {
+          updates.push(`currency = $${paramCount++}`);
+          values.push(data.currency);
+        }
+        if (data.language !== undefined) {
+          updates.push(`language = $${paramCount++}`);
+          values.push(data.language);
+        }
+        if (data.enabledCapabilities !== undefined) {
+          updates.push(`enabled_capabilities = $${paramCount++}`);
+          values.push(JSON.stringify(data.enabledCapabilities));
+        }
+        if (data.settings !== undefined) {
+          updates.push(`settings = $${paramCount++}`);
+          values.push(JSON.stringify(data.settings));
+        }
+
+        if (userId) {
+          updates.push(`updated_by = $${paramCount++}`);
+          values.push(userId);
+        }
+
+        values.push(id);
+
+        const result = await db.query(
+          `UPDATE organizations 
+           SET ${updates.join(', ')}
+           WHERE id = $${paramCount}
+           RETURNING *`,
+          values
+        );
+
+        if (result.rows.length === 0) {
           throw new Error('Organization not found');
         }
 
-        const orgType = await organizationTypeService.getOrganizationTypeById(
-          org.organizationTypeId
-        );
+        // Invalidate cache
+        cacheService.delete(`org:${id}`);
 
-        if (data.enabledCapabilities.length > 0) {
-          const valid = await capabilityService.validateCapabilities(data.enabledCapabilities);
-          if (!valid) {
-            throw new Error('Invalid capabilities provided');
-          }
-
-          // Ensure capabilities are subset of org type defaults
-          const invalidCaps = data.enabledCapabilities.filter(
-            cap => !orgType!.defaultCapabilities.includes(cap)
-          );
-          if (invalidCaps.length > 0) {
-            throw new Error(
-              `Capabilities not in organization type defaults: ${invalidCaps.join(', ')}`
-            );
-          }
-        }
+        logger.info(`Organization updated: ${id}`);
+        return this.rowToOrganization(result.rows[0]);
+      } catch (error) {
+        logger.error('Error updating organization:', error);
+        throw error;
       }
-
-      const updates: string[] = ['updated_at = NOW()'];
-      const values: any[] = [];
-      let paramCount = 1;
-
-      if (data.displayName !== undefined) {
-        updates.push(`display_name = $${paramCount++}`);
-        values.push(data.displayName);
-      }
-      if (data.domain !== undefined) {
-        updates.push(`domain = $${paramCount++}`);
-        values.push(data.domain);
-      }
-      if (data.status !== undefined) {
-        updates.push(`status = $${paramCount++}`);
-        values.push(data.status);
-      }
-      if (data.currency !== undefined) {
-        updates.push(`currency = $${paramCount++}`);
-        values.push(data.currency);
-      }
-      if (data.language !== undefined) {
-        updates.push(`language = $${paramCount++}`);
-        values.push(data.language);
-      }
-      if (data.enabledCapabilities !== undefined) {
-        updates.push(`enabled_capabilities = $${paramCount++}`);
-        values.push(JSON.stringify(data.enabledCapabilities));
-      }
-      if (data.settings !== undefined) {
-        updates.push(`settings = $${paramCount++}`);
-        values.push(JSON.stringify(data.settings));
-      }
-
-      if (userId) {
-        updates.push(`updated_by = $${paramCount++}`);
-        values.push(userId);
-      }
-
-      values.push(id);
-
-      const result = await db.query(
-        `UPDATE organizations 
-         SET ${updates.join(', ')}
-         WHERE id = $${paramCount}
-         RETURNING *`,
-        values
-      );
-
-      if (result.rows.length === 0) {
-        throw new Error('Organization not found');
-      }
-
-      // Invalidate cache
-      cacheService.delete(`org:${id}`);
-
-      logger.info(`Organization updated: ${id}`);
-      return this.rowToOrganization(result.rows[0]);
-    } catch (error) {
-      logger.error('Error updating organization:', error);
-      throw error;
     }
-  }
 
   /**
    * Delete organization and Keycloak group

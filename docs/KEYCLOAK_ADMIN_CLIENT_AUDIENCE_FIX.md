@@ -1,12 +1,37 @@
 # Keycloak Admin Client Audience Configuration
 
 ## Problem
-The admin frontend (`aws-framework-admin` client) was getting 401 Unauthorized errors when calling backend APIs because the JWT tokens didn't include the backend client (`aws-framework-backend`) in the audience claim.
+The admin frontend (`aws-framework-admin` client) was getting 401 Unauthorized and CORS errors when calling backend APIs:
 
-## Solution
+1. **Token Audience Issue**: JWT tokens didn't include the backend client (`aws-framework-backend`) in the audience claim
+2. **CORS Issue**: Backend wasn't configured to allow requests from the admin frontend origin (`http://localhost:5174`)
+
+## Solutions
+
+### Solution 1: Backend CORS Configuration (Completed)
+Updated backend `.env` to include admin frontend in allowed origins.
+
+### Solution 2: Keycloak Audience Mapper (Manual Configuration Required)
 Configure the admin client to include the backend client as an audience in issued tokens.
 
 ## Configuration Steps
+
+### Step 1: Backend CORS Configuration (Completed)
+
+The backend has been updated to allow requests from the admin frontend:
+
+```env
+# packages/backend/.env
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5174,http://localhost:5175
+```
+
+Restart the backend server after this change:
+```bash
+cd packages/backend
+npm run dev
+```
+
+### Step 2: Keycloak Audience Mapper (Manual Configuration Required)
 
 ### 1. Access Keycloak Admin Console
 - URL: `http://localhost:8080`
@@ -87,6 +112,24 @@ After configuration, the access token should contain:
 
 ## Troubleshooting
 
+### Still Getting CORS Errors
+
+1. **Verify backend .env configuration**
+   ```bash
+   # In packages/backend/.env
+   ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5174,http://localhost:5175
+   ```
+
+2. **Restart backend server**
+   ```bash
+   cd packages/backend
+   npm run dev
+   ```
+
+3. **Check browser console**
+   - Look for CORS-specific error messages
+   - Verify the request origin matches one in ALLOWED_ORIGINS
+
 ### Still Getting 401 Errors
 
 1. **Clear browser cache and cookies**
@@ -104,6 +147,7 @@ After configuration, the access token should contain:
    KEYCLOAK_CLIENT_ID=aws-framework-backend
    KEYCLOAK_REALM=aws-framework
    KEYCLOAK_URL=http://localhost:8080
+   ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5174,http://localhost:5175
    ```
 
 4. **Restart backend server**

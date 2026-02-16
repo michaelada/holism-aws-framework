@@ -84,6 +84,9 @@ export interface Organization {
   name: string;
   displayName: string;
   domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   status: OrganizationStatus;
   currency?: string;
   language?: string;
@@ -110,6 +113,9 @@ export interface CreateOrganizationDto {
   name: string;
   displayName: string;
   domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   status?: OrganizationStatus;
   enabledCapabilities: string[];
   currency?: string;
@@ -119,6 +125,9 @@ export interface CreateOrganizationDto {
 export interface UpdateOrganizationDto {
   displayName?: string;
   domain?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactMobile?: string;
   status?: OrganizationStatus;
   enabledCapabilities?: string[];
   currency?: string;

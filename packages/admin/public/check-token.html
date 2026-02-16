@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Checker - Admin Interface</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .token-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .token-info pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        ul {
+            line-height: 1.8;
+        }
+        .highlight {
+            background: #ffeb3b;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Token Diagnostic Tool</h1>
+        <p class="subtitle">Check if your Keycloak token has the correct audience for the backend API</p>
+
+        <div id="status"></div>
+
+        <div class="section">
+            <h2>Instructions</h2>
+            <ol>
+                <li>Make sure you're logged into the admin interface at <a href="http://localhost:5174" target="_blank">http://localhost:5174</a></li>
+                <li>Click the "Check Token" button below</li>
+                <li>Review the token information to see if it includes the backend audience</li>
+            </ol>
+        </div>
+
+        <button id="checkBtn" onclick="checkToken()">Check Token</button>
+        <button onclick="window.location.href='http://localhost:5174'">Go to Admin Interface</button>
+
+        <div id="results"></div>
+
+        <div class="section">
+            <h2>What to Look For</h2>
+            <p>Your token should include:</p>
+            <ul>
+                <li><strong>Audience (aud):</strong> Should contain both <span class="highlight">aws-framework-admin</span> AND <span class="highlight">aws-framework-backend</span></li>
+                <li><strong>Issuer (iss):</strong> Should be <code>http://localhost:8080/realms/aws-framework</code></li>
+                <li><strong>Roles:</strong> Should include <code>admin</code> or <code>super-admin</code></li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <strong>💡 If the backend audience is missing:</strong>
+            <p>You need to configure the Keycloak audience mapper. Follow the instructions in <code>SUPER_ADMIN_FIX_INSTRUCTIONS.md</code></p>
+        </div>
+    </div>
+
+    <script>
+        function checkToken() {
+            const resultsDiv = document.getElementById('results');
+            const statusDiv = document.getElementById('status');
+            const checkBtn = document.getElementById('checkBtn');
+            
+            // Try to get keycloak from window
+            const keycloak = window.opener?.keycloak || window.parent?.keycloak;
+            
+            if (!keycloak || !keycloak.token) {
+                statusDiv.innerHTML = '<div class="status error">❌ No Keycloak token found. Please log in to the admin interface first.</div>';
+                resultsDiv.innerHTML = '';
+                return;
+            }
+
+            try {
+                // Decode the token
+                const tokenParts = keycloak.token.split('.');
+                if (tokenParts.length !== 3) {
+                    throw new Error('Invalid token format');
+                }
+
+                const payload = JSON.parse(atob(tokenParts[1]));
+                
+                // Check for required fields
+                const hasBackendAudience = Array.isArray(payload.aud) 
+                    ? payload.aud.includes('aws-framework-backend')
+                    : payload.aud === 'aws-framework-backend';
+                
+                const hasAdminAudience = Array.isArray(payload.aud)
+                    ? payload.aud.includes('aws-framework-admin')
+                    : payload.aud === 'aws-framework-admin';
+
+                const hasAdminRole = payload.realm_access?.roles?.includes('admin') || 
+                                    payload.realm_access?.roles?.includes('super-admin');
+
+                // Display status
+                if (hasBackendAudience && hasAdminAudience && hasAdminRole) {
+                    statusDiv.innerHTML = '<div class="status success">✅ Token is correctly configured! The backend should accept this token.</div>';
+                } else if (!hasBackendAudience) {
+                    statusDiv.innerHTML = '<div class="status error">❌ Token is missing the backend audience. You need to configure the Keycloak audience mapper.</div>';
+                } else if (!hasAdminRole) {
+                    statusDiv.innerHTML = '<div class="status warning">⚠️ Token is missing admin role. Check your Keycloak user roles.</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="status warning">⚠️ Token configuration issue detected.</div>';
+                }
+
+                // Display token details
+                resultsDiv.innerHTML = `
+                    <div class="section">
+                        <h2>Token Analysis</h2>
+                        
+                        <h3>Audience (aud)</h3>
+                        <div class="token-info">
+                            <pre>${JSON.stringify(payload.aud, null, 2)}</pre>
+                        </div>
+                        <p>
+                            ${hasAdminAudience ? '✅' : '❌'} Contains <code>aws-framework-admin</code><br>
+                            ${hasBackendAudience ? '✅' : '❌'} Contains <code>aws-framework-backend</code>
+                        </p>
+
+                        <h3>Issuer (iss)</h3>
+                        <div class="token-info">
+                            <pre>${payload.iss}</pre>
+                        </div>
+
+                        <h3>Roles</h3>
+                        <div class="token-info">
+                            <pre>${JSON.stringify(payload.realm_access?.roles || [], null, 2)}</pre>
+                        </div>
+                        <p>
+                            ${hasAdminRole ? '✅' : '❌'} Has admin or super-admin role
+                        </p>
+
+                        <h3>User Info</h3>
+                        <div class="token-info">
+                            <pre>Email: ${payload.email || 'N/A'}
+Username: ${payload.preferred_username || 'N/A'}
+Subject: ${payload.sub || 'N/A'}</pre>
+                        </div>
+
+                        <h3>Token Expiration</h3>
+                        <div class="token-info">
+                            <pre>Expires: ${new Date(payload.exp * 1000).toLocaleString()}
+Issued: ${new Date(payload.iat * 1000).toLocaleString()}</pre>
+                        </div>
+
+                        <details>
+                            <summary><strong>Full Token Payload (click to expand)</strong></summary>
+                            <div class="token-info">
+                                <pre>${JSON.stringify(payload, null, 2)}</pre>
+                            </div>
+                        </details>
+                    </div>
+                `;
+
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">❌ Error decoding token: ' + error.message + '</div>';
+                resultsDiv.innerHTML = '';
+            }
+        }
+
+        // Auto-check if opened from admin interface
+        window.addEventListener('load', () => {
+            const keycloak = window.opener?.keycloak || window.parent?.keycloak;
+            if (keycloak && keycloak.token) {
+                checkToken();
+            }
+        });
+    </script>
+</body>
+</html>
