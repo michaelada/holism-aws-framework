@@ -248,13 +248,13 @@ router.delete(
 router.get(
   '/application-fields',
   authenticateToken(),
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     try {
       const fields = await applicationFormService.getAllApplicationFields();
-      res.json(fields);
+      return res.json(fields);
     } catch (error) {
       logger.error('Error in GET /application-fields:', error);
-      res.status(500).json({ error: 'Failed to fetch application fields' });
+      return res.status(500).json({ error: 'Failed to fetch application fields' });
     }
   }
 );
@@ -288,13 +288,13 @@ router.post(
       }
 
       const field = await applicationFormService.createApplicationField(req.body);
-      res.status(201).json(field);
+      return res.status(201).json(field);
     } catch (error) {
       logger.error('Error in POST /application-fields:', error);
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        return res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Failed to create application field' });
+        return res.status(500).json({ error: 'Failed to create application field' });
       }
     }
   }
@@ -377,13 +377,13 @@ router.put(
       }
 
       const field = await applicationFormService.updateApplicationField(id, req.body);
-      res.json(field);
+      return res.json(field);
     } catch (error) {
       logger.error('Error in PUT /application-fields/:id:', error);
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        return res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Failed to update application field' });
+        return res.status(500).json({ error: 'Failed to update application field' });
       }
     }
   }

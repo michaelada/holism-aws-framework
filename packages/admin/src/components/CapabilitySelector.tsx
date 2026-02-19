@@ -8,6 +8,7 @@ import {
   Typography,
   Chip,
   Paper,
+  Button,
 } from '@mui/material';
 import type { Capability } from '../types/organization.types';
 
@@ -33,8 +34,28 @@ export const CapabilitySelector: React.FC<CapabilitySelectorProps> = ({
     onChange(newSelected);
   };
 
-  const coreServices = capabilities.filter((c) => c.category === 'core-service');
-  const additionalFeatures = capabilities.filter((c) => c.category === 'additional-feature');
+  // Filter capabilities to only show those in defaultCapabilities
+  const availableCapabilities = defaultCapabilities.length > 0
+    ? capabilities.filter((c) => defaultCapabilities.includes(c.name))
+    : capabilities;
+
+  const coreServices = availableCapabilities.filter((c) => c.category === 'core-service');
+  const additionalFeatures = availableCapabilities.filter((c) => c.category === 'additional-feature');
+
+  // Check if all available capabilities are selected
+  const allSelected = availableCapabilities.length > 0 && 
+    availableCapabilities.every((c) => selectedCapabilities.includes(c.name));
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deselect all
+      onChange([]);
+    } else {
+      // Select all available capabilities
+      const allCapabilityNames = availableCapabilities.map((c) => c.name);
+      onChange(allCapabilityNames);
+    }
+  };
 
   const renderCapabilityGroup = (title: string, caps: Capability[]) => (
     <Box mb={3}>
@@ -79,9 +100,19 @@ export const CapabilitySelector: React.FC<CapabilitySelectorProps> = ({
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Capabilities
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">
+          Capabilities
+        </Typography>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={handleSelectAll}
+          disabled={disabled || availableCapabilities.length === 0}
+        >
+          {allSelected ? 'Deselect All' : 'Select All'}
+        </Button>
+      </Box>
       {renderCapabilityGroup('Core Services', coreServices)}
       {renderCapabilityGroup('Additional Features', additionalFeatures)}
     </Paper>

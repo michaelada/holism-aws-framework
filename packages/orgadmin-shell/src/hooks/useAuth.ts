@@ -196,8 +196,13 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
   }, [keycloak]);
 
   const logout = useCallback(() => {
-    keycloak?.logout();
-  }, [keycloak]);
+    if (authDisabled) {
+      // In dev mode with auth disabled, just reload the page
+      window.location.href = '/';
+    } else {
+      keycloak?.logout();
+    }
+  }, [keycloak, authDisabled]);
 
   const getToken = useCallback(() => {
     return keycloak?.token || null;

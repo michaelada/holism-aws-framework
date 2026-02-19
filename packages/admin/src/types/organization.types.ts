@@ -46,6 +46,7 @@ export interface Organization {
   updatedBy?: string;
   adminUserCount?: number;
   accountUserCount?: number;
+  paymentMethods?: any[]; // OrgPaymentMethodData[]
 }
 
 export interface OrganizationUser {
@@ -89,6 +90,7 @@ export interface CreateOrganizationTypeDto {
 }
 
 export interface UpdateOrganizationTypeDto {
+  name?: string;
   displayName?: string;
   description?: string;
   currency?: string;
@@ -107,9 +109,11 @@ export interface CreateOrganizationDto {
   contactEmail?: string;
   contactMobile?: string;
   enabledCapabilities: string[];
+  enabledPaymentMethods?: string[];
 }
 
 export interface UpdateOrganizationDto {
+  name?: string;
   displayName?: string;
   domain?: string;
   contactName?: string;
@@ -117,6 +121,7 @@ export interface UpdateOrganizationDto {
   contactMobile?: string;
   status?: 'active' | 'inactive' | 'blocked';
   enabledCapabilities?: string[];
+  enabledPaymentMethods?: string[];
   settings?: Record<string, any>;
 }
 

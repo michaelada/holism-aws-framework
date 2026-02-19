@@ -51,7 +51,8 @@ export const EditOrganizationTypePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
-  const [formData, setFormData] = useState<UpdateOrganizationTypeDto>({
+  const [formData, setFormData] = useState<UpdateOrganizationTypeDto & { name?: string }>({
+    name: '',
     displayName: '',
     description: '',
     currency: 'USD',
@@ -77,6 +78,7 @@ export const EditOrganizationTypePage: React.FC = () => {
       ]);
       setCapabilities(capsData);
       setFormData({
+        name: typeData.name,
         displayName: typeData.displayName,
         description: typeData.description,
         currency: typeData.currency,
@@ -108,7 +110,15 @@ export const EditOrganizationTypePage: React.FC = () => {
     }
   };
 
-  const handleChange = (field: keyof UpdateOrganizationTypeDto, value: any) => {
+  const handleChange = (field: string, value: any) => {
+    // Sanitize name field to be URL-friendly
+    if (field === 'name') {
+      value = value
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    }
     setFormData({ ...formData, [field]: value });
   };
 
@@ -133,6 +143,16 @@ export const EditOrganizationTypePage: React.FC = () => {
         <CardContent>
           <form onSubmit={handleSubmit}>
             <Box display="flex" flexDirection="column" gap={3}>
+              <TextField
+                label="Name (URL-friendly)"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="e.g., swimming-club"
+                helperText="Lowercase, no spaces, hyphens allowed"
+                required
+                fullWidth
+              />
+
               <TextField
                 label="Display Name"
                 value={formData.displayName}
@@ -221,12 +241,7 @@ export const EditOrganizationTypePage: React.FC = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={
-                    submitting ||
-                    !formData.displayName ||
-                    !formData.defaultCapabilities ||
-                    formData.defaultCapabilities.length === 0
-                  }
+                  disabled={submitting}
                 >
                   {submitting ? <CircularProgress size={24} /> : 'Update Organisation Type'}
                 </Button>

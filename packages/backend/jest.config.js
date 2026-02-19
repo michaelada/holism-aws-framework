@@ -20,12 +20,13 @@ module.exports = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   moduleNameMapper: {
     '^exceljs$': '<rootDir>/__mocks__/exceljs.js',
+    '^isomorphic-dompurify$': '<rootDir>/__mocks__/isomorphic-dompurify.js',
   },
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(isomorphic-dompurify|@exodus/bytes)/)',
+    'node_modules/(?!(isomorphic-dompurify|@exodus/bytes|html-encoding-sniffer|whatwg-encoding|jsdom)/)',
   ],
   // Set up test environment before running tests
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest.setup.js'],

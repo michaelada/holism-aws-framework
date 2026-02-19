@@ -14,6 +14,7 @@ import type {
   CreateOrganizationAdminRoleDto,
   UpdateOrganizationAdminRoleDto,
 } from '../types/organization.types';
+import type { PaymentMethod } from '../types/payment-method.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -251,4 +252,10 @@ export const deleteOrganizationRole = async (
   await apiClient.delete(
     `/api/admin/organizations/${organizationId}/roles/${roleId}`
   );
+};
+
+// Payment Methods
+export const getPaymentMethods = async (): Promise<PaymentMethod[]> => {
+  const response = await apiClient.get('/api/admin/payment-methods');
+  return response.data;
 };

@@ -229,7 +229,7 @@ describe('ApplicationFormService', () => {
         name: 'first_name',
         label: 'First Name',
         datatype: 'text',
-        required: true,
+        validation: { required: true },
       });
 
       expect(result.name).toBe('first_name');
@@ -259,7 +259,7 @@ describe('ApplicationFormService', () => {
         name: 'resume',
         label: 'Resume',
         datatype: 'document_upload',
-        required: true,
+        validation: { required: true },
         allowedFileTypes: ['application/pdf', 'application/msword'],
         maxFileSize: 5242880,
       });
@@ -276,7 +276,7 @@ describe('ApplicationFormService', () => {
           name: 'resume',
           label: 'Resume',
           datatype: 'document_upload',
-          required: true,
+          validation: { required: true },
           maxFileSize: 5242880,
         })
       ).rejects.toThrow('document_upload field must have allowedFileTypes');
@@ -289,7 +289,7 @@ describe('ApplicationFormService', () => {
           name: 'resume',
           label: 'Resume',
           datatype: 'document_upload',
-          required: true,
+          validation: { required: true },
           allowedFileTypes: ['application/pdf'],
         })
       ).rejects.toThrow('document_upload field must have maxFileSize');

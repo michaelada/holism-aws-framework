@@ -19,6 +19,7 @@ import {
   getOrganizationById,
   getOrganizationTypes,
   getCapabilities,
+  getPaymentMethods,
   updateOrganization,
 } from '../services/organizationApi';
 import type {
@@ -27,8 +28,10 @@ import type {
   Capability,
   UpdateOrganizationDto,
 } from '../types/organization.types';
+import type { PaymentMethod } from '../types/payment-method.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
+import { PaymentMethodSelector } from '../components/PaymentMethodSelector';
 
 const STATUSES = ['active', 'inactive', 'blocked'];
 
@@ -40,10 +43,12 @@ export const EditOrganizationPage: React.FC = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState<UpdateOrganizationDto>({
+  const [formData, setFormData] = useState<UpdateOrganizationDto & { name?: string }>({
+    name: '',
     displayName: '',
     domain: '',
     contactName: '',
@@ -51,6 +56,7 @@ export const EditOrganizationPage: React.FC = () => {
     contactMobile: '',
     status: 'active',
     enabledCapabilities: [],
+    enabledPaymentMethods: [],
   });
 
   useEffect(() => {
@@ -64,15 +70,24 @@ export const EditOrganizationPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const [orgData, typesData, capsData] = await Promise.all([
+      const [orgData, typesData, capsData, paymentMethodsData] = await Promise.all([
         getOrganizationById(id),
         getOrganizationTypes(),
         getCapabilities(),
+        getPaymentMethods(),
       ]);
       setOrganization(orgData);
       setOrganizationTypes(typesData);
       setCapabilities(capsData);
+      setPaymentMethods(paymentMethodsData);
+      
+      // Extract payment method names from organization's payment methods
+      const selectedPaymentMethodNames = orgData.paymentMethods
+        ? orgData.paymentMethods.map((pm: any) => pm.paymentMethod?.name || pm.name).filter(Boolean)
+        : [];
+      
       setFormData({
+        name: orgData.name,
         displayName: orgData.displayName,
         domain: orgData.domain || '',
         contactName: orgData.contactName || '',
@@ -80,6 +95,7 @@ export const EditOrganizationPage: React.FC = () => {
         contactMobile: orgData.contactMobile || '',
         status: orgData.status,
         enabledCapabilities: orgData.enabledCapabilities,
+        enabledPaymentMethods: selectedPaymentMethodNames,
       });
     } catch (error) {
       showError('Failed to load organisation');
@@ -105,7 +121,15 @@ export const EditOrganizationPage: React.FC = () => {
     }
   };
 
-  const handleChange = (field: keyof UpdateOrganizationDto, value: any) => {
+  const handleChange = (field: string, value: any) => {
+    // Sanitize name field to be URL-friendly
+    if (field === 'name') {
+      value = value
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    }
     setFormData({ ...formData, [field]: value });
   };
 
@@ -142,10 +166,12 @@ export const EditOrganizationPage: React.FC = () => {
             <Box display="flex" flexDirection="column" gap={3}>
               <TextField
                 label="Name (URL-friendly)"
-                value={organization.name}
-                disabled
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="e.g., my-org"
+                helperText="Lowercase, no spaces, hyphens allowed"
+                required
                 fullWidth
-                helperText="Organisation name cannot be changed"
               />
 
               <TextField
@@ -221,9 +247,23 @@ export const EditOrganizationPage: React.FC = () => {
                 </Typography>
                 <CapabilitySelector
                   capabilities={capabilities}
-                  selectedCapabilities={formData.enabledCapabilities}
+                  selectedCapabilities={formData.enabledCapabilities || []}
                   onChange={(selected) => handleChange('enabledCapabilities', selected)}
                   defaultCapabilities={orgType?.defaultCapabilities}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Payment Methods
+                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Select which payment methods this organisation should have access to.
+                </Typography>
+                <PaymentMethodSelector
+                  paymentMethods={paymentMethods}
+                  selectedPaymentMethods={formData.enabledPaymentMethods || []}
+                  onChange={(selected) => handleChange('enabledPaymentMethods', selected)}
                 />
               </Box>
 
@@ -238,11 +278,7 @@ export const EditOrganizationPage: React.FC = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={
-                    submitting ||
-                    !formData.displayName ||
-                    formData.enabledCapabilities.length === 0
-                  }
+                  disabled={submitting}
                 >
                   {submitting ? <CircularProgress size={24} /> : 'Update Organisation'}
                 </Button>

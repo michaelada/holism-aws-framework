@@ -2,6 +2,8 @@ import { OrganizationService } from '../organization.service';
 import { capabilityService } from '../capability.service';
 import { organizationTypeService } from '../organization-type.service';
 import { KeycloakAdminService } from '../keycloak-admin.service';
+import { orgPaymentMethodDataService } from '../org-payment-method-data.service';
+import cacheService from '../cache.service';
 import { db } from '../../database/pool';
 import { logger } from '../../config/logger';
 
@@ -10,6 +12,8 @@ jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 jest.mock('../capability.service');
 jest.mock('../organization-type.service');
+jest.mock('../org-payment-method-data.service');
+jest.mock('../cache.service');
 
 describe('OrganizationService', () => {
   let service: OrganizationService;
@@ -18,6 +22,8 @@ describe('OrganizationService', () => {
   const mockDb = db as jest.Mocked<typeof db>;
   const mockCapabilityService = capabilityService as jest.Mocked<typeof capabilityService>;
   const mockOrgTypeService = organizationTypeService as jest.Mocked<typeof organizationTypeService>;
+  const mockOrgPaymentMethodDataService = orgPaymentMethodDataService as jest.Mocked<typeof orgPaymentMethodDataService>;
+  const mockCacheService = cacheService as jest.Mocked<typeof cacheService>;
 
   beforeEach(() => {
     // Create mock Keycloak client
@@ -40,6 +46,17 @@ describe('OrganizationService', () => {
     } as any;
 
     service = new OrganizationService(mockKcAdmin);
+    
+    // Mock payment method service methods
+    mockOrgPaymentMethodDataService.initializeDefaultPaymentMethods = jest.fn().mockResolvedValue(undefined);
+    mockOrgPaymentMethodDataService.syncOrgPaymentMethods = jest.fn().mockResolvedValue(undefined);
+    mockOrgPaymentMethodDataService.getOrgPaymentMethods = jest.fn().mockResolvedValue([]);
+    
+    // Mock cache service methods
+    mockCacheService.get = jest.fn().mockReturnValue(null);
+    mockCacheService.set = jest.fn();
+    mockCacheService.delete = jest.fn();
+    
     jest.clearAllMocks();
   });
 
@@ -114,6 +131,8 @@ describe('OrganizationService', () => {
       mockDb.query
         .mockResolvedValueOnce({ rows: [mockOrg] } as any)
         .mockResolvedValueOnce({ rows: [{ admin_user_count: '3', account_user_count: '15' }] } as any);
+
+      mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       const result = await service.getOrganizationById('1');
 
@@ -268,17 +287,22 @@ describe('OrganizationService', () => {
     it('should update organization fields', async () => {
       const mockOrg = {
         id: '1',
-        organizationTypeId: 'type-1',
-        keycloakGroupId: 'kc-group-1',
+        organization_type_id: 'type-1',
+        keycloak_group_id: 'kc-group-1',
         name: 'org-1',
-        displayName: 'Organization 1',
-        status: 'active' as const,
+        display_name: 'Organization 1',
+        status: 'active',
         currency: 'USD',
         language: 'en',
-        enabledCapabilities: ['event-management'],
+        enabled_capabilities: ['event-management'],
         settings: {},
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date(),
+        created_by: null,
+        updated_by: null,
+        org_type_name: 'swimming-club',
+        org_type_display_name: 'Swimming Club',
+        org_type_default_locale: 'en-GB'
       };
 
       const mockOrgType = {
@@ -294,13 +318,19 @@ describe('OrganizationService', () => {
         updatedAt: new Date()
       };
 
+      const mockUpdated = {
+        ...mockOrg,
+        display_name: 'Updated Name'
+      };
+
       mockDb.query
-        .mockResolvedValueOnce({ rows: [mockOrg] } as any) // getOrganizationById
-        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats
-        .mockResolvedValueOnce({ rows: [{ ...mockOrg, display_name: 'Updated Name' }] } as any); // update
+        .mockResolvedValueOnce({ rows: [mockOrg] } as any) // getOrganizationById query
+        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats in getOrganizationById
+        .mockResolvedValueOnce({ rows: [mockUpdated] } as any); // update query
 
       mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
       mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       const result = await service.updateOrganization('1', {
         displayName: 'Updated Name',
@@ -311,6 +341,8 @@ describe('OrganizationService', () => {
     });
 
     it('should throw error when organization not found', async () => {
+      // Mock for updateOrganization - it doesn't call getOrganizationById first
+      // It just tries to update directly
       mockDb.query.mockResolvedValue({ rows: [] } as any);
 
       await expect(service.updateOrganization('999', { displayName: 'Test' }))
@@ -335,7 +367,10 @@ describe('OrganizationService', () => {
         created_at: new Date(),
         updated_at: new Date(),
         created_by: null,
-        updated_by: null
+        updated_by: null,
+        org_type_name: 'swimming-club',
+        org_type_display_name: 'Swimming Club',
+        org_type_default_locale: 'en-GB'
       };
 
       mockDb.query
@@ -343,6 +378,8 @@ describe('OrganizationService', () => {
         .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats for getOrganizationById
         .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats check in deleteOrganization
         .mockResolvedValueOnce({ rowCount: 1 } as any); // delete
+
+      mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       await service.deleteOrganization('1');
 
@@ -367,13 +404,18 @@ describe('OrganizationService', () => {
         created_at: new Date(),
         updated_at: new Date(),
         created_by: null,
-        updated_by: null
+        updated_by: null,
+        org_type_name: 'swimming-club',
+        org_type_display_name: 'Swimming Club',
+        org_type_default_locale: 'en-GB'
       };
 
       mockDb.query
-        .mockResolvedValueOnce({ rows: [mockOrg] } as any)
-        .mockResolvedValueOnce({ rows: [{ admin_user_count: '5', account_user_count: '0' }] } as any)
-        .mockResolvedValueOnce({ rows: [{ admin_user_count: '5', account_user_count: '0' }] } as any);
+        .mockResolvedValueOnce({ rows: [mockOrg] } as any) // getOrganizationById query
+        .mockResolvedValueOnce({ rows: [{ admin_user_count: '5', account_user_count: '0' }] } as any) // stats in getOrganizationById
+        .mockResolvedValueOnce({ rows: [{ admin_user_count: '5', account_user_count: '0' }] } as any); // stats check in deleteOrganization
+
+      mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       await expect(service.deleteOrganization('1'))
         .rejects.toThrow('Cannot delete organization with existing users');
@@ -395,16 +437,20 @@ describe('OrganizationService', () => {
         created_at: new Date(),
         updated_at: new Date(),
         created_by: null,
-        updated_by: null
+        updated_by: null,
+        org_type_name: 'swimming-club',
+        org_type_display_name: 'Swimming Club',
+        org_type_default_locale: 'en-GB'
       };
 
       mockDb.query
-        .mockResolvedValueOnce({ rows: [mockOrg] } as any)
-        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any)
-        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any)
-        .mockResolvedValueOnce({ rowCount: 1 } as any);
+        .mockResolvedValueOnce({ rows: [mockOrg] } as any) // getOrganizationById query
+        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats in getOrganizationById
+        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats check in deleteOrganization
+        .mockResolvedValueOnce({ rowCount: 1 } as any); // delete query
 
       mockClient.groups.del.mockRejectedValue(new Error('Keycloak error'));
+      mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       await service.deleteOrganization('1');
 
@@ -456,7 +502,10 @@ describe('OrganizationService', () => {
         created_at: new Date(),
         updated_at: new Date(),
         created_by: null,
-        updated_by: null
+        updated_by: null,
+        org_type_name: 'swimming-club',
+        org_type_display_name: 'Swimming Club',
+        org_type_default_locale: 'en-GB'
       };
 
       const mockUpdated = {
@@ -465,9 +514,9 @@ describe('OrganizationService', () => {
       };
 
       mockDb.query
-        .mockResolvedValueOnce({ rows: [mockOrg] } as any) // getOrganizationById
-        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats
-        .mockResolvedValueOnce({ rows: [mockUpdated] } as any); // update
+        .mockResolvedValueOnce({ rows: [mockOrg] } as any) // getOrganizationById query
+        .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any) // stats in getOrganizationById
+        .mockResolvedValueOnce({ rows: [mockUpdated] } as any); // update query
 
       mockOrgTypeService.getOrganizationTypeById.mockResolvedValue({
         id: 'type-1',
@@ -483,6 +532,7 @@ describe('OrganizationService', () => {
       });
 
       mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       const result = await service.updateOrganizationCapabilities(
         '1',
@@ -491,6 +541,344 @@ describe('OrganizationService', () => {
       );
 
       expect(result.enabledCapabilities).toEqual(['event-management', 'memberships']);
+    });
+  });
+
+  describe('Payment Method Integration', () => {
+    const mockOrgType = {
+      id: 'type-1',
+      name: 'swimming-club',
+      displayName: 'Swimming Club',
+      currency: 'USD',
+      language: 'en',
+      defaultCapabilities: ['event-management'],
+      defaultLocale: 'en-GB',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    describe('createOrganization with payment methods', () => {
+      it('should initialize default payment methods', async () => {
+        const newOrg = {
+          organizationTypeId: 'type-1',
+          name: 'test-org',
+          displayName: 'Test Organization',
+          enabledCapabilities: []
+        };
+
+        mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
+        mockClient.groups.find.mockResolvedValue([]);
+        mockClient.groups.create.mockResolvedValue({ id: 'type-group-id' });
+        mockClient.groups.findOne
+          .mockResolvedValueOnce({ id: 'type-group-id', name: 'swimming-club' })
+          .mockResolvedValueOnce({ id: 'org-group-id', name: 'test-org' });
+        mockClient.groups.createChildGroup
+          .mockResolvedValueOnce({ id: 'org-group-id' })
+          .mockResolvedValueOnce({ id: 'admins-group-id' })
+          .mockResolvedValueOnce({ id: 'members-group-id' });
+
+        const mockCreated = {
+          id: 'new-org-id',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'org-group-id',
+          name: 'test-org',
+          display_name: 'Test Organization',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null
+        };
+
+        mockDb.query.mockResolvedValue({ rows: [mockCreated] } as any);
+
+        await service.createOrganization(newOrg);
+
+        expect(mockOrgPaymentMethodDataService.initializeDefaultPaymentMethods).toHaveBeenCalledWith('new-org-id');
+      });
+
+      it('should sync additional payment methods when provided', async () => {
+        const newOrg = {
+          organizationTypeId: 'type-1',
+          name: 'test-org',
+          displayName: 'Test Organization',
+          enabledCapabilities: [],
+          enabledPaymentMethods: ['stripe', 'helix-pay']
+        };
+
+        mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
+        mockClient.groups.find.mockResolvedValue([]);
+        mockClient.groups.create.mockResolvedValue({ id: 'type-group-id' });
+        mockClient.groups.findOne
+          .mockResolvedValueOnce({ id: 'type-group-id', name: 'swimming-club' })
+          .mockResolvedValueOnce({ id: 'org-group-id', name: 'test-org' });
+        mockClient.groups.createChildGroup
+          .mockResolvedValueOnce({ id: 'org-group-id' })
+          .mockResolvedValueOnce({ id: 'admins-group-id' })
+          .mockResolvedValueOnce({ id: 'members-group-id' });
+
+        const mockCreated = {
+          id: 'new-org-id',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'org-group-id',
+          name: 'test-org',
+          display_name: 'Test Organization',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null
+        };
+
+        mockDb.query.mockResolvedValue({ rows: [mockCreated] } as any);
+
+        await service.createOrganization(newOrg);
+
+        expect(mockOrgPaymentMethodDataService.initializeDefaultPaymentMethods).toHaveBeenCalledWith('new-org-id');
+        expect(mockOrgPaymentMethodDataService.syncOrgPaymentMethods).toHaveBeenCalledWith(
+          'new-org-id',
+          ['stripe', 'helix-pay']
+        );
+      });
+
+      it('should not fail organization creation if payment method initialization fails', async () => {
+        const newOrg = {
+          organizationTypeId: 'type-1',
+          name: 'test-org',
+          displayName: 'Test Organization',
+          enabledCapabilities: []
+        };
+
+        mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
+        mockClient.groups.find.mockResolvedValue([]);
+        mockClient.groups.create.mockResolvedValue({ id: 'type-group-id' });
+        mockClient.groups.findOne
+          .mockResolvedValueOnce({ id: 'type-group-id', name: 'swimming-club' })
+          .mockResolvedValueOnce({ id: 'org-group-id', name: 'test-org' });
+        mockClient.groups.createChildGroup
+          .mockResolvedValueOnce({ id: 'org-group-id' })
+          .mockResolvedValueOnce({ id: 'admins-group-id' })
+          .mockResolvedValueOnce({ id: 'members-group-id' });
+
+        const mockCreated = {
+          id: 'new-org-id',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'org-group-id',
+          name: 'test-org',
+          display_name: 'Test Organization',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null
+        };
+
+        mockDb.query.mockResolvedValue({ rows: [mockCreated] } as any);
+        mockOrgPaymentMethodDataService.initializeDefaultPaymentMethods.mockRejectedValue(
+          new Error('Payment method initialization failed')
+        );
+
+        const result = await service.createOrganization(newOrg);
+
+        expect(result.id).toBe('new-org-id');
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error initializing payment methods'),
+          expect.any(Error)
+        );
+      });
+    });
+
+    describe('updateOrganization with payment methods', () => {
+      it('should sync payment methods when enabledPaymentMethods is provided', async () => {
+        const mockOrg = {
+          id: '1',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'kc-group-1',
+          name: 'org-1',
+          display_name: 'Organization 1',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null
+        };
+
+        mockDb.query.mockResolvedValue({ rows: [mockOrg] } as any);
+
+        await service.updateOrganization('1', {
+          enabledPaymentMethods: ['stripe', 'helix-pay']
+        });
+
+        expect(mockOrgPaymentMethodDataService.syncOrgPaymentMethods).toHaveBeenCalledWith(
+          '1',
+          ['stripe', 'helix-pay']
+        );
+      });
+
+      it('should not sync payment methods when enabledPaymentMethods is not provided', async () => {
+        const mockOrg = {
+          id: '1',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'kc-group-1',
+          name: 'org-1',
+          display_name: 'Organization 1',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null
+        };
+
+        mockDb.query.mockResolvedValue({ rows: [mockOrg] } as any);
+
+        await service.updateOrganization('1', {
+          displayName: 'Updated Name'
+        });
+
+        expect(mockOrgPaymentMethodDataService.syncOrgPaymentMethods).not.toHaveBeenCalled();
+      });
+
+      it('should not fail organization update if payment method sync fails', async () => {
+        const mockOrg = {
+          id: '1',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'kc-group-1',
+          name: 'org-1',
+          display_name: 'Organization 1',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null
+        };
+
+        mockDb.query.mockResolvedValue({ rows: [mockOrg] } as any);
+        mockOrgPaymentMethodDataService.syncOrgPaymentMethods.mockRejectedValue(
+          new Error('Payment method sync failed')
+        );
+
+        const result = await service.updateOrganization('1', {
+          enabledPaymentMethods: ['stripe']
+        });
+
+        expect(result.id).toBe('1');
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error syncing payment methods'),
+          expect.any(Error)
+        );
+      });
+    });
+
+    describe('getOrganizationById with payment methods', () => {
+      it('should include payment methods in response', async () => {
+        const mockOrg = {
+          id: '1',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'kc-group-1',
+          name: 'org-1',
+          display_name: 'Organization 1',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null,
+          org_type_name: 'swimming-club',
+          org_type_display_name: 'Swimming Club',
+          org_type_default_locale: 'en-GB'
+        };
+
+        const mockPaymentMethods = [
+          {
+            id: 'pm-1',
+            organizationId: '1',
+            paymentMethodId: 'method-1',
+            status: 'active' as const,
+            paymentData: {},
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ];
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockOrg] } as any)
+          .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any);
+
+        mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue(mockPaymentMethods);
+
+        const result = await service.getOrganizationById('1');
+
+        expect(result).not.toBeNull();
+        expect(result?.paymentMethods).toEqual(mockPaymentMethods);
+        expect(mockOrgPaymentMethodDataService.getOrgPaymentMethods).toHaveBeenCalledWith('1');
+      });
+
+      it('should continue without payment methods if fetch fails', async () => {
+        const mockOrg = {
+          id: '1',
+          organization_type_id: 'type-1',
+          keycloak_group_id: 'kc-group-1',
+          name: 'org-1',
+          display_name: 'Organization 1',
+          status: 'active',
+          currency: 'USD',
+          language: 'en',
+          enabled_capabilities: [],
+          settings: {},
+          created_at: new Date(),
+          updated_at: new Date(),
+          created_by: null,
+          updated_by: null,
+          org_type_name: 'swimming-club',
+          org_type_display_name: 'Swimming Club',
+          org_type_default_locale: 'en-GB'
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockOrg] } as any)
+          .mockResolvedValueOnce({ rows: [{ admin_user_count: '0', account_user_count: '0' }] } as any);
+
+        mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockRejectedValue(
+          new Error('Payment methods fetch failed')
+        );
+
+        const result = await service.getOrganizationById('1');
+
+        expect(result).not.toBeNull();
+        expect(result?.paymentMethods).toEqual([]);
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error fetching payment methods'),
+          expect.any(Error)
+        );
+      });
     });
   });
 });

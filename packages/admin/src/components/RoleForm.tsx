@@ -17,20 +17,17 @@ interface RoleFormProps {
 }
 
 interface FormData {
-  name: string;
   displayName: string;
   description: string;
 }
 
 interface FormErrors {
-  name?: string;
   displayName?: string;
   description?: string;
 }
 
 export function RoleForm({ loading, onSubmit, onCancel }: RoleFormProps) {
   const [formData, setFormData] = useState<FormData>({
-    name: '',
     displayName: '',
     description: '',
   });
@@ -39,12 +36,6 @@ export function RoleForm({ loading, onSubmit, onCancel }: RoleFormProps) {
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (!/^[a-z0-9-_]+$/.test(formData.name)) {
-      newErrors.name = 'Name must contain only lowercase letters, numbers, hyphens, and underscores';
-    }
 
     if (!formData.displayName.trim()) {
       newErrors.displayName = 'Display name is required';
@@ -77,8 +68,15 @@ export function RoleForm({ loading, onSubmit, onCancel }: RoleFormProps) {
       return;
     }
 
+    // Auto-generate name from displayName
+    const generatedName = formData.displayName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
     const submitData: CreateRoleDto = {
-      name: formData.name,
+      name: generatedName,
       displayName: formData.displayName,
       description: formData.description || undefined,
     };
@@ -95,23 +93,11 @@ export function RoleForm({ loading, onSubmit, onCancel }: RoleFormProps) {
       <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
         <TextField
           fullWidth
-          label="Name"
-          value={formData.name}
-          onChange={handleChange('name')}
-          error={!!errors.name}
-          helperText={errors.name || 'Unique identifier (lowercase, numbers, hyphens, underscores only)'}
-          disabled={loading}
-          required
-          sx={{ mb: 2 }}
-        />
-
-        <TextField
-          fullWidth
           label="Display Name"
           value={formData.displayName}
           onChange={handleChange('displayName')}
           error={!!errors.displayName}
-          helperText={errors.displayName || 'Human-readable name'}
+          helperText={errors.displayName || 'Human-readable name for the role'}
           disabled={loading}
           required
           sx={{ mb: 2 }}

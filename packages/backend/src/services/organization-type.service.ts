@@ -206,6 +206,10 @@ export class OrganizationTypeService {
       const values: any[] = [];
       let paramCount = 1;
 
+      if (data.name !== undefined) {
+        updates.push(`name = $${paramCount++}`);
+        values.push(data.name);
+      }
       if (data.displayName !== undefined) {
         updates.push(`display_name = $${paramCount++}`);
         values.push(data.displayName);

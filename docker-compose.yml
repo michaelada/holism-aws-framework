@@ -31,6 +31,8 @@ services:
       KC_HTTP_ENABLED: true
     ports:
       - "8080:8080"
+    volumes:
+      - ./infrastructure/keycloak/themes:/opt/keycloak/themes
     command: start-dev
     depends_on:
       postgres:
@@ -65,7 +67,7 @@ services:
       KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
       KEYCLOAK_ADMIN_REALM: aws-framework
       # Development: Disable authentication
-      DISABLE_AUTH: true
+      # DISABLE_AUTH: true
     ports:
       - "3000:3000"
     depends_on:

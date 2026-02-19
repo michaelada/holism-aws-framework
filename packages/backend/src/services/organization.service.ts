@@ -10,6 +10,7 @@ import { capabilityService } from './capability.service';
 import { organizationTypeService } from './organization-type.service';
 import { KeycloakAdminService } from './keycloak-admin.service';
 import cacheService from './cache.service';
+import { orgPaymentMethodDataService } from './org-payment-method-data.service';
 
 export class OrganizationService {
   private readonly CACHE_TTL = 300000; // 5 minutes
@@ -123,6 +124,15 @@ export class OrganizationService {
       const org = this.rowToOrganization(result.rows[0]);
       const stats = await this.getOrganizationStats(id);
       
+      // Get payment methods for the organization
+      let paymentMethods: any[] = [];
+      try {
+        paymentMethods = await orgPaymentMethodDataService.getOrgPaymentMethods(id);
+      } catch (paymentError) {
+        logger.error(`Error fetching payment methods for organization ${id}:`, paymentError);
+        // Continue without payment methods if fetch fails
+      }
+      
       const fullOrg = {
         ...org,
         organizationType: result.rows[0].org_type_name ? {
@@ -132,7 +142,8 @@ export class OrganizationService {
           defaultLocale: result.rows[0].org_type_default_locale || 'en-GB'
         } : undefined,
         adminUserCount: stats.adminUserCount,
-        accountUserCount: stats.accountUserCount
+        accountUserCount: stats.accountUserCount,
+        paymentMethods
       };
 
       // Cache the result
@@ -262,7 +273,27 @@ export class OrganizationService {
       );
 
       logger.info(`Organization created: ${data.name} with Keycloak group: ${orgGroup!.id}`);
-      return this.rowToOrganization(result.rows[0]);
+      
+      const createdOrg = this.rowToOrganization(result.rows[0]);
+      
+      // Initialize default payment methods
+      try {
+        await orgPaymentMethodDataService.initializeDefaultPaymentMethods(createdOrg.id);
+        
+        // Sync additional payment methods if provided
+        if (data.enabledPaymentMethods && data.enabledPaymentMethods.length > 0) {
+          await orgPaymentMethodDataService.syncOrgPaymentMethods(
+            createdOrg.id,
+            data.enabledPaymentMethods
+          );
+        }
+      } catch (paymentError) {
+        logger.error(`Error initializing payment methods for organization ${createdOrg.id}:`, paymentError);
+        // Don't fail organization creation if payment method initialization fails
+        // The organization is still created, but payment methods may need to be configured manually
+      }
+      
+      return createdOrg;
     } catch (error) {
       logger.error('Error creating organization:', error);
       throw error;
@@ -311,6 +342,10 @@ export class OrganizationService {
         const values: any[] = [];
         let paramCount = 1;
 
+        if (data.name !== undefined) {
+          updates.push(`name = $${paramCount++}`);
+          values.push(data.name);
+        }
         if (data.displayName !== undefined) {
           updates.push(`display_name = $${paramCount++}`);
           values.push(data.displayName);
@@ -371,11 +406,26 @@ export class OrganizationService {
           throw new Error('Organization not found');
         }
 
+        const updatedOrg = this.rowToOrganization(result.rows[0]);
+
+        // Sync payment methods if provided
+        if (data.enabledPaymentMethods !== undefined) {
+          try {
+            await orgPaymentMethodDataService.syncOrgPaymentMethods(
+              id,
+              data.enabledPaymentMethods
+            );
+          } catch (paymentError) {
+            logger.error(`Error syncing payment methods for organization ${id}:`, paymentError);
+            // Don't fail organization update if payment method sync fails
+          }
+        }
+
         // Invalidate cache
         cacheService.delete(`org:${id}`);
 
         logger.info(`Organization updated: ${id}`);
-        return this.rowToOrganization(result.rows[0]);
+        return updatedOrg;
       } catch (error) {
         logger.error('Error updating organization:', error);
         throw error;

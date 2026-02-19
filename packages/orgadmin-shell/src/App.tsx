@@ -71,7 +71,7 @@ const LoadingScreen: React.FC = () => (
 /**
  * Error screen component
  */
-const ErrorScreen: React.FC<{ error: string }> = ({ error }) => (
+const ErrorScreen: React.FC<{ error: string; onLogout: () => void }> = ({ error, onLogout }) => (
   <Box
     sx={{
       display: 'flex',
@@ -89,6 +89,21 @@ const ErrorScreen: React.FC<{ error: string }> = ({ error }) => (
     <Typography variant="body1" textAlign="center" maxWidth="600px">
       {error}
     </Typography>
+    <button
+      onClick={onLogout}
+      style={{
+        marginTop: '1rem',
+        padding: '0.75rem 1.5rem',
+        fontSize: '1rem',
+        cursor: 'pointer',
+        backgroundColor: '#009087',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '0.5rem',
+      }}
+    >
+      Return to Login
+    </button>
   </Box>
 );
 
@@ -212,7 +227,7 @@ const App: React.FC = () => {
 
   // Error state
   if (error) {
-    return <ErrorScreen error={error} />;
+    return <ErrorScreen error={error} onLogout={logout} />;
   }
 
   // Access denied if not org admin

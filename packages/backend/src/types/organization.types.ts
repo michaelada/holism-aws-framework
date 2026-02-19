@@ -2,6 +2,8 @@
  * Organization Management Types
  */
 
+import { OrgPaymentMethodData } from './payment-method.types';
+
 // Permission levels for capabilities
 export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
 
@@ -65,6 +67,7 @@ export interface CreateOrganizationTypeDto {
 }
 
 export interface UpdateOrganizationTypeDto {
+  name?: string;
   displayName?: string;
   description?: string;
   currency?: string;
@@ -106,6 +109,7 @@ export interface Organization {
   };
   adminUserCount?: number;
   accountUserCount?: number;
+  paymentMethods?: OrgPaymentMethodData[];
 }
 
 export interface CreateOrganizationDto {
@@ -120,9 +124,11 @@ export interface CreateOrganizationDto {
   enabledCapabilities: string[];
   currency?: string;
   language?: string;
+  enabledPaymentMethods?: string[];
 }
 
 export interface UpdateOrganizationDto {
+  name?: string;
   displayName?: string;
   domain?: string;
   contactName?: string;
@@ -133,6 +139,7 @@ export interface UpdateOrganizationDto {
   currency?: string;
   language?: string;
   settings?: Record<string, any>;
+  enabledPaymentMethods?: string[];
 }
 
 /**

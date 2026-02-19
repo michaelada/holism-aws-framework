@@ -89,6 +89,14 @@ export const CreateOrganizationTypePage: React.FC = () => {
   };
 
   const handleChange = (field: keyof CreateOrganizationTypeDto, value: any) => {
+    // Sanitize name field to be URL-friendly
+    if (field === 'name') {
+      value = value
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    }
     setFormData({ ...formData, [field]: value });
   };
 

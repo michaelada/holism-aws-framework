@@ -20,14 +20,17 @@ import {
   getOrganizationTypes,
   getCapabilities,
   createOrganization,
+  getPaymentMethods,
 } from '../services/organizationApi';
 import type {
   OrganizationType,
   Capability,
   CreateOrganizationDto,
 } from '../types/organization.types';
+import type { PaymentMethod } from '../types/payment-method.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
+import { PaymentMethodSelector } from '../components/PaymentMethodSelector';
 
 export const CreateOrganizationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -36,6 +39,7 @@ export const CreateOrganizationPage: React.FC = () => {
 
   const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -50,6 +54,7 @@ export const CreateOrganizationPage: React.FC = () => {
     contactEmail: '',
     contactMobile: '',
     enabledCapabilities: [],
+    enabledPaymentMethods: ['pay-offline'], // Default to pay-offline
   });
 
   useEffect(() => {
@@ -69,12 +74,14 @@ export const CreateOrganizationPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [typesData, capsData] = await Promise.all([
+      const [typesData, capsData, paymentMethodsData] = await Promise.all([
         getOrganizationTypes(),
         getCapabilities(),
+        getPaymentMethods(),
       ]);
       setOrganizationTypes(typesData);
       setCapabilities(capsData);
+      setPaymentMethods(paymentMethodsData);
     } catch (error) {
       showError('Failed to load data');
       console.error('Error loading data:', error);
@@ -120,6 +127,14 @@ export const CreateOrganizationPage: React.FC = () => {
   };
 
   const handleChange = (field: keyof CreateOrganizationDto, value: any) => {
+    // Sanitize name field to be URL-friendly
+    if (field === 'name') {
+      value = value
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    }
     setFormData({ ...formData, [field]: value });
   };
 
@@ -176,10 +191,11 @@ export const CreateOrganizationPage: React.FC = () => {
                 <TextField
                   fullWidth
                   required
-                  label="Name"
+                  label="Name (URL-friendly)"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  helperText="Internal name (lowercase, no spaces, e.g., 'my-org')"
+                  placeholder="e.g., my-org"
+                  helperText="Lowercase, no spaces, hyphens allowed"
                 />
               </Grid>
 
@@ -252,6 +268,21 @@ export const CreateOrganizationPage: React.FC = () => {
                   />
                 </Grid>
               )}
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Payment Methods
+                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Select which payment methods this organisation should have access to.
+                  "Pay Offline" is selected by default.
+                </Typography>
+                <PaymentMethodSelector
+                  paymentMethods={paymentMethods}
+                  selectedPaymentMethods={formData.enabledPaymentMethods || []}
+                  onChange={(selected) => handleChange('enabledPaymentMethods', selected)}
+                />
+              </Grid>
             </Grid>
           </CardContent>
         </Card>

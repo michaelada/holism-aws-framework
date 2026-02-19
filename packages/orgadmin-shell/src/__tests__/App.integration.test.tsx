@@ -142,6 +142,7 @@ describe('App Integration Tests', () => {
 
     it('should show error screen when authentication fails', () => {
       const errorMessage = 'Authentication failed';
+      const mockLogout = vi.fn();
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
         loading: false,
         error: errorMessage,
@@ -150,13 +151,21 @@ describe('App Integration Tests', () => {
         organisation: null,
         capabilities: [],
         isOrgAdmin: false,
-        logout: vi.fn(),
+        logout: mockLogout,
       });
 
       render(<App />);
 
       expect(screen.getByText('Authentication Error')).toBeInTheDocument();
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      
+      // Verify logout button is present
+      const logoutButton = screen.getByRole('button', { name: /return to login/i });
+      expect(logoutButton).toBeInTheDocument();
+      
+      // Verify clicking logout calls the logout function
+      logoutButton.click();
+      expect(mockLogout).toHaveBeenCalledTimes(1);
     });
 
     it('should show access denied screen when user is not org admin', () => {

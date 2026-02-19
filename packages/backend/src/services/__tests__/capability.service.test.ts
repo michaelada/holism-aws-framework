@@ -1,18 +1,24 @@
 import { CapabilityService } from '../capability.service';
 import { db } from '../../database/pool';
 import { logger } from '../../config/logger';
+import cacheService from '../cache.service';
 
 // Mock dependencies
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
+jest.mock('../cache.service');
 
 describe('CapabilityService', () => {
   let service: CapabilityService;
   const mockDb = db as jest.Mocked<typeof db>;
+  const mockCache = cacheService as jest.Mocked<typeof cacheService>;
 
   beforeEach(() => {
     service = new CapabilityService();
     jest.clearAllMocks();
+    // Ensure cache returns null by default
+    mockCache.get = jest.fn().mockReturnValue(null);
+    mockCache.set = jest.fn();
   });
 
   describe('getAllCapabilities', () => {
