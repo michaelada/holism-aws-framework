@@ -32,7 +32,6 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import InviteUserDialog from '../components/InviteUserDialog';
 
 interface AccountUser {
   id: string;
@@ -53,7 +52,6 @@ const AccountUsersListPage: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<AccountUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(1);
 
   useEffect(() => {
@@ -96,12 +94,7 @@ const AccountUsersListPage: React.FC = () => {
   };
 
   const handleCreateUser = () => {
-    setCreateDialogOpen(true);
-  };
-
-  const handleCreateSuccess = () => {
-    setCreateDialogOpen(false);
-    loadUsers();
+    navigate('/users/accounts/create');
   };
 
   const handleEditUser = (userId: string) => {
@@ -239,13 +232,6 @@ const AccountUsersListPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      <InviteUserDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-        userType="account"
-      />
     </Box>
   );
 };

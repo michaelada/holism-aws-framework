@@ -75,7 +75,7 @@ export const OrganizationDetailsPage: React.FC = () => {
     lastName: '',
     temporaryPassword: '',
   });
-
+  
   const [roleFormData, setRoleFormData] = useState<CreateOrganizationAdminRoleDto>({
     name: '',
     displayName: '',
@@ -112,45 +112,33 @@ export const OrganizationDetailsPage: React.FC = () => {
     }
   };
 
-  const handleCreateUser = async () => {
-    if (!id) return;
+  const handleUpdateUser = async () => {
+    if (!id || !editingUser) return;
 
     try {
-      if (editingUser) {
-        // Update existing user
-        await updateOrganizationUser(id, editingUser.id, {
-          firstName: userFormData.firstName,
-          lastName: userFormData.lastName,
-          status: editingUser.status,
-        });
+      // Update existing user
+      await updateOrganizationUser(id, editingUser.id, {
+        firstName: userFormData.firstName,
+        lastName: userFormData.lastName,
+        status: editingUser.status,
+      });
 
-        // Sync roles - remove old roles and add new ones
-        const oldRoles = editingUser.roles || [];
-        const rolesToRemove = oldRoles.filter((roleId) => !selectedUserRoles.includes(roleId));
-        const rolesToAdd = selectedUserRoles.filter((roleId) => !oldRoles.includes(roleId));
+      // Sync roles - remove old roles and add new ones
+      const oldRoles = editingUser.roles || [];
+      const rolesToRemove = oldRoles.filter((roleId) => !selectedUserRoles.includes(roleId));
+      const rolesToAdd = selectedUserRoles.filter((roleId) => !oldRoles.includes(roleId));
 
-        // Remove roles that are no longer assigned
-        for (const roleId of rolesToRemove) {
-          await removeRoleFromUser(id, editingUser.id, roleId);
-        }
-
-        // Add new roles
-        for (const roleId of rolesToAdd) {
-          await assignRoleToUser(id, editingUser.id, roleId);
-        }
-
-        showSuccess('User updated successfully');
-      } else {
-        // Create new user
-        const newUser = await createOrganizationAdminUser(id, userFormData);
-        
-        // Assign roles to new user
-        for (const roleId of selectedUserRoles) {
-          await assignRoleToUser(id, newUser.id, roleId);
-        }
-
-        showSuccess('Administrator user created successfully');
+      // Remove roles that are no longer assigned
+      for (const roleId of rolesToRemove) {
+        await removeRoleFromUser(id, editingUser.id, roleId);
       }
+
+      // Add new roles
+      for (const roleId of rolesToAdd) {
+        await assignRoleToUser(id, editingUser.id, roleId);
+      }
+
+      showSuccess('User updated successfully');
       setUserDialogOpen(false);
       setEditingUser(null);
       setSelectedUserRoles([]);
@@ -162,7 +150,7 @@ export const OrganizationDetailsPage: React.FC = () => {
       });
       loadData();
     } catch (error: any) {
-      showError(error.response?.data?.error || `Failed to ${editingUser ? 'update' : 'create'} user`);
+      showError(error.response?.data?.error || 'Failed to update user');
     }
   };
 
@@ -194,23 +182,17 @@ export const OrganizationDetailsPage: React.FC = () => {
     }
   };
 
-  const handleCreateRole = async () => {
-    if (!id) return;
+  const handleUpdateRole = async () => {
+    if (!id || !editingRole) return;
 
     try {
-      if (editingRole) {
-        // Update existing role
-        await updateOrganizationRole(id, editingRole.id, {
-          displayName: roleFormData.displayName,
-          description: roleFormData.description,
-          capabilityPermissions: roleFormData.capabilityPermissions,
-        });
-        showSuccess('Role updated successfully');
-      } else {
-        // Create new role
-        await createOrganizationRole(id, roleFormData);
-        showSuccess('Role created successfully');
-      }
+      // Update existing role
+      await updateOrganizationRole(id, editingRole.id, {
+        displayName: roleFormData.displayName,
+        description: roleFormData.description,
+        capabilityPermissions: roleFormData.capabilityPermissions,
+      });
+      showSuccess('Role updated successfully');
       setRoleDialogOpen(false);
       setEditingRole(null);
       setRoleFormData({
@@ -221,7 +203,7 @@ export const OrganizationDetailsPage: React.FC = () => {
       });
       loadData();
     } catch (error: any) {
-      showError(error.response?.data?.error || `Failed to ${editingRole ? 'update' : 'create'} role`);
+      showError(error.response?.data?.error || 'Failed to update role');
     }
   };
 
@@ -391,7 +373,7 @@ export const OrganizationDetailsPage: React.FC = () => {
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => setUserDialogOpen(true)}
+                  onClick={() => navigate(`/organizations/${id}/users/add`)}
                 >
                   Add Administrator User
                 </Button>
@@ -491,7 +473,7 @@ export const OrganizationDetailsPage: React.FC = () => {
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => setRoleDialogOpen(true)}
+                  onClick={() => navigate(`/organizations/${id}/roles/create`)}
                 >
                   Create Role
                 </Button>
@@ -570,7 +552,7 @@ export const OrganizationDetailsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Create/Edit User Dialog */}
+      {/* Edit User Dialog */}
       <Dialog open={userDialogOpen} onClose={() => {
         setUserDialogOpen(false);
         setEditingUser(null);
@@ -582,7 +564,7 @@ export const OrganizationDetailsPage: React.FC = () => {
           temporaryPassword: '',
         });
       }} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingUser ? 'Edit Administrator User' : 'Add Administrator User'}</DialogTitle>
+        <DialogTitle>Edit Administrator User</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <TextField
@@ -606,18 +588,6 @@ export const OrganizationDetailsPage: React.FC = () => {
               onChange={(e) => setUserFormData({ ...userFormData, lastName: e.target.value })}
               fullWidth
             />
-            {!editingUser && (
-              <TextField
-                label="Temporary Password"
-                type="password"
-                value={userFormData.temporaryPassword}
-                onChange={(e) =>
-                  setUserFormData({ ...userFormData, temporaryPassword: e.target.value })
-                }
-                helperText="User will be required to change on first login"
-                fullWidth
-              />
-            )}
             <RoleSelector
               roles={roles}
               selectedRoleIds={selectedUserRoles}
@@ -639,21 +609,20 @@ export const OrganizationDetailsPage: React.FC = () => {
             });
           }}>Cancel</Button>
           <Button
-            onClick={handleCreateUser}
+            onClick={handleUpdateUser}
             variant="contained"
             disabled={
               !userFormData.email ||
               !userFormData.firstName ||
-              !userFormData.lastName ||
-              (!editingUser && !userFormData.temporaryPassword)
+              !userFormData.lastName
             }
           >
-            {editingUser ? 'Update User' : 'Create User'}
+            Update User
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Create/Edit Role Dialog */}
+      {/* Edit Role Dialog */}
       <Dialog open={roleDialogOpen} onClose={() => {
         setRoleDialogOpen(false);
         setEditingRole(null);
@@ -664,7 +633,7 @@ export const OrganizationDetailsPage: React.FC = () => {
           capabilityPermissions: {},
         });
       }} maxWidth="md" fullWidth>
-        <DialogTitle>{editingRole ? 'Edit Role' : 'Create Role'}</DialogTitle>
+        <DialogTitle>Edit Role</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={3} mt={1}>
             <TextField
@@ -672,9 +641,9 @@ export const OrganizationDetailsPage: React.FC = () => {
               value={roleFormData.name}
               onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
               placeholder="e.g., event-manager"
-              disabled={!!editingRole}
+              disabled
               fullWidth
-              helperText={editingRole ? 'Role name cannot be changed' : ''}
+              helperText="Role name cannot be changed"
             />
             <TextField
               label="Display Name"
@@ -713,11 +682,11 @@ export const OrganizationDetailsPage: React.FC = () => {
             });
           }}>Cancel</Button>
           <Button
-            onClick={handleCreateRole}
+            onClick={handleUpdateRole}
             variant="contained"
             disabled={!roleFormData.name || !roleFormData.displayName}
           >
-            {editingRole ? 'Update Role' : 'Create Role'}
+            Update Role
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '../components';
+import { DashboardPage } from '../pages/DashboardPage';
 import { TenantsPage } from '../pages/TenantsPage';
 import { TenantDetailsPage } from '../pages/TenantDetailsPage';
 import { UsersPage } from '../pages/UsersPage';
@@ -13,16 +14,8 @@ import { OrganizationsPage } from '../pages/OrganizationsPage';
 import { OrganizationDetailsPage } from '../pages/OrganizationDetailsPage';
 import { EditOrganizationPage } from '../pages/EditOrganizationPage';
 import { CreateOrganizationPage } from '../pages/CreateOrganizationPage';
-
-// Placeholder components - will be implemented in later tasks
-function DashboardPage() {
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Admin Dashboard</h1>
-      <p>Welcome to the Admin Portal</p>
-    </div>
-  );
-}
+import { AddOrganizationAdminUserPage } from '../pages/AddOrganizationAdminUserPage';
+import { CreateOrganizationRolePage } from '../pages/CreateOrganizationRolePage';
 
 function NotFoundPage() {
   return (
@@ -98,6 +91,22 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrganizationDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/organizations/:id/users/add"
+        element={
+          <ProtectedRoute>
+            <AddOrganizationAdminUserPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/organizations/:id/roles/create"
+        element={
+          <ProtectedRoute>
+            <CreateOrganizationRolePage />
           </ProtectedRoute>
         }
       />

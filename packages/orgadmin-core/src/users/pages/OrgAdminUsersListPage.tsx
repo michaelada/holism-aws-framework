@@ -32,7 +32,6 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import InviteUserDialog from '../components/InviteUserDialog';
 
 interface OrgAdminUser {
   id: string;
@@ -53,7 +52,6 @@ const OrgAdminUsersListPage: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<OrgAdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
 
   useEffect(() => {
@@ -96,12 +94,7 @@ const OrgAdminUsersListPage: React.FC = () => {
   };
 
   const handleInviteUser = () => {
-    setInviteDialogOpen(true);
-  };
-
-  const handleInviteSuccess = () => {
-    setInviteDialogOpen(false);
-    loadUsers();
+    navigate('/users/admins/invite');
   };
 
   const handleEditUser = (userId: string) => {
@@ -243,13 +236,6 @@ const OrgAdminUsersListPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      <InviteUserDialog
-        open={inviteDialogOpen}
-        onClose={() => setInviteDialogOpen(false)}
-        onSuccess={handleInviteSuccess}
-        userType="admin"
-      />
     </Box>
   );
 };

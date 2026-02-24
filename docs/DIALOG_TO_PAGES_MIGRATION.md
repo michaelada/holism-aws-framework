@@ -94,3 +94,54 @@ All existing tests continue to pass:
 - ✅ 24 test files
 - ✅ 122 tests passed
 - ✅ No unhandled errors
+
+
+---
+
+## Admin UI Migration (Super Admin Portal)
+
+### Organization Creation Dialog to Page
+
+#### Changes Made
+
+**Updated Page:**
+- `packages/admin/src/pages/OrganizationsPage.tsx`
+  - Removed dialog-based organization creation form
+  - Removed unused state: `createDialogOpen`, `formData`, `capabilities`
+  - Removed unused imports: `Dialog`, `DialogTitle`, `DialogContent`, `DialogActions`, `getCapabilities`, `createOrganization`, `Capability`, `CreateOrganizationDto`, `CapabilitySelector`
+  - "Create Organisation" button now navigates to `/organizations/new`
+  - Simplified data loading (no longer fetches capabilities)
+
+**Existing Page (Already Complete):**
+- `packages/admin/src/pages/CreateOrganizationPage.tsx`
+  - Full-featured organization creation page
+  - Organization type selection with default capabilities
+  - Name and display name fields with URL-friendly sanitization
+  - Domain and contact information fields
+  - Capability selector with default pre-selection
+  - Payment method selector (defaults to "pay-offline")
+  - Proper navigation and breadcrumbs
+  - Support for pre-selected organization type via URL parameter
+
+#### User Flow
+1. Navigate to `/organizations`
+2. Click "Create Organisation" → Navigate to `/organizations/new`
+3. Select organization type
+4. Fill in organization details (name, display name, domain, contact info)
+5. Configure capabilities (defaults pre-selected)
+6. Configure payment methods (pay-offline pre-selected)
+7. Submit → Navigate back to `/organizations`
+
+#### Benefits
+- Consistent with other admin UI patterns (roles, users)
+- More space for complex configuration (capabilities, payment methods)
+- Better form organization with grid layout
+- Support for deep linking with pre-selected organization type
+- Clearer separation between list view and creation flow
+
+#### Files Modified
+- `packages/admin/src/pages/OrganizationsPage.tsx` (simplified, removed dialog)
+
+#### Files Already Existing
+- `packages/admin/src/pages/CreateOrganizationPage.tsx` (already complete)
+- `packages/admin/src/routes/index.tsx` (route already registered)

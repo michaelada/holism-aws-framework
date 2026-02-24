@@ -1,0 +1,499 @@
+/**
+ * AWS Framework - Neumorphic Keycloak Theme
+ * Matches the orgadmin UI design system
+ */
+
+:root {
+  /* Primary Colors */
+  --primary-main: #009087;
+  --primary-light: #00b3a8;
+  --primary-dark: #006d66;
+  
+  /* Background Colors */
+  --bg-default: #e8e8e8;
+  --bg-paper: #f5f5f5;
+  
+  /* Text Colors */
+  --text-primary: #090909;
+  --text-secondary: #666666;
+  
+  /* Shadow Colors */
+  --shadow-light: #ffffff;
+  --shadow-dark: #c5c5c5;
+  
+  /* Border Radius */
+  --border-radius: 0.5em;
+  --border-radius-large: 1em;
+}
+
+/* Global Styles */
+body {
+  background-color: var(--bg-default);
+  background-image: none !important;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  color: var(--text-primary);
+}
+
+/* Login Container */
+#kc-container-wrapper {
+  background-color: var(--bg-default);
+}
+
+.login-pf body {
+  background-color: var(--bg-default);
+  background-image: none !important;
+}
+
+html {
+  background-color: var(--bg-default);
+}
+
+/* Card/Form Container */
+
+#kc-content {
+  background-color: var(--bg-default);
+  box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  border-radius: var(--border-radius-large);
+  border: none;
+  padding: 2em;
+  max-width: 450px;
+  margin: 0 auto;
+}
+
+#kc-header-wrapper {
+  padding: 0.5em 0 0em 0;
+}
+
+/* Logo/Header */
+#kc-header {
+  text-align: center;
+  margin-bottom: 2em;
+}
+
+#kc-header-wrapper #kc-header {
+  color: var(--text-primary);
+  font-size: 1.5em;
+  font-weight: 500;
+}
+
+#kc-header-wrapper h1 {
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: none;
+}
+
+/* Logo Styling */
+.kc-logo-wrapper {
+  text-align: center;
+  margin-bottom: 0.5em;
+}
+
+.kc-logo {
+  max-width: 120px;
+  height: auto;
+  display: inline-block;
+  filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+/* Account Login Heading */
+.kc-account-login-heading {
+  text-align: center;
+  color: var(--text-primary);
+  font-size: 1.6em;
+  font-weight: 500;
+  margin: 0 0 0.8em 0;
+  padding: 0;
+  line-height: 1.3;
+}
+
+/* Login Description */
+.kc-login-description {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.2em;
+  font-weight: 400;
+  margin: 0 0 1.5em 0;
+  padding: 0;
+  line-height: 1.5;
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 1.5em;
+}
+
+label {
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 0.5em;
+  display: block;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.8em 1em;
+  background-color: var(--bg-default);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-main);
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light), 0 0 0 2px rgba(0, 144, 135, 0.1);
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="email"]::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Buttons */
+button,
+input[type="submit"],
+.btn,
+#kc-login,
+#kc-form-buttons input[type="submit"] {
+  position: relative;
+  overflow: hidden;
+  padding: 0.7em 1.7em;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: var(--border-radius);
+  background-color: var(--bg-default);
+  color: var(--text-primary);
+  border: 1px solid var(--bg-default);
+  box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  cursor: pointer;
+  transition: all 0.2s ease-in;
+  z-index: 1;
+  text-transform: none;
+}
+
+button::before,
+input[type="submit"]::before,
+.btn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) scaleY(1) scaleX(1.25);
+  top: 100%;
+  width: 140%;
+  height: 180%;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  display: block;
+  transition: all 0.5s 0.1s cubic-bezier(0.55, 0, 0.1, 1);
+  z-index: -1;
+}
+
+button::after,
+input[type="submit"]::after,
+.btn::after {
+  content: "";
+  position: absolute;
+  left: 55%;
+  transform: translateX(-50%) scaleY(1) scaleX(1.45);
+  top: 180%;
+  width: 160%;
+  height: 190%;
+  background-color: var(--primary-main);
+  border-radius: 50%;
+  display: block;
+  transition: all 0.5s 0.1s cubic-bezier(0.55, 0, 0.1, 1);
+  z-index: -1;
+}
+
+button:hover,
+input[type="submit"]:hover,
+.btn:hover {
+  background-color: var(--bg-default);
+  color: #ffffff;
+  border: 1px solid var(--primary-main);
+  box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+}
+
+button:hover::before,
+input[type="submit"]:hover::before,
+.btn:hover::before {
+  top: -35%;
+  background-color: var(--primary-main);
+  transform: translateX(-50%) scaleY(1.3) scaleX(0.8);
+}
+
+button:hover::after,
+input[type="submit"]:hover::after,
+.btn:hover::after {
+  top: -45%;
+  background-color: var(--primary-main);
+  transform: translateX(-50%) scaleY(1.3) scaleX(0.8);
+}
+
+button:active,
+input[type="submit"]:active,
+.btn:active {
+  color: var(--text-secondary);
+  box-shadow: inset 4px 4px 12px var(--shadow-dark), inset -4px -4px 12px var(--shadow-light);
+}
+
+/* Primary Button */
+.btn-primary,
+#kc-form-buttons input[type="submit"] {
+  background-color: var(--bg-default);
+  color: var(--text-primary);
+  border: 1px solid var(--bg-default);
+}
+
+/* Links */
+a {
+  color: var(--primary-main);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5em;
+  accent-color: var(--primary-main);
+}
+
+.checkbox label {
+  display: inline;
+  font-weight: normal;
+}
+
+/* Alert Messages */
+.alert {
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5em;
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+}
+
+.alert-error,
+.alert-danger {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #c62828;
+}
+
+.alert-warning {
+  background-color: #fff3e0;
+  color: #e65100;
+  border-left: 4px solid #e65100;
+}
+
+.alert-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.alert-info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border-left: 4px solid #1565c0;
+}
+
+/* Info Text */
+#kc-info,
+#kc-info-wrapper {
+  margin-top: 2em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--shadow-dark);
+}
+
+#kc-info-wrapper .instruction {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+/* Registration Link */
+#kc-registration {
+  margin-top: 1.5em;
+  text-align: center;
+}
+
+#kc-registration span {
+  color: var(--text-secondary);
+  margin-right: 0.5em;
+}
+
+/* Social Providers */
+#kc-social-providers {
+  margin-top: 2em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--shadow-dark);
+}
+
+#kc-social-providers ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#kc-social-providers li {
+  margin-bottom: 0.8em;
+}
+
+#kc-social-providers button,
+#kc-social-providers a {
+  width: 100%;
+  text-align: center;
+  display: block;
+}
+
+/* Locale Selector */
+#kc-locale {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+}
+
+#kc-locale-dropdown {
+  background-color: var(--bg-default);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+  padding: 0.5em 1em;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* Required Field Indicator */
+.required {
+  color: var(--primary-main);
+}
+
+/* Form Actions */
+#kc-form-options {
+  margin-top: 1em;
+}
+
+#kc-form-buttons {
+  margin-top: 1.5em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #kc-form,
+  #kc-content {
+    padding: 1.5em;
+    max-width: 100%;
+  }
+  
+  #kc-header-wrapper #kc-header {
+    font-size: 1.2em;
+  }
+  
+  button,
+  input[type="submit"],
+  .btn {
+    padding: 0.6em 1.4em;
+    font-size: 0.95rem;
+  }
+}
+
+/* Loading Spinner */
+.kc-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--shadow-dark);
+  border-radius: 50%;
+  border-top-color: var(--primary-main);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Accessibility */
+*:focus-visible {
+  outline: 2px solid var(--primary-main);
+  outline-offset: 2px;
+}
+
+/* Remove default Keycloak styles that conflict */
+.login-pf .container {
+  background-color: transparent;
+  padding: 0;
+}
+
+.login-pf-page .card-pf {
+  background-color: var(--bg-default);
+  border: none;
+}
+
+/* Username/Email Field Icon */
+.pf-c-form-control {
+  background-color: var(--bg-default);
+}
+
+/* Improve spacing */
+#kc-content-wrapper {
+  padding: 0;
+}
+
+#kc-content-wrapper {
+    margin-top: 0;
+}
+
+/* Terms and Conditions */
+#kc-terms-text {
+  background-color: var(--bg-paper);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1em;
+  box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+}
+
+/* OTP/2FA */
+#kc-totp-settings {
+  background-color: var(--bg-paper);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+}
+
+/* Password Requirements */
+.password-requirements {
+  background-color: var(--bg-paper);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin-top: 0.5em;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.password-requirements ul {
+  margin: 0.5em 0 0 1.5em;
+  padding: 0;
+}
+
+.password-requirements li {
+  margin: 0.3em 0;
+}

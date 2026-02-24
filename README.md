@@ -1,4 +1,4 @@
-# AWS Web Application Framework
+# Application Framework
 
 A comprehensive base framework for deploying web applications to AWS with a Metadata Repository System that enables generic CRUD operations and UI components based on object definitions.
 

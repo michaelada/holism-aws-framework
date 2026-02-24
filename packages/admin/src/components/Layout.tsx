@@ -30,9 +30,16 @@ export function Layout({ children, onLogout, userName }: LayoutProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ mr: 4 }}>
-            Admin Portal
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 4 }}>
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              style={{ height: '40px', marginRight: '12px' }} 
+            />
+            <Typography variant="h6" component="div">
+              Super Admin
+            </Typography>
+          </Box>
           <Box sx={{ flexGrow: 1, display: 'flex', gap: 2 }}>
             {navItems.map((item) => (
               <Button

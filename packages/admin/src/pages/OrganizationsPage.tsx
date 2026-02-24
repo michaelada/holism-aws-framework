@@ -13,10 +13,6 @@ import {
   IconButton,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   MenuItem,
   FormControl,
@@ -33,34 +29,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   getOrganizations,
   getOrganizationTypes,
-  getCapabilities,
-  createOrganization,
   deleteOrganization,
 } from '../services/organizationApi';
 import type {
   Organization,
   OrganizationType,
-  Capability,
-  CreateOrganizationDto,
 } from '../types/organization.types';
 import { useNotification } from '../context/NotificationContext';
-import { CapabilitySelector } from '../components/CapabilitySelector';
 
 export const OrganizationsPage: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
-  const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filterTypeId, setFilterTypeId] = useState<string>('');
-  const [formData, setFormData] = useState<CreateOrganizationDto>({
-    organizationTypeId: '',
-    name: '',
-    displayName: '',
-    domain: '',
-    enabledCapabilities: [],
-  });
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
 
@@ -71,37 +53,17 @@ export const OrganizationsPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [orgsData, typesData, capsData] = await Promise.all([
+      const [orgsData, typesData] = await Promise.all([
         getOrganizations(),
         getOrganizationTypes(),
-        getCapabilities(),
       ]);
       setOrganizations(orgsData);
       setOrganizationTypes(typesData);
-      setCapabilities(capsData);
     } catch (error) {
       showError('Failed to load data');
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreate = async () => {
-    try {
-      await createOrganization(formData);
-      showSuccess('Organisation created successfully');
-      setCreateDialogOpen(false);
-      setFormData({
-        organizationTypeId: '',
-        name: '',
-        displayName: '',
-        domain: '',
-        enabledCapabilities: [],
-      });
-      loadData();
-    } catch (error: any) {
-      showError(error.response?.data?.error || 'Failed to create organisation');
     }
   };
 
@@ -132,8 +94,6 @@ export const OrganizationsPage: React.FC = () => {
     }
   };
 
-  const selectedType = organizationTypes.find((t) => t.id === formData.organizationTypeId);
-
   // Filter organizations based on search text and type filter
   const filteredOrganizations = organizations.filter((org) => {
     const matchesSearch = searchText === '' || 
@@ -162,7 +122,7 @@ export const OrganizationsPage: React.FC = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={() => navigate('/organizations/new')}
         >
           Create Organisation
         </Button>
@@ -286,88 +246,6 @@ export const OrganizationsPage: React.FC = () => {
               </TableBody>
             </Table>
       </TableContainer>
-
-      {/* Create Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create Organisation</DialogTitle>
-        <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} mt={1}>
-            <FormControl fullWidth>
-              <InputLabel>Organisation Type</InputLabel>
-              <Select
-                value={formData.organizationTypeId}
-                label="Organisation Type"
-                onChange={(e) => {
-                  const typeId = e.target.value;
-                  const type = organizationTypes.find((t) => t.id === typeId);
-                  setFormData({
-                    ...formData,
-                    organizationTypeId: typeId,
-                    enabledCapabilities: type?.defaultCapabilities || [],
-                  });
-                }}
-              >
-                {organizationTypes.map((type) => (
-                  <MenuItem key={type.id} value={type.id}>
-                    {type.displayName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              label="Name (URL-friendly)"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., riverside-swim-club"
-              helperText="Lowercase, no spaces, hyphens allowed"
-              fullWidth
-            />
-
-            <TextField
-              label="Display Name"
-              value={formData.displayName}
-              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-              placeholder="e.g., Riverside Swim Club"
-              fullWidth
-            />
-
-            <TextField
-              label="Domain (optional)"
-              value={formData.domain}
-              onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-              placeholder="e.g., riverside-swim.example.com"
-              fullWidth
-            />
-
-            {formData.organizationTypeId && (
-              <CapabilitySelector
-                capabilities={capabilities}
-                selectedCapabilities={formData.enabledCapabilities}
-                onChange={(selected) =>
-                  setFormData({ ...formData, enabledCapabilities: selected })
-                }
-                defaultCapabilities={selectedType?.defaultCapabilities}
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleCreate}
-            variant="contained"
-            disabled={
-              !formData.organizationTypeId ||
-              !formData.name ||
-              !formData.displayName ||
-              formData.enabledCapabilities.length === 0
-            }
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

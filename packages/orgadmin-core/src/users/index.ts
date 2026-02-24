@@ -34,8 +34,16 @@ export const usersModule: ModuleRegistration = {
       component: lazy(() => import('./pages/OrgAdminUsersListPage')),
     },
     {
+      path: 'users/admins/invite',
+      component: lazy(() => import('./pages/InviteAdminUserPage')),
+    },
+    {
       path: 'users/accounts',
       component: lazy(() => import('./pages/AccountUsersListPage')),
+    },
+    {
+      path: 'users/accounts/create',
+      component: lazy(() => import('./pages/CreateAccountUserPage')),
     },
     {
       path: 'users/:type/:id',
@@ -53,3 +61,5 @@ export const usersModule: ModuleRegistration = {
 export { default as OrgAdminUsersListPage } from './pages/OrgAdminUsersListPage';
 export { default as AccountUsersListPage } from './pages/AccountUsersListPage';
 export { default as UserDetailsPage } from './pages/UserDetailsPage';
+export { default as InviteAdminUserPage } from './pages/InviteAdminUserPage';
+export { default as CreateAccountUserPage } from './pages/CreateAccountUserPage';
