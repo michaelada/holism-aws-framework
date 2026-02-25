@@ -1174,8 +1174,57 @@
       "preview": "Vista previa",
       "edit": "Editar"
     },
+    "fields": {
+      "title": "Definiciones de campos",
+      "createField": "Crear campo",
+      "editField": "Editar campo",
+      "createFieldPage": "Crear definición de campo",
+      "editFieldPage": "Editar definición de campo",
+      "searchPlaceholder": "Buscar campos...",
+      "noFieldsFound": "Aún no hay campos. Crea tu primer campo para comenzar.",
+      "noMatchingFields": "Ningún campo coincide con tus filtros",
+      "loadingFields": "Cargando campos...",
+      "fieldLabel": "Etiqueta del campo",
+      "fieldLabelHelper": "Etiqueta de visualización (p. ej., Nombre) - el nombre del campo se generará automáticamente",
+      "fieldDescription": "Descripción",
+      "fieldDescriptionHelper": "Explicación detallada opcional de para qué sirve este campo",
+      "fieldType": "Tipo de campo",
+      "fieldOptions": "Opciones",
+      "addOption": "Añadir opción",
+      "optionsRequired": "Se requiere al menos una opción para los campos {{type}}",
+      "fieldNameWillBe": "El nombre del campo será: {{name}}",
+      "invalidFieldName": "(inválido)",
+      "allTypes": "Todos los tipos",
+      "table": {
+        "label": "Etiqueta",
+        "description": "Descripción",
+        "type": "Tipo",
+        "created": "Creado",
+        "actions": "Acciones"
+      },
+      "validation": {
+        "labelRequired": "La etiqueta del campo es obligatoria",
+        "labelAlphanumeric": "La etiqueta del campo debe contener al menos un carácter alfanumérico",
+        "optionsRequired": "El tipo de campo \"{{type}}\" requiere al menos una opción"
+      },
+      "messages": {
+        "fieldCreated": "Campo creado con éxito",
+        "fieldUpdated": "Campo actualizado con éxito"
+      },
+      "delete": {
+        "title": "Eliminar definición de campo",
+        "message": "¿Estás seguro de que quieres eliminar el campo \"{{label}}\"? Esta acción no se puede deshacer."
+      }
+    },
     "builder": {
       "title": "Constructor de formularios",
+      "createForm": "Crear formulario",
+      "editForm": "Editar formulario",
+      "formDetails": "Detalles del formulario",
+      "formName": "Nombre del formulario",
+      "description": "Descripción",
+      "cancel": "Cancelar",
+      "save": "Guardar",
       "saving": "Guardando...",
       "tabs": {
         "fields": "Campos",
@@ -1186,68 +1235,47 @@
         "title": "Campos del formulario",
         "addField": "Añadir campo",
         "noFields": "Aún no se han añadido campos. Haz clic en \"Añadir campo\" para comenzar.",
-        "moveUp": "Mover arriba",
-        "moveDown": "Mover abajo",
+        "selectField": "Seleccionar campo",
+        "mandatoryField": "Campo obligatorio",
         "makeRequired": "Hacer obligatorio",
         "makeOptional": "Hacer opcional",
         "required": "Obligatorio",
-        "optional": "Opcional"
+        "optional": "Opcional",
+        "moveUp": "Mover arriba",
+        "moveDown": "Mover abajo",
+        "addFieldDialog": "Añadir campo"
       },
       "groups": {
         "title": "Grupos de campos",
         "addGroup": "Añadir grupo",
         "noGroups": "No hay grupos de campos definidos. Los grupos ayudan a organizar los campos en secciones.",
         "groupName": "Nombre del grupo",
+        "groupDescription": "Descripción",
         "selectFields": "Seleccionar campos para este grupo",
         "noFieldsAvailable": "No hay campos disponibles. Añade campos al formulario primero.",
-        "fieldOrder": "Orden de campos en el grupo"
+        "fieldOrder": "Orden de campos en el grupo",
+        "addGroupDialog": "Añadir grupo de campos"
       },
       "wizard": {
         "title": "Pasos del asistente",
         "addStep": "Añadir paso",
         "noSteps": "No hay pasos de asistente definidos. Los pasos del asistente crean una experiencia de formulario de varios pasos.",
         "stepName": "Nombre del paso",
-        "stepNumber": "Paso {{number}}",
+        "stepDescription": "Descripción",
         "selectFields": "Seleccionar campos para este paso",
-        "noFieldsAvailable": "No hay campos disponibles. Añade campos al formulario primero.",
-        "fieldOrder": "Orden de campos en el paso"
+        "fieldOrder": "Orden de campos en el paso",
+        "stepNumber": "Paso {{number}}: {{name}}",
+        "addStepDialog": "Añadir paso del asistente"
       },
-      "dialogs": {
-        "addField": {
-          "title": "Añadir campo",
-          "selectField": "Seleccionar campo",
-          "mandatoryField": "Campo obligatorio"
-        },
-        "addGroup": {
-          "title": "Añadir grupo de campos"
-        },
-        "addWizardStep": {
-          "title": "Añadir paso del asistente"
-        }
+      "validation": {
+        "formNameRequired": "El nombre del formulario es obligatorio",
+        "organisationMissing": "Falta el contexto de la organización"
+      },
+      "messages": {
+        "failedToLoad": "Error al cargar el formulario",
+        "failedToSave": "Error al guardar el formulario"
       }
     },
-    "preview": {
-      "title": "Vista previa del formulario",
-      "backToForms": "Volver a formularios",
-      "editForm": "Editar formulario",
-      "infoMessage": "Esta es una vista previa en vivo de tu formulario. Puedes interactuar con todos los campos para ver cómo funcionarán para los usuarios finales. Los cambios realizados aquí no se guardan.",
-      "statusLabel": "Estado:",
-      "modes": {
-        "grouped": "Vista agrupada",
-        "wizard": "Asistente paso a paso"
-      },
-      "formFields": "Campos del formulario",
-      "additionalInformation": "Información adicional",
-      "submitPreview": "Enviar (Solo vista previa)",
-      "cancelPreview": "Cancelar (Solo vista previa)",
-      "backButton": "Atrás",
-      "nextButton": "Siguiente",
-      "formNotFound": "Formulario no encontrado"
-    },
-    "fields": {
-      "title": "Definiciones de campos",
-      "createField": "Crear campo",
-      "searchPlaceholder": "Buscar campos...",
       "noFieldsFound": "Aún no hay campos. Crea tu primer campo para comenzar.",
       "noMatchingFields": "Ningún campo coincide con tus filtros",
       "loadingFields": "Cargando campos...",
@@ -1268,34 +1296,9 @@
       "filters": {
         "type": "Tipo",
         "allTypes": "Todos los tipos"
-      },
-      "dialogs": {
-        "create": {
-          "title": "Crear definición de campo",
-          "fieldLabel": "Etiqueta del campo",
-          "fieldLabelHelper": "Etiqueta de visualización (ej., Nombre) - el nombre del campo se generará automáticamente",
-          "descriptionHelper": "Explicación detallada opcional de para qué sirve este campo",
-          "fieldType": "Tipo de campo",
-          "options": "Opciones",
-          "addOption": "Añadir opción",
-          "optionsWarning": "Se requiere al menos una opción para los campos de tipo {{type}}",
-          "fieldNamePreview": "El nombre del campo será: {{name}}",
-          "fieldNameInvalid": "El nombre del campo será: (inválido)",
-          "creating": "Creando..."
-        },
-        "edit": {
-          "title": "Editar definición de campo",
-          "saving": "Guardando..."
-        },
-        "delete": {
-          "title": "Eliminar definición de campo",
-          "confirmMessage": "¿Estás seguro de que quieres eliminar el campo \"{{label}}\"? Esta acción no se puede deshacer.",
-          "deleting": "Eliminando..."
-        }
       }
-    }
-  },
-  "payments": {
+    },
+    "preview": {
     "title": "Pagos",
     "paymentDetails": "Detalles del pago",
     "lodgements": "Depósitos",
@@ -1705,6 +1708,96 @@
     "noModulesAvailable": "No hay módulos disponibles",
     "contactAdministrator": "Póngase en contacto con su administrador para habilitar las capacidades de su organización.",
     "debugInfo": "Depuración: {{capabilitiesCount}} capacidades habilitadas, {{modulesCount}} módulos disponibles"
+  },
+  "modules": {
+    "dashboard": {
+      "name": "Panel de control",
+      "title": "Panel de control",
+      "description": "Resumen de su organización"
+    },
+    "forms": {
+      "name": "Formularios",
+      "title": "Constructor de formularios",
+      "description": "Crear y gestionar formularios de solicitud y definiciones de campos",
+      "menu": {
+        "forms": "Formularios",
+        "fields": "Campos"
+      }
+    },
+    "settings": {
+      "name": "Configuración",
+      "title": "Configuración",
+      "description": "Configurar ajustes y preferencias de la organización"
+    },
+    "payments": {
+      "name": "Pagos",
+      "title": "Pagos",
+      "description": "Ver y gestionar pagos y transacciones"
+    },
+    "reporting": {
+      "name": "Informes",
+      "title": "Informes y análisis",
+      "description": "Ver informes y análisis de su organización"
+    },
+    "users": {
+      "name": "Usuarios",
+      "title": "Usuarios",
+      "description": "Gestionar usuarios y permisos de la organización",
+      "menu": {
+        "admins": "Usuarios administradores",
+        "accounts": "Usuarios de cuenta"
+      }
+    },
+    "events": {
+      "name": "Eventos",
+      "title": "Eventos",
+      "description": "Gestionar eventos e inscripciones",
+      "menu": {
+        "events": "Eventos",
+        "entries": "Inscripciones"
+      }
+    },
+    "memberships": {
+      "name": "Membresías",
+      "title": "Membresías",
+      "description": "Gestionar tipos de membresía y miembros",
+      "menu": {
+        "types": "Tipos de membresía",
+        "members": "Miembros"
+      }
+    },
+    "calendar": {
+      "name": "Calendario",
+      "title": "Calendario",
+      "description": "Gestionar calendarios reservables y citas",
+      "menu": {
+        "calendars": "Calendarios",
+        "bookings": "Reservas"
+      }
+    },
+    "registrations": {
+      "name": "Registros",
+      "title": "Registros",
+      "description": "Gestionar tipos de registro y registros",
+      "menu": {
+        "types": "Tipos de registro",
+        "database": "Base de datos de registros"
+      }
+    },
+    "ticketing": {
+      "name": "Venta de entradas",
+      "title": "Venta de entradas para eventos",
+      "description": "Gestionar entradas de eventos y control de acceso"
+    },
+    "merchandise": {
+      "name": "Mercancía",
+      "title": "Mercancía",
+      "description": "Gestionar mercancía y tienda en línea",
+      "menu": {
+        "types": "Tipos de mercancía",
+        "orders": "Pedidos"
+      }
+    }
   },
   "components": {
     "orgDataTable": {

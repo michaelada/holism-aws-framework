@@ -35,7 +35,7 @@ import {
   People as EntriesIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
 import type { Event } from '../types/event.types';
 
@@ -52,12 +52,21 @@ const EventsListPage: React.FC = () => {
   const { execute } = useApi();
   const { t } = useTranslation();
   const { locale } = useLocale();
+  const { checkModuleVisit } = useOnboarding();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published' | 'cancelled' | 'completed'>('all');
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('events');
+  }, [checkModuleVisit]);
 
   useEffect(() => {
     loadEvents();

@@ -954,8 +954,57 @@
       "preview": "Pré-visualizar",
       "edit": "Editar"
     },
+    "fields": {
+      "title": "Definições de campos",
+      "createField": "Criar campo",
+      "editField": "Editar campo",
+      "createFieldPage": "Criar definição de campo",
+      "editFieldPage": "Editar definição de campo",
+      "searchPlaceholder": "Pesquisar campos...",
+      "noFieldsFound": "Ainda sem campos. Crie o seu primeiro campo para começar.",
+      "noMatchingFields": "Nenhum campo corresponde aos seus filtros",
+      "loadingFields": "A carregar campos...",
+      "fieldLabel": "Etiqueta do campo",
+      "fieldLabelHelper": "Etiqueta de visualização (ex. Nome Próprio) - o nome do campo será gerado automaticamente",
+      "fieldDescription": "Descrição",
+      "fieldDescriptionHelper": "Explicação detalhada opcional sobre a finalidade deste campo",
+      "fieldType": "Tipo de campo",
+      "fieldOptions": "Opções",
+      "addOption": "Adicionar opção",
+      "optionsRequired": "É necessária pelo menos uma opção para campos {{type}}",
+      "fieldNameWillBe": "O nome do campo será: {{name}}",
+      "invalidFieldName": "(inválido)",
+      "allTypes": "Todos os tipos",
+      "table": {
+        "label": "Etiqueta",
+        "description": "Descrição",
+        "type": "Tipo",
+        "created": "Criado",
+        "actions": "Ações"
+      },
+      "validation": {
+        "labelRequired": "A etiqueta do campo é obrigatória",
+        "labelAlphanumeric": "A etiqueta do campo deve conter pelo menos um carácter alfanumérico",
+        "optionsRequired": "O tipo de campo \"{{type}}\" requer pelo menos uma opção"
+      },
+      "messages": {
+        "fieldCreated": "Campo criado com sucesso",
+        "fieldUpdated": "Campo atualizado com sucesso"
+      },
+      "delete": {
+        "title": "Eliminar definição de campo",
+        "message": "Tem a certeza de que pretende eliminar o campo \"{{label}}\"? Esta ação não pode ser revertida."
+      }
+    },
     "builder": {
       "title": "Construtor de formulários",
+      "createForm": "Criar formulário",
+      "editForm": "Editar formulário",
+      "formDetails": "Detalhes do formulário",
+      "formName": "Nome do formulário",
+      "description": "Descrição",
+      "cancel": "Cancelar",
+      "save": "Guardar",
       "saving": "A guardar...",
       "tabs": {
         "fields": "Campos",
@@ -966,44 +1015,45 @@
         "title": "Campos do formulário",
         "addField": "Adicionar campo",
         "noFields": "Ainda sem campos adicionados. Clique em \"Adicionar campo\" para começar.",
-        "moveUp": "Mover para cima",
-        "moveDown": "Mover para baixo",
+        "selectField": "Selecionar campo",
+        "mandatoryField": "Campo obrigatório",
         "makeRequired": "Tornar obrigatório",
         "makeOptional": "Tornar opcional",
         "required": "Obrigatório",
-        "optional": "Opcional"
+        "optional": "Opcional",
+        "moveUp": "Mover para cima",
+        "moveDown": "Mover para baixo",
+        "addFieldDialog": "Adicionar campo"
       },
       "groups": {
         "title": "Grupos de campos",
         "addGroup": "Adicionar grupo",
         "noGroups": "Nenhum grupo de campos definido. Os grupos ajudam a organizar os campos em secções.",
         "groupName": "Nome do grupo",
+        "groupDescription": "Descrição",
         "selectFields": "Selecionar campos para este grupo",
         "noFieldsAvailable": "Nenhum campo disponível. Adicione campos ao formulário primeiro.",
-        "fieldOrder": "Ordem dos campos no grupo"
+        "fieldOrder": "Ordem dos campos no grupo",
+        "addGroupDialog": "Adicionar grupo de campos"
       },
       "wizard": {
         "title": "Passos do assistente",
         "addStep": "Adicionar passo",
         "noSteps": "Nenhum passo de assistente definido. Os passos do assistente criam uma experiência de formulário em várias etapas.",
         "stepName": "Nome do passo",
-        "stepNumber": "Passo {{number}}",
+        "stepDescription": "Descrição",
         "selectFields": "Selecionar campos para este passo",
-        "noFieldsAvailable": "Nenhum campo disponível. Adicione campos ao formulário primeiro.",
-        "fieldOrder": "Ordem dos campos no passo"
+        "fieldOrder": "Ordem dos campos no passo",
+        "stepNumber": "Passo {{number}}: {{name}}",
+        "addStepDialog": "Adicionar passo do assistente"
       },
-      "dialogs": {
-        "addField": {
-          "title": "Adicionar campo",
-          "selectField": "Selecionar campo",
-          "mandatoryField": "Campo obrigatório"
-        },
-        "addGroup": {
-          "title": "Adicionar grupo de campos"
-        },
-        "addWizardStep": {
-          "title": "Adicionar passo do assistente"
-        }
+      "validation": {
+        "formNameRequired": "O nome do formulário é obrigatório",
+        "organisationMissing": "Falta o contexto da organização"
+      },
+      "messages": {
+        "failedToLoad": "Falha ao carregar formulário",
+        "failedToSave": "Falha ao guardar formulário"
       }
     },
     "preview": {
@@ -1023,56 +1073,6 @@
       "backButton": "Voltar",
       "nextButton": "Seguinte",
       "formNotFound": "Formulário não encontrado"
-    },
-    "fields": {
-      "title": "Definições de campos",
-      "createField": "Criar campo",
-      "searchPlaceholder": "Pesquisar campos...",
-      "noFieldsFound": "Ainda sem campos. Crie o seu primeiro campo para começar.",
-      "noMatchingFields": "Nenhum campo corresponde aos seus filtros",
-      "loadingFields": "A carregar campos...",
-      "failedToCreate": "Falha ao criar campo",
-      "failedToUpdate": "Falha ao atualizar campo",
-      "failedToDelete": "Falha ao eliminar campo",
-      "fieldLabelRequired": "A etiqueta do campo é obrigatória",
-      "organisationContextNotAvailable": "O contexto da organização não está disponível",
-      "invalidFieldLabel": "A etiqueta do campo deve conter pelo menos um carácter alfanumérico",
-      "optionsRequired": "O tipo de campo \"{{type}}\" requer pelo menos uma opção",
-      "table": {
-        "label": "Etiqueta",
-        "description": "Descrição",
-        "type": "Tipo",
-        "created": "Criado",
-        "actions": "Ações"
-      },
-      "filters": {
-        "type": "Tipo",
-        "allTypes": "Todos os tipos"
-      },
-      "dialogs": {
-        "create": {
-          "title": "Criar definição de campo",
-          "fieldLabel": "Etiqueta do campo",
-          "fieldLabelHelper": "Etiqueta de visualização (ex., Nome próprio) - o nome do campo será gerado automaticamente",
-          "descriptionHelper": "Explicação detalhada opcional do que este campo serve",
-          "fieldType": "Tipo de campo",
-          "options": "Opções",
-          "addOption": "Adicionar opção",
-          "optionsWarning": "É necessária pelo menos uma opção para campos do tipo {{type}}",
-          "fieldNamePreview": "O nome do campo será: {{name}}",
-          "fieldNameInvalid": "O nome do campo será: (inválido)",
-          "creating": "A criar..."
-        },
-        "edit": {
-          "title": "Editar definição de campo",
-          "saving": "A guardar..."
-        },
-        "delete": {
-          "title": "Eliminar definição de campo",
-          "confirmMessage": "Tem a certeza de que pretende eliminar o campo \"{{label}}\"? Esta ação não pode ser anulada.",
-          "deleting": "A eliminar..."
-        }
-      }
     }
   },
   "payments": {
@@ -1493,6 +1493,96 @@
     "noModulesAvailable": "Nenhum módulo disponível",
     "contactAdministrator": "Contacte o seu administrador para ativar as capacidades da sua organização.",
     "debugInfo": "Depuração: {{capabilitiesCount}} capacidades ativadas, {{modulesCount}} módulos disponíveis"
+  },
+  "modules": {
+    "dashboard": {
+      "name": "Painel",
+      "title": "Painel",
+      "description": "Visão geral da sua organização"
+    },
+    "forms": {
+      "name": "Formulários",
+      "title": "Construtor de formulários",
+      "description": "Criar e gerir formulários de candidatura e definições de campos",
+      "menu": {
+        "forms": "Formulários",
+        "fields": "Campos"
+      }
+    },
+    "settings": {
+      "name": "Definições",
+      "title": "Definições",
+      "description": "Configurar definições e preferências da organização"
+    },
+    "payments": {
+      "name": "Pagamentos",
+      "title": "Pagamentos",
+      "description": "Ver e gerir pagamentos e transações"
+    },
+    "reporting": {
+      "name": "Relatórios",
+      "title": "Relatórios e análises",
+      "description": "Ver relatórios e análises da sua organização"
+    },
+    "users": {
+      "name": "Utilizadores",
+      "title": "Utilizadores",
+      "description": "Gerir utilizadores e permissões da organização",
+      "menu": {
+        "admins": "Utilizadores administradores",
+        "accounts": "Utilizadores de conta"
+      }
+    },
+    "events": {
+      "name": "Eventos",
+      "title": "Eventos",
+      "description": "Gerir eventos e inscrições",
+      "menu": {
+        "events": "Eventos",
+        "entries": "Inscrições"
+      }
+    },
+    "memberships": {
+      "name": "Membros",
+      "title": "Membros",
+      "description": "Gerir tipos de membro e membros",
+      "menu": {
+        "types": "Tipos de membro",
+        "members": "Membros"
+      }
+    },
+    "calendar": {
+      "name": "Calendário",
+      "title": "Calendário",
+      "description": "Gerir calendários reserváveis e compromissos",
+      "menu": {
+        "calendars": "Calendários",
+        "bookings": "Reservas"
+      }
+    },
+    "registrations": {
+      "name": "Registos",
+      "title": "Registos",
+      "description": "Gerir tipos de registo e registos",
+      "menu": {
+        "types": "Tipos de registo",
+        "database": "Base de dados de registos"
+      }
+    },
+    "ticketing": {
+      "name": "Bilheteira",
+      "title": "Bilheteira de eventos",
+      "description": "Gerir bilhetes de eventos e controlo de acesso"
+    },
+    "merchandise": {
+      "name": "Mercadoria",
+      "title": "Mercadoria",
+      "description": "Gerir mercadoria e loja online",
+      "menu": {
+        "types": "Tipos de mercadoria",
+        "orders": "Encomendas"
+      }
+    }
   },
   "components": {
     "orgDataTable": {

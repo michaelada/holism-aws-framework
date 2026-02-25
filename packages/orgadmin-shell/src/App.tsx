@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ModuleRegistration } from './types/module.types';
 import { initializeI18n } from './i18n/config';
 import { LocaleProvider } from './context/LocaleContext';
+import { OnboardingProvider } from './context';
 
 // Import all core module registrations
 import {
@@ -174,6 +175,7 @@ const NotFoundPage: React.FC = () => (
  */
 const App: React.FC = () => {
   const [i18nReady, setI18nReady] = useState(false);
+  const [i18nInitialized, setI18nInitialized] = useState(false);
   
   const keycloakConfig = {
     url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8080',
@@ -183,30 +185,50 @@ const App: React.FC = () => {
 
   const { loading, error, authenticated, user, organisation, capabilities, isOrgAdmin, logout, getToken } = useAuth(keycloakConfig);
 
-  // Initialize i18n on mount - MUST complete before rendering LocaleProvider
+  // Extract organization locale from organization data
+  const organizationLocale = useMemo(() => {
+    // Don't return a locale until we have organization data
+    if (!organisation) {
+      return null;
+    }
+    
+    // Use the organization's language setting directly
+    if ((organisation as any).language) {
+      console.log('Organization language found:', (organisation as any).language);
+      return (organisation as any).language;
+    }
+    // Check if organization has organizationType with defaultLocale as fallback
+    if ((organisation as any).organizationType?.defaultLocale) {
+      console.log('Using organizationType defaultLocale:', (organisation as any).organizationType.defaultLocale);
+      return (organisation as any).organizationType.defaultLocale;
+    }
+    // Fallback to 'en-GB' if neither is available
+    console.log('Falling back to en-GB, organization data:', organisation);
+    return 'en-GB';
+  }, [organisation]);
+
+  // Initialize i18n with the organization's locale - MUST complete before rendering LocaleProvider
   useEffect(() => {
     const initI18n = async () => {
       try {
-        await initializeI18n();
+        // Initialize i18n with the organization's locale
+        console.log('Initializing i18n with locale:', organizationLocale);
+        await initializeI18n(organizationLocale);
         setI18nReady(true);
+        setI18nInitialized(true);
       } catch (error) {
         console.error('Failed to initialize i18n:', error);
         // App will continue with fallback behavior
         setI18nReady(true); // Set to true anyway to allow app to render
+        setI18nInitialized(true);
       }
     };
-    initI18n();
-  }, []);
-
-  // Extract organization locale from organization data
-  const organizationLocale = useMemo(() => {
-    // Check if organization has organizationType with defaultLocale
-    if (organisation && (organisation as any).organizationType?.defaultLocale) {
-      return (organisation as any).organizationType.defaultLocale;
+    
+    // Only initialize once when we have the organization locale
+    if (organizationLocale && !i18nInitialized) {
+      initI18n();
     }
-    // Fallback to 'en-GB' if not available
-    return 'en-GB';
-  }, [organisation]);
+  }, [organizationLocale, i18nInitialized]);
 
   // Filter modules based on user's capabilities
   const availableModules = useMemo(() => {
@@ -221,7 +243,8 @@ const App: React.FC = () => {
   }, [capabilities]);
 
   // Loading state - show loading screen while auth or i18n is loading
-  if (loading || !i18nReady) {
+  // Also wait for organization data before initializing i18n
+  if (loading || !i18nReady || (authenticated && !organisation)) {
     return <LoadingScreen />;
   }
 
@@ -254,33 +277,35 @@ const App: React.FC = () => {
   // Authenticated and authorized - render main application
   return (
     <BrowserRouter basename="/orgadmin">
-      <LocaleProvider organizationLocale={organizationLocale}>
+      <LocaleProvider organizationLocale={organizationLocale || 'en-GB'}>
         <AuthTokenContext.Provider value={getToken}>
           <OrganisationProvider organisation={organisation}>
-            <CapabilityProvider capabilities={capabilities}>
-              <Layout modules={availableModules} onLogout={logout}>
-                <Suspense fallback={<LoadingScreen />}>
-                  <Routes>
-                    {/* Dashboard (landing page) */}
-                    <Route path="/" element={<DashboardPage modules={availableModules} />} />
+            <OnboardingProvider>
+              <CapabilityProvider capabilities={capabilities}>
+                <Layout modules={availableModules} onLogout={logout}>
+                  <Suspense fallback={<LoadingScreen />}>
+                    <Routes>
+                      {/* Dashboard (landing page) */}
+                      <Route path="/" element={<DashboardPage modules={availableModules} />} />
 
-                    {/* Dynamic routes from module registrations */}
-                    {availableModules.flatMap(module =>
-                      module.routes.map(route => (
-                        <Route
-                          key={route.path}
-                          path={route.path}
-                          element={<route.component />}
-                        />
-                      ))
-                    )}
+                      {/* Dynamic routes from module registrations */}
+                      {availableModules.flatMap(module =>
+                        module.routes.map(route => (
+                          <Route
+                            key={route.path}
+                            path={route.path}
+                            element={<route.component />}
+                          />
+                        ))
+                      )}
 
-                    {/* 404 Not Found */}
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Routes>
-                </Suspense>
-              </Layout>
-            </CapabilityProvider>
+                      {/* 404 Not Found */}
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Routes>
+                  </Suspense>
+                </Layout>
+              </CapabilityProvider>
+            </OnboardingProvider>
           </OrganisationProvider>
         </AuthTokenContext.Provider>
       </LocaleProvider>

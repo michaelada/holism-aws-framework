@@ -954,8 +954,57 @@
       "preview": "Anteprima",
       "edit": "Modifica"
     },
+    "fields": {
+      "title": "Definizioni campi",
+      "createField": "Crea campo",
+      "editField": "Modifica campo",
+      "createFieldPage": "Crea definizione campo",
+      "editFieldPage": "Modifica definizione campo",
+      "searchPlaceholder": "Cerca campi...",
+      "noFieldsFound": "Nessun campo ancora. Crea il tuo primo campo per iniziare.",
+      "noMatchingFields": "Nessun campo corrisponde ai tuoi filtri",
+      "loadingFields": "Caricamento campi...",
+      "fieldLabel": "Etichetta campo",
+      "fieldLabelHelper": "Etichetta di visualizzazione (es. Nome) - il nome del campo verrà generato automaticamente",
+      "fieldDescription": "Descrizione",
+      "fieldDescriptionHelper": "Spiegazione dettagliata facoltativa di cosa serve questo campo",
+      "fieldType": "Tipo di campo",
+      "fieldOptions": "Opzioni",
+      "addOption": "Aggiungi opzione",
+      "optionsRequired": "È richiesta almeno un'opzione per i campi {{type}}",
+      "fieldNameWillBe": "Il nome del campo sarà: {{name}}",
+      "invalidFieldName": "(non valido)",
+      "allTypes": "Tutti i tipi",
+      "table": {
+        "label": "Etichetta",
+        "description": "Descrizione",
+        "type": "Tipo",
+        "created": "Creato",
+        "actions": "Azioni"
+      },
+      "validation": {
+        "labelRequired": "L'etichetta del campo è obbligatoria",
+        "labelAlphanumeric": "L'etichetta del campo deve contenere almeno un carattere alfanumerico",
+        "optionsRequired": "Il tipo di campo \"{{type}}\" richiede almeno un'opzione"
+      },
+      "messages": {
+        "fieldCreated": "Campo creato con successo",
+        "fieldUpdated": "Campo aggiornato con successo"
+      },
+      "delete": {
+        "title": "Elimina definizione campo",
+        "message": "Sei sicuro di voler eliminare il campo \"{{label}}\"? Questa azione non può essere annullata."
+      }
+    },
     "builder": {
       "title": "Costruttore di moduli",
+      "createForm": "Crea modulo",
+      "editForm": "Modifica modulo",
+      "formDetails": "Dettagli modulo",
+      "formName": "Nome modulo",
+      "description": "Descrizione",
+      "cancel": "Annulla",
+      "save": "Salva",
       "saving": "Salvataggio...",
       "tabs": {
         "fields": "Campi",
@@ -966,44 +1015,45 @@
         "title": "Campi del modulo",
         "addField": "Aggiungi campo",
         "noFields": "Nessun campo aggiunto ancora. Clicca su \"Aggiungi campo\" per iniziare.",
-        "moveUp": "Sposta su",
-        "moveDown": "Sposta giù",
+        "selectField": "Seleziona campo",
+        "mandatoryField": "Campo obbligatorio",
         "makeRequired": "Rendi obbligatorio",
         "makeOptional": "Rendi facoltativo",
         "required": "Obbligatorio",
-        "optional": "Facoltativo"
+        "optional": "Facoltativo",
+        "moveUp": "Sposta su",
+        "moveDown": "Sposta giù",
+        "addFieldDialog": "Aggiungi campo"
       },
       "groups": {
         "title": "Gruppi di campi",
         "addGroup": "Aggiungi gruppo",
         "noGroups": "Nessun gruppo di campi definito. I gruppi aiutano a organizzare i campi in sezioni.",
         "groupName": "Nome gruppo",
+        "groupDescription": "Descrizione",
         "selectFields": "Seleziona campi per questo gruppo",
         "noFieldsAvailable": "Nessun campo disponibile. Aggiungi prima i campi al modulo.",
-        "fieldOrder": "Ordine campi nel gruppo"
+        "fieldOrder": "Ordine campi nel gruppo",
+        "addGroupDialog": "Aggiungi gruppo di campi"
       },
       "wizard": {
         "title": "Passaggi guidati",
         "addStep": "Aggiungi passaggio",
         "noSteps": "Nessun passaggio guidato definito. I passaggi guidati creano un'esperienza di modulo multi-step.",
         "stepName": "Nome passaggio",
-        "stepNumber": "Passaggio {{number}}",
+        "stepDescription": "Descrizione",
         "selectFields": "Seleziona campi per questo passaggio",
-        "noFieldsAvailable": "Nessun campo disponibile. Aggiungi prima i campi al modulo.",
-        "fieldOrder": "Ordine campi nel passaggio"
+        "fieldOrder": "Ordine campi nel passaggio",
+        "stepNumber": "Passaggio {{number}}: {{name}}",
+        "addStepDialog": "Aggiungi passaggio guidato"
       },
-      "dialogs": {
-        "addField": {
-          "title": "Aggiungi campo",
-          "selectField": "Seleziona campo",
-          "mandatoryField": "Campo obbligatorio"
-        },
-        "addGroup": {
-          "title": "Aggiungi gruppo di campi"
-        },
-        "addWizardStep": {
-          "title": "Aggiungi passaggio guidato"
-        }
+      "validation": {
+        "formNameRequired": "Il nome del modulo è obbligatorio",
+        "organisationMissing": "Manca il contesto dell'organizzazione"
+      },
+      "messages": {
+        "failedToLoad": "Caricamento modulo fallito",
+        "failedToSave": "Salvataggio modulo fallito"
       }
     },
     "preview": {
@@ -1023,56 +1073,6 @@
       "backButton": "Indietro",
       "nextButton": "Avanti",
       "formNotFound": "Modulo non trovato"
-    },
-    "fields": {
-      "title": "Definizioni campi",
-      "createField": "Crea campo",
-      "searchPlaceholder": "Cerca campi...",
-      "noFieldsFound": "Nessun campo ancora. Crea il tuo primo campo per iniziare.",
-      "noMatchingFields": "Nessun campo corrisponde ai tuoi filtri",
-      "loadingFields": "Caricamento campi...",
-      "failedToCreate": "Creazione campo fallita",
-      "failedToUpdate": "Aggiornamento campo fallito",
-      "failedToDelete": "Eliminazione campo fallita",
-      "fieldLabelRequired": "L'etichetta del campo è obbligatoria",
-      "organisationContextNotAvailable": "Il contesto dell'organizzazione non è disponibile",
-      "invalidFieldLabel": "L'etichetta del campo deve contenere almeno un carattere alfanumerico",
-      "optionsRequired": "Il tipo di campo \"{{type}}\" richiede almeno un'opzione",
-      "table": {
-        "label": "Etichetta",
-        "description": "Descrizione",
-        "type": "Tipo",
-        "created": "Creato",
-        "actions": "Azioni"
-      },
-      "filters": {
-        "type": "Tipo",
-        "allTypes": "Tutti i tipi"
-      },
-      "dialogs": {
-        "create": {
-          "title": "Crea definizione campo",
-          "fieldLabel": "Etichetta campo",
-          "fieldLabelHelper": "Etichetta di visualizzazione (es., Nome) - il nome del campo verrà generato automaticamente",
-          "descriptionHelper": "Spiegazione dettagliata facoltativa di cosa serve questo campo",
-          "fieldType": "Tipo di campo",
-          "options": "Opzioni",
-          "addOption": "Aggiungi opzione",
-          "optionsWarning": "È richiesta almeno un'opzione per i campi di tipo {{type}}",
-          "fieldNamePreview": "Il nome del campo sarà: {{name}}",
-          "fieldNameInvalid": "Il nome del campo sarà: (non valido)",
-          "creating": "Creazione..."
-        },
-        "edit": {
-          "title": "Modifica definizione campo",
-          "saving": "Salvataggio..."
-        },
-        "delete": {
-          "title": "Elimina definizione campo",
-          "confirmMessage": "Sei sicuro di voler eliminare il campo \"{{label}}\"? Questa azione non può essere annullata.",
-          "deleting": "Eliminazione..."
-        }
-      }
     }
   },
   "payments": {
@@ -1493,6 +1493,96 @@
     "noModulesAvailable": "Nessun modulo disponibile",
     "contactAdministrator": "Contatta il tuo amministratore per abilitare le funzionalità per la tua organizzazione.",
     "debugInfo": "Debug: {{capabilitiesCount}} funzionalità abilitate, {{modulesCount}} moduli disponibili"
+  },
+  "modules": {
+    "dashboard": {
+      "name": "Dashboard",
+      "title": "Dashboard",
+      "description": "Panoramica della tua organizzazione"
+    },
+    "forms": {
+      "name": "Moduli",
+      "title": "Costruttore di moduli",
+      "description": "Creare e gestire moduli di candidatura e definizioni di campi",
+      "menu": {
+        "forms": "Moduli",
+        "fields": "Campi"
+      }
+    },
+    "settings": {
+      "name": "Impostazioni",
+      "title": "Impostazioni",
+      "description": "Configurare impostazioni e preferenze dell'organizzazione"
+    },
+    "payments": {
+      "name": "Pagamenti",
+      "title": "Pagamenti",
+      "description": "Visualizzare e gestire pagamenti e transazioni"
+    },
+    "reporting": {
+      "name": "Report",
+      "title": "Report e analisi",
+      "description": "Visualizzare report e analisi della tua organizzazione"
+    },
+    "users": {
+      "name": "Utenti",
+      "title": "Utenti",
+      "description": "Gestire utenti e permessi dell'organizzazione",
+      "menu": {
+        "admins": "Utenti amministratori",
+        "accounts": "Utenti account"
+      }
+    },
+    "events": {
+      "name": "Eventi",
+      "title": "Eventi",
+      "description": "Gestire eventi e registrazioni",
+      "menu": {
+        "events": "Eventi",
+        "entries": "Iscrizioni"
+      }
+    },
+    "memberships": {
+      "name": "Iscrizioni",
+      "title": "Iscrizioni",
+      "description": "Gestire tipi di iscrizione e membri",
+      "menu": {
+        "types": "Tipi di iscrizione",
+        "members": "Membri"
+      }
+    },
+    "calendar": {
+      "name": "Calendario",
+      "title": "Calendario",
+      "description": "Gestire calendari prenotabili e appuntamenti",
+      "menu": {
+        "calendars": "Calendari",
+        "bookings": "Prenotazioni"
+      }
+    },
+    "registrations": {
+      "name": "Registrazioni",
+      "title": "Registrazioni",
+      "description": "Gestire tipi di registrazione e registrazioni",
+      "menu": {
+        "types": "Tipi di registrazione",
+        "database": "Database registrazioni"
+      }
+    },
+    "ticketing": {
+      "name": "Biglietteria",
+      "title": "Biglietteria eventi",
+      "description": "Gestire biglietti eventi e controllo accessi"
+    },
+    "merchandise": {
+      "name": "Merchandising",
+      "title": "Merchandising",
+      "description": "Gestire merchandising e negozio online",
+      "menu": {
+        "types": "Tipi di merchandising",
+        "orders": "Ordini"
+      }
+    }
   },
   "components": {
     "orgDataTable": {

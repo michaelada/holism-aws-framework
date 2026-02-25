@@ -1174,8 +1174,57 @@
       "preview": "Aperçu",
       "edit": "Modifier"
     },
+    "fields": {
+      "title": "Définitions de champs",
+      "createField": "Créer un champ",
+      "editField": "Modifier le champ",
+      "createFieldPage": "Créer une définition de champ",
+      "editFieldPage": "Modifier la définition de champ",
+      "searchPlaceholder": "Rechercher des champs...",
+      "noFieldsFound": "Aucun champ pour le moment. Créez votre premier champ pour commencer.",
+      "noMatchingFields": "Aucun champ ne correspond à vos filtres",
+      "loadingFields": "Chargement des champs...",
+      "fieldLabel": "Libellé du champ",
+      "fieldLabelHelper": "Libellé d'affichage (par ex., Prénom) - le nom du champ sera généré automatiquement",
+      "fieldDescription": "Description",
+      "fieldDescriptionHelper": "Explication détaillée facultative de l'utilité de ce champ",
+      "fieldType": "Type de champ",
+      "fieldOptions": "Options",
+      "addOption": "Ajouter une option",
+      "optionsRequired": "Au moins une option est requise pour les champs {{type}}",
+      "fieldNameWillBe": "Le nom du champ sera : {{name}}",
+      "invalidFieldName": "(invalide)",
+      "allTypes": "Tous les types",
+      "table": {
+        "label": "Libellé",
+        "description": "Description",
+        "type": "Type",
+        "created": "Créé",
+        "actions": "Actions"
+      },
+      "validation": {
+        "labelRequired": "Le libellé du champ est requis",
+        "labelAlphanumeric": "Le libellé du champ doit contenir au moins un caractère alphanumérique",
+        "optionsRequired": "Le type de champ \"{{type}}\" nécessite au moins une option"
+      },
+      "messages": {
+        "fieldCreated": "Champ créé avec succès",
+        "fieldUpdated": "Champ mis à jour avec succès"
+      },
+      "delete": {
+        "title": "Supprimer la définition de champ",
+        "message": "Êtes-vous sûr de vouloir supprimer le champ \"{{label}}\" ? Cette action ne peut pas être annulée."
+      }
+    },
     "builder": {
       "title": "Créateur de formulaire",
+      "createForm": "Créer un formulaire",
+      "editForm": "Modifier le formulaire",
+      "formDetails": "Détails du formulaire",
+      "formName": "Nom du formulaire",
+      "description": "Description",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
       "saving": "Enregistrement...",
       "tabs": {
         "fields": "Champs",
@@ -1186,68 +1235,47 @@
         "title": "Champs du formulaire",
         "addField": "Ajouter un champ",
         "noFields": "Aucun champ ajouté pour le moment. Cliquez sur \"Ajouter un champ\" pour commencer.",
-        "moveUp": "Déplacer vers le haut",
-        "moveDown": "Déplacer vers le bas",
+        "selectField": "Sélectionner un champ",
+        "mandatoryField": "Champ obligatoire",
         "makeRequired": "Rendre obligatoire",
         "makeOptional": "Rendre facultatif",
         "required": "Obligatoire",
-        "optional": "Facultatif"
+        "optional": "Facultatif",
+        "moveUp": "Déplacer vers le haut",
+        "moveDown": "Déplacer vers le bas",
+        "addFieldDialog": "Ajouter un champ"
       },
       "groups": {
         "title": "Groupes de champs",
         "addGroup": "Ajouter un groupe",
         "noGroups": "Aucun groupe de champs défini. Les groupes aident à organiser les champs en sections.",
         "groupName": "Nom du groupe",
+        "groupDescription": "Description",
         "selectFields": "Sélectionner les champs pour ce groupe",
         "noFieldsAvailable": "Aucun champ disponible. Ajoutez d'abord des champs au formulaire.",
-        "fieldOrder": "Ordre des champs dans le groupe"
+        "fieldOrder": "Ordre des champs dans le groupe",
+        "addGroupDialog": "Ajouter un groupe de champs"
       },
       "wizard": {
         "title": "Étapes de l'assistant",
         "addStep": "Ajouter une étape",
         "noSteps": "Aucune étape d'assistant définie. Les étapes d'assistant créent une expérience de formulaire en plusieurs étapes.",
         "stepName": "Nom de l'étape",
-        "stepNumber": "Étape {{number}}",
+        "stepDescription": "Description",
         "selectFields": "Sélectionner les champs pour cette étape",
-        "noFieldsAvailable": "Aucun champ disponible. Ajoutez d'abord des champs au formulaire.",
-        "fieldOrder": "Ordre des champs dans l'étape"
+        "fieldOrder": "Ordre des champs dans l'étape",
+        "stepNumber": "Étape {{number}} : {{name}}",
+        "addStepDialog": "Ajouter une étape d'assistant"
       },
-      "dialogs": {
-        "addField": {
-          "title": "Ajouter un champ",
-          "selectField": "Sélectionner un champ",
-          "mandatoryField": "Champ obligatoire"
-        },
-        "addGroup": {
-          "title": "Ajouter un groupe de champs"
-        },
-        "addWizardStep": {
-          "title": "Ajouter une étape d'assistant"
-        }
+      "validation": {
+        "formNameRequired": "Le nom du formulaire est requis",
+        "organisationMissing": "Le contexte de l'organisation est manquant"
+      },
+      "messages": {
+        "failedToLoad": "Échec du chargement du formulaire",
+        "failedToSave": "Échec de l'enregistrement du formulaire"
       }
     },
-    "preview": {
-      "title": "Aperçu du formulaire",
-      "backToForms": "Retour aux formulaires",
-      "editForm": "Modifier le formulaire",
-      "infoMessage": "Ceci est un aperçu en direct de votre formulaire. Vous pouvez interagir avec tous les champs pour voir comment ils fonctionneront pour les utilisateurs finaux. Les modifications apportées ici ne sont pas enregistrées.",
-      "statusLabel": "Statut :",
-      "modes": {
-        "grouped": "Vue groupée",
-        "wizard": "Assistant étape par étape"
-      },
-      "formFields": "Champs du formulaire",
-      "additionalInformation": "Informations supplémentaires",
-      "submitPreview": "Soumettre (Aperçu uniquement)",
-      "cancelPreview": "Annuler (Aperçu uniquement)",
-      "backButton": "Retour",
-      "nextButton": "Suivant",
-      "formNotFound": "Formulaire introuvable"
-    },
-    "fields": {
-      "title": "Définitions de champs",
-      "createField": "Créer un champ",
-      "searchPlaceholder": "Rechercher des champs...",
       "noFieldsFound": "Aucun champ pour le moment. Créez votre premier champ pour commencer.",
       "noMatchingFields": "Aucun champ ne correspond à vos filtres",
       "loadingFields": "Chargement des champs...",
@@ -1268,34 +1296,9 @@
       "filters": {
         "type": "Type",
         "allTypes": "Tous les types"
-      },
-      "dialogs": {
-        "create": {
-          "title": "Créer une définition de champ",
-          "fieldLabel": "Libellé du champ",
-          "fieldLabelHelper": "Libellé d'affichage (par ex., Prénom) - le nom du champ sera généré automatiquement",
-          "descriptionHelper": "Explication détaillée facultative de l'utilité de ce champ",
-          "fieldType": "Type de champ",
-          "options": "Options",
-          "addOption": "Ajouter une option",
-          "optionsWarning": "Au moins une option est requise pour les champs de type {{type}}",
-          "fieldNamePreview": "Le nom du champ sera : {{name}}",
-          "fieldNameInvalid": "Le nom du champ sera : (invalide)",
-          "creating": "Création..."
-        },
-        "edit": {
-          "title": "Modifier la définition du champ",
-          "saving": "Enregistrement..."
-        },
-        "delete": {
-          "title": "Supprimer la définition du champ",
-          "confirmMessage": "Êtes-vous sûr de vouloir supprimer le champ \"{{label}}\" ? Cette action ne peut pas être annulée.",
-          "deleting": "Suppression..."
-        }
       }
-    }
-  },
-  "payments": {
+    },
+    "preview": {
     "title": "Paiements",
     "paymentDetails": "Détails du paiement",
     "lodgements": "Versements",
@@ -1705,6 +1708,96 @@
     "noModulesAvailable": "Aucun module disponible",
     "contactAdministrator": "Contactez votre administrateur pour activer les fonctionnalités de votre organisation.",
     "debugInfo": "Débogage : {{capabilitiesCount}} fonctionnalités activées, {{modulesCount}} modules disponibles"
+  },
+  "modules": {
+    "dashboard": {
+      "name": "Tableau de bord",
+      "title": "Tableau de bord",
+      "description": "Vue d'ensemble de votre organisation"
+    },
+    "forms": {
+      "name": "Formulaires",
+      "title": "Créateur de formulaires",
+      "description": "Créer et gérer des formulaires de candidature et des définitions de champs",
+      "menu": {
+        "forms": "Formulaires",
+        "fields": "Champs"
+      }
+    },
+    "settings": {
+      "name": "Paramètres",
+      "title": "Paramètres",
+      "description": "Configurer les paramètres et préférences de l'organisation"
+    },
+    "payments": {
+      "name": "Paiements",
+      "title": "Paiements",
+      "description": "Voir et gérer les paiements et transactions"
+    },
+    "reporting": {
+      "name": "Rapports",
+      "title": "Rapports et analyses",
+      "description": "Voir les rapports et analyses de votre organisation"
+    },
+    "users": {
+      "name": "Utilisateurs",
+      "title": "Utilisateurs",
+      "description": "Gérer les utilisateurs et permissions de l'organisation",
+      "menu": {
+        "admins": "Utilisateurs administrateurs",
+        "accounts": "Utilisateurs de compte"
+      }
+    },
+    "events": {
+      "name": "Événements",
+      "title": "Événements",
+      "description": "Gérer les événements et inscriptions",
+      "menu": {
+        "events": "Événements",
+        "entries": "Inscriptions"
+      }
+    },
+    "memberships": {
+      "name": "Adhésions",
+      "title": "Adhésions",
+      "description": "Gérer les types d'adhésion et les membres",
+      "menu": {
+        "types": "Types d'adhésion",
+        "members": "Membres"
+      }
+    },
+    "calendar": {
+      "name": "Calendrier",
+      "title": "Calendrier",
+      "description": "Gérer les calendriers réservables et les rendez-vous",
+      "menu": {
+        "calendars": "Calendriers",
+        "bookings": "Réservations"
+      }
+    },
+    "registrations": {
+      "name": "Inscriptions",
+      "title": "Inscriptions",
+      "description": "Gérer les types d'inscription et les inscriptions",
+      "menu": {
+        "types": "Types d'inscription",
+        "database": "Base de données des inscriptions"
+      }
+    },
+    "ticketing": {
+      "name": "Billetterie",
+      "title": "Billetterie d'événements",
+      "description": "Gérer les billets d'événements et le contrôle d'accès"
+    },
+    "merchandise": {
+      "name": "Marchandises",
+      "title": "Marchandises",
+      "description": "Gérer les marchandises et la boutique en ligne",
+      "menu": {
+        "types": "Types de marchandises",
+        "orders": "Commandes"
+      }
+    }
   },
   "components": {
     "orgDataTable": {

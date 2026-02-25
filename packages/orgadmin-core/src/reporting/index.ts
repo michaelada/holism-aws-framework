@@ -11,14 +11,14 @@ import type { ModuleRegistration } from '../types/module.types';
 
 export const reportingModule: ModuleRegistration = {
   id: 'reporting',
-  name: 'Reporting',
-  title: 'Reports & Analytics',
-  description: 'View reports and analytics for events, members, and revenue',
+  name: 'modules.reporting.name',
+  title: 'modules.reporting.title',
+  description: 'modules.reporting.description',
   capability: undefined, // Core module - always available
   order: 5, // Fifth in menu after Dashboard, Forms, Settings, and Payments
   card: {
-    title: 'Reports & Analytics',
-    description: 'View reports and analytics for events, members, and revenue',
+    title: 'modules.reporting.title',
+    description: 'modules.reporting.description',
     icon: ReportingIcon,
     color: '#0288d1',
     path: '/reporting',
@@ -42,7 +42,7 @@ export const reportingModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Reporting',
+    label: 'modules.reporting.name',
     path: '/reporting',
     icon: ReportingIcon,
   },

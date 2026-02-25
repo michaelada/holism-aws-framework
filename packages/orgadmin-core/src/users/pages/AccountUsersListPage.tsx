@@ -32,6 +32,8 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 interface AccountUser {
   id: string;
@@ -47,12 +49,21 @@ interface AccountUser {
 const AccountUsersListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { checkModuleVisit } = useOnboarding();
   
   const [users, setUsers] = useState<AccountUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<AccountUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState(1);
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('users');
+  }, [checkModuleVisit]);
 
   useEffect(() => {
     loadUsers();

@@ -23,14 +23,14 @@ import type { ModuleRegistration } from './types/module.types';
 
 export const calendarModule: ModuleRegistration = {
   id: 'calendar',
-  name: 'Calendar',
-  title: 'Calendar Bookings',
-  description: 'Manage bookable calendars, time slots, and bookings for your organisation',
+  name: 'modules.calendar.name',
+  title: 'modules.calendar.title',
+  description: 'modules.calendar.description',
   capability: 'calendar-bookings', // Requires calendar-bookings capability
   order: 13, // After events, memberships, merchandise
   card: {
-    title: 'Calendar Bookings',
-    description: 'Manage bookable calendars, time slots, and bookings for your organisation',
+    title: 'modules.calendar.title',
+    description: 'modules.calendar.description',
     icon: CalendarIcon,
     color: '#9c27b0', // Purple color
     path: '/calendar',
@@ -66,7 +66,7 @@ export const calendarModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Calendar',
+    label: 'modules.calendar.name',
     path: '/calendar',
     icon: CalendarIcon,
   },

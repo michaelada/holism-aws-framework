@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { Layout } from '../Layout';
 import { OrganisationProvider } from '../../context/OrganisationContext';
+import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { ModuleRegistration } from '../../types/module.types';
 import { Dashboard as DashboardIcon, Event as EventIcon } from '@mui/icons-material';
 
@@ -48,9 +49,11 @@ const renderLayout = (modules: ModuleRegistration[] = [], onLogout = vi.fn()) =>
   return render(
     <BrowserRouter>
       <OrganisationProvider organisation={mockOrganisation}>
-        <Layout modules={modules} onLogout={onLogout}>
-          <div>Test Content</div>
-        </Layout>
+        <OnboardingProvider>
+          <Layout modules={modules} onLogout={onLogout}>
+            <div>Test Content</div>
+          </Layout>
+        </OnboardingProvider>
       </OrganisationProvider>
     </BrowserRouter>
   );

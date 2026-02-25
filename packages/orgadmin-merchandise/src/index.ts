@@ -24,14 +24,14 @@ import type { ModuleRegistration } from './types/module.types';
 
 export const merchandiseModule: ModuleRegistration = {
   id: 'merchandise',
-  name: 'Merchandise',
-  title: 'Merchandise Management',
-  description: 'Manage merchandise items and orders for your organisation',
+  name: 'modules.merchandise.name',
+  title: 'modules.merchandise.title',
+  description: 'modules.merchandise.description',
   capability: 'merchandise', // Requires merchandise capability
   order: 12, // After memberships module
   card: {
-    title: 'Merchandise Management',
-    description: 'Manage merchandise items and orders for your organisation',
+    title: 'modules.merchandise.title',
+    description: 'modules.merchandise.description',
     icon: MerchandiseIcon,
     color: '#ed6c02',
     path: '/merchandise',
@@ -63,7 +63,7 @@ export const merchandiseModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Merchandise',
+    label: 'modules.merchandise.name',
     path: '/merchandise',
     icon: MerchandiseIcon,
   },

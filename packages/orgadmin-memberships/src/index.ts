@@ -23,14 +23,14 @@ import type { ModuleRegistration } from './types/module.types';
 
 export const membershipsModule: ModuleRegistration = {
   id: 'memberships',
-  name: 'Memberships',
-  title: 'Membership Management',
-  description: 'Manage membership types and members for your organisation',
+  name: 'modules.memberships.name',
+  title: 'modules.memberships.title',
+  description: 'modules.memberships.description',
   capability: 'memberships', // Requires memberships capability
   order: 11, // After events module
   card: {
-    title: 'Membership Management',
-    description: 'Manage membership types and members for your organisation',
+    title: 'modules.memberships.title',
+    description: 'modules.memberships.description',
     icon: MembershipIcon,
     color: '#ff9966',
     path: '/members',
@@ -66,7 +66,7 @@ export const membershipsModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Memberships',
+    label: 'modules.memberships.name',
     path: '/members',
     icon: MembershipIcon,
   },

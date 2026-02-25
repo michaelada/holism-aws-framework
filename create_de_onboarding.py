@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import json
+
+data = {
+  "welcome": {
+    "title": "Willkommen bei OrgAdmin",
+    "content": "# Willkommen bei OrgAdmin\\n\\nOrgAdmin ist Ihre umfassende Plattform für die Verwaltung der Abläufe Ihrer Organisation. Das können Sie tun:\\n\\n## Kernfunktionen\\n\\n**Benutzerverwaltung** - Erstellen und verwalten Sie Benutzerkonten, weisen Sie Rollen zu und steuern Sie Berechtigungen in Ihrer gesamten Organisation.\\n\\n**Formulare & Datenerfassung** - Erstellen Sie benutzerdefinierte Formulare zur Erfassung von Informationen von Mitgliedern mit flexiblen Feldtypen und Validierung.\\n\\n**Veranstaltungsverwaltung** - Erstellen und verwalten Sie Veranstaltungen, verfolgen Sie Anmeldungen und kommunizieren Sie mit Teilnehmern.\\n\\n**Mitgliederverwaltung** - Verwalten Sie Mitgliedschaftsabonnements, Verlängerungen und Mitgliederdaten.\\n\\n**Kalender & Buchungen** - Verwalten Sie buchbare Ressourcen, Termine und Terminplanung.\\n\\n**Zahlungsabwicklung** - Akzeptieren Sie Zahlungen, verfolgen Sie Transaktionen und verwalten Sie Finanzunterlagen.\\n\\n## Erste Schritte\\n\\nJedes Modul hat seine eigene Einführung, die beim ersten Besuch angezeigt wird. Sie können jederzeit auf die Hilfe zugreifen, indem Sie auf die Hilfeschaltfläche (?) in der oberen rechten Ecke klicken.\\n\\nBereit loszulegen? Schließen Sie diesen Dialog und erkunden Sie Ihr Dashboard!",
+    "dontShowAgain": "Nicht mehr anzeigen"
+  },
+  "actions": {
+    "gotIt": "Verstanden"
+  },
+  "modules": {
+    "dashboard": {
+      "title": "Dashboard-Übersicht",
+      "content": "# Dashboard\\n\\nIhr Dashboard bietet einen schnellen Überblick über die wichtigsten Kennzahlen und aktuellen Aktivitäten Ihrer Organisation.\\n\\n## Was Sie sehen werden\\n\\n- **Schnellstatistiken** - Mitgliederzahlen, bevorstehende Veranstaltungen, aktuelle Formulareinreichungen\\n- **Aktuelle Aktivität** - Neueste Aktionen und Updates über alle Module hinweg\\n- **Verknüpfungen** - Schnellzugriff auf häufige Aufgaben\\n- **Benachrichtigungen** - Wichtige Warnungen und Erinnerungen\\n\\n## Anpassung\\n\\nSie können anpassen, welche Widgets auf Ihrem Dashboard erscheinen und sie nach Ihrem Arbeitsablauf anordnen.\\n\\nKlicken Sie auf „Verstanden", um Ihr Dashboard zu erkunden!"
+    },
+    "users": {
+      "title": "Benutzerverwaltung",
+      "content": "# Benutzerverwaltung\\n\\nDas Benutzermodul hilft Ihnen, alle Benutzerkonten in Ihrer Organisation zu verwalten.\\n\\n## Hauptfunktionen\\n\\n- **Alle Benutzer anzeigen** - Durchsuchen und durchsuchen Sie Ihr vollständiges Benutzerverzeichnis\\n- **Benutzer erstellen** - Fügen Sie neue Benutzer manuell hinzu oder laden Sie sie per E-Mail ein\\n- **Rollen zuweisen** - Steuern Sie, worauf Benutzer zugreifen und was sie tun können\\n- **Berechtigungen verwalten** - Feinabstimmung der Funktionen für jede Rolle\\n- **Benutzerprofile** - Detaillierte Benutzerinformationen anzeigen und bearbeiten\\n\\n## Erste Schritte\\n\\nBeginnen Sie damit, Ihre vorhandenen Benutzer zu durchsuchen oder ein neues Benutzerkonto zu erstellen. Sie können Rollen zuweisen, um Zugriffsebenen zu steuern."
+    },
+    "forms": {
+      "title": "Formular-Builder",
+      "content": "# Formularmodul\\n\\nErstellen Sie benutzerdefinierte Formulare, um Informationen von Ihren Mitgliedern und der Öffentlichkeit zu sammeln.\\n\\n## Was Sie tun können\\n\\n- **Formulare erstellen** - Erstellen Sie Formulare mit verschiedenen Feldtypen (Text, Zahlen, Daten, Dropdown-Listen usw.)\\n- **Feldvalidierung** - Stellen Sie die Datenqualität mit integrierten Validierungsregeln sicher\\n- **Bedingte Logik** - Felder basierend auf Benutzerantworten ein- oder ausblenden\\n- **Einreichungen** - Alle Formulareinreichungen anzeigen und verwalten\\n- **Daten exportieren** - Einreichungsdaten zur Analyse herunterladen\\n\\n## Formulartypen\\n\\nErstellen Sie Anmeldeformulare, Umfragen, Bewerbungen, Feedback-Formulare und mehr. Formulare können auf Ihrer Website eingebettet oder über direkte Links geteilt werden."
+    }
+  }
+}
+
+with open('packages/orgadmin-shell/src/locales/de-DE/onboarding.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+print("✓ Created valid German onboarding.json")
+
+data["modules"]["events"] = {
+  "title": "Veranstaltungsverwaltung",
+  "content": "# Veranstaltungsmodul\\n\\nPlanen, bewerben und verwalten Sie Veranstaltungen für Ihre Organisation.\\n\\n## Kernfunktionen\\n\\n- **Veranstaltungen erstellen** - Richten Sie Veranstaltungen mit Daten, Orten und Beschreibungen ein\\n- **Anmeldung** - Akzeptieren Sie Veranstaltungsanmeldungen mit benutzerdefinierten Formularen\\n- **Kapazitätsverwaltung** - Legen Sie Teilnehmergrenzen und Wartelisten fest\\n- **Kommunikation** - Senden Sie Updates und Erinnerungen an Teilnehmer\\n- **Check-in** - Verfolgen Sie die Anwesenheit am Veranstaltungstag\\n- **Berichterstattung** - Analysieren Sie Anmeldungs- und Anwesenheitsdaten\\n\\n## Veranstaltungstypen\\n\\nVerwalten Sie Besprechungen, Workshops, Konferenzen, gesellschaftliche Zusammenkünfte und jede andere Art von Veranstaltung, die Ihre Organisation ausrichtet."
+}
+
+data["modules"]["memberships"] = {
+  "title": "Mitgliederverwaltung",
+  "content": "# Mitgliedermodul\\n\\nVerwalten Sie das Mitgliedschaftsprogramm und die Mitgliederbeziehungen Ihrer Organisation.\\n\\n## Hauptfunktionen\\n\\n- **Mitgliedschaftstypen** - Definieren Sie verschiedene Mitgliedschaftsstufen und Vorteile\\n- **Abonnements** - Verwalten Sie wiederkehrende Mitgliedschaften mit automatischen Verlängerungen\\n- **Mitgliederdatensätze** - Pflegen Sie detaillierte Mitgliederprofile und -historie\\n- **Verlängerungen** - Verfolgen Sie Ablaufdaten und senden Sie Verlängerungserinnerungen\\n- **Mitgliederportal** - Geben Sie Mitgliedern Zugriff auf ihre eigenen Informationen\\n- **Berichterstattung** - Analysieren Sie Mitgliedschaftstrends und -bindung\\n\\n## Erste Schritte\\n\\nRichten Sie Ihre Mitgliedschaftstypen ein und beginnen Sie dann, Mitglieder hinzuzufügen oder erlauben Sie ihnen, sich über Ihre Website selbst zu registrieren."
+}
+
+data["modules"]["calendar"] = {
+  "title": "Kalender & Buchungen",
+  "content": "# Kalender & Buchungen\\n\\nVerwalten Sie buchbare Ressourcen, Termine und Terminplanung für Ihre Organisation.\\n\\n## Was Sie tun können\\n\\n- **Kalender erstellen** - Richten Sie Kalender für Räume, Ausrüstung, Personal oder Dienstleistungen ein\\n- **Verfügbarkeit definieren** - Legen Sie fest, wann Ressourcen zur Buchung verfügbar sind\\n- **Buchungen akzeptieren** - Lassen Sie Benutzer Zeitfenster online buchen\\n- **Termine verwalten** - Buchungen anzeigen, bearbeiten und stornieren\\n- **Konflikte vermeiden** - Automatische Konflikterkennung und -vermeidung\\n- **Benachrichtigungen** - Buchungsbestätigungen und Erinnerungen senden\\n\\n## Anwendungsfälle\\n\\nPerfekt für Besprechungsraumbuchungen, Geräteverleih, Terminplanung, Kursanmeldungen und mehr."
+}
+
+data["modules"]["payments"] = {
+  "title": "Zahlungsabwicklung",
+  "content": "# Zahlungsmodul\\n\\nAkzeptieren und verwalten Sie Zahlungen für Mitgliedschaften, Veranstaltungen und andere Dienstleistungen.\\n\\n## Kernfunktionen\\n\\n- **Zahlungseinzug** - Akzeptieren Sie Kreditkarten, Banküberweisungen und andere Zahlungsmethoden\\n- **Transaktionsverlauf** - Alle Zahlungstransaktionen anzeigen\\n- **Rechnungsstellung** - Rechnungen erstellen und versenden\\n- **Rückerstattungen** - Rückerstattungen bei Bedarf bearbeiten\\n- **Berichterstattung** - Finanzberichte und Abstimmung\\n- **Sicherheit** - PCI-konforme Zahlungsabwicklung\\n\\n## Integration\\n\\nZahlungen sind in OrgAdmin integriert - erheben Sie Gebühren während der Veranstaltungsanmeldung, Mitgliedschaftsanmeldung und mehr."
+}

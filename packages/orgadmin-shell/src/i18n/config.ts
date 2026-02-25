@@ -22,33 +22,35 @@ const translationCache = new Map<string, any>();
 /**
  * Lazy load translation resources on demand
  * @param locale - The locale to load
+ * @param namespace - The namespace to load (default: 'translation')
  * @returns Promise resolving to the translation object
  */
-async function loadTranslation(locale: SupportedLocale): Promise<any> {
+async function loadTranslation(locale: SupportedLocale, namespace: string = 'translation'): Promise<any> {
   // Check cache first
-  if (translationCache.has(locale)) {
-    return translationCache.get(locale);
+  const cacheKey = `${locale}-${namespace}`;
+  if (translationCache.has(cacheKey)) {
+    return translationCache.get(cacheKey);
   }
 
   try {
     // Dynamically import the translation file
-    const translation = await import(`../locales/${locale}/translation.json`);
+    const translation = await import(`../locales/${locale}/${namespace}.json`);
     
     // Cache the loaded translation
-    translationCache.set(locale, translation.default || translation);
+    translationCache.set(cacheKey, translation.default || translation);
     
     return translation.default || translation;
   } catch (error) {
-    console.error(`Failed to load translation for locale ${locale}:`, error);
+    console.error(`Failed to load ${namespace} translation for locale ${locale}:`, error);
     
     // If not default locale, try to load default as fallback
-    if (locale !== DEFAULT_LOCALE && !translationCache.has(DEFAULT_LOCALE)) {
+    if (locale !== DEFAULT_LOCALE && !translationCache.has(`${DEFAULT_LOCALE}-${namespace}`)) {
       try {
-        const defaultTranslation = await import(`../locales/${DEFAULT_LOCALE}/translation.json`);
-        translationCache.set(DEFAULT_LOCALE, defaultTranslation.default || defaultTranslation);
+        const defaultTranslation = await import(`../locales/${DEFAULT_LOCALE}/${namespace}.json`);
+        translationCache.set(`${DEFAULT_LOCALE}-${namespace}`, defaultTranslation.default || defaultTranslation);
         return defaultTranslation.default || defaultTranslation;
       } catch (fallbackError) {
-        console.error('Failed to load default locale translation:', fallbackError);
+        console.error(`Failed to load default locale ${namespace} translation:`, fallbackError);
         return {};
       }
     }
@@ -94,11 +96,17 @@ export function clearTranslationCache(): void {
  */
 export async function initializeI18n(locale: string = DEFAULT_LOCALE, preloadAll: boolean = false): Promise<void> {
   try {
-    // Load the initial locale translation
-    const initialTranslation = await loadTranslation(locale as SupportedLocale);
+    // Load the initial locale translations for all namespaces
+    const initialTranslation = await loadTranslation(locale as SupportedLocale, 'translation');
+    const initialOnboarding = await loadTranslation(locale as SupportedLocale, 'onboarding');
+    const initialHelp = await loadTranslation(locale as SupportedLocale, 'help');
     
-    const resources: Record<string, { translation: any }> = {
-      [locale]: { translation: initialTranslation },
+    const resources: Record<string, { translation: any; onboarding: any; help: any }> = {
+      [locale]: { 
+        translation: initialTranslation,
+        onboarding: initialOnboarding,
+        help: initialHelp,
+      },
     };
     
     // Optionally preload all translations (for testing)
@@ -106,8 +114,10 @@ export async function initializeI18n(locale: string = DEFAULT_LOCALE, preloadAll
       for (const loc of SUPPORTED_LOCALES) {
         if (loc !== locale) {
           try {
-            const translation = await loadTranslation(loc);
-            resources[loc] = { translation };
+            const translation = await loadTranslation(loc, 'translation');
+            const onboarding = await loadTranslation(loc, 'onboarding');
+            const help = await loadTranslation(loc, 'help');
+            resources[loc] = { translation, onboarding, help };
           } catch (error) {
             console.error(`Failed to preload translation for ${loc}:`, error);
           }
@@ -123,6 +133,8 @@ export async function initializeI18n(locale: string = DEFAULT_LOCALE, preloadAll
         lng: locale,
         fallbackLng: DEFAULT_LOCALE,
         supportedLngs: [...SUPPORTED_LOCALES],
+        ns: ['translation', 'onboarding', 'help'],
+        defaultNS: 'translation',
         interpolation: {
           escapeValue: false, // React already escapes values
         },
@@ -135,7 +147,7 @@ export async function initializeI18n(locale: string = DEFAULT_LOCALE, preloadAll
         },
         // Log missing keys in development mode only
         saveMissing: process.env.NODE_ENV === 'development',
-        missingKeyHandler: (lngs, ns, key) => {
+        missingKeyHandler: (lngs, _ns, key) => {
           if (process.env.NODE_ENV === 'development') {
             console.warn(`Missing translation key: ${key} for languages: ${lngs.join(', ')}`);
           }
@@ -147,10 +159,26 @@ export async function initializeI18n(locale: string = DEFAULT_LOCALE, preloadAll
       i18n.on('languageChanged', async (lng) => {
         if (!i18n.hasResourceBundle(lng, 'translation')) {
           try {
-            const translation = await loadTranslation(lng as SupportedLocale);
+            const translation = await loadTranslation(lng as SupportedLocale, 'translation');
             i18n.addResourceBundle(lng, 'translation', translation, true, true);
           } catch (error) {
             console.error(`Failed to load translation for ${lng}:`, error);
+          }
+        }
+        if (!i18n.hasResourceBundle(lng, 'onboarding')) {
+          try {
+            const onboarding = await loadTranslation(lng as SupportedLocale, 'onboarding');
+            i18n.addResourceBundle(lng, 'onboarding', onboarding, true, true);
+          } catch (error) {
+            console.error(`Failed to load onboarding translation for ${lng}:`, error);
+          }
+        }
+        if (!i18n.hasResourceBundle(lng, 'help')) {
+          try {
+            const help = await loadTranslation(lng as SupportedLocale, 'help');
+            i18n.addResourceBundle(lng, 'help', help, true, true);
+          } catch (error) {
+            console.error(`Failed to load help translation for ${lng}:`, error);
           }
         }
       });
@@ -159,15 +187,23 @@ export async function initializeI18n(locale: string = DEFAULT_LOCALE, preloadAll
     console.error('Failed to initialize i18n, falling back to English:', error);
     // Attempt to initialize with minimal English-only configuration
     try {
-      const fallbackTranslation = await loadTranslation(DEFAULT_LOCALE);
+      const fallbackTranslation = await loadTranslation(DEFAULT_LOCALE, 'translation');
+      const fallbackOnboarding = await loadTranslation(DEFAULT_LOCALE, 'onboarding');
+      const fallbackHelp = await loadTranslation(DEFAULT_LOCALE, 'help');
       await i18n
         .use(initReactI18next)
         .init({
           resources: {
-            [DEFAULT_LOCALE]: { translation: fallbackTranslation },
+            [DEFAULT_LOCALE]: { 
+              translation: fallbackTranslation,
+              onboarding: fallbackOnboarding,
+              help: fallbackHelp,
+            },
           },
           lng: DEFAULT_LOCALE,
           fallbackLng: DEFAULT_LOCALE,
+          ns: ['translation', 'onboarding', 'help'],
+          defaultNS: 'translation',
           interpolation: {
             escapeValue: false,
           },

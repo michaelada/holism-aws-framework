@@ -12,14 +12,14 @@ import type { ModuleRegistration } from '../types/module.types';
 
 export const formsModule: ModuleRegistration = {
   id: 'forms',
-  name: 'Forms',
-  title: 'Form Builder',
-  description: 'Create and manage application forms and field definitions',
+  name: 'modules.forms.name',
+  title: 'modules.forms.title',
+  description: 'modules.forms.description',
   capability: undefined, // Core module - always available
   order: 2, // Second in menu after Dashboard
   card: {
-    title: 'Form Builder',
-    description: 'Create and manage application forms and field definitions',
+    title: 'modules.forms.title',
+    description: 'modules.forms.description',
     icon: FormIcon,
     color: '#2e7d32',
     path: '/forms',
@@ -45,15 +45,23 @@ export const formsModule: ModuleRegistration = {
       path: 'forms/fields',
       component: lazy(() => import('./pages/FieldsListPage')),
     },
+    {
+      path: 'forms/fields/new',
+      component: lazy(() => import('./pages/CreateFieldPage')),
+    },
+    {
+      path: 'forms/fields/:id/edit',
+      component: lazy(() => import('./pages/EditFieldPage')),
+    },
   ],
   subMenuItems: [
     {
-      label: 'Forms',
+      label: 'modules.forms.menu.forms',
       path: '/forms',
       icon: FormIcon,
     },
     {
-      label: 'Fields',
+      label: 'modules.forms.menu.fields',
       path: '/forms/fields',
       icon: FieldIcon,
     },
@@ -65,3 +73,5 @@ export { default as FormsListPage } from './pages/FormsListPage';
 export { default as FormBuilderPage } from './pages/FormBuilderPage';
 export { default as FormPreviewPage } from './pages/FormPreviewPage';
 export { default as FieldsListPage } from './pages/FieldsListPage';
+export { default as CreateFieldPage } from './pages/CreateFieldPage';
+export { default as EditFieldPage } from './pages/EditFieldPage';

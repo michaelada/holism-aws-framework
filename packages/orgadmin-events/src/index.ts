@@ -21,14 +21,14 @@ import type { ModuleRegistration } from './types/module.types';
 
 export const eventsModule: ModuleRegistration = {
   id: 'events',
-  name: 'Events',
-  title: 'Event Management',
-  description: 'Manage events, activities, and entries for your organisation',
+  name: 'modules.events.name',
+  title: 'modules.events.title',
+  description: 'modules.events.description',
   capability: 'event-management', // Requires event-management capability
   order: 10, // After core modules
   card: {
-    title: 'Event Management',
-    description: 'Manage events, activities, and entries for your organisation',
+    title: 'modules.events.title',
+    description: 'modules.events.description',
     icon: EventIcon,
     color: '#d84315',
     path: '/events',
@@ -56,7 +56,7 @@ export const eventsModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Events',
+    label: 'modules.events.name',
     path: '/events',
     icon: EventIcon,
   },

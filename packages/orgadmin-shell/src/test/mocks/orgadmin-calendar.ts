@@ -3,14 +3,14 @@
 
 export const calendarModule = {
   id: 'calendar',
-  name: 'Calendar',
-  title: 'Calendar',
-  description: 'Manage calendar',
+  name: 'modules.calendar.name',
+  title: 'modules.calendar.title',
+  description: 'modules.calendar.description',
   capability: 'calendar-bookings',
   order: 13,
   card: { 
-    title: 'Calendar', 
-    description: 'Manage calendar', 
+    title: 'modules.calendar.title', 
+    description: 'modules.calendar.description', 
     icon: () => null, 
     path: '/calendar' 
   },

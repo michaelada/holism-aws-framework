@@ -1,0 +1,40 @@
+{
+  "welcome": {
+    "title": "Benvenuto in OrgAdmin",
+    "content": "# Benvenuto in OrgAdmin\n\nOrgAdmin è la tua piattaforma completa per gestire le operazioni della tua organizzazione. Ecco cosa puoi fare:\n\n## Funzionalità Principali\n\n**Gestione Utenti** - Crea e gestisci account utente, assegna ruoli e controlla i permessi in tutta la tua organizzazione.\n\n**Moduli e Raccolta Dati** - Crea moduli personalizzati per raccogliere informazioni dai membri, con tipi di campo flessibili e validazione.\n\n**Gestione Eventi** - Crea e gestisci eventi, monitora le registrazioni e comunica con i partecipanti.\n\n**Gestione Iscrizioni** - Gestisci abbonamenti, rinnovi e dati dei membri.\n\n**Calendario e Prenotazioni** - Gestisci risorse prenotabili, appuntamenti e pianificazione.\n\n**Elaborazione Pagamenti** - Accetta pagamenti, monitora le transazioni e gestisci i registri finanziari.\n\n## Per Iniziare\n\nOgni modulo ha la propria introduzione che apparirà la prima volta che lo visiti. Puoi anche accedere all'aiuto in qualsiasi momento cliccando sul pulsante di aiuto (?) nell'angolo in alto a destra.\n\nPronto per iniziare? Chiudi questa finestra ed esplora la tua dashboard!",
+    "dontShowAgain": "Non mostrare più questo messaggio"
+  },
+  "actions": {
+    "gotIt": "Ho capito"
+  },
+  "modules": {
+    "dashboard": {
+      "title": "Panoramica Dashboard",
+      "content": "# Dashboard\n\nLa tua dashboard fornisce una panoramica rapida delle metriche chiave e delle attività recenti della tua organizzazione.\n\n## Cosa Vedrai\n\n- **Statistiche Rapide** - Conteggio membri, eventi imminenti, invii di moduli recenti\n- **Attività Recente** - Ultime azioni e aggiornamenti in tutti i moduli\n- **Scorciatoie** - Accesso rapido alle attività comuni\n- **Notifiche** - Avvisi e promemoria importanti\n\n## Personalizzazione\n\nPuoi personalizzare quali widget appaiono sulla tua dashboard e organizzarli per adattarli al tuo flusso di lavoro.\n\nClicca \"Ho capito\" per iniziare a esplorare la tua dashboard!"
+    },
+    "users": {
+      "title": "Gestione Utenti",
+      "content": "# Gestione Utenti\n\nIl modulo Utenti ti aiuta a gestire tutti gli account utente nella tua organizzazione.\n\n## Funzionalità Chiave\n\n- **Visualizza Tutti gli Utenti** - Sfoglia e cerca nella tua directory utenti completa\n- **Crea Utenti** - Aggiungi nuovi utenti manualmente o invitali via email\n- **Assegna Ruoli** - Controlla a cosa possono accedere e cosa possono fare gli utenti\n- **Gestisci Permessi** - Regola con precisione le capacità per ogni ruolo\n- **Profili Utente** - Visualizza e modifica informazioni dettagliate degli utenti\n\n## Per Iniziare\n\nInizia sfogliando i tuoi utenti esistenti o crea un nuovo account utente. Puoi assegnare ruoli per controllare i livelli di accesso."
+    },
+    "forms": {
+      "title": "Costruttore di Moduli",
+      "content": "# Modulo Moduli\n\nCrea moduli personalizzati per raccogliere informazioni dai tuoi membri e dal pubblico.\n\n## Cosa Puoi Fare\n\n- **Costruisci Moduli** - Crea moduli con vari tipi di campo (testo, numeri, date, menu a discesa, ecc.)\n- **Validazione Campi** - Assicura la qualità dei dati con regole di validazione integrate\n- **Logica Condizionale** - Mostra o nascondi campi in base alle risposte degli utenti\n- **Invii** - Visualizza e gestisci tutti gli invii di moduli\n- **Esporta Dati** - Scarica i dati degli invii per l'analisi\n\n## Tipi di Moduli\n\nCrea moduli di registrazione, sondaggi, applicazioni, moduli di feedback e altro ancora. I moduli possono essere incorporati nel tuo sito web o condivisi tramite link diretti."
+    },
+    "events": {
+      "title": "Gestione Eventi",
+      "content": "# Modulo Eventi\n\nPianifica, promuovi e gestisci eventi per la tua organizzazione.\n\n## Capacità Principali\n\n- **Crea Eventi** - Configura eventi con date, luoghi e descrizioni\n- **Registrazione** - Accetta registrazioni agli eventi con moduli personalizzati\n- **Gestione Capacità** - Imposta limiti di partecipazione e liste d'attesa\n- **Comunicazione** - Invia aggiornamenti e promemoria ai partecipanti\n- **Check-in** - Monitora la presenza il giorno dell'evento\n- **Reportistica** - Analizza i dati di registrazione e partecipazione\n\n## Tipi di Eventi\n\nGestisci riunioni, workshop, conferenze, incontri sociali e qualsiasi altro tipo di evento ospitato dalla tua organizzazione."
+    },
+    "memberships": {
+      "title": "Gestione Iscrizioni",
+      "content": "# Modulo Iscrizioni\n\nGestisci il programma di iscrizione della tua organizzazione e le relazioni con i membri.\n\n## Funzionalità Chiave\n\n- **Tipi di Iscrizione** - Definisci diversi livelli di iscrizione e benefici\n- **Abbonamenti** - Gestisci iscrizioni ricorrenti con rinnovi automatici\n- **Registri Membri** - Mantieni profili dettagliati e cronologia dei membri\n- **Rinnovi** - Monitora le date di scadenza e invia promemoria di rinnovo\n- **Portale Membri** - Dai ai membri accesso alle proprie informazioni\n- **Reportistica** - Analizza le tendenze e la fidelizzazione delle iscrizioni\n\n## Per Iniziare\n\nConfigura i tuoi tipi di iscrizione, poi inizia ad aggiungere membri o consenti loro di auto-registrarsi tramite il tuo sito web."
+    },
+    "calendar": {
+      "title": "Calendario e Prenotazioni",
+      "content": "# Calendario e Prenotazioni\n\nGestisci risorse prenotabili, appuntamenti e pianificazione per la tua organizzazione.\n\n## Cosa Puoi Fare\n\n- **Crea Calendari** - Configura calendari per sale, attrezzature, personale o servizi\n- **Definisci Disponibilità** - Imposta quando le risorse sono disponibili per la prenotazione\n- **Accetta Prenotazioni** - Consenti agli utenti di prenotare fasce orarie online\n- **Gestisci Appuntamenti** - Visualizza, modifica e annulla prenotazioni\n- **Previeni Conflitti** - Rilevamento e prevenzione automatica dei conflitti\n- **Notifiche** - Invia conferme di prenotazione e promemoria\n\n## Casi d'Uso\n\nPerfetto per prenotazioni di sale riunioni, noleggio attrezzature, pianificazione appuntamenti, registrazioni a corsi e altro ancora."
+    },
+    "payments": {
+      "title": "Elaborazione Pagamenti",
+      "content": "# Modulo Pagamenti\n\nAccetta e gestisci pagamenti per iscrizioni, eventi e altri servizi.\n\n## Funzionalità Principali\n\n- **Raccolta Pagamenti** - Accetta carte di credito, bonifici bancari e altri metodi di pagamento\n- **Cronologia Transazioni** - Visualizza tutte le transazioni di pagamento\n- **Fatturazione** - Genera e invia fatture\n- **Rimborsi** - Elabora rimborsi quando necessario\n- **Reportistica** - Report finanziari e riconciliazione\n- **Sicurezza** - Elaborazione pagamenti conforme PCI\n\n## Integrazione\n\nI pagamenti sono integrati in tutto OrgAdmin - raccogli commissioni durante la registrazione agli eventi, l'iscrizione e altro ancora."
+    }
+  }
+}

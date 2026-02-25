@@ -3,14 +3,14 @@
 
 export const registrationsModule = {
   id: 'registrations',
-  name: 'Registrations',
-  title: 'Registrations',
-  description: 'Manage registrations',
+  name: 'modules.registrations.name',
+  title: 'modules.registrations.title',
+  description: 'modules.registrations.description',
   capability: 'registrations',
   order: 14,
   card: { 
-    title: 'Registrations', 
-    description: 'Manage registrations', 
+    title: 'modules.registrations.title', 
+    description: 'modules.registrations.description', 
     icon: () => null, 
     path: '/registrations' 
   },

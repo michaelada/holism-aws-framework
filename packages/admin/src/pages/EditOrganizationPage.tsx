@@ -35,6 +35,25 @@ import { PaymentMethodSelector } from '../components/PaymentMethodSelector';
 
 const STATUSES = ['active', 'inactive', 'blocked'];
 
+const LANGUAGES = [
+  { code: 'en-GB', label: 'English (UK)' },
+  { code: 'en-US', label: 'English (US)' },
+  { code: 'fr-FR', label: 'French (France)' },
+  { code: 'de-DE', label: 'German (Germany)' },
+  { code: 'es-ES', label: 'Spanish (Spain)' },
+  { code: 'it-IT', label: 'Italian (Italy)' },
+  { code: 'pt-PT', label: 'Portuguese (Portugal)' },
+];
+
+const CURRENCIES = [
+  { code: 'GBP', label: 'British Pound (£)' },
+  { code: 'USD', label: 'US Dollar ($)' },
+  { code: 'EUR', label: 'Euro (€)' },
+  { code: 'AUD', label: 'Australian Dollar (A$)' },
+  { code: 'CAD', label: 'Canadian Dollar (C$)' },
+  { code: 'NZD', label: 'New Zealand Dollar (NZ$)' },
+];
+
 export const EditOrganizationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -55,6 +74,8 @@ export const EditOrganizationPage: React.FC = () => {
     contactEmail: '',
     contactMobile: '',
     status: 'active',
+    currency: 'GBP',
+    language: 'en-GB',
     enabledCapabilities: [],
     enabledPaymentMethods: [],
   });
@@ -94,6 +115,8 @@ export const EditOrganizationPage: React.FC = () => {
         contactEmail: orgData.contactEmail || '',
         contactMobile: orgData.contactMobile || '',
         status: orgData.status,
+        currency: orgData.currency || 'GBP',
+        language: orgData.language || 'en-GB',
         enabledCapabilities: orgData.enabledCapabilities,
         enabledPaymentMethods: selectedPaymentMethodNames,
       });
@@ -233,6 +256,36 @@ export const EditOrganizationPage: React.FC = () => {
                   {STATUSES.map((status) => (
                     <MenuItem key={status} value={status}>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
+                <InputLabel>Language</InputLabel>
+                <Select
+                  value={formData.language}
+                  label="Language"
+                  onChange={(e) => handleChange('language', e.target.value)}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <MenuItem key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
+                <InputLabel>Currency</InputLabel>
+                <Select
+                  value={formData.currency}
+                  label="Currency"
+                  onChange={(e) => handleChange('currency', e.target.value)}
+                >
+                  {CURRENCIES.map((curr) => (
+                    <MenuItem key={curr.code} value={curr.code}>
+                      {curr.label}
                     </MenuItem>
                   ))}
                 </Select>

@@ -15,14 +15,10 @@ import {
   Typography,
   Chip,
   Grid,
-  Divider,
-  IconButton,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  ToggleOn as ToggleOnIcon,
-  ToggleOff as ToggleOffIcon,
   CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import type { Calendar } from '../types/calendar.types';
@@ -30,7 +26,7 @@ import type { Calendar } from '../types/calendar.types';
 const CalendarDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [calendar, setCalendar] = useState<Calendar | null>(null);
+  const [calendar, _setCalendar] = useState<Calendar | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +35,7 @@ const CalendarDetailsPage: React.FC = () => {
     }
   }, [id]);
 
-  const loadCalendar = async (calendarId: string) => {
+  const loadCalendar = async (_calendarId: string) => {
     try {
       setLoading(true);
       // API call

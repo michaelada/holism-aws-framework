@@ -37,6 +37,7 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import type { MembershipType } from '../types/membership.types';
 
 // Mock API hook - will be replaced with actual implementation
@@ -59,6 +60,9 @@ const MembershipTypesListPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'single' | 'group'>('all');
   const [createMenuAnchor, setCreateMenuAnchor] = useState<null | HTMLElement>(null);
+
+  // Register page for contextual help
+  usePageHelp('list');
 
   useEffect(() => {
     loadMembershipTypes();

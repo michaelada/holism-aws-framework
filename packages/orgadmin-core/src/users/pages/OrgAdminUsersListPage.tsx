@@ -32,6 +32,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 interface OrgAdminUser {
   id: string;
@@ -53,6 +54,9 @@ const OrgAdminUsersListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState(0);
+
+  // Register page for contextual help
+  usePageHelp('list');
 
   useEffect(() => {
     loadUsers();

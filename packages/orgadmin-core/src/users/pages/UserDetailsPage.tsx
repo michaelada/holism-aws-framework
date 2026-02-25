@@ -36,6 +36,7 @@ import {
   Block as DeactivateIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 interface User {
   id: string;
@@ -64,6 +65,9 @@ const UserDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const isAdminUser = type === 'admins';
+
+  // Register page for contextual help
+  usePageHelp('detail');
 
   useEffect(() => {
     loadUser();

@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -40,7 +41,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useOrganisation } from '../../context/OrganisationContext';
+import { useTranslation, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 interface ApplicationField {
   id: string;
@@ -73,8 +74,9 @@ const FIELD_TYPES = [
 ];
 
 const FieldsListPage: React.FC = () => {
+  const { t } = useTranslation();
   const { execute } = useApi();
-  const { organisation } = useOrganisation();
+  const navigate = useNavigate();
   
   const [fields, setFields] = useState<ApplicationField[]>([]);
   const [filteredFields, setFilteredFields] = useState<ApplicationField[]>([]);
@@ -83,46 +85,14 @@ const FieldsListPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   
   // Dialog states
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<ApplicationField | null>(null);
   
-  // Form states
-  const [fieldLabel, setFieldLabel] = useState('');
-  const [fieldDescription, setFieldDescription] = useState('');
-  const [fieldType, setFieldType] = useState('text');
-  const [fieldOptions, setFieldOptions] = useState<string[]>([]);
-  const [newOption, setNewOption] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Helper function to generate field name from label
-  const generateFieldName = (label: string): string => {
-    return label
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-      .replace(/\s+/g, '_'); // Replace spaces with underscores
-  };
-
-  // Check if field type requires options
-  const requiresOptions = (type: string): boolean => {
-    return ['select', 'multiselect', 'radio', 'checkbox'].includes(type);
-  };
-
-  // Handle adding an option
-  const handleAddOption = () => {
-    if (newOption.trim() && !fieldOptions.includes(newOption.trim())) {
-      setFieldOptions([...fieldOptions, newOption.trim()]);
-      setNewOption('');
-    }
-  };
-
-  // Handle removing an option
-  const handleRemoveOption = (option: string) => {
-    setFieldOptions(fieldOptions.filter(o => o !== option));
-  };
+  // Register page for contextual help
+  usePageHelp('fields');
 
   useEffect(() => {
     loadFields();
@@ -167,108 +137,6 @@ const FieldsListPage: React.FC = () => {
     setFilteredFields(filtered);
   };
 
-  const handleCreateField = async () => {
-    if (!fieldLabel.trim()) {
-      setError('Field label is required');
-      return;
-    }
-
-    if (!organisation) {
-      setError('Organisation context not available');
-      return;
-    }
-
-    const generatedName = generateFieldName(fieldLabel);
-    if (!generatedName) {
-      setError('Field label must contain at least one alphanumeric character');
-      return;
-    }
-
-    // Validate options for field types that require them
-    if (requiresOptions(fieldType) && fieldOptions.length === 0) {
-      setError(`Field type "${fieldType}" requires at least one option`);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-
-      await execute({
-        method: 'POST',
-        url: '/api/orgadmin/application-fields',
-        data: {
-          organisationId: organisation.id,
-          name: generatedName,
-          label: fieldLabel,
-          description: fieldDescription || undefined,
-          datatype: fieldType,
-          options: requiresOptions(fieldType) ? fieldOptions : undefined,
-        },
-      });
-
-      setCreateDialogOpen(false);
-      resetForm();
-      loadFields();
-    } catch (err) {
-      setError('Failed to create field');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEditField = async () => {
-    if (!selectedField || !fieldLabel.trim()) {
-      setError('Field label is required');
-      return;
-    }
-
-    if (!organisation) {
-      setError('Organisation context not available');
-      return;
-    }
-
-    const generatedName = generateFieldName(fieldLabel);
-    if (!generatedName) {
-      setError('Field label must contain at least one alphanumeric character');
-      return;
-    }
-
-    // Validate options for field types that require them
-    if (requiresOptions(fieldType) && fieldOptions.length === 0) {
-      setError(`Field type "${fieldType}" requires at least one option`);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-
-      await execute({
-        method: 'PUT',
-        url: `/api/orgadmin/application-fields/${selectedField.id}`,
-        data: {
-          organisationId: organisation.id,
-          name: generatedName,
-          label: fieldLabel,
-          description: fieldDescription || undefined,
-          datatype: fieldType,
-          options: requiresOptions(fieldType) ? fieldOptions : undefined,
-        },
-      });
-
-      setEditDialogOpen(false);
-      resetForm();
-      loadFields();
-    } catch (err) {
-      setError('Failed to update field');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDeleteField = async () => {
     if (!selectedField) return;
 
@@ -292,33 +160,17 @@ const FieldsListPage: React.FC = () => {
     }
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setCreateDialogOpen(true);
-  };
-
-  const openEditDialog = (field: ApplicationField) => {
-    setSelectedField(field);
-    setFieldLabel(field.label);
-    setFieldDescription(field.description || '');
-    setFieldType(field.datatype);
-    setFieldOptions(field.options || []);
-    setEditDialogOpen(true);
-  };
-
   const openDeleteDialog = (field: ApplicationField) => {
     setSelectedField(field);
     setDeleteDialogOpen(true);
   };
 
-  const resetForm = () => {
-    setFieldLabel('');
-    setFieldDescription('');
-    setFieldType('text');
-    setFieldOptions([]);
-    setNewOption('');
-    setSelectedField(null);
-    setError(null);
+  const handleCreateField = () => {
+    navigate('/forms/fields/new');
+  };
+
+  const handleEditField = (field: ApplicationField) => {
+    navigate(`/forms/fields/${field.id}/edit`);
   };
 
   const formatDate = (dateString: string) => {
@@ -332,14 +184,14 @@ const FieldsListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Field Definitions</Typography>
+        <Typography variant="h4">{t('forms.fields.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={openCreateDialog}
+          onClick={handleCreateField}
         >
-          Create Field
+          {t('forms.fields.createField')}
         </Button>
       </Box>
 
@@ -347,7 +199,7 @@ const FieldsListPage: React.FC = () => {
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <TextField
-              placeholder="Search fields..."
+              placeholder={t('forms.fields.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -360,13 +212,13 @@ const FieldsListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Type</InputLabel>
+              <InputLabel>{t('forms.fields.fieldType')}</InputLabel>
               <Select
                 value={typeFilter}
-                label="Type"
+                label={t('forms.fields.fieldType')}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
-                <MenuItem value="all">All Types</MenuItem>
+                <MenuItem value="all">{t('forms.fields.allTypes')}</MenuItem>
                 {FIELD_TYPES.map((type) => (
                   <MenuItem key={type} value={type}>
                     {type}
@@ -382,26 +234,26 @@ const FieldsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Label</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('forms.fields.table.label')}</TableCell>
+              <TableCell>{t('forms.fields.table.description')}</TableCell>
+              <TableCell>{t('forms.fields.table.type')}</TableCell>
+              <TableCell>{t('forms.fields.table.created')}</TableCell>
+              <TableCell align="right">{t('forms.fields.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  Loading fields...
+                  {t('forms.fields.loadingFields')}
                 </TableCell>
               </TableRow>
             ) : filteredFields.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {searchTerm || typeFilter !== 'all'
-                    ? 'No fields match your filters'
-                    : 'No fields yet. Create your first field to get started.'}
+                    ? t('forms.fields.noMatchingFields')
+                    : t('forms.fields.noFieldsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -424,15 +276,15 @@ const FieldsListPage: React.FC = () => {
                   <TableCell align="right">
                     <IconButton
                       size="small"
-                      onClick={() => openEditDialog(field)}
-                      title="Edit"
+                      onClick={() => handleEditField(field)}
+                      title={t('common.actions.edit')}
                     >
                       <EditIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => openDeleteDialog(field)}
-                      title="Delete"
+                      title={t('common.actions.delete')}
                       color="error"
                     >
                       <DeleteIcon />
@@ -445,237 +297,12 @@ const FieldsListPage: React.FC = () => {
         </Table>
       </TableContainer>
 
-      {/* Create Field Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Field Definition</DialogTitle>
-        <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TextField
-            fullWidth
-            label="Field Label"
-            value={fieldLabel}
-            onChange={(e) => setFieldLabel(e.target.value)}
-            required
-            sx={{ mt: 2, mb: 2 }}
-            helperText="Display label (e.g., First Name) - field name will be auto-generated"
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            value={fieldDescription}
-            onChange={(e) => setFieldDescription(e.target.value)}
-            multiline
-            rows={3}
-            sx={{ mb: 2 }}
-            helperText="Optional detailed explanation of what this field is for"
-          />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Field Type</InputLabel>
-            <Select
-              value={fieldType}
-              label="Field Type"
-              onChange={(e) => {
-                setFieldType(e.target.value);
-                // Clear options when changing to a type that doesn't need them
-                if (!requiresOptions(e.target.value)) {
-                  setFieldOptions([]);
-                }
-              }}
-            >
-              {FIELD_TYPES.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Options section for select, multiselect, radio, checkbox */}
-          {requiresOptions(fieldType) && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Options {fieldOptions.length === 0 && <span style={{ color: 'red' }}>*</span>}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Add option"
-                  value={newOption}
-                  onChange={(e) => setNewOption(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddOption();
-                    }
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleAddOption}
-                  disabled={!newOption.trim()}
-                >
-                  Add
-                </Button>
-              </Box>
-              {fieldOptions.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {fieldOptions.map((option, index) => (
-                    <Chip
-                      key={index}
-                      label={option}
-                      onDelete={() => handleRemoveOption(option)}
-                      size="small"
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Alert severity="warning" sx={{ mt: 1 }}>
-                  At least one option is required for {fieldType} fields
-                </Alert>
-              )}
-            </Box>
-          )}
-
-          {fieldLabel && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              Field name will be: <strong>{generateFieldName(fieldLabel) || '(invalid)'}</strong>
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleCreateField} variant="contained" disabled={saving}>
-            {saving ? 'Creating...' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Edit Field Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Field Definition</DialogTitle>
-        <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TextField
-            fullWidth
-            label="Field Label"
-            value={fieldLabel}
-            onChange={(e) => setFieldLabel(e.target.value)}
-            required
-            sx={{ mt: 2, mb: 2 }}
-            helperText="Display label (e.g., First Name) - field name will be auto-generated"
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            value={fieldDescription}
-            onChange={(e) => setFieldDescription(e.target.value)}
-            multiline
-            rows={3}
-            sx={{ mb: 2 }}
-            helperText="Optional detailed explanation of what this field is for"
-          />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Field Type</InputLabel>
-            <Select
-              value={fieldType}
-              label="Field Type"
-              onChange={(e) => {
-                setFieldType(e.target.value);
-                // Clear options when changing to a type that doesn't need them
-                if (!requiresOptions(e.target.value)) {
-                  setFieldOptions([]);
-                }
-              }}
-            >
-              {FIELD_TYPES.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Options section for select, multiselect, radio, checkbox */}
-          {requiresOptions(fieldType) && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Options {fieldOptions.length === 0 && <span style={{ color: 'red' }}>*</span>}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Add option"
-                  value={newOption}
-                  onChange={(e) => setNewOption(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddOption();
-                    }
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleAddOption}
-                  disabled={!newOption.trim()}
-                >
-                  Add
-                </Button>
-              </Box>
-              {fieldOptions.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {fieldOptions.map((option, index) => (
-                    <Chip
-                      key={index}
-                      label={option}
-                      onDelete={() => handleRemoveOption(option)}
-                      size="small"
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Alert severity="warning" sx={{ mt: 1 }}>
-                  At least one option is required for {fieldType} fields
-                </Alert>
-              )}
-            </Box>
-          )}
-
-          {fieldLabel && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              Field name will be: <strong>{generateFieldName(fieldLabel) || '(invalid)'}</strong>
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleEditField} variant="contained" disabled={saving}>
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm">
-        <DialogTitle>Delete Field Definition</DialogTitle>
+        <DialogTitle>{t('forms.fields.delete.title')}</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete the field "{selectedField?.label}"?
-            This action cannot be undone.
+            {t('forms.fields.delete.message', { label: selectedField?.label })}
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
@@ -685,10 +312,10 @@ const FieldsListPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} disabled={saving}>
-            Cancel
+            {t('common.actions.cancel')}
           </Button>
           <Button onClick={handleDeleteField} color="error" variant="contained" disabled={saving}>
-            {saving ? 'Deleting...' : 'Delete'}
+            {saving ? t('common.messages.saving') : t('common.actions.delete')}
           </Button>
         </DialogActions>
       </Dialog>

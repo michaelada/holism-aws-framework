@@ -9,21 +9,23 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  Typography,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Switch,
-  Divider,
+  Typography
+  // Card,
+  // CardContent,
+  // Typography,
+  // TextField,
+  // FormControl,
+  // InputLabel,
+  // Select,
+  // MenuItem,
+  // FormControlLabel,
+  // Switch,
+  // Divider,
 } from '@mui/material';
 import { Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import type { CalendarFormData, CalendarStatus } from '../types/calendar.types';
+import type { CalendarFormData } from '../types/calendar.types';
 import CalendarForm from '../components/CalendarForm';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 const CreateCalendarPage: React.FC = () => {
   const navigate = useNavigate();
@@ -53,13 +55,16 @@ const CreateCalendarPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Register page for contextual help
+  usePageHelp(isEditMode ? 'edit' : 'create');
+
   useEffect(() => {
     if (isEditMode && id) {
       loadCalendar(id);
     }
   }, [id, isEditMode]);
 
-  const loadCalendar = async (calendarId: string) => {
+  const loadCalendar = async (_calendarId: string) => {
     try {
       setLoading(true);
       // API call to load calendar

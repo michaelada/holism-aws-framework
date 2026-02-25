@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -14,7 +14,6 @@ import {
   Typography,
   Grid,
   Chip,
-  Divider,
 } from '@mui/material';
 import {
   Cancel as CancelIcon,
@@ -25,8 +24,7 @@ import type { Booking } from '../types/calendar.types';
 
 const BookingDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [booking, _setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,7 +33,7 @@ const BookingDetailsPage: React.FC = () => {
     }
   }, [id]);
 
-  const loadBooking = async (bookingId: string) => {
+  const loadBooking = async (_bookingId: string) => {
     try {
       setLoading(true);
       // API call

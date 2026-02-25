@@ -7,6 +7,7 @@ import {
   Box,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
 
 interface DashboardCardProps {
@@ -27,6 +28,7 @@ interface DashboardCardProps {
  */
 export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { card } = module;
   const Icon = card.icon;
 
@@ -115,7 +117,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
             mb: 1,
           }}
         >
-          {card.title}
+          {t(card.title)}
         </Typography>
 
         {/* Description */}
@@ -127,7 +129,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
             minHeight: '3em', // Ensure consistent card heights
           }}
         >
-          {card.description}
+          {t(card.description)}
         </Typography>
       </CardContent>
     </Card>

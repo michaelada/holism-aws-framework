@@ -29,6 +29,7 @@ import {
   Send as SendIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 const InviteAdminUserPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,9 @@ const InviteAdminUserPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Register page for contextual help
+  usePageHelp('invite');
 
   useEffect(() => {
     loadAvailableRoles();

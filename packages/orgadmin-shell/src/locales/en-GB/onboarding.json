@@ -1,0 +1,40 @@
+{
+  "welcome": {
+    "title": "Welcome to OrgAdmin",
+    "content": "# Welcome to OrgAdmin\n\nOrgAdmin is your comprehensive platform for managing your organisation's operations. Here's what you can do:\n\n## Core Features\n\n**User Management** - Create and manage user accounts, assign roles, and control permissions across your organisation.\n\n**Forms & Data Collection** - Build custom forms to collect information from members, with flexible field types and validation.\n\n**Event Management** - Create and manage events, track registrations, and communicate with attendees.\n\n**Membership Management** - Handle membership subscriptions, renewals, and member data.\n\n**Calendar & Bookings** - Manage bookable resources, appointments, and scheduling.\n\n**Payment Processing** - Accept payments, track transactions, and manage financial records.\n\n## Getting Started\n\nEach module has its own introduction that will appear the first time you visit it. You can also access help at any time by clicking the help button (?) in the top right corner.\n\nReady to get started? Close this dialog and explore your dashboard!",
+    "dontShowAgain": "Don't show this again"
+  },
+  "actions": {
+    "gotIt": "Got it"
+  },
+  "modules": {
+    "dashboard": {
+      "title": "Dashboard Overview",
+      "content": "# Dashboard\n\nYour dashboard provides a quick overview of your organisation's key metrics and recent activity.\n\n## What You'll See\n\n- **Quick Stats** - Member counts, upcoming events, recent form submissions\n- **Recent Activity** - Latest actions and updates across all modules\n- **Shortcuts** - Quick access to common tasks\n- **Notifications** - Important alerts and reminders\n\n## Customization\n\nYou can customize which widgets appear on your dashboard and arrange them to suit your workflow.\n\nClick \"Got it\" to start exploring your dashboard!"
+    },
+    "users": {
+      "title": "User Management",
+      "content": "# User Management\n\nThe Users module helps you manage all user accounts in your organisation.\n\n## Key Features\n\n- **View All Users** - Browse and search your complete user directory\n- **Create Users** - Add new users manually or invite them via email\n- **Assign Roles** - Control what users can access and do\n- **Manage Permissions** - Fine-tune capabilities for each role\n- **User Profiles** - View and edit detailed user information\n\n## Getting Started\n\nStart by browsing your existing users or create a new user account. You can assign roles to control access levels."
+    },
+    "forms": {
+      "title": "Form Builder",
+      "content": "# Forms Module\n\nCreate custom forms to collect information from your members and the public.\n\n## What You Can Do\n\n- **Build Forms** - Create forms with various field types (text, numbers, dates, dropdowns, etc.)\n- **Field Validation** - Ensure data quality with built-in validation rules\n- **Conditional Logic** - Show or hide fields based on user responses\n- **Submissions** - View and manage all form submissions\n- **Export Data** - Download submission data for analysis\n\n## Form Types\n\nCreate registration forms, surveys, applications, feedback forms, and more. Forms can be embedded on your website or shared via direct links."
+    },
+    "events": {
+      "title": "Event Management",
+      "content": "# Events Module\n\nPlan, promote, and manage events for your organisation.\n\n## Core Capabilities\n\n- **Create Events** - Set up events with dates, locations, and descriptions\n- **Registration** - Accept event registrations with custom forms\n- **Capacity Management** - Set attendance limits and waitlists\n- **Communication** - Send updates and reminders to attendees\n- **Check-in** - Track attendance on event day\n- **Reporting** - Analyze registration and attendance data\n\n## Event Types\n\nManage meetings, workshops, conferences, social gatherings, and any other type of event your organisation hosts."
+    },
+    "memberships": {
+      "title": "Membership Management",
+      "content": "# Memberships Module\n\nManage your organisation's membership program and member relationships.\n\n## Key Features\n\n- **Membership Types** - Define different membership tiers and benefits\n- **Subscriptions** - Handle recurring memberships with automatic renewals\n- **Member Records** - Maintain detailed member profiles and history\n- **Renewals** - Track expiration dates and send renewal reminders\n- **Member Portal** - Give members access to their own information\n- **Reporting** - Analyze membership trends and retention\n\n## Getting Started\n\nSet up your membership types, then start adding members or allow them to self-register through your website."
+    },
+    "calendar": {
+      "title": "Calendar & Bookings",
+      "content": "# Calendar & Bookings\n\nManage bookable resources, appointments, and scheduling for your organisation.\n\n## What You Can Do\n\n- **Create Calendars** - Set up calendars for rooms, equipment, staff, or services\n- **Define Availability** - Set when resources are available for booking\n- **Accept Bookings** - Let users book time slots online\n- **Manage Appointments** - View, edit, and cancel bookings\n- **Prevent Conflicts** - Automatic conflict detection and prevention\n- **Notifications** - Send booking confirmations and reminders\n\n## Use Cases\n\nPerfect for meeting room bookings, equipment rentals, appointment scheduling, class registrations, and more."
+    },
+    "payments": {
+      "title": "Payment Processing",
+      "content": "# Payments Module\n\nAccept and manage payments for memberships, events, and other services.\n\n## Core Features\n\n- **Payment Collection** - Accept credit cards, bank transfers, and other payment methods\n- **Transaction History** - View all payment transactions\n- **Invoicing** - Generate and send invoices\n- **Refunds** - Process refunds when needed\n- **Reporting** - Financial reports and reconciliation\n- **Security** - PCI-compliant payment processing\n\n## Integration\n\nPayments are integrated throughout OrgAdmin - collect fees during event registration, membership signup, and more."
+    }
+  }
+}

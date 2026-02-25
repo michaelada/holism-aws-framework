@@ -32,6 +32,25 @@ import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
 import { PaymentMethodSelector } from '../components/PaymentMethodSelector';
 
+const LANGUAGES = [
+  { code: 'en-GB', label: 'English (UK)' },
+  { code: 'en-US', label: 'English (US)' },
+  { code: 'fr-FR', label: 'French (France)' },
+  { code: 'de-DE', label: 'German (Germany)' },
+  { code: 'es-ES', label: 'Spanish (Spain)' },
+  { code: 'it-IT', label: 'Italian (Italy)' },
+  { code: 'pt-PT', label: 'Portuguese (Portugal)' },
+];
+
+const CURRENCIES = [
+  { code: 'GBP', label: 'British Pound (£)' },
+  { code: 'USD', label: 'US Dollar ($)' },
+  { code: 'EUR', label: 'Euro (€)' },
+  { code: 'AUD', label: 'Australian Dollar (A$)' },
+  { code: 'CAD', label: 'Canadian Dollar (C$)' },
+  { code: 'NZD', label: 'New Zealand Dollar (NZ$)' },
+];
+
 export const CreateOrganizationPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -53,6 +72,8 @@ export const CreateOrganizationPage: React.FC = () => {
     contactName: '',
     contactEmail: '',
     contactMobile: '',
+    currency: 'GBP',
+    language: 'en-GB',
     enabledCapabilities: [],
     enabledPaymentMethods: ['pay-offline'], // Default to pay-offline
   });
@@ -249,6 +270,40 @@ export const CreateOrganizationPage: React.FC = () => {
                   onChange={(e) => handleChange('contactMobile', e.target.value)}
                   helperText="Primary contact mobile number"
                 />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Language</InputLabel>
+                  <Select
+                    value={formData.language}
+                    label="Language"
+                    onChange={(e) => handleChange('language', e.target.value)}
+                  >
+                    {LANGUAGES.map((lang) => (
+                      <MenuItem key={lang.code} value={lang.code}>
+                        {lang.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Currency</InputLabel>
+                  <Select
+                    value={formData.currency}
+                    label="Currency"
+                    onChange={(e) => handleChange('currency', e.target.value)}
+                  >
+                    {CURRENCIES.map((curr) => (
+                      <MenuItem key={curr.code} value={curr.code}>
+                        {curr.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
 
               {selectedType && (

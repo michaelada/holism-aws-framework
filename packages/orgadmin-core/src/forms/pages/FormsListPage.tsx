@@ -36,9 +36,8 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
+import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { formatDate } from '@aws-web-framework/orgadmin-shell';
 
 interface ApplicationForm {
   id: string;
@@ -55,12 +54,21 @@ const FormsListPage: React.FC = () => {
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
   const { locale } = useLocale();
+  const { checkModuleVisit } = useOnboarding();
   
   const [forms, setForms] = useState<ApplicationForm[]>([]);
   const [filteredForms, setFilteredForms] = useState<ApplicationForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('forms');
+  }, [checkModuleVisit]);
 
   useEffect(() => {
     if (organisation?.id) {

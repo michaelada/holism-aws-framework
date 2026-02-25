@@ -7,12 +7,13 @@ ItsPlainSailing is a comprehensive organization administration system that helps
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Dashboard Overview](#dashboard-overview)
-3. [Core Modules](#core-modules)
-4. [Capability Modules](#capability-modules)
-5. [Common Tasks](#common-tasks)
-6. [Tips and Best Practices](#tips-and-best-practices)
-7. [Troubleshooting](#troubleshooting)
+2. [Using the Help System](#using-the-help-system)
+3. [Dashboard Overview](#dashboard-overview)
+4. [Core Modules](#core-modules)
+5. [Capability Modules](#capability-modules)
+6. [Common Tasks](#common-tasks)
+7. [Tips and Best Practices](#tips-and-best-practices)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -48,6 +49,156 @@ After logging in for the first time:
    - Click your name in the top right
    - Update your profile information
    - Configure notification preferences
+
+---
+
+## Using the Help System
+
+ItsPlainSailing includes a comprehensive help system to guide you through using the platform. Whether you're a first-time user or need assistance with a specific feature, help is always available.
+
+### Welcome Dialog
+
+When you log in for the first time, you'll see a welcome dialog that introduces you to ItsPlainSailing and its key features.
+
+**What You'll See**:
+- Overview of the platform's capabilities
+- Quick introduction to core modules
+- Information about getting started
+
+**Dismissing the Welcome Dialog**:
+1. Read through the welcome information
+2. If you don't want to see this dialog again, check the box labeled "Don't show this again"
+3. Click the close button or click outside the dialog
+
+**Note**: If you don't check "Don't show this again", the welcome dialog will appear the next time you log in. This preference is saved to your account and applies across all devices.
+
+### Module Introduction Dialogs
+
+The first time you visit each module (Dashboard, Users, Forms, Events, etc.), you'll see an introduction dialog specific to that module.
+
+**What You'll Learn**:
+- What the module does
+- Key features available
+- How to get started with common tasks
+
+**Dismissing Module Introductions**:
+1. Read the module introduction
+2. Click "Got it" or the close button
+3. The introduction won't appear again for that module
+
+**Note**: Each module has its own introduction, so you'll see a different dialog the first time you visit each new area. Once dismissed, these dialogs won't appear again, even if you log in from a different device.
+
+### Help Button and Drawer
+
+For ongoing assistance, use the help button available on every page.
+
+**Accessing Help**:
+1. Look for the **?** (question mark) button in the top right corner of the navigation bar
+2. Click the help button to open the help drawer
+3. The help drawer slides in from the right side of the screen
+
+**What's in the Help Drawer**:
+- **Page-Specific Help**: Guidance relevant to the current page you're viewing
+- **Module Help**: General information about the current module
+- **Rich Content**: Formatted text with headings, lists, and links for easy reading
+
+**Using the Help Drawer**:
+- **Read Content**: Scroll through the help content to find what you need
+- **Stay Productive**: The help drawer doesn't block your work - you can still see and interact with the main content
+- **Close When Done**: Click the close button (X) or click outside the drawer to close it
+- **Reopen Anytime**: Click the help button again whenever you need assistance
+
+**Keyboard Shortcut**:
+- Press **Shift + ?** to quickly open or close the help drawer
+
+### Help Content by Module
+
+The help system provides specific guidance for each module:
+
+**Dashboard**:
+- Understanding your dashboard widgets
+- Customizing your view
+- Quick actions and shortcuts
+
+**Users**:
+- Creating and inviting users
+- Managing roles and permissions
+- Viewing user lists and profiles
+
+**Forms**:
+- Building custom forms
+- Adding and configuring fields
+- Managing form submissions
+
+**Events**:
+- Creating events and activities
+- Managing registrations
+- Tracking attendance
+
+**Memberships**:
+- Setting up membership types
+- Managing the member database
+- Handling renewals
+
+**Calendar**:
+- Creating bookable calendars
+- Managing availability
+- Handling bookings and cancellations
+
+**Payments**:
+- Viewing transactions
+- Processing refunds
+- Generating financial reports
+
+### Tips for Using the Help System
+
+**For New Users**:
+- Take time to read the welcome dialog - it provides a helpful overview
+- Don't skip module introductions - they highlight key features you might miss
+- Keep the help drawer open while learning a new module
+- Bookmark this user guide for detailed reference
+
+**For Experienced Users**:
+- Use the help drawer as a quick reference when you need a reminder
+- The help button is always available if you forget how to do something
+- Help content is available in your preferred language
+
+**Multilingual Support**:
+- All help content is available in English, French, Spanish, Italian, German, and Portuguese
+- Help content automatically displays in your selected language
+- Change your language preference in your profile settings
+
+### Dismissing Onboarding Dialogs
+
+If you want to manage your onboarding preferences:
+
+**To Stop Seeing the Welcome Dialog**:
+- Check "Don't show this again" before closing the welcome dialog
+- This preference is saved permanently to your account
+
+**To See Module Introductions Again**:
+- Module introductions are automatically dismissed after you view them once
+- Currently, there's no way to reset these preferences yourself
+- Contact your system administrator if you need to see them again
+
+**What Gets Saved**:
+- Whether you've dismissed the welcome dialog
+- Which module introductions you've already seen
+- These preferences sync across all your devices
+
+**Privacy Note**:
+- Your onboarding preferences are stored securely with your account
+- Only you can see and modify your preferences
+- Preferences are never shared with other users
+
+### Getting Additional Help
+
+If the built-in help system doesn't answer your question:
+
+1. **Check This User Guide**: More detailed information is available in the relevant sections below
+2. **Contact Support**: Use the support channels listed at the end of this guide
+3. **Ask Your Administrator**: Your organization's admin may have specific guidance
+4. **Report Issues**: If help content seems incorrect or unclear, let us know
 
 ---
 
@@ -629,9 +780,16 @@ Generate and manage electronic tickets with QR codes.
 
 ### In-App Help
 
-- Look for **?** icons throughout the interface
-- Hover over field labels for tooltips
-- Check validation messages for guidance
+ItsPlainSailing provides multiple ways to get help while you work:
+
+- **Help Button**: Click the **?** button in the top right corner to open the help drawer with page-specific guidance
+- **Keyboard Shortcut**: Press **Shift + ?** to quickly access help
+- **Welcome Dialog**: First-time users see an introductory welcome dialog
+- **Module Introductions**: Each module shows a helpful introduction on your first visit
+- **Tooltips**: Hover over field labels and icons for quick explanations
+- **Validation Messages**: Form fields show helpful messages when input needs correction
+
+For detailed information about using the help system, see the [Using the Help System](#using-the-help-system) section above.
 
 ### Documentation
 
@@ -659,9 +817,10 @@ When reporting an issue, include:
 
 ## Keyboard Shortcuts
 
+- **Shift + ?**: Open/close help drawer
 - **Ctrl/Cmd + S**: Save current form
 - **Ctrl/Cmd + K**: Open search
-- **Esc**: Close dialog/modal
+- **Esc**: Close dialog/modal or help drawer
 - **Tab**: Navigate between fields
 - **Enter**: Submit form (when focused on button)
 
@@ -671,6 +830,10 @@ When reporting an issue, include:
 
 - **Capability**: A feature that can be enabled for an organization
 - **Module**: A functional area of the system (Events, Memberships, etc.)
+- **Help Drawer**: A slide-out panel that displays contextual help content
+- **Welcome Dialog**: An introductory dialog shown to first-time users
+- **Module Introduction**: A dialog explaining a module's features, shown on first visit
+- **Onboarding**: The process of introducing new users to the system through dialogs and help content
 - **Activity**: A category within an event
 - **Entry**: A participant's registration
 - **Member**: A person with a membership

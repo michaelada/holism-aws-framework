@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
+import { useOnboarding } from '@aws-web-framework/orgadmin-shell';
 import type { Member, MemberFilter } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
@@ -58,6 +59,7 @@ const MembersDatabasePage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { checkModuleVisit } = useOnboarding();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
@@ -70,6 +72,11 @@ const MembersDatabasePage: React.FC = () => {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchOperation, setBatchOperation] = useState<'mark_processed' | 'mark_unprocessed' | 'add_labels' | 'remove_labels'>('mark_processed');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('memberships');
+  }, [checkModuleVisit]);
 
   useEffect(() => {
     loadMembers();

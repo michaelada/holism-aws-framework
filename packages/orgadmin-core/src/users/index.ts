@@ -12,14 +12,14 @@ import type { ModuleRegistration } from '../types/module.types';
 
 export const usersModule: ModuleRegistration = {
   id: 'users',
-  name: 'Users',
-  title: 'User Management',
-  description: 'Manage admin users and account users for your organisation',
+  name: 'modules.users.name',
+  title: 'modules.users.title',
+  description: 'modules.users.description',
   capability: undefined, // Core module - always available
   order: 7, // After Dashboard, Forms, Settings, Payments, Reporting
   card: {
-    title: 'User Management',
-    description: 'Manage admin users and account users for your organisation',
+    title: 'modules.users.title',
+    description: 'modules.users.description',
     icon: UsersIcon,
     color: '#7b1fa2',
     path: '/users',
@@ -51,7 +51,7 @@ export const usersModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Users',
+    label: 'modules.users.name',
     path: '/users',
     icon: UsersIcon,
   },

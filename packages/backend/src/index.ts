@@ -40,6 +40,7 @@ import paymentRoutes from './routes/payment.routes';
 import reportingRoutes from './routes/reporting.routes';
 import userManagementRoutes from './routes/user-management.routes';
 import orgadminAuthRoutes from './routes/orgadmin-auth.routes';
+import userPreferencesRoutes from './routes/user-preferences.routes';
 import { swaggerSpec } from './config/swagger';
 import { register } from './config/metrics';
 
@@ -213,6 +214,7 @@ app.use('/api/orgadmin', paymentRoutes);
 app.use('/api/orgadmin', reportingRoutes);
 app.use('/api/orgadmin/files', fileUploadRoutes);
 app.use('/api/orgadmin/users', userManagementRoutes);
+app.use('/api/user-preferences', userPreferencesRoutes);
 
 // 404 handler
 app.use((_req, res) => {

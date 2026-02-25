@@ -3,14 +3,14 @@
 
 export const ticketingModule = {
   id: 'ticketing',
-  name: 'Ticketing',
-  title: 'Ticketing',
-  description: 'Manage ticketing',
+  name: 'modules.ticketing.name',
+  title: 'modules.ticketing.title',
+  description: 'modules.ticketing.description',
   capability: 'event-ticketing',
   order: 15,
   card: { 
-    title: 'Ticketing', 
-    description: 'Manage ticketing', 
+    title: 'modules.ticketing.title', 
+    description: 'modules.ticketing.description', 
     icon: () => null, 
     path: '/tickets' 
   },

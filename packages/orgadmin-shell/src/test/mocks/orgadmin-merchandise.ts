@@ -3,14 +3,14 @@
 
 export const merchandiseModule = {
   id: 'merchandise',
-  name: 'Merchandise',
-  title: 'Merchandise',
-  description: 'Manage merchandise',
+  name: 'modules.merchandise.name',
+  title: 'modules.merchandise.title',
+  description: 'modules.merchandise.description',
   capability: 'merchandise',
   order: 12,
   card: { 
-    title: 'Merchandise', 
-    description: 'Manage merchandise', 
+    title: 'modules.merchandise.title', 
+    description: 'modules.merchandise.description', 
     icon: () => null, 
     path: '/merchandise' 
   },

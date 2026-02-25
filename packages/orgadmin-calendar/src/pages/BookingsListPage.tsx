@@ -18,26 +18,27 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Typography,
   Chip,
   IconButton,
 } from '@mui/material';
 import {
   Visibility as ViewIcon,
-  Cancel as CancelIcon,
-  Email as EmailIcon,
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatDate, formatCurrency, usePageHelp, useLocale } from '@aws-web-framework/orgadmin-shell';
 import type { Booking, BookingsFilterOptions } from '../types/calendar.types';
 
 const BookingsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { locale } = useLocale();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<BookingsFilterOptions>({});
+  const [filters, _setFilters] = useState<BookingsFilterOptions>({});
+
+  // Register page for contextual help
+  usePageHelp('bookings-list');
 
   useEffect(() => {
     loadBookings();
@@ -116,10 +117,10 @@ const BookingsListPage: React.FC = () => {
                   <TableCell>{booking.bookingReference}</TableCell>
                   <TableCell>{booking.calendar?.name}</TableCell>
                   <TableCell>{booking.userName}</TableCell>
-                  <TableCell>{formatDate(new Date(booking.bookingDate), 'dd/MM/yyyy')}</TableCell>
+                  <TableCell>{formatDate(new Date(booking.bookingDate), 'dd/MM/yyyy', locale)}</TableCell>
                   <TableCell>{booking.startTime}</TableCell>
                   <TableCell>{t('calendar.duration.minutes', { count: booking.duration })}</TableCell>
-                  <TableCell>{formatCurrency(booking.totalPrice, 'EUR')}</TableCell>
+                  <TableCell>{formatCurrency(booking.totalPrice, 'EUR', locale)}</TableCell>
                   <TableCell>
                     <Chip label={booking.bookingStatus} size="small" />
                   </TableCell>

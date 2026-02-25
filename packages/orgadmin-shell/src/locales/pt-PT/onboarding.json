@@ -1,0 +1,40 @@
+{
+  "welcome": {
+    "title": "Bem-vindo ao OrgAdmin",
+    "content": "# Bem-vindo ao OrgAdmin\n\nO OrgAdmin é a sua plataforma abrangente para gerir as operações da sua organização. Eis o que pode fazer:\n\n## Funcionalidades Principais\n\n**Gestão de Utilizadores** - Crie e gira contas de utilizador, atribua funções e controle permissões em toda a sua organização.\n\n**Formulários e Recolha de Dados** - Crie formulários personalizados para recolher informações de membros, com tipos de campos flexíveis e validação.\n\n**Gestão de Eventos** - Crie e gira eventos, acompanhe inscrições e comunique com os participantes.\n\n**Gestão de Membros** - Gira subscrições de membros, renovações e dados de membros.\n\n**Calendário e Reservas** - Gira recursos reserváveis, compromissos e agendamento.\n\n**Processamento de Pagamentos** - Aceite pagamentos, acompanhe transações e gira registos financeiros.\n\n## Começar\n\nCada módulo tem a sua própria introdução que aparecerá na primeira vez que o visitar. Também pode aceder à ajuda a qualquer momento clicando no botão de ajuda (?) no canto superior direito.\n\nPronto para começar? Feche esta caixa de diálogo e explore o seu painel de controlo!",
+    "dontShowAgain": "Não mostrar novamente"
+  },
+  "actions": {
+    "gotIt": "Entendido"
+  },
+  "modules": {
+    "dashboard": {
+      "title": "Visão Geral do Painel",
+      "content": "# Painel de Controlo\n\nO seu painel de controlo fornece uma visão geral rápida das métricas principais e atividade recente da sua organização.\n\n## O Que Verá\n\n- **Estatísticas Rápidas** - Contagens de membros, eventos próximos, submissões de formulários recentes\n- **Atividade Recente** - Últimas ações e atualizações em todos os módulos\n- **Atalhos** - Acesso rápido a tarefas comuns\n- **Notificações** - Alertas e lembretes importantes\n\n## Personalização\n\nPode personalizar quais widgets aparecem no seu painel e organizá-los para se adequarem ao seu fluxo de trabalho.\n\nClique em \"Entendido\" para começar a explorar o seu painel!"
+    },
+    "users": {
+      "title": "Gestão de Utilizadores",
+      "content": "# Gestão de Utilizadores\n\nO módulo de Utilizadores ajuda-o a gerir todas as contas de utilizador na sua organização.\n\n## Funcionalidades Principais\n\n- **Ver Todos os Utilizadores** - Navegue e pesquise o seu diretório completo de utilizadores\n- **Criar Utilizadores** - Adicione novos utilizadores manualmente ou convide-os por e-mail\n- **Atribuir Funções** - Controle o que os utilizadores podem aceder e fazer\n- **Gerir Permissões** - Ajuste as capacidades de cada função\n- **Perfis de Utilizador** - Visualize e edite informações detalhadas do utilizador\n\n## Começar\n\nComece por navegar pelos seus utilizadores existentes ou crie uma nova conta de utilizador. Pode atribuir funções para controlar os níveis de acesso."
+    },
+    "forms": {
+      "title": "Construtor de Formulários",
+      "content": "# Módulo de Formulários\n\nCrie formulários personalizados para recolher informações dos seus membros e do público.\n\n## O Que Pode Fazer\n\n- **Criar Formulários** - Crie formulários com vários tipos de campos (texto, números, datas, menus suspensos, etc.)\n- **Validação de Campos** - Garanta a qualidade dos dados com regras de validação integradas\n- **Lógica Condicional** - Mostre ou oculte campos com base nas respostas do utilizador\n- **Submissões** - Visualize e gira todas as submissões de formulários\n- **Exportar Dados** - Descarregue dados de submissão para análise\n\n## Tipos de Formulários\n\nCrie formulários de inscrição, inquéritos, candidaturas, formulários de feedback e muito mais. Os formulários podem ser incorporados no seu website ou partilhados através de links diretos."
+    },
+    "events": {
+      "title": "Gestão de Eventos",
+      "content": "# Módulo de Eventos\n\nPlaneie, promova e gira eventos para a sua organização.\n\n## Capacidades Principais\n\n- **Criar Eventos** - Configure eventos com datas, locais e descrições\n- **Inscrição** - Aceite inscrições de eventos com formulários personalizados\n- **Gestão de Capacidade** - Defina limites de participação e listas de espera\n- **Comunicação** - Envie atualizações e lembretes aos participantes\n- **Check-in** - Acompanhe a presença no dia do evento\n- **Relatórios** - Analise dados de inscrição e presença\n\n## Tipos de Eventos\n\nGira reuniões, workshops, conferências, encontros sociais e qualquer outro tipo de evento que a sua organização organize."
+    },
+    "memberships": {
+      "title": "Gestão de Membros",
+      "content": "# Módulo de Membros\n\nGira o programa de membros da sua organização e as relações com os membros.\n\n## Funcionalidades Principais\n\n- **Tipos de Membros** - Defina diferentes níveis de membros e benefícios\n- **Subscrições** - Gira membros recorrentes com renovações automáticas\n- **Registos de Membros** - Mantenha perfis detalhados e histórico de membros\n- **Renovações** - Acompanhe datas de expiração e envie lembretes de renovação\n- **Portal de Membros** - Dê aos membros acesso às suas próprias informações\n- **Relatórios** - Analise tendências de membros e retenção\n\n## Começar\n\nConfigure os seus tipos de membros e depois comece a adicionar membros ou permita que se auto-registem através do seu website."
+    },
+    "calendar": {
+      "title": "Calendário e Reservas",
+      "content": "# Calendário e Reservas\n\nGira recursos reserváveis, compromissos e agendamento para a sua organização.\n\n## O Que Pode Fazer\n\n- **Criar Calendários** - Configure calendários para salas, equipamento, pessoal ou serviços\n- **Definir Disponibilidade** - Defina quando os recursos estão disponíveis para reserva\n- **Aceitar Reservas** - Permita que os utilizadores reservem horários online\n- **Gerir Compromissos** - Visualize, edite e cancele reservas\n- **Prevenir Conflitos** - Deteção e prevenção automática de conflitos\n- **Notificações** - Envie confirmações de reserva e lembretes\n\n## Casos de Uso\n\nPerfeito para reservas de salas de reunião, aluguer de equipamento, agendamento de compromissos, inscrições em aulas e muito mais."
+    },
+    "payments": {
+      "title": "Processamento de Pagamentos",
+      "content": "# Módulo de Pagamentos\n\nAceite e gira pagamentos para membros, eventos e outros serviços.\n\n## Funcionalidades Principais\n\n- **Recolha de Pagamentos** - Aceite cartões de crédito, transferências bancárias e outros métodos de pagamento\n- **Histórico de Transações** - Visualize todas as transações de pagamento\n- **Faturação** - Gere e envie faturas\n- **Reembolsos** - Processe reembolsos quando necessário\n- **Relatórios** - Relatórios financeiros e reconciliação\n- **Segurança** - Processamento de pagamentos em conformidade com PCI\n\n## Integração\n\nOs pagamentos estão integrados em todo o OrgAdmin - recolha taxas durante a inscrição em eventos, adesão de membros e muito mais."
+    }
+  }
+}

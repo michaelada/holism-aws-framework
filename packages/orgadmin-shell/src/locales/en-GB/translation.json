@@ -1174,8 +1174,58 @@
       "preview": "Preview",
       "edit": "Edit"
     },
+    "fields": {
+      "title": "Field Definitions",
+      "createField": "Create Field",
+      "editField": "Edit Field",
+      "createFieldPage": "Create Field Definition",
+      "editFieldPage": "Edit Field Definition",
+      "searchPlaceholder": "Search fields...",
+      "noFieldsFound": "No fields yet. Create your first field to get started.",
+      "noMatchingFields": "No fields match your filters",
+      "loadingFields": "Loading fields...",
+      "fieldLabel": "Field Label",
+      "fieldLabelHelper": "Display label (e.g., First Name) - field name will be auto-generated",
+      "fieldDescription": "Description",
+      "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
+      "fieldType": "Field Type",
+      "fieldOptions": "Options",
+      "addOption": "Add option",
+      "optionsRequired": "At least one option is required for {{type}} fields",
+      "fieldNameWillBe": "Field name will be: {{name}}",
+      "invalidFieldName": "(invalid)",
+      "allTypes": "All Types",
+      "table": {
+        "label": "Label",
+        "description": "Description",
+        "type": "Type",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "validation": {
+        "labelRequired": "Field label is required",
+        "labelAlphanumeric": "Field label must contain at least one alphanumeric character",
+        "optionsRequired": "Field type \"{{type}}\" requires at least one option"
+      },
+      "messages": {
+        "fieldCreated": "Field created successfully",
+        "fieldUpdated": "Field updated successfully",
+        "fieldNotFound": "Field not found"
+      },
+      "delete": {
+        "title": "Delete Field Definition",
+        "message": "Are you sure you want to delete the field \"{{label}}\"? This action cannot be undone."
+      }
+    },
     "builder": {
       "title": "Form Builder",
+      "createForm": "Create Form",
+      "editForm": "Edit Form",
+      "formDetails": "Form Details",
+      "formName": "Form Name",
+      "description": "Description",
+      "cancel": "Cancel",
+      "save": "Save",
       "saving": "Saving...",
       "tabs": {
         "fields": "Fields",
@@ -1186,44 +1236,45 @@
         "title": "Form Fields",
         "addField": "Add Field",
         "noFields": "No fields added yet. Click \"Add Field\" to get started.",
-        "moveUp": "Move up",
-        "moveDown": "Move down",
+        "selectField": "Select Field",
+        "mandatoryField": "Mandatory field",
         "makeRequired": "Make Required",
         "makeOptional": "Make Optional",
         "required": "Required",
-        "optional": "Optional"
+        "optional": "Optional",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "addFieldDialog": "Add Field"
       },
       "groups": {
         "title": "Field Groups",
         "addGroup": "Add Group",
         "noGroups": "No field groups defined. Groups help organise fields into sections.",
         "groupName": "Group Name",
+        "groupDescription": "Description",
         "selectFields": "Select Fields for this Group",
         "noFieldsAvailable": "No fields available. Add fields to the form first.",
-        "fieldOrder": "Field Order in Group"
+        "fieldOrder": "Field Order in Group",
+        "addGroupDialog": "Add Field Group"
       },
       "wizard": {
         "title": "Wizard Steps",
         "addStep": "Add Step",
         "noSteps": "No wizard steps defined. Wizard steps create a multi-step form experience.",
         "stepName": "Step Name",
-        "stepNumber": "Step {{number}}",
+        "stepDescription": "Description",
         "selectFields": "Select Fields for this Step",
-        "noFieldsAvailable": "No fields available. Add fields to the form first.",
-        "fieldOrder": "Field Order in Step"
+        "fieldOrder": "Field Order in Step",
+        "stepNumber": "Step {{number}}: {{name}}",
+        "addStepDialog": "Add Wizard Step"
       },
-      "dialogs": {
-        "addField": {
-          "title": "Add Field",
-          "selectField": "Select Field",
-          "mandatoryField": "Mandatory field"
-        },
-        "addGroup": {
-          "title": "Add Field Group"
-        },
-        "addWizardStep": {
-          "title": "Add Wizard Step"
-        }
+      "validation": {
+        "formNameRequired": "Form name is required",
+        "organisationMissing": "Organisation context is missing"
+      },
+      "messages": {
+        "failedToLoad": "Failed to load form",
+        "failedToSave": "Failed to save form"
       }
     },
     "preview": {
@@ -1247,17 +1298,24 @@
     "fields": {
       "title": "Field Definitions",
       "createField": "Create Field",
+      "editField": "Edit Field",
+      "createFieldPage": "Create Field Definition",
+      "editFieldPage": "Edit Field Definition",
       "searchPlaceholder": "Search fields...",
       "noFieldsFound": "No fields yet. Create your first field to get started.",
       "noMatchingFields": "No fields match your filters",
       "loadingFields": "Loading fields...",
-      "failedToCreate": "Failed to create field",
-      "failedToUpdate": "Failed to update field",
-      "failedToDelete": "Failed to delete field",
-      "fieldLabelRequired": "Field label is required",
-      "organisationContextNotAvailable": "Organisation context not available",
-      "invalidFieldLabel": "Field label must contain at least one alphanumeric character",
-      "optionsRequired": "Field type \"{{type}}\" requires at least one option",
+      "fieldLabel": "Field Label",
+      "fieldLabelHelper": "Display label (e.g., First Name) - field name will be auto-generated",
+      "fieldDescription": "Description",
+      "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
+      "fieldType": "Field Type",
+      "fieldOptions": "Options",
+      "addOption": "Add option",
+      "optionsRequired": "At least one option is required for {{type}} fields",
+      "fieldNameWillBe": "Field name will be: {{name}}",
+      "invalidFieldName": "(invalid)",
+      "allTypes": "All Types",
       "table": {
         "label": "Label",
         "description": "Description",
@@ -1265,33 +1323,14 @@
         "created": "Created",
         "actions": "Actions"
       },
-      "filters": {
-        "type": "Type",
-        "allTypes": "All Types"
+      "validation": {
+        "labelRequired": "Field label is required",
+        "labelAlphanumeric": "Field label must contain at least one alphanumeric character",
+        "optionsRequired": "Field type \"{{type}}\" requires at least one option"
       },
-      "dialogs": {
-        "create": {
-          "title": "Create Field Definition",
-          "fieldLabel": "Field Label",
-          "fieldLabelHelper": "Display label (e.g., First Name) - field name will be auto-generated",
-          "descriptionHelper": "Optional detailed explanation of what this field is for",
-          "fieldType": "Field Type",
-          "options": "Options",
-          "addOption": "Add option",
-          "optionsWarning": "At least one option is required for {{type}} fields",
-          "fieldNamePreview": "Field name will be: {{name}}",
-          "fieldNameInvalid": "Field name will be: (invalid)",
-          "creating": "Creating..."
-        },
-        "edit": {
-          "title": "Edit Field Definition",
-          "saving": "Saving..."
-        },
-        "delete": {
-          "title": "Delete Field Definition",
-          "confirmMessage": "Are you sure you want to delete the field \"{{label}}\"? This action cannot be undone.",
-          "deleting": "Deleting..."
-        }
+      "delete": {
+        "title": "Delete Field Definition",
+        "message": "Are you sure you want to delete the field \"{{label}}\"? This action cannot be undone."
       }
     }
   },
@@ -1705,6 +1744,96 @@
     "noModulesAvailable": "No modules available",
     "contactAdministrator": "Contact your administrator to enable capabilities for your organisation.",
     "debugInfo": "Debug: {{capabilitiesCount}} capabilities enabled, {{modulesCount}} modules available"
+  },
+  "modules": {
+    "dashboard": {
+      "name": "Dashboard",
+      "title": "Dashboard",
+      "description": "Overview of your organisation"
+    },
+    "forms": {
+      "name": "Forms",
+      "title": "Form Builder",
+      "description": "Create and manage application forms and field definitions",
+      "menu": {
+        "forms": "Forms",
+        "fields": "Fields"
+      }
+    },
+    "settings": {
+      "name": "Settings",
+      "title": "Settings",
+      "description": "Configure organisation settings and preferences"
+    },
+    "payments": {
+      "name": "Payments",
+      "title": "Payments",
+      "description": "View and manage payments and transactions"
+    },
+    "reporting": {
+      "name": "Reporting",
+      "title": "Reports & Analytics",
+      "description": "View reports and analytics for your organisation"
+    },
+    "users": {
+      "name": "Users",
+      "title": "Users",
+      "description": "Manage organisation users and permissions",
+      "menu": {
+        "admins": "Admin Users",
+        "accounts": "Account Users"
+      }
+    },
+    "events": {
+      "name": "Events",
+      "title": "Events",
+      "description": "Manage events and registrations",
+      "menu": {
+        "events": "Events",
+        "entries": "Entries"
+      }
+    },
+    "memberships": {
+      "name": "Memberships",
+      "title": "Memberships",
+      "description": "Manage membership types and members",
+      "menu": {
+        "types": "Membership Types",
+        "members": "Members"
+      }
+    },
+    "calendar": {
+      "name": "Calendar",
+      "title": "Calendar",
+      "description": "Manage bookable calendars and appointments",
+      "menu": {
+        "calendars": "Calendars",
+        "bookings": "Bookings"
+      }
+    },
+    "registrations": {
+      "name": "Registrations",
+      "title": "Registrations",
+      "description": "Manage registration types and registrations",
+      "menu": {
+        "types": "Registration Types",
+        "database": "Registrations Database"
+      }
+    },
+    "ticketing": {
+      "name": "Ticketing",
+      "title": "Event Ticketing",
+      "description": "Manage event tickets and access control"
+    },
+    "merchandise": {
+      "name": "Merchandise",
+      "title": "Merchandise",
+      "description": "Manage merchandise and online store",
+      "menu": {
+        "types": "Merchandise Types",
+        "orders": "Orders"
+      }
+    }
   },
   "components": {
     "orgDataTable": {

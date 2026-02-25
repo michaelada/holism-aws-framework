@@ -54,9 +54,9 @@ export function calculateAvailableSlots(
  * Generate slots from a time slot configuration
  */
 function generateSlotsFromConfiguration(
-  config: TimeSlotConfiguration,
-  startDate: Date,
-  endDate: Date
+  _config: TimeSlotConfiguration,
+  _startDate: Date,
+  _endDate: Date
 ): CalendarSlotView[] {
   const slots: CalendarSlotView[] = [];
   

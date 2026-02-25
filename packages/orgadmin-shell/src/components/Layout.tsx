@@ -25,6 +25,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
+import { HelpButton } from './HelpButton';
+import { useOnboarding } from '../context/OnboardingContext';
 
 const DRAWER_WIDTH = 260;
 const SMALL_LOGO_URL = 'https://itsplainsailing.com/admin//logos/ips-logo-sails-transparent-64.png';
@@ -54,6 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
   const location = useLocation();
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
+  const { helpDrawerOpen, toggleHelpDrawer } = useOnboarding();
 
   // Check if we're on the landing page
   const isLandingPage = location.pathname === '/';
@@ -196,7 +199,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
                         <ListItemIcon>
                           <Icon />
                         </ListItemIcon>
-                        <ListItemText primary={subItem.label} />
+                        <ListItemText primary={t(subItem.label)} />
                       </ListItemButton>
                     </ListItem>
                   );
@@ -220,7 +223,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
                 <ListItemIcon>
                   <Icon />
                 </ListItemIcon>
-                <ListItemText primary={module.menuItem.label} />
+                <ListItemText primary={t(module.menuItem.label)} />
               </ListItemButton>
             </ListItem>
           );
@@ -290,6 +293,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
           >
             {organisation?.displayName || t('navigation.loading')}
           </Typography>
+
+          {/* Help Button */}
+          <HelpButton 
+            onClick={toggleHelpDrawer} 
+            active={helpDrawerOpen}
+          />
 
           {/* Logout Button - only show on landing page */}
           {isLandingPage && (

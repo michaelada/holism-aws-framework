@@ -39,12 +39,14 @@ import {
   ToggleOff as ToggleOffIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import type { Calendar, CalendarStatus } from '../types/calendar.types';
 
 // Mock API hook - will be replaced with actual implementation
 const useApi = () => ({
   execute: async ({ method, url }: { method: string; url: string }) => {
     // Mock data for development
+    console.log(`Mock implementation for ${url} - ${method}`)
     return [];
   },
 });
@@ -53,12 +55,21 @@ const CalendarsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { checkModuleVisit } = useOnboarding();
   
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [filteredCalendars, setFilteredCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | CalendarStatus>('all');
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('calendar');
+  }, [checkModuleVisit]);
 
   useEffect(() => {
     loadCalendars();

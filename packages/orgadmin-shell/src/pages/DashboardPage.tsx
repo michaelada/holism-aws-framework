@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Typography, Grid } from '@mui/material';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useCapabilities } from '../context/CapabilityContext';
 import { DashboardCard } from '../components/DashboardCard';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
+import { useOnboarding } from '../context/OnboardingContext';
+import { usePageHelp } from '../hooks/usePageHelp';
 
 interface DashboardPageProps {
   modules: ModuleRegistration[];
@@ -26,6 +28,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
   const { organisation } = useOrganisation();
   const { capabilities, hasCapability } = useCapabilities();
   const { t } = useTranslation();
+  const { checkModuleVisit } = useOnboarding();
+
+  // Register page for contextual help
+  usePageHelp('overview');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('dashboard');
+  }, [checkModuleVisit]);
 
   // Filter modules based on enabled capabilities
   // Core modules (no capability requirement) are always shown

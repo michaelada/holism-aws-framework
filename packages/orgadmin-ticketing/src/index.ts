@@ -27,14 +27,14 @@ import type { ModuleRegistration } from './types/module.types';
 
 export const ticketingModule: ModuleRegistration = {
   id: 'ticketing',
-  name: 'Ticketing',
-  title: 'Event Ticketing',
-  description: 'Manage electronic tickets with QR codes for your events',
+  name: 'modules.ticketing.name',
+  title: 'modules.ticketing.title',
+  description: 'modules.ticketing.description',
   capability: 'event-ticketing', // Requires event-ticketing capability
   order: 13, // After registrations module
   card: {
-    title: 'Event Ticketing',
-    description: 'Manage electronic tickets with QR codes for your events',
+    title: 'modules.ticketing.title',
+    description: 'modules.ticketing.description',
     icon: TicketIcon,
     color: '#7b1fa2',
     path: '/tickets',
@@ -46,7 +46,7 @@ export const ticketingModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Ticketing',
+    label: 'modules.ticketing.name',
     path: '/tickets',
     icon: TicketIcon,
   },

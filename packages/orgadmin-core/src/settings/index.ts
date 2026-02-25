@@ -11,14 +11,14 @@ import type { ModuleRegistration } from '../types/module.types';
 
 export const settingsModule: ModuleRegistration = {
   id: 'settings',
-  name: 'Settings',
-  title: 'Organisation Settings',
-  description: 'Manage organisation details, payment settings, branding, and email templates',
+  name: 'modules.settings.name',
+  title: 'modules.settings.title',
+  description: 'modules.settings.description',
   capability: undefined, // Core module - always available
   order: 3, // Third in menu after Dashboard and Forms
   card: {
-    title: 'Organisation Settings',
-    description: 'Manage organisation details, payment settings, branding, and email templates',
+    title: 'modules.settings.title',
+    description: 'modules.settings.description',
     icon: SettingsIcon,
     color: '#757575',
     path: '/settings',
@@ -30,7 +30,7 @@ export const settingsModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Settings',
+    label: 'modules.settings.name',
     path: '/settings',
     icon: SettingsIcon,
   },

@@ -11,14 +11,14 @@ import type { ModuleRegistration } from '../types/module.types';
 
 export const dashboardModule: ModuleRegistration = {
   id: 'dashboard',
-  name: 'Dashboard',
-  title: 'Dashboard',
-  description: 'View high-level metrics and overview of your organisation',
+  name: 'modules.dashboard.name',
+  title: 'modules.dashboard.title',
+  description: 'modules.dashboard.description',
   capability: undefined, // Core module - always available
   order: 1, // First in menu
   card: {
-    title: 'Dashboard',
-    description: 'View high-level metrics and overview of your organisation',
+    title: 'modules.dashboard.title',
+    description: 'modules.dashboard.description',
     icon: DashboardIcon,
     color: '#1976d2',
     path: '/dashboard',
@@ -30,7 +30,7 @@ export const dashboardModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Dashboard',
+    label: 'modules.dashboard.name',
     path: '/dashboard',
     icon: DashboardIcon,
   },

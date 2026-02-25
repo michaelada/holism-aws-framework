@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { DashboardPage } from '../DashboardPage';
 import { OrganisationProvider } from '../../context/OrganisationContext';
 import { CapabilityProvider } from '../../context/CapabilityContext';
+import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { ModuleRegistration } from '../../types/module.types';
 import { Event as EventIcon, People as PeopleIcon, Settings as SettingsIcon } from '@mui/icons-material';
 
@@ -78,7 +79,9 @@ const renderDashboardPage = (
     <BrowserRouter>
       <OrganisationProvider organisation={mockOrganisation}>
         <CapabilityProvider capabilities={capabilities}>
-          <DashboardPage modules={modules} />
+          <OnboardingProvider>
+            <DashboardPage modules={modules} />
+          </OnboardingProvider>
         </CapabilityProvider>
       </OrganisationProvider>
     </BrowserRouter>

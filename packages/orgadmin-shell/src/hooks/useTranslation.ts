@@ -32,7 +32,7 @@ export interface UseTranslationResult {
  * const { t } = useTranslation();
  * const minLengthError = t('common.validation.minLength', { min: 5 }); // Returns "Must be at least 5 characters"
  */
-export function useTranslation(namespace?: string | string[], options?: UseTranslationOptions): UseTranslationResult {
+export function useTranslation(namespace?: string | string[], options?: UseTranslationOptions<any>): UseTranslationResult {
   const { t: i18nextT, i18n, ready } = useI18nextTranslation(namespace, options);
 
   // Wrap the translation function to ensure it never throws and always returns a string
@@ -59,7 +59,11 @@ export function useTranslation(namespace?: string | string[], options?: UseTrans
     t,
     i18n: {
       language: i18n.language,
-      changeLanguage: i18n.changeLanguage ? i18n.changeLanguage.bind(i18n) : async () => {},
+      changeLanguage: async (lng: string) => {
+        if (i18n.changeLanguage) {
+          await i18n.changeLanguage(lng);
+        }
+      },
     },
     ready,
   };

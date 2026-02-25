@@ -23,6 +23,7 @@ import {
   PersonAdd as CreateIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 const CreateAccountUserPage: React.FC = () => {
   const navigate = useNavigate();
@@ -35,6 +36,9 @@ const CreateAccountUserPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Register page for contextual help
+  usePageHelp('create');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

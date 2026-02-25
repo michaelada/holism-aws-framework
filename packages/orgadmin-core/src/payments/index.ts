@@ -11,14 +11,14 @@ import type { ModuleRegistration } from '../types/module.types';
 
 export const paymentsModule: ModuleRegistration = {
   id: 'payments',
-  name: 'Payments',
-  title: 'Payment Management',
-  description: 'View and manage payments, refunds, and lodgements',
+  name: 'modules.payments.name',
+  title: 'modules.payments.title',
+  description: 'modules.payments.description',
   capability: undefined, // Core module - always available
   order: 4, // Fourth in menu after Dashboard, Forms, and Settings
   card: {
-    title: 'Payment Management',
-    description: 'View and manage payments, refunds, and lodgements',
+    title: 'modules.payments.title',
+    description: 'modules.payments.description',
     icon: PaymentIcon,
     color: '#388e3c',
     path: '/payments',
@@ -38,7 +38,7 @@ export const paymentsModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Payments',
+    label: 'modules.payments.name',
     path: '/payments',
     icon: PaymentIcon,
   },

@@ -33,10 +33,7 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
-import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
+import { useTranslation, useLocale, useOnboarding, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
 
 interface Payment {
   id: string;
@@ -54,6 +51,7 @@ const PaymentsListPage: React.FC = () => {
   const { execute } = useApi();
   const { t } = useTranslation();
   const { locale } = useLocale();
+  const { checkModuleVisit } = useOnboarding();
   
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
@@ -62,6 +60,11 @@ const PaymentsListPage: React.FC = () => {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | Payment['paymentMethod']>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Check module visit for onboarding
+  useEffect(() => {
+    checkModuleVisit('payments');
+  }, [checkModuleVisit]);
 
   useEffect(() => {
     loadPayments();

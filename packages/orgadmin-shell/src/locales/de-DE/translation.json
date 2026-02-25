@@ -954,8 +954,57 @@
       "preview": "Vorschau",
       "edit": "Bearbeiten"
     },
+    "fields": {
+      "title": "Felddefinitionen",
+      "createField": "Feld erstellen",
+      "editField": "Feld bearbeiten",
+      "createFieldPage": "Felddefinition erstellen",
+      "editFieldPage": "Felddefinition bearbeiten",
+      "searchPlaceholder": "Felder suchen...",
+      "noFieldsFound": "Noch keine Felder. Erstellen Sie Ihr erstes Feld, um zu beginnen.",
+      "noMatchingFields": "Keine Felder entsprechen Ihren Filtern",
+      "loadingFields": "Felder werden geladen...",
+      "fieldLabel": "Feldbezeichnung",
+      "fieldLabelHelper": "Anzeigebezeichnung (z.B. Vorname) - Feldname wird automatisch generiert",
+      "fieldDescription": "Beschreibung",
+      "fieldDescriptionHelper": "Optionale detaillierte Erklärung, wofür dieses Feld verwendet wird",
+      "fieldType": "Feldtyp",
+      "fieldOptions": "Optionen",
+      "addOption": "Option hinzufügen",
+      "optionsRequired": "Mindestens eine Option ist für {{type}}-Felder erforderlich",
+      "fieldNameWillBe": "Feldname wird sein: {{name}}",
+      "invalidFieldName": "(ungültig)",
+      "allTypes": "Alle Typen",
+      "table": {
+        "label": "Bezeichnung",
+        "description": "Beschreibung",
+        "type": "Typ",
+        "created": "Erstellt",
+        "actions": "Aktionen"
+      },
+      "validation": {
+        "labelRequired": "Feldbezeichnung ist erforderlich",
+        "labelAlphanumeric": "Feldbezeichnung muss mindestens ein alphanumerisches Zeichen enthalten",
+        "optionsRequired": "Feldtyp \"{{type}}\" erfordert mindestens eine Option"
+      },
+      "messages": {
+        "fieldCreated": "Feld erfolgreich erstellt",
+        "fieldUpdated": "Feld erfolgreich aktualisiert"
+      },
+      "delete": {
+        "title": "Felddefinition löschen",
+        "message": "Sind Sie sicher, dass Sie das Feld \"{{label}}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      }
+    },
     "builder": {
       "title": "Formular-Builder",
+      "createForm": "Formular erstellen",
+      "editForm": "Formular bearbeiten",
+      "formDetails": "Formulardetails",
+      "formName": "Formularname",
+      "description": "Beschreibung",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
       "saving": "Speichern...",
       "tabs": {
         "fields": "Felder",
@@ -966,44 +1015,45 @@
         "title": "Formularfelder",
         "addField": "Feld hinzufügen",
         "noFields": "Noch keine Felder hinzugefügt. Klicken Sie auf \"Feld hinzufügen\", um zu beginnen.",
-        "moveUp": "Nach oben",
-        "moveDown": "Nach unten",
+        "selectField": "Feld auswählen",
+        "mandatoryField": "Pflichtfeld",
         "makeRequired": "Pflichtfeld machen",
         "makeOptional": "Optional machen",
         "required": "Erforderlich",
-        "optional": "Optional"
+        "optional": "Optional",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "addFieldDialog": "Feld hinzufügen"
       },
       "groups": {
         "title": "Feldgruppen",
         "addGroup": "Gruppe hinzufügen",
         "noGroups": "Keine Feldgruppen definiert. Gruppen helfen, Felder in Abschnitte zu organisieren.",
         "groupName": "Gruppenname",
+        "groupDescription": "Beschreibung",
         "selectFields": "Felder für diese Gruppe auswählen",
         "noFieldsAvailable": "Keine Felder verfügbar. Fügen Sie zuerst Felder zum Formular hinzu.",
-        "fieldOrder": "Feldreihenfolge in der Gruppe"
+        "fieldOrder": "Feldreihenfolge in der Gruppe",
+        "addGroupDialog": "Feldgruppe hinzufügen"
       },
       "wizard": {
         "title": "Assistentenschritte",
         "addStep": "Schritt hinzufügen",
         "noSteps": "Keine Assistentenschritte definiert. Assistentenschritte erstellen ein mehrstufiges Formularerlebnis.",
         "stepName": "Schrittname",
-        "stepNumber": "Schritt {{number}}",
+        "stepDescription": "Beschreibung",
         "selectFields": "Felder für diesen Schritt auswählen",
-        "noFieldsAvailable": "Keine Felder verfügbar. Fügen Sie zuerst Felder zum Formular hinzu.",
-        "fieldOrder": "Feldreihenfolge im Schritt"
+        "fieldOrder": "Feldreihenfolge im Schritt",
+        "stepNumber": "Schritt {{number}}: {{name}}",
+        "addStepDialog": "Assistentenschritt hinzufügen"
       },
-      "dialogs": {
-        "addField": {
-          "title": "Feld hinzufügen",
-          "selectField": "Feld auswählen",
-          "mandatoryField": "Pflichtfeld"
-        },
-        "addGroup": {
-          "title": "Feldgruppe hinzufügen"
-        },
-        "addWizardStep": {
-          "title": "Assistentenschritt hinzufügen"
-        }
+      "validation": {
+        "formNameRequired": "Formularname ist erforderlich",
+        "organisationMissing": "Organisationskontext fehlt"
+      },
+      "messages": {
+        "failedToLoad": "Laden des Formulars fehlgeschlagen",
+        "failedToSave": "Speichern des Formulars fehlgeschlagen"
       }
     },
     "preview": {
@@ -1023,56 +1073,6 @@
       "backButton": "Zurück",
       "nextButton": "Weiter",
       "formNotFound": "Formular nicht gefunden"
-    },
-    "fields": {
-      "title": "Felddefinitionen",
-      "createField": "Feld erstellen",
-      "searchPlaceholder": "Felder suchen...",
-      "noFieldsFound": "Noch keine Felder. Erstellen Sie Ihr erstes Feld, um zu beginnen.",
-      "noMatchingFields": "Keine Felder entsprechen Ihren Filtern",
-      "loadingFields": "Felder werden geladen...",
-      "failedToCreate": "Erstellen des Feldes fehlgeschlagen",
-      "failedToUpdate": "Aktualisieren des Feldes fehlgeschlagen",
-      "failedToDelete": "Löschen des Feldes fehlgeschlagen",
-      "fieldLabelRequired": "Feldbezeichnung ist erforderlich",
-      "organisationContextNotAvailable": "Organisationskontext ist nicht verfügbar",
-      "invalidFieldLabel": "Feldbezeichnung muss mindestens ein alphanumerisches Zeichen enthalten",
-      "optionsRequired": "Feldtyp \"{{type}}\" erfordert mindestens eine Option",
-      "table": {
-        "label": "Bezeichnung",
-        "description": "Beschreibung",
-        "type": "Typ",
-        "created": "Erstellt",
-        "actions": "Aktionen"
-      },
-      "filters": {
-        "type": "Typ",
-        "allTypes": "Alle Typen"
-      },
-      "dialogs": {
-        "create": {
-          "title": "Felddefinition erstellen",
-          "fieldLabel": "Feldbezeichnung",
-          "fieldLabelHelper": "Anzeigebezeichnung (z.B. Vorname) - Feldname wird automatisch generiert",
-          "descriptionHelper": "Optionale detaillierte Erklärung, wofür dieses Feld dient",
-          "fieldType": "Feldtyp",
-          "options": "Optionen",
-          "addOption": "Option hinzufügen",
-          "optionsWarning": "Mindestens eine Option ist für {{type}}-Felder erforderlich",
-          "fieldNamePreview": "Feldname wird sein: {{name}}",
-          "fieldNameInvalid": "Feldname wird sein: (ungültig)",
-          "creating": "Erstellen..."
-        },
-        "edit": {
-          "title": "Felddefinition bearbeiten",
-          "saving": "Speichern..."
-        },
-        "delete": {
-          "title": "Felddefinition löschen",
-          "confirmMessage": "Sind Sie sicher, dass Sie das Feld \"{{label}}\" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
-          "deleting": "Löschen..."
-        }
-      }
     }
   },
   "payments": {
@@ -1493,6 +1493,96 @@
     "noModulesAvailable": "Keine Module verfügbar",
     "contactAdministrator": "Wenden Sie sich an Ihren Administrator, um Funktionen für Ihre Organisation zu aktivieren.",
     "debugInfo": "Debug: {{capabilitiesCount}} Funktionen aktiviert, {{modulesCount}} Module verfügbar"
+  },
+  "modules": {
+    "dashboard": {
+      "name": "Dashboard",
+      "title": "Dashboard",
+      "description": "Übersicht über Ihre Organisation"
+    },
+    "forms": {
+      "name": "Formulare",
+      "title": "Formular-Builder",
+      "description": "Bewerbungsformulare und Felddefinitionen erstellen und verwalten",
+      "menu": {
+        "forms": "Formulare",
+        "fields": "Felder"
+      }
+    },
+    "settings": {
+      "name": "Einstellungen",
+      "title": "Einstellungen",
+      "description": "Organisationseinstellungen und -präferenzen konfigurieren"
+    },
+    "payments": {
+      "name": "Zahlungen",
+      "title": "Zahlungen",
+      "description": "Zahlungen und Transaktionen anzeigen und verwalten"
+    },
+    "reporting": {
+      "name": "Berichte",
+      "title": "Berichte und Analysen",
+      "description": "Berichte und Analysen Ihrer Organisation anzeigen"
+    },
+    "users": {
+      "name": "Benutzer",
+      "title": "Benutzer",
+      "description": "Organisationsbenutzer und Berechtigungen verwalten",
+      "menu": {
+        "admins": "Admin-Benutzer",
+        "accounts": "Kontobenutzer"
+      }
+    },
+    "events": {
+      "name": "Veranstaltungen",
+      "title": "Veranstaltungen",
+      "description": "Veranstaltungen und Anmeldungen verwalten",
+      "menu": {
+        "events": "Veranstaltungen",
+        "entries": "Anmeldungen"
+      }
+    },
+    "memberships": {
+      "name": "Mitgliedschaften",
+      "title": "Mitgliedschaften",
+      "description": "Mitgliedschaftstypen und Mitglieder verwalten",
+      "menu": {
+        "types": "Mitgliedschaftstypen",
+        "members": "Mitglieder"
+      }
+    },
+    "calendar": {
+      "name": "Kalender",
+      "title": "Kalender",
+      "description": "Buchbare Kalender und Termine verwalten",
+      "menu": {
+        "calendars": "Kalender",
+        "bookings": "Buchungen"
+      }
+    },
+    "registrations": {
+      "name": "Registrierungen",
+      "title": "Registrierungen",
+      "description": "Registrierungstypen und Registrierungen verwalten",
+      "menu": {
+        "types": "Registrierungstypen",
+        "database": "Registrierungsdatenbank"
+      }
+    },
+    "ticketing": {
+      "name": "Ticketing",
+      "title": "Veranstaltungs-Ticketing",
+      "description": "Veranstaltungstickets und Zugangskontrolle verwalten"
+    },
+    "merchandise": {
+      "name": "Merchandise",
+      "title": "Merchandise",
+      "description": "Merchandise und Online-Shop verwalten",
+      "menu": {
+        "types": "Merchandise-Typen",
+        "orders": "Bestellungen"
+      }
+    }
   },
   "components": {
     "orgDataTable": {

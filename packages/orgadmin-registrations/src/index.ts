@@ -29,14 +29,14 @@ import type { ModuleRegistration } from './types/module.types';
 
 export const registrationsModule: ModuleRegistration = {
   id: 'registrations',
-  name: 'Registrations',
-  title: 'Registration Management',
-  description: 'Manage entity registrations (horses, boats, equipment) for your organisation',
+  name: 'modules.registrations.name',
+  title: 'modules.registrations.title',
+  description: 'modules.registrations.description',
   capability: 'registrations', // Requires registrations capability
   order: 12, // After memberships module
   card: {
-    title: 'Registration Management',
-    description: 'Manage entity registrations (horses, boats, equipment) for your organisation',
+    title: 'modules.registrations.title',
+    description: 'modules.registrations.description',
     icon: RegistrationIcon,
     color: '#1565c0',
     path: '/registrations',
@@ -68,7 +68,7 @@ export const registrationsModule: ModuleRegistration = {
     },
   ],
   menuItem: {
-    label: 'Registrations',
+    label: 'modules.registrations.name',
     path: '/registrations',
     icon: RegistrationIcon,
   },

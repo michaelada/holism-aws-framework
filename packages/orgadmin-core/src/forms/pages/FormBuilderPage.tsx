@@ -44,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
+import { useTranslation, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 interface ApplicationForm {
   id?: string;
@@ -119,11 +120,15 @@ const FormBuilderPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
   const { organisation } = useOrganisation();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  
+  // Register page for contextual help
+  usePageHelp(id ? 'edit' : 'create');
   
   // Form data
   const [formName, setFormName] = useState('');
@@ -193,7 +198,7 @@ const FormBuilderPage: React.FC = () => {
         setWizardConfig(form.wizardConfig);
       }
     } catch (err) {
-      setError('Failed to load form');
+      setError(t('forms.builder.messages.failedToLoad'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -202,12 +207,12 @@ const FormBuilderPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!formName.trim()) {
-      setError('Form name is required');
+      setError(t('forms.builder.validation.formNameRequired'));
       return;
     }
 
     if (!organisation?.id) {
-      setError('Organisation context is missing');
+      setError(t('forms.builder.validation.organisationMissing'));
       return;
     }
 
@@ -266,7 +271,7 @@ const FormBuilderPage: React.FC = () => {
 
       navigate('/forms');
     } catch (err) {
-      setError('Failed to save form');
+      setError(t('forms.builder.messages.failedToSave'));
       console.error(err);
     } finally {
       setSaving(false);
@@ -404,7 +409,7 @@ const FormBuilderPage: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">
-          {id ? 'Edit Form' : 'Create Form'}
+          {id ? t('forms.builder.editForm') : t('forms.builder.createForm')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -412,14 +417,14 @@ const FormBuilderPage: React.FC = () => {
             onClick={() => navigate('/forms')}
             disabled={saving}
           >
-            Cancel
+            {t('forms.builder.cancel')}
           </Button>
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? t('forms.builder.saving') : t('forms.builder.save')}
           </Button>
         </Box>
       </Box>
@@ -433,11 +438,11 @@ const FormBuilderPage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Form Details
+            {t('forms.builder.formDetails')}
           </Typography>
           <TextField
             fullWidth
-            label="Form Name"
+            label={t('forms.builder.formName')}
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
             required
@@ -445,7 +450,7 @@ const FormBuilderPage: React.FC = () => {
           />
           <TextField
             fullWidth
-            label="Description"
+            label={t('forms.builder.description')}
             value={formDescription}
             onChange={(e) => setFormDescription(e.target.value)}
             multiline
@@ -456,27 +461,27 @@ const FormBuilderPage: React.FC = () => {
 
       <Card>
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-          <Tab label="Fields" />
-          <Tab label="Field Groups" />
-          <Tab label="Wizard Steps" />
+          <Tab label={t('forms.builder.tabs.fields')} />
+          <Tab label={t('forms.builder.tabs.fieldGroups')} />
+          <Tab label={t('forms.builder.tabs.wizardSteps')} />
         </Tabs>
 
         <CardContent>
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">Form Fields</Typography>
+              <Typography variant="h6">{t('forms.builder.fields.title')}</Typography>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setAddFieldDialogOpen(true)}
               >
-                Add Field
+                {t('forms.builder.fields.addField')}
               </Button>
             </Box>
 
             {selectedFields.length === 0 ? (
               <Alert severity="info">
-                No fields added yet. Click "Add Field" to get started.
+                {t('forms.builder.fields.noFields')}
               </Alert>
             ) : (
               <List>
@@ -487,14 +492,14 @@ const FormBuilderPage: React.FC = () => {
                     </IconButton>
                     <ListItemText
                       primary={field.fieldLabel}
-                      secondary={`${field.fieldType} • ${field.required ? 'Required' : 'Optional'}`}
+                      secondary={`${field.fieldType} • ${field.required ? t('forms.builder.fields.required') : t('forms.builder.fields.optional')}`}
                     />
                     <ListItemSecondaryAction>
                       <IconButton
                         size="small"
                         onClick={() => handleMoveFieldUp(index)}
                         disabled={index === 0}
-                        title="Move up"
+                        title={t('forms.builder.fields.moveUp')}
                       >
                         <ArrowUpIcon />
                       </IconButton>
@@ -502,7 +507,7 @@ const FormBuilderPage: React.FC = () => {
                         size="small"
                         onClick={() => handleMoveFieldDown(index)}
                         disabled={index === selectedFields.length - 1}
-                        title="Move down"
+                        title={t('forms.builder.fields.moveDown')}
                       >
                         <ArrowDownIcon />
                       </IconButton>
@@ -511,7 +516,7 @@ const FormBuilderPage: React.FC = () => {
                         onClick={() => handleToggleRequired(field.fieldId)}
                         sx={{ ml: 1 }}
                       >
-                        {field.required ? 'Make Optional' : 'Make Required'}
+                        {field.required ? t('forms.builder.fields.makeOptional') : t('forms.builder.fields.makeRequired')}
                       </Button>
                       <IconButton
                         edge="end"
@@ -529,19 +534,19 @@ const FormBuilderPage: React.FC = () => {
 
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">Field Groups</Typography>
+              <Typography variant="h6">{t('forms.builder.groups.title')}</Typography>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setAddGroupDialogOpen(true)}
               >
-                Add Group
+                {t('forms.builder.groups.addGroup')}
               </Button>
             </Box>
 
             {fieldGroups.length === 0 ? (
               <Alert severity="info">
-                No field groups defined. Groups help organize fields into sections.
+                {t('forms.builder.groups.noGroups')}
               </Alert>
             ) : (
               <List>
@@ -586,19 +591,19 @@ const FormBuilderPage: React.FC = () => {
 
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">Wizard Steps</Typography>
+              <Typography variant="h6">{t('forms.builder.wizard.title')}</Typography>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setAddWizardStepDialogOpen(true)}
               >
-                Add Step
+                {t('forms.builder.wizard.addStep')}
               </Button>
             </Box>
 
             {!wizardConfig || wizardConfig.steps.length === 0 ? (
               <Alert severity="info">
-                No wizard steps defined. Wizard steps create a multi-step form experience.
+                {t('forms.builder.wizard.noSteps')}
               </Alert>
             ) : (
               <List>
@@ -610,7 +615,7 @@ const FormBuilderPage: React.FC = () => {
                   return (
                     <ListItem key={step.name}>
                       <ListItemText
-                        primary={`Step ${step.order}: ${step.name}`}
+                        primary={t('forms.builder.wizard.stepNumber', { number: step.order, name: step.name })}
                         secondary={
                           <Box>
                             <Typography variant="body2" color="text.secondary">
@@ -683,6 +688,7 @@ const AddFieldDialog: React.FC<{
   availableFields: AvailableField[];
   selectedFields: ApplicationFormField[];
 }> = ({ open, onClose, onAdd, availableFields, selectedFields }) => {
+  const { t } = useTranslation();
   const [selectedFieldId, setSelectedFieldId] = useState('');
   const [required, setRequired] = useState(false);
 
@@ -696,12 +702,12 @@ const AddFieldDialog: React.FC<{
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add Field</DialogTitle>
+      <DialogTitle>{t('forms.builder.fields.addFieldDialog')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
-          <InputLabel>Select Field</InputLabel>
+          <InputLabel>{t('forms.builder.fields.selectField')}</InputLabel>
           <Select
-            label="Select Field"
+            label={t('forms.builder.fields.selectField')}
             value={selectedFieldId}
             onChange={(e) => setSelectedFieldId(e.target.value as string)}
           >
@@ -721,13 +727,13 @@ const AddFieldDialog: React.FC<{
               onChange={(e) => setRequired(e.target.checked)}
             />
           }
-          label="Mandatory field"
+          label={t('forms.builder.fields.mandatoryField')}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('forms.builder.cancel')}</Button>
         <Button onClick={handleAdd} variant="contained" disabled={!selectedFieldId}>
-          Add
+          {t('common.actions.add')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -740,6 +746,7 @@ const AddGroupDialog: React.FC<{
   onAdd: (name: string, description: string, selectedFieldIds: string[]) => void;
   availableFields: ApplicationFormField[];
 }> = ({ open, onClose, onAdd, availableFields }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
@@ -777,18 +784,18 @@ const AddGroupDialog: React.FC<{
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add Field Group</DialogTitle>
+      <DialogTitle>{t('forms.builder.groups.addGroupDialog')}</DialogTitle>
       <DialogContent>
         <TextField
           fullWidth
-          label="Group Name"
+          label={t('forms.builder.groups.groupName')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           sx={{ mt: 2, mb: 2 }}
         />
         <TextField
           fullWidth
-          label="Description"
+          label={t('forms.builder.groups.groupDescription')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           multiline
@@ -796,11 +803,11 @@ const AddGroupDialog: React.FC<{
           sx={{ mb: 2 }}
         />
         <Typography variant="subtitle2" gutterBottom>
-          Select Fields for this Group
+          {t('forms.builder.groups.selectFields')}
         </Typography>
         {availableFields.length === 0 ? (
           <Alert severity="info">
-            No fields available. Add fields to the form first.
+            {t('forms.builder.groups.noFieldsAvailable')}
           </Alert>
         ) : (
           <Box>
@@ -821,7 +828,7 @@ const AddGroupDialog: React.FC<{
             {selectedFieldIds.length > 0 && (
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  Field Order in Group
+                  {t('forms.builder.groups.fieldOrder')}
                 </Typography>
                 <List dense>
                   {selectedFieldIds.map((fieldId, index) => {
@@ -834,7 +841,7 @@ const AddGroupDialog: React.FC<{
                             size="small"
                             onClick={() => handleMoveFieldUp(index)}
                             disabled={index === 0}
-                            title="Move up"
+                            title={t('forms.builder.fields.moveUp')}
                           >
                             <ArrowUpIcon />
                           </IconButton>
@@ -842,7 +849,7 @@ const AddGroupDialog: React.FC<{
                             size="small"
                             onClick={() => handleMoveFieldDown(index)}
                             disabled={index === selectedFieldIds.length - 1}
-                            title="Move down"
+                            title={t('forms.builder.fields.moveDown')}
                           >
                             <ArrowDownIcon />
                           </IconButton>
@@ -857,9 +864,9 @@ const AddGroupDialog: React.FC<{
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('forms.builder.cancel')}</Button>
         <Button onClick={handleAdd} variant="contained" disabled={!name.trim()}>
-          Add
+          {t('common.actions.add')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -872,6 +879,7 @@ const AddWizardStepDialog: React.FC<{
   onAdd: (name: string, description: string, selectedFieldIds: string[]) => void;
   availableFields: ApplicationFormField[];
 }> = ({ open, onClose, onAdd, availableFields }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
@@ -909,18 +917,18 @@ const AddWizardStepDialog: React.FC<{
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add Wizard Step</DialogTitle>
+      <DialogTitle>{t('forms.builder.wizard.addStepDialog')}</DialogTitle>
       <DialogContent>
         <TextField
           fullWidth
-          label="Step Name"
+          label={t('forms.builder.wizard.stepName')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           sx={{ mt: 2, mb: 2 }}
         />
         <TextField
           fullWidth
-          label="Description"
+          label={t('forms.builder.wizard.stepDescription')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           multiline
@@ -928,11 +936,11 @@ const AddWizardStepDialog: React.FC<{
           sx={{ mb: 2 }}
         />
         <Typography variant="subtitle2" gutterBottom>
-          Select Fields for this Step
+          {t('forms.builder.wizard.selectFields')}
         </Typography>
         {availableFields.length === 0 ? (
           <Alert severity="info">
-            No fields available. Add fields to the form first.
+            {t('forms.builder.groups.noFieldsAvailable')}
           </Alert>
         ) : (
           <Box>
@@ -953,7 +961,7 @@ const AddWizardStepDialog: React.FC<{
             {selectedFieldIds.length > 0 && (
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  Field Order in Step
+                  {t('forms.builder.wizard.fieldOrder')}
                 </Typography>
                 <List dense>
                   {selectedFieldIds.map((fieldId, index) => {
@@ -966,7 +974,7 @@ const AddWizardStepDialog: React.FC<{
                             size="small"
                             onClick={() => handleMoveFieldUp(index)}
                             disabled={index === 0}
-                            title="Move up"
+                            title={t('forms.builder.fields.moveUp')}
                           >
                             <ArrowUpIcon />
                           </IconButton>
@@ -974,7 +982,7 @@ const AddWizardStepDialog: React.FC<{
                             size="small"
                             onClick={() => handleMoveFieldDown(index)}
                             disabled={index === selectedFieldIds.length - 1}
-                            title="Move down"
+                            title={t('forms.builder.fields.moveDown')}
                           >
                             <ArrowDownIcon />
                           </IconButton>
@@ -989,9 +997,9 @@ const AddWizardStepDialog: React.FC<{
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('forms.builder.cancel')}</Button>
         <Button onClick={handleAdd} variant="contained" disabled={!name.trim()}>
-          Add
+          {t('common.actions.add')}
         </Button>
       </DialogActions>
     </Dialog>

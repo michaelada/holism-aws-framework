@@ -108,6 +108,8 @@ export interface CreateOrganizationDto {
   contactName?: string;
   contactEmail?: string;
   contactMobile?: string;
+  currency?: string;
+  language?: string;
   enabledCapabilities: string[];
   enabledPaymentMethods?: string[];
 }
@@ -120,6 +122,8 @@ export interface UpdateOrganizationDto {
   contactEmail?: string;
   contactMobile?: string;
   status?: 'active' | 'inactive' | 'blocked';
+  currency?: string;
+  language?: string;
   enabledCapabilities?: string[];
   enabledPaymentMethods?: string[];
   settings?: Record<string, any>;
