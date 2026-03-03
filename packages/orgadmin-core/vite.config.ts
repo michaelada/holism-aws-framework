@@ -36,6 +36,13 @@ export default defineConfig({
         statements: 70,
       },
     },
+    // Resolve date-fns and MUI date pickers for tests
+    deps: {
+      inline: [
+        '@mui/x-date-pickers',
+        'date-fns',
+      ],
+    },
   },
   
   // Environment variable prefix

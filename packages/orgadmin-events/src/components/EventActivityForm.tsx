@@ -27,8 +27,8 @@ import {
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { DiscountSelector, type Discount } from '@aws-web-framework/components';
 import type { EventActivityFormData } from '../types/event.types';
 
 interface EventActivityFormProps {
@@ -55,6 +55,8 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
   const [expanded, setExpanded] = useState(true);
   const [applicationForms, setApplicationForms] = useState<ApplicationForm[]>([]);
   const [loading, setLoading] = useState(false);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false);
 
   const loadApplicationForms = useCallback(async () => {
     if (!organisation?.id) return;
@@ -74,9 +76,30 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
     }
   }, [organisation?.id, execute]);
 
+  const loadDiscounts = useCallback(async () => {
+    if (!organisation?.id) return;
+    
+    try {
+      setLoadingDiscounts(true);
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation.id}/discounts/events`,
+      });
+      // Extract discounts array from response object
+      setDiscounts(response?.discounts || []);
+    } catch (error) {
+      console.error('Failed to load discounts:', error);
+      // Silently fail - discounts are optional
+      setDiscounts([]);
+    } finally {
+      setLoadingDiscounts(false);
+    }
+  }, [organisation?.id, execute]);
+
   useEffect(() => {
     loadApplicationForms();
-  }, [loadApplicationForms]);
+    loadDiscounts();
+  }, [loadApplicationForms, loadDiscounts]);
 
   const handleChange = (field: keyof EventActivityFormData, value: any) => {
     onChange({ ...activity, [field]: value });
@@ -114,6 +137,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
           <Grid item xs={12}>
             <TextField
               fullWidth
+              required
               multiline
               rows={2}
               label={t('events.activities.activity.description')}
@@ -283,6 +307,21 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                 </Grid>
               )}
             </>
+          )}
+
+          {/* Discount Selection */}
+          {discounts.length > 0 && (
+            <Grid item xs={12}>
+              <DiscountSelector
+                discounts={discounts}
+                selectedDiscounts={activity.discountIds || []}
+                onChange={(discountIds) => handleChange('discountIds', discountIds)}
+                multiSelect={true}
+                disabled={loading}
+                label="Apply Discounts to Activity"
+                loading={loadingDiscounts}
+              />
+            </Grid>
           )}
         </Grid>
       </Collapse>

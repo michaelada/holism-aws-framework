@@ -32,10 +32,74 @@ export default defineConfig({
       '@aws-web-framework/orgadmin-registrations': path.resolve(__dirname, './src/test/mocks/orgadmin-registrations.ts'),
       '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, './src/test/mocks/orgadmin-ticketing.ts'),
     },
+    
+    /**
+     * Module Deduplication Configuration
+     * 
+     * PROBLEM: In a monorepo with source aliases, Vite may load separate instances of the same
+     * module when it's imported from different packages. This breaks React context propagation
+     * because context providers and consumers must use the exact same module instance.
+     * 
+     * SPECIFIC ISSUE: The LocalizationProvider context error occurs when:
+     * 1. orgadmin-core imports @mui/x-date-pickers and wraps content in LocalizationProvider
+     * 2. components package imports @mui/x-date-pickers for DateRenderer
+     * 3. Vite loads two separate instances of @mui/x-date-pickers
+     * 4. LocalizationProvider from instance 1 cannot provide context to DatePicker from instance 2
+     * 5. Result: "Can not find utils in context" error and blank screens
+     * 
+     * SOLUTION: The dedupe option forces Vite to use a single module instance across all packages,
+     * ensuring React context works correctly. This is critical for:
+     * - react/react-dom: Core React context mechanism
+     * - @mui/material: Theme and styling context
+     * - @mui/x-date-pickers: LocalizationProvider context (fixes the date picker issue)
+     * - date-fns: Ensures consistent date utilities across all date pickers
+     * 
+     * REFERENCE: See .kiro/specs/date-picker-localization-fix/design.md for full details
+     * on the module resolution issue and solution architecture.
+     */
+    dedupe: [
+      'react',
+      'react-dom',
+      '@mui/material',
+      '@mui/x-date-pickers',
+      'date-fns',
+    ],
   },
   
-  // Optimize dependencies
+  /**
+   * Dependency Optimization Configuration
+   * 
+   * PROBLEM: Even with dedupe configuration, Vite's on-demand module loading in development
+   * mode can still create timing issues where different parts of the application load
+   * different instances of the same module before deduplication takes effect.
+   * 
+   * SOLUTION: Pre-bundle date picker modules during dev server startup to ensure they are
+   * loaded as a single optimized dependency before any application code runs. This works
+   * in conjunction with the dedupe configuration to guarantee single module instances.
+   * 
+   * INCLUDE: Date picker modules that must be pre-bundled to prevent context errors
+   * - Main package and all subpath imports are explicitly listed
+   * - This ensures LocalizationProvider and all date picker components share the same instance
+   * 
+   * EXCLUDE: Source packages that should remain unbundled for hot module replacement (HMR)
+   * - Keeping these excluded allows fast refresh during development
+   * - Changes to these packages trigger HMR without full page reload
+   * 
+   * REFERENCE: See .kiro/specs/date-picker-localization-fix/design.md section 1.B
+   * for detailed explanation of the optimization strategy.
+   */
   optimizeDeps: {
+    // Pre-bundle date picker modules into a single optimized dependency
+    // This ensures all date picker components use the same module instance
+    // and prevents LocalizationProvider context errors in development mode
+    include: [
+      '@mui/x-date-pickers',
+      '@mui/x-date-pickers/DatePicker',
+      '@mui/x-date-pickers/TimePicker',
+      '@mui/x-date-pickers/DateTimePicker',
+      '@mui/x-date-pickers/LocalizationProvider',
+      '@mui/x-date-pickers/AdapterDateFns',
+    ],
     exclude: [
       '@aws-web-framework/components', 
       '@aws-web-framework/orgadmin-core', 
@@ -44,9 +108,24 @@ export default defineConfig({
     ],
   },
   
-  // Development server configuration
+  /**
+   * Development Server Configuration
+   * 
+   * PORT: Custom port to avoid conflicts with other services
+   * 
+   * FILE SYSTEM ACCESS: In a monorepo with source aliases, the dev server needs to serve
+   * files from parent directories (../components/src, ../orgadmin-core/src, etc.).
+   * Setting fs.strict to false allows Vite to serve these files without security restrictions.
+   * This is safe in a development environment where all source code is trusted.
+   * 
+   * PROXY: API calls are proxied to the backend server to avoid CORS issues during development.
+   */
   server: {
     port: 5175,
+    // Allow serving files from parent directories in monorepo structure
+    fs: {
+      strict: false,
+    },
     proxy: {
       // Proxy API calls to backend
       '/api': {

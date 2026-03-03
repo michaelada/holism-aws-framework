@@ -32,11 +32,29 @@ import { Save as SaveIcon, Cancel as CancelIcon, Publish as PublishIcon } from '
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import type { CreateMembershipTypeDto } from '../types/membership.types';
+import { DiscountSelector } from '@aws-web-framework/components';
+import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 
 // Mock API hook - will be replaced with actual implementation
 const useApi = () => ({
   execute: async ({ method, url, data }: { method: string; url: string; data?: any }) => {
     console.log('API call:', method, url, data);
+    
+    // Mock responses based on URL
+    if (url === '/api/orgadmin/application-forms') {
+      return []; // Return empty array for forms
+    }
+    if (url === '/api/orgadmin/payment-methods') {
+      return [
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ];
+    }
+    if (url.startsWith('/api/orgadmin/membership-types/')) {
+      return { id: '1', ...data }; // Return object for single membership type
+    }
+    
     return { id: '1', ...data };
   },
 });
@@ -55,6 +73,8 @@ const CreateSingleMembershipTypePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { hasCapability } = useCapabilities();
+  const { organisation } = useOrganisation();
   const isEditMode = Boolean(id);
 
   const [loading, setLoading] = useState(false);
@@ -76,6 +96,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
     useTermsAndConditions: false,
     termsAndConditions: undefined,
     membershipTypeCategory: 'single',
+    discountIds: [],
   });
 
   const [labelInput, setLabelInput] = useState('');
@@ -117,6 +138,19 @@ const CreateSingleMembershipTypePage: React.FC = () => {
         { id: 'pay-offline', name: 'Pay Offline' },
         { id: 'stripe', name: 'Card Payment (Stripe)' },
       ]);
+    }
+  };
+
+  const fetchDiscounts = async (organisationId: string, moduleType: string) => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisationId}/discounts/${moduleType}`,
+      });
+      return response.discounts || [];
+    } catch (error) {
+      console.error('Failed to fetch discounts:', error);
+      return [];
     }
   };
 
@@ -329,14 +363,13 @@ const CreateSingleMembershipTypePage: React.FC = () => {
                     label="Valid Until"
                     value={formData.validUntil ? new Date(formData.validUntil) : null}
                     onChange={(date) => handleChange('validUntil', date)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        required
-                        helperText="End date for fixed-period memberships"
-                      />
-                    )}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        required: true,
+                        helperText: "End date for fixed-period memberships"
+                      }
+                    }}
                   />
                 </Grid>
               ) : (
@@ -451,6 +484,33 @@ const CreateSingleMembershipTypePage: React.FC = () => {
             </Grid>
           </CardContent>
         </Card>
+
+        {hasCapability('membership-discounts') && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Discounts
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Select discounts that will be available for this membership type
+              </Typography>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <DiscountSelector
+                    selectedDiscountIds={formData.discountIds || []}
+                    onChange={(discountIds) => handleChange('discountIds', discountIds)}
+                    organisationId={organisation?.id || ''}
+                    moduleType="memberships"
+                    fetchDiscounts={fetchDiscounts}
+                    label="Select Discounts"
+                    helperText="Choose which discounts can be applied to this membership type"
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
 
         <Card sx={{ mb: 3 }}>
           <CardContent>

@@ -25,6 +25,7 @@ export * from './components/OrgDataTable';
 export * from './components/OrgPaymentWidget';
 export * from './components/OrgDatePicker';
 export * from './components/OrgFileUpload';
+export * from './components/discount';
 
 
 

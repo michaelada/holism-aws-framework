@@ -295,6 +295,18 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     const handleKeyDown = (event: KeyboardEvent) => {
       // Check for Shift+? (which is Shift+/ on most keyboards)
       if (event.shiftKey && event.key === '?') {
+        // Don't trigger if user is typing in an input field
+        const target = event.target as HTMLElement;
+        const isInputField = 
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.closest('[contenteditable="true"]');
+        
+        if (isInputField) {
+          return; // Allow normal typing in input fields
+        }
+        
         event.preventDefault();
         toggleHelpDrawer();
       }

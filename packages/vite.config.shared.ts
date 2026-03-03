@@ -23,6 +23,7 @@ export function getModuleBuildConfig(moduleName: string, dirname: string): Build
         '@mui/material',
         '@mui/icons-material',
         '@mui/x-date-pickers',
+        /^@mui\/x-date-pickers\/.*/,
         '@emotion/react',
         '@emotion/styled',
         'react-quill',
@@ -68,7 +69,8 @@ export function getModuleResolveConfig(dirname: string) {
   return {
     alias: {
       '@aws-web-framework/components': path.resolve(dirname, '../components/src'),
-      '@aws-web-framework/orgadmin-shell': path.resolve(dirname, '../orgadmin-shell/src'),
+      '@aws-web-framework/orgadmin-shell': path.resolve(dirname, '../orgadmin-shell'),
+      '@aws-web-framework/orgadmin-core': path.resolve(dirname, '../orgadmin-core/src'),
     },
   };
 }
@@ -77,5 +79,5 @@ export function getModuleResolveConfig(dirname: string) {
  * Shared optimize deps configuration
  */
 export const sharedOptimizeDeps = {
-  exclude: ['@aws-web-framework/components', '@aws-web-framework/orgadmin-shell'],
+  exclude: ['@aws-web-framework/components', '@aws-web-framework/orgadmin-shell', '@aws-web-framework/orgadmin-core'],
 };

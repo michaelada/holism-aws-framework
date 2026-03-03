@@ -25,6 +25,10 @@ import {
   Tooltip,
   IconButton,
   InputAdornment,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -39,7 +43,8 @@ import {
   HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 import { useApi } from '@aws-web-framework/orgadmin-core';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { DiscountSelector, type Discount } from '@aws-web-framework/components';
 import type { EventFormData, EventActivityFormData } from '../types/event.types';
 import EventActivityForm from '../components/EventActivityForm';
 
@@ -48,6 +53,7 @@ const CreateEventPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { hasCapability } = useCapabilities();
   const isEditMode = Boolean(id);
 
   const steps = [
@@ -62,6 +68,17 @@ const CreateEventPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
+  // Event types and venues
+  const [eventTypes, setEventTypes] = useState<Array<{ id: string; name: string }>>([]);
+  const [venues, setVenues] = useState<Array<{ id: string; name: string }>>([]);
+  const [addEventType, setAddEventType] = useState(false);
+  const [addVenue, setAddVenue] = useState(false);
+  
+  // Discounts
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false);
+  
   const [formData, setFormData] = useState<EventFormData>({
     name: '',
     description: '',
@@ -77,6 +94,8 @@ const CreateEventPage: React.FC = () => {
     confirmationMessage: undefined,
     status: 'draft',
     activities: [],
+    eventTypeId: undefined,
+    venueId: undefined,
     // Ticketing configuration
     generateElectronicTickets: false,
     ticketHeaderText: undefined,
@@ -85,13 +104,56 @@ const CreateEventPage: React.FC = () => {
     ticketValidityPeriod: undefined,
     includeEventLogo: false,
     ticketBackgroundColor: '#ffffff',
+    // Discount configuration
+    discountIds: [],
   });
 
   useEffect(() => {
+    loadEventTypesAndVenues();
+    loadDiscounts();
     if (isEditMode && id) {
       loadEvent(id);
     }
   }, [id, isEditMode]);
+
+  const loadEventTypesAndVenues = async () => {
+    try {
+      const [eventTypesResponse, venuesResponse] = await Promise.all([
+        execute({
+          method: 'GET',
+          url: `/api/orgadmin/organisations/${formData.organisationId || 'd5a5a5ca-c4b4-436d-8981-627ab3556433'}/event-types`,
+        }).catch(() => []),
+        execute({
+          method: 'GET',
+          url: `/api/orgadmin/organisations/${formData.organisationId || 'd5a5a5ca-c4b4-436d-8981-627ab3556433'}/venues`,
+        }).catch(() => []),
+      ]);
+      
+      setEventTypes(eventTypesResponse || []);
+      setVenues(venuesResponse || []);
+    } catch (error) {
+      console.error('Failed to load event types and venues:', error);
+    }
+  };
+
+  const loadDiscounts = async () => {
+    try {
+      setLoadingDiscounts(true);
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${formData.organisationId || 'd5a5a5ca-c4b4-436d-8981-627ab3556433'}/discounts/events`,
+      });
+      
+      // Extract discounts array from response object
+      setDiscounts(response?.discounts || []);
+    } catch (error) {
+      console.error('Failed to load discounts:', error);
+      // Silently fail - discounts are optional
+      setDiscounts([]);
+    } finally {
+      setLoadingDiscounts(false);
+    }
+  };
 
   const loadEvent = async (eventId: string) => {
     try {
@@ -100,7 +162,31 @@ const CreateEventPage: React.FC = () => {
         method: 'GET',
         url: `/api/orgadmin/events/${eventId}`,
       });
-      setFormData(response);
+      
+      console.log('Event response:', response);
+      console.log('Event response discountIds:', response.discountIds);
+      console.log('Activities from response:', response.activities);
+      
+      // Convert date strings to Date objects and ensure activities array exists
+      const eventData = {
+        ...response,
+        startDate: response.startDate ? new Date(response.startDate) : new Date(),
+        endDate: response.endDate ? new Date(response.endDate) : new Date(),
+        openDateEntries: response.openDateEntries ? new Date(response.openDateEntries) : new Date(),
+        entriesClosingDate: response.entriesClosingDate ? new Date(response.entriesClosingDate) : new Date(),
+        activities: Array.isArray(response.activities) ? response.activities : [], // Ensure activities is always an array
+        discountIds: response.discountIds || [], // Ensure discountIds is always an array
+      };
+      
+      console.log('Event data after processing:', eventData);
+      console.log('Event data discountIds after processing:', eventData.discountIds);
+      console.log('Activities after processing:', eventData.activities);
+      
+      setFormData(eventData);
+      
+      // Set checkboxes based on whether event type/venue are set
+      setAddEventType(!!response.eventTypeId);
+      setAddVenue(!!response.venueId);
     } catch (error) {
       console.error(t('events.failedToLoad'), error);
       setError(t('events.failedToLoad'));
@@ -168,6 +254,7 @@ const CreateEventPage: React.FC = () => {
       allowedPaymentMethod: 'both',
       handlingFeeIncluded: false,
       chequePaymentInstructions: undefined,
+      discountIds: [],
     };
     setFormData(prev => ({
       ...prev,
@@ -214,6 +301,14 @@ const CreateEventPage: React.FC = () => {
       }
       if (formData.activities.length === 0) {
         errors.activities = t('events.activities.validation.atLeastOne');
+      } else {
+        // Validate each activity
+        const invalidActivities = formData.activities.filter(
+          (activity, index) => !activity.name.trim() || !activity.description.trim()
+        );
+        if (invalidActivities.length > 0) {
+          errors.activities = t('events.activities.validation.allFieldsRequired');
+        }
       }
 
       if (Object.keys(errors).length > 0) {
@@ -273,6 +368,14 @@ const CreateEventPage: React.FC = () => {
     if (activeStep === 3) {
       if (formData.activities.length === 0) {
         errors.activities = t('events.activities.validation.atLeastOne');
+      } else {
+        // Validate each activity
+        const invalidActivities = formData.activities.filter(
+          (activity, index) => !activity.name.trim() || !activity.description.trim()
+        );
+        if (invalidActivities.length > 0) {
+          errors.activities = t('events.activities.validation.allFieldsRequired');
+        }
       }
     }
     
@@ -480,6 +583,113 @@ const CreateEventPage: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
+              />
+            </Grid>
+          )}
+
+          {/* Event Type Selection */}
+          {eventTypes.length > 0 && (
+            <>
+              <Grid item xs={12}>
+                <Tooltip title="Categorize your event by selecting an event type" arrow placement="right">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={addEventType}
+                        onChange={(e) => {
+                          setAddEventType(e.target.checked);
+                          if (!e.target.checked) {
+                            handleChange('eventTypeId', undefined);
+                          }
+                        }}
+                      />
+                    }
+                    label="Add Event Type"
+                  />
+                </Tooltip>
+              </Grid>
+
+              {addEventType && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Event Type</InputLabel>
+                    <Select
+                      value={formData.eventTypeId || ''}
+                      onChange={(e) => handleChange('eventTypeId', e.target.value || undefined)}
+                      label="Event Type"
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {eventTypes.map((type) => (
+                        <MenuItem key={type.id} value={type.id}>
+                          {type.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+            </>
+          )}
+
+          {/* Venue Selection */}
+          {venues.length > 0 && (
+            <>
+              <Grid item xs={12}>
+                <Tooltip title="Specify the location where your event will take place" arrow placement="right">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={addVenue}
+                        onChange={(e) => {
+                          setAddVenue(e.target.checked);
+                          if (!e.target.checked) {
+                            handleChange('venueId', undefined);
+                          }
+                        }}
+                      />
+                    }
+                    label="Add Venue"
+                  />
+                </Tooltip>
+              </Grid>
+
+              {addVenue && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Venue</InputLabel>
+                    <Select
+                      value={formData.venueId || ''}
+                      onChange={(e) => handleChange('venueId', e.target.value || undefined)}
+                      label="Venue"
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {venues.map((venue) => (
+                        <MenuItem key={venue.id} value={venue.id}>
+                          {venue.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+            </>
+          )}
+
+          {/* Discount Selection */}
+          {hasCapability('entry-discounts') && discounts.length > 0 && (
+            <Grid item xs={12}>
+              <DiscountSelector
+                discounts={discounts}
+                selectedDiscounts={formData.discountIds || []}
+                onChange={(discountIds) => handleChange('discountIds', discountIds)}
+                multiSelect={true}
+                disabled={loading}
+                label="Apply Discounts to Event"
+                loading={loadingDiscounts}
               />
             </Grid>
           )}
@@ -1018,6 +1228,18 @@ const CreateEventPage: React.FC = () => {
                 disabled={loading}
               >
                 {t('common.actions.back')}
+              </Button>
+            )}
+
+            {/* Show Save button on all steps when editing */}
+            {isEditMode && activeStep < steps.length - 1 && (
+              <Button
+                variant="outlined"
+                startIcon={<SaveIcon />}
+                onClick={() => handleSave(formData.status || 'draft')}
+                disabled={loading}
+              >
+                {t('common.actions.save')}
               </Button>
             )}
 

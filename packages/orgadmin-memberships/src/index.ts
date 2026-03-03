@@ -18,7 +18,7 @@
  */
 
 import { lazy } from 'react';
-import { People as MembershipIcon } from '@mui/icons-material';
+import { People as MembershipIcon, LocalOffer as DiscountIcon } from '@mui/icons-material';
 import type { ModuleRegistration } from './types/module.types';
 
 export const membershipsModule: ModuleRegistration = {
@@ -37,39 +37,67 @@ export const membershipsModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/members',
+      path: 'members',
       component: lazy(() => import('./pages/MembersDatabasePage')),
     },
     {
-      path: '/members/types',
+      path: 'members/types',
       component: lazy(() => import('./pages/MembershipTypesListPage')),
     },
     {
-      path: '/members/types/new/single',
+      path: 'members/types/new/single',
       component: lazy(() => import('./pages/CreateSingleMembershipTypePage')),
     },
     {
-      path: '/members/types/new/group',
+      path: 'members/types/new/group',
       component: lazy(() => import('./pages/CreateGroupMembershipTypePage')),
     },
     {
-      path: '/members/types/:id',
+      path: 'members/types/:id',
       component: lazy(() => import('./pages/MembershipTypeDetailsPage')),
     },
     {
-      path: '/members/types/:id/edit',
+      path: 'members/types/:id/edit',
       component: lazy(() => import('./pages/CreateSingleMembershipTypePage')),
     },
     {
-      path: '/members/:id',
+      path: 'members/:id',
       component: lazy(() => import('./pages/MemberDetailsPage')),
     },
+    {
+      path: 'members/discounts',
+      component: lazy(() => import('./pages/DiscountsListPage')),
+      capability: 'membership-discounts',
+    },
+    {
+      path: 'members/discounts/new',
+      component: lazy(() => import('./pages/CreateDiscountPage')),
+      capability: 'membership-discounts',
+    },
+    {
+      path: 'members/discounts/:id/edit',
+      component: lazy(() => import('./pages/EditDiscountPage')),
+      capability: 'membership-discounts',
+    },
   ],
-  menuItem: {
-    label: 'modules.memberships.name',
-    path: '/members',
-    icon: MembershipIcon,
-  },
+  subMenuItems: [
+    {
+      label: 'modules.memberships.menu.membersDatabase',
+      path: '/members',
+      icon: MembershipIcon,
+    },
+    {
+      label: 'modules.memberships.menu.membershipTypes',
+      path: '/members/types',
+      icon: MembershipIcon,
+    },
+    {
+      label: 'modules.memberships.menu.discounts',
+      path: '/members/discounts',
+      icon: DiscountIcon,
+      capability: 'membership-discounts',
+    },
+  ],
 };
 
 // Export pages for direct use if needed

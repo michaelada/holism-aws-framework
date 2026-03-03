@@ -25,6 +25,7 @@ export interface MembershipType {
   personTitles?: string[];
   personLabels?: string[][];
   fieldConfiguration?: Record<string, 'common' | 'unique'>;
+  discountIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,6 +78,7 @@ export interface CreateMembershipTypeDto {
   personTitles?: string[];
   personLabels?: string[][];
   fieldConfiguration?: Record<string, 'common' | 'unique'>;
+  discountIds?: string[];
 }
 
 /**
@@ -101,6 +103,19 @@ export interface UpdateMembershipTypeDto {
   personTitles?: string[];
   personLabels?: string[][];
   fieldConfiguration?: Record<string, 'common' | 'unique'>;
+  discountIds?: string[];
+}
+
+/**
+ * Discount validation result interface
+ */
+export interface DiscountValidationResult {
+  valid: boolean;
+  errors: Array<{
+    discountId: string;
+    reason: 'not_found' | 'wrong_organisation' | 'wrong_module_type' | 'inactive';
+    message: string;
+  }>;
 }
 
 /**
@@ -132,6 +147,9 @@ export class MembershipService {
       personTitles: row.person_titles,
       personLabels: row.person_labels,
       fieldConfiguration: row.field_configuration,
+      discountIds: row.discount_ids ? 
+        (Array.isArray(row.discount_ids) ? row.discount_ids : JSON.parse(row.discount_ids)) 
+        : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -235,14 +253,24 @@ export class MembershipService {
         throw new Error('Terms and conditions text is required when use terms and conditions is enabled');
       }
 
+      // Validate discount IDs if provided
+      if (data.discountIds && data.discountIds.length > 0) {
+        const validationResult = await this.validateDiscountIds(data.discountIds, data.organisationId);
+        if (!validationResult.valid) {
+          const error = new Error('Discount validation failed') as any;
+          error.validationErrors = validationResult.errors;
+          throw error;
+        }
+      }
+
       const result = await db.query(
         `INSERT INTO membership_types 
          (organisation_id, name, description, membership_form_id, membership_status,
           is_rolling_membership, valid_until, number_of_months, automatically_approve,
           member_labels, supported_payment_methods, use_terms_and_conditions, terms_and_conditions,
           membership_type_category, max_people_in_application, min_people_in_application,
-          person_titles, person_labels, field_configuration)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+          person_titles, person_labels, field_configuration, discount_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
          RETURNING *`,
         [
           data.organisationId,
@@ -264,6 +292,7 @@ export class MembershipService {
           data.personTitles ? JSON.stringify(data.personTitles) : null,
           data.personLabels ? JSON.stringify(data.personLabels) : null,
           data.fieldConfiguration ? JSON.stringify(data.fieldConfiguration) : null,
+          JSON.stringify(data.discountIds || []),
         ]
       );
 
@@ -320,6 +349,16 @@ export class MembershipService {
       const termsText = data.termsAndConditions !== undefined ? data.termsAndConditions : existing.termsAndConditions;
       if (useTerms && !termsText) {
         throw new Error('Terms and conditions text is required when use terms and conditions is enabled');
+      }
+
+      // Validate discount IDs if provided
+      if (data.discountIds && data.discountIds.length > 0) {
+        const validationResult = await this.validateDiscountIds(data.discountIds, existing.organisationId);
+        if (!validationResult.valid) {
+          const error = new Error('Discount validation failed') as any;
+          error.validationErrors = validationResult.errors;
+          throw error;
+        }
       }
 
       const updates: string[] = ['updated_at = NOW()'];
@@ -397,6 +436,11 @@ export class MembershipService {
       if (data.fieldConfiguration !== undefined) {
         updates.push(`field_configuration = $${paramCount++}`);
         values.push(data.fieldConfiguration ? JSON.stringify(data.fieldConfiguration) : null);
+      }
+
+      if (data.discountIds !== undefined) {
+        updates.push(`discount_ids = ${paramCount++}`);
+        values.push(JSON.stringify(data.discountIds));
       }
 
       values.push(id);
@@ -481,6 +525,85 @@ export class MembershipService {
       throw error;
     }
   }
+
+  /**
+   * Validate discount IDs for membership type association
+   * Checks existence, organization ownership, and moduleType
+   */
+  async validateDiscountIds(
+    discountIds: string[],
+    organisationId: string
+  ): Promise<DiscountValidationResult> {
+    const errors: Array<{
+      discountId: string;
+      reason: 'not_found' | 'wrong_organisation' | 'wrong_module_type' | 'inactive';
+      message: string;
+    }> = [];
+
+    // If empty array, return valid
+    if (!discountIds || discountIds.length === 0) {
+      return { valid: true, errors: [] };
+    }
+
+    try {
+      // Batch query all discounts using WHERE id = ANY($1)
+      const result = await db.query(
+        `SELECT id, organisation_id, module_type, status
+         FROM discounts
+         WHERE id = ANY($1)`,
+        [discountIds]
+      );
+
+      // Create a map of found discounts for quick lookup
+      const foundDiscounts = new Map(
+        result.rows.map(row => [row.id, row])
+      );
+
+      // Validate each discount ID
+      for (const discountId of discountIds) {
+        const discount = foundDiscounts.get(discountId);
+
+        if (!discount) {
+          // Discount does not exist
+          errors.push({
+            discountId,
+            reason: 'not_found',
+            message: `Discount with ID '${discountId}' does not exist`
+          });
+        } else if (discount.organisation_id !== organisationId) {
+          // Discount belongs to different organization
+          errors.push({
+            discountId,
+            reason: 'wrong_organisation',
+            message: `Discount with ID '${discountId}' belongs to a different organisation`
+          });
+        } else if (discount.module_type !== 'memberships') {
+          // Discount has wrong moduleType
+          errors.push({
+            discountId,
+            reason: 'wrong_module_type',
+            message: `Discount with ID '${discountId}' has moduleType '${discount.module_type}', expected 'memberships'`
+          });
+        } else if (discount.status === 'inactive') {
+          // Discount is inactive
+          errors.push({
+            discountId,
+            reason: 'inactive',
+            message: `Discount with ID '${discountId}' is inactive`
+          });
+        }
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors
+      };
+    } catch (error) {
+      logger.error('Error validating discount IDs:', error);
+      throw error;
+    }
+  }
+
 }
 
 // Create singleton instance

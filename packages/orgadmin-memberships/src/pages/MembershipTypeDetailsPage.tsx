@@ -14,6 +14,7 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -39,7 +40,9 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
+import { useDiscountService } from '../../../orgadmin-events/src/hooks/useDiscountService';
 import type { MembershipType } from '../types/membership.types';
+import type { Discount } from '../../../backend/src/types/discount.types';
 
 // Mock API hook - will be replaced with actual implementation
 const useApi = () => ({
@@ -54,8 +57,11 @@ const MembershipTypeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
   const { t, i18n } = useTranslation();
+  const discountService = useDiscountService();
 
   const [membershipType, setMembershipType] = useState<MembershipType | null>(null);
+  const [discounts, setDiscounts] = useState<(Discount | null)[]>([]);
+  const [discountsLoading, setDiscountsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -65,6 +71,34 @@ const MembershipTypeDetailsPage: React.FC = () => {
       loadMembershipType(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (membershipType?.discountIds && membershipType.discountIds.length > 0) {
+      loadDiscounts(membershipType.discountIds, membershipType.organisationId);
+    } else {
+      setDiscounts([]);
+    }
+  }, [membershipType?.discountIds]);
+
+  const loadDiscounts = async (discountIds: string[], organisationId: string) => {
+    try {
+      setDiscountsLoading(true);
+      const discountPromises = discountIds.map(async (discountId) => {
+        try {
+          return await discountService.getDiscountById(discountId, organisationId);
+        } catch (error) {
+          console.error(`Failed to load discount ${discountId}:`, error);
+          return null;
+        }
+      });
+      const loadedDiscounts = await Promise.all(discountPromises);
+      setDiscounts(loadedDiscounts);
+    } catch (error) {
+      console.error('Failed to load discounts:', error);
+    } finally {
+      setDiscountsLoading(false);
+    }
+  };
 
   const loadMembershipType = async (typeId: string) => {
     try {
@@ -102,6 +136,19 @@ const MembershipTypeDetailsPage: React.FC = () => {
 
   const handleBack = () => {
     navigate('/members/types');
+  };
+
+  const formatDiscountValue = (discount: Discount) => {
+    if (discount.discountType === 'percentage') {
+      return `${discount.discountValue}%`;
+    }
+    return `£${discount.discountValue.toFixed(2)}`;
+  };
+
+  const getDiscountTypeLabel = (discountType: string) => {
+    return discountType === 'percentage' 
+      ? t('discounts.types.percentage') 
+      : t('discounts.types.fixed');
   };
 
   if (loading) {
@@ -193,6 +240,76 @@ const MembershipTypeDetailsPage: React.FC = () => {
               </Typography>
             </Grid>
           </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Associated Discounts */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            {t('memberships.sections.discounts')}
+          </Typography>
+          {discountsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : !membershipType.discountIds || membershipType.discountIds.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t('memberships.discounts.noDiscounts')}
+            </Typography>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('memberships.discounts.name')}</TableCell>
+                    <TableCell>{t('memberships.discounts.type')}</TableCell>
+                    <TableCell>{t('memberships.discounts.value')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {membershipType.discountIds.map((discountId, index) => {
+                    const discount = discounts[index];
+                    if (!discount) {
+                      return (
+                        <TableRow key={discountId}>
+                          <TableCell colSpan={3}>
+                            <Typography variant="body2" color="error">
+                              {t('memberships.discounts.notFound')}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    return (
+                      <TableRow key={discountId}>
+                        <TableCell>
+                          <Typography variant="body2">{discount.name}</Typography>
+                          {discount.description && (
+                            <Typography variant="caption" color="text.secondary">
+                              {discount.description}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={getDiscountTypeLabel(discount.discountType)}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {formatDiscountValue(discount)}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
 

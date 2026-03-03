@@ -12,6 +12,15 @@ import * as useApiModule from '../../../hooks/useApi';
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
 
+// Mock MUI X Date Pickers to avoid date-fns internal import issues in tests
+vi.mock('@mui/x-date-pickers/LocalizationProvider', () => ({
+  LocalizationProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="localization-provider">{children}</div>,
+}));
+
+vi.mock('@mui/x-date-pickers/AdapterDateFns', () => ({
+  AdapterDateFns: vi.fn(),
+}));
+
 // Mock useNavigate and useParams
 const mockNavigate = vi.fn();
 const mockParams = { id: 'form-1' };
@@ -178,6 +187,178 @@ describe('FormPreviewPage', () => {
       </BrowserRouter>
     );
   };
+
+  describe('LocalizationProvider Configuration', () => {
+    it('should render LocalizationProvider component', async () => {
+      mockExecute.mockResolvedValue(mockSimpleForm);
+      const { container } = renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Form Preview')).toBeInTheDocument();
+      });
+
+      // Verify LocalizationProvider wrapper is present
+      expect(screen.getByTestId('localization-provider')).toBeInTheDocument();
+    });
+
+    it('should configure AdapterDateFns for date localization', async () => {
+      mockExecute.mockResolvedValue({
+        ...mockSimpleForm,
+        fields: [
+          {
+            id: 'field-1',
+            name: 'birth_date',
+            label: 'Date of Birth',
+            datatype: 'date',
+            order: 1,
+            required: false,
+          },
+        ],
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Date of Birth')).toBeInTheDocument();
+      });
+
+      // Verify LocalizationProvider wraps the content
+      expect(screen.getByTestId('localization-provider')).toBeInTheDocument();
+      expect(screen.getByText('Date of Birth')).toBeInTheDocument();
+    });
+
+    it('should support date picker fields without context errors', async () => {
+      const formWithDateField = {
+        ...mockSimpleForm,
+        fields: [
+          {
+            id: 'field-1',
+            name: 'event_date',
+            label: 'Event Date',
+            datatype: 'date',
+            order: 1,
+            required: true,
+          },
+        ],
+      };
+
+      mockExecute.mockResolvedValue(formWithDateField);
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Event Date')).toBeInTheDocument();
+      });
+
+      // Verify the field renders within LocalizationProvider context
+      const provider = screen.getByTestId('localization-provider');
+      expect(provider).toBeInTheDocument();
+      expect(screen.getByText('Event Date')).toBeInTheDocument();
+    });
+
+    it('should support time picker fields without context errors', async () => {
+      const formWithTimeField = {
+        ...mockSimpleForm,
+        fields: [
+          {
+            id: 'field-1',
+            name: 'appointment_time',
+            label: 'Appointment Time',
+            datatype: 'time',
+            order: 1,
+            required: true,
+          },
+        ],
+      };
+
+      mockExecute.mockResolvedValue(formWithTimeField);
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Appointment Time')).toBeInTheDocument();
+      });
+
+      // Verify the field renders within LocalizationProvider context
+      const provider = screen.getByTestId('localization-provider');
+      expect(provider).toBeInTheDocument();
+      expect(screen.getByText('Appointment Time')).toBeInTheDocument();
+    });
+
+    it('should support datetime picker fields without context errors', async () => {
+      const formWithDateTimeField = {
+        ...mockSimpleForm,
+        fields: [
+          {
+            id: 'field-1',
+            name: 'meeting_datetime',
+            label: 'Meeting Date & Time',
+            datatype: 'datetime',
+            order: 1,
+            required: true,
+          },
+        ],
+      };
+
+      mockExecute.mockResolvedValue(formWithDateTimeField);
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Meeting Date & Time')).toBeInTheDocument();
+      });
+
+      // Verify the field renders within LocalizationProvider context
+      const provider = screen.getByTestId('localization-provider');
+      expect(provider).toBeInTheDocument();
+      expect(screen.getByText('Meeting Date & Time')).toBeInTheDocument();
+    });
+
+    it('should support multiple date/time fields without context conflicts', async () => {
+      const formWithMultipleDateFields = {
+        ...mockSimpleForm,
+        fields: [
+          {
+            id: 'field-1',
+            name: 'start_date',
+            label: 'Start Date',
+            datatype: 'date',
+            order: 1,
+            required: true,
+          },
+          {
+            id: 'field-2',
+            name: 'end_date',
+            label: 'End Date',
+            datatype: 'date',
+            order: 2,
+            required: true,
+          },
+          {
+            id: 'field-3',
+            name: 'meeting_time',
+            label: 'Meeting Time',
+            datatype: 'time',
+            order: 3,
+            required: false,
+          },
+        ],
+      };
+
+      mockExecute.mockResolvedValue(formWithMultipleDateFields);
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('Start Date')).toBeInTheDocument();
+        expect(screen.getByText('End Date')).toBeInTheDocument();
+        expect(screen.getByText('Meeting Time')).toBeInTheDocument();
+      });
+
+      // Verify all date/time fields render within the same LocalizationProvider context
+      const provider = screen.getByTestId('localization-provider');
+      expect(provider).toBeInTheDocument();
+      expect(screen.getByText('Start Date')).toBeInTheDocument();
+      expect(screen.getByText('End Date')).toBeInTheDocument();
+      expect(screen.getByText('Meeting Time')).toBeInTheDocument();
+    });
+  });
 
   describe('Form Preview Rendering', () => {
     it('should render form preview page title', async () => {

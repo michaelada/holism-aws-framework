@@ -16,7 +16,12 @@
  */
 
 import { lazy } from 'react';
-import { Festival as EventIcon } from '@mui/icons-material';
+import { 
+  Festival as EventIcon,
+  Category as CategoryIcon,
+  LocationOn as LocationIcon,
+  LocalOffer as DiscountIcon,
+} from '@mui/icons-material';
 import type { ModuleRegistration } from './types/module.types';
 
 export const eventsModule: ModuleRegistration = {
@@ -35,31 +40,72 @@ export const eventsModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/events',
+      path: 'events',
       component: lazy(() => import('./pages/EventsListPage')),
     },
     {
-      path: '/events/new',
+      path: 'events/new',
       component: lazy(() => import('./pages/CreateEventPage')),
     },
     {
-      path: '/events/:id',
+      path: 'events/:id',
       component: lazy(() => import('./pages/EventDetailsPage')),
     },
     {
-      path: '/events/:id/edit',
+      path: 'events/:id/edit',
       component: lazy(() => import('./pages/CreateEventPage')),
     },
     {
-      path: '/events/:id/entries',
+      path: 'events/:id/entries',
       component: lazy(() => import('./pages/EventEntriesPage')),
     },
+    {
+      path: 'events/types',
+      component: lazy(() => import('./pages/EventTypesListPage')),
+    },
+    {
+      path: 'events/venues',
+      component: lazy(() => import('./pages/VenuesListPage')),
+    },
+    {
+      path: 'events/discounts',
+      component: lazy(() => import('./pages/DiscountsListPage')),
+      capability: 'entry-discounts', // Only show if entry-discounts capability enabled
+    },
+    {
+      path: 'events/discounts/new',
+      component: lazy(() => import('./pages/CreateDiscountPage')),
+      capability: 'entry-discounts', // Only show if entry-discounts capability enabled
+    },
+    {
+      path: 'events/discounts/:id/edit',
+      component: lazy(() => import('./pages/CreateDiscountPage')),
+      capability: 'entry-discounts', // Only show if entry-discounts capability enabled
+    },
   ],
-  menuItem: {
-    label: 'modules.events.name',
-    path: '/events',
-    icon: EventIcon,
-  },
+  subMenuItems: [
+    {
+      label: 'modules.events.menu.events',
+      path: '/events',
+      icon: EventIcon,
+    },
+    {
+      label: 'modules.events.menu.eventTypes',
+      path: '/events/types',
+      icon: CategoryIcon,
+    },
+    {
+      label: 'modules.events.menu.venues',
+      path: '/events/venues',
+      icon: LocationIcon,
+    },
+    {
+      label: 'modules.events.menu.discounts',
+      path: '/events/discounts',
+      icon: DiscountIcon,
+      capability: 'entry-discounts', // Only show if entry-discounts capability enabled
+    },
+  ],
 };
 
 // Export pages for direct use if needed
@@ -67,10 +113,17 @@ export { default as EventsListPage } from './pages/EventsListPage';
 export { default as CreateEventPage } from './pages/CreateEventPage';
 export { default as EventDetailsPage } from './pages/EventDetailsPage';
 export { default as EventEntriesPage } from './pages/EventEntriesPage';
+export { default as EventTypesListPage } from './pages/EventTypesListPage';
+export { default as VenuesListPage } from './pages/VenuesListPage';
+export { default as DiscountsListPage } from './pages/DiscountsListPage';
+export { default as CreateDiscountPage } from './pages/CreateDiscountPage';
 
 // Export components
 export { default as EventActivityForm } from './components/EventActivityForm';
 export { default as EventEntryDetailsDialog } from './components/EventEntryDetailsDialog';
+
+// Export hooks
+export { useDiscountService } from './hooks/useDiscountService';
 
 // Export types
 export * from './types/event.types';

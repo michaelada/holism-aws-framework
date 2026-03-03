@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import i18n, { preloadTranslation } from '../i18n/config';
 import { SupportedLocale, DEFAULT_LOCALE, SUPPORTED_LOCALES } from '../i18n/config';
 

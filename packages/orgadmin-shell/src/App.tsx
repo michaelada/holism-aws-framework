@@ -26,11 +26,24 @@ import {
 
 // Import all capability module registrations
 import { eventsModule } from '@aws-web-framework/orgadmin-events';
+// @ts-ignore - Module may not have type declarations
 import { membershipsModule } from '@aws-web-framework/orgadmin-memberships';
+// @ts-ignore - Module may not have type declarations
 import { merchandiseModule } from '@aws-web-framework/orgadmin-merchandise';
+// @ts-ignore - Module may not have type declarations
 import { calendarModule } from '@aws-web-framework/orgadmin-calendar';
+// @ts-ignore - Module may not have type declarations
 import { registrationsModule } from '@aws-web-framework/orgadmin-registrations';
+// @ts-ignore - Module may not have type declarations
 import { ticketingModule } from '@aws-web-framework/orgadmin-ticketing';
+
+// Debug: Log memberships module on import
+console.log('Memberships module imported:', {
+  id: membershipsModule?.id,
+  hasSubMenuItems: !!membershipsModule?.subMenuItems,
+  subMenuItemsCount: membershipsModule?.subMenuItems?.length,
+  subMenuItems: membershipsModule?.subMenuItems
+});
 
 // Import all module registrations here
 const ALL_MODULES: ModuleRegistration[] = [
@@ -290,13 +303,22 @@ const App: React.FC = () => {
 
                       {/* Dynamic routes from module registrations */}
                       {availableModules.flatMap(module =>
-                        module.routes.map(route => (
-                          <Route
-                            key={route.path}
-                            path={route.path}
-                            element={<route.component />}
-                          />
-                        ))
+                        module.routes
+                          .filter(route => {
+                            // If route has a capability requirement, check if org has it
+                            if (route.capability) {
+                              return organisation?.enabledCapabilities?.includes(route.capability);
+                            }
+                            // If no capability requirement, always allow
+                            return true;
+                          })
+                          .map(route => (
+                            <Route
+                              key={route.path}
+                              path={route.path}
+                              element={<route.component />}
+                            />
+                          ))
                       )}
 
                       {/* 404 Not Found */}

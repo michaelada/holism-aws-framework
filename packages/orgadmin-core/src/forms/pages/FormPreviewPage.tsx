@@ -23,6 +23,9 @@ import {
   StepLabel,
 } from '@mui/material';
 import { ArrowBack as BackIcon, ViewList as ViewListIcon, ViewModule as ViewModuleIcon } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enGB } from 'date-fns/locale';
 import { FieldRenderer } from '@aws-web-framework/components';
 import { useApi } from '../../hooks/useApi';
 
@@ -107,14 +110,66 @@ const FormPreviewPage: React.FC = () => {
     }
   };
 
+  // Map database field types to FieldRenderer expected types
+  const mapDatatypeToRenderer = (datatype: string): string => {
+    const mapping: Record<string, string> = {
+      'text': 'text',
+      'textarea': 'text_area',
+      'number': 'number',
+      'email': 'email',
+      'phone': 'text',
+      'date': 'date',
+      'time': 'time',
+      'datetime': 'datetime',
+      'boolean': 'boolean',
+      'select': 'single_select',
+      'multiselect': 'multi_select',
+      'radio': 'single_select',
+      'checkbox': 'multi_select', // Checkbox list = multi-select with checkboxes
+      'file': 'document_upload',
+      'image': 'document_upload',
+    };
+    return mapping[datatype] || 'text';
+  };
+
+  // Transform field options from string array to {value, label} format
+  const transformOptions = (field: ApplicationFormField) => {
+    const baseProperties: Record<string, any> = {};
+
+    // Add file type property for image fields
+    if (field.datatype === 'image') {
+      baseProperties.fileType = 'image';
+      baseProperties.acceptImages = true;
+    }
+
+    if (!field.options || !Array.isArray(field.options)) {
+      return baseProperties;
+    }
+
+    // Convert string array to {value, label} format
+    const options = field.options.map((opt: string) => ({
+      value: opt,
+      label: opt,
+    }));
+
+    // Set displayMode based on field type
+    const displayMode = field.datatype === 'radio' ? 'radio' : 'dropdown';
+
+    return {
+      ...baseProperties,
+      options,
+      displayMode,
+    };
+  };
+
   const renderField = (field: ApplicationFormField) => {
     // Convert ApplicationFormField to FieldDefinition format expected by FieldRenderer
     const fieldDefinition = {
       shortName: field.name,
       displayName: field.label,
       description: field.description || '',
-      datatype: field.datatype as any,
-      datatypeProperties: field.options || {},
+      datatype: mapDatatypeToRenderer(field.datatype) as any,
+      datatypeProperties: transformOptions(field),
       validationRules: field.validation?.rules || [],
     };
 
@@ -203,24 +258,30 @@ const FormPreviewPage: React.FC = () => {
   const isLastStep = form?.wizardConfig ? currentWizardStep === form.wizardConfig.steps.length - 1 : false;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Form Preview</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            startIcon={<BackIcon />}
-            onClick={() => navigate('/forms')}
-          >
-            Back to Forms
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => navigate(`/forms/${id}/edit`)}
-          >
-            Edit Form
-          </Button>
+    // LocalizationProvider must be at page level (not in DateRenderer component) to work around
+    // Vite module resolution issue in development mode. In a monorepo setup, Vite may load multiple
+    // instances of @mui/x-date-pickers from different packages, breaking React context propagation.
+    // Placing the provider here ensures it wraps all date/time/datetime fields in the form preview.
+    // See: .kiro/specs/date-picker-localization-fix/design.md for full technical details.
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4">Form Preview</Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              startIcon={<BackIcon />}
+              onClick={() => navigate('/forms')}
+            >
+              Back to Forms
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(`/forms/${id}/edit`)}
+            >
+              Edit Form
+            </Button>
+          </Box>
         </Box>
-      </Box>
 
       <Alert severity="info" sx={{ mb: 3 }}>
         This is a live preview of your form. You can interact with all fields to see how they will work for end users.
@@ -288,8 +349,10 @@ const FormPreviewPage: React.FC = () => {
           {(() => {
             const sortedSteps = [...form.wizardConfig!.steps].sort((a, b) => a.order - b.order);
             const currentStep = sortedSteps[currentWizardStep];
+            
+            // Match fields by both name and id (wizard steps may store either)
             const stepFields = sortedFields.filter((f) =>
-              currentStep.fields.includes(f.name)
+              currentStep.fields.includes(f.name) || currentStep.fields.includes(f.id)
             );
 
             return (
@@ -307,7 +370,13 @@ const FormPreviewPage: React.FC = () => {
 
                   <Divider sx={{ mb: 3 }} />
 
-                  {stepFields.map(renderField)}
+                  {stepFields.length > 0 ? (
+                    stepFields.map(renderField)
+                  ) : (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      No fields configured for this step. Please edit the form to assign fields to this wizard step.
+                    </Alert>
+                  )}
 
                   {/* Wizard navigation buttons */}
                   <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'space-between' }}>
@@ -402,6 +471,7 @@ const FormPreviewPage: React.FC = () => {
         </Box>
       )}
     </Box>
+    </LocalizationProvider>
   );
 };
 

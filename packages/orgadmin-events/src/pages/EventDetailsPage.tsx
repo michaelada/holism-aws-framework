@@ -1,7 +1,7 @@
 /**
  * Event Details Page
  * 
- * Displays full details of an event including all activities
+ * Displays detailed information about a specific event
  */
 
 import React, { useState, useEffect } from 'react';
@@ -12,114 +12,104 @@ import {
   Card,
   CardContent,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Grid,
-  IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  Delete as DeleteIcon,
-  People as EntriesIcon,
   ArrowBack as BackIcon,
+  People as EntriesIcon,
 } from '@mui/icons-material';
+import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { Event, EventActivity } from '../types/event.types';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async () => {
-    return null;
-  },
-});
+import type { Discount } from '../types/discount.types';
+import { useDiscountService } from '../hooks/useDiscountService';
 
 const EventDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t } = useTranslation();
+  const { locale } = useLocale();
+  const discountService = useDiscountService();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [activities, setActivities] = useState<EventActivity[]>([]);
+  const [eventDiscounts, setEventDiscounts] = useState<Discount[]>([]);
+  const [activityDiscounts, setActivityDiscounts] = useState<Map<string, Discount[]>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       loadEvent(id);
-      loadActivities(id);
     }
   }, [id]);
 
-  const loadEvent = async (_eventId: string) => {
+  const loadEvent = async (eventId: string) => {
     try {
       setLoading(true);
-      const response = await execute();
-      setEvent(response);
+      
+      // Load event details
+      const eventResponse = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/events/${eventId}`,
+      });
+      setEvent(eventResponse);
+
+      // Load event activities
+      const activitiesResponse = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/events/${eventId}/activities`,
+      });
+      setActivities(activitiesResponse || []);
+
+      // Load discounts for the event
+      try {
+        const eventDiscountsData = await discountService.getDiscountsForTarget('event', eventId);
+        setEventDiscounts(eventDiscountsData);
+      } catch (discountError) {
+        console.error('Failed to load event discounts:', discountError);
+        // Don't fail the whole page if discounts fail to load
+      }
+
+      // Load discounts for each activity
+      if (activitiesResponse && activitiesResponse.length > 0) {
+        const activityDiscountsMap = new Map<string, Discount[]>();
+        
+        await Promise.all(
+          activitiesResponse.map(async (activity: EventActivity) => {
+            try {
+              const activityDiscountsData = await discountService.getDiscountsForTarget(
+                'event_activity',
+                activity.id
+              );
+              if (activityDiscountsData.length > 0) {
+                activityDiscountsMap.set(activity.id, activityDiscountsData);
+              }
+            } catch (discountError) {
+              console.error(`Failed to load discounts for activity ${activity.id}:`, discountError);
+              // Continue loading other activities' discounts
+            }
+          })
+        );
+        
+        setActivityDiscounts(activityDiscountsMap);
+      }
     } catch (error) {
       console.error('Failed to load event:', error);
-      setEvent(null);
+      setError('Failed to load event details');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadActivities = async (_eventId: string) => {
-    try {
-      const response = await execute();
-      setActivities(response || []);
-    } catch (error) {
-      console.error('Failed to load activities:', error);
-      setActivities([]);
-    }
-  };
-
-  const handleEdit = () => {
-    navigate(`/orgadmin/events/${id}/edit`);
-  };
-
-  const handleViewEntries = () => {
-    navigate(`/orgadmin/events/${id}/entries`);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await execute();
-      navigate('/events');
-    } catch (error) {
-      console.error('Failed to delete event:', error);
-    }
-  };
-
-  const handleBack = () => {
-    navigate('/events');
-  };
-
-  const formatDate = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatDateTime = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatDateLocale = (dateString: Date | string) => {
+    return formatDate(dateString, 'dd MMM yyyy HH:mm', locale);
   };
 
   const getStatusColor = (status: string) => {
@@ -139,18 +129,23 @@ const EventDetailsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Typography>Loading event...</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
       </Box>
     );
   }
 
-  if (!event) {
+  if (error || !event) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Event not found</Typography>
-        <Button onClick={handleBack} sx={{ mt: 2 }}>
-          Back to Events
+        <Alert severity="error">{error || 'Event not found'}</Alert>
+        <Button
+          variant="outlined"
+          startIcon={<BackIcon />}
+          onClick={() => navigate('/events')}
+          sx={{ mt: 2 }}
+        >
+          {t('common.actions.back')}
         </Button>
       </Box>
     );
@@ -159,116 +154,106 @@ const EventDetailsPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={handleBack}>
-            <BackIcon />
-          </IconButton>
-          <Typography variant="h4">{event.name}</Typography>
-          <Chip
-            label={event.status}
-            color={getStatusColor(event.status)}
-            size="small"
-          />
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Typography variant="h4">{event.name}</Typography>
+        <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="outlined"
             startIcon={<EntriesIcon />}
-            onClick={handleViewEntries}
+            onClick={() => navigate(`/events/${id}/entries`)}
           >
             View Entries
           </Button>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<EditIcon />}
-            onClick={handleEdit}
+            onClick={() => navigate(`/events/${id}/edit`)}
           >
-            Edit
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            Delete
+            {t('common.actions.edit')}
           </Button>
         </Box>
       </Box>
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Event Details
-          </Typography>
-
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="subtitle2" color="textSecondary">
+                Status
+              </Typography>
+              <Chip
+                label={t(`common.status.${event.status}`)}
+                color={getStatusColor(event.status)}
+                size="small"
+                sx={{ mt: 1 }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="textSecondary">
                 Description
               </Typography>
-              <Typography variant="body1">
+              <Typography variant="body1" sx={{ mt: 1 }}>
                 {event.description}
               </Typography>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="textSecondary">
-                Start Date
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                Event Start Date
               </Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {formatDate(event.startDate)}
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {formatDateLocale(event.startDate)}
               </Typography>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="textSecondary">
-                End Date
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                Event End Date
               </Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {formatDate(event.endDate)}
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {formatDateLocale(event.endDate)}
               </Typography>
             </Grid>
 
             {event.openDateEntries && (
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" color="textSecondary">
                   Entries Open
                 </Typography>
-                <Typography variant="body1" fontWeight="medium">
-                  {formatDateTime(event.openDateEntries)}
+                <Typography variant="body1" sx={{ mt: 1 }}>
+                  {formatDateLocale(event.openDateEntries)}
                 </Typography>
               </Grid>
             )}
 
             {event.entriesClosingDate && (
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" color="textSecondary">
                   Entries Close
                 </Typography>
-                <Typography variant="body1" fontWeight="medium">
-                  {formatDateTime(event.entriesClosingDate)}
+                <Typography variant="body1" sx={{ mt: 1 }}>
+                  {formatDateLocale(event.entriesClosingDate)}
                 </Typography>
               </Grid>
             )}
 
-            {event.limitEntries && event.entriesLimit && (
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
-                  Entry Limit
-                </Typography>
-                <Typography variant="body1" fontWeight="medium">
-                  {event.entriesLimit} entries maximum
-                </Typography>
-              </Grid>
-            )}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                Entry Limit
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {event.limitEntries && event.entriesLimit
+                  ? `${event.entriesLimit} ${t('common.labels.max')}`
+                  : t('common.labels.unlimited')}
+              </Typography>
+            </Grid>
 
             {event.emailNotifications && (
               <Grid item xs={12}>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="subtitle2" color="textSecondary">
                   Email Notifications
                 </Typography>
-                <Typography variant="body1" fontWeight="medium">
+                <Typography variant="body1" sx={{ mt: 1 }}>
                   {event.emailNotifications}
                 </Typography>
               </Grid>
@@ -276,97 +261,145 @@ const EventDetailsPage: React.FC = () => {
 
             {event.addConfirmationMessage && event.confirmationMessage && (
               <Grid item xs={12}>
-                <Typography variant="body2" color="textSecondary">
-                  Confirmation Email Message
+                <Typography variant="subtitle2" color="textSecondary">
+                  Confirmation Message
                 </Typography>
-                <Typography variant="body1">
+                <Typography variant="body1" sx={{ mt: 1 }}>
                   {event.confirmationMessage}
                 </Typography>
+              </Grid>
+            )}
+
+            {/* Event Discounts */}
+            {eventDiscounts.length > 0 && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 2 }}>
+                  Applied Discounts
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {eventDiscounts.map((discount) => (
+                    <Chip
+                      key={discount.id}
+                      label={`${discount.name} (${
+                        discount.discountType === 'percentage'
+                          ? `${discount.discountValue}%`
+                          : `£${discount.discountValue.toFixed(2)}`
+                      })`}
+                      color="success"
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
               </Grid>
             )}
           </Grid>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Event Activities
-          </Typography>
-
-          {activities.length === 0 ? (
-            <Typography color="textSecondary">
-              No activities configured for this event
+      {/* Activities Section */}
+      {activities.length > 0 && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 3 }}>
+              Activities
             </Typography>
-          ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Activity Name</TableCell>
-                    <TableCell>Fee</TableCell>
-                    <TableCell>Payment Method</TableCell>
-                    <TableCell>Visible</TableCell>
-                    <TableCell>Applicant Limit</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {activities.map((activity) => (
-                    <TableRow key={activity.id}>
-                      <TableCell>
-                        <Typography variant="body1" fontWeight="medium">
-                          {activity.name}
-                        </Typography>
-                        {activity.description && (
-                          <Typography variant="body2" color="textSecondary">
-                            {activity.description}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {activity.fee > 0 ? `£${activity.fee.toFixed(2)}` : 'Free'}
-                      </TableCell>
-                      <TableCell>
-                        {activity.fee > 0 ? activity.allowedPaymentMethod : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={activity.showPublicly ? 'Yes' : 'No'}
-                          color={activity.showPublicly ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {activity.limitApplicants && activity.applicantsLimit
-                          ? `${activity.applicantsLimit} max`
-                          : 'Unlimited'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+            {activities.map((activity, index) => (
+              <Box key={activity.id} sx={{ mb: index < activities.length - 1 ? 3 : 0 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {activity.name}
+                    </Typography>
+                  </Grid>
 
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="textSecondary">
+                      {activity.description}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Fee
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {activity.fee > 0 ? `£${activity.fee.toFixed(2)}` : 'Free'}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Visibility
+                    </Typography>
+                    <Chip
+                      label={activity.showPublicly ? 'Public' : 'Private'}
+                      color={activity.showPublicly ? 'success' : 'default'}
+                      size="small"
+                      sx={{ mt: 0.5 }}
+                    />
+                  </Grid>
+
+                  {activity.limitApplicants && activity.applicantsLimit && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" color="textSecondary">
+                        Applicant Limit
+                      </Typography>
+                      <Typography variant="body1" sx={{ mt: 0.5 }}>
+                        {activity.applicantsLimit}
+                      </Typography>
+                    </Grid>
+                  )}
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Payment Methods
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {activity.allowedPaymentMethod === 'both'
+                        ? 'Card & Cheque'
+                        : activity.allowedPaymentMethod === 'card'
+                        ? 'Card Only'
+                        : 'Cheque Only'}
+                    </Typography>
+                  </Grid>
+
+                  {/* Activity Discounts */}
+                  {activityDiscounts.has(activity.id) && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
+                        Applied Discounts
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {activityDiscounts.get(activity.id)!.map((discount) => (
+                          <Chip
+                            key={discount.id}
+                            label={`${discount.name} (${
+                              discount.discountType === 'percentage'
+                                ? `${discount.discountValue}%`
+                                : `£${discount.discountValue.toFixed(2)}`
+                            })`}
+                            color="success"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
+                {index < activities.length - 1 && <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }} />}
+              </Box>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Button
+        variant="outlined"
+        startIcon={<BackIcon />}
+        onClick={() => navigate('/events')}
       >
-        <DialogTitle>Delete Event</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this event? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {t('common.actions.back')}
+      </Button>
     </Box>
   );
 };

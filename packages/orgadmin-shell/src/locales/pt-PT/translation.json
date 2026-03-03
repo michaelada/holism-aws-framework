@@ -970,6 +970,10 @@
       "fieldDescriptionHelper": "Explicação detalhada opcional sobre a finalidade deste campo",
       "fieldType": "Tipo de campo",
       "fieldOptions": "Opções",
+      "fieldConfiguration": "Configuração do campo",
+      "livePreview": "Pré-visualização ao vivo",
+      "previewDescription": "É assim que o campo aparecerá aos utilizadores",
+      "previewPlaceholder": "Comece a digitar um rótulo de campo para ver uma pré-visualização",
       "addOption": "Adicionar opção",
       "optionsRequired": "É necessária pelo menos uma opção para campos {{type}}",
       "fieldNameWillBe": "O nome do campo será: {{name}}",
@@ -1055,6 +1059,10 @@
         "failedToLoad": "Falha ao carregar formulário",
         "failedToSave": "Falha ao guardar formulário"
       }
+    },
+    "messages": {
+      "fieldCreated": "Campo criado com sucesso",
+      "fieldUpdated": "Campo atualizado com sucesso"
     },
     "preview": {
       "title": "Pré-visualização do formulário",

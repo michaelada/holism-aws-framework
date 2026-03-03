@@ -16,7 +16,8 @@ Last Updated: February 2026
 7. [Security Architecture](#security-architecture)
 8. [Deployment Architecture](#deployment-architecture)
 9. [Module System](#module-system)
-10. [API Architecture](#api-architecture)
+10. [Build System & Module Resolution](#build-system--module-resolution)
+11. [API Architecture](#api-architecture)
 
 ---
 
@@ -828,9 +829,204 @@ sequenceDiagram
 
 ---
 
-## 10. API Architecture
+## 10. Build System & Module Resolution
 
-### 10.1 API Structure
+### 10.1 Vite Configuration for Monorepo
+
+The application uses Vite as the build tool and development server. In a monorepo setup with multiple packages sharing dependencies, special configuration is required to ensure consistent module resolution, particularly for libraries that rely on React context.
+
+#### 10.1.1 Module Dedupe Configuration
+
+**Problem**: When Vite's dev server runs with source aliases pointing to multiple packages (e.g., `../components/src` and `../orgadmin-core/src`), it may load separate module instances for shared dependencies. This breaks React context propagation because context doesn't work across different module instances.
+
+**Solution**: The `resolve.dedupe` configuration forces Vite to use a single instance of specified packages:
+
+```typescript
+// packages/orgadmin-shell/vite.config.ts
+resolve: {
+  dedupe: [
+    'react',
+    'react-dom',
+    '@mui/material',
+    '@mui/x-date-pickers',  // Critical for LocalizationProvider context
+    'date-fns',
+  ],
+}
+```
+
+**Rationale**:
+- React and React DOM must be single instances for hooks and context to work
+- MUI packages must be single instances for theme and context propagation
+- `@mui/x-date-pickers` must be single instance for LocalizationProvider context
+- `date-fns` should be single instance to avoid duplicate locale data
+
+#### 10.1.2 Dependency Pre-bundling
+
+Vite's `optimizeDeps` configuration pre-bundles dependencies into a single optimized module:
+
+```typescript
+optimizeDeps: {
+  include: [
+    '@mui/x-date-pickers',
+    '@mui/x-date-pickers/DatePicker',
+    '@mui/x-date-pickers/TimePicker',
+    '@mui/x-date-pickers/DateTimePicker',
+    '@mui/x-date-pickers/LocalizationProvider',
+    '@mui/x-date-pickers/AdapterDateFns',
+  ],
+  exclude: [
+    '@aws-web-framework/components',
+    '@aws-web-framework/orgadmin-core',
+    '@aws-web-framework/orgadmin-events',
+    '@aws-web-framework/orgadmin-memberships',
+  ],
+}
+```
+
+**Rationale**:
+- `include`: Pre-bundles date picker modules into a single optimized dependency, ensuring all subpath imports use the same module instance
+- `exclude`: Keeps source packages unbundled for hot module replacement (HMR) during development
+
+#### 10.1.3 Date Picker LocalizationProvider Architecture
+
+The date picker implementation uses MUI X Date Pickers with a specific component hierarchy to ensure proper context propagation:
+
+```mermaid
+graph TD
+    A[FormPreviewPage / CreateFieldPage] --> B[LocalizationProvider]
+    B --> C[AdapterDateFns + enGB locale]
+    C --> D[Form Content]
+    D --> E[FieldRenderer]
+    E --> F{Field Type}
+    F -->|date| G[DateRenderer]
+    F -->|time| H[DateRenderer]
+    F -->|datetime| I[DateRenderer]
+    G --> J[DatePicker Component]
+    H --> K[TimePicker Component]
+    I --> L[DateTimePicker Component]
+    
+    style B fill:#9f9,stroke:#333
+    style J fill:#9f9,stroke:#333
+    style K fill:#9f9,stroke:#333
+    style L fill:#9f9,stroke:#333
+```
+
+**Key Points**:
+- LocalizationProvider is placed at the page level (FormPreviewPage, CreateFieldPage, EditFieldPage)
+- DateRenderer in the components package does NOT wrap itself in LocalizationProvider
+- This architecture relies on React context propagation from parent to child
+- Vite dedupe configuration ensures the context works across package boundaries
+
+#### 10.1.4 Module Resolution Flow
+
+**Before Fix (Multiple Module Instances)**:
+
+```mermaid
+graph TD
+    A[Vite Dev Server] --> B[orgadmin-shell]
+    B --> C[orgadmin-core/src via alias]
+    B --> D[components/src via alias]
+    C --> E[@mui/x-date-pickers Instance 1]
+    D --> F[@mui/x-date-pickers Instance 2]
+    E -.Context.-> G[LocalizationProvider in FormPreviewPage]
+    F -.Context.-> H[DatePicker in DateRenderer]
+    G -.X.-> H
+    
+    style G fill:#f9f,stroke:#333
+    style H fill:#f9f,stroke:#333
+    style E fill:#faa,stroke:#333
+    style F fill:#faa,stroke:#333
+```
+
+**After Fix (Single Module Instance)**:
+
+```mermaid
+graph TD
+    A[Vite Dev Server] --> B[orgadmin-shell]
+    B --> C[orgadmin-core/src via alias]
+    B --> D[components/src via alias]
+    C --> E[@mui/x-date-pickers Single Instance]
+    D --> E
+    E --> F[LocalizationProvider in FormPreviewPage]
+    E --> G[DatePicker in DateRenderer]
+    F -.Context.-> G
+    
+    style F fill:#9f9,stroke:#333
+    style G fill:#9f9,stroke:#333
+    style E fill:#9f9,stroke:#333
+```
+
+#### 10.1.5 Package Version Standardization
+
+All packages in the monorepo use the same version of `@mui/x-date-pickers` to prevent version conflicts:
+
+| Package | Version |
+|---------|---------|
+| components | ^6.19.4 |
+| orgadmin-core | ^6.19.4 |
+| orgadmin-memberships | ^6.19.4 |
+| orgadmin-registrations | ^6.19.4 |
+| orgadmin-calendar | ^6.19.4 |
+| orgadmin-ticketing | ^6.19.4 |
+| orgadmin-merchandise | ^6.19.4 |
+| admin | ^6.19.4 |
+| frontend | ^6.19.4 |
+
+**Note**: Version standardization is critical for the dedupe configuration to work correctly. Different versions would result in multiple module instances.
+
+#### 10.1.6 Shared Vite Configuration
+
+The shared Vite configuration (`packages/vite.config.shared.ts`) marks date picker packages as external for library builds:
+
+```typescript
+external: [
+  'react',
+  'react-dom',
+  '@mui/material',
+  '@mui/x-date-pickers',
+  /^@mui\/x-date-pickers\/.*/,  // All subpaths
+  'date-fns',
+  /^date-fns\/.*/,
+]
+```
+
+This ensures that when building individual packages, date picker dependencies are not bundled but remain as external dependencies to be resolved at runtime.
+
+#### 10.1.7 Development vs Production Behavior
+
+**Development Mode**:
+- Vite dev server uses dedupe configuration
+- Source packages loaded via aliases
+- HMR (Hot Module Replacement) enabled
+- Date pickers work correctly with LocalizationProvider context
+
+**Production Build**:
+- All dependencies bundled and optimized
+- Code splitting creates separate chunks for date pickers
+- Single module instance guaranteed by bundler
+- Smaller bundle size due to tree shaking
+
+#### 10.1.8 Troubleshooting Module Resolution Issues
+
+If you encounter "LocalizationProvider context not found" errors:
+
+1. **Verify dedupe configuration**: Check that `@mui/x-date-pickers` is in the dedupe array
+2. **Check package versions**: Ensure all packages use the same version
+3. **Clear Vite cache**: Delete `node_modules/.vite` and restart dev server
+4. **Verify LocalizationProvider placement**: Ensure it wraps all date picker components
+5. **Check console for module duplication warnings**: Vite may warn about duplicate modules
+
+**Common Causes**:
+- Missing dedupe configuration
+- Version mismatch between packages
+- LocalizationProvider not in parent component tree
+- Stale Vite cache after configuration changes
+
+---
+
+## 11. API Architecture
+
+### 11.1 API Structure
 
 ```mermaid
 graph TB
@@ -924,7 +1120,7 @@ graph TB
 ```
 
 
-### 10.2 API Endpoints
+### 11.2 API Endpoints
 
 **Organization Management:**
 - `GET /api/organizations` - List organizations
@@ -972,7 +1168,7 @@ graph TB
 - `POST /api/payments` - Process payment
 - `POST /api/payments/:id/refund` - Refund payment
 
-### 10.3 API Response Format
+### 11.3 API Response Format
 
 ```json
 {
@@ -1011,9 +1207,9 @@ graph TB
 
 ---
 
-## 11. Performance & Scalability
+## 12. Performance & Scalability
 
-### 11.1 Performance Optimizations
+### 12.1 Performance Optimizations
 
 ```mermaid
 graph TB
@@ -1039,7 +1235,7 @@ graph TB
     end
 ```
 
-### 11.2 Scalability Strategy
+### 12.2 Scalability Strategy
 
 | Layer | Strategy | Implementation |
 |-------|----------|---------------|
@@ -1051,9 +1247,9 @@ graph TB
 
 ---
 
-## 12. Monitoring & Observability
+## 13. Monitoring & Observability
 
-### 12.1 Monitoring Stack
+### 13.1 Monitoring Stack
 
 ```mermaid
 graph TB
@@ -1092,7 +1288,7 @@ graph TB
 ```
 
 
-### 12.2 Key Metrics
+### 13.2 Key Metrics
 
 **Application Metrics:**
 - Request rate (requests/second)
@@ -1117,9 +1313,9 @@ graph TB
 
 ---
 
-## 13. Disaster Recovery & Backup
+## 14. Disaster Recovery & Backup
 
-### 13.1 Backup Strategy
+### 14.1 Backup Strategy
 
 ```mermaid
 graph TB
@@ -1152,7 +1348,7 @@ graph TB
     RDS_SNAP --> MONTHLY
 ```
 
-### 13.2 Recovery Procedures
+### 14.2 Recovery Procedures
 
 | Scenario | RTO | RPO | Procedure |
 |----------|-----|-----|-----------|
@@ -1163,9 +1359,9 @@ graph TB
 
 ---
 
-## 14. Development Workflow
+## 15. Development Workflow
 
-### 14.1 Local Development
+### 15.1 Local Development
 
 ```mermaid
 graph LR
@@ -1202,7 +1398,7 @@ graph LR
     FRONTEND_DEV --> BACKEND_LOCAL
 ```
 
-### 14.2 Testing Strategy
+### 15.2 Testing Strategy
 
 | Test Type | Framework | Coverage | Purpose |
 |-----------|-----------|----------|---------|
@@ -1214,9 +1410,9 @@ graph LR
 
 ---
 
-## 15. Future Enhancements
+## 16. Future Enhancements
 
-### 15.1 Planned Features
+### 16.1 Planned Features
 
 ```mermaid
 graph TB
@@ -1259,7 +1455,7 @@ graph TB
     INTEGRATIONS --> API_GATEWAY
 ```
 
-### 15.2 Technical Debt & Improvements
+### 16.2 Technical Debt & Improvements
 
 - Migrate to GraphQL for more efficient data fetching
 - Implement server-side rendering (SSR) for SEO
@@ -1272,9 +1468,9 @@ graph TB
 
 ---
 
-## 16. Appendix
+## 17. Appendix
 
-### 16.1 Glossary
+### 17.1 Glossary
 
 | Term | Definition |
 |------|------------|
@@ -1286,7 +1482,7 @@ graph TB
 | **Form Builder** | Dynamic form creation system |
 | **Metadata** | Data that describes other data (form definitions, field configs) |
 
-### 16.2 Key URLs
+### 17.2 Key URLs
 
 **Local Development:**
 - Application: http://localhost
@@ -1304,7 +1500,7 @@ graph TB
 - OrgAdmin: https://itsplainsailing.com/orgadmin
 - API: https://api.itsplainsailing.com
 
-### 16.3 Contact & Support
+### 17.3 Contact & Support
 
 - **Documentation**: `/docs` folder in repository
 - **Issue Tracking**: GitHub Issues

@@ -970,6 +970,10 @@
       "fieldDescriptionHelper": "Spiegazione dettagliata facoltativa di cosa serve questo campo",
       "fieldType": "Tipo di campo",
       "fieldOptions": "Opzioni",
+      "fieldConfiguration": "Configurazione del campo",
+      "livePreview": "Anteprima dal vivo",
+      "previewDescription": "Ecco come apparirà il campo agli utenti",
+      "previewPlaceholder": "Inizia a digitare un'etichetta di campo per vedere un'anteprima",
       "addOption": "Aggiungi opzione",
       "optionsRequired": "È richiesta almeno un'opzione per i campi {{type}}",
       "fieldNameWillBe": "Il nome del campo sarà: {{name}}",
@@ -1055,6 +1059,10 @@
         "failedToLoad": "Caricamento modulo fallito",
         "failedToSave": "Salvataggio modulo fallito"
       }
+    },
+    "messages": {
+      "fieldCreated": "Campo creato con successo",
+      "fieldUpdated": "Campo aggiornato con successo"
     },
     "preview": {
       "title": "Anteprima modulo",

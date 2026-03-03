@@ -7,6 +7,7 @@ import { db } from '../database/pool';
  */
 export interface OrganisationRequest extends AuthenticatedRequest {
   organisationId?: string;
+  organisationUserId?: string;
   capabilities?: string[];
 }
 
@@ -15,9 +16,9 @@ export interface OrganisationRequest extends AuthenticatedRequest {
  * Must be used after authenticateToken middleware
  * 
  * This middleware:
- * 1. Extracts organisation ID from request (query param, body, or params)
- * 2. Loads organisation capabilities from database
- * 3. Attaches capabilities to request for use by other middleware
+ * 1. Looks up the user's organisation from organization_users table
+ * 2. Loads organisation capabilities from the organizations table
+ * 3. Attaches organisationId, organisationUserId, and capabilities to request for use by other middleware
  * 
  * @returns Express middleware function
  */
@@ -34,35 +35,34 @@ export function loadOrganisationCapabilities() {
         return;
       }
 
-      // Extract organisation ID from request
-      // Priority: params > body > query
-      const organisationId = 
-        req.params.organisationId || 
-        req.body?.organisationId || 
-        req.query.organisationId as string;
+      const keycloakUserId = req.user.userId;
 
-      if (!organisationId) {
-        res.status(400).json({
+      // Look up the user's organisation and capabilities from organization_users and organizations tables
+      const userResult = await db.query(
+        `SELECT ou.id as user_id, ou.organization_id, o.enabled_capabilities
+         FROM organization_users ou
+         INNER JOIN organizations o ON ou.organization_id = o.id
+         WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin' AND ou.status = 'active'
+         LIMIT 1`,
+        [keycloakUserId]
+      );
+
+      if (userResult.rows.length === 0) {
+        res.status(403).json({
           error: {
-            code: 'BAD_REQUEST',
-            message: 'Organisation ID is required'
+            code: 'FORBIDDEN',
+            message: 'User is not an organization administrator or account is not active'
           }
         });
         return;
       }
 
-      // Load organisation capabilities from database
-      const result = await db.query(
-        `SELECT c.name
-         FROM capabilities c
-         INNER JOIN organisation_capabilities oc ON c.id = oc.capability_id
-         WHERE oc.organisation_id = $1 AND oc.enabled = true`,
-        [organisationId]
-      );
-
-      const capabilities = result.rows.map((row: any) => row.name);
+      const organisationUserId = userResult.rows[0].user_id;
+      const organisationId = userResult.rows[0].organization_id;
+      const capabilities = userResult.rows[0].enabled_capabilities || [];
 
       // Attach to request
+      req.organisationUserId = organisationUserId;
       req.organisationId = organisationId;
       req.capabilities = capabilities;
 

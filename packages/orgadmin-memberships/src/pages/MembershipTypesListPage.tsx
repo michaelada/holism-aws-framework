@@ -233,19 +233,20 @@ const MembershipTypesListPage: React.FC = () => {
               <TableCell>{t('memberships.table.status')}</TableCell>
               <TableCell>{t('memberships.table.type')}</TableCell>
               <TableCell>{t('memberships.table.pricing')}</TableCell>
+              <TableCell>{t('memberships.table.discounts')}</TableCell>
               <TableCell align="right">{t('memberships.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   {t('memberships.loadingTypes')}
                 </TableCell>
               </TableRow>
             ) : filteredTypes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
                     ? t('memberships.noMatchingTypes')
                     : t('memberships.noTypesFound')}
@@ -278,6 +279,14 @@ const MembershipTypesListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     {getPricingDisplay(type)}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={type.discountIds?.length || 0}
+                      size="small"
+                      color={type.discountIds?.length ? 'primary' : 'default'}
+                      variant="outlined"
+                    />
                   </TableCell>
                   <TableCell align="right">
                     <IconButton

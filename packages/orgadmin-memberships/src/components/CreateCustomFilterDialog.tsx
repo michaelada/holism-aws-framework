@@ -152,7 +152,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label={t('memberships.customFilter.beforeDate')}
                 value={formData.dateLastRenewedBefore ? new Date(formData.dateLastRenewedBefore) : null}
                 onChange={(date) => handleChange('dateLastRenewedBefore', date)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Grid>
 
@@ -161,7 +161,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label={t('memberships.customFilter.afterDate')}
                 value={formData.dateLastRenewedAfter ? new Date(formData.dateLastRenewedAfter) : null}
                 onChange={(date) => handleChange('dateLastRenewedAfter', date)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Grid>
 
@@ -176,7 +176,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label={t('memberships.customFilter.beforeDate')}
                 value={formData.validUntilBefore ? new Date(formData.validUntilBefore) : null}
                 onChange={(date) => handleChange('validUntilBefore', date)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Grid>
 
@@ -185,7 +185,7 @@ const CreateCustomFilterDialog: React.FC<CreateCustomFilterDialogProps> = ({
                 label={t('memberships.customFilter.afterDate')}
                 value={formData.validUntilAfter ? new Date(formData.validUntilAfter) : null}
                 onChange={(date) => handleChange('validUntilAfter', date)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{ textField: { fullWidth: true } }}
               />
             </Grid>
 

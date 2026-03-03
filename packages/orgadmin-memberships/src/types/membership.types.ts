@@ -24,6 +24,18 @@ export type PaymentStatus = 'pending' | 'paid' | 'refunded';
 export type FieldConfiguration = 'common' | 'unique';
 
 /**
+ * Discount Validation Result Interface
+ */
+export interface DiscountValidationResult {
+  valid: boolean;
+  errors: Array<{
+    discountId: string;
+    reason: 'not_found' | 'wrong_organisation' | 'wrong_module_type' | 'inactive';
+    message: string;
+  }>;
+}
+
+/**
  * Membership Type Interface
  */
 export interface MembershipType {
@@ -48,6 +60,7 @@ export interface MembershipType {
   personTitles?: string[];
   personLabels?: string[][];
   fieldConfiguration?: Record<string, FieldConfiguration>;
+  discountIds: string[];
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -119,6 +132,7 @@ export interface CreateMembershipTypeDto {
   personTitles?: string[];
   personLabels?: string[][];
   fieldConfiguration?: Record<string, FieldConfiguration>;
+  discountIds?: string[];
 }
 
 /**

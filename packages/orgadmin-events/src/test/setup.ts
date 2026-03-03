@@ -32,3 +32,28 @@ global.IntersectionObserver = class IntersectionObserver {
   }
   unobserve() {}
 } as any;
+
+// Mock workspace packages
+vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: {
+      language: 'en-GB',
+      changeLanguage: vi.fn(),
+    },
+  }),
+}));
+
+vi.mock('@aws-web-framework/orgadmin-core', () => ({
+  useApi: vi.fn(() => ({
+    execute: vi.fn(),
+    data: null,
+    error: null,
+    loading: false,
+    reset: vi.fn(),
+  })),
+  useOrganisation: vi.fn(() => ({
+    organisation: { id: 'test-org', name: 'Test Organisation' },
+    setOrganisation: vi.fn(),
+  })),
+}));

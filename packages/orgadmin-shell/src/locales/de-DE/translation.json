@@ -970,6 +970,10 @@
       "fieldDescriptionHelper": "Optionale detaillierte Erklärung, wofür dieses Feld verwendet wird",
       "fieldType": "Feldtyp",
       "fieldOptions": "Optionen",
+      "fieldConfiguration": "Feldkonfiguration",
+      "livePreview": "Live-Vorschau",
+      "previewDescription": "So wird das Feld den Benutzern angezeigt",
+      "previewPlaceholder": "Beginnen Sie mit der Eingabe einer Feldbeschriftung, um eine Vorschau anzuzeigen",
       "addOption": "Option hinzufügen",
       "optionsRequired": "Mindestens eine Option ist für {{type}}-Felder erforderlich",
       "fieldNameWillBe": "Feldname wird sein: {{name}}",
@@ -1055,6 +1059,10 @@
         "failedToLoad": "Laden des Formulars fehlgeschlagen",
         "failedToSave": "Speichern des Formulars fehlgeschlagen"
       }
+    },
+    "messages": {
+      "fieldCreated": "Feld erfolgreich erstellt",
+      "fieldUpdated": "Feld erfolgreich aktualisiert"
     },
     "preview": {
       "title": "Formularvorschau",

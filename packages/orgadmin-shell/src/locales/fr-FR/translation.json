@@ -1190,6 +1190,10 @@
       "fieldDescriptionHelper": "Explication détaillée facultative de l'utilité de ce champ",
       "fieldType": "Type de champ",
       "fieldOptions": "Options",
+      "fieldConfiguration": "Configuration du champ",
+      "livePreview": "Aperçu en direct",
+      "previewDescription": "Voici comment le champ apparaîtra aux utilisateurs",
+      "previewPlaceholder": "Commencez à saisir un libellé de champ pour voir un aperçu",
       "addOption": "Ajouter une option",
       "optionsRequired": "Au moins une option est requise pour les champs {{type}}",
       "fieldNameWillBe": "Le nom du champ sera : {{name}}",
@@ -1296,6 +1300,10 @@
       "filters": {
         "type": "Type",
         "allTypes": "Tous les types"
+      },
+      "messages": {
+        "fieldCreated": "Champ créé avec succès",
+        "fieldUpdated": "Champ mis à jour avec succès"
       }
     },
     "preview": {

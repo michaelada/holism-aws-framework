@@ -1190,6 +1190,10 @@
       "fieldDescriptionHelper": "Explicación detallada opcional de para qué sirve este campo",
       "fieldType": "Tipo de campo",
       "fieldOptions": "Opciones",
+      "fieldConfiguration": "Configuración del campo",
+      "livePreview": "Vista previa en vivo",
+      "previewDescription": "Así es como aparecerá el campo a los usuarios",
+      "previewPlaceholder": "Comience a escribir una etiqueta de campo para ver una vista previa",
       "addOption": "Añadir opción",
       "optionsRequired": "Se requiere al menos una opción para los campos {{type}}",
       "fieldNameWillBe": "El nombre del campo será: {{name}}",
@@ -1296,6 +1300,10 @@
       "filters": {
         "type": "Tipo",
         "allTypes": "Todos los tipos"
+      },
+      "messages": {
+        "fieldCreated": "Campo creado con éxito",
+        "fieldUpdated": "Campo actualizado con éxito"
       }
     },
     "preview": {

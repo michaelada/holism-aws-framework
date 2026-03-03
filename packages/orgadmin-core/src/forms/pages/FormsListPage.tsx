@@ -129,7 +129,7 @@ const FormsListPage: React.FC = () => {
     navigate(`/forms/${formId}/preview`);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'default' => {
     return status === 'published' ? 'success' : 'default';
   };
 
@@ -223,6 +223,11 @@ const FormsListPage: React.FC = () => {
                       label={t(`common.status.${form.status}`)}
                       color={getStatusColor(form.status)}
                       size="small"
+                      // variant="outlined"
+                      sx={form.status === 'published' ? {
+                        backgroundColor: 'success.light',
+                        color: 'white',
+                      } : undefined}
                     />
                   </TableCell>
                   <TableCell>{formatDate(new Date(form.createdAt), 'dd MMM yyyy', locale)}</TableCell>

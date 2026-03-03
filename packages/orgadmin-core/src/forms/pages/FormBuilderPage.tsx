@@ -38,6 +38,7 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
   DragIndicator as DragIcon,
   ArrowUpward as ArrowUpIcon,
   ArrowDownward as ArrowDownIcon,
@@ -133,6 +134,7 @@ const FormBuilderPage: React.FC = () => {
   // Form data
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formStatus, setFormStatus] = useState<'draft' | 'published'>('draft');
   const [selectedFields, setSelectedFields] = useState<ApplicationFormField[]>([]);
   const [fieldGroups, setFieldGroups] = useState<FieldGroup[]>([]);
   const [wizardConfig, setWizardConfig] = useState<WizardConfiguration | undefined>();
@@ -144,6 +146,10 @@ const FormBuilderPage: React.FC = () => {
   const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
   const [addGroupDialogOpen, setAddGroupDialogOpen] = useState(false);
   const [addWizardStepDialogOpen, setAddWizardStepDialogOpen] = useState(false);
+  const [editGroupDialogOpen, setEditGroupDialogOpen] = useState(false);
+  const [editWizardStepDialogOpen, setEditWizardStepDialogOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<FieldGroup | null>(null);
+  const [editingStep, setEditingStep] = useState<WizardStep | null>(null);
 
   useEffect(() => {
     loadAvailableFields();
@@ -178,6 +184,7 @@ const FormBuilderPage: React.FC = () => {
       if (form) {
         setFormName(form.name);
         setFormDescription(form.description);
+        setFormStatus(form.status || 'draft');
         
         // Convert backend field format to frontend format
         const fields: ApplicationFormField[] = (form.fields || []).map((f: any) => ({
@@ -223,7 +230,7 @@ const FormBuilderPage: React.FC = () => {
       const formData = {
         name: formName,
         description: formDescription,
-        status: 'draft' as const,
+        status: formStatus,
         fieldGroups: fieldGroups,
         wizardConfig: wizardConfig,
       };
@@ -353,6 +360,35 @@ const FormBuilderPage: React.FC = () => {
     setAddGroupDialogOpen(false);
   };
 
+  const handleEditGroup = (groupName: string, groupDescription: string, selectedFieldIds: string[]) => {
+    setFieldGroups(
+      fieldGroups.map(g =>
+        g.name === editingGroup?.name
+          ? { ...g, name: groupName, description: groupDescription, fields: selectedFieldIds }
+          : g
+      )
+    );
+    
+    // Also update the corresponding wizard step
+    if (wizardConfig) {
+      setWizardConfig({
+        steps: wizardConfig.steps.map(s =>
+          s.name === editingGroup?.name
+            ? { ...s, name: groupName, description: groupDescription, fields: selectedFieldIds }
+            : s
+        ),
+      });
+    }
+    
+    setEditGroupDialogOpen(false);
+    setEditingGroup(null);
+  };
+
+  const handleOpenEditGroup = (group: FieldGroup) => {
+    setEditingGroup(group);
+    setEditGroupDialogOpen(true);
+  };
+
   const handleRemoveGroup = (groupName: string) => {
     setFieldGroups(fieldGroups.filter(g => g.name !== groupName));
     
@@ -387,6 +423,26 @@ const FormBuilderPage: React.FC = () => {
       steps: [...(wizardConfig?.steps || []), newStep],
     });
     setAddWizardStepDialogOpen(false);
+  };
+
+  const handleEditWizardStep = (stepName: string, stepDescription: string, selectedFieldIds: string[]) => {
+    if (!wizardConfig) return;
+    
+    setWizardConfig({
+      steps: wizardConfig.steps.map(s =>
+        s.name === editingStep?.name
+          ? { ...s, name: stepName, description: stepDescription, fields: selectedFieldIds }
+          : s
+      ),
+    });
+    
+    setEditWizardStepDialogOpen(false);
+    setEditingStep(null);
+  };
+
+  const handleOpenEditWizardStep = (step: WizardStep) => {
+    setEditingStep(step);
+    setEditWizardStepDialogOpen(true);
   };
 
   const handleRemoveWizardStep = (stepName: string) => {
@@ -455,7 +511,19 @@ const FormBuilderPage: React.FC = () => {
             onChange={(e) => setFormDescription(e.target.value)}
             multiline
             rows={3}
+            sx={{ mb: 2 }}
           />
+          <FormControl fullWidth>
+            <InputLabel>{t('forms.builder.status')}</InputLabel>
+            <Select
+              value={formStatus}
+              label={t('forms.builder.status')}
+              onChange={(e) => setFormStatus(e.target.value as 'draft' | 'published')}
+            >
+              <MenuItem value="draft">{t('common.status.draft')}</MenuItem>
+              <MenuItem value="published">{t('common.status.published')}</MenuItem>
+            </Select>
+          </FormControl>
         </CardContent>
       </Card>
 
@@ -576,6 +644,14 @@ const FormBuilderPage: React.FC = () => {
                       />
                       <ListItemSecondaryAction>
                         <IconButton
+                          size="small"
+                          onClick={() => handleOpenEditGroup(group)}
+                          sx={{ mr: 1 }}
+                          title={t('common.actions.edit')}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
                           edge="end"
                           onClick={() => handleRemoveGroup(group.name)}
                         >
@@ -633,6 +709,14 @@ const FormBuilderPage: React.FC = () => {
                       />
                       <ListItemSecondaryAction>
                         <IconButton
+                          size="small"
+                          onClick={() => handleOpenEditWizardStep(step)}
+                          sx={{ mr: 1 }}
+                          title={t('common.actions.edit')}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
                           edge="end"
                           onClick={() => handleRemoveWizardStep(step.name)}
                         >
@@ -667,6 +751,18 @@ const FormBuilderPage: React.FC = () => {
         )}
       />
 
+      {/* Edit Group Dialog */}
+      <EditGroupDialog
+        open={editGroupDialogOpen}
+        onClose={() => {
+          setEditGroupDialogOpen(false);
+          setEditingGroup(null);
+        }}
+        onSave={handleEditGroup}
+        group={editingGroup}
+        allFields={selectedFields}
+      />
+
       {/* Add Wizard Step Dialog */}
       <AddWizardStepDialog
         open={addWizardStepDialogOpen}
@@ -675,6 +771,18 @@ const FormBuilderPage: React.FC = () => {
         availableFields={selectedFields.filter(field => 
           !wizardConfig?.steps.some(step => step.fields.includes(field.fieldId))
         )}
+      />
+
+      {/* Edit Wizard Step Dialog */}
+      <EditWizardStepDialog
+        open={editWizardStepDialogOpen}
+        onClose={() => {
+          setEditWizardStepDialogOpen(false);
+          setEditingStep(null);
+        }}
+        onSave={handleEditWizardStep}
+        step={editingStep}
+        allFields={selectedFields}
       />
     </Box>
   );
@@ -1000,6 +1108,292 @@ const AddWizardStepDialog: React.FC<{
         <Button onClick={onClose}>{t('forms.builder.cancel')}</Button>
         <Button onClick={handleAdd} variant="contained" disabled={!name.trim()}>
           {t('common.actions.add')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const EditGroupDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onSave: (name: string, description: string, selectedFieldIds: string[]) => void;
+  group: FieldGroup | null;
+  allFields: ApplicationFormField[];
+}> = ({ open, onClose, onSave, group, allFields }) => {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
+
+  // Initialize form when group changes
+  useEffect(() => {
+    if (group) {
+      setName(group.name);
+      setDescription(group.description);
+      setSelectedFieldIds(group.fields);
+    }
+  }, [group]);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(name, description, selectedFieldIds);
+      setName('');
+      setDescription('');
+      setSelectedFieldIds([]);
+    }
+  };
+
+  const handleToggleField = (fieldId: string) => {
+    setSelectedFieldIds(prev =>
+      prev.includes(fieldId)
+        ? prev.filter(id => id !== fieldId)
+        : [...prev, fieldId]
+    );
+  };
+
+  const handleMoveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index - 1], newIds[index]] = [newIds[index], newIds[index - 1]];
+    setSelectedFieldIds(newIds);
+  };
+
+  const handleMoveFieldDown = (index: number) => {
+    if (index === selectedFieldIds.length - 1) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index], newIds[index + 1]] = [newIds[index + 1], newIds[index]];
+    setSelectedFieldIds(newIds);
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{t('forms.builder.groups.editGroupDialog')}</DialogTitle>
+      <DialogContent>
+        <TextField
+          fullWidth
+          label={t('forms.builder.groups.groupName')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          sx={{ mt: 2, mb: 2 }}
+        />
+        <TextField
+          fullWidth
+          label={t('forms.builder.groups.groupDescription')}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          multiline
+          rows={2}
+          sx={{ mb: 2 }}
+        />
+        <Typography variant="subtitle2" gutterBottom>
+          {t('forms.builder.groups.selectFields')}
+        </Typography>
+        {allFields.length === 0 ? (
+          <Alert severity="info">
+            {t('forms.builder.groups.noFieldsAvailable')}
+          </Alert>
+        ) : (
+          <Box>
+            <Box sx={{ maxHeight: 300, overflow: 'auto', mb: 2 }}>
+              {allFields.map((field) => (
+                <FormControlLabel
+                  key={field.fieldId}
+                  control={
+                    <Checkbox
+                      checked={selectedFieldIds.includes(field.fieldId)}
+                      onChange={() => handleToggleField(field.fieldId)}
+                    />
+                  }
+                  label={field.fieldLabel}
+                />
+              ))}
+            </Box>
+            {selectedFieldIds.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  {t('forms.builder.groups.fieldOrder')}
+                </Typography>
+                <List dense>
+                  {selectedFieldIds.map((fieldId, index) => {
+                    const field = allFields.find(f => f.fieldId === fieldId);
+                    return (
+                      <ListItem key={fieldId}>
+                        <ListItemText primary={field?.fieldLabel} />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldUp(index)}
+                            disabled={index === 0}
+                            title={t('forms.builder.fields.moveUp')}
+                          >
+                            <ArrowUpIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldDown(index)}
+                            disabled={index === selectedFieldIds.length - 1}
+                            title={t('forms.builder.fields.moveDown')}
+                          >
+                            <ArrowDownIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+            )}
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('forms.builder.cancel')}</Button>
+        <Button onClick={handleSave} variant="contained" disabled={!name.trim()}>
+          {t('common.actions.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const EditWizardStepDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onSave: (name: string, description: string, selectedFieldIds: string[]) => void;
+  step: WizardStep | null;
+  allFields: ApplicationFormField[];
+}> = ({ open, onClose, onSave, step, allFields }) => {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
+
+  // Initialize form when step changes
+  useEffect(() => {
+    if (step) {
+      setName(step.name);
+      setDescription(step.description);
+      setSelectedFieldIds(step.fields);
+    }
+  }, [step]);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(name, description, selectedFieldIds);
+      setName('');
+      setDescription('');
+      setSelectedFieldIds([]);
+    }
+  };
+
+  const handleToggleField = (fieldId: string) => {
+    setSelectedFieldIds(prev =>
+      prev.includes(fieldId)
+        ? prev.filter(id => id !== fieldId)
+        : [...prev, fieldId]
+    );
+  };
+
+  const handleMoveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index - 1], newIds[index]] = [newIds[index], newIds[index - 1]];
+    setSelectedFieldIds(newIds);
+  };
+
+  const handleMoveFieldDown = (index: number) => {
+    if (index === selectedFieldIds.length - 1) return;
+    const newIds = [...selectedFieldIds];
+    [newIds[index], newIds[index + 1]] = [newIds[index + 1], newIds[index]];
+    setSelectedFieldIds(newIds);
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{t('forms.builder.wizard.editStepDialog')}</DialogTitle>
+      <DialogContent>
+        <TextField
+          fullWidth
+          label={t('forms.builder.wizard.stepName')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          sx={{ mt: 2, mb: 2 }}
+        />
+        <TextField
+          fullWidth
+          label={t('forms.builder.wizard.stepDescription')}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          multiline
+          rows={2}
+          sx={{ mb: 2 }}
+        />
+        <Typography variant="subtitle2" gutterBottom>
+          {t('forms.builder.wizard.selectFields')}
+        </Typography>
+        {allFields.length === 0 ? (
+          <Alert severity="info">
+            {t('forms.builder.groups.noFieldsAvailable')}
+          </Alert>
+        ) : (
+          <Box>
+            <Box sx={{ maxHeight: 300, overflow: 'auto', mb: 2 }}>
+              {allFields.map((field) => (
+                <FormControlLabel
+                  key={field.fieldId}
+                  control={
+                    <Checkbox
+                      checked={selectedFieldIds.includes(field.fieldId)}
+                      onChange={() => handleToggleField(field.fieldId)}
+                    />
+                  }
+                  label={field.fieldLabel}
+                />
+              ))}
+            </Box>
+            {selectedFieldIds.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  {t('forms.builder.wizard.fieldOrder')}
+                </Typography>
+                <List dense>
+                  {selectedFieldIds.map((fieldId, index) => {
+                    const field = allFields.find(f => f.fieldId === fieldId);
+                    return (
+                      <ListItem key={fieldId}>
+                        <ListItemText primary={field?.fieldLabel} />
+                        <ListItemSecondaryAction>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldUp(index)}
+                            disabled={index === 0}
+                            title={t('forms.builder.fields.moveUp')}
+                          >
+                            <ArrowUpIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveFieldDown(index)}
+                            disabled={index === selectedFieldIds.length - 1}
+                            title={t('forms.builder.fields.moveDown')}
+                          >
+                            <ArrowDownIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+            )}
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('forms.builder.cancel')}</Button>
+        <Button onClick={handleSave} variant="contained" disabled={!name.trim()}>
+          {t('common.actions.save')}
         </Button>
       </DialogActions>
     </Dialog>

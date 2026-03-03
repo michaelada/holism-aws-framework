@@ -100,12 +100,19 @@
       "dates": "Dates",
       "status": "Status",
       "entryLimit": "Entry Limit",
+      "hasDiscounts": "Discounts",
+      "discountApplied": "Discount",
       "actions": "Actions"
     },
     "tooltips": {
       "viewEntries": "View Entries",
       "viewDetails": "View Details",
-      "edit": "Edit"
+      "edit": "Edit",
+      "delete": "Delete Event"
+    },
+    "deleteDialog": {
+      "title": "Delete Event",
+      "message": "Are you sure you want to delete \"{{eventName}}\"? This action will hide the event from the list but preserve all data."
     },
     "wizard": {
       "steps": {
@@ -1190,6 +1197,10 @@
       "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
       "fieldType": "Field Type",
       "fieldOptions": "Options",
+      "fieldConfiguration": "Field Configuration",
+      "livePreview": "Live Preview",
+      "previewDescription": "This is how the field will appear to users",
+      "previewPlaceholder": "Start typing a field label to see a preview",
       "addOption": "Add option",
       "optionsRequired": "At least one option is required for {{type}} fields",
       "fieldNameWillBe": "Field name will be: {{name}}",
@@ -1224,6 +1235,7 @@
       "formDetails": "Form Details",
       "formName": "Form Name",
       "description": "Description",
+      "status": "Status",
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving...",
@@ -1255,7 +1267,8 @@
         "selectFields": "Select Fields for this Group",
         "noFieldsAvailable": "No fields available. Add fields to the form first.",
         "fieldOrder": "Field Order in Group",
-        "addGroupDialog": "Add Field Group"
+        "addGroupDialog": "Add Field Group",
+        "editGroupDialog": "Edit Field Group"
       },
       "wizard": {
         "title": "Wizard Steps",
@@ -1266,7 +1279,8 @@
         "selectFields": "Select Fields for this Step",
         "fieldOrder": "Field Order in Step",
         "stepNumber": "Step {{number}}: {{name}}",
-        "addStepDialog": "Add Wizard Step"
+        "addStepDialog": "Add Wizard Step",
+        "editStepDialog": "Edit Wizard Step"
       },
       "validation": {
         "formNameRequired": "Form name is required",
@@ -1311,6 +1325,10 @@
       "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
       "fieldType": "Field Type",
       "fieldOptions": "Options",
+      "fieldConfiguration": "Field Configuration",
+      "livePreview": "Live Preview",
+      "previewDescription": "This is how the field will appear to users",
+      "previewPlaceholder": "Start typing a field label to see a preview",
       "addOption": "Add option",
       "optionsRequired": "At least one option is required for {{type}} fields",
       "fieldNameWillBe": "Field name will be: {{name}}",
@@ -1327,6 +1345,11 @@
         "labelRequired": "Field label is required",
         "labelAlphanumeric": "Field label must contain at least one alphanumeric character",
         "optionsRequired": "Field type \"{{type}}\" requires at least one option"
+      },
+      "messages": {
+        "fieldCreated": "Field created successfully",
+        "fieldUpdated": "Field updated successfully",
+        "fieldNotFound": "Field not found"
       },
       "delete": {
         "title": "Delete Field Definition",
@@ -1743,7 +1766,8 @@
     "selectArea": "Select an area below to get started",
     "noModulesAvailable": "No modules available",
     "contactAdministrator": "Contact your administrator to enable capabilities for your organisation.",
-    "debugInfo": "Debug: {{capabilitiesCount}} capabilities enabled, {{modulesCount}} modules available"
+    "debugInfo": "Debug: {{capabilitiesCount}} capabilities enabled, {{modulesCount}} modules available",
+    "learnMore": "Go"
   },
   "modules": {
     "dashboard": {
@@ -1790,7 +1814,10 @@
       "description": "Manage events and registrations",
       "menu": {
         "events": "Events",
-        "entries": "Entries"
+        "eventTypes": "Event Types",
+        "venues": "Venues",
+        "entries": "Entries",
+        "discounts": "Discounts"
       }
     },
     "memberships": {
@@ -1798,8 +1825,9 @@
       "title": "Memberships",
       "description": "Manage membership types and members",
       "menu": {
-        "types": "Membership Types",
-        "members": "Members"
+        "membersDatabase": "Members Database",
+        "membershipTypes": "Membership Types",
+        "discounts": "Discounts"
       }
     },
     "calendar": {
@@ -1833,6 +1861,257 @@
         "types": "Merchandise Types",
         "orders": "Orders"
       }
+    }
+  },
+  "discounts": {
+    "title": "Discounts",
+    "createDiscount": "Create Discount",
+    "editDiscount": "Edit Discount",
+    "discountDetails": "Discount Details",
+    "searchPlaceholder": "Search discounts...",
+    "noDiscountsFound": "No discounts yet. Create your first discount to get started.",
+    "noMatchingDiscounts": "No discounts match your filters",
+    "loadingDiscounts": "Loading discounts...",
+    "failedToLoad": "Failed to load discounts",
+    "failedToSave": "Failed to save discount",
+    "failedToDelete": "Failed to delete discount",
+    "discountNotFound": "Discount not found",
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "value": "Value",
+      "scope": "Scope",
+      "status": "Status",
+      "usageCount": "Usage",
+      "code": "Code",
+      "actions": "Actions"
+    },
+    "tooltips": {
+      "viewDetails": "View Details",
+      "edit": "Edit",
+      "delete": "Delete",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "viewUsage": "View Usage"
+    },
+    "filters": {
+      "status": "Status",
+      "type": "Type",
+      "scope": "Scope",
+      "all": "All"
+    },
+    "statusOptions": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expired"
+    },
+    "typeOptions": {
+      "all": "All",
+      "percentage": "Percentage",
+      "fixed": "Fixed Amount"
+    },
+    "scopeOptions": {
+      "all": "All",
+      "item": "Item Level",
+      "category": "Category Level",
+      "cart": "Cart Level",
+      "quantityBased": "Quantity-Based"
+    },
+    "discountTypes": {
+      "percentage": "Percentage",
+      "fixed": "Fixed Amount"
+    },
+    "applicationScopes": {
+      "item": "Item Level",
+      "category": "Category Level",
+      "cart": "Cart Level",
+      "quantityBased": "Quantity-Based"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expired"
+    },
+    "wizard": {
+      "steps": {
+        "basicInfo": "Basic Information",
+        "configuration": "Discount Configuration",
+        "eligibility": "Eligibility Criteria",
+        "validityLimits": "Validity & Limits",
+        "review": "Review & Confirm"
+      }
+    },
+    "basicInfo": {
+      "title": "Basic Information",
+      "description": "Enter the basic details for your discount",
+      "name": "Discount Name",
+      "nameHelper": "A descriptive name for this discount",
+      "nameTooltip": "The name of your discount as it will appear in the system",
+      "discountDescription": "Description",
+      "descriptionHelper": "Optional detailed description of this discount",
+      "descriptionTooltip": "Provide additional details about this discount",
+      "code": "Discount Code",
+      "codeHelper": "Optional code that users can enter to activate this discount (3-50 characters)",
+      "codeTooltip": "If provided, users must enter this code to use the discount",
+      "status": "Status",
+      "statusHelper": "Set whether this discount is active or inactive"
+    },
+    "configuration": {
+      "title": "Discount Configuration",
+      "description": "Configure the discount type, value, and application scope",
+      "discountType": "Discount Type",
+      "discountTypeHelper": "Choose between percentage or fixed amount discount",
+      "discountValue": "Discount Value",
+      "discountValueHelper": "For percentage: enter 0-100. For fixed amount: enter the amount",
+      "percentageValue": "Percentage Value",
+      "percentageValueHelper": "Enter a value between 0 and 100",
+      "fixedValue": "Fixed Amount",
+      "fixedValueHelper": "Enter the fixed discount amount",
+      "applicationScope": "Application Scope",
+      "applicationScopeHelper": "Choose how this discount should be applied",
+      "quantityRules": "Quantity Rules",
+      "minimumQuantity": "Minimum Quantity",
+      "minimumQuantityHelper": "Minimum items required to qualify for this discount",
+      "applyToQuantity": "Apply to Quantity",
+      "applyToQuantityHelper": "Number of items that receive the discount (optional)",
+      "applyEveryN": "Apply Every N Items",
+      "applyEveryNHelper": "Apply discount to every Nth item (e.g., every 3rd item free)"
+    },
+    "eligibility": {
+      "title": "Eligibility Criteria",
+      "description": "Set who can use this discount and under what conditions",
+      "requiresCode": "Requires Code Entry",
+      "requiresCodeHelper": "Users must enter the discount code to activate",
+      "membershipTypes": "Membership Types",
+      "membershipTypesHelper": "Restrict to specific membership types (optional)",
+      "userGroups": "User Groups",
+      "userGroupsHelper": "Restrict to specific user groups (optional)",
+      "minimumPurchase": "Minimum Purchase Amount",
+      "minimumPurchaseHelper": "Minimum cart total required to use this discount",
+      "maximumDiscount": "Maximum Discount Amount",
+      "maximumDiscountHelper": "Cap the maximum discount that can be applied"
+    },
+    "validityLimits": {
+      "title": "Validity & Limits",
+      "description": "Set validity period and usage limits for this discount",
+      "validFrom": "Valid From",
+      "validFromHelper": "Date when this discount becomes active (optional)",
+      "validUntil": "Valid Until",
+      "validUntilHelper": "Date when this discount expires (optional)",
+      "totalUsageLimit": "Total Usage Limit",
+      "totalUsageLimitHelper": "Maximum number of times this discount can be used (optional)",
+      "perUserLimit": "Per User Limit",
+      "perUserLimitHelper": "Maximum times each user can use this discount (optional)",
+      "combinable": "Combinable with Other Discounts",
+      "combinableHelper": "Allow this discount to be combined with other discounts",
+      "priority": "Priority",
+      "priorityHelper": "Higher priority discounts are applied first (0 = lowest)"
+    },
+    "review": {
+      "title": "Review & Confirm",
+      "description": "Review your discount settings before saving",
+      "basicInformation": "Basic Information",
+      "name": "Name:",
+      "description": "Description:",
+      "code": "Code:",
+      "status": "Status:",
+      "discountConfiguration": "Discount Configuration",
+      "type": "Type:",
+      "value": "Value:",
+      "scope": "Scope:",
+      "quantityRules": "Quantity Rules:",
+      "eligibilityCriteria": "Eligibility Criteria",
+      "requiresCode": "Requires Code:",
+      "membershipTypes": "Membership Types:",
+      "userGroups": "User Groups:",
+      "minimumPurchase": "Minimum Purchase:",
+      "maximumDiscount": "Maximum Discount:",
+      "validityAndLimits": "Validity & Limits",
+      "validFrom": "Valid From:",
+      "validUntil": "Valid Until:",
+      "totalUsageLimit": "Total Usage Limit:",
+      "perUserLimit": "Per User Limit:",
+      "combinable": "Combinable:",
+      "priority": "Priority:",
+      "noCode": "No code required",
+      "noDescription": "No description",
+      "noRestrictions": "No restrictions",
+      "unlimited": "Unlimited",
+      "notSet": "Not set",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "selector": {
+      "applyDiscounts": "Apply Discounts",
+      "selectDiscounts": "Select Discounts",
+      "noDiscountsAvailable": "No discounts available",
+      "loadingDiscounts": "Loading discounts...",
+      "discountDetails": "Discount Details"
+    },
+    "summary": {
+      "title": "Discount Summary",
+      "originalPrice": "Original Price:",
+      "totalDiscount": "Total Discount:",
+      "finalPrice": "Final Price:",
+      "youSave": "You Save:",
+      "appliedDiscounts": "Applied Discounts:",
+      "noDiscounts": "No discounts applied"
+    },
+    "usage": {
+      "title": "Discount Usage",
+      "statistics": "Usage Statistics",
+      "totalUses": "Total Uses:",
+      "remainingUses": "Remaining Uses:",
+      "totalDiscountGiven": "Total Discount Given:",
+      "averageDiscount": "Average Discount:",
+      "topUsers": "Top Users",
+      "usageHistory": "Usage History",
+      "noUsageData": "No usage data available"
+    },
+    "validation": {
+      "nameRequired": "Discount name is required",
+      "typeRequired": "Discount type is required",
+      "valueRequired": "Discount value is required",
+      "valuePositive": "Discount value must be greater than 0",
+      "percentageRange": "Percentage must be between 0 and 100",
+      "scopeRequired": "Application scope is required",
+      "codeLength": "Discount code must be between 3 and 50 characters",
+      "codeUnique": "This discount code is already in use",
+      "dateRangeInvalid": "Valid from date must be before valid until date",
+      "minimumQuantityRequired": "Minimum quantity is required for quantity-based discounts",
+      "minimumQuantityPositive": "Minimum quantity must be greater than 0"
+    },
+    "messages": {
+      "created": "Discount created successfully",
+      "updated": "Discount updated successfully",
+      "deleted": "Discount deleted successfully",
+      "activated": "Discount activated successfully",
+      "deactivated": "Discount deactivated successfully",
+      "applied": "Discount applied successfully",
+      "removed": "Discount removed successfully",
+      "expired": "This discount has expired",
+      "notYetValid": "This discount is not yet valid",
+      "inactive": "This discount is inactive",
+      "usageLimitReached": "Discount usage limit has been reached",
+      "userLimitReached": "You have reached the usage limit for this discount",
+      "eligibilityNotMet": "You do not meet the eligibility criteria for this discount",
+      "minimumPurchaseNotMet": "Minimum purchase amount not met",
+      "codeNotFound": "Discount code not found",
+      "inUse": "Cannot delete discount that is currently applied to items"
+    },
+    "delete": {
+      "title": "Delete Discount",
+      "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove all applications of this discount.",
+      "confirmButton": "Delete Discount"
+    },
+    "actions": {
+      "saveDiscount": "Save Discount",
+      "updateDiscount": "Update Discount",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "viewUsage": "View Usage",
+      "exportUsage": "Export Usage"
     }
   },
   "components": {

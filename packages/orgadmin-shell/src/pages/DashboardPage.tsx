@@ -55,15 +55,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
     return hasCapability(module.capability);
   });
 
-  // Sort modules by order (lower order = displayed first)
-  const sortedModules = [...availableModules].sort(
-    (a, b) => (a.order || 999) - (b.order || 999)
-  );
+  // Define custom ordering for modules
+  const moduleOrder: Record<string, number> = {
+    'events': 1,
+    'memberships': 2,
+    'registrations': 3,
+    'merchandise': 4,
+    'calendar': 5,
+    'ticketing': 6,
+    'forms': 7, // Form Builder after Event Ticketing
+    'payments': 8,
+    'users': 9,
+    'settings': 10,
+    'reports': 11,
+  };
+
+  // Sort modules by custom order, then by module.order for any not in the custom list
+  const sortedModules = [...availableModules].sort((a, b) => {
+    const orderA = moduleOrder[a.id] ?? (a.order || 999);
+    const orderB = moduleOrder[b.id] ?? (b.order || 999);
+    return orderA - orderB;
+  });
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ 
+      p: 0,
+      minHeight: '100vh',
+      background: '#FAF8F5', // Warm background matching features page
+    }}>
       {/* Welcome Message */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 3 } }}>
         <Typography
           variant="h4"
           gutterBottom
@@ -86,13 +107,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
 
       {/* Module Cards Grid */}
       {sortedModules.length > 0 ? (
-        <Grid container spacing={3}>
-          {sortedModules.map((module) => (
-            <Grid item xs={12} sm={6} md={4} key={module.id}>
-              <DashboardCard module={module} />
-            </Grid>
-          ))}
-        </Grid>
+        <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
+          <Grid container spacing={3}>
+            {sortedModules.map((module) => (
+              <Grid item xs={12} sm={6} md={3} key={module.id}>
+                <DashboardCard module={module} />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       ) : (
         <Box
           sx={{

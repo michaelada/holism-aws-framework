@@ -51,6 +51,9 @@ export const pageMappings: PageMapping[] = [
   { route: '/events/:id', pageId: 'detail', moduleId: 'events' },
   { route: '/events/:id/edit', pageId: 'edit', moduleId: 'events' },
   { route: '/events/:id/registrations', pageId: 'registrations', moduleId: 'events' },
+  { route: '/events/discounts', pageId: 'discounts', moduleId: 'events' },
+  { route: '/events/discounts/new', pageId: 'discounts', moduleId: 'events' },
+  { route: '/events/discounts/:id/edit', pageId: 'discounts', moduleId: 'events' },
   
   // Memberships
   { route: '/memberships', pageId: 'list', moduleId: 'memberships' },

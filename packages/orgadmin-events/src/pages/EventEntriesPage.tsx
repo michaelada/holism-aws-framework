@@ -1,22 +1,17 @@
 /**
  * Event Entries Page
  * 
- * Displays a tabular view of all entries for an event with filtering and export
+ * Displays all entries for a specific event with filtering and export capabilities
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
   Card,
   CardContent,
-  FormControl,
-  IconButton,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -26,63 +21,75 @@ import {
   TextField,
   Typography,
   InputAdornment,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
+  ArrowBack as BackIcon,
   Download as DownloadIcon,
-  Visibility as ViewIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import type { EventEntry, EventActivity } from '../types/event.types';
-import EventEntryDetailsDialog from '../components/EventEntryDetailsDialog';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async () => {
-    return [];
-  },
-});
+interface EventEntry {
+  id: string;
+  eventId: string;
+  eventActivityId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  createdAt: Date;
+}
 
 const EventEntriesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t } = useTranslation();
   
   const [entries, setEntries] = useState<EventEntry[]>([]);
-  const [activities, setActivities] = useState<EventActivity[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<EventEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchName, setSearchName] = useState('');
-  const [activityFilter, setActivityFilter] = useState<string>('all');
-  const [selectedEntry, setSelectedEntry] = useState<EventEntry | null>(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [eventName, setEventName] = useState('');
 
   useEffect(() => {
     if (id) {
-      loadActivities(id);
+      loadEvent(id);
       loadEntries(id);
     }
   }, [id]);
 
   useEffect(() => {
     filterEntries();
-  }, [entries, searchName, activityFilter]);
+  }, [entries, searchTerm]);
 
-  const loadActivities = async (_eventId: string) => {
+  const loadEvent = async (eventId: string) => {
     try {
-      const response = await execute();
-      setActivities(response || []);
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/events/${eventId}`,
+      });
+      setEventName(response?.name || '');
     } catch (error) {
-      console.error('Failed to load activities:', error);
-      setActivities([]);
+      console.error('Failed to load event:', error);
     }
   };
 
-  const loadEntries = async (_eventId: string) => {
+  const loadEntries = async (eventId: string) => {
     try {
       setLoading(true);
-      const response = await execute();
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/events/${eventId}/entries`,
+      });
       setEntries(response || []);
     } catch (error) {
       console.error('Failed to load entries:', error);
+      setError('Failed to load event entries');
       setEntries([]);
     } finally {
       setLoading(false);
@@ -92,105 +99,92 @@ const EventEntriesPage: React.FC = () => {
   const filterEntries = () => {
     let filtered = [...entries];
 
-    // Apply activity filter
-    if (activityFilter !== 'all') {
-      filtered = filtered.filter(entry => entry.eventActivityId === activityFilter);
-    }
-
-    // Apply name search
-    if (searchName) {
-      const searchLower = searchName.toLowerCase();
+    if (searchTerm) {
       filtered = filtered.filter(entry =>
-        entry.firstName.toLowerCase().includes(searchLower) ||
-        entry.lastName.toLowerCase().includes(searchLower)
+        entry.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     setFilteredEntries(filtered);
   };
 
-  const handleExportEntries = async () => {
+  const handleExport = async () => {
+    if (!id) return;
+
     try {
-      // This will trigger a download of Excel file
-      window.open(`/api/orgadmin/events/${id}/entries/export`, '_blank');
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/events/${id}/entries/export`,
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${eventName.replace(/[^a-z0-9]/gi, '_')}_entries.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
       console.error('Failed to export entries:', error);
     }
   };
 
-  const handleViewEntry = (entry: EventEntry) => {
-    setSelectedEntry(entry);
-    setDetailsDialogOpen(true);
-  };
-
-  const handleCloseDetails = () => {
-    setDetailsDialogOpen(false);
-    setSelectedEntry(null);
-  };
-
-  const formatDateTime = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getActivityName = (activityId: string) => {
-    const activity = activities.find(a => a.id === activityId);
-    return activity?.name || 'Unknown Activity';
-  };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Event Entries</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<DownloadIcon />}
-          onClick={handleExportEntries}
-          disabled={entries.length === 0}
-        >
-          Download All Entries
-        </Button>
+        <Box>
+          <Typography variant="h4">Event Entries</Typography>
+          {eventName && (
+            <Typography variant="subtitle1" color="textSecondary">
+              {eventName}
+            </Typography>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={handleExport}
+            disabled={entries.length === 0}
+          >
+            Export to Excel
+          </Button>
+        </Box>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Event Activity</InputLabel>
-              <Select
-                value={activityFilter}
-                label="Event Activity"
-                onChange={(e) => setActivityFilter(e.target.value)}
-              >
-                <MenuItem value="all">All Activities</MenuItem>
-                {activities.map((activity) => (
-                  <MenuItem key={activity.id} value={activity.id}>
-                    {activity.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              placeholder="Search by name..."
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              sx={{ flexGrow: 1, minWidth: 250 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
+          <TextField
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -198,43 +192,31 @@ const EventEntriesPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Event Activity</TableCell>
               <TableCell>First Name</TableCell>
               <TableCell>Last Name</TableCell>
-              <TableCell>Entry Date/Time</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Submitted</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading ? (
+            {filteredEntries.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  Loading entries...
-                </TableCell>
-              </TableRow>
-            ) : filteredEntries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center">
-                  {searchName || activityFilter !== 'all'
-                    ? 'No entries match your filters'
-                    : 'No entries yet for this event'}
+                  {searchTerm
+                    ? 'No matching entries found'
+                    : 'No entries yet'}
                 </TableCell>
               </TableRow>
             ) : (
               filteredEntries.map((entry) => (
                 <TableRow key={entry.id} hover>
-                  <TableCell>{getActivityName(entry.eventActivityId)}</TableCell>
                   <TableCell>{entry.firstName}</TableCell>
                   <TableCell>{entry.lastName}</TableCell>
-                  <TableCell>{formatDateTime(entry.entryDate)}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleViewEntry(entry)}
-                      title="View Details"
-                    >
-                      <ViewIcon />
-                    </IconButton>
+                  <TableCell>{entry.email}</TableCell>
+                  <TableCell>{entry.status}</TableCell>
+                  <TableCell>
+                    {new Date(entry.createdAt).toLocaleDateString()}
                   </TableCell>
                 </TableRow>
               ))
@@ -243,13 +225,14 @@ const EventEntriesPage: React.FC = () => {
         </Table>
       </TableContainer>
 
-      {selectedEntry && (
-        <EventEntryDetailsDialog
-          entry={selectedEntry}
-          open={detailsDialogOpen}
-          onClose={handleCloseDetails}
-        />
-      )}
+      <Button
+        variant="outlined"
+        startIcon={<BackIcon />}
+        onClick={() => navigate('/events')}
+        sx={{ mt: 3 }}
+      >
+        {t('common.actions.back')}
+      </Button>
     </Box>
   );
 };

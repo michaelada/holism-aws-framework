@@ -2,6 +2,25 @@ import { db } from '../database/pool';
 import { logger } from '../config/logger';
 
 /**
+ * Event Activity interface
+ */
+export interface EventActivity {
+  name: string;
+  description: string;
+  showPublicly: boolean;
+  applicationFormId?: string;
+  limitApplicants: boolean;
+  applicantsLimit?: number;
+  allowSpecifyQuantity: boolean;
+  useTermsAndConditions: boolean;
+  termsAndConditions?: string;
+  fee: number;
+  allowedPaymentMethod: 'card' | 'cheque' | 'both';
+  handlingFeeIncluded: boolean;
+  chequePaymentInstructions?: string;
+}
+
+/**
  * Event interface matching database schema
  */
 export interface Event {
@@ -20,6 +39,35 @@ export interface Event {
   addConfirmationMessage: boolean;
   confirmationMessage?: string;
   status: 'draft' | 'published' | 'cancelled' | 'completed';
+  eventTypeId?: string;
+  venueId?: string;
+  discountIds?: string[];
+  activities?: EventActivity[];
+  // Ticketing configuration
+  generateElectronicTickets?: boolean;
+  ticketHeaderText?: string;
+  ticketInstructions?: string;
+  ticketFooterText?: string;
+  ticketValidityPeriod?: number;
+  includeEventLogo?: boolean;
+  ticketBackgroundColor?: string;
+  // Soft delete fields
+  deleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: string;
+  // Populated fields from joins
+  eventType?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
+  venue?: {
+    id: string;
+    name: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +90,18 @@ export interface CreateEventDto {
   addConfirmationMessage?: boolean;
   confirmationMessage?: string;
   status?: 'draft' | 'published';
+  eventTypeId?: string;
+  venueId?: string;
+  discountIds?: string[];
+  activities?: EventActivity[];
+  // Ticketing configuration
+  generateElectronicTickets?: boolean;
+  ticketHeaderText?: string;
+  ticketInstructions?: string;
+  ticketFooterText?: string;
+  ticketValidityPeriod?: number;
+  includeEventLogo?: boolean;
+  ticketBackgroundColor?: string;
 }
 
 /**
@@ -61,6 +121,18 @@ export interface UpdateEventDto {
   addConfirmationMessage?: boolean;
   confirmationMessage?: string;
   status?: 'draft' | 'published' | 'cancelled' | 'completed';
+  eventTypeId?: string;
+  venueId?: string;
+  discountIds?: string[];
+  activities?: EventActivity[];
+  // Ticketing configuration
+  generateElectronicTickets?: boolean;
+  ticketHeaderText?: string;
+  ticketInstructions?: string;
+  ticketFooterText?: string;
+  ticketValidityPeriod?: number;
+  includeEventLogo?: boolean;
+  ticketBackgroundColor?: string;
 }
 
 /**
@@ -71,7 +143,22 @@ export class EventService {
    * Convert database row to Event object
    */
   private rowToEvent(row: any): Event {
-    return {
+    // Parse discount_ids from JSONB - it might be a string or already parsed
+    let discountIds: string[] = [];
+    if (row.discount_ids) {
+      if (Array.isArray(row.discount_ids)) {
+        discountIds = row.discount_ids;
+      } else if (typeof row.discount_ids === 'string') {
+        try {
+          const parsed = JSON.parse(row.discount_ids);
+          discountIds = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          discountIds = [];
+        }
+      }
+    }
+
+    const event: Event = {
       id: row.id,
       organisationId: row.organisation_id,
       name: row.name,
@@ -87,9 +174,37 @@ export class EventService {
       addConfirmationMessage: row.add_confirmation_message,
       confirmationMessage: row.confirmation_message,
       status: row.status,
+      eventTypeId: row.event_type_id,
+      venueId: row.venue_id,
+      discountIds,
+      deleted: row.deleted,
+      deletedAt: row.deleted_at,
+      deletedBy: row.deleted_by,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
+
+    // Add event type if joined
+    if (row.event_type_name) {
+      event.eventType = {
+        id: row.event_type_id,
+        name: row.event_type_name,
+        description: row.event_type_description,
+      };
+    }
+
+    // Add venue if joined
+    if (row.venue_name) {
+      event.venue = {
+        id: row.venue_id,
+        name: row.venue_name,
+        address: row.venue_address,
+        latitude: row.venue_latitude ? parseFloat(row.venue_latitude) : undefined,
+        longitude: row.venue_longitude ? parseFloat(row.venue_longitude) : undefined,
+      };
+    }
+
+    return event;
   }
 
   /**
@@ -98,9 +213,19 @@ export class EventService {
   async getEventsByOrganisation(organisationId: string): Promise<Event[]> {
     try {
       const result = await db.query(
-        `SELECT * FROM events 
-         WHERE organisation_id = $1 
-         ORDER BY start_date DESC`,
+        `SELECT 
+           e.*,
+           et.name as event_type_name,
+           et.description as event_type_description,
+           v.name as venue_name,
+           v.address as venue_address,
+           v.latitude as venue_latitude,
+           v.longitude as venue_longitude
+         FROM events e
+         LEFT JOIN event_types et ON e.event_type_id = et.id
+         LEFT JOIN venues v ON e.venue_id = v.id
+         WHERE e.organisation_id = $1 AND e.deleted = FALSE
+         ORDER BY e.start_date DESC`,
         [organisationId]
       );
 
@@ -117,7 +242,18 @@ export class EventService {
   async getEventById(id: string): Promise<Event | null> {
     try {
       const result = await db.query(
-        'SELECT * FROM events WHERE id = $1',
+        `SELECT 
+           e.*,
+           et.name as event_type_name,
+           et.description as event_type_description,
+           v.name as venue_name,
+           v.address as venue_address,
+           v.latitude as venue_latitude,
+           v.longitude as venue_longitude
+         FROM events e
+         LEFT JOIN event_types et ON e.event_type_id = et.id
+         LEFT JOIN venues v ON e.venue_id = v.id
+         WHERE e.id = $1`,
         [id]
       );
 
@@ -125,7 +261,14 @@ export class EventService {
         return null;
       }
 
-      return this.rowToEvent(result.rows[0]);
+      const event = this.rowToEvent(result.rows[0]);
+      
+      // Load activities for this event
+      const { eventActivityService } = await import('./event-activity.service');
+      const activities = await eventActivityService.getActivitiesByEvent(id);
+      event.activities = activities;
+
+      return event;
     } catch (error) {
       logger.error('Error getting event by ID:', error);
       throw error;
@@ -156,8 +299,9 @@ export class EventService {
         `INSERT INTO events 
          (organisation_id, name, description, event_owner, email_notifications,
           start_date, end_date, open_date_entries, entries_closing_date,
-          limit_entries, entries_limit, add_confirmation_message, confirmation_message, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          limit_entries, entries_limit, add_confirmation_message, confirmation_message, 
+          status, event_type_id, venue_id, discount_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING *`,
         [
           data.organisationId,
@@ -174,11 +318,26 @@ export class EventService {
           data.addConfirmationMessage || false,
           data.confirmationMessage || null,
           data.status || 'draft',
+          data.eventTypeId || null,
+          data.venueId || null,
+          JSON.stringify(data.discountIds || []),
         ]
       );
 
-      logger.info(`Event created: ${data.name} (${result.rows[0].id})`);
-      return this.rowToEvent(result.rows[0]);
+      const event = this.rowToEvent(result.rows[0]);
+
+      // Create activities if provided
+      if (data.activities && data.activities.length > 0) {
+        const { eventActivityService } = await import('./event-activity.service');
+        const activities = await eventActivityService.replaceActivitiesForEvent(
+          event.id,
+          data.activities.map(a => ({ ...a, eventId: event.id }))
+        );
+        event.activities = activities;
+      }
+
+      logger.info(`Event created: ${data.name} (${event.id})`);
+      return event;
     } catch (error) {
       logger.error('Error creating event:', error);
       throw error;
@@ -277,6 +436,18 @@ export class EventService {
         updates.push(`status = $${paramCount++}`);
         values.push(data.status);
       }
+      if (data.eventTypeId !== undefined) {
+        updates.push(`event_type_id = $${paramCount++}`);
+        values.push(data.eventTypeId || null);
+      }
+      if (data.venueId !== undefined) {
+        updates.push(`venue_id = $${paramCount++}`);
+        values.push(data.venueId || null);
+      }
+      if (data.discountIds !== undefined) {
+        updates.push(`discount_ids = $${paramCount++}`);
+        values.push(JSON.stringify(data.discountIds || []));
+      }
 
       values.push(id);
 
@@ -292,8 +463,24 @@ export class EventService {
         throw new Error('Event not found');
       }
 
+      const event = this.rowToEvent(result.rows[0]);
+
+      // Update activities if provided
+      if (data.activities !== undefined) {
+        const { eventActivityService } = await import('./event-activity.service');
+        const activities = await eventActivityService.replaceActivitiesForEvent(
+          id,
+          data.activities.map(a => ({ ...a, eventId: id }))
+        );
+        event.activities = activities;
+      } else {
+        // Load existing activities
+        const { eventActivityService } = await import('./event-activity.service');
+        event.activities = await eventActivityService.getActivitiesByEvent(id);
+      }
+
       logger.info(`Event updated: ${id}`);
-      return this.rowToEvent(result.rows[0]);
+      return event;
     } catch (error) {
       logger.error('Error updating event:', error);
       throw error;
@@ -301,25 +488,89 @@ export class EventService {
   }
 
   /**
-   * Delete an event
+   * Soft delete an event
    */
-  async deleteEvent(id: string): Promise<void> {
+  async deleteEvent(id: string, deletedBy: string): Promise<void> {
     try {
       const result = await db.query(
-        'DELETE FROM events WHERE id = $1',
-        [id]
+        'UPDATE events SET deleted = TRUE, deleted_at = NOW(), deleted_by = $2 WHERE id = $1 AND deleted = FALSE',
+        [id, deletedBy]
       );
 
       if (result.rowCount === 0) {
-        throw new Error('Event not found');
+        throw new Error('Event not found or already deleted');
       }
 
-      logger.info(`Event deleted: ${id}`);
+      logger.info(`Event soft deleted: ${id} by ${deletedBy}`);
     } catch (error) {
       logger.error('Error deleting event:', error);
       throw error;
     }
   }
+
+  /**
+   * Clone an event with all its activities
+   * Creates a new event with "(Copy)" appended to the name
+   * All activities are cloned as well
+   * The cloned event has no entries (it's a new event)
+   */
+  async cloneEvent(id: string): Promise<Event> {
+    try {
+      // Get the original event with activities
+      const originalEvent = await this.getEventById(id);
+      if (!originalEvent) {
+        throw new Error('Event not found');
+      }
+
+      // Create new event data with "(Copy)" appended to name
+      const cloneData: CreateEventDto = {
+        organisationId: originalEvent.organisationId,
+        name: `${originalEvent.name} (Copy)`,
+        description: originalEvent.description,
+        eventOwner: originalEvent.eventOwner,
+        emailNotifications: originalEvent.emailNotifications,
+        startDate: originalEvent.startDate,
+        endDate: originalEvent.endDate,
+        openDateEntries: originalEvent.openDateEntries,
+        entriesClosingDate: originalEvent.entriesClosingDate,
+        limitEntries: originalEvent.limitEntries,
+        entriesLimit: originalEvent.entriesLimit,
+        addConfirmationMessage: originalEvent.addConfirmationMessage,
+        confirmationMessage: originalEvent.confirmationMessage,
+        status: 'draft', // Always create clones as draft
+        eventTypeId: originalEvent.eventTypeId,
+        venueId: originalEvent.venueId,
+        discountIds: originalEvent.discountIds || [], // Clone discount IDs
+        // Clone activities (without IDs)
+        activities: originalEvent.activities?.map(activity => ({
+          eventId: '', // Will be set by createEvent
+          name: activity.name,
+          description: activity.description,
+          showPublicly: activity.showPublicly,
+          applicationFormId: activity.applicationFormId,
+          limitApplicants: activity.limitApplicants,
+          applicantsLimit: activity.applicantsLimit,
+          allowSpecifyQuantity: activity.allowSpecifyQuantity,
+          useTermsAndConditions: activity.useTermsAndConditions,
+          termsAndConditions: activity.termsAndConditions,
+          fee: activity.fee,
+          allowedPaymentMethod: activity.allowedPaymentMethod,
+          handlingFeeIncluded: activity.handlingFeeIncluded,
+          chequePaymentInstructions: activity.chequePaymentInstructions,
+        })) || [],
+      };
+
+      // Create the cloned event
+      const clonedEvent = await this.createEvent(cloneData);
+
+      logger.info(`Event cloned: ${originalEvent.name} -> ${clonedEvent.name} (${clonedEvent.id})`);
+      return clonedEvent;
+    } catch (error) {
+      logger.error('Error cloning event:', error);
+      throw error;
+    }
+  }
+
 }
 
 // Create singleton instance

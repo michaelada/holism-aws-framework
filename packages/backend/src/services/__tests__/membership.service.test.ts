@@ -532,4 +532,472 @@ describe('MembershipService', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('Discount Handling', () => {
+    describe('createMembershipType with discountIds', () => {
+      it('should create membership type with valid discountIds', async () => {
+        const discountIds = ['discount-1', 'discount-2'];
+        
+        // Mock discount validation
+        mockDb.query.mockResolvedValueOnce({
+          rows: [
+            { id: 'discount-1', organisation_id: 'org-1', module_type: 'memberships', status: 'active' },
+            { id: 'discount-2', organisation_id: 'org-1', module_type: 'memberships', status: 'active' },
+          ],
+        } as any);
+
+        // Mock insert
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify(discountIds),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.createMembershipType({
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          description: 'Test Description',
+          membershipFormId: 'form-1',
+          supportedPaymentMethods: ['card'],
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          discountIds,
+        });
+
+        expect(result.discountIds).toEqual(discountIds);
+        expect(mockDb.query).toHaveBeenCalledWith(
+          expect.stringContaining('WHERE id = ANY($1)'),
+          [discountIds]
+        );
+      });
+
+      it('should create membership type with empty discountIds array', async () => {
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify([]),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.createMembershipType({
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          description: 'Test Description',
+          membershipFormId: 'form-1',
+          supportedPaymentMethods: ['card'],
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          discountIds: [],
+        });
+
+        expect(result.discountIds).toEqual([]);
+      });
+
+      it('should throw error when discount validation fails', async () => {
+        const discountIds = ['discount-1', 'discount-2'];
+        
+        // Mock discount validation - only one discount exists
+        mockDb.query.mockResolvedValueOnce({
+          rows: [
+            { id: 'discount-1', organisation_id: 'org-1', module_type: 'memberships', status: 'active' },
+          ],
+        } as any);
+
+        await expect(service.createMembershipType({
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          description: 'Test Description',
+          membershipFormId: 'form-1',
+          supportedPaymentMethods: ['card'],
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          discountIds,
+        })).rejects.toThrow('Discount validation failed');
+      });
+
+      it('should throw error when discount belongs to different organization', async () => {
+        const discountIds = ['discount-1'];
+        
+        // Mock discount validation - discount belongs to different org
+        mockDb.query.mockResolvedValueOnce({
+          rows: [
+            { id: 'discount-1', organisation_id: 'org-2', module_type: 'memberships', status: 'active' },
+          ],
+        } as any);
+
+        await expect(service.createMembershipType({
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          description: 'Test Description',
+          membershipFormId: 'form-1',
+          supportedPaymentMethods: ['card'],
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          discountIds,
+        })).rejects.toThrow('Discount validation failed');
+      });
+
+      it('should throw error when discount has wrong moduleType', async () => {
+        const discountIds = ['discount-1'];
+        
+        // Mock discount validation - discount has wrong moduleType
+        mockDb.query.mockResolvedValueOnce({
+          rows: [
+            { id: 'discount-1', organisation_id: 'org-1', module_type: 'events', status: 'active' },
+          ],
+        } as any);
+
+        await expect(service.createMembershipType({
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          description: 'Test Description',
+          membershipFormId: 'form-1',
+          supportedPaymentMethods: ['card'],
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          discountIds,
+        })).rejects.toThrow('Discount validation failed');
+      });
+    });
+
+    describe('updateMembershipType with discountIds', () => {
+      it('should update membership type with new discountIds', async () => {
+        const newDiscountIds = ['discount-3', 'discount-4'];
+        
+        // Mock get existing
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify(['discount-1']),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        // Mock discount validation
+        mockDb.query.mockResolvedValueOnce({
+          rows: [
+            { id: 'discount-3', organisation_id: 'org-1', module_type: 'memberships', status: 'active' },
+            { id: 'discount-4', organisation_id: 'org-1', module_type: 'memberships', status: 'active' },
+          ],
+        } as any);
+
+        // Mock update
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify(newDiscountIds),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.updateMembershipType('1', {
+          discountIds: newDiscountIds,
+        });
+
+        expect(result.discountIds).toEqual(newDiscountIds);
+      });
+
+      it('should update membership type to remove all discounts', async () => {
+        // Mock get existing
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify(['discount-1', 'discount-2']),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        // Mock update
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify([]),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.updateMembershipType('1', {
+          discountIds: [],
+        });
+
+        expect(result.discountIds).toEqual([]);
+      });
+
+      it('should throw error when updating with invalid discountIds', async () => {
+        const newDiscountIds = ['discount-3'];
+        
+        // Mock get existing
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify(['discount-1']),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        // Mock discount validation - discount doesn't exist
+        mockDb.query.mockResolvedValueOnce({
+          rows: [],
+        } as any);
+
+        await expect(service.updateMembershipType('1', {
+          discountIds: newDiscountIds,
+        })).rejects.toThrow('Discount validation failed');
+      });
+    });
+
+    describe('getMembershipTypeById with discountIds', () => {
+      it('should deserialize discountIds from JSON string', async () => {
+        const discountIds = ['discount-1', 'discount-2'];
+        
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: JSON.stringify(discountIds),
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.getMembershipTypeById('1');
+
+        expect(result).not.toBeNull();
+        expect(result!.discountIds).toEqual(discountIds);
+      });
+
+      it('should handle null discount_ids as empty array', async () => {
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: null,
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.getMembershipTypeById('1');
+
+        expect(result).not.toBeNull();
+        expect(result!.discountIds).toEqual([]);
+      });
+
+      it('should handle already-parsed discount_ids array', async () => {
+        const discountIds = ['discount-1', 'discount-2'];
+        
+        mockDb.query.mockResolvedValueOnce({
+          rows: [{
+            id: '1',
+            organisation_id: 'org-1',
+            name: 'Test Membership',
+            description: 'Test Description',
+            membership_form_id: 'form-1',
+            membership_status: 'open',
+            is_rolling_membership: true,
+            valid_until: null,
+            number_of_months: 12,
+            automatically_approve: false,
+            member_labels: [],
+            supported_payment_methods: ['card'],
+            use_terms_and_conditions: false,
+            terms_and_conditions: null,
+            membership_type_category: 'single',
+            max_people_in_application: null,
+            min_people_in_application: null,
+            person_titles: null,
+            person_labels: null,
+            field_configuration: null,
+            discount_ids: discountIds, // Already an array
+            created_at: new Date(),
+            updated_at: new Date(),
+          }],
+        } as any);
+
+        const result = await service.getMembershipTypeById('1');
+
+        expect(result).not.toBeNull();
+        expect(result!.discountIds).toEqual(discountIds);
+      });
+    });
+  });
 });

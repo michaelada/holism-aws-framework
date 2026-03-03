@@ -117,7 +117,7 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
               label={t('memberships.fields.validUntil')}
               value={formData.validUntil ? new Date(formData.validUntil) : null}
               onChange={(date) => onChange('validUntil', date)}
-              renderInput={(params) => <TextField {...params} fullWidth required />}
+              slotProps={{ textField: { fullWidth: true, required: true } }}
             />
           </Grid>
         ) : (

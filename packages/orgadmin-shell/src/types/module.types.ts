@@ -17,6 +17,7 @@ export interface ModuleCard {
 export interface ModuleRoute {
   path: string;
   component: LazyExoticComponent<ComponentType<any>>;
+  capability?: string;  // Optional capability required to access this route
 }
 
 /**
@@ -26,6 +27,7 @@ export interface MenuItem {
   label: string;
   path: string;
   icon?: ComponentType;
+  capability?: string;  // Optional capability required to see this menu item
 }
 
 /**

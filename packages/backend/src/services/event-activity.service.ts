@@ -2,13 +2,13 @@ import { db } from '../database/pool';
 import { logger } from '../config/logger';
 
 /**
- * EventActivity interface matching database schema
+ * Event Activity interface
  */
 export interface EventActivity {
   id: string;
   eventId: string;
   name: string;
-  description?: string;
+  description: string;
   showPublicly: boolean;
   applicationFormId?: string;
   limitApplicants: boolean;
@@ -17,7 +17,7 @@ export interface EventActivity {
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
-  allowedPaymentMethod?: 'card' | 'cheque' | 'both';
+  allowedPaymentMethod: 'card' | 'cheque' | 'both';
   handlingFeeIncluded: boolean;
   chequePaymentInstructions?: string;
   createdAt: Date;
@@ -30,26 +30,7 @@ export interface EventActivity {
 export interface CreateEventActivityDto {
   eventId: string;
   name: string;
-  description?: string;
-  showPublicly?: boolean;
-  applicationFormId?: string;
-  limitApplicants?: boolean;
-  applicantsLimit?: number;
-  allowSpecifyQuantity?: boolean;
-  useTermsAndConditions?: boolean;
-  termsAndConditions?: string;
-  fee?: number;
-  allowedPaymentMethod?: 'card' | 'cheque' | 'both';
-  handlingFeeIncluded?: boolean;
-  chequePaymentInstructions?: string;
-}
-
-/**
- * DTO for updating an event activity
- */
-export interface UpdateEventActivityDto {
-  name?: string;
-  description?: string;
+  description: string;
   showPublicly?: boolean;
   applicationFormId?: string;
   limitApplicants?: boolean;
@@ -70,7 +51,7 @@ export class EventActivityService {
   /**
    * Convert database row to EventActivity object
    */
-  private rowToEventActivity(row: any): EventActivity {
+  private rowToActivity(row: any): EventActivity {
     return {
       id: row.id,
       eventId: row.event_id,
@@ -104,7 +85,7 @@ export class EventActivityService {
         [eventId]
       );
 
-      return result.rows.map(row => this.rowToEventActivity(row));
+      return result.rows.map(row => this.rowToActivity(row));
     } catch (error) {
       logger.error('Error getting activities by event:', error);
       throw error;
@@ -125,7 +106,7 @@ export class EventActivityService {
         return null;
       }
 
-      return this.rowToEventActivity(result.rows[0]);
+      return this.rowToActivity(result.rows[0]);
     } catch (error) {
       logger.error('Error getting activity by ID:', error);
       throw error;
@@ -137,29 +118,6 @@ export class EventActivityService {
    */
   async createActivity(data: CreateEventActivityDto): Promise<EventActivity> {
     try {
-      // Validate applicants limit
-      if (data.limitApplicants && (!data.applicantsLimit || data.applicantsLimit <= 0)) {
-        throw new Error('Applicants limit must be greater than 0 when limit is enabled');
-      }
-
-      // Validate terms and conditions
-      if (data.useTermsAndConditions && !data.termsAndConditions) {
-        throw new Error('Terms and conditions are required when use terms and conditions is enabled');
-      }
-
-      // Validate payment method for paid activities
-      const fee = data.fee || 0;
-      if (fee > 0 && !data.allowedPaymentMethod) {
-        throw new Error('Payment method is required for paid activities');
-      }
-
-      // Validate cheque instructions
-      if (data.allowedPaymentMethod && 
-          (data.allowedPaymentMethod === 'cheque' || data.allowedPaymentMethod === 'both') &&
-          !data.chequePaymentInstructions) {
-        throw new Error('Cheque payment instructions are required when cheque payment is allowed');
-      }
-
       const result = await db.query(
         `INSERT INTO event_activities 
          (event_id, name, description, show_publicly, application_form_id,
@@ -171,7 +129,7 @@ export class EventActivityService {
         [
           data.eventId,
           data.name,
-          data.description || null,
+          data.description,
           data.showPublicly !== undefined ? data.showPublicly : true,
           data.applicationFormId || null,
           data.limitApplicants || false,
@@ -179,15 +137,15 @@ export class EventActivityService {
           data.allowSpecifyQuantity || false,
           data.useTermsAndConditions || false,
           data.termsAndConditions || null,
-          fee,
-          data.allowedPaymentMethod || null,
+          data.fee || 0,
+          data.allowedPaymentMethod || 'both',
           data.handlingFeeIncluded || false,
           data.chequePaymentInstructions || null,
         ]
       );
 
-      logger.info(`Event activity created: ${data.name} (${result.rows[0].id})`);
-      return this.rowToEventActivity(result.rows[0]);
+      logger.info(`Event activity created: ${data.name} for event ${data.eventId}`);
+      return this.rowToActivity(result.rows[0]);
     } catch (error) {
       logger.error('Error creating event activity:', error);
       throw error;
@@ -197,51 +155,8 @@ export class EventActivityService {
   /**
    * Update an event activity
    */
-  async updateActivity(id: string, data: UpdateEventActivityDto): Promise<EventActivity> {
+  async updateActivity(id: string, data: Partial<CreateEventActivityDto>): Promise<EventActivity> {
     try {
-      // Get existing activity
-      const existing = await this.getActivityById(id);
-      if (!existing) {
-        throw new Error('Event activity not found');
-      }
-
-      // Validate applicants limit
-      const limitApplicants = data.limitApplicants !== undefined ? data.limitApplicants : existing.limitApplicants;
-      const applicantsLimit = data.applicantsLimit !== undefined ? data.applicantsLimit : existing.applicantsLimit;
-      if (limitApplicants && (!applicantsLimit || applicantsLimit <= 0)) {
-        throw new Error('Applicants limit must be greater than 0 when limit is enabled');
-      }
-
-      // Validate terms and conditions
-      const useTermsAndConditions = data.useTermsAndConditions !== undefined 
-        ? data.useTermsAndConditions 
-        : existing.useTermsAndConditions;
-      const termsAndConditions = data.termsAndConditions !== undefined 
-        ? data.termsAndConditions 
-        : existing.termsAndConditions;
-      if (useTermsAndConditions && !termsAndConditions) {
-        throw new Error('Terms and conditions are required when use terms and conditions is enabled');
-      }
-
-      // Validate payment method for paid activities
-      const fee = data.fee !== undefined ? data.fee : existing.fee;
-      const allowedPaymentMethod = data.allowedPaymentMethod !== undefined 
-        ? data.allowedPaymentMethod 
-        : existing.allowedPaymentMethod;
-      if (fee > 0 && !allowedPaymentMethod) {
-        throw new Error('Payment method is required for paid activities');
-      }
-
-      // Validate cheque instructions
-      const chequePaymentInstructions = data.chequePaymentInstructions !== undefined 
-        ? data.chequePaymentInstructions 
-        : existing.chequePaymentInstructions;
-      if (allowedPaymentMethod && 
-          (allowedPaymentMethod === 'cheque' || allowedPaymentMethod === 'both') &&
-          !chequePaymentInstructions) {
-        throw new Error('Cheque payment instructions are required when cheque payment is allowed');
-      }
-
       const updates: string[] = ['updated_at = NOW()'];
       const values: any[] = [];
       let paramCount = 1;
@@ -252,7 +167,7 @@ export class EventActivityService {
       }
       if (data.description !== undefined) {
         updates.push(`description = $${paramCount++}`);
-        values.push(data.description || null);
+        values.push(data.description);
       }
       if (data.showPublicly !== undefined) {
         updates.push(`show_publicly = $${paramCount++}`);
@@ -288,7 +203,7 @@ export class EventActivityService {
       }
       if (data.allowedPaymentMethod !== undefined) {
         updates.push(`allowed_payment_method = $${paramCount++}`);
-        values.push(data.allowedPaymentMethod || null);
+        values.push(data.allowedPaymentMethod);
       }
       if (data.handlingFeeIncluded !== undefined) {
         updates.push(`handling_fee_included = $${paramCount++}`);
@@ -314,7 +229,7 @@ export class EventActivityService {
       }
 
       logger.info(`Event activity updated: ${id}`);
-      return this.rowToEventActivity(result.rows[0]);
+      return this.rowToActivity(result.rows[0]);
     } catch (error) {
       logger.error('Error updating event activity:', error);
       throw error;
@@ -338,6 +253,45 @@ export class EventActivityService {
       logger.info(`Event activity deleted: ${id}`);
     } catch (error) {
       logger.error('Error deleting event activity:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all activities for an event
+   */
+  async deleteActivitiesByEvent(eventId: string): Promise<void> {
+    try {
+      await db.query(
+        'DELETE FROM event_activities WHERE event_id = $1',
+        [eventId]
+      );
+
+      logger.info(`All activities deleted for event: ${eventId}`);
+    } catch (error) {
+      logger.error('Error deleting activities by event:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Replace all activities for an event (used during event update)
+   */
+  async replaceActivitiesForEvent(eventId: string, activities: CreateEventActivityDto[]): Promise<EventActivity[]> {
+    try {
+      // Delete existing activities
+      await this.deleteActivitiesByEvent(eventId);
+
+      // Create new activities
+      const createdActivities: EventActivity[] = [];
+      for (const activity of activities) {
+        const created = await this.createActivity({ ...activity, eventId });
+        createdActivities.push(created);
+      }
+
+      return createdActivities;
+    } catch (error) {
+      logger.error('Error replacing activities for event:', error);
       throw error;
     }
   }

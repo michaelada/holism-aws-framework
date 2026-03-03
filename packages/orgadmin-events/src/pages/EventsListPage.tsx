@@ -27,6 +27,11 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -34,59 +39,132 @@ import {
   Visibility as ViewIcon,
   People as EntriesIcon,
   Search as SearchIcon,
+  ContentCopy as CloneIcon,
+  LocalOffer as DiscountIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { Event } from '../types/event.types';
+import { useDiscountService } from '../hooks/useDiscountService';
 
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async () => {
-    // Mock data for development
-    return [];
-  },
-});
+interface DiscountSummary {
+  id: string;
+  name: string;
+}
+
 
 const EventsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
   const { locale } = useLocale();
-  const { checkModuleVisit } = useOnboarding();
+  const { checkModuleVisit, setCurrentModule } = useOnboarding();
+  const { organisation } = useOrganisation();
+  const discountService = useDiscountService();
   
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published' | 'cancelled' | 'completed'>('all');
+  const [eventDiscounts, setEventDiscounts] = useState<Record<string, DiscountSummary[]>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
   // Register page for contextual help
   usePageHelp('list');
 
   // Check module visit for onboarding
   useEffect(() => {
+    setCurrentModule('events');
     checkModuleVisit('events');
-  }, [checkModuleVisit]);
+  }, [setCurrentModule, checkModuleVisit]);
 
   useEffect(() => {
-    loadEvents();
-  }, []);
+    if (organisation?.id) {
+      loadEvents();
+    }
+  }, [organisation?.id]);
 
   useEffect(() => {
     filterEvents();
   }, [events, searchTerm, statusFilter]);
 
   const loadEvents = async () => {
+    if (!organisation?.id) {
+      console.error('Organisation ID not available');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await execute();
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation.id}/events`,
+      });
+      console.log('Events loaded:', response);
+      console.log('First event discountIds:', response?.[0]?.discountIds);
       setEvents(response || []);
+      
+      // Load discount information for each event
+      await loadEventDiscounts(response || []);
     } catch (error) {
       console.error(t('events.failedToLoad'), error);
       setEvents([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadEventDiscounts = async (eventsList: Event[]) => {
+    if (!organisation?.id) {
+      console.error('Organisation ID not available for loading discounts');
+      return;
+    }
+
+    const discountsMap: Record<string, DiscountSummary[]> = {};
+    
+    console.log('Loading discounts for events:', eventsList.map(e => ({ id: e.id, name: e.name, discountIds: e.discountIds })));
+    
+    // Load discount details for events that have discountIds
+    await Promise.all(
+      eventsList.map(async (event) => {
+        if (event.discountIds && event.discountIds.length > 0) {
+          try {
+            console.log(`Event ${event.name} has discount IDs:`, event.discountIds);
+            // Fetch discount details for each discount ID
+            const discountPromises = event.discountIds.map(async (id) => {
+              console.log(`Fetching discount with ID: ${id} for organisation: ${organisation.id}`);
+              try {
+                const discount = await discountService.getDiscountById(id, organisation.id);
+                console.log(`Successfully fetched discount:`, discount);
+                return discount;
+              } catch (err) {
+                console.error(`Failed to fetch discount ${id}:`, err);
+                throw err;
+              }
+            });
+            const discounts = await Promise.all(discountPromises);
+            discountsMap[event.id] = discounts.map(d => ({
+              id: d.id,
+              name: d.name
+            }));
+            console.log(`Loaded discounts for event ${event.name}:`, discountsMap[event.id]);
+          } catch (error) {
+            console.error(`Failed to load discounts for event ${event.id}:`, error);
+            discountsMap[event.id] = [];
+          }
+        } else {
+          console.log(`Event ${event.name} has no discount IDs`);
+          discountsMap[event.id] = [];
+        }
+      })
+    );
+    
+    console.log('Final discounts map:', discountsMap);
+    setEventDiscounts(discountsMap);
   };
 
   const filterEvents = () => {
@@ -113,15 +191,60 @@ const EventsListPage: React.FC = () => {
   };
 
   const handleEditEvent = (eventId: string) => {
-    navigate(`/orgadmin/events/${eventId}/edit`);
+    navigate(`/events/${eventId}/edit`);
   };
 
   const handleViewEvent = (eventId: string) => {
-    navigate(`/orgadmin/events/${eventId}`);
+    navigate(`/events/${eventId}`);
   };
 
   const handleViewEntries = (eventId: string) => {
-    navigate(`/orgadmin/events/${eventId}/entries`);
+    navigate(`/events/${eventId}/entries`);
+  };
+
+  const handleCloneEvent = async (eventId: string) => {
+    try {
+      setLoading(true);
+      const clonedEvent = await execute({
+        method: 'POST',
+        url: `/api/orgadmin/events/${eventId}/clone`,
+      });
+      
+      // Navigate to edit page of the cloned event
+      navigate(`/events/${clonedEvent.id}/edit`);
+    } catch (error) {
+      console.error('Failed to clone event:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (event: Event) => {
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!eventToDelete) return;
+
+    try {
+      await execute({
+        method: 'DELETE',
+        url: `/api/orgadmin/events/${eventToDelete.id}`,
+      });
+      
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
+      
+      // Reload events list
+      await loadEvents();
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setEventToDelete(null);
   };
 
   const formatDateLocale = (dateString: Date | string) => {
@@ -205,19 +328,20 @@ const EventsListPage: React.FC = () => {
               <TableCell>{t('events.table.dates')}</TableCell>
               <TableCell>{t('events.table.status')}</TableCell>
               <TableCell>{t('events.table.entryLimit')}</TableCell>
+              <TableCell align="center">{t('events.table.hasDiscounts')}</TableCell>
               <TableCell align="right">{t('events.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   {t('events.loadingEvents')}
                 </TableCell>
               </TableRow>
             ) : filteredEvents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   {searchTerm || statusFilter !== 'all'
                     ? t('events.noMatchingEvents')
                     : t('events.noEventsFound')}
@@ -246,6 +370,22 @@ const EventsListPage: React.FC = () => {
                       ? `${event.entriesLimit} ${t('common.labels.max')}`
                       : t('common.labels.unlimited')}
                   </TableCell>
+                  <TableCell align="center">
+                    {eventDiscounts[event.id] && eventDiscounts[event.id].length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {eventDiscounts[event.id].map((discount) => (
+                          <Chip
+                            key={discount.id}
+                            icon={<DiscountIcon />}
+                            label={discount.name}
+                            color="secondary"
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
@@ -268,6 +408,21 @@ const EventsListPage: React.FC = () => {
                     >
                       <EditIcon />
                     </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleCloneEvent(event.id)}
+                      title="Clone Event"
+                    >
+                      <CloneIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteClick(event)}
+                      title={t('events.tooltips.delete')}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))
@@ -275,6 +430,30 @@ const EventsListPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          {t('events.deleteDialog.title')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            {t('events.deleteDialog.message', { eventName: eventToDelete?.name })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="primary">
+            {t('common.actions.cancel')}
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained" autoFocus>
+            {t('common.actions.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

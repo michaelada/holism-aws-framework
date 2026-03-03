@@ -20,6 +20,7 @@ export interface Event {
   addConfirmationMessage: boolean;     // Add Message To Confirmation Email
   confirmationMessage?: string;        // Message text if addConfirmationMessage is true
   status: 'draft' | 'published' | 'cancelled' | 'completed';
+  discountIds?: string[];              // Discount IDs associated with this event
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -76,6 +77,8 @@ export interface EventFormData {
   confirmationMessage?: string;
   status: 'draft' | 'published';
   activities: EventActivityFormData[];
+  eventTypeId?: string;
+  venueId?: string;
   // Ticketing configuration (conditional on event-ticketing capability)
   generateElectronicTickets?: boolean;
   ticketHeaderText?: string;
@@ -84,6 +87,8 @@ export interface EventFormData {
   ticketValidityPeriod?: number;
   includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
+  // Discount configuration (conditional on entry-discounts capability)
+  discountIds?: string[];
 }
 
 export interface EventActivityFormData {
@@ -100,6 +105,8 @@ export interface EventActivityFormData {
   allowedPaymentMethod: 'card' | 'cheque' | 'both';
   handlingFeeIncluded: boolean;
   chequePaymentInstructions?: string;
+  // Discount configuration (conditional on entry-discounts capability)
+  discountIds?: string[];
 }
 
 export interface EventEntryFilter {

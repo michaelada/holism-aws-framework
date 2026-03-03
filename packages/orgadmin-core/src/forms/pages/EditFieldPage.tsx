@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 
 const FIELD_TYPES = [
   'text',
@@ -67,9 +67,6 @@ const EditFieldPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  // Register page for contextual help
-  usePageHelp('edit');
 
   // Helper function to generate field name from label
   const generateFieldName = (label: string): string => {
@@ -165,7 +162,7 @@ const EditFieldPage: React.FC = () => {
   useEffect(() => {
     const loadField = async () => {
       if (!id) {
-        setError(t('forms.fields.messages.fieldNotFound'));
+        setError('Field not found');
         setLoading(false);
         return;
       }
@@ -185,14 +182,14 @@ const EditFieldPage: React.FC = () => {
         setLoading(false);
       } catch (err) {
         // Handle 404 or other errors
-        const errorMessage = err instanceof Error ? err.message : t('forms.fields.messages.fieldNotFound');
+        const errorMessage = err instanceof Error ? err.message : 'Field not found';
         setError(errorMessage);
         setLoading(false);
       }
     };
 
     loadField();
-  }, [id, execute, t]);
+  }, [id, execute]);
 
   const generatedName = generateFieldName(fieldLabel);
   const showOptions = requiresOptions(fieldType);

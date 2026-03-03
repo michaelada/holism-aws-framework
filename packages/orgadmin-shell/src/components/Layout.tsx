@@ -58,6 +58,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
   const { t } = useTranslation();
   const { helpDrawerOpen, toggleHelpDrawer } = useOnboarding();
 
+  // Debug: Log modules on mount and when they change
+  React.useEffect(() => {
+    console.log('Layout modules:', modules.map(m => ({
+      id: m.id,
+      hasSubMenuItems: !!m.subMenuItems,
+      subMenuItemsCount: m.subMenuItems?.length || 0,
+      subMenuItems: m.subMenuItems
+    })));
+  }, [modules]);
+
   // Check if we're on the landing page
   const isLandingPage = location.pathname === '/';
 
@@ -89,13 +99,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
     }
 
     // Find the module that matches the current path
-    return sortedModules.find(module => {
+    const found = sortedModules.find(module => {
       // Check if any of the module's routes match the current path
       return module.routes.some(route => {
         const routePath = `/${route.path}`;
         return location.pathname.startsWith(routePath);
       });
     });
+    
+    console.log('Layout Debug:', {
+      pathname: location.pathname,
+      currentModule: found?.id,
+      hasSubMenuItems: found?.subMenuItems?.length,
+      subMenuItems: found?.subMenuItems
+    });
+    
+    return found;
   }, [location.pathname, sortedModules]);
 
   // Create gradient background based on module color (same as DashboardCard)
@@ -126,6 +145,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
 
   // Filter modules to show only the current module's menu items
   const visibleModules = currentModule ? [currentModule] : [];
+  
+  console.log('visibleModules:', visibleModules.map(m => ({
+    id: m.id,
+    hasSubMenuItems: !!m.subMenuItems,
+    subMenuItemsCount: m.subMenuItems?.length
+  })));
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -180,30 +205,47 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
 
         {/* Module Menu Items - only show current module's items */}
         {visibleModules.map((module) => {
+          console.log('Rendering module in drawer:', {
+            moduleId: module.id,
+            hasSubMenuItems: !!module.subMenuItems,
+            subMenuItemsLength: module.subMenuItems?.length,
+            subMenuItems: module.subMenuItems
+          });
+          
           // If module has sub-menu items, render them
           if (module.subMenuItems && module.subMenuItems.length > 0) {
+            console.log('Rendering subMenuItems for module:', module.id);
             return (
               <React.Fragment key={module.id}>
-                {module.subMenuItems.map((subItem) => {
-                  const Icon = subItem.icon || DashboardIcon;
-                  // Use exact match for sub-items to avoid highlighting multiple items
-                  const isActive = location.pathname === subItem.path;
+                {module.subMenuItems
+                  .filter((subItem) => {
+                    // If subItem has a capability requirement, check if org has it
+                    if (subItem.capability) {
+                      return organisation?.enabledCapabilities?.includes(subItem.capability);
+                    }
+                    // If no capability requirement, always show
+                    return true;
+                  })
+                  .map((subItem) => {
+                    const Icon = subItem.icon || DashboardIcon;
+                    // Use exact match for sub-items to avoid highlighting multiple items
+                    const isActive = location.pathname === subItem.path;
 
-                  return (
-                    <ListItem key={`${module.id}-${subItem.path}`} disablePadding>
-                      <ListItemButton
-                        selected={isActive}
-                        onClick={() => handleNavigation(subItem.path)}
-                        sx={{ pl: 4 }} // Indent sub-items
-                      >
-                        <ListItemIcon>
-                          <Icon />
-                        </ListItemIcon>
-                        <ListItemText primary={t(subItem.label)} />
-                      </ListItemButton>
-                    </ListItem>
-                  );
-                })}
+                    return (
+                      <ListItem key={`${module.id}-${subItem.path}`} disablePadding>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => handleNavigation(subItem.path)}
+                          sx={{ pl: 4 }} // Indent sub-items
+                        >
+                          <ListItemIcon>
+                            <Icon />
+                          </ListItemIcon>
+                          <ListItemText primary={t(subItem.label)} />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
               </React.Fragment>
             );
           }
@@ -367,7 +409,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: isLandingPage ? 0 : 3,
           width: isLandingPage ? '100%' : { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           mt: 8, // Account for AppBar height
         }}

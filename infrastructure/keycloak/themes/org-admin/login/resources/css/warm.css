@@ -1,0 +1,551 @@
+/**
+ * ItsPlainSailing - Warm Keycloak Theme
+ * Matches the warm theme design system with orange/gold gradients
+ */
+
+/* Import Sora font */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Primary Colors - Orange/Amber Gradient */
+  --primary-main: #FF9800;
+  --primary-light: #FFB74D;
+  --primary-dark: #F57C00;
+  --primary-gradient-start: #FF9800;
+  --primary-gradient-end: #E65100;
+  
+  /* Secondary Colors - Gold */
+  --secondary-main: #FFC107;
+  --secondary-light: #FFD54F;
+  --secondary-dark: #FFA000;
+  
+  /* Background Colors */
+  --bg-default: #FFFFFF;
+  --bg-paper: #FAF8F5;
+  --bg-warm: #F1EDE8;
+  
+  /* Text Colors */
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --text-charcoal: #1A1E2E;
+  
+  /* Border Colors */
+  --border-light: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.08);
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-orange: 0 8px 30px rgba(255,152,0,0.25);
+  --shadow-orange-hover: 0 12px 35px rgba(255,152,0,0.35);
+  
+  /* Border Radius */
+  --border-radius: 12px;
+  --border-radius-large: 20px;
+  --border-radius-button: 60px;
+}
+
+/* Global Styles */
+body {
+  background-color: var(--bg-default);
+  background-image: none !important;
+  font-family: 'Sora', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Login Container */
+#kc-container-wrapper {
+  background-color: var(--bg-default);
+}
+
+.login-pf body {
+  background-color: var(--bg-default);
+  background-image: none !important;
+}
+
+html {
+  background-color: var(--bg-default);
+}
+
+/* Card/Form Container */
+#kc-content {
+  background-color: var(--bg-default);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--border-radius-large);
+  border: 1px solid var(--border-light);
+  padding: 2.5em;
+  max-width: 480px;
+  margin: 0 auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#kc-content:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+#kc-header-wrapper {
+  padding: 0.5em 0 0 0;
+}
+
+/* Logo/Header */
+#kc-header {
+  text-align: center;
+  margin-bottom: 2em;
+}
+
+#kc-header-wrapper #kc-header {
+  color: var(--text-primary);
+  font-size: 1.5em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+#kc-header-wrapper h1 {
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: none;
+  font-weight: 700;
+}
+
+/* Logo Styling */
+.kc-logo-wrapper {
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+.kc-logo {
+  max-width: 140px;
+  height: auto;
+  display: inline-block;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+/* Account Login Heading */
+.kc-account-login-heading {
+  text-align: center;
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5em 0;
+  padding: 0;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+/* Login Description */
+.kc-login-description {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0 0 2em 0;
+  padding: 0;
+  line-height: 1.7;
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 1.5em;
+}
+
+label {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  display: block;
+  font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-default);
+  border: 2px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: 'Sora', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input[type="text"]:hover,
+input[type="password"]:hover,
+input[type="email"]:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--primary-main);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-main);
+  box-shadow: 0 0 0 4px rgba(255, 152, 0, 0.1);
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="email"]::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Buttons */
+button,
+input[type="submit"],
+.btn,
+#kc-login,
+#kc-form-buttons input[type="submit"] {
+  padding: 0.85rem 2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--border-radius-button);
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  color: #ffffff;
+  border: none;
+  box-shadow: var(--shadow-orange);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: none;
+  font-family: 'Sora', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+button:hover,
+input[type="submit"]:hover,
+.btn:hover {
+  background: linear-gradient(135deg, #F57C00, #D84315);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-orange-hover);
+}
+
+button:active,
+input[type="submit"]:active,
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Secondary/Outlined Button */
+.btn-secondary,
+button.btn-secondary {
+  background: transparent;
+  border: 2px solid var(--text-charcoal);
+  color: var(--text-charcoal);
+  box-shadow: none;
+}
+
+.btn-secondary:hover,
+button.btn-secondary:hover {
+  background: var(--text-charcoal);
+  color: #ffffff;
+  transform: translateY(-2px);
+  border-color: var(--text-charcoal);
+}
+
+/* Links */
+a {
+  color: var(--primary-main);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-weight: 500;
+}
+
+a:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5em;
+  accent-color: var(--primary-main);
+  cursor: pointer;
+}
+
+.checkbox label {
+  display: inline;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+/* Alert Messages */
+.alert {
+  padding: 1em 1.2em;
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5em;
+  border-left: 4px solid;
+  font-weight: 500;
+}
+
+.alert-error,
+.alert-danger {
+  background-color: #FEF2F2;
+  color: #991B1B;
+  border-left-color: #EF4444;
+}
+
+.alert-warning {
+  background-color: #FFFBEB;
+  color: #92400E;
+  border-left-color: #F59E0B;
+}
+
+.alert-success {
+  background-color: #F0FDF4;
+  color: #166534;
+  border-left-color: #22C55E;
+}
+
+.alert-info {
+  background-color: #EFF6FF;
+  color: #1E40AF;
+  border-left-color: #3B82F6;
+}
+
+/* Info Text */
+#kc-info,
+#kc-info-wrapper {
+  margin-top: 2em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--border-light);
+}
+
+#kc-info-wrapper .instruction {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  line-height: 1.7;
+}
+
+/* Registration Link */
+#kc-registration {
+  margin-top: 1.5em;
+  text-align: center;
+}
+
+#kc-registration span {
+  color: var(--text-secondary);
+  margin-right: 0.5em;
+}
+
+/* Social Providers */
+#kc-social-providers {
+  margin-top: 2em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--border-light);
+}
+
+#kc-social-providers ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#kc-social-providers li {
+  margin-bottom: 0.8em;
+}
+
+#kc-social-providers button,
+#kc-social-providers a {
+  width: 100%;
+  text-align: center;
+  display: block;
+}
+
+/* Locale Selector */
+#kc-locale {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+}
+
+#kc-locale-dropdown {
+  background-color: var(--bg-default);
+  border: 2px solid var(--border-medium);
+  border-radius: var(--border-radius);
+  padding: 0.5em 1em;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#kc-locale-dropdown:hover {
+  border-color: var(--primary-main);
+}
+
+/* Required Field Indicator */
+.required {
+  color: var(--primary-main);
+}
+
+/* Form Actions */
+#kc-form-options {
+  margin-top: 1em;
+}
+
+#kc-form-buttons {
+  margin-top: 1.5em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #kc-form,
+  #kc-content {
+    padding: 1.5em;
+    max-width: 100%;
+    margin: 1em;
+  }
+  
+  #kc-header-wrapper #kc-header {
+    font-size: 1.2em;
+  }
+  
+  .kc-account-login-heading {
+    font-size: 1.5rem;
+  }
+  
+  button,
+  input[type="submit"],
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Loading Spinner */
+.kc-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--border-light);
+  border-radius: 50%;
+  border-top-color: var(--primary-main);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Accessibility */
+*:focus-visible {
+  outline: 2px solid var(--primary-main);
+  outline-offset: 2px;
+}
+
+/* Remove default Keycloak styles that conflict */
+.login-pf .container {
+  background-color: transparent;
+  padding: 0;
+}
+
+.login-pf-page .card-pf {
+  background-color: var(--bg-default);
+  border: none;
+}
+
+/* Username/Email Field Icon */
+.pf-c-form-control {
+  background-color: var(--bg-default);
+}
+
+/* Improve spacing */
+#kc-content-wrapper {
+  padding: 0;
+  margin-top: 0;
+}
+
+/* Terms and Conditions */
+#kc-terms-text {
+  background-color: var(--bg-paper);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1em;
+  border: 1px solid var(--border-light);
+}
+
+/* OTP/2FA */
+#kc-totp-settings {
+  background-color: var(--bg-paper);
+  padding: 1.2em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  border: 1px solid var(--border-light);
+}
+
+/* Password Requirements */
+.password-requirements {
+  background-color: var(--bg-paper);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin-top: 0.5em;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.password-requirements ul {
+  margin: 0.5em 0 0 1.5em;
+  padding: 0;
+}
+
+.password-requirements li {
+  margin: 0.3em 0;
+  line-height: 1.6;
+}
+
+/* Remember Me Checkbox */
+.checkbox {
+  margin: 1em 0;
+}
+
+.checkbox input[type="checkbox"] {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+.checkbox label {
+  vertical-align: middle;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+/* Forgot Password Link */
+#kc-form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1em 0;
+}
+
+#kc-form-options .checkbox {
+  margin: 0;
+}
+
+/* Error Icon in Alerts */
+.pf-c-alert__icon {
+  display: inline-block;
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+input,
+select,
+textarea,
+a {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

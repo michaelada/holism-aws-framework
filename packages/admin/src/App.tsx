@@ -1,14 +1,10 @@
-import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
+import { ThemeProvider, CssBaseline } from '@mui/material';
 import { BrowserRouter } from 'react-router-dom';
 import { useMemo } from 'react';
 import { AuthProvider, useAuth, ApiProvider, NotificationProvider } from './context';
 import { AppRoutes } from './routes';
 import { Layout, ErrorBoundary } from './components';
-import { neumorphicTheme } from './theme';
-
-const customTheme = createTheme({
-  ...neumorphicTheme,
-});
+import { defaultTheme } from './theme';
 
 function AppContent() {
   const { logout, userName } = useAuth();
@@ -35,7 +31,7 @@ function App() {
   }), []);
 
   return (
-    <ThemeProvider theme={customTheme}>
+    <ThemeProvider theme={defaultTheme}>
       <CssBaseline />
       <BrowserRouter>
         <AuthProvider keycloakConfig={keycloakConfig}>

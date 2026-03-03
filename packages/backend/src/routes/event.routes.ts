@@ -99,14 +99,35 @@ router.post(
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
-      const event = await eventService.createEvent(req.body);
-      res.status(201).json(event);
+      // Extract user and organisation from authenticated request
+      const organisationRequest = req as any;
+      const organisationId = organisationRequest.organisationId;
+      const organisationUserId = organisationRequest.organisationUserId;
+      
+      if (!organisationId) {
+        return res.status(400).json({ error: 'Organisation ID not found' });
+      }
+      
+      if (!organisationUserId) {
+        return res.status(400).json({ error: 'Organisation user ID not found' });
+      }
+      
+      // Merge request body with authenticated user and organisation data
+      const eventData = {
+        ...req.body,
+        organisationId,
+        eventOwner: organisationUserId,
+        discountIds: req.body.discountIds || [],
+      };
+      
+      const event = await eventService.createEvent(eventData);
+      return res.status(201).json(event);
     } catch (error) {
       logger.error('Error in POST /events:', error);
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        return res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Failed to create event' });
+        return res.status(500).json({ error: 'Failed to create event' });
       }
     }
   }
@@ -142,7 +163,11 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const event = await eventService.updateEvent(id, req.body);
+      const updateData = {
+        ...req.body,
+        discountIds: req.body.discountIds !== undefined ? req.body.discountIds : undefined,
+      };
+      const event = await eventService.updateEvent(id, updateData);
       res.json(event);
     } catch (error) {
       logger.error('Error in PUT /events/:id:', error);
@@ -157,9 +182,47 @@ router.put(
 
 /**
  * @swagger
+ * /api/orgadmin/events/{id}/clone:
+ *   post:
+ *     summary: Clone an event with all its activities
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Event cloned successfully
+ *       404:
+ *         description: Event not found
+ */
+router.post(
+  '/events/:id/clone',
+  authenticateToken(),
+  ...requireOrgAdminCapability('event-management'),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const clonedEvent = await eventService.cloneEvent(id);
+      return res.status(201).json(clonedEvent);
+    } catch (error) {
+      logger.error('Error in POST /events/:id/clone:', error);
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({ error: error.message });
+      } else {
+        return res.status(500).json({ error: 'Failed to clone event' });
+      }
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/orgadmin/events/{id}:
  *   delete:
- *     summary: Delete an event
+ *     summary: Soft delete an event
  *     tags: [Events]
  *     parameters:
  *       - in: path
@@ -176,17 +239,25 @@ router.put(
 router.delete(
   '/events/:id',
   authenticateToken(),
+  ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await eventService.deleteEvent(id);
-      res.status(204).send();
+      const organisationRequest = req as any;
+      const organisationUserId = organisationRequest.organisationUserId;
+      
+      if (!organisationUserId) {
+        return res.status(400).json({ error: 'Organisation user ID not found' });
+      }
+      
+      await eventService.deleteEvent(id, organisationUserId);
+      return res.status(204).send();
     } catch (error) {
       logger.error('Error in DELETE /events/:id:', error);
       if (error instanceof Error && error.message.includes('not found')) {
-        res.status(404).json({ error: error.message });
+        return res.status(404).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Failed to delete event' });
+        return res.status(500).json({ error: 'Failed to delete event' });
       }
     }
   }
