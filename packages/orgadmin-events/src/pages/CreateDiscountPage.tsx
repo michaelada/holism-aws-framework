@@ -60,8 +60,7 @@ interface DiscountFormData {
   applyEveryN?: number;
   // Step 3 fields
   requiresCode: boolean;
-  membershipTypes: string[];
-  userGroups: string[];
+  membershipTypeIds: string[];
   minimumPurchaseAmount?: number;
   maximumDiscountAmount?: number;
   // Step 4 fields
@@ -88,23 +87,9 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   const { setCurrentModule } = useOnboarding();
   const isEditMode = Boolean(id);
 
-  // Placeholder data for membership types and user groups
-  // TODO: Load from API in the future
-  const availableMembershipTypes = [
-    'Standard',
-    'Premium',
-    'VIP',
-    'Student',
-    'Senior',
-  ];
-
-  const availableUserGroups = [
-    'Early Birds',
-    'Loyal Customers',
-    'First Time Buyers',
-    'Corporate',
-    'Non-Profit',
-  ];
+  // State for membership types loaded from API
+  const [membershipTypes, setMembershipTypes] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingMembershipTypes, setLoadingMembershipTypes] = useState(true);
 
   const steps = [
     'Basic Information',
@@ -128,8 +113,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
     discountValue: 0,
     applicationScope: 'item',
     requiresCode: false,
-    membershipTypes: [],
-    userGroups: [],
+    membershipTypeIds: [],
     combinable: true,
     priority: 0,
   });
@@ -139,11 +123,33 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
     setCurrentModule(moduleType === 'memberships' ? 'memberships' : 'events');
   }, [setCurrentModule, moduleType]);
 
+  // Load membership types from API
+  useEffect(() => {
+    loadMembershipTypes();
+  }, []);
+
   useEffect(() => {
     if (isEditMode && id) {
       loadDiscount(id);
     }
   }, [id, isEditMode]);
+
+  const loadMembershipTypes = async () => {
+    try {
+      setLoadingMembershipTypes(true);
+      const types = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/membership-types',
+      });
+      const typesArray = Array.isArray(types) ? types : [];
+      setMembershipTypes(typesArray);
+    } catch (error) {
+      console.error('Failed to load membership types:', error);
+      setMembershipTypes([]);
+    } finally {
+      setLoadingMembershipTypes(false);
+    }
+  };
 
   const loadDiscount = async (discountId: string) => {
     if (!organisation?.id) {
@@ -170,8 +176,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
         applyToQuantity: response.quantityRules?.applyToQuantity,
         applyEveryN: response.quantityRules?.applyEveryN,
         requiresCode: response.eligibilityCriteria?.requiresCode || false,
-        membershipTypes: response.eligibilityCriteria?.membershipTypes || [],
-        userGroups: response.eligibilityCriteria?.userGroups || [],
+        membershipTypeIds: response.eligibilityCriteria?.membershipTypeIds || [],
         minimumPurchaseAmount: response.eligibilityCriteria?.minimumPurchaseAmount,
         maximumDiscountAmount: response.eligibilityCriteria?.maximumDiscountAmount,
         validFrom: response.validFrom ? new Date(response.validFrom) : undefined,
@@ -346,8 +351,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
 
       const eligibilityCriteria = {
         requiresCode: formData.requiresCode,
-        membershipTypes: formData.membershipTypes.length > 0 ? formData.membershipTypes : undefined,
-        userGroups: formData.userGroups.length > 0 ? formData.userGroups : undefined,
+        membershipTypeIds: formData.membershipTypeIds.length > 0 ? formData.membershipTypeIds : undefined,
         minimumPurchaseAmount: formData.minimumPurchaseAmount,
         maximumDiscountAmount: formData.maximumDiscountAmount,
       };
@@ -770,67 +774,39 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
             </Grid>
           )}
 
-          {/* Membership Types */}
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel id="membership-types-label">Membership Types</InputLabel>
-              <Select
-                labelId="membership-types-label"
-                multiple
-                value={formData.membershipTypes}
-                onChange={(e) => handleChange('membershipTypes', e.target.value as string[])}
-                input={<OutlinedInput label="Membership Types" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {availableMembershipTypes.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    <Checkbox checked={formData.membershipTypes.indexOf(type) > -1} />
-                    {type}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>
-                Select membership types that are eligible for this discount (optional)
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-
-          {/* User Groups */}
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel id="user-groups-label">User Groups</InputLabel>
-              <Select
-                labelId="user-groups-label"
-                multiple
-                value={formData.userGroups}
-                onChange={(e) => handleChange('userGroups', e.target.value as string[])}
-                input={<OutlinedInput label="User Groups" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {availableUserGroups.map((group) => (
-                  <MenuItem key={group} value={group}>
-                    <Checkbox checked={formData.userGroups.indexOf(group) > -1} />
-                    {group}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>
-                Select user groups that are eligible for this discount (optional)
-              </FormHelperText>
-            </FormControl>
-          </Grid>
+          {/* Membership Types - Only shown if membership types exist */}
+          {!loadingMembershipTypes && membershipTypes.length > 0 && (
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel id="membership-types-label">Membership Types</InputLabel>
+                <Select
+                  labelId="membership-types-label"
+                  multiple
+                  value={formData.membershipTypeIds}
+                  onChange={(e) => handleChange('membershipTypeIds', e.target.value as string[])}
+                  input={<OutlinedInput label="Membership Types" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((id) => {
+                        const type = membershipTypes.find(t => t.id === id);
+                        return type ? <Chip key={id} label={type.name} size="small" /> : null;
+                      })}
+                    </Box>
+                  )}
+                >
+                  {membershipTypes.map((type) => (
+                    <MenuItem key={type.id} value={type.id}>
+                      <Checkbox checked={formData.membershipTypeIds.indexOf(type.id) > -1} />
+                      {type.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  Select membership types that are eligible for this discount (optional)
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+          )}
 
           {/* Minimum Purchase Amount */}
           <Grid item xs={12} md={6}>
@@ -1252,25 +1228,12 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
                 <Typography variant="body2" color="textSecondary">Membership Types:</Typography>
               </Grid>
               <Grid item xs={12} sm={8}>
-                {formData.membershipTypes.length > 0 ? (
+                {formData.membershipTypeIds.length > 0 ? (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {formData.membershipTypes.map((type) => (
-                      <Chip key={type} label={type} size="small" />
-                    ))}
-                  </Box>
-                ) : (
-                  <Typography variant="body2">Not set</Typography>
-                )}
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Typography variant="body2" color="textSecondary">User Groups:</Typography>
-              </Grid>
-              <Grid item xs={12} sm={8}>
-                {formData.userGroups.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {formData.userGroups.map((group) => (
-                      <Chip key={group} label={group} size="small" />
-                    ))}
+                    {formData.membershipTypeIds.map((id) => {
+                      const type = membershipTypes.find(t => t.id === id);
+                      return type ? <Chip key={id} label={type.name} size="small" /> : null;
+                    })}
                   </Box>
                 ) : (
                   <Typography variant="body2">Not set</Typography>

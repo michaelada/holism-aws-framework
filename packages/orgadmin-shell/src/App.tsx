@@ -255,15 +255,16 @@ const App: React.FC = () => {
     });
   }, [capabilities]);
 
+  // Error state - check this FIRST before loading state
+  // This ensures error messages are shown even if organisation data failed to load
+  if (error) {
+    return <ErrorScreen error={error} onLogout={logout} />;
+  }
+
   // Loading state - show loading screen while auth or i18n is loading
   // Also wait for organization data before initializing i18n
   if (loading || !i18nReady || (authenticated && !organisation)) {
     return <LoadingScreen />;
-  }
-
-  // Error state
-  if (error) {
-    return <ErrorScreen error={error} onLogout={logout} />;
   }
 
   // Access denied if not org admin

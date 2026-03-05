@@ -37,24 +37,7 @@ import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation, useOnboarding } from '@aws-web-framework/orgadmin-shell';
 import { FieldRenderer } from '@aws-web-framework/components';
-
-const FIELD_TYPES = [
-  'text',
-  'textarea',
-  'number',
-  'email',
-  'phone',
-  'date',
-  'time',
-  'datetime',
-  'boolean',
-  'select',
-  'multiselect',
-  'radio',
-  'checkbox',
-  'file',
-  'image',
-];
+import { useFilteredFieldTypes } from '../hooks/useFilteredFieldTypes';
 
 const CreateFieldPage: React.FC = () => {
   const navigate = useNavigate();
@@ -62,6 +45,7 @@ const CreateFieldPage: React.FC = () => {
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
   const { setCurrentPageId, setCurrentModule, checkModuleVisit } = useOnboarding();
+  const fieldTypes = useFilteredFieldTypes();
   
   // Register this page with the help system
   React.useEffect(() => {
@@ -332,7 +316,7 @@ const CreateFieldPage: React.FC = () => {
                         label={t('forms.fields.fieldType')}
                         disabled={saving}
                       >
-                        {FIELD_TYPES.map((type) => (
+                        {fieldTypes.map((type) => (
                           <MenuItem key={type} value={type}>
                             {type}
                           </MenuItem>

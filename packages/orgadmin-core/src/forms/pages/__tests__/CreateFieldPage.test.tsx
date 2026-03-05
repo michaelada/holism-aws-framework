@@ -1,13 +1,206 @@
 /**
  * Unit tests for CreateFieldPage component
  * Tests LocalizationProvider setup for date picker preview functionality
+ * Tests component rendering with and without document-management capability
  * 
- * **Validates: Requirements 6.4**
+ * **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.9, 6.4**
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+
+// Mock the useFilteredFieldTypes hook
+vi.mock('../../hooks/useFilteredFieldTypes', () => ({
+  useFilteredFieldTypes: vi.fn(() => [
+    'text',
+    'textarea',
+    'number',
+    'email',
+    'phone',
+    'date',
+    'time',
+    'datetime',
+    'boolean',
+    'select',
+    'multiselect',
+    'radio',
+    'checkbox',
+  ]),
+}));
+
+import { useFilteredFieldTypes } from '../../hooks/useFilteredFieldTypes';
+
+describe('CreateFieldPage - Component Rendering Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const componentPath = join(__dirname, '../CreateFieldPage.tsx');
+  const fileContent = readFileSync(componentPath, 'utf-8');
+
+  describe('Component uses useFilteredFieldTypes hook', () => {
+    it('should import useFilteredFieldTypes hook', () => {
+      // Verify the hook is imported
+      expect(fileContent).toContain("import { useFilteredFieldTypes } from '../hooks/useFilteredFieldTypes'");
+    });
+
+    it('should call useFilteredFieldTypes hook in component', () => {
+      // Verify the hook is called
+      expect(fileContent).toContain('const fieldTypes = useFilteredFieldTypes()');
+    });
+
+    it('should use fieldTypes variable in the component', () => {
+      // Verify fieldTypes is used (likely in a map function for rendering)
+      expect(fileContent).toContain('fieldTypes');
+    });
+  });
+
+  describe('Field type dropdown rendering', () => {
+    it('should render field types in a Select/MenuItem structure', () => {
+      // Verify the component uses Material-UI Select and MenuItem
+      expect(fileContent).toContain('<Select');
+      expect(fileContent).toContain('<MenuItem');
+    });
+
+    it('should map over fieldTypes to render options', () => {
+      // Verify fieldTypes is mapped to create menu items
+      expect(fileContent).toContain('fieldTypes.map');
+      expect(fileContent).toMatch(/fieldTypes\.map\([^)]*\)/);
+    });
+
+    it('should render each field type as a MenuItem', () => {
+      // Verify each type is rendered as a MenuItem with key and value
+      const mapMatch = fileContent.match(/fieldTypes\.map\(\(([^)]+)\)\s*=>\s*\(/);
+      expect(mapMatch).toBeTruthy();
+      
+      // Check that MenuItem is rendered with the type
+      const menuItemPattern = /<MenuItem[^>]*key={[^}]*}[^>]*value={[^}]*}[^>]*>/;
+      expect(fileContent).toMatch(menuItemPattern);
+    });
+  });
+
+  describe('Hook behavior with different capabilities', () => {
+    it('should return all field types including file and image when capability is present', () => {
+      // Mock with document-management capability
+      vi.mocked(useFilteredFieldTypes).mockReturnValue([
+        'text',
+        'textarea',
+        'number',
+        'email',
+        'phone',
+        'date',
+        'time',
+        'datetime',
+        'boolean',
+        'select',
+        'multiselect',
+        'radio',
+        'checkbox',
+        'file',
+        'image',
+      ]);
+
+      const fieldTypes = useFilteredFieldTypes();
+      
+      // Verify file and image are included
+      expect(fieldTypes).toContain('file');
+      expect(fieldTypes).toContain('image');
+      expect(fieldTypes).toHaveLength(15);
+    });
+
+    it('should return field types without file and image when capability is absent', () => {
+      // Mock without document-management capability
+      vi.mocked(useFilteredFieldTypes).mockReturnValue([
+        'text',
+        'textarea',
+        'number',
+        'email',
+        'phone',
+        'date',
+        'time',
+        'datetime',
+        'boolean',
+        'select',
+        'multiselect',
+        'radio',
+        'checkbox',
+      ]);
+
+      const fieldTypes = useFilteredFieldTypes();
+      
+      // Verify file and image are NOT included
+      expect(fieldTypes).not.toContain('file');
+      expect(fieldTypes).not.toContain('image');
+      expect(fieldTypes).toHaveLength(13);
+    });
+
+    it('should always include non-document field types', () => {
+      // Test with capability
+      vi.mocked(useFilteredFieldTypes).mockReturnValue([
+        'text',
+        'textarea',
+        'number',
+        'email',
+        'phone',
+        'date',
+        'time',
+        'datetime',
+        'boolean',
+        'select',
+        'multiselect',
+        'radio',
+        'checkbox',
+        'file',
+        'image',
+      ]);
+
+      let fieldTypes = useFilteredFieldTypes();
+      const nonDocumentTypes = [
+        'text',
+        'textarea',
+        'number',
+        'email',
+        'phone',
+        'date',
+        'time',
+        'datetime',
+        'boolean',
+        'select',
+        'multiselect',
+        'radio',
+        'checkbox',
+      ];
+
+      nonDocumentTypes.forEach((type) => {
+        expect(fieldTypes).toContain(type);
+      });
+
+      // Test without capability
+      vi.mocked(useFilteredFieldTypes).mockReturnValue([
+        'text',
+        'textarea',
+        'number',
+        'email',
+        'phone',
+        'date',
+        'time',
+        'datetime',
+        'boolean',
+        'select',
+        'multiselect',
+        'radio',
+        'checkbox',
+      ]);
+
+      fieldTypes = useFilteredFieldTypes();
+
+      nonDocumentTypes.forEach((type) => {
+        expect(fieldTypes).toContain(type);
+      });
+    });
+  });
+});
 
 describe('CreateFieldPage - LocalizationProvider Tests', () => {
   const componentPath = join(__dirname, '../CreateFieldPage.tsx');

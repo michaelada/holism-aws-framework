@@ -3,6 +3,7 @@ import { applicationFormService } from '../services/application-form.service';
 import { formSubmissionService } from '../services/form-submission.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
+import { db } from '../database/pool';
 
 const router = Router();
 
@@ -32,6 +33,48 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
+      const forms = await applicationFormService.getApplicationFormsByOrganisation(organisationId);
+      res.json(forms);
+    } catch (error) {
+      logger.error('Error in GET /application-forms:', error);
+      res.status(500).json({ error: 'Failed to fetch application forms' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/application-forms:
+ *   get:
+ *     summary: Get all application forms for the authenticated user's organisation
+ *     tags: [Application Forms]
+ *     responses:
+ *       200:
+ *         description: List of application forms
+ */
+router.get(
+  '/application-forms',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (!user?.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      // Get user's organisation from organization_users table
+      const orgResult = await db.query(
+        `SELECT organization_id FROM organization_users 
+         WHERE keycloak_user_id = $1 AND user_type = 'org-admin' AND status = 'active'
+         LIMIT 1`,
+        [user.userId]
+      );
+      
+      if (orgResult.rows.length === 0) {
+        return res.status(403).json({ error: 'User is not an organization administrator' });
+      }
+      
+      const organisationId = orgResult.rows[0].organization_id;
       const forms = await applicationFormService.getApplicationFormsByOrganisation(organisationId);
       res.json(forms);
     } catch (error) {

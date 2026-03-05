@@ -31,25 +31,8 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-
-const FIELD_TYPES = [
-  'text',
-  'textarea',
-  'number',
-  'email',
-  'phone',
-  'date',
-  'time',
-  'datetime',
-  'boolean',
-  'select',
-  'multiselect',
-  'radio',
-  'checkbox',
-  'file',
-  'image',
-];
+import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { useFilteredFieldTypes } from '../hooks/useFilteredFieldTypes';
 
 const EditFieldPage: React.FC = () => {
   const navigate = useNavigate();
@@ -57,11 +40,14 @@ const EditFieldPage: React.FC = () => {
   const { execute } = useApi();
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
+  const { hasCapability } = useCapabilities();
+  const fieldTypes = useFilteredFieldTypes();
   
   const [loading, setLoading] = useState(true);
   const [fieldLabel, setFieldLabel] = useState('');
   const [fieldDescription, setFieldDescription] = useState('');
   const [fieldType, setFieldType] = useState('text');
+  const [originalFieldType, setOriginalFieldType] = useState('text');
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -178,6 +164,7 @@ const EditFieldPage: React.FC = () => {
         setFieldLabel(response.label || '');
         setFieldDescription(response.description || '');
         setFieldType(response.datatype || 'text');
+        setOriginalFieldType(response.datatype || 'text');
         setFieldOptions(response.options || []);
         setLoading(false);
       } catch (err) {
@@ -193,6 +180,12 @@ const EditFieldPage: React.FC = () => {
 
   const generatedName = generateFieldName(fieldLabel);
   const showOptions = requiresOptions(fieldType);
+  
+  // Determine if datatype dropdown should be disabled
+  // If the original field is a document type (file/image) and the organization
+  // doesn't have the document-management capability, disable the dropdown
+  const isDocumentType = (type: string) => type === 'file' || type === 'image';
+  const isDatatypeDisabled = isDocumentType(originalFieldType) && !hasCapability('document-management');
 
   return (
     <Box sx={{ p: 3 }}>
@@ -309,15 +302,20 @@ const EditFieldPage: React.FC = () => {
                         }
                       }}
                       label={t('forms.fields.fieldType')}
-                      disabled={saving}
+                      disabled={saving || isDatatypeDisabled}
                     >
-                      {FIELD_TYPES.map((type) => (
+                      {fieldTypes.map((type) => (
                         <MenuItem key={type} value={type}>
                           {type}
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
+                  {isDatatypeDisabled && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      {t('forms.fields.datatypeLockedNoCapability')}
+                    </Typography>
+                  )}
                 </Grid>
 
                 {showOptions && (

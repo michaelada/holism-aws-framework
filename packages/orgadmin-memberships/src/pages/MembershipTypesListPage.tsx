@@ -38,15 +38,8 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { MembershipType } from '../types/membership.types';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async (_params: { method: string; url: string }) => {
-    // Mock data for development
-    return [];
-  },
-});
 
 const MembershipTypesListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -131,11 +124,11 @@ const MembershipTypesListPage: React.FC = () => {
   };
 
   const handleEditType = (typeId: string) => {
-    navigate(`/orgadmin/members/types/${typeId}/edit`);
+    navigate(`/members/types/${typeId}/edit`);
   };
 
   const handleViewType = (typeId: string) => {
-    navigate(`/orgadmin/members/types/${typeId}`);
+    navigate(`/members/types/${typeId}`);
   };
 
   const getStatusColor = (status: string) => {

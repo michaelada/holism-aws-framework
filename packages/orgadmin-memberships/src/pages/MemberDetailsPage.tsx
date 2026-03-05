@@ -106,7 +106,7 @@ const MemberDetailsPage: React.FC = () => {
   };
 
   const handleEdit = () => {
-    navigate(`/orgadmin/members/${id}/edit`);
+    navigate(`/members/${id}/edit`);
   };
 
   if (loading) {

@@ -1,5 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css';
 
 // Temporarily disable StrictMode to prevent double-mounting during Keycloak initialization
 // StrictMode causes components to mount twice in development which can interfere with Keycloak

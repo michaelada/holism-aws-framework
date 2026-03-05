@@ -1,0 +1,32 @@
+/* Global styles for Super Admin UI */
+
+/* Fix for stuck MUI backdrops */
+/* This prevents orphaned backdrop elements from blocking the UI */
+.MuiBackdrop-root:not([aria-hidden="false"]) {
+  /* Hide backdrops that are not actively part of an open dialog */
+  pointer-events: none !important;
+  opacity: 0 !important;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Ensure active backdrops work correctly */
+.MuiBackdrop-root[aria-hidden="false"] {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+/* Additional safety: Remove backdrops that have been orphaned for more than 1 second */
+@keyframes fadeOutOrphanedBackdrop {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 0;
+    display: none;
+  }
+}
+
+/* Apply fade out to backdrops without a parent dialog */
+.MuiBackdrop-root:not(:has(~ [role="dialog"])):not([aria-hidden="false"]) {
+  animation: fadeOutOrphanedBackdrop 0.5s ease-out forwards;
+}

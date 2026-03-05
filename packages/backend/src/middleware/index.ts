@@ -8,12 +8,19 @@ export {
 } from './auth.middleware';
 
 export {
+  requireOrgAdminRole,
+  requireOrgAdmin
+} from './orgadmin-role.middleware';
+
+export {
   loadOrganisationCapabilities,
   requireCapability,
   requireAllCapabilities,
   requireOrgAdminCapability,
   OrganisationRequest
 } from './capability.middleware';
+
+export { validateFieldCapability } from './field-capability.middleware';
 
 export {
   errorHandler,

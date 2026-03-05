@@ -1,5 +1,6 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
+import { FormSubmissionService } from './form-submission.service';
 
 /**
  * MembershipType interface matching database schema
@@ -107,6 +108,18 @@ export interface UpdateMembershipTypeDto {
 }
 
 /**
+ * DTO for creating a member
+ */
+export interface CreateMemberDto {
+  organisationId: string;
+  membershipTypeId: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  formSubmissionId: string;
+}
+
+/**
  * Discount validation result interface
  */
 export interface DiscountValidationResult {
@@ -122,6 +135,13 @@ export interface DiscountValidationResult {
  * Service for managing membership types and members
  */
 export class MembershipService {
+  private formSubmissionService: FormSubmissionService;
+
+  constructor(formSubmissionService?: FormSubmissionService) {
+    // Allow dependency injection for testing, but use singleton by default
+    this.formSubmissionService = formSubmissionService || new FormSubmissionService();
+  }
+
   /**
    * Convert database row to MembershipType object
    */
@@ -525,6 +545,151 @@ export class MembershipService {
       throw error;
     }
   }
+
+  /**
+   * Create a new member
+   */
+  async createMember(data: CreateMemberDto): Promise<Member> {
+    try {
+      // Validate membership type exists
+      const membershipType = await this.getMembershipTypeById(data.membershipTypeId);
+      if (!membershipType) {
+        throw new Error('Membership type not found');
+      }
+
+      // Validate form submission exists
+      const formSubmission = await this.formSubmissionService.getSubmissionById(data.formSubmissionId);
+      if (!formSubmission) {
+        throw new Error('Form submission not found');
+      }
+
+      // Validate required fields
+      if (!data.firstName || data.firstName.trim() === '') {
+        throw new Error('First name is required');
+      }
+      if (!data.lastName || data.lastName.trim() === '') {
+        throw new Error('Last name is required');
+      }
+
+      // Determine status based on automaticallyApprove flag
+      const status = membershipType.automaticallyApprove ? 'active' : 'pending';
+
+      // Calculate valid until date
+      const validUntil = this.calculateValidUntil(membershipType);
+
+      // Retry logic for handling unique constraint violations on membership_number
+      const maxRetries = 3;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          // Generate membership number
+          const membershipNumber = await this.generateMembershipNumber(data.organisationId);
+
+          // Create member record
+          const result = await db.query(
+            `INSERT INTO members
+             (organisation_id, membership_type_id, user_id, membership_number,
+              first_name, last_name, form_submission_id, status, valid_until, payment_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING *`,
+            [
+              data.organisationId,
+              data.membershipTypeId,
+              data.userId,
+              membershipNumber,
+              data.firstName.trim(),
+              data.lastName.trim(),
+              data.formSubmissionId,
+              status,
+              validUntil,
+              'pending',
+            ]
+          );
+
+          logger.info(`Member created: ${result.rows[0].id} (${membershipNumber})`);
+          return this.rowToMember(result.rows[0]);
+        } catch (error: any) {
+          // Check if it's a unique constraint violation on membership_number
+          if (error.code === '23505' && error.constraint === 'members_membership_number_key') {
+            logger.warn(`Membership number collision detected, retrying (attempt ${attempt + 1}/${maxRetries})`);
+            // Wait a small random amount before retrying to reduce collision probability
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+            continue;
+          }
+          // If it's a different error, throw immediately
+          throw error;
+        }
+      }
+
+      // If we exhausted all retries, throw an error
+      throw new Error(`Failed to create member after ${maxRetries} attempts due to membership number collision`);
+    } catch (error) {
+      logger.error('Error creating member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate a unique membership number
+   * Format: {ORG_PREFIX}-{YEAR}-{SEQUENCE}
+   */
+  private async generateMembershipNumber(organisationId: string): Promise<string> {
+    try {
+      // Get organization name and create prefix from it
+      const orgResult = await db.query(
+        'SELECT name FROM organizations WHERE id = $1',
+        [organisationId]
+      );
+      
+      // Create prefix from organization name (first 3-4 uppercase letters)
+      const orgName = orgResult.rows[0]?.name || 'ORG';
+      const prefix = orgName
+        .toUpperCase()
+        .replace(/[^A-Z]/g, '') // Remove non-letters
+        .substring(0, 4) // Take first 4 letters
+        || 'ORG'; // Fallback if no letters found
+
+      // Get current year
+      const year = new Date().getFullYear();
+
+      // Get next sequence number for this year
+      const countResult = await db.query(
+        `SELECT COUNT(*) as count FROM members
+         WHERE organisation_id = $1
+         AND EXTRACT(YEAR FROM created_at) = $2`,
+        [organisationId, year]
+      );
+      const sequence = (parseInt(countResult.rows[0].count) + 1)
+        .toString()
+        .padStart(5, '0');
+
+      return `${prefix}-${year}-${sequence}`;
+    } catch (error) {
+      logger.error('Error generating membership number:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate valid until date based on membership type configuration
+   */
+  private calculateValidUntil(membershipType: MembershipType): Date {
+    if (membershipType.isRollingMembership && membershipType.numberOfMonths) {
+      // Rolling membership: add months from today
+      const validUntil = new Date();
+      validUntil.setMonth(validUntil.getMonth() + membershipType.numberOfMonths);
+      return validUntil;
+    } else if (membershipType.validUntil) {
+      // Fixed date membership
+      return new Date(membershipType.validUntil);
+    } else {
+      // Default: 1 year from today
+      const validUntil = new Date();
+      validUntil.setFullYear(validUntil.getFullYear() + 1);
+      return validUntil;
+    }
+  }
+
 
   /**
    * Validate discount IDs for membership type association

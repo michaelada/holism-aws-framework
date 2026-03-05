@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { metadataService } from '../services/metadata.service';
 import { FieldDefinition, ObjectDefinition } from '../types/metadata.types';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
+import { loadOrganisationCapabilities } from '../middleware/capability.middleware';
+import { validateFieldCapability } from '../middleware/field-capability.middleware';
 
 const router = Router();
 
@@ -75,7 +77,7 @@ router.use(authenticateToken());
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/fields', requireRole('admin'), async (req: Request, res: Response) => {
+router.post('/fields', requireRole('admin'), loadOrganisationCapabilities(), validateFieldCapability(), async (req: Request, res: Response) => {
   try {
     const field: FieldDefinition = req.body;
 
@@ -285,7 +287,7 @@ router.get('/fields/:shortName', async (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.put('/fields/:shortName', requireRole('admin'), async (req: Request, res: Response) => {
+router.put('/fields/:shortName', requireRole('admin'), loadOrganisationCapabilities(), validateFieldCapability(), async (req: Request, res: Response) => {
   try {
     const { shortName } = req.params;
     const updates: Partial<FieldDefinition> = req.body;

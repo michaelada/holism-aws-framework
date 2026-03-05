@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -30,6 +30,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -40,26 +42,24 @@ import {
   FileDownload as ExportIcon,
   Label as LabelIcon,
   FilterList as FilterIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
 import { useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { Member, MemberFilter } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
 
-// Mock API hook
-const useApi = () => ({
-  execute: async (_params: { method: string; url: string }) => {
-    return [];
-  },
-});
-
 const MembersDatabasePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { execute } = useApi();
   const { t } = useTranslation();
   const { checkModuleVisit } = useOnboarding();
+  const { organisation } = useOrganisation();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
@@ -72,6 +72,41 @@ const MembersDatabasePage: React.FC = () => {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchOperation, setBatchOperation] = useState<'mark_processed' | 'mark_unprocessed' | 'add_labels' | 'remove_labels'>('mark_processed');
+  
+  // New state for membership type count
+  const [membershipTypeCount, setMembershipTypeCount] = useState<number>(0);
+  const [membershipTypes, setMembershipTypes] = useState<any[]>([]);
+  const [loadingTypes, setLoadingTypes] = useState<boolean>(true);
+  
+  // New state for user roles
+  const [userRoles, setUserRoles] = useState<Array<{ id: string; name: string; displayName: string }>>([]);
+  const [loadingRoles, setLoadingRoles] = useState<boolean>(true);
+
+  // Success notification state
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      const message = location.state.createdMemberName
+        ? `${location.state.successMessage}: ${location.state.createdMemberName}`
+        : location.state.successMessage;
+      setSuccessMessage(message);
+      setShowSuccessNotification(true);
+      
+      // Restore filter state if provided
+      if (location.state?.filterState) {
+        const { searchTerm: savedSearchTerm, statusFilter: savedStatusFilter, selectedCustomFilter: savedCustomFilter } = location.state.filterState;
+        if (savedSearchTerm !== undefined) setSearchTerm(savedSearchTerm);
+        if (savedStatusFilter !== undefined) setStatusFilter(savedStatusFilter);
+        if (savedCustomFilter !== undefined) setSelectedCustomFilter(savedCustomFilter);
+      }
+      
+      // Clear the navigation state to prevent showing the message again on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   // Check module visit for onboarding
   useEffect(() => {
@@ -81,11 +116,74 @@ const MembersDatabasePage: React.FC = () => {
   useEffect(() => {
     loadMembers();
     loadCustomFilters();
+    loadMembershipTypeCount();
+    loadUserRoles();
   }, []);
 
   useEffect(() => {
     filterMembers();
   }, [members, searchTerm, statusFilter, selectedCustomFilter]);
+
+  const loadMembershipTypeCount = async () => {
+    try {
+      setLoadingTypes(true);
+      const types = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/membership-types',
+      });
+      const typesArray = Array.isArray(types) ? types : [];
+      setMembershipTypes(typesArray);
+      setMembershipTypeCount(typesArray.length);
+    } catch (error) {
+      console.error('Failed to load membership types:', error);
+      setMembershipTypes([]);
+      setMembershipTypeCount(0);
+    } finally {
+      setLoadingTypes(false);
+    }
+  };
+
+  const loadUserRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      const response = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/auth/me',
+      });
+      setUserRoles(response.roles || []);
+    } catch (error) {
+      console.error('Failed to load user roles:', error);
+      setUserRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
+
+  // Check if user has admin role (Organization Administrator or Full Administrator)
+  const hasAdminRole = () => {
+    return userRoles.some(role => role.name === 'admin' || role.name === 'full-administrator');
+  };
+
+  const handleAddMember = () => {
+    // Preserve filter state for navigation back
+    const filterState = {
+      searchTerm,
+      statusFilter,
+      selectedCustomFilter,
+    };
+
+    if (membershipTypeCount === 1 && membershipTypes.length === 1) {
+      // Auto-select the single membership type and navigate with typeId
+      navigate(`/members/create?typeId=${membershipTypes[0].id}`, {
+        state: { filterState },
+      });
+    } else if (membershipTypeCount > 1) {
+      // Navigate to type selector (will be shown on the create page)
+      navigate('/members/create', {
+        state: { filterState },
+      });
+    }
+  };
 
   const loadMembers = async () => {
     try {
@@ -158,11 +256,11 @@ const MembersDatabasePage: React.FC = () => {
   };
 
   const handleViewMember = (memberId: string) => {
-    navigate(`/orgadmin/members/${memberId}`);
+    navigate(`/members/${memberId}`);
   };
 
   const handleEditMember = (memberId: string) => {
-    navigate(`/orgadmin/members/${memberId}/edit`);
+    navigate(`/members/${memberId}/edit`);
   };
 
   const handleToggleProcessed = async (memberId: string, _currentStatus: boolean) => {
@@ -214,13 +312,26 @@ const MembersDatabasePage: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">{t('memberships.membersDatabase')}</Typography>
-        <Button
-          variant="outlined"
-          startIcon={<ExportIcon />}
-          onClick={handleExport}
-        >
-          {t('memberships.actions.exportToExcel')}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<ExportIcon />}
+            onClick={handleExport}
+          >
+            {t('memberships.actions.exportToExcel')}
+          </Button>
+          {/* Add Member button - visible only when membership types exist AND user has admin role */}
+          {!loadingTypes && !loadingRoles && membershipTypeCount > 0 && hasAdminRole() && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddMember}
+              data-testid="add-member-button"
+            >
+              {t('memberships.actions.addMember')}
+            </Button>
+          )}
+        </Box>
       </Box>
 
       <Card sx={{ mb: 3 }}>
@@ -428,6 +539,22 @@ const MembersDatabasePage: React.FC = () => {
           loadMembers();
         }}
       />
+
+      {/* Success notification */}
+      <Snackbar
+        open={showSuccessNotification}
+        autoHideDuration={6000}
+        onClose={() => setShowSuccessNotification(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccessNotification(false)}
+          severity="success"
+          sx={{ width: '100%' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

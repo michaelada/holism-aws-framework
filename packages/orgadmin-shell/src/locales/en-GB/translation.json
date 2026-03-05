@@ -292,6 +292,7 @@
       "status": "Status",
       "type": "Type",
       "pricing": "Pricing",
+      "discounts": "Discounts",
       "actions": "Actions",
       "membershipType": "Membership Type",
       "firstName": "First Name",
@@ -463,7 +464,11 @@
       "addLabels": "Add Labels",
       "removeLabels": "Remove Labels",
       "execute": "Execute",
-      "add": "Add"
+      "add": "Add",
+      "addMember": "Add Member"
+    },
+    "typeSelector": {
+      "title": "Select Membership Type"
     },
     "batch": {
       "markProcessed": {
@@ -1196,6 +1201,7 @@
       "fieldDescription": "Description",
       "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
       "fieldType": "Field Type",
+      "datatypeLockedNoCapability": "Field type cannot be changed because your organization does not have the document management capability",
       "fieldOptions": "Options",
       "fieldConfiguration": "Field Configuration",
       "livePreview": "Live Preview",
@@ -1324,6 +1330,7 @@
       "fieldDescription": "Description",
       "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
       "fieldType": "Field Type",
+      "datatypeLockedNoCapability": "Field type cannot be changed because your organization does not have the document management capability",
       "fieldOptions": "Options",
       "fieldConfiguration": "Field Configuration",
       "livePreview": "Live Preview",

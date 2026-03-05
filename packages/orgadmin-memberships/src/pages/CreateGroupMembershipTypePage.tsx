@@ -37,33 +37,7 @@ import FieldConfigurationTable from '../components/FieldConfigurationTable';
 import PersonConfigurationSection from '../components/PersonConfigurationSection';
 import { DiscountSelector } from '@aws-web-framework/components';
 import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation } from '@aws-web-framework/orgadmin-core';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async ({ method, url, data }: { method: string; url: string; data?: any }) => {
-    console.log('API call:', method, url, data);
-    
-    // Mock responses based on URL
-    if (url === '/api/orgadmin/application-forms') {
-      return []; // Return empty array for forms
-    }
-    if (url.startsWith('/api/orgadmin/application-forms/') && url.endsWith('/fields')) {
-      return []; // Return empty array for form fields
-    }
-    if (url === '/api/orgadmin/payment-methods') {
-      return [
-        { id: 'pay-offline', name: 'Pay Offline' },
-        { id: 'stripe', name: 'Card Payment (Stripe)' },
-      ];
-    }
-    if (url.startsWith('/api/orgadmin/membership-types/')) {
-      return { id: '1', ...data }; // Return object for single membership type
-    }
-    
-    return { id: '1', ...data };
-  },
-});
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 
 interface ApplicationForm {
   id: string;

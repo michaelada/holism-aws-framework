@@ -1000,4 +1000,581 @@ describe('MembershipService', () => {
       });
     });
   });
+
+  describe('createMember', () => {
+    describe('successful member creation', () => {
+      it('should create member with active status when automaticallyApprove is true', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
+        const mockMemberCount = { count: '0' };
+        const year = new Date().getFullYear();
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
+          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
+          .mockResolvedValueOnce({ // INSERT member
+            rows: [{
+              id: 'member-1',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: `TEST-${year}-00001`,
+              first_name: 'John',
+              last_name: 'Doe',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'active',
+              valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result).toBeDefined();
+        expect(result.status).toBe('active');
+        expect(result.firstName).toBe('John');
+        expect(result.lastName).toBe('Doe');
+        expect(result.membershipNumber).toBe(`TEST-${year}-00001`);
+      });
+
+      it('should create member with pending status when automaticallyApprove is false', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'Jane',
+          lastName: 'Smith',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: false,
+          validUntil: new Date('2024-12-31'),
+          automaticallyApprove: false,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
+        const mockMemberCount = { count: '5' };
+        const year = new Date().getFullYear();
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
+          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
+          .mockResolvedValueOnce({ // INSERT member
+            rows: [{
+              id: 'member-2',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: `TEST-${year}-00006`,
+              first_name: 'Jane',
+              last_name: 'Smith',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'pending',
+              valid_until: new Date('2024-12-31'),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result).toBeDefined();
+        expect(result.status).toBe('pending');
+        expect(result.firstName).toBe('Jane');
+        expect(result.lastName).toBe('Smith');
+      });
+
+      it('should trim whitespace from first and last names', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: '  John  ',
+          lastName: '  Doe  ',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
+        const mockMemberCount = { count: '0' };
+        const year = new Date().getFullYear();
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any)
+          .mockResolvedValueOnce({
+            rows: [{
+              id: 'member-1',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: `TEST-${year}-00001`,
+              first_name: 'John',
+              last_name: 'Doe',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'active',
+              valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result.firstName).toBe('John');
+        expect(result.lastName).toBe('Doe');
+      });
+    });
+
+    describe('error handling for missing membership type', () => {
+      it('should throw error when membership type not found', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'non-existent-type',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        mockDb.query.mockResolvedValueOnce({ rows: [] } as any); // getMembershipTypeById returns empty
+
+        await expect(service.createMember(memberData)).rejects.toThrow('Membership type not found');
+      });
+    });
+
+    describe('error handling for missing form submission', () => {
+      it('should throw error when form submission not found', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'non-existent-submission',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
+          .mockResolvedValueOnce({ rows: [] } as any); // getSubmissionById returns empty
+
+        await expect(service.createMember(memberData)).rejects.toThrow('Form submission not found');
+      });
+    });
+
+    describe('error handling for invalid data', () => {
+      it('should throw error when firstName is empty', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: '',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow('First name is required');
+      });
+
+      it('should throw error when firstName is only whitespace', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: '   ',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow('First name is required');
+      });
+
+      it('should throw error when lastName is empty', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: '',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow('Last name is required');
+      });
+
+      it('should throw error when lastName is only whitespace', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: '   ',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow('Last name is required');
+      });
+    });
+
+    describe('retry logic for membership number collision', () => {
+      it('should retry on membership number collision and succeed', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
+        const mockMemberCount = { count: '0' };
+        const year = new Date().getFullYear();
+
+        // First attempt: collision error
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
+          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
+          .mockRejectedValueOnce({ // INSERT fails with unique constraint violation
+            code: '23505',
+            constraint: 'members_membership_number_key',
+          })
+          // Second attempt: success
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
+          .mockResolvedValueOnce({ rows: [{ count: '1' }] } as any) // getMemberCount (incremented)
+          .mockResolvedValueOnce({ // INSERT succeeds
+            rows: [{
+              id: 'member-1',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: `TEST-${year}-00002`,
+              first_name: 'John',
+              last_name: 'Doe',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'active',
+              valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result).toBeDefined();
+        expect(result.membershipNumber).toBe(`TEST-${year}-00002`);
+        // 1 getMembershipTypeById + 1 getSubmissionById + (3 queries per attempt * 2 attempts) = 8 total
+        expect(mockDb.query).toHaveBeenCalledTimes(8);
+      });
+
+      it('should throw error after max retries on persistent collision', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
+        const mockMemberCount = { count: '0' };
+
+        // All attempts fail with collision
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
+          .mockResolvedValue({ rows: [mockOrganization] } as any) // getOrganization (all attempts)
+          .mockResolvedValue({ rows: [mockMemberCount] } as any) // getMemberCount (all attempts)
+          .mockRejectedValue({ // INSERT fails (all attempts)
+            code: '23505',
+            constraint: 'members_membership_number_key',
+          });
+
+        await expect(service.createMember(memberData)).rejects.toThrow(
+          'Failed to create member after 3 attempts due to membership number collision'
+        );
+      });
+
+      it('should throw immediately on non-collision errors', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
+        const mockMemberCount = { count: '0' };
+
+        // Different error (not collision)
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
+          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
+          .mockRejectedValueOnce(new Error('Database connection error')); // Different error
+
+        await expect(service.createMember(memberData)).rejects.toThrow('Database connection error');
+        
+        // Should not retry on non-collision errors
+        expect(mockDb.query).toHaveBeenCalledTimes(5); // Only one attempt
+      });
+    });
+  });
 });
+

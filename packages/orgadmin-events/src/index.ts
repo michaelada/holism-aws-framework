@@ -62,10 +62,12 @@ export const eventsModule: ModuleRegistration = {
     {
       path: 'events/types',
       component: lazy(() => import('./pages/EventTypesListPage')),
+      capability: 'event-types', // Only accessible if event-types capability enabled
     },
     {
       path: 'events/venues',
       component: lazy(() => import('./pages/VenuesListPage')),
+      capability: 'venues', // Only accessible if venues capability enabled
     },
     {
       path: 'events/discounts',
@@ -93,11 +95,13 @@ export const eventsModule: ModuleRegistration = {
       label: 'modules.events.menu.eventTypes',
       path: '/events/types',
       icon: CategoryIcon,
+      capability: 'event-types', // Only show if event-types capability enabled
     },
     {
       label: 'modules.events.menu.venues',
       path: '/events/venues',
       icon: LocationIcon,
+      capability: 'venues', // Only show if venues capability enabled
     },
     {
       label: 'modules.events.menu.discounts',

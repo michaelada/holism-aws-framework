@@ -18,6 +18,7 @@ interface UseAuthReturn {
   } | null;
   organisation: Organisation | null;
   capabilities: string[];
+  roles: Array<{ id: string; name: string; displayName: string }>;
   isOrgAdmin: boolean;
   login: () => void;
   logout: () => void;
@@ -51,6 +52,7 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
   const [user, setUser] = useState<UseAuthReturn['user']>(null);
   const [organisation, setOrganisation] = useState<Organisation | null>(null);
   const [capabilities, setCapabilities] = useState<string[]>([]);
+  const [roles, setRoles] = useState<Array<{ id: string; name: string; displayName: string }>>([]);
   const [isOrgAdmin, setIsOrgAdmin] = useState(false);
 
   const isInitializing = useRef(false);
@@ -72,7 +74,7 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
         withCredentials: true,
       });
 
-      const { user: userData, organisation: orgData, capabilities: caps } = response.data;
+      const { user: userData, organisation: orgData, capabilities: caps, roles: userRoles } = response.data;
 
       setUser({
         id: userData.id,
@@ -84,10 +86,24 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
 
       setOrganisation(orgData);
       setCapabilities(caps || orgData.enabledCapabilities || []);
+      setRoles(userRoles || []);
       setIsOrgAdmin(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching organisation:', err);
-      throw new Error('Failed to load organisation data');
+      
+      // Extract error message from response if available
+      let errorMessage = 'Failed to load organisation data';
+      
+      if (err.response?.status === 403) {
+        // User is not an org admin or account is not active
+        errorMessage = err.response.data?.message || 'You do not have permission to access the Organisation Admin Portal. Please contact your system administrator if you believe this is an error.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      throw new Error(errorMessage);
     }
   };
 
@@ -119,6 +135,7 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
         updatedAt: new Date(),
       });
       setCapabilities(['event-management', 'memberships']);
+      setRoles([{ id: 'dev-role-1', name: 'admin', displayName: 'Administrator' }]);
       setIsOrgAdmin(true);
       return;
     }
@@ -157,14 +174,18 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
             // Fetch organisation and verify user is org-admin
             await fetchOrganisation(kc);
             setError(null);
+            setLoading(false);
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to load organisation';
+            console.error('Authentication error:', errorMessage);
             setError(errorMessage);
             setIsOrgAdmin(false);
+            setLoading(false);
+            // Don't throw - let the error be displayed by the ErrorScreen component
           }
+        } else {
+          setLoading(false);
         }
-
-        setLoading(false);
 
         // Setup token refresh
         const refreshInterval = setInterval(() => {
@@ -217,6 +238,7 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
     user,
     organisation,
     capabilities,
+    roles,
     isOrgAdmin,
     login,
     logout,
