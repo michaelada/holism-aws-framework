@@ -59,6 +59,9 @@ export const EditOrganizationTypePage: React.FC = () => {
     language: 'en',
     defaultLocale: 'en-GB',
     defaultCapabilities: [],
+    membershipNumbering: 'internal',
+    membershipNumberUniqueness: 'organization',
+    initialMembershipNumber: 1000000,
   });
 
   useEffect(() => {
@@ -85,6 +88,9 @@ export const EditOrganizationTypePage: React.FC = () => {
         language: typeData.language,
         defaultLocale: typeData.defaultLocale || 'en-GB',
         defaultCapabilities: typeData.defaultCapabilities,
+        membershipNumbering: typeData.membershipNumbering || 'internal',
+        membershipNumberUniqueness: typeData.membershipNumberUniqueness || 'organization',
+        initialMembershipNumber: typeData.initialMembershipNumber || 1000000,
       });
     } catch (error) {
       showError('Failed to load organisation type');
@@ -100,7 +106,19 @@ export const EditOrganizationTypePage: React.FC = () => {
     
     try {
       setSubmitting(true);
-      await updateOrganizationType(id, formData);
+      
+      // Prepare form data - only include conditional fields for internal mode
+      const submitData: UpdateOrganizationTypeDto = {
+        ...formData,
+      };
+      
+      // Remove conditional fields if external mode
+      if (formData.membershipNumbering === 'external') {
+        delete submitData.membershipNumberUniqueness;
+        delete submitData.initialMembershipNumber;
+      }
+      
+      await updateOrganizationType(id, submitData);
       showSuccess('Organisation type updated successfully');
       navigate('/organization-types');
     } catch (error: any) {
@@ -215,6 +233,47 @@ export const EditOrganizationTypePage: React.FC = () => {
                   </MenuItem>
                 ))}
               </TextField>
+
+              <TextField
+                select
+                label="Membership Numbering"
+                value={formData.membershipNumbering}
+                onChange={(e) => handleChange('membershipNumbering', e.target.value)}
+                helperText="Choose how membership numbers are generated"
+                required
+                fullWidth
+              >
+                <MenuItem value="internal">Internal (System Generated)</MenuItem>
+                <MenuItem value="external">External (User Provided)</MenuItem>
+              </TextField>
+
+              {formData.membershipNumbering === 'internal' && (
+                <>
+                  <TextField
+                    select
+                    label="Membership Number Uniqueness"
+                    value={formData.membershipNumberUniqueness}
+                    onChange={(e) => handleChange('membershipNumberUniqueness', e.target.value)}
+                    helperText="Define the scope for membership number uniqueness"
+                    required
+                    fullWidth
+                  >
+                    <MenuItem value="organization_type">Organization Type Level</MenuItem>
+                    <MenuItem value="organization">Organization Level</MenuItem>
+                  </TextField>
+
+                  <TextField
+                    type="number"
+                    label="Initial Membership Number"
+                    value={formData.initialMembershipNumber}
+                    onChange={(e) => handleChange('initialMembershipNumber', parseInt(e.target.value) || 1000000)}
+                    helperText="The starting number for sequential membership number generation"
+                    inputProps={{ min: 1 }}
+                    required
+                    fullWidth
+                  />
+                </>
+              )}
 
               <Box>
                 <Typography variant="h6" gutterBottom>

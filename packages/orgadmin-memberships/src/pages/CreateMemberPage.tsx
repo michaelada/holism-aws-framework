@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   IconButton,
   Typography,
   Alert,
@@ -50,6 +49,29 @@ interface ApplicationFormWithFields {
 }
 
 /**
+ * File Metadata Interface
+ * Represents uploaded file metadata stored in submission_data
+ */
+interface FileMetadata {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  url: string;
+}
+
+/**
+ * Organization Type Configuration Interface
+ */
+interface OrganizationTypeConfig {
+  id: string;
+  name: string;
+  membershipNumbering: 'internal' | 'external';
+  membershipNumberUniqueness: 'organization_type' | 'organization';
+  initialMembershipNumber: number;
+}
+
+/**
  * Create Member Page State Interface
  */
 interface CreateMemberPageState {
@@ -58,9 +80,12 @@ interface CreateMemberPageState {
   errorType: 'network' | 'api' | 'validation' | null;
   membershipType: MembershipType | null;
   formDefinition: ApplicationFormWithFields | null;
+  organizationTypeConfig: OrganizationTypeConfig | null;
   formData: Record<string, any>;
   validationErrors: Record<string, string>;
   submitting: boolean;
+  uploadedFileIds: string[]; // Track uploaded files for cleanup
+  uploadingFiles: Record<string, boolean>; // Track upload progress per field
 }
 
 const CreateMemberPage: React.FC = () => {
@@ -81,9 +106,12 @@ const CreateMemberPage: React.FC = () => {
     errorType: null,
     membershipType: null,
     formDefinition: null,
+    organizationTypeConfig: null,
     formData: {},
     validationErrors: {},
     submitting: false,
+    uploadedFileIds: [],
+    uploadingFiles: {},
   });
 
   // State for membership type selection
@@ -147,6 +175,76 @@ const CreateMemberPage: React.FC = () => {
   };
 
   /**
+   * Upload file to S3 and return metadata
+   */
+  const uploadFileToS3 = async (
+    file: File,
+    fieldId: string,
+    fieldType: 'file' | 'image'
+  ): Promise<FileMetadata> => {
+    if (!state.membershipType || !organisation?.id) {
+      throw new Error('Missing required data for file upload');
+    }
+
+    // Create FormData for multipart upload
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('organizationId', organisation.id);
+    formData.append('formId', state.membershipType.membershipFormId);
+    formData.append('fieldId', fieldId);
+    formData.append('fieldType', fieldType);
+
+    try {
+      // Upload to S3 via the file upload endpoint
+      const response = await execute({
+        method: 'POST',
+        url: '/api/orgadmin/files/upload',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!response?.success || !response?.file) {
+        throw new Error('File upload failed');
+      }
+
+      const uploadedFile = response.file;
+
+      // Return file metadata
+      return {
+        fileId: uploadedFile.fileId,
+        fileName: uploadedFile.fileName,
+        fileSize: uploadedFile.fileSize,
+        mimeType: uploadedFile.mimeType,
+        url: '', // URL will be generated on-demand when viewing
+      };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload file. Please try again.'
+      );
+    }
+  };
+
+  /**
+   * Delete uploaded file from S3 (for cleanup)
+   */
+  const deleteUploadedFile = async (fileId: string): Promise<void> => {
+    try {
+      await execute({
+        method: 'DELETE',
+        url: `/api/orgadmin/files/${fileId}`,
+      });
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      // Don't throw - cleanup is best-effort
+    }
+  };
+
+  /**
    * Render a dynamic form field using FieldRenderer
    */
   const renderField = (field: ApplicationFormWithFields['fields'][0]) => {
@@ -160,12 +258,110 @@ const CreateMemberPage: React.FC = () => {
       validationRules: field.validation?.rules || [],
     };
 
+    // Check if this is a file upload field
+    const isFileField = field.datatype === 'file' || field.datatype === 'image';
+
     return (
       <Box key={field.id} sx={{ mb: 3 }}>
         <FieldRenderer
           fieldDefinition={fieldDefinition}
           value={state.formData[field.name] || ''}
-          onChange={(value: any) => {
+          onChange={async (value: any) => {
+            // Handle file upload fields specially
+            if (isFileField && value && Array.isArray(value)) {
+              // Check if value contains File objects (not already uploaded)
+              const hasFileObjects = value.some((item: any) => item instanceof File);
+              
+              if (hasFileObjects) {
+                // Validate files before upload for image fields
+                if (field.datatype === 'image') {
+                  const invalidFiles = value.filter((item: any) => {
+                    if (!(item instanceof File)) return false;
+                    // Check if file is an image
+                    return !item.type.startsWith('image/');
+                  });
+
+                  if (invalidFiles.length > 0) {
+                    const invalidNames = invalidFiles.map((f: File) => f.name).join(', ');
+                    const errorMsg = `Only image files are allowed. Invalid files: ${invalidNames}`;
+                    setState(prev => ({
+                      ...prev,
+                      validationErrors: {
+                        ...prev.validationErrors,
+                        [field.name]: errorMsg,
+                      },
+                    }));
+                    return; // Don't proceed with upload
+                  }
+                }
+                
+                // Mark field as uploading
+                setState(prev => ({
+                  ...prev,
+                  uploadingFiles: {
+                    ...prev.uploadingFiles,
+                    [field.name]: true,
+                  },
+                }));
+
+                try {
+                  // Upload all File objects and convert to metadata
+                  const uploadedMetadata: FileMetadata[] = [];
+                  const fileIds: string[] = [];
+
+                  for (const item of value) {
+                    if (item instanceof File) {
+                      // Upload the file with field type
+                      const fieldType = field.datatype === 'image' ? 'image' : 'file';
+                      const metadata = await uploadFileToS3(item, field.id, fieldType);
+                      uploadedMetadata.push(metadata);
+                      fileIds.push(metadata.fileId);
+                    } else if (item && typeof item === 'object' && 'fileId' in item) {
+                      // Already uploaded metadata
+                      uploadedMetadata.push(item as FileMetadata);
+                    }
+                  }
+
+                  // Update state with metadata instead of File objects
+                  setState(prev => ({
+                    ...prev,
+                    formData: {
+                      ...prev.formData,
+                      [field.name]: uploadedMetadata,
+                    },
+                    uploadedFileIds: [...prev.uploadedFileIds, ...fileIds],
+                    uploadingFiles: {
+                      ...prev.uploadingFiles,
+                      [field.name]: false,
+                    },
+                    validationErrors: {
+                      ...prev.validationErrors,
+                      [field.name]: '',
+                    },
+                  }));
+                } catch (error) {
+                  // Handle upload error
+                  const errorMessage = error instanceof Error
+                    ? error.message
+                    : 'Failed to upload file';
+
+                  setState(prev => ({
+                    ...prev,
+                    uploadingFiles: {
+                      ...prev.uploadingFiles,
+                      [field.name]: false,
+                    },
+                    validationErrors: {
+                      ...prev.validationErrors,
+                      [field.name]: errorMessage,
+                    },
+                  }));
+                }
+                return;
+              }
+            }
+
+            // Non-file fields or already-uploaded files
             setState(prev => ({
               ...prev,
               formData: {
@@ -193,10 +389,15 @@ const CreateMemberPage: React.FC = () => {
               }));
             }
           }}
-          disabled={false}
+          disabled={state.uploadingFiles[field.name] || false}
           required={field.validation?.required || false}
           error={state.validationErrors[field.name]}
         />
+        {state.uploadingFiles[field.name] && (
+          <Typography color="primary" variant="caption" sx={{ mt: 1, display: 'block' }}>
+            {t('memberships.uploadingFile', 'Uploading file...')}
+          </Typography>
+        )}
         {state.validationErrors[field.name] && (
           <Typography color="error" variant="caption">
             {state.validationErrors[field.name]}
@@ -309,15 +510,36 @@ const CreateMemberPage: React.FC = () => {
         throw new Error('Form definition not found');
       }
 
-      console.log('Loaded membership type:', membershipType);
-      console.log('Membership type ID:', membershipType.id);
-      console.log('Membership type ID type:', typeof membershipType.id);
+      // Load organization type configuration
+      let organizationTypeConfig: OrganizationTypeConfig | null = null;
+      if (organisation?.organizationTypeId) {
+        try {
+          const orgType = await execute({
+            method: 'GET',
+            url: `/api/organization-types/${organisation.organizationTypeId}`,
+          });
+          
+          if (orgType) {
+            organizationTypeConfig = {
+              id: orgType.id,
+              name: orgType.name,
+              membershipNumbering: orgType.membershipNumbering || 'internal',
+              membershipNumberUniqueness: orgType.membershipNumberUniqueness || 'organization',
+              initialMembershipNumber: orgType.initialMembershipNumber || 1000000,
+            };
+          }
+        } catch (error) {
+          console.error('Failed to load organization type config:', error);
+          // Continue without config - will default to internal mode
+        }
+      }
 
       setState(prev => ({
         ...prev,
         loading: false,
         membershipType,
         formDefinition,
+        organizationTypeConfig,
       }));
     } catch (error) {
       console.error('Error loading membership type and form:', error);
@@ -528,6 +750,14 @@ const CreateMemberPage: React.FC = () => {
       errors.name = nameError;
     }
     
+    // Validate membership number field (only for external mode)
+    if (state.organizationTypeConfig?.membershipNumbering === 'external') {
+      const membershipNumber = state.formData.membershipNumber || '';
+      if (!membershipNumber.trim()) {
+        errors.membershipNumber = t('memberships.validation.membershipNumberRequired', 'Membership number is required');
+      }
+    }
+    
     // Validate dynamic fields
     const fieldErrors = validateAllFields();
     Object.assign(errors, fieldErrors);
@@ -604,34 +834,57 @@ const CreateMemberPage: React.FC = () => {
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || '';
 
       // Step 3: Create member record with form submission ID
+      const memberPayload: any = {
+        organisationId: organisation.id,
+        membershipTypeId: state.membershipType.id,
+        userId: currentUserId,
+        firstName,
+        lastName,
+        formSubmissionId: formSubmission.id,
+        status: state.membershipType.automaticallyApprove ? 'active' : 'pending',
+      };
+
+      // Include membership number only for external mode
+      if (state.organizationTypeConfig?.membershipNumbering === 'external') {
+        memberPayload.membershipNumber = state.formData.membershipNumber;
+      }
+
       const member = await execute({
         method: 'POST',
         url: '/api/orgadmin/members',
-        data: {
-          organisationId: organisation.id,
-          membershipTypeId: state.membershipType.id,
-          userId: currentUserId,
-          firstName,
-          lastName,
-          formSubmissionId: formSubmission.id,
-          status: state.membershipType.automaticallyApprove ? 'active' : 'pending',
-        },
+        data: memberPayload,
       });
 
       if (!member?.id) {
         throw new Error('Failed to create member');
       }
 
-      // Success! Navigate back to members database
+      // Success! Clear uploaded file IDs (no cleanup needed on success)
+      setState(prev => ({ ...prev, uploadedFileIds: [] }));
+
+      // Navigate back to members database
+      // For internal mode, include the generated membership number in the success message
+      const successMessage = state.organizationTypeConfig?.membershipNumbering === 'internal' && member.membershipNumber
+        ? t('memberships.memberCreatedWithNumber', `Member created successfully with membership number ${member.membershipNumber}`)
+        : t('memberships.memberCreatedSuccessfully', 'Member created successfully');
+
       navigate('/members', {
         state: {
-          successMessage: t('memberships.memberCreatedSuccessfully', 'Member created successfully'),
+          successMessage,
           createdMemberName: state.formData.name,
           filterState,
         },
       });
     } catch (error) {
       console.error('Error creating member:', error);
+
+      // Cleanup orphaned files on submission failure
+      if (state.uploadedFileIds.length > 0) {
+        for (const fileId of state.uploadedFileIds) {
+          await deleteUploadedFile(fileId);
+        }
+        setState(prev => ({ ...prev, uploadedFileIds: [] }));
+      }
       
       // Categorize error type
       let errorType: 'network' | 'api' | 'validation' = 'api';
@@ -643,6 +896,16 @@ const CreateMemberPage: React.FC = () => {
         if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
           errorType = 'network';
           errorMessage = t('memberships.errors.networkError', 'Network error. Please check your connection and try again.');
+        }
+        // Duplicate membership number error (external mode)
+        else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate') || errorMessage.includes('Membership number')) {
+          errorType = 'validation';
+          // Use the error message from the API if it contains membership number info
+          if (errorMessage.includes('Membership number')) {
+            errorMessage = errorMessage;
+          } else {
+            errorMessage = t('memberships.errors.duplicateMembershipNumber', 'This membership number already exists. Please use a different number.');
+          }
         }
         // Validation errors
         else if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
@@ -791,6 +1054,48 @@ const CreateMemberPage: React.FC = () => {
                 'data-testid': 'name-input',
               }}
             />
+
+            {/* Membership Number field (only for external mode) */}
+            {state.organizationTypeConfig?.membershipNumbering === 'external' && (
+              <TextField
+                label={t('memberships.membershipNumber', 'Membership Number')}
+                value={state.formData.membershipNumber || ''}
+                onChange={(e) => {
+                  setState(prev => ({
+                    ...prev,
+                    formData: {
+                      ...prev.formData,
+                      membershipNumber: e.target.value,
+                    },
+                    validationErrors: {
+                      ...prev.validationErrors,
+                      membershipNumber: '',
+                    },
+                  }));
+                }}
+                onBlur={() => {
+                  const value = state.formData.membershipNumber || '';
+                  if (!value.trim()) {
+                    setState(prev => ({
+                      ...prev,
+                      validationErrors: {
+                        ...prev.validationErrors,
+                        membershipNumber: t('memberships.validation.membershipNumberRequired', 'Membership number is required'),
+                      },
+                    }));
+                  }
+                }}
+                error={!!state.validationErrors.membershipNumber}
+                helperText={state.validationErrors.membershipNumber || t('memberships.membershipNumberHelp', 'Enter the existing membership number from your external system')}
+                required
+                fullWidth
+                sx={{ mb: 3 }}
+                data-testid="membership-number-field"
+                inputProps={{
+                  'data-testid': 'membership-number-input',
+                }}
+              />
+            )}
 
             {/* Dynamic form fields rendered from form definition */}
             {state.formDefinition?.fields && state.formDefinition.fields.length > 0 && (

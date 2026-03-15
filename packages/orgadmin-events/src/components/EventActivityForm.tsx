@@ -314,12 +314,12 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             <Grid item xs={12}>
               <DiscountSelector
                 discounts={discounts}
-                selectedDiscounts={activity.discountIds || []}
+                selectedDiscountIds={activity.discountIds || []}
                 onChange={(discountIds) => handleChange('discountIds', discountIds)}
-                multiSelect={true}
+                organisationId={organisation?.id || ''}
+                moduleType="events"
                 disabled={loading}
                 label="Apply Discounts to Activity"
-                loading={loadingDiscounts}
               />
             </Grid>
           )}

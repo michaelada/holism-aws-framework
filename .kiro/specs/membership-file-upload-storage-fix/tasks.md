@@ -1,0 +1,126 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - File Objects Serialize to Empty Objects
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases: form submissions with document_upload fields containing File objects
+  - Test that when a user uploads files through CreateMemberPage, the submission_data in the database contains `[{}]` or `[{},{}]` instead of file metadata
+  - Test that when viewing member details with uploaded files, the system displays "NaN MB" with no file name
+  - Test that when editing a member with previously uploaded files, the system cannot retrieve or display the file information
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause (e.g., "submission_data contains [{}] instead of {fileId, fileName, fileSize, mimeType, url}")
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-File Field Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-file form submissions
+  - Observe: Form submission with only text fields stores values correctly in submission_data
+  - Observe: Form submission with date, number, select fields stores values correctly
+  - Observe: DocumentUploadRenderer in other features (e.g., BrandingTab) works correctly
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements
+  - Property-based testing generates many test cases for stronger guarantees
+  - Test that for all form submissions WITHOUT document_upload fields, submission_data is stored correctly
+  - Test that non-file fields (text, number, date, select, etc.) continue to be stored correctly
+  - Test that form validation for non-file fields continues to work
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 3. Fix for membership file upload storage
+
+  - [x] 3.1 Update FileUploadService S3 key structure
+    - Modify `generateS3Key` method in `packages/backend/src/services/file-upload.service.ts`
+    - Change from `organizationId/formId/fieldId/filename` to `uploads/organizationId/formId/fieldId/filename`
+    - Add `uploads/` prefix to group all uploaded files under a clear namespace
+    - Maintain existing organizationId/formId/fieldId structure for granular organization
+    - Example: `uploads/org-123/form-abc/field-xyz/consent_1234567890_a1b2c3d4.pdf`
+    - _Bug_Condition: isBugCondition(input) where input.fieldType == 'document_upload' AND input.value CONTAINS File objects_
+    - _Expected_Behavior: Files uploaded to S3 with improved key structure, metadata returned_
+    - _Preservation: File upload endpoints continue to work for other features_
+    - _Requirements: 2.1, 2.2, 3.5_
+
+  - [x] 3.2 Implement file upload functionality in CreateMemberPage
+    - Add `uploadFileToS3` function that calls `/api/orgadmin/files/upload`
+    - Accept File object, organizationId, formId, fieldId
+    - Use FormData with multipart/form-data
+    - Return file metadata: `{fileId, fileName, fileSize, mimeType, url}`
+    - Handle upload errors with user-friendly messages
+    - Define TypeScript interface for FileMetadata
+    - Modify field change handler in `renderField` for document_upload fields
+    - Detect when field datatype is 'document_upload'
+    - When File objects are received, immediately upload them to S3
+    - Replace File objects with file metadata in formData state
+    - Show upload progress indicator during upload
+    - Handle upload failures gracefully
+    - Add orphaned file cleanup: track uploaded fileIds and delete them if form submission fails
+    - Store uploaded fileIds in component state
+    - On submission failure, call DELETE `/api/orgadmin/files/:fileId` for each uploaded file
+    - Clear fileIds list on successful submission
+    - _Bug_Condition: isBugCondition(input) where input.fieldType == 'document_upload' AND input.value CONTAINS File objects_
+    - _Expected_Behavior: Files uploaded to S3 immediately when selected, metadata stored in formData_
+    - _Preservation: Non-file fields continue to be stored correctly in submission_data_
+    - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2_
+
+  - [x] 3.3 Implement file upload functionality in EditMemberPage
+    - Add `uploadFileToS3` function (same as CreateMemberPage)
+    - Modify field change handler for document_upload fields (same as CreateMemberPage)
+    - Add orphaned file cleanup (same as CreateMemberPage)
+    - Ensure existing file metadata is loaded and displayed correctly
+    - _Bug_Condition: isBugCondition(input) where input.fieldType == 'document_upload' AND input.value CONTAINS File objects_
+    - _Expected_Behavior: Files uploaded to S3 immediately when selected, metadata stored in formData, existing files displayed correctly_
+    - _Preservation: Non-file fields continue to be stored correctly in submission_data_
+    - _Requirements: 2.1, 2.2, 2.3, 2.5, 3.1, 3.2_
+
+  - [x] 3.4 Update DocumentUploadRenderer to handle file metadata
+    - Update `value` prop type to accept `File[] | FileMetadata[] | (File | FileMetadata)[]`
+    - Modify `getFileName` to extract name from metadata: `file.fileName || file.name`
+    - Modify `getFileSize` to use metadata: `file.fileSize || file.size`
+    - Update `isUrl` check to detect metadata objects: `typeof file === 'object' && 'fileId' in file`
+    - Add download link for metadata: use `file.url` from metadata, open in new tab
+    - Preserve existing File object handling for other features
+    - _Bug_Condition: isBugCondition(input) where input.fieldType == 'document_upload' AND input.value CONTAINS File objects_
+    - _Expected_Behavior: Component displays file metadata correctly with download links_
+    - _Preservation: DocumentUploadRenderer behavior in other parts of the application remains unchanged_
+    - _Requirements: 2.4, 2.5, 3.4_
+
+  - [x] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - File Metadata Stored Correctly
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - Verify that submission_data contains file metadata objects (not empty objects)
+    - Verify that member details display proper file names and sizes
+    - Verify that files can be downloaded via the url in metadata
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [x] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-File Field Behavior
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Verify that non-file form submissions produce identical submission_data
+    - Verify that non-file fields are stored correctly
+    - Verify that DocumentUploadRenderer in other features still works
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 4. Integration testing
+  - Test full create member flow with file upload: select file → upload → submit → verify in database → view member details → download file
+  - Test full edit member flow with file upload: load member with files → display files → add new file → submit → verify updated
+  - Test form submission failure with uploaded files: upload files → trigger validation error → cancel form → verify files cleaned up from S3
+  - Test switching between membership types with different form fields including file uploads
+  - Test multiple file uploads in a single form submission
+  - Test file upload with various file types and sizes
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

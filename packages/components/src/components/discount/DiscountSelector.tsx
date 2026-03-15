@@ -132,7 +132,7 @@ export const DiscountSelector: React.FC<DiscountSelectorProps> = ({
 
   // Get selected discount objects
   const selectedDiscounts = useMemo(() => {
-    return selectedDiscountIds
+    return (selectedDiscountIds || [])
       .map(id => activeDiscounts.find(d => d.id === id))
       .filter((d): d is Discount => d !== undefined);
   }, [selectedDiscountIds, activeDiscounts]);
@@ -172,7 +172,7 @@ export const DiscountSelector: React.FC<DiscountSelectorProps> = ({
         <Select
           labelId="discount-selector-label"
           multiple
-          value={selectedDiscountIds}
+          value={selectedDiscountIds || []}
           onChange={handleSelectChange}
           label={label}
           renderValue={() => null} // We'll render chips below instead

@@ -110,11 +110,26 @@ router.get('/:id', authenticateToken(), async (req: Request, res: Response) => {
  *                 type: array
  *                 items:
  *                   type: string
+ *               membershipNumbering:
+ *                 type: string
+ *                 enum: [internal, external]
+ *                 description: Controls whether membership numbers are system-generated (internal) or user-provided (external)
+ *                 default: internal
+ *               membershipNumberUniqueness:
+ *                 type: string
+ *                 enum: [organization_type, organization]
+ *                 description: Uniqueness scope for membership numbers (only applicable for internal mode)
+ *                 default: organization
+ *               initialMembershipNumber:
+ *                 type: integer
+ *                 description: Starting number for internal sequential generation (only applicable for internal mode)
+ *                 default: 1000000
+ *                 minimum: 1
  *     responses:
  *       201:
  *         description: Organization type created
  *       400:
- *         description: Invalid locale format or unsupported locale
+ *         description: Invalid locale format, unsupported locale, or invalid membership numbering configuration
  */
 router.post(
   '/',
@@ -130,7 +145,11 @@ router.post(
       res.status(201).json(type);
     } catch (error) {
       logger.error('Error in POST /organization-types:', error);
-      if (error instanceof Error && error.message.includes('locale')) {
+      if (error instanceof Error && (
+        error.message.includes('locale') ||
+        error.message.includes('Membership number') ||
+        error.message.includes('Initial membership number')
+      )) {
         res.status(400).json({ error: error.message });
       } else {
         res.status(500).json({ error: 'Failed to create organization type' });
@@ -173,11 +192,23 @@ router.post(
  *                 type: array
  *                 items:
  *                   type: string
+ *               membershipNumbering:
+ *                 type: string
+ *                 enum: [internal, external]
+ *                 description: Controls whether membership numbers are system-generated (internal) or user-provided (external)
+ *               membershipNumberUniqueness:
+ *                 type: string
+ *                 enum: [organization_type, organization]
+ *                 description: Uniqueness scope for membership numbers (only applicable for internal mode)
+ *               initialMembershipNumber:
+ *                 type: integer
+ *                 description: Starting number for internal sequential generation (only applicable for internal mode)
+ *                 minimum: 1
  *     responses:
  *       200:
  *         description: Organization type updated
  *       400:
- *         description: Invalid locale format or unsupported locale
+ *         description: Invalid locale format, unsupported locale, invalid membership numbering configuration, or cannot change configuration with existing members
  *       404:
  *         description: Organization type not found
  */
@@ -197,7 +228,13 @@ router.put(
       res.json(type);
     } catch (error) {
       logger.error('Error in PUT /organization-types/:id:', error);
-      if (error instanceof Error && error.message.includes('locale')) {
+      if (error instanceof Error && (
+        error.message.includes('locale') ||
+        error.message.includes('Membership number') ||
+        error.message.includes('Initial membership number') ||
+        error.message.includes('Cannot change') ||
+        error.message.includes('duplicate membership numbers')
+      )) {
         res.status(400).json({ error: error.message });
       } else if (error instanceof Error && error.message.includes('not found')) {
         res.status(404).json({ error: error.message });

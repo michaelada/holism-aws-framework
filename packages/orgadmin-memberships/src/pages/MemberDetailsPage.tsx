@@ -20,6 +20,7 @@ import {
   Grid,
   IconButton,
   InputLabel,
+  Link,
   MenuItem,
   Select,
   Switch,
@@ -30,18 +31,12 @@ import {
 import {
   ArrowBack as BackIcon,
   Edit as EditIcon,
-  // Download as DownloadIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
+import { useApi } from '../../../orgadmin-core/src/hooks/useApi';
 import type { Member } from '../types/membership.types';
-
-// Mock API hook
-const useApi = () => ({
-  execute: async (_params: { method: string; url: string }) => {
-    return null;
-  },
-});
 
 const MemberDetailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,8 +45,27 @@ const MemberDetailsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
 
   const [member, setMember] = useState<Member | null>(null);
+  const [membershipType, setMembershipType] = useState<any | null>(null);
+  const [formSubmission, setFormSubmission] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper function to download file
+  const handleFileDownload = async (fileId: string, fileName: string) => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/files/${fileId}`,
+      });
+      
+      if (response?.url) {
+        // Open the signed URL in a new tab
+        window.open(response.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Failed to download file:', error);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -67,6 +81,24 @@ const MemberDetailsPage: React.FC = () => {
         url: `/api/orgadmin/members/${memberId}`,
       });
       setMember(response);
+      
+      // Load membership type details
+      if (response?.membershipTypeId) {
+        const typeResponse = await execute({
+          method: 'GET',
+          url: `/api/orgadmin/membership-types/${response.membershipTypeId}`,
+        });
+        setMembershipType(typeResponse);
+      }
+      
+      // Load form submission details
+      if (response?.formSubmissionId) {
+        const submissionResponse = await execute({
+          method: 'GET',
+          url: `/api/orgadmin/form-submissions/${response.formSubmissionId}`,
+        });
+        setFormSubmission(submissionResponse);
+      }
     } catch (error) {
       console.error('Failed to load member:', error);
       setError(t('memberships.failedToLoad'));
@@ -78,11 +110,12 @@ const MemberDetailsPage: React.FC = () => {
   const handleStatusChange = async (newStatus: string) => {
     if (!member) return;
     try {
-      await execute({
+      const updatedMember = await execute({
         method: 'PATCH',
         url: `/api/orgadmin/members/${member.id}`,
+        data: { status: newStatus },
       });
-      setMember({ ...member, status: newStatus as any });
+      setMember(updatedMember || { ...member, status: newStatus as any });
     } catch (error) {
       console.error('Failed to update status:', error);
     }
@@ -91,11 +124,12 @@ const MemberDetailsPage: React.FC = () => {
   const handleProcessedToggle = async () => {
     if (!member) return;
     try {
-      await execute({
+      const updatedMember = await execute({
         method: 'PATCH',
         url: `/api/orgadmin/members/${member.id}`,
+        data: { processed: !member.processed },
       });
-      setMember({ ...member, processed: !member.processed });
+      setMember(updatedMember || { ...member, processed: !member.processed });
     } catch (error) {
       console.error('Failed to toggle processed status:', error);
     }
@@ -136,7 +170,7 @@ const MemberDetailsPage: React.FC = () => {
             <BackIcon />
           </IconButton>
           <Typography variant="h4">
-            {member.firstName} {member.lastName}
+            {member.name || `${member.firstName} ${member.lastName}`}
           </Typography>
           <Chip label={t(`memberships.memberStatus.${member.status}`)} color={member.status === 'active' ? 'success' : 'default'} />
         </Box>
@@ -161,9 +195,15 @@ const MemberDetailsPage: React.FC = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
+                    {t('memberships.fields.name', 'Name')}
+                  </Typography>
+                  <Typography variant="body1">{member.name || `${member.firstName} ${member.lastName}`}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">
                     {t('memberships.fields.membershipType')}
                   </Typography>
-                  <Typography variant="body1">{member.membershipTypeId}</Typography>
+                  <Typography variant="body1">{membershipType?.name || member.membershipTypeName || member.membershipTypeId}</Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -266,6 +306,128 @@ const MemberDetailsPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {formSubmission && formSubmission.submissionData && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {t('memberships.sections.applicationFormData', 'Application Form Data')}
+                </Typography>
+                <Grid container spacing={2}>
+                  {Object.entries(formSubmission.submissionData).map(([key, value]: [string, any]) => {
+                    // Skip the name field (shown in Membership Information panel)
+                    if (key === 'name') return null;
+                    
+                    // Skip empty values and file arrays
+                    if (value === null || value === undefined || value === '') return null;
+                    if (Array.isArray(value) && value.length === 0) return null;
+                    
+                    // Format the field name (convert snake_case to Title Case)
+                    const fieldLabel = key
+                      .split('_')
+                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ');
+                    
+                    // Format the value
+                    let displayValue: React.ReactNode;
+                    if (Array.isArray(value)) {
+                      // Check if it's a file array (contains objects with file properties)
+                      const isFileArray = value.some(item => 
+                        item && typeof item === 'object' && (item.fileId || item.name || item.url || item.fileName || item.size)
+                      );
+                      
+                      if (isFileArray) {
+                        // Filter out empty file objects
+                        const validFiles = value.filter(item => 
+                          item && typeof item === 'object' && Object.keys(item).length > 0 && (item.fileId || item.name || item.url || item.fileName)
+                        );
+                        
+                        if (validFiles.length === 0) return null;
+                        
+                        // Render file links
+                        displayValue = (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {validFiles.map((file, index) => {
+                              const fileName = file.fileName || file.name || 'Uploaded file';
+                              const fileId = file.fileId;
+                              
+                              if (fileId) {
+                                // File metadata with fileId - create download link
+                                return (
+                                  <Link
+                                    key={index}
+                                    component="button"
+                                    variant="body1"
+                                    onClick={() => handleFileDownload(fileId, fileName)}
+                                    sx={{ 
+                                      textAlign: 'left',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <DownloadIcon fontSize="small" />
+                                    {fileName}
+                                  </Link>
+                                );
+                              } else {
+                                // Legacy file or no fileId - just show name
+                                return (
+                                  <Typography key={index} variant="body1">
+                                    {fileName}
+                                  </Typography>
+                                );
+                              }
+                            })}
+                          </Box>
+                        );
+                      } else {
+                        // Handle regular arrays (like meal preferences)
+                        const stringValue = value
+                          .filter(item => typeof item === 'string' || typeof item === 'number')
+                          .join(', ');
+                        if (!stringValue) return null;
+                        displayValue = stringValue;
+                      }
+                    } else if (typeof value === 'object') {
+                      // Skip empty objects or file objects
+                      if (Object.keys(value).length === 0) return null;
+                      return null;
+                    } else if (typeof value === 'boolean') {
+                      displayValue = value ? 'Yes' : 'No';
+                    } else if (key.includes('date') && typeof value === 'string') {
+                      // Format dates
+                      try {
+                        displayValue = formatDate(new Date(value), 'dd MMM yyyy', i18n.language);
+                      } catch {
+                        displayValue = String(value);
+                      }
+                    } else {
+                      displayValue = String(value);
+                    }
+                    
+                    return (
+                      <Grid item xs={12} md={6} key={key}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          {fieldLabel}
+                        </Typography>
+                        {typeof displayValue === 'string' ? (
+                          <Typography variant="body1">
+                            {displayValue}
+                          </Typography>
+                        ) : (
+                          displayValue
+                        )}
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
     </Box>
   );

@@ -785,6 +785,49 @@ router.put(
 /**
  * @swagger
  * /api/orgadmin/form-submissions/{id}:
+ *   patch:
+ *     summary: Update a form submission (partial update)
+ *     tags: [Form Submissions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Form submission updated
+ *       404:
+ *         description: Form submission not found
+ */
+router.patch(
+  '/form-submissions/:id',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const submission = await formSubmissionService.updateSubmission(id, req.body);
+      res.json(submission);
+    } catch (error) {
+      logger.error('Error in PATCH /form-submissions/:id:', error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to update form submission' });
+      }
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/form-submissions/{id}:
  *   delete:
  *     summary: Delete a form submission
  *     tags: [Form Submissions]

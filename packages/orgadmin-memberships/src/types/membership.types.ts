@@ -72,8 +72,10 @@ export interface Member {
   id: string;
   organisationId: string;
   membershipTypeId: string;
+  membershipTypeName?: string; // Optional: membership type name for display
   userId: string;
   membershipNumber: string;
+  name?: string; // Optional: member name from form submission
   firstName: string;
   lastName: string;
   formSubmissionId: string;
@@ -160,6 +162,7 @@ export interface UpdateMemberDto {
   status?: MemberStatus;
   labels?: string[];
   processed?: boolean;
+  membershipNumber?: string;
 }
 
 /**

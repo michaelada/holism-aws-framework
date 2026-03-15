@@ -17,6 +17,10 @@ export type UserStatus = 'active' | 'inactive';
 // Capability category
 export type CapabilityCategory = 'core-service' | 'additional-feature';
 
+// Membership numbering types
+export type MembershipNumbering = 'internal' | 'external';
+export type MembershipNumberUniqueness = 'organization_type' | 'organization';
+
 /**
  * Capability
  */
@@ -49,6 +53,9 @@ export interface OrganizationType {
   language: string;
   defaultLocale: string;
   defaultCapabilities: string[];
+  membershipNumbering: MembershipNumbering;
+  membershipNumberUniqueness: MembershipNumberUniqueness;
+  initialMembershipNumber: number;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -64,6 +71,9 @@ export interface CreateOrganizationTypeDto {
   language: string;
   defaultLocale?: string;
   defaultCapabilities: string[];
+  membershipNumbering?: MembershipNumbering;
+  membershipNumberUniqueness?: MembershipNumberUniqueness;
+  initialMembershipNumber?: number;
 }
 
 export interface UpdateOrganizationTypeDto {
@@ -74,6 +84,9 @@ export interface UpdateOrganizationTypeDto {
   language?: string;
   defaultLocale?: string;
   defaultCapabilities?: string[];
+  membershipNumbering?: MembershipNumbering;
+  membershipNumberUniqueness?: MembershipNumberUniqueness;
+  initialMembershipNumber?: number;
   status?: string;
 }
 

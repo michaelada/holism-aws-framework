@@ -315,16 +315,24 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
             </IconButton>
           )}
 
-          {/* App Title */}
+          {/* App Title / Module Name */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            <Avatar
-              src={SMALL_LOGO_URL}
-              alt={t('navigation.appName')}
-              sx={{ width: 32, height: 32, mr: 1, display: { xs: 'none', sm: 'block' } }}
-            />
-            <Typography variant="h6" noWrap component="div">
-              {t('navigation.appName')}
-            </Typography>
+            {isLandingPage ? (
+              <>
+                <Avatar
+                  src={SMALL_LOGO_URL}
+                  alt={t('navigation.appName')}
+                  sx={{ width: 32, height: 32, mr: 1, display: { xs: 'none', sm: 'block' } }}
+                />
+                <Typography variant="h6" noWrap component="div">
+                  {t('navigation.appName')}
+                </Typography>
+              </>
+            ) : (
+              <Typography variant="h6" noWrap component="div">
+                {currentModule ? t(currentModule.name) : t('navigation.appName')}
+              </Typography>
+            )}
           </Box>
 
           {/* Organisation Name in AppBar (desktop only) */}

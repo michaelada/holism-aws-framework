@@ -4,6 +4,7 @@ import { fileUploadService } from '../services/file-upload.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
+import { S3_BUCKET_NAME } from '../config/aws.config';
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.post(
   upload.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const { organizationId, formId, fieldId } = req.body;
+      const { organizationId, formId, fieldId, fieldType } = req.body;
       const file = req.file;
 
       // Validate required fields
@@ -76,11 +77,15 @@ router.post(
         return;
       }
 
+      // Validate fieldType if provided
+      const validFieldType = fieldType === 'image' ? 'image' : 'file';
+
       // Upload file
       const result = await fileUploadService.uploadFile({
         organizationId,
         formId,
         fieldId,
+        fieldType: validFieldType,
         file: {
           buffer: file.buffer,
           originalname: file.originalname,
@@ -92,17 +97,19 @@ router.post(
       // Store file metadata in database
       await db.query(
         `INSERT INTO form_submission_files 
-         (id, organization_id, form_id, field_id, s3_key, file_name, file_size, mime_type, uploaded_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         (id, organization_id, form_id, field_id, s3_key, s3_bucket, file_name, file_size, file_type, mime_type, uploaded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           result.fileId,
           organizationId,
           formId,
           fieldId,
           result.s3Key,
+          S3_BUCKET_NAME,
           result.fileName,
           result.fileSize,
-          result.mimeType,
+          result.mimeType, // file_type (for backwards compatibility)
+          result.mimeType, // mime_type (new standardized column)
           result.uploadedAt,
         ]
       );

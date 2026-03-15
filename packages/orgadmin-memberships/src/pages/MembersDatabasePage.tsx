@@ -225,6 +225,7 @@ const MembersDatabasePage: React.FC = () => {
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(m =>
+        (m.name && m.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         m.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.membershipNumber.toLowerCase().includes(searchTerm.toLowerCase())
@@ -263,11 +264,12 @@ const MembersDatabasePage: React.FC = () => {
     navigate(`/members/${memberId}/edit`);
   };
 
-  const handleToggleProcessed = async (memberId: string, _currentStatus: boolean) => {
+  const handleToggleProcessed = async (memberId: string, currentStatus: boolean) => {
     try {
       await execute({
         method: 'PATCH',
         url: `/api/orgadmin/members/${memberId}`,
+        data: { processed: !currentStatus },
       });
       loadMembers();
     } catch (error) {
@@ -432,8 +434,7 @@ const MembersDatabasePage: React.FC = () => {
                 />
               </TableCell>
               <TableCell>{t('memberships.table.membershipType')}</TableCell>
-              <TableCell>{t('memberships.table.firstName')}</TableCell>
-              <TableCell>{t('memberships.table.lastName')}</TableCell>
+              <TableCell>{t('memberships.table.name')}</TableCell>
               <TableCell>{t('memberships.table.membershipNumber')}</TableCell>
               <TableCell>{t('memberships.table.dateLastRenewed')}</TableCell>
               <TableCell>{t('memberships.table.status')}</TableCell>
@@ -446,13 +447,13 @@ const MembersDatabasePage: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} align="center">
+                <TableCell colSpan={10} align="center">
                   {t('memberships.loadingMembers')}
                 </TableCell>
               </TableRow>
             ) : filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} align="center">
+                <TableCell colSpan={10} align="center">
                   {t('memberships.noMembersFound')}
                 </TableCell>
               </TableRow>
@@ -465,9 +466,8 @@ const MembersDatabasePage: React.FC = () => {
                       onChange={() => handleSelectMember(member.id)}
                     />
                   </TableCell>
-                  <TableCell>{member.membershipTypeId}</TableCell>
-                  <TableCell>{member.firstName}</TableCell>
-                  <TableCell>{member.lastName}</TableCell>
+                  <TableCell>{member.membershipTypeName || member.membershipTypeId}</TableCell>
+                  <TableCell>{member.name || `${member.firstName} ${member.lastName}`}</TableCell>
                   <TableCell>{member.membershipNumber}</TableCell>
                   <TableCell>{formatDateLocale(member.dateLastRenewed)}</TableCell>
                   <TableCell>
@@ -532,6 +532,7 @@ const MembersDatabasePage: React.FC = () => {
         open={batchDialogOpen}
         operation={batchOperation}
         selectedMembers={selectedMembers}
+        members={members}
         onClose={() => setBatchDialogOpen(false)}
         onComplete={() => {
           setBatchDialogOpen(false);

@@ -21,6 +21,7 @@ export interface UploadFileParams {
   organizationId: string;
   formId: string;
   fieldId: string;
+  fieldType?: 'file' | 'image'; // Optional field type for validation
   file: {
     buffer: Buffer;
     originalname: string;
@@ -47,24 +48,44 @@ export class FileUploadService {
   // Maximum file size: 10MB
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-  // Allowed MIME types
-  private readonly ALLOWED_MIME_TYPES = [
+  // Allowed MIME types for IMAGE fields only
+  private readonly ALLOWED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/bmp',
+    'image/webp',
+    'image/svg+xml',
+  ];
+
+  // Allowed MIME types for FILE fields (general document uploads)
+  private readonly ALLOWED_FILE_TYPES = [
     'application/pdf',
     'image/jpeg',
     'image/jpg',
     'image/png',
     'image/gif',
+    'image/bmp',
+    'image/webp',
+    'image/svg+xml',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'text/plain',
     'text/csv',
+    'text/rtf',
+    'application/rtf',
+    'application/zip',
+    'application/x-zip-compressed',
   ];
 
   /**
    * Generate S3 key with organization segregation
-   * Format: /org-id/form-id/field-id/filename
+   * Format: uploads/org-id/form-id/field-id/filename
    */
   private generateS3Key(
     organizationId: string,
@@ -82,17 +103,20 @@ export class FileUploadService {
     const fileNameWithoutExt = path.basename(sanitizedFileName, fileExtension);
     const uniqueFileName = `${fileNameWithoutExt}_${timestamp}_${randomString}${fileExtension}`;
 
-    return `${organizationId}/${formId}/${fieldId}/${uniqueFileName}`;
+    return `uploads/${organizationId}/${formId}/${fieldId}/${uniqueFileName}`;
   }
 
   /**
    * Validate file before upload
    */
-  validateFile(file: {
-    size: number;
-    mimetype: string;
-    originalname: string;
-  }): FileValidationResult {
+  validateFile(
+    file: {
+      size: number;
+      mimetype: string;
+      originalname: string;
+    },
+    fieldType?: 'file' | 'image'
+  ): FileValidationResult {
     const errors: string[] = [];
 
     // Check file size
@@ -102,11 +126,21 @@ export class FileUploadService {
       );
     }
 
-    // Check MIME type
-    if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      errors.push(
-        `File type ${file.mimetype} is not allowed. Allowed types: ${this.ALLOWED_MIME_TYPES.join(', ')}`
-      );
+    // Check MIME type based on field type
+    if (fieldType === 'image') {
+      // For image fields, only allow image types
+      if (!this.ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        errors.push(
+          `File type ${file.mimetype} is not allowed for image fields. Allowed types: ${this.ALLOWED_IMAGE_TYPES.join(', ')}`
+        );
+      }
+    } else {
+      // For file fields, allow all document types
+      if (!this.ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+        errors.push(
+          `File type ${file.mimetype} is not allowed. Allowed types: ${this.ALLOWED_FILE_TYPES.join(', ')}`
+        );
+      }
     }
 
     // Check filename
@@ -132,10 +166,10 @@ export class FileUploadService {
    */
   async uploadFile(params: UploadFileParams): Promise<UploadFileResult> {
     try {
-      const { organizationId, formId, fieldId, file } = params;
+      const { organizationId, formId, fieldId, fieldType, file } = params;
 
       // Validate file
-      const validation = this.validateFile(file);
+      const validation = this.validateFile(file, fieldType);
       if (!validation.valid) {
         throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
       }

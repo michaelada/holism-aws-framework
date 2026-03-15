@@ -18,10 +18,22 @@ import {
 } from '@mui/icons-material';
 import type { FieldDefinition } from '../../../types';
 
+/**
+ * File Metadata Interface
+ * Represents uploaded file metadata stored in submission_data
+ */
+interface FileMetadata {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  url: string;
+}
+
 export interface DocumentUploadRendererProps {
   fieldDefinition: FieldDefinition;
-  value: File[] | string[] | (File | string)[] | null;
-  onChange: (value: File[] | string[] | (File | string)[] | null) => void;
+  value: File[] | string[] | FileMetadata[] | (File | string | FileMetadata)[] | null;
+  onChange: (value: File[] | string[] | FileMetadata[] | (File | string | FileMetadata)[] | null) => void;
   error?: string;
   disabled?: boolean;
   required?: boolean;
@@ -59,7 +71,7 @@ export function DocumentUploadRenderer({
     : [];
 
   // Normalize value to array
-  const files: (File | string)[] = Array.isArray(value) ? value : value ? [value] : [];
+  const files: (File | string | FileMetadata)[] = Array.isArray(value) ? value : value ? [value] : [];
 
   // Validate if file is an image
   const isValidImageFile = (file: File): boolean => {
@@ -104,9 +116,18 @@ export function DocumentUploadRenderer({
 
     if (invalid.length > 0) {
       const invalidNames = invalid.map(f => f.name).join(', ');
-      setValidationError(
-        `The following files are not valid images: ${invalidNames}. Please select image files only (JPG, PNG, GIF, etc.).`
-      );
+      const errorMsg = `The following files are not valid images: ${invalidNames}. Please select image files only (JPG, PNG, GIF, etc.).`;
+      setValidationError(errorMsg);
+      
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      // If ALL files are invalid, don't call onChange at all
+      if (valid.length === 0) {
+        return;
+      }
     } else {
       setValidationError(null);
     }
@@ -159,6 +180,11 @@ export function DocumentUploadRenderer({
         setValidationError(
           `The following files are not valid images: ${invalidNames}. Please select image files only (JPG, PNG, GIF, etc.).`
         );
+        
+        // If ALL files are invalid, don't call onChange at all
+        if (valid.length === 0) {
+          return;
+        }
       } else {
         setValidationError(null);
       }
@@ -181,19 +207,35 @@ export function DocumentUploadRenderer({
     fileInputRef.current?.click();
   };
 
-  const getFileName = (file: File | string): string => {
+  const getFileName = (file: File | string | FileMetadata): string => {
+    // Handle FileMetadata objects
+    if (typeof file === 'object' && 'fileId' in file) {
+      return file.fileName;
+    }
+    // Handle URL strings
     if (typeof file === 'string') {
       // Extract filename from URL
       const parts = file.split('/');
       return parts[parts.length - 1] || file;
     }
+    // Handle File objects
     return file.name;
   };
 
-  const getFileSize = (file: File | string): string => {
+  const getFileSize = (file: File | string | FileMetadata): string => {
+    // Handle FileMetadata objects
+    if (typeof file === 'object' && 'fileId' in file) {
+      const sizeInKB = file.fileSize / 1024;
+      if (sizeInKB < 1024) {
+        return `${sizeInKB.toFixed(1)} KB`;
+      }
+      return `${(sizeInKB / 1024).toFixed(1)} MB`;
+    }
+    // Handle URL strings (no size info)
     if (typeof file === 'string') {
       return '';
     }
+    // Handle File objects
     const sizeInKB = file.size / 1024;
     if (sizeInKB < 1024) {
       return `${sizeInKB.toFixed(1)} KB`;
@@ -201,8 +243,16 @@ export function DocumentUploadRenderer({
     return `${(sizeInKB / 1024).toFixed(1)} MB`;
   };
 
-  const isUrl = (file: File | string): file is string => {
+  const isUrl = (file: File | string | FileMetadata): boolean => {
+    // FileMetadata objects have URLs but are not strings
+    if (typeof file === 'object' && 'fileId' in file) {
+      return false; // Will be handled separately
+    }
     return typeof file === 'string';
+  };
+
+  const isFileMetadata = (file: File | string | FileMetadata): file is FileMetadata => {
+    return typeof file === 'object' && 'fileId' in file;
   };
 
   return (
@@ -294,7 +344,26 @@ export function DocumentUploadRenderer({
                 <ListItemText
                   primary={getFileName(file)}
                   secondary={
-                    isUrl(file) ? (
+                    isFileMetadata(file) ? (
+                      // FileMetadata: show size and download link
+                      <>
+                        {getFileSize(file)}
+                        {file.url && (
+                          <>
+                            {' • '}
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: 'inherit' }}
+                            >
+                              Download
+                            </a>
+                          </>
+                        )}
+                      </>
+                    ) : isUrl(file) ? (
+                      // URL string: show view link
                       <a
                         href={file}
                         target="_blank"
@@ -304,6 +373,7 @@ export function DocumentUploadRenderer({
                         View file
                       </a>
                     ) : (
+                      // File object: show size
                       getFileSize(file)
                     )
                   }
@@ -326,7 +396,7 @@ export function DocumentUploadRenderer({
 
       {(error || validationError) && (
         <FormHelperText error sx={{ mt: 1 }}>
-          {error || validationError}
+          {validationError || error}
         </FormHelperText>
       )}
     </Box>

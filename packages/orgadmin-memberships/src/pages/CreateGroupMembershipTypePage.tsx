@@ -137,13 +137,16 @@ const CreateGroupMembershipTypePage: React.FC = () => {
     try {
       const response = await execute({
         method: 'GET',
-        url: `/api/orgadmin/application-forms/${formId}/fields`,
+        url: `/api/orgadmin/application-forms/${formId}/with-fields`,
       });
-      setSelectedFormFields(response || []);
+      
+      // Extract fields from the response
+      const fields = response?.fields || [];
+      setSelectedFormFields(fields);
       
       // Initialize field configuration for new fields
       const newFieldConfig = { ...formData.fieldConfiguration };
-      response.forEach((field: ApplicationField) => {
+      fields.forEach((field: ApplicationField) => {
         if (!newFieldConfig[field.id]) {
           newFieldConfig[field.id] = 'unique';
         }

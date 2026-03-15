@@ -422,7 +422,7 @@ describe('FileUploadService', () => {
 
       const result = await service.uploadFile(params);
 
-      expect(result.s3Key).toMatch(/^org-123\/form-abc\/field-xyz\/.+\.pdf$/);
+      expect(result.s3Key).toMatch(/^uploads\/org-123\/form-abc\/field-xyz\/.+\.pdf$/);
     });
   });
 });

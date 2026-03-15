@@ -38,8 +38,10 @@ export interface Member {
   id: string;
   organisationId: string;
   membershipTypeId: string;
+  membershipTypeName?: string; // Optional: membership type name for display
   userId: string;
   membershipNumber: string;
+  name?: string; // Optional: member name from form submission
   firstName: string;
   lastName: string;
   formSubmissionId: string;
@@ -117,6 +119,16 @@ export interface CreateMemberDto {
   firstName: string;
   lastName: string;
   formSubmissionId: string;
+  membershipNumber?: string; // Optional: provided only in external mode
+}
+
+/**
+ * Internal configuration for membership numbering
+ */
+interface MembershipNumberConfig {
+  mode: 'internal' | 'external';
+  uniqueness: 'organization_type' | 'organization';
+  initialNumber: number;
 }
 
 /**
@@ -183,8 +195,10 @@ export class MembershipService {
       id: row.id,
       organisationId: row.organisation_id,
       membershipTypeId: row.membership_type_id,
+      membershipTypeName: row.membership_type_name, // Add membership type name
       userId: row.user_id,
       membershipNumber: row.membership_number,
+      name: row.member_name, // Add member name from form submission
       firstName: row.first_name,
       lastName: row.last_name,
       formSubmissionId: row.form_submission_id,
@@ -459,7 +473,7 @@ export class MembershipService {
       }
 
       if (data.discountIds !== undefined) {
-        updates.push(`discount_ids = ${paramCount++}`);
+        updates.push(`discount_ids = $${paramCount++}`);
         values.push(JSON.stringify(data.discountIds));
       }
 
@@ -512,9 +526,12 @@ export class MembershipService {
   async getMembersByOrganisation(organisationId: string): Promise<Member[]> {
     try {
       const result = await db.query(
-        `SELECT * FROM members 
-         WHERE organisation_id = $1 
-         ORDER BY date_last_renewed DESC`,
+        `SELECT m.*, mt.name as membership_type_name, fs.submission_data->>'name' as member_name
+         FROM members m
+         LEFT JOIN membership_types mt ON m.membership_type_id = mt.id
+         LEFT JOIN form_submissions fs ON m.form_submission_id = fs.id
+         WHERE m.organisation_id = $1 
+         ORDER BY m.date_last_renewed DESC`,
         [organisationId]
       );
 
@@ -571,58 +588,106 @@ export class MembershipService {
         throw new Error('Last name is required');
       }
 
+      // Fetch organization to get organization type ID
+      const orgResult = await db.query(
+        'SELECT organization_type_id FROM organizations WHERE id = $1',
+        [data.organisationId]
+      );
+      
+      if (orgResult.rows.length === 0) {
+        throw new Error('Organization not found');
+      }
+      
+      const organizationTypeId = orgResult.rows[0].organization_type_id;
+
+      // Fetch organization type configuration
+      const orgTypeResult = await db.query(
+        `SELECT membership_numbering, membership_number_uniqueness, initial_membership_number
+         FROM organization_types WHERE id = $1`,
+        [organizationTypeId]
+      );
+
+      if (orgTypeResult.rows.length === 0) {
+        throw new Error('Organization type not found');
+      }
+
+      const orgTypeConfig = orgTypeResult.rows[0];
+      const numberingMode = orgTypeConfig.membership_numbering || 'internal';
+
       // Determine status based on automaticallyApprove flag
       const status = membershipType.automaticallyApprove ? 'active' : 'pending';
 
       // Calculate valid until date
       const validUntil = this.calculateValidUntil(membershipType);
 
-      // Retry logic for handling unique constraint violations on membership_number
-      const maxRetries = 3;
+      let membershipNumber: string;
 
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          // Generate membership number
-          const membershipNumber = await this.generateMembershipNumber(data.organisationId);
+      // Generate or validate membership number based on mode
+      if (numberingMode === 'internal') {
+        // Internal mode: Generate membership number using MembershipNumberGenerator
+        const { membershipNumberGenerator } = await import('./membership-number-generator.service');
+        
+        const config: MembershipNumberConfig = {
+          mode: 'internal',
+          uniqueness: orgTypeConfig.membership_number_uniqueness || 'organization',
+          initialNumber: orgTypeConfig.initial_membership_number || 1000000
+        };
 
-          // Create member record
-          const result = await db.query(
-            `INSERT INTO members
-             (organisation_id, membership_type_id, user_id, membership_number,
-              first_name, last_name, form_submission_id, status, valid_until, payment_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-             RETURNING *`,
-            [
-              data.organisationId,
-              data.membershipTypeId,
-              data.userId,
-              membershipNumber,
-              data.firstName.trim(),
-              data.lastName.trim(),
-              data.formSubmissionId,
-              status,
-              validUntil,
-              'pending',
-            ]
-          );
-
-          logger.info(`Member created: ${result.rows[0].id} (${membershipNumber})`);
-          return this.rowToMember(result.rows[0]);
-        } catch (error: any) {
-          // Check if it's a unique constraint violation on membership_number
-          if (error.code === '23505' && error.constraint === 'members_membership_number_key') {
-            logger.warn(`Membership number collision detected, retrying (attempt ${attempt + 1}/${maxRetries})`);
-            // Wait a small random amount before retrying to reduce collision probability
-            await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
-            continue;
-          }
-          // If it's a different error, throw immediately
-          throw error;
+        membershipNumber = await membershipNumberGenerator.generateWithRetry(
+          data.organisationId,
+          organizationTypeId,
+          config
+        );
+      } else {
+        // External mode: Validate and use provided membership number
+        if (!data.membershipNumber || data.membershipNumber.trim() === '') {
+          throw new Error('Membership number is required for external numbering mode');
+        }
+        
+        membershipNumber = data.membershipNumber.trim();
+        
+        // Validate uniqueness using MembershipNumberValidator
+        const { membershipNumberValidator } = await import('./membership-number-validator.service');
+        
+        const uniquenessScope = orgTypeConfig.membership_number_uniqueness || 'organization';
+        const validationResult = await membershipNumberValidator.validateUniqueness(
+          membershipNumber,
+          data.organisationId,
+          organizationTypeId,
+          uniquenessScope
+        );
+        
+        if (!validationResult.valid) {
+          throw new Error(validationResult.error || 'Membership number validation failed');
         }
       }
 
-      // If we exhausted all retries, throw an error
-      throw new Error(`Failed to create member after ${maxRetries} attempts due to membership number collision`);
+      // Create member record
+      const dateLastRenewed = new Date(); // Set to current date for new members
+      
+      const result = await db.query(
+        `INSERT INTO members
+         (organisation_id, membership_type_id, user_id, membership_number,
+          first_name, last_name, form_submission_id, status, valid_until, payment_status, date_last_renewed)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING *`,
+        [
+          data.organisationId,
+          data.membershipTypeId,
+          data.userId,
+          membershipNumber,
+          data.firstName.trim(),
+          data.lastName.trim(),
+          data.formSubmissionId,
+          status,
+          validUntil,
+          'pending',
+          dateLastRenewed,
+        ]
+      );
+
+      logger.info(`Member created: ${result.rows[0].id} (${membershipNumber})`);
+      return this.rowToMember(result.rows[0]);
     } catch (error) {
       logger.error('Error creating member:', error);
       throw error;
@@ -630,42 +695,71 @@ export class MembershipService {
   }
 
   /**
-   * Generate a unique membership number
-   * Format: {ORG_PREFIX}-{YEAR}-{SEQUENCE}
+   * Update member details
    */
-  private async generateMembershipNumber(organisationId: string): Promise<string> {
+  async updateMember(id: string, data: { status?: string; processed?: boolean; labels?: string[]; membershipNumber?: string }): Promise<Member> {
     try {
-      // Get organization name and create prefix from it
-      const orgResult = await db.query(
-        'SELECT name FROM organizations WHERE id = $1',
-        [organisationId]
+      // Build dynamic update query
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      if (data.status !== undefined) {
+        updates.push(`status = $${paramIndex++}`);
+        values.push(data.status);
+      }
+
+      if (data.processed !== undefined) {
+        updates.push(`processed = $${paramIndex++}`);
+        values.push(data.processed);
+      }
+
+      if (data.labels !== undefined) {
+        updates.push(`labels = $${paramIndex++}`);
+        values.push(JSON.stringify(data.labels));
+      }
+
+      if (data.membershipNumber !== undefined) {
+        // Validate membership number uniqueness before updating
+        const existingMember = await db.query(
+          `SELECT id FROM members WHERE membership_number = $1 AND id != $2`,
+          [data.membershipNumber, id]
+        );
+
+        if (existingMember.rows.length > 0) {
+          throw new Error(`Membership number ${data.membershipNumber} already exists`);
+        }
+
+        updates.push(`membership_number = $${paramIndex++}`);
+        values.push(data.membershipNumber);
+      }
+
+      if (updates.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      // Add updated_at timestamp
+      updates.push(`updated_at = CURRENT_TIMESTAMP`);
+
+      // Add member ID as last parameter
+      values.push(id);
+
+      const result = await db.query(
+        `UPDATE members 
+         SET ${updates.join(', ')}
+         WHERE id = $${paramIndex}
+         RETURNING *`,
+        values
       );
-      
-      // Create prefix from organization name (first 3-4 uppercase letters)
-      const orgName = orgResult.rows[0]?.name || 'ORG';
-      const prefix = orgName
-        .toUpperCase()
-        .replace(/[^A-Z]/g, '') // Remove non-letters
-        .substring(0, 4) // Take first 4 letters
-        || 'ORG'; // Fallback if no letters found
 
-      // Get current year
-      const year = new Date().getFullYear();
+      if (result.rows.length === 0) {
+        throw new Error('Member not found');
+      }
 
-      // Get next sequence number for this year
-      const countResult = await db.query(
-        `SELECT COUNT(*) as count FROM members
-         WHERE organisation_id = $1
-         AND EXTRACT(YEAR FROM created_at) = $2`,
-        [organisationId, year]
-      );
-      const sequence = (parseInt(countResult.rows[0].count) + 1)
-        .toString()
-        .padStart(5, '0');
-
-      return `${prefix}-${year}-${sequence}`;
+      logger.info(`Member updated: ${id}`);
+      return this.rowToMember(result.rows[0]);
     } catch (error) {
-      logger.error('Error generating membership number:', error);
+      logger.error('Error updating member:', error);
       throw error;
     }
   }

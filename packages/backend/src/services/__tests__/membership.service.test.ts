@@ -5,6 +5,20 @@ import { db } from '../../database/pool';
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 
+// Mock MembershipNumberGenerator
+jest.mock('../membership-number-generator.service', () => ({
+  membershipNumberGenerator: {
+    generateWithRetry: jest.fn(),
+  },
+}));
+
+// Mock MembershipNumberValidator
+jest.mock('../membership-number-validator.service', () => ({
+  membershipNumberValidator: {
+    validateUniqueness: jest.fn(),
+  },
+}));
+
 describe('MembershipService', () => {
   let service: MembershipService;
   const mockDb = db as jest.Mocked<typeof db>;
@@ -486,7 +500,7 @@ describe('MembershipService', () => {
       expect(result[0].firstName).toBe('John');
       expect(result[0].membershipNumber).toBe('MEM-2024-001');
       expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE organisation_id = $1'),
+        expect.stringContaining('WHERE m.organisation_id = $1'),
         ['org-1']
       );
     });
@@ -1033,22 +1047,28 @@ describe('MembershipService', () => {
           status: 'approved',
         };
 
-        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
-        const mockMemberCount = { count: '0' };
-        const year = new Date().getFullYear();
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'internal',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberGenerator } = require('../membership-number-generator.service');
+        (membershipNumberGenerator.generateWithRetry as jest.Mock).mockResolvedValue('1000000');
 
         mockDb.query
           .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
           .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
-          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
-          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // get organization_type_id
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any) // get org type config
           .mockResolvedValueOnce({ // INSERT member
             rows: [{
               id: 'member-1',
               organisation_id: 'org-1',
               membership_type_id: 'type-1',
               user_id: 'user-1',
-              membership_number: `TEST-${year}-00001`,
+              membership_number: '1000000',
               first_name: 'John',
               last_name: 'Doe',
               form_submission_id: 'submission-1',
@@ -1069,7 +1089,16 @@ describe('MembershipService', () => {
         expect(result.status).toBe('active');
         expect(result.firstName).toBe('John');
         expect(result.lastName).toBe('Doe');
-        expect(result.membershipNumber).toBe(`TEST-${year}-00001`);
+        expect(result.membershipNumber).toBe('1000000');
+        expect(membershipNumberGenerator.generateWithRetry).toHaveBeenCalledWith(
+          'org-1',
+          'org-type-1',
+          {
+            mode: 'internal',
+            uniqueness: 'organization',
+            initialNumber: 1000000,
+          }
+        );
       });
 
       it('should create member with pending status when automaticallyApprove is false', async () => {
@@ -1102,22 +1131,28 @@ describe('MembershipService', () => {
           status: 'approved',
         };
 
-        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
-        const mockMemberCount = { count: '5' };
-        const year = new Date().getFullYear();
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'internal',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberGenerator } = require('../membership-number-generator.service');
+        (membershipNumberGenerator.generateWithRetry as jest.Mock).mockResolvedValue('1000005');
 
         mockDb.query
           .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
           .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
-          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
-          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // get organization_type_id
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any) // get org type config
           .mockResolvedValueOnce({ // INSERT member
             rows: [{
               id: 'member-2',
               organisation_id: 'org-1',
               membership_type_id: 'type-1',
               user_id: 'user-1',
-              membership_number: `TEST-${year}-00006`,
+              membership_number: '1000005',
               first_name: 'Jane',
               last_name: 'Smith',
               form_submission_id: 'submission-1',
@@ -1170,22 +1205,28 @@ describe('MembershipService', () => {
           status: 'approved',
         };
 
-        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
-        const mockMemberCount = { count: '0' };
-        const year = new Date().getFullYear();
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'internal',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberGenerator } = require('../membership-number-generator.service');
+        (membershipNumberGenerator.generateWithRetry as jest.Mock).mockResolvedValue('1000000');
 
         mockDb.query
           .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
           .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
           .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
-          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any)
           .mockResolvedValueOnce({
             rows: [{
               id: 'member-1',
               organisation_id: 'org-1',
               membership_type_id: 'type-1',
               user_id: 'user-1',
-              membership_number: `TEST-${year}-00001`,
+              membership_number: '1000000',
               first_name: 'John',
               last_name: 'Doe',
               form_submission_id: 'submission-1',
@@ -1403,7 +1444,7 @@ describe('MembershipService', () => {
     });
 
     describe('retry logic for membership number collision', () => {
-      it('should retry on membership number collision and succeed', async () => {
+      it('should use MembershipNumberGenerator with retry logic', async () => {
         const memberData = {
           organisationId: 'org-1',
           membershipTypeId: 'type-1',
@@ -1433,30 +1474,28 @@ describe('MembershipService', () => {
           status: 'approved',
         };
 
-        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
-        const mockMemberCount = { count: '0' };
-        const year = new Date().getFullYear();
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'internal',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
 
-        // First attempt: collision error
+        const { membershipNumberGenerator } = require('../membership-number-generator.service');
+        (membershipNumberGenerator.generateWithRetry as jest.Mock).mockResolvedValue('1000000');
+
         mockDb.query
-          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
-          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
-          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
-          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
-          .mockRejectedValueOnce({ // INSERT fails with unique constraint violation
-            code: '23505',
-            constraint: 'members_membership_number_key',
-          })
-          // Second attempt: success
-          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
-          .mockResolvedValueOnce({ rows: [{ count: '1' }] } as any) // getMemberCount (incremented)
-          .mockResolvedValueOnce({ // INSERT succeeds
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any)
+          .mockResolvedValueOnce({
             rows: [{
               id: 'member-1',
               organisation_id: 'org-1',
               membership_type_id: 'type-1',
               user_id: 'user-1',
-              membership_number: `TEST-${year}-00002`,
+              membership_number: '1000000',
               first_name: 'John',
               last_name: 'Doe',
               form_submission_id: 'submission-1',
@@ -1474,61 +1513,18 @@ describe('MembershipService', () => {
         const result = await service.createMember(memberData);
 
         expect(result).toBeDefined();
-        expect(result.membershipNumber).toBe(`TEST-${year}-00002`);
-        // 1 getMembershipTypeById + 1 getSubmissionById + (3 queries per attempt * 2 attempts) = 8 total
-        expect(mockDb.query).toHaveBeenCalledTimes(8);
-      });
-
-      it('should throw error after max retries on persistent collision', async () => {
-        const memberData = {
-          organisationId: 'org-1',
-          membershipTypeId: 'type-1',
-          userId: 'user-1',
-          firstName: 'John',
-          lastName: 'Doe',
-          formSubmissionId: 'submission-1',
-        };
-
-        const mockMembershipType = {
-          id: 'type-1',
-          organisationId: 'org-1',
-          name: 'Test Membership',
-          isRollingMembership: true,
-          numberOfMonths: 12,
-          automaticallyApprove: true,
-        };
-
-        const mockFormSubmission = {
-          id: 'submission-1',
-          formId: 'form-1',
-          organisationId: 'org-1',
-          userId: 'user-1',
-          submissionType: 'membership_application',
-          contextId: 'manual-creation',
-          submissionData: {},
-          status: 'approved',
-        };
-
-        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
-        const mockMemberCount = { count: '0' };
-
-        // All attempts fail with collision
-        mockDb.query
-          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
-          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
-          .mockResolvedValue({ rows: [mockOrganization] } as any) // getOrganization (all attempts)
-          .mockResolvedValue({ rows: [mockMemberCount] } as any) // getMemberCount (all attempts)
-          .mockRejectedValue({ // INSERT fails (all attempts)
-            code: '23505',
-            constraint: 'members_membership_number_key',
-          });
-
-        await expect(service.createMember(memberData)).rejects.toThrow(
-          'Failed to create member after 3 attempts due to membership number collision'
+        expect(membershipNumberGenerator.generateWithRetry).toHaveBeenCalledWith(
+          'org-1',
+          'org-type-1',
+          {
+            mode: 'internal',
+            uniqueness: 'organization',
+            initialNumber: 1000000,
+          }
         );
       });
 
-      it('should throw immediately on non-collision errors', async () => {
+      it('should propagate errors from MembershipNumberGenerator', async () => {
         const memberData = {
           organisationId: 'org-1',
           membershipTypeId: 'type-1',
@@ -1558,21 +1554,422 @@ describe('MembershipService', () => {
           status: 'approved',
         };
 
-        const mockOrganization = { id: 'org-1', short_name: 'TEST' };
-        const mockMemberCount = { count: '0' };
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'internal',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
 
-        // Different error (not collision)
+        const { membershipNumberGenerator } = require('../membership-number-generator.service');
+        (membershipNumberGenerator.generateWithRetry as jest.Mock).mockRejectedValue(
+          new Error('Failed to generate membership number after 3 retry attempts')
+        );
+
         mockDb.query
-          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any) // getMembershipTypeById
-          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any) // getSubmissionById
-          .mockResolvedValueOnce({ rows: [mockOrganization] } as any) // getOrganization
-          .mockResolvedValueOnce({ rows: [mockMemberCount] } as any) // getMemberCount
-          .mockRejectedValueOnce(new Error('Database connection error')); // Different error
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any);
 
-        await expect(service.createMember(memberData)).rejects.toThrow('Database connection error');
-        
-        // Should not retry on non-collision errors
-        expect(mockDb.query).toHaveBeenCalledTimes(5); // Only one attempt
+        await expect(service.createMember(memberData)).rejects.toThrow(
+          'Failed to generate membership number after 3 retry attempts'
+        );
+      });
+    });
+
+    describe('external mode', () => {
+      it('should create member with provided membership number in external mode', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+          membershipNumber: 'EXT-12345',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'external',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberValidator } = require('../membership-number-validator.service');
+        (membershipNumberValidator.validateUniqueness as jest.Mock).mockResolvedValue({
+          valid: true,
+        });
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any)
+          .mockResolvedValueOnce({
+            rows: [{
+              id: 'member-1',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: 'EXT-12345',
+              first_name: 'John',
+              last_name: 'Doe',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'active',
+              valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result).toBeDefined();
+        expect(result.membershipNumber).toBe('EXT-12345');
+        expect(membershipNumberValidator.validateUniqueness).toHaveBeenCalledWith(
+          'EXT-12345',
+          'org-1',
+          'org-type-1',
+          'organization'
+        );
+      });
+
+      it('should throw error when membership number is missing in external mode', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'external',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow(
+          'Membership number is required for external numbering mode'
+        );
+      });
+
+      it('should throw error when membership number is empty string in external mode', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+          membershipNumber: '   ',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'external',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow(
+          'Membership number is required for external numbering mode'
+        );
+      });
+
+      it('should throw error when membership number is duplicate in external mode', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+          membershipNumber: 'EXT-12345',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'external',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberValidator } = require('../membership-number-validator.service');
+        (membershipNumberValidator.validateUniqueness as jest.Mock).mockResolvedValue({
+          valid: false,
+          error: 'Membership number EXT-12345 already exists in this organization',
+        });
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any);
+
+        await expect(service.createMember(memberData)).rejects.toThrow(
+          'Membership number EXT-12345 already exists in this organization'
+        );
+      });
+
+      it('should trim whitespace from membership number in external mode', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+          membershipNumber: '  EXT-12345  ',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'external',
+          membership_number_uniqueness: 'organization',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberValidator } = require('../membership-number-validator.service');
+        (membershipNumberValidator.validateUniqueness as jest.Mock).mockResolvedValue({
+          valid: true,
+        });
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any)
+          .mockResolvedValueOnce({
+            rows: [{
+              id: 'member-1',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: 'EXT-12345',
+              first_name: 'John',
+              last_name: 'Doe',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'active',
+              valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result.membershipNumber).toBe('EXT-12345');
+        expect(membershipNumberValidator.validateUniqueness).toHaveBeenCalledWith(
+          'EXT-12345',
+          'org-1',
+          'org-type-1',
+          'organization'
+        );
+      });
+
+      it('should validate uniqueness with organization type scope in external mode', async () => {
+        const memberData = {
+          organisationId: 'org-1',
+          membershipTypeId: 'type-1',
+          userId: 'user-1',
+          firstName: 'John',
+          lastName: 'Doe',
+          formSubmissionId: 'submission-1',
+          membershipNumber: 'EXT-12345',
+        };
+
+        const mockMembershipType = {
+          id: 'type-1',
+          organisationId: 'org-1',
+          name: 'Test Membership',
+          isRollingMembership: true,
+          numberOfMonths: 12,
+          automaticallyApprove: true,
+        };
+
+        const mockFormSubmission = {
+          id: 'submission-1',
+          formId: 'form-1',
+          organisationId: 'org-1',
+          userId: 'user-1',
+          submissionType: 'membership_application',
+          contextId: 'manual-creation',
+          submissionData: {},
+          status: 'approved',
+        };
+
+        const mockOrganization = { organization_type_id: 'org-type-1' };
+        const mockOrgType = {
+          membership_numbering: 'external',
+          membership_number_uniqueness: 'organization_type',
+          initial_membership_number: 1000000,
+        };
+
+        const { membershipNumberValidator } = require('../membership-number-validator.service');
+        (membershipNumberValidator.validateUniqueness as jest.Mock).mockResolvedValue({
+          valid: true,
+        });
+
+        mockDb.query
+          .mockResolvedValueOnce({ rows: [mockMembershipType] } as any)
+          .mockResolvedValueOnce({ rows: [mockFormSubmission] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrganization] } as any)
+          .mockResolvedValueOnce({ rows: [mockOrgType] } as any)
+          .mockResolvedValueOnce({
+            rows: [{
+              id: 'member-1',
+              organisation_id: 'org-1',
+              membership_type_id: 'type-1',
+              user_id: 'user-1',
+              membership_number: 'EXT-12345',
+              first_name: 'John',
+              last_name: 'Doe',
+              form_submission_id: 'submission-1',
+              date_last_renewed: new Date(),
+              status: 'active',
+              valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              labels: [],
+              processed: false,
+              payment_status: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            }],
+          } as any);
+
+        const result = await service.createMember(memberData);
+
+        expect(result).toBeDefined();
+        expect(membershipNumberValidator.validateUniqueness).toHaveBeenCalledWith(
+          'EXT-12345',
+          'org-1',
+          'org-type-1',
+          'organization_type'
+        );
       });
     });
   });

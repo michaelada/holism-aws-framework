@@ -69,6 +69,10 @@ export const membershipsModule: ModuleRegistration = {
       component: lazy(() => import('./pages/MemberDetailsPage')),
     },
     {
+      path: 'members/:id/edit',
+      component: lazy(() => import('./pages/EditMemberPage')),
+    },
+    {
       path: 'members/discounts',
       component: lazy(() => import('./pages/DiscountsListPage')),
       capability: 'membership-discounts',
@@ -111,6 +115,7 @@ export { default as CreateGroupMembershipTypePage } from './pages/CreateGroupMem
 export { default as MembershipTypeDetailsPage } from './pages/MembershipTypeDetailsPage';
 export { default as MembersDatabasePage } from './pages/MembersDatabasePage';
 export { default as MemberDetailsPage } from './pages/MemberDetailsPage';
+export { default as EditMemberPage } from './pages/EditMemberPage';
 export { default as CreateMemberPage } from './pages/CreateMemberPage';
 
 // Export components

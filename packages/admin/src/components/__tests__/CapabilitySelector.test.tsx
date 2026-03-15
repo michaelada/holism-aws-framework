@@ -11,8 +11,8 @@ describe('CapabilitySelector', () => {
       displayName: 'Event Management',
       description: 'Manage events',
       category: 'core-service',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
     },
     {
       id: '2',
@@ -20,8 +20,8 @@ describe('CapabilitySelector', () => {
       displayName: 'Memberships',
       description: 'Manage memberships',
       category: 'core-service',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
     },
     {
       id: '3',
@@ -29,8 +29,8 @@ describe('CapabilitySelector', () => {
       displayName: 'Merchandise',
       description: 'Sell merchandise',
       category: 'additional-feature',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
     },
   ];
 

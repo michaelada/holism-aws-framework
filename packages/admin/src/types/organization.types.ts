@@ -1,5 +1,8 @@
 // Organization Management Types
 
+export type MembershipNumbering = 'internal' | 'external';
+export type MembershipNumberUniqueness = 'organization_type' | 'organization';
+
 export interface Capability {
   id: string;
   name: string;
@@ -19,6 +22,9 @@ export interface OrganizationType {
   language: string;
   defaultLocale: string;
   defaultCapabilities: string[];
+  membershipNumbering: MembershipNumbering;
+  membershipNumberUniqueness: MembershipNumberUniqueness;
+  initialMembershipNumber: number;
   status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
@@ -87,6 +93,9 @@ export interface CreateOrganizationTypeDto {
   language: string;
   defaultLocale?: string;
   defaultCapabilities: string[];
+  membershipNumbering?: MembershipNumbering;
+  membershipNumberUniqueness?: MembershipNumberUniqueness;
+  initialMembershipNumber?: number;
 }
 
 export interface UpdateOrganizationTypeDto {
@@ -97,6 +106,9 @@ export interface UpdateOrganizationTypeDto {
   language?: string;
   defaultLocale?: string;
   defaultCapabilities?: string[];
+  membershipNumbering?: MembershipNumbering;
+  membershipNumberUniqueness?: MembershipNumberUniqueness;
+  initialMembershipNumber?: number;
   status?: 'active' | 'inactive';
 }
 

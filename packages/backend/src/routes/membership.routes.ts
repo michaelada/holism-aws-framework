@@ -442,13 +442,185 @@ router.get(
 
 /**
  * @swagger
+ * /api/orgadmin/members/{id}:
+ *   patch:
+ *     summary: Update member details
+ *     tags: [Members]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, pending, elapsed]
+ *               processed:
+ *                 type: boolean
+ *               labels:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Member updated successfully
+ *       404:
+ *         description: Member not found
+ */
+router.patch(
+  '/members/:id',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status, processed, labels, membershipNumber } = req.body;
+
+      const member = await membershipService.updateMember(id, {
+        status,
+        processed,
+        labels,
+        membershipNumber,
+      });
+
+      return res.json(member);
+    } catch (error) {
+      logger.error('Error in PATCH /members/:id:', error);
+      if (error instanceof Error && error.message === 'Member not found') {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+      if (error instanceof Error && error.message.includes('already exists')) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Failed to update member' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/members/batch:
+ *   post:
+ *     summary: Perform batch operations on members
+ *     tags: [Members]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberIds
+ *               - operation
+ *             properties:
+ *               memberIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               operation:
+ *                 type: string
+ *                 enum: [mark_processed, mark_unprocessed, add_labels, remove_labels]
+ *               labels:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Batch operation completed successfully
+ */
+router.post(
+  '/members/batch',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const { memberIds, operation, labels } = req.body;
+
+      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+        return res.status(400).json({ error: 'memberIds array is required' });
+      }
+
+      if (!operation) {
+        return res.status(400).json({ error: 'operation is required' });
+      }
+
+      // Process each member
+      const results = [];
+      for (const memberId of memberIds) {
+        try {
+          let updateData: any = {};
+
+          switch (operation) {
+            case 'mark_processed':
+              updateData = { processed: true };
+              break;
+            case 'mark_unprocessed':
+              updateData = { processed: false };
+              break;
+            case 'add_labels':
+              if (!labels || !Array.isArray(labels)) {
+                return res.status(400).json({ error: 'labels array is required for add_labels operation' });
+              }
+              // Get current member to merge labels
+              const currentMember = await membershipService.getMemberById(memberId);
+              if (currentMember) {
+                const existingLabels = currentMember.labels || [];
+                const newLabels = [...new Set([...existingLabels, ...labels])];
+                updateData = { labels: newLabels };
+              }
+              break;
+            case 'remove_labels':
+              if (!labels || !Array.isArray(labels)) {
+                return res.status(400).json({ error: 'labels array is required for remove_labels operation' });
+              }
+              // Get current member to filter labels
+              const member = await membershipService.getMemberById(memberId);
+              if (member) {
+                const existingLabels = member.labels || [];
+                const filteredLabels = existingLabels.filter(l => !labels.includes(l));
+                updateData = { labels: filteredLabels };
+              }
+              break;
+            default:
+              return res.status(400).json({ error: 'Invalid operation' });
+          }
+
+          const updatedMember = await membershipService.updateMember(memberId, updateData);
+          results.push({ id: memberId, success: true, member: updatedMember });
+        } catch (error) {
+          logger.error(`Error updating member ${memberId}:`, error);
+          results.push({ id: memberId, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+      }
+
+      return res.json({
+        success: true,
+        results,
+        total: memberIds.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
+      });
+    } catch (error) {
+      logger.error('Error in POST /members/batch:', error);
+      return res.status(500).json({ error: 'Failed to perform batch operation' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/orgadmin/members:
  *   post:
  *     summary: Create a new member
  *     tags: [Members]
  *     security:
  *       - bearerAuth: []
- *     description: Creates a new member. Requires Organization Administrator role.
+ *     description: Creates a new member. Requires Organization Administrator role. Membership number handling depends on organization type configuration - internal mode auto-generates numbers, external mode requires manual entry.
  *     requestBody:
  *       required: true
  *       content:
@@ -479,13 +651,18 @@ router.get(
  *               status:
  *                 type: string
  *                 enum: [active, pending]
+ *               membershipNumber:
+ *                 type: string
+ *                 description: Optional membership number. Required only when organization type uses external numbering mode. Ignored in internal mode.
  *     responses:
  *       201:
  *         description: Member created successfully
  *       400:
- *         description: Invalid request data
+ *         description: Invalid request data or validation error
  *       403:
  *         description: Access denied - requires Organization Administrator role
+ *       409:
+ *         description: Conflict - duplicate membership number
  */
 router.post(
   '/members',
@@ -495,13 +672,18 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const member = await membershipService.createMember(req.body);
-      res.status(201).json(member);
+      return res.status(201).json(member);
     } catch (error) {
       logger.error('Error in POST /members:', error);
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        // Handle uniqueness validation errors with 409 Conflict
+        if (error.message.includes('already exists')) {
+          return res.status(409).json({ error: error.message });
+        }
+        // Handle other validation errors with 400 Bad Request
+        return res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Failed to create member' });
+        return res.status(500).json({ error: 'Failed to create member' });
       }
     }
   }
