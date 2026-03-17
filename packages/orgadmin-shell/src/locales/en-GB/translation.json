@@ -640,7 +640,8 @@
       "dateLastRenewed": "Date Last Renewed",
       "validUntil": "Valid Until",
       "labels": "Labels",
-      "processed": "Processed"
+      "processed": "Processed",
+      "createdAt": "Created At"
     },
     "tooltips": {
       "viewDetails": "View Details",
@@ -653,7 +654,22 @@
       "status": "Status",
       "customFilter": "Custom Filter",
       "createFilter": "Create Filter",
-      "none": "None"
+      "createTitle": "Create Custom Filter",
+      "none": "None",
+      "name": "Filter Name",
+      "save": "Save Filter",
+      "registrationTypes": "Registration Types",
+      "labels": "Labels",
+      "addLabel": "Add Label",
+      "dateLastRenewed": "Date Last Renewed",
+      "validUntil": "Valid Until",
+      "afterDate": "After",
+      "beforeDate": "Before",
+      "validation": {
+        "nameRequired": "Filter name is required",
+        "criteriaRequired": "At least one filter criterion is required",
+        "dateRangeInvalid": "The \"after\" date must not be later than the \"before\" date"
+      }
     },
     "statusOptions": {
       "all": "All",
@@ -669,6 +685,11 @@
       "pending": "Pending",
       "elapsed": "Elapsed"
     },
+    "status": {
+      "active": "Active",
+      "pending": "Pending",
+      "elapsed": "Elapsed"
+    },
     "sections": {
       "basicInfo": "Basic Information",
       "registrationForm": "Registration Form",
@@ -679,7 +700,14 @@
       "termsAndConditions": "Terms and Conditions",
       "statusAndDates": "Status and Dates",
       "paymentInfo": "Payment Information",
-      "formData": "Registration Form Data"
+      "formData": "Registration Form Data",
+      "formSubmissionData": "Form Submission Data",
+      "registrationInfo": "Registration Information",
+      "registrationForm": "Registration Form",
+      "duration": "Duration Settings",
+      "approval": "Approval Settings",
+      "payment": "Payment Configuration",
+      "discounts": "Discounts"
     },
     "fields": {
       "name": "Name",
@@ -741,7 +769,8 @@
     },
     "details": {
       "backToTypes": "Back to List",
-      "backToDatabase": "Back to Database"
+      "backToDatabase": "Back to Database",
+      "backToRegistrations": "Back to Registrations"
     },
     "delete": {
       "title": "Delete Registration Type",
@@ -757,6 +786,11 @@
       "paymentMethodRequired": "At least one payment method is required",
       "termsRequired": "Terms and Conditions content is required when enabled"
     },
+    "discounts": {
+      "selectorHelperText": "Associate discounts with this registration type",
+      "selectLabel": "Select Discounts",
+      "selectHelperText": "Choose applicable discounts for this registration type"
+    },
     "actions": {
       "saveAsDraft": "Save as Draft",
       "saveAndPublish": "Save and Publish",
@@ -766,12 +800,15 @@
       "markUnprocessed": "Mark Unprocessed",
       "addLabels": "Add Labels",
       "removeLabels": "Remove Labels",
+      "addRegistration": "Add Registration",
+      "cancel": "Cancel",
       "execute": "Execute",
       "add": "Add",
       "saveLabels": "Save Labels",
       "saveChanges": "Save Changes"
     },
     "batch": {
+      "title": "Batch Operation",
       "markProcessed": {
         "title": "Mark as Processed",
         "message": "Mark {{count}} registration(s) as processed?"
@@ -782,15 +819,19 @@
       },
       "addLabels": {
         "title": "Add Labels",
-        "message": "Add selected labels to {{count}} registration(s)?"
+        "message": "Add selected labels to {{count}} registration(s)?",
+        "labelsToAdd": "Labels to add"
       },
       "removeLabels": {
         "title": "Remove Labels",
-        "message": "Remove selected labels from {{count}} registration(s)?"
+        "message": "Remove selected labels from {{count}} registration(s)?",
+        "labelsToRemove": "Labels to remove"
       },
+      "labelPlaceholder": "Type a label and press Enter",
       "selectedRegistrations": "Selected registrations: {{count}}",
       "processing": "Processing...",
-      "batchOperation": "Batch Operation"
+      "batchOperation": "Batch Operation",
+      "error": "Batch operation failed. Please try again."
     },
     "customFilter": {
       "title": "Create Custom Filter",
@@ -817,6 +858,25 @@
       "paid": "Paid",
       "pending": "Pending",
       "notSpecified": "Not specified"
+    },
+    "creation": {
+      "selectType": "Select Registration Type",
+      "title": "Create Registration",
+      "entityName": "Entity Name",
+      "name": "Name",
+      "ownerName": "Owner Name",
+      "loadingFields": "Loading form fields…",
+      "statusActive": "This registration will be automatically approved (Active)",
+      "statusPending": "This registration will require manual approval (Pending)",
+      "submit": "Create Registration",
+      "submitting": "Creating…",
+      "success": "Registration created successfully",
+      "error": "Failed to create registration",
+      "validationError": "Please fill in all required fields",
+      "noTypesAvailable": "No registration types available",
+      "fieldRequired": "{{field}} is required",
+      "invalidEmail": "Invalid email format",
+      "invalidNumber": "Invalid number"
     },
     "processedStatus": {
       "processed": "Processed",
@@ -1849,10 +1909,11 @@
     "registrations": {
       "name": "Registrations",
       "title": "Registrations",
-      "description": "Manage registration types and registrations",
+      "description": "Manage entity registrations",
       "menu": {
-        "types": "Registration Types",
-        "database": "Registrations Database"
+        "registrationsDatabase": "Registrations Database",
+        "registrationTypes": "Registration Types",
+        "discounts": "Discounts"
       }
     },
     "ticketing": {

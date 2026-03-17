@@ -641,7 +641,22 @@
       "status": "Estado",
       "customFilter": "Filtro personalizado",
       "createFilter": "Crear filtro",
-      "none": "Ninguno"
+      "createTitle": "Crear filtro personalizado",
+      "none": "Ninguno",
+      "name": "Nombre del filtro",
+      "save": "Guardar filtro",
+      "registrationTypes": "Tipos de inscripción",
+      "labels": "Etiquetas",
+      "addLabel": "Agregar etiqueta",
+      "dateLastRenewed": "Fecha de última renovación",
+      "validUntil": "Válido hasta",
+      "afterDate": "Después",
+      "beforeDate": "Antes",
+      "validation": {
+        "nameRequired": "El nombre del filtro es obligatorio",
+        "criteriaRequired": "Se requiere al menos un criterio de filtro",
+        "dateRangeInvalid": "La fecha \"después\" no debe ser posterior a la fecha \"antes\""
+      }
     },
     "statusOptions": {
       "all": "Todos",
@@ -653,6 +668,11 @@
       "elapsed": "Vencido"
     },
     "registrationStatus": {
+      "active": "Activo",
+      "pending": "Pendiente",
+      "elapsed": "Vencido"
+    },
+    "status": {
       "active": "Activo",
       "pending": "Pendiente",
       "elapsed": "Vencido"
@@ -729,7 +749,8 @@
     },
     "details": {
       "backToTypes": "Volver a la lista",
-      "backToDatabase": "Volver a la base de datos"
+      "backToDatabase": "Volver a la base de datos",
+      "backToRegistrations": "Volver a inscripciones"
     },
     "delete": {
       "title": "Eliminar tipo de inscripción",
@@ -754,6 +775,8 @@
       "markUnprocessed": "Marcar como no procesado",
       "addLabels": "Agregar etiquetas",
       "removeLabels": "Eliminar etiquetas",
+      "addRegistration": "Agregar inscripción",
+      "cancel": "Cancelar",
       "execute": "Ejecutar",
       "add": "Agregar",
       "saveLabels": "Guardar etiquetas",
@@ -805,6 +828,21 @@
       "paid": "Pagado",
       "pending": "Pendiente",
       "notSpecified": "No especificado"
+    },
+    "creation": {
+      "selectType": "Seleccionar tipo de inscripción",
+      "title": "Crear inscripción",
+      "entityName": "Nombre de entidad",
+      "name": "Nombre",
+      "ownerName": "Nombre del propietario",
+      "loadingFields": "Cargando campos del formulario…",
+      "statusActive": "Esta inscripción será aprobada automáticamente (Activo)",
+      "statusPending": "Esta inscripción requerirá aprobación manual (Pendiente)",
+      "submit": "Crear inscripción",
+      "submitting": "Creando…",
+      "success": "Inscripción creada con éxito",
+      "error": "Error al crear la inscripción",
+      "validationError": "Por favor, completa todos los campos obligatorios"
     },
     "processedStatus": {
       "processed": "Procesado",
@@ -1788,8 +1826,9 @@
       "title": "Registros",
       "description": "Gestionar tipos de registro y registros",
       "menu": {
-        "types": "Tipos de registro",
-        "database": "Base de datos de registros"
+        "registrationsDatabase": "Base de datos de registros",
+        "registrationTypes": "Tipos de registro",
+        "discounts": "Descuentos"
       }
     },
     "ticketing": {

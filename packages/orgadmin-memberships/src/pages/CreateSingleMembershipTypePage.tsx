@@ -4,7 +4,7 @@
  * Form for creating or editing single membership types
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -118,7 +118,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
     }
   };
 
-  const fetchDiscounts = async (organisationId: string, moduleType: string) => {
+  const fetchDiscounts = useCallback(async (organisationId: string, moduleType: string) => {
     try {
       const response = await execute({
         method: 'GET',
@@ -129,7 +129,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
       console.error('Failed to fetch discounts:', error);
       return [];
     }
-  };
+  }, [execute]);
 
   const loadMembershipType = async (typeId: string) => {
     try {
@@ -482,6 +482,7 @@ const CreateSingleMembershipTypePage: React.FC = () => {
                     fetchDiscounts={fetchDiscounts}
                     label="Select Discounts"
                     helperText="Choose which discounts can be applied to this membership type"
+                    currencyCode={organisation?.currency || 'EUR'}
                   />
                 </Grid>
               </Grid>

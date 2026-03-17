@@ -1,33 +1,36 @@
 /**
  * Batch Operations Dialog
- * 
- * Dialog for performing batch operations on selected registrations
+ *
+ * Dialog for performing batch operations on selected registrations:
+ * - Mark Processed / Mark Unprocessed: confirmation then immediate API call
+ * - Add Labels / Remove Labels: label selection UI (text input + chips) then API call
+ *
+ * Calls onComplete on success which clears selection in the parent.
  */
 
 import React, { useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
   Box,
+  Button,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  OutlinedInput,
-  SelectChangeEvent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   LinearProgress,
+  TextField,
+  Typography,
   Alert,
 } from '@mui/material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
+import type { BatchOperationType } from '../types/registration.types';
 
 interface BatchOperationsDialogProps {
   open: boolean;
   onClose: () => void;
-  operation: 'mark_processed' | 'mark_unprocessed' | 'add_labels' | 'remove_labels';
+  operation: BatchOperationType;
   selectedIds: string[];
   onComplete: () => void;
 }
@@ -39,148 +42,186 @@ const BatchOperationsDialog: React.FC<BatchOperationsDialogProps> = ({
   selectedIds,
   onComplete,
 }) => {
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
-  const [processing, setProcessing] = useState(false);
+  const { t } = useTranslation();
+  const { execute } = useApi();
+  const [labels, setLabels] = useState<string[]>([]);
+  const [labelInput, setLabelInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock data - would be loaded from API
-  const availableLabels = ['VIP', 'Verified', 'Renewal', 'New'];
+  const isLabelOperation = operation === 'add_labels' || operation === 'remove_labels';
 
-  const handleLabelsChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    setSelectedLabels(typeof value === 'string' ? value.split(',') : value);
-  };
-
-  const getOperationTitle = () => {
-    switch (operation) {
-      case 'mark_processed':
-        return 'Mark as Processed';
-      case 'mark_unprocessed':
-        return 'Mark as Unprocessed';
-      case 'add_labels':
-        return 'Add Labels';
-      case 'remove_labels':
-        return 'Remove Labels';
-      default:
-        return 'Batch Operation';
+  const handleAddLabel = () => {
+    const trimmed = labelInput.trim();
+    if (trimmed && !labels.includes(trimmed)) {
+      setLabels(prev => [...prev, trimmed]);
+      setLabelInput('');
     }
   };
 
-  const getOperationDescription = () => {
+  const handleRemoveLabel = (label: string) => {
+    setLabels(prev => prev.filter(l => l !== label));
+  };
+
+  const getEndpointUrl = (): string => {
+    switch (operation) {
+      case 'mark_processed':
+        return '/api/orgadmin/registrations/batch/mark-processed';
+      case 'mark_unprocessed':
+        return '/api/orgadmin/registrations/batch/mark-unprocessed';
+      case 'add_labels':
+        return '/api/orgadmin/registrations/batch/add-labels';
+      case 'remove_labels':
+        return '/api/orgadmin/registrations/batch/remove-labels';
+    }
+  };
+
+  const getTitle = (): string => {
+    switch (operation) {
+      case 'mark_processed':
+        return t('registrations.batch.markProcessed.title');
+      case 'mark_unprocessed':
+        return t('registrations.batch.markUnprocessed.title');
+      case 'add_labels':
+        return t('registrations.batch.addLabels.title');
+      case 'remove_labels':
+        return t('registrations.batch.removeLabels.title');
+      default:
+        return t('registrations.batch.title');
+    }
+  };
+
+  const getDescription = (): string => {
     const count = selectedIds.length;
     switch (operation) {
       case 'mark_processed':
-        return `Mark ${count} registration${count !== 1 ? 's' : ''} as processed?`;
+        return t('registrations.batch.markProcessed.message', { count });
       case 'mark_unprocessed':
-        return `Mark ${count} registration${count !== 1 ? 's' : ''} as unprocessed?`;
+        return t('registrations.batch.markUnprocessed.message', { count });
       case 'add_labels':
-        return `Add selected labels to ${count} registration${count !== 1 ? 's' : ''}?`;
+        return t('registrations.batch.addLabels.message', { count });
       case 'remove_labels':
-        return `Remove selected labels from ${count} registration${count !== 1 ? 's' : ''}?`;
+        return t('registrations.batch.removeLabels.message', { count });
       default:
         return '';
     }
   };
 
   const handleExecute = async () => {
+    setLoading(true);
     setError(null);
-    setProcessing(true);
 
     try {
-      // Mock API call - would be replaced with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate API call
-      console.log('Batch operation:', {
-        operation,
+      const data: Record<string, unknown> = {
         registrationIds: selectedIds,
-        labels: selectedLabels,
+      };
+
+      if (isLabelOperation) {
+        data.labels = labels;
+      }
+
+      await execute({
+        method: 'POST',
+        url: getEndpointUrl(),
+        data,
       });
 
       onComplete();
-      handleClose();
+      resetAndClose();
     } catch (err) {
-      setError('Failed to perform batch operation. Please try again.');
+      setError(t('registrations.batch.error'));
     } finally {
-      setProcessing(false);
+      setLoading(false);
     }
+  };
+
+  const resetAndClose = () => {
+    setLabels([]);
+    setLabelInput('');
+    setError(null);
+    onClose();
   };
 
   const handleClose = () => {
-    if (!processing) {
-      setSelectedLabels([]);
-      setError(null);
-      onClose();
+    if (!loading) {
+      resetAndClose();
     }
   };
 
-  const isLabelOperation = operation === 'add_labels' || operation === 'remove_labels';
-  const canExecute = !isLabelOperation || selectedLabels.length > 0;
+  const canExecute = !isLabelOperation || labels.length > 0;
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{getOperationTitle()}</DialogTitle>
+      <DialogTitle>{getTitle()}</DialogTitle>
       <DialogContent>
+        <DialogContentText sx={{ mb: 2 }}>
+          {getDescription()}
+        </DialogContentText>
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        <Typography variant="body1" gutterBottom>
-          {getOperationDescription()}
-        </Typography>
-
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Selected registrations: {selectedIds.length}
-          </Typography>
-        </Box>
-
         {isLabelOperation && (
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Labels</InputLabel>
-            <Select
-              multiple
-              value={selectedLabels}
-              onChange={handleLabelsChange}
-              input={<OutlinedInput label="Labels" />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
-                  ))}
-                </Box>
-              )}
-            >
-              {availableLabels.map((label) => (
-                <MenuItem key={label} value={label}>
-                  {label}
-                </MenuItem>
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              {operation === 'add_labels'
+                ? t('registrations.batch.addLabels.labelsToAdd')
+                : t('registrations.batch.removeLabels.labelsToRemove')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', minHeight: 40 }}>
+              {labels.map((label) => (
+                <Chip
+                  key={label}
+                  label={label}
+                  onDelete={() => handleRemoveLabel(label)}
+                />
               ))}
-            </Select>
-          </FormControl>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                size="small"
+                placeholder={t('registrations.batch.labelPlaceholder')}
+                value={labelInput}
+                onChange={(e) => setLabelInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLabel();
+                  }
+                }}
+                sx={{ flexGrow: 1 }}
+                data-testid="label-input"
+              />
+              <Button onClick={handleAddLabel} data-testid="add-label-button">
+                {t('registrations.actions.add')}
+              </Button>
+            </Box>
+          </Box>
         )}
 
-        {processing && (
+        {loading && (
           <Box sx={{ mt: 2 }}>
             <LinearProgress />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Processing...
+              {t('registrations.batch.processing')}
             </Typography>
           </Box>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={processing}>
-          Cancel
+        <Button onClick={handleClose} disabled={loading}>
+          {t('common.actions.cancel')}
         </Button>
         <Button
           onClick={handleExecute}
           variant="contained"
-          disabled={!canExecute || processing}
+          disabled={loading || !canExecute}
+          data-testid="execute-button"
         >
-          {processing ? 'Processing...' : 'Execute'}
+          {t('registrations.actions.execute')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -83,6 +83,7 @@ export interface RegistrationTypeFormData {
   supportedPaymentMethods: string[];
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
+  discountIds?: string[];
 }
 
 /**

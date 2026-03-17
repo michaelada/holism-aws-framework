@@ -116,4 +116,61 @@ router.get('/auth/me', authenticateToken(), async (req: AuthenticatedRequest, re
   }
 });
 
+/**
+ * GET /api/orgadmin/auth/capabilities
+ * Get current user's capabilities based on their roles and organization's enabled capabilities
+ */
+router.get('/auth/capabilities', authenticateToken(), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const keycloakUserId = req.user?.userId;
+
+    if (!keycloakUserId) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    // Find the organization user record with org capabilities
+    const userResult = await db.query(
+      `SELECT ou.id, o.enabled_capabilities
+       FROM organization_users ou
+       INNER JOIN organizations o ON ou.organization_id = o.id
+       WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin' AND ou.status = 'active'
+       LIMIT 1`,
+      [keycloakUserId]
+    );
+
+    if (userResult.rows.length === 0) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
+    const userRow = userResult.rows[0];
+
+    // Get user's role-based capabilities
+    const rolesResult = await db.query(
+      `SELECT oar.capability_permissions
+       FROM organization_user_roles our
+       INNER JOIN organization_admin_roles oar ON our.organization_admin_role_id = oar.id
+       WHERE our.organization_user_id = $1`,
+      [userRow.id]
+    );
+
+    // Aggregate capabilities from roles
+    const roleCapabilities = new Set<string>();
+    rolesResult.rows.forEach((role: any) => {
+      const permissions = role.capability_permissions || {};
+      Object.keys(permissions).forEach(cap => roleCapabilities.add(cap));
+    });
+
+    // Combine role capabilities with organization's enabled capabilities
+    const enabledCapabilities: string[] = userRow.enabled_capabilities || [];
+    const allCapabilities = new Set([...roleCapabilities, ...enabledCapabilities]);
+
+    res.json({ capabilities: Array.from(allCapabilities) });
+  } catch (error) {
+    logger.error('Error fetching capabilities:', error);
+    res.status(500).json({ error: 'Failed to load capabilities' });
+  }
+});
+
 export default router;

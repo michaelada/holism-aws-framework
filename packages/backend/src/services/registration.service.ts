@@ -21,6 +21,7 @@ export interface RegistrationType {
   supportedPaymentMethods: string[];
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
+  discountIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +86,7 @@ export interface CreateRegistrationTypeDto {
   supportedPaymentMethods: string[];
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
+  discountIds?: string[];
 }
 
 /**
@@ -104,6 +106,20 @@ export interface UpdateRegistrationTypeDto {
   supportedPaymentMethods?: string[];
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
+  discountIds?: string[];
+}
+
+/**
+ * DTO for creating a registration
+ */
+export interface CreateRegistrationDto {
+  organisationId: string;
+  registrationTypeId: string;
+  userId: string;
+  entityName: string;
+  ownerName?: string;
+  formSubmissionId: string;
+  status?: 'active' | 'pending' | 'elapsed';
 }
 
 /**
@@ -139,6 +155,18 @@ export interface CreateFilterDto {
 }
 
 /**
+ * Discount validation result interface
+ */
+export interface DiscountValidationResult {
+  valid: boolean;
+  errors: Array<{
+    discountId: string;
+    reason: 'not_found' | 'wrong_organisation' | 'wrong_module_type' | 'inactive';
+    message: string;
+  }>;
+}
+
+/**
  * Service for managing registration types and registrations
  */
 export class RegistrationService {
@@ -162,6 +190,9 @@ export class RegistrationService {
       supportedPaymentMethods: row.supported_payment_methods || [],
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
+      discountIds: row.discount_ids ? 
+        (Array.isArray(row.discount_ids) ? row.discount_ids : JSON.parse(row.discount_ids)) 
+        : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -276,12 +307,23 @@ export class RegistrationService {
         throw new Error('Terms and conditions text is required when use terms and conditions is enabled');
       }
 
+      // Validate discount IDs if provided
+      if (data.discountIds && data.discountIds.length > 0) {
+        const validationResult = await this.validateDiscountIds(data.discountIds, data.organisationId);
+        if (!validationResult.valid) {
+          const error = new Error('Discount validation failed') as any;
+          error.validationErrors = validationResult.errors;
+          throw error;
+        }
+      }
+
       const result = await db.query(
         `INSERT INTO registration_types 
          (organisation_id, name, description, entity_name, registration_form_id, registration_status,
           is_rolling_registration, valid_until, number_of_months, automatically_approve,
-          registration_labels, supported_payment_methods, use_terms_and_conditions, terms_and_conditions)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          registration_labels, supported_payment_methods, use_terms_and_conditions, terms_and_conditions,
+          discount_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
         [
           data.organisationId,
@@ -298,6 +340,7 @@ export class RegistrationService {
           JSON.stringify(data.supportedPaymentMethods),
           data.useTermsAndConditions || false,
           data.termsAndConditions || null,
+          JSON.stringify(data.discountIds || []),
         ]
       );
 
@@ -343,6 +386,16 @@ export class RegistrationService {
       const termsText = data.termsAndConditions !== undefined ? data.termsAndConditions : existing.termsAndConditions;
       if (useTerms && !termsText) {
         throw new Error('Terms and conditions text is required when use terms and conditions is enabled');
+      }
+
+      // Validate discount IDs if provided
+      if (data.discountIds && data.discountIds.length > 0) {
+        const validationResult = await this.validateDiscountIds(data.discountIds, existing.organisationId);
+        if (!validationResult.valid) {
+          const error = new Error('Discount validation failed') as any;
+          error.validationErrors = validationResult.errors;
+          throw error;
+        }
       }
 
       const updates: string[] = ['updated_at = NOW()'];
@@ -402,6 +455,11 @@ export class RegistrationService {
         values.push(data.termsAndConditions || null);
       }
 
+      if (data.discountIds !== undefined) {
+        updates.push(`discount_ids = $${paramCount++}`);
+        values.push(JSON.stringify(data.discountIds));
+      }
+
       values.push(id);
 
       const result = await db.query(
@@ -441,6 +499,66 @@ export class RegistrationService {
       logger.info(`Registration type deleted: ${id}`);
     } catch (error) {
       logger.error('Error deleting registration type:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new registration
+   */
+  async createRegistration(data: CreateRegistrationDto): Promise<Registration> {
+    try {
+      // Get the registration type to determine valid_until and labels
+      const regType = await this.getRegistrationTypeById(data.registrationTypeId);
+      if (!regType) {
+        throw new Error('Registration type not found');
+      }
+
+      // Calculate valid_until based on registration type config
+      let validUntil: Date;
+      if (regType.isRollingRegistration && regType.numberOfMonths) {
+        validUntil = new Date();
+        validUntil.setMonth(validUntil.getMonth() + regType.numberOfMonths);
+      } else if (regType.validUntil) {
+        validUntil = new Date(regType.validUntil);
+      } else {
+        // Fallback: 1 year from now
+        validUntil = new Date();
+        validUntil.setFullYear(validUntil.getFullYear() + 1);
+      }
+
+      // Generate a unique registration number
+      const countResult = await db.query(
+        'SELECT COUNT(*) as count FROM registrations WHERE organisation_id = $1',
+        [data.organisationId]
+      );
+      const count = parseInt(countResult.rows[0].count, 10) + 1;
+      const registrationNumber = `REG-${count.toString().padStart(6, '0')}`;
+
+      const result = await db.query(
+        `INSERT INTO registrations 
+         (organisation_id, registration_type_id, user_id, registration_number, entity_name,
+          owner_name, form_submission_id, date_last_renewed, status, valid_until, labels, processed, payment_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, $8, $9, $10, false, 'pending')
+         RETURNING *`,
+        [
+          data.organisationId,
+          data.registrationTypeId,
+          data.userId,
+          registrationNumber,
+          data.entityName,
+          data.ownerName || '',
+          data.formSubmissionId,
+          data.status || 'pending',
+          validUntil,
+          JSON.stringify(regType.registrationLabels || []),
+        ]
+      );
+
+      logger.info(`Registration created: ${registrationNumber} (${result.rows[0].id})`);
+      return this.rowToRegistration(result.rows[0]);
+    } catch (error) {
+      logger.error('Error creating registration:', error);
       throw error;
     }
   }
@@ -829,6 +947,84 @@ export class RegistrationService {
       return count;
     } catch (error) {
       logger.error('Error in automatic status update:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate discount IDs for a registration type
+   * Checks existence, organisation ownership, module type, and active status
+   */
+  async validateDiscountIds(
+    discountIds: string[],
+    organisationId: string
+  ): Promise<DiscountValidationResult> {
+    const errors: Array<{
+      discountId: string;
+      reason: 'not_found' | 'wrong_organisation' | 'wrong_module_type' | 'inactive';
+      message: string;
+    }> = [];
+
+    // If empty array, return valid
+    if (!discountIds || discountIds.length === 0) {
+      return { valid: true, errors: [] };
+    }
+
+    try {
+      // Batch query all discounts using WHERE id = ANY($1)
+      const result = await db.query(
+        `SELECT id, organisation_id, module_type, status
+         FROM discounts
+         WHERE id = ANY($1)`,
+        [discountIds]
+      );
+
+      // Create a map of found discounts for quick lookup
+      const foundDiscounts = new Map(
+        result.rows.map(row => [row.id, row])
+      );
+
+      // Validate each discount ID
+      for (const discountId of discountIds) {
+        const discount = foundDiscounts.get(discountId);
+
+        if (!discount) {
+          // Discount does not exist
+          errors.push({
+            discountId,
+            reason: 'not_found',
+            message: `Discount with ID '${discountId}' does not exist`
+          });
+        } else if (discount.organisation_id !== organisationId) {
+          // Discount belongs to different organization
+          errors.push({
+            discountId,
+            reason: 'wrong_organisation',
+            message: `Discount with ID '${discountId}' belongs to a different organisation`
+          });
+        } else if (discount.module_type !== 'registrations') {
+          // Discount has wrong moduleType
+          errors.push({
+            discountId,
+            reason: 'wrong_module_type',
+            message: `Discount with ID '${discountId}' has moduleType '${discount.module_type}', expected 'registrations'`
+          });
+        } else if (discount.status === 'inactive') {
+          // Discount is inactive
+          errors.push({
+            discountId,
+            reason: 'inactive',
+            message: `Discount with ID '${discountId}' is inactive`
+          });
+        }
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors
+      };
+    } catch (error) {
+      logger.error('Error validating discount IDs:', error);
       throw error;
     }
   }

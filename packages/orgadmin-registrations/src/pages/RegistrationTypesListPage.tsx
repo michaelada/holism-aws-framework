@@ -35,20 +35,14 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { RegistrationType } from '../types/registration.types';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    // Mock data for development
-    return [];
-  },
-});
 
 const RegistrationTypesListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { organisation } = useOrganisation();
   
   const [registrationTypes, setRegistrationTypes] = useState<RegistrationType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<RegistrationType[]>([]);
@@ -69,7 +63,7 @@ const RegistrationTypesListPage: React.FC = () => {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/registration-types',
+        url: `/api/orgadmin/organisations/${organisation?.id}/registration-types`,
       });
       setRegistrationTypes(response || []);
     } catch (error) {
@@ -105,11 +99,11 @@ const RegistrationTypesListPage: React.FC = () => {
   };
 
   const handleEditType = (typeId: string) => {
-    navigate(`/orgadmin/registrations/types/${typeId}/edit`);
+    navigate(`/registrations/types/${typeId}/edit`);
   };
 
   const handleViewType = (typeId: string) => {
-    navigate(`/orgadmin/registrations/types/${typeId}`);
+    navigate(`/registrations/types/${typeId}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -121,11 +115,6 @@ const RegistrationTypesListPage: React.FC = () => {
       default:
         return 'default';
     }
-  };
-
-  const getPricingDisplay = (type: RegistrationType) => {
-    // This will be enhanced when payment integration is complete
-    return t('common.labels.configured');
   };
 
   return (
@@ -181,7 +170,7 @@ const RegistrationTypesListPage: React.FC = () => {
               <TableCell>{t('registrations.table.name')}</TableCell>
               <TableCell>{t('registrations.table.entityName')}</TableCell>
               <TableCell>{t('registrations.table.status')}</TableCell>
-              <TableCell>{t('registrations.table.pricing')}</TableCell>
+              <TableCell>{t('registrations.table.createdAt')}</TableCell>
               <TableCell align="right">{t('registrations.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -202,7 +191,12 @@ const RegistrationTypesListPage: React.FC = () => {
               </TableRow>
             ) : (
               filteredTypes.map((type) => (
-                <TableRow key={type.id} hover>
+                <TableRow
+                  key={type.id}
+                  hover
+                  onClick={() => handleViewType(type.id)}
+                  sx={{ cursor: 'pointer' }}
+                >
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">
                       {type.name}
@@ -227,19 +221,19 @@ const RegistrationTypesListPage: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    {getPricingDisplay(type)}
+                    {type.createdAt ? new Date(type.createdAt).toLocaleDateString() : '-'}
                   </TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
-                      onClick={() => handleViewType(type.id)}
+                      onClick={(e) => { e.stopPropagation(); handleViewType(type.id); }}
                       title={t('registrations.tooltips.viewDetails')}
                     >
                       <ViewIcon />
                     </IconButton>
                     <IconButton
                       size="small"
-                      onClick={() => handleEditType(type.id)}
+                      onClick={(e) => { e.stopPropagation(); handleEditType(type.id); }}
                       title={t('registrations.tooltips.edit')}
                     >
                       <EditIcon />

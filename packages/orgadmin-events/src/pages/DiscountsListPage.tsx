@@ -54,11 +54,11 @@ import {
   Assessment as StatsIcon,
 } from '@mui/icons-material';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
 import type { Discount, DiscountStatus, DiscountType, ApplicationScope } from '../types/discount.types';
 
 interface DiscountsListPageProps {
-  moduleType?: 'events' | 'memberships';
+  moduleType?: 'events' | 'memberships' | 'registrations';
 }
 
 const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'events' }) => {
@@ -69,6 +69,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
   const { execute, error: apiError } = useApi();
   const { organisation } = useOrganisation();
   const { setCurrentModule } = useOnboarding();
+  const { locale } = useLocale();
   
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [filteredDiscounts, setFilteredDiscounts] = useState<Discount[]>([]);
@@ -85,7 +86,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
 
   // Set current module for help context
   useEffect(() => {
-    setCurrentModule(moduleType === 'memberships' ? 'memberships' : 'events');
+    setCurrentModule(moduleType === 'memberships' ? 'memberships' : moduleType === 'registrations' ? 'registrations' : 'events');
   }, [setCurrentModule, moduleType]);
 
   useEffect(() => {
@@ -164,12 +165,12 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
   };
 
   const handleCreate = () => {
-    const basePath = moduleType === 'memberships' ? '/members' : '/events';
+    const basePath = moduleType === 'memberships' ? '/members' : moduleType === 'registrations' ? '/registrations' : '/events';
     navigate(`${basePath}/discounts/new`);
   };
 
   const handleEdit = (discount: Discount) => {
-    const basePath = moduleType === 'memberships' ? '/members' : '/events';
+    const basePath = moduleType === 'memberships' ? '/members' : moduleType === 'registrations' ? '/registrations' : '/events';
     navigate(`${basePath}/discounts/${discount.id}/edit`);
   };
 
@@ -216,7 +217,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
   };
 
   const handleViewStats = (discount: Discount) => {
-    const basePath = moduleType === 'memberships' ? '/members' : '/events';
+    const basePath = moduleType === 'memberships' ? '/members' : moduleType === 'registrations' ? '/registrations' : '/events';
     navigate(`${basePath}/discounts/${discount.id}/stats`);
   };
 
@@ -232,7 +233,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
   const formatDiscountValue = (discount: Discount): string => {
     return discount.discountType === 'percentage'
       ? `${discount.discountValue}%`
-      : `$${discount.discountValue.toFixed(2)}`;
+      : formatCurrency(discount.discountValue, organisation?.currency || 'EUR', locale);
   };
 
   const formatScope = (scope: ApplicationScope): string => {
@@ -274,7 +275,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">
-          {moduleType === 'memberships' ? 'Membership Discounts' : 'Event Discounts'}
+          {moduleType === 'memberships' ? 'Membership Discounts' : moduleType === 'registrations' ? 'Registration Discounts' : 'Event Discounts'}
         </Typography>
         <Button
           variant="contained"

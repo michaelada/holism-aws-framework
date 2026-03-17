@@ -42,6 +42,7 @@ export interface ApplicationFormField {
   formId: string;
   fieldId: string;
   order: number;
+  required?: boolean;
   groupName?: string;
   groupOrder?: number;
   wizardStep?: number;
@@ -56,6 +57,7 @@ export interface ApplicationFormField {
 export interface ApplicationFormWithFields extends ApplicationForm {
   fields: Array<ApplicationField & {
     order: number;
+    required?: boolean;
     groupName?: string;
     groupOrder?: number;
     wizardStep?: number;
@@ -122,6 +124,7 @@ export interface AddFieldToFormDto {
   formId: string;
   fieldId: string;
   order: number;
+  required?: boolean;
   groupName?: string;
   groupOrder?: number;
   wizardStep?: number;
@@ -223,6 +226,7 @@ export class ApplicationFormService {
         `SELECT 
           af.*,
           aff.order,
+          aff.required,
           aff.group_name,
           aff.group_order,
           aff.wizard_step,
@@ -237,6 +241,7 @@ export class ApplicationFormService {
       const fields = fieldsResult.rows.map(row => ({
         ...this.rowToField(row),
         order: row.order,
+        required: row.required ?? false,
         groupName: row.group_name,
         groupOrder: row.group_order,
         wizardStep: row.wizard_step,
@@ -551,13 +556,14 @@ export class ApplicationFormService {
     try {
       const result = await db.query(
         `INSERT INTO application_form_fields 
-         (form_id, field_id, "order", group_name, group_order, wizard_step, wizard_step_title)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (form_id, field_id, "order", required, group_name, group_order, wizard_step, wizard_step_title)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
         [
           data.formId,
           data.fieldId,
           data.order,
+          data.required ?? false,
           data.groupName || null,
           data.groupOrder || null,
           data.wizardStep || null,
@@ -571,6 +577,7 @@ export class ApplicationFormService {
         formId: result.rows[0].form_id,
         fieldId: result.rows[0].field_id,
         order: result.rows[0].order,
+        required: result.rows[0].required,
         groupName: result.rows[0].group_name,
         groupOrder: result.rows[0].group_order,
         wizardStep: result.rows[0].wizard_step,

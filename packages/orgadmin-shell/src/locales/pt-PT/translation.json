@@ -422,7 +422,22 @@
       "status": "Estado",
       "customFilter": "Filtro personalizado",
       "createFilter": "Criar filtro",
-      "none": "Nenhum"
+      "createTitle": "Criar filtro personalizado",
+      "none": "Nenhum",
+      "name": "Nome do filtro",
+      "save": "Guardar filtro",
+      "registrationTypes": "Tipos de registo",
+      "labels": "Etiquetas",
+      "addLabel": "Adicionar etiqueta",
+      "dateLastRenewed": "Data da última renovação",
+      "validUntil": "Válido até",
+      "afterDate": "Depois",
+      "beforeDate": "Antes",
+      "validation": {
+        "nameRequired": "O nome do filtro é obrigatório",
+        "criteriaRequired": "É necessário pelo menos um critério de filtro",
+        "dateRangeInvalid": "A data \"depois\" não deve ser posterior à data \"antes\""
+      }
     },
     "statusOptions": {
       "all": "Todos",
@@ -434,6 +449,11 @@
       "elapsed": "Expirado"
     },
     "registrationStatus": {
+      "active": "Ativo",
+      "pending": "Pendente",
+      "elapsed": "Expirado"
+    },
+    "status": {
       "active": "Ativo",
       "pending": "Pendente",
       "elapsed": "Expirado"
@@ -510,7 +530,8 @@
     },
     "details": {
       "backToTypes": "Voltar à lista",
-      "backToDatabase": "Voltar à base de dados"
+      "backToDatabase": "Voltar à base de dados",
+      "backToRegistrations": "Voltar aos registos"
     },
     "delete": {
       "title": "Eliminar tipo de registo",
@@ -535,6 +556,8 @@
       "markUnprocessed": "Marcar como não processado",
       "addLabels": "Adicionar etiquetas",
       "removeLabels": "Remover etiquetas",
+      "addRegistration": "Adicionar registo",
+      "cancel": "Cancelar",
       "execute": "Executar",
       "add": "Adicionar",
       "saveLabels": "Guardar etiquetas",
@@ -586,6 +609,21 @@
       "paid": "Pago",
       "pending": "Pendente",
       "notSpecified": "Não especificado"
+    },
+    "creation": {
+      "selectType": "Selecionar tipo de registo",
+      "title": "Criar registo",
+      "entityName": "Nome da entidade",
+      "name": "Nome",
+      "ownerName": "Nome do proprietário",
+      "loadingFields": "A carregar campos do formulário…",
+      "statusActive": "Este registo será aprovado automaticamente (Ativo)",
+      "statusPending": "Este registo necessitará de aprovação manual (Pendente)",
+      "submit": "Criar registo",
+      "submitting": "A criar…",
+      "success": "Registo criado com sucesso",
+      "error": "Falha ao criar o registo",
+      "validationError": "Por favor, preencha todos os campos obrigatórios"
     },
     "processedStatus": {
       "processed": "Processado",
@@ -1573,8 +1611,9 @@
       "title": "Registos",
       "description": "Gerir tipos de registo e registos",
       "menu": {
-        "types": "Tipos de registo",
-        "database": "Base de dados de registos"
+        "registrationsDatabase": "Base de dados de registos",
+        "registrationTypes": "Tipos de registo",
+        "discounts": "Descontos"
       }
     },
     "ticketing": {

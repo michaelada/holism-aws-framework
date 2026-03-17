@@ -43,7 +43,7 @@ import {
   HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
 import type { CreateDiscountDto, DiscountStatus, ApplicationScope } from '../../../backend/src/types/discount.types';
 
 interface DiscountFormData {
@@ -73,7 +73,7 @@ interface DiscountFormData {
 }
 
 interface CreateDiscountPageProps {
-  moduleType?: 'events' | 'memberships';
+  moduleType?: 'events' | 'memberships' | 'registrations';
 }
 
 const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'events' }) => {
@@ -85,6 +85,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   const { execute } = useApi();
   const { organisation } = useOrganisation();
   const { setCurrentModule } = useOnboarding();
+  const { locale } = useLocale();
   const isEditMode = Boolean(id);
 
   // State for membership types loaded from API
@@ -104,6 +105,17 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Derive currency symbol from organisation currency code
+  const currencySymbol = React.useMemo(() => {
+    const code = organisation?.currency || 'EUR';
+    try {
+      const parts = new Intl.NumberFormat('en', { style: 'currency', currency: code }).formatToParts(0);
+      return parts.find(p => p.type === 'currency')?.value || code;
+    } catch {
+      return code;
+    }
+  }, [organisation?.currency]);
+
   const [formData, setFormData] = useState<DiscountFormData>({
     name: '',
     description: '',
@@ -120,7 +132,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
 
   // Set current module for help context
   useEffect(() => {
-    setCurrentModule(moduleType === 'memberships' ? 'memberships' : 'events');
+    setCurrentModule(moduleType === 'memberships' ? 'memberships' : moduleType === 'registrations' ? 'registrations' : 'events');
   }, [setCurrentModule, moduleType]);
 
   // Load membership types from API
@@ -396,7 +408,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
         });
       }
 
-      navigate(moduleType === 'memberships' ? '/members/discounts' : '/events/discounts');
+      navigate(moduleType === 'memberships' ? '/members/discounts' : moduleType === 'registrations' ? '/registrations/discounts' : '/events/discounts');
     } catch (error) {
       console.error('Failed to save discount:', error);
       setError('Failed to save discount');
@@ -406,7 +418,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   };
 
   const handleCancel = () => {
-    navigate(moduleType === 'memberships' ? '/members/discounts' : '/events/discounts');
+    navigate(moduleType === 'memberships' ? '/members/discounts' : moduleType === 'registrations' ? '/registrations/discounts' : '/events/discounts');
   };
 
   const renderStepContent = (step: number) => {
@@ -559,7 +571,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
               }
               InputProps={{
                 startAdornment: formData.discountType === 'fixed' ? (
-                  <InputAdornment position="start">$</InputAdornment>
+                  <InputAdornment position="start">{currencySymbol}</InputAdornment>
                 ) : undefined,
                 endAdornment: (
                   <InputAdornment position="end">
@@ -822,7 +834,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
                 'Minimum cart total required to apply this discount (optional)'
               }
               InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
                 endAdornment: (
                   <InputAdornment position="end">
                     <Tooltip
@@ -858,7 +870,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
                 'Maximum discount amount that can be applied (optional)'
               }
               InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
                 endAdornment: (
                   <InputAdornment position="end">
                     <Tooltip
@@ -1176,7 +1188,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
                 <Typography variant="body2">
                   {formData.discountType === 'percentage'
                     ? `${formData.discountValue}%`
-                    : `$${formData.discountValue.toFixed(2)}`}
+                    : formatCurrency(formData.discountValue, organisation?.currency || 'EUR', locale)}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -1245,7 +1257,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
               <Grid item xs={12} sm={8}>
                 <Typography variant="body2">
                   {formData.minimumPurchaseAmount !== undefined
-                    ? `$${formData.minimumPurchaseAmount.toFixed(2)}`
+                    ? formatCurrency(formData.minimumPurchaseAmount, organisation?.currency || 'EUR', locale)
                     : 'Not set'}
                 </Typography>
               </Grid>
@@ -1255,7 +1267,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
               <Grid item xs={12} sm={8}>
                 <Typography variant="body2">
                   {formData.maximumDiscountAmount !== undefined
-                    ? `$${formData.maximumDiscountAmount.toFixed(2)}`
+                    ? formatCurrency(formData.maximumDiscountAmount, organisation?.currency || 'EUR', locale)
                     : 'Not set'}
                 </Typography>
               </Grid>

@@ -26,17 +26,9 @@ import {
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { RegistrationType } from '../types/registration.types';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    console.log('API call:', method, url);
-    return null;
-  },
-});
 
 const RegistrationTypeDetailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,7 +62,7 @@ const RegistrationTypeDetailsPage: React.FC = () => {
   };
 
   const handleEdit = () => {
-    navigate(`/orgadmin/registrations/types/${id}/edit`);
+    navigate(`/registrations/types/${id}/edit`);
   };
 
   const handleDelete = async () => {

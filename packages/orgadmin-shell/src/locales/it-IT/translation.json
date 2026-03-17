@@ -422,7 +422,22 @@
       "status": "Stato",
       "customFilter": "Filtro personalizzato",
       "createFilter": "Crea filtro",
-      "none": "Nessuno"
+      "createTitle": "Crea filtro personalizzato",
+      "none": "Nessuno",
+      "name": "Nome filtro",
+      "save": "Salva filtro",
+      "registrationTypes": "Tipi di registrazione",
+      "labels": "Etichette",
+      "addLabel": "Aggiungi etichetta",
+      "dateLastRenewed": "Data ultimo rinnovo",
+      "validUntil": "Valido fino a",
+      "afterDate": "Dopo",
+      "beforeDate": "Prima",
+      "validation": {
+        "nameRequired": "Il nome del filtro è obbligatorio",
+        "criteriaRequired": "È richiesto almeno un criterio di filtro",
+        "dateRangeInvalid": "La data \"dopo\" non deve essere successiva alla data \"prima\""
+      }
     },
     "statusOptions": {
       "all": "Tutti",
@@ -434,6 +449,11 @@
       "elapsed": "Scaduto"
     },
     "registrationStatus": {
+      "active": "Attivo",
+      "pending": "In attesa",
+      "elapsed": "Scaduto"
+    },
+    "status": {
       "active": "Attivo",
       "pending": "In attesa",
       "elapsed": "Scaduto"
@@ -510,7 +530,8 @@
     },
     "details": {
       "backToTypes": "Torna all'elenco",
-      "backToDatabase": "Torna al database"
+      "backToDatabase": "Torna al database",
+      "backToRegistrations": "Torna alle registrazioni"
     },
     "delete": {
       "title": "Elimina tipo di registrazione",
@@ -535,6 +556,8 @@
       "markUnprocessed": "Segna come non elaborato",
       "addLabels": "Aggiungi etichette",
       "removeLabels": "Rimuovi etichette",
+      "addRegistration": "Aggiungi registrazione",
+      "cancel": "Annulla",
       "execute": "Esegui",
       "add": "Aggiungi",
       "saveLabels": "Salva etichette",
@@ -586,6 +609,21 @@
       "paid": "Pagato",
       "pending": "In attesa",
       "notSpecified": "Non specificato"
+    },
+    "creation": {
+      "selectType": "Seleziona tipo di registrazione",
+      "title": "Crea registrazione",
+      "entityName": "Nome entità",
+      "name": "Nome",
+      "ownerName": "Nome proprietario",
+      "loadingFields": "Caricamento campi del modulo…",
+      "statusActive": "Questa registrazione sarà approvata automaticamente (Attivo)",
+      "statusPending": "Questa registrazione richiederà approvazione manuale (In attesa)",
+      "submit": "Crea registrazione",
+      "submitting": "Creazione in corso…",
+      "success": "Registrazione creata con successo",
+      "error": "Impossibile creare la registrazione",
+      "validationError": "Compila tutti i campi obbligatori"
     },
     "processedStatus": {
       "processed": "Elaborato",
@@ -1573,8 +1611,9 @@
       "title": "Registrazioni",
       "description": "Gestire tipi di registrazione e registrazioni",
       "menu": {
-        "types": "Tipi di registrazione",
-        "database": "Database registrazioni"
+        "registrationsDatabase": "Database registrazioni",
+        "registrationTypes": "Tipi di registrazione",
+        "discounts": "Sconti"
       }
     },
     "ticketing": {

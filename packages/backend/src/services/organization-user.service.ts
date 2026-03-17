@@ -26,6 +26,7 @@ export class OrganizationUserService {
       firstName: row.first_name,
       lastName: row.last_name,
       status: row.status,
+      roles: row.role_ids || [],
       lastLogin: row.last_login,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

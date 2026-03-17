@@ -22,9 +22,9 @@ import {
   ArrowBack as BackIcon,
   People as EntriesIcon,
 } from '@mui/icons-material';
-import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, formatCurrency } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { Event, EventActivity } from '../types/event.types';
 import type { Discount } from '../types/discount.types';
 import { useDiscountService } from '../hooks/useDiscountService';
@@ -35,6 +35,7 @@ const EventDetailsPage: React.FC = () => {
   const { execute } = useApi();
   const { t } = useTranslation();
   const { locale } = useLocale();
+  const { organisation } = useOrganisation();
   const discountService = useDiscountService();
   
   const [event, setEvent] = useState<Event | null>(null);
@@ -283,7 +284,7 @@ const EventDetailsPage: React.FC = () => {
                       label={`${discount.name} (${
                         discount.discountType === 'percentage'
                           ? `${discount.discountValue}%`
-                          : `£${discount.discountValue.toFixed(2)}`
+                          : formatCurrency(discount.discountValue, organisation?.currency || 'EUR', locale)
                       })`}
                       color="success"
                       variant="outlined"
@@ -323,7 +324,7 @@ const EventDetailsPage: React.FC = () => {
                       Fee
                     </Typography>
                     <Typography variant="body1" sx={{ mt: 0.5 }}>
-                      {activity.fee > 0 ? `£${activity.fee.toFixed(2)}` : 'Free'}
+                      {activity.fee > 0 ? formatCurrency(activity.fee, organisation?.currency || 'EUR', locale) : 'Free'}
                     </Typography>
                   </Grid>
 
@@ -376,7 +377,7 @@ const EventDetailsPage: React.FC = () => {
                             label={`${discount.name} (${
                               discount.discountType === 'percentage'
                                 ? `${discount.discountValue}%`
-                                : `£${discount.discountValue.toFixed(2)}`
+                                : formatCurrency(discount.discountValue, organisation?.currency || 'EUR', locale)
                             })`}
                             color="success"
                             variant="outlined"

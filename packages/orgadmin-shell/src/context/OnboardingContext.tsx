@@ -10,6 +10,7 @@ export type ModuleId =
   | 'forms' 
   | 'events' 
   | 'memberships' 
+  | 'registrations'
   | 'calendar' 
   | 'payments';
 

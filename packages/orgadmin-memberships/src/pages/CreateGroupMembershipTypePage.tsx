@@ -5,7 +5,7 @@
  * Includes all fields from single membership type plus group-specific configuration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -177,7 +177,7 @@ const CreateGroupMembershipTypePage: React.FC = () => {
     }
   };
 
-  const fetchDiscounts = async (organisationId: string, moduleType: string) => {
+  const fetchDiscounts = useCallback(async (organisationId: string, moduleType: string) => {
     try {
       const response = await execute({
         method: 'GET',
@@ -188,7 +188,7 @@ const CreateGroupMembershipTypePage: React.FC = () => {
       console.error('Failed to fetch discounts:', error);
       return [];
     }
-  };
+  }, [execute]);
 
   const loadMembershipType = async (typeId: string) => {
     try {
@@ -652,6 +652,7 @@ const CreateGroupMembershipTypePage: React.FC = () => {
                     fetchDiscounts={fetchDiscounts}
                     label="Select Discounts"
                     helperText="Choose which discounts can be applied to this membership type"
+                    currencyCode={organisation?.currency || 'EUR'}
                   />
                 </Grid>
               </Grid>

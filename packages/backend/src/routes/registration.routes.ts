@@ -3,8 +3,27 @@ import { registrationService } from '../services/registration.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
+import validator from 'validator';
+import DOMPurify from 'isomorphic-dompurify';
+import { richTextConfig } from '../middleware/xss-protection.middleware';
 
 const router = Router();
+
+/**
+ * Restore rich text HTML that was escaped by the global sanitizeBody middleware.
+ * Unescapes HTML entities then re-sanitizes with DOMPurify to allow safe formatting tags.
+ */
+function restoreRichTextField(data: any, field: string): void {
+  if (data && typeof data[field] === 'string') {
+    const unescaped = validator.unescape(data[field]);
+    data[field] = DOMPurify.sanitize(unescaped, {
+      ALLOWED_TAGS: richTextConfig.allowedTags || [],
+      ALLOWED_ATTR: Object.values(richTextConfig.allowedAttributes || {}).flat(),
+      FORBID_TAGS: richTextConfig.stripIgnoreTagBody || [],
+      FORBID_CONTENTS: richTextConfig.stripIgnoreTagBody || [],
+    }) as unknown as string;
+  }
+}
 
 /**
  * Middleware to check if organisation has registrations capability
@@ -114,6 +133,11 @@ router.get(
       if (!registrationType) {
         return res.status(404).json({ error: 'Registration type not found' });
       }
+
+      // Unescape any previously-escaped rich text HTML stored in the database
+      if (registrationType.termsAndConditions) {
+        registrationType.termsAndConditions = validator.unescape(registrationType.termsAndConditions);
+      }
       
       return res.json(registrationType);
     } catch (error) {
@@ -142,17 +166,62 @@ router.get(
 router.post(
   '/registration-types',
   authenticateToken(),
-  requireRegistrationsCapability,
   async (req: Request, res: Response) => {
     try {
-      const registrationType = await registrationService.createRegistrationType(req.body);
-      res.status(201).json(registrationType);
+      const user = (req as any).user;
+      if (!user?.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Get user's organisation from organization_users table
+      const orgResult = await db.query(
+        `SELECT organization_id FROM organization_users 
+         WHERE keycloak_user_id = $1 AND user_type = 'org-admin' AND status = 'active'
+         LIMIT 1`,
+        [user.userId]
+      );
+
+      if (orgResult.rows.length === 0) {
+        return res.status(403).json({ error: 'User is not an organization administrator' });
+      }
+
+      const organisationId = orgResult.rows[0].organization_id;
+
+      // Check if organisation has registrations capability
+      const capabilityResult = await db.query(
+        `SELECT enabled_capabilities FROM organizations WHERE id = $1`,
+        [organisationId]
+      );
+
+      if (capabilityResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Organisation not found' });
+      }
+
+      const enabledCapabilities = capabilityResult.rows[0].enabled_capabilities || [];
+
+      if (!enabledCapabilities.includes('registrations')) {
+        return res.status(403).json({
+          error: 'Organisation does not have registrations capability enabled'
+        });
+      }
+
+      // Add organisationId to request body
+      const registrationTypeData = {
+        ...req.body,
+        organisationId
+      };
+
+      // Restore rich text HTML escaped by global sanitizeBody middleware
+      restoreRichTextField(registrationTypeData, 'termsAndConditions');
+
+      const registrationType = await registrationService.createRegistrationType(registrationTypeData);
+      return res.status(201).json(registrationType);
     } catch (error) {
       logger.error('Error in POST /registration-types:', error);
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        return res.status(400).json({ error: error.message });
       } else {
-        res.status(500).json({ error: 'Failed to create registration type' });
+        return res.status(500).json({ error: 'Failed to create registration type' });
       }
     }
   }
@@ -188,7 +257,12 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const registrationType = await registrationService.updateRegistrationType(id, req.body);
+      const updateData = { ...req.body };
+
+      // Restore rich text HTML escaped by global sanitizeBody middleware
+      restoreRichTextField(updateData, 'termsAndConditions');
+
+      const registrationType = await registrationService.updateRegistrationType(id, updateData);
       res.json(registrationType);
     } catch (error) {
       logger.error('Error in PUT /registration-types/:id:', error);
@@ -309,6 +383,96 @@ router.get(
     } catch (error) {
       logger.error('Error in GET /registrations:', error);
       res.status(500).json({ error: 'Failed to fetch registrations' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/organisations/{organisationId}/registrations:
+ *   post:
+ *     summary: Create a new registration
+ *     tags: [Registrations]
+ *     parameters:
+ *       - in: path
+ *         name: organisationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - registrationTypeId
+ *               - formSubmissionId
+ *               - entityName
+ *             properties:
+ *               registrationTypeId:
+ *                 type: string
+ *               formSubmissionId:
+ *                 type: string
+ *               entityName:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [active, pending, elapsed]
+ *     responses:
+ *       201:
+ *         description: Registration created
+ *       400:
+ *         description: Validation error
+ */
+router.post(
+  '/organisations/:organisationId/registrations',
+  authenticateToken(),
+  requireRegistrationsCapability,
+  async (req: Request, res: Response) => {
+    try {
+      const { organisationId } = req.params;
+      const { registrationTypeId, formSubmissionId, entityName, status } = req.body;
+
+      if (!registrationTypeId || !formSubmissionId || !entityName) {
+        return res.status(400).json({ error: 'registrationTypeId, formSubmissionId, and entityName are required' });
+      }
+
+      // Get user's organization_users ID from auth token
+      const user = (req as any).user;
+      if (!user?.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const orgUserResult = await db.query(
+        `SELECT id FROM organization_users 
+         WHERE keycloak_user_id = $1 AND organization_id = $2 AND status = 'active'
+         LIMIT 1`,
+        [user.userId, organisationId]
+      );
+
+      if (orgUserResult.rows.length === 0) {
+        return res.status(403).json({ error: 'User is not a member of this organisation' });
+      }
+
+      const userId = orgUserResult.rows[0].id;
+
+      const registration = await registrationService.createRegistration({
+        organisationId,
+        registrationTypeId,
+        userId,
+        entityName,
+        formSubmissionId,
+        status: status || 'pending',
+      });
+
+      return res.status(201).json(registration);
+    } catch (error) {
+      logger.error('Error in POST /registrations:', error);
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Failed to create registration' });
     }
   }
 );
@@ -685,13 +849,31 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
-      const { userId } = req.query;
+
+      // Get user ID from auth token or query parameter
+      let userId = req.query.userId as string | undefined;
 
       if (!userId) {
-        return res.status(400).json({ error: 'userId query parameter is required' });
+        const user = (req as any).user;
+        if (!user?.userId) {
+          return res.status(401).json({ error: 'User not authenticated' });
+        }
+
+        const orgUserResult = await db.query(
+          `SELECT id FROM organization_users 
+           WHERE keycloak_user_id = $1 AND organization_id = $2 AND status = 'active'
+           LIMIT 1`,
+          [user.userId, organisationId]
+        );
+
+        if (orgUserResult.rows.length === 0) {
+          return res.status(403).json({ error: 'User is not a member of this organisation' });
+        }
+
+        userId = orgUserResult.rows[0].id;
       }
 
-      const filters = await registrationService.getCustomFilters(organisationId, userId as string);
+      const filters = await registrationService.getCustomFilters(organisationId, userId);
       return res.json(filters);
     } catch (error) {
       logger.error('Error in GET /registrations/filters:', error);

@@ -641,7 +641,22 @@
       "status": "Statut",
       "customFilter": "Filtre personnalisé",
       "createFilter": "Créer un filtre",
-      "none": "Aucun"
+      "createTitle": "Créer un filtre personnalisé",
+      "none": "Aucun",
+      "name": "Nom du filtre",
+      "save": "Enregistrer le filtre",
+      "registrationTypes": "Types d'inscription",
+      "labels": "Étiquettes",
+      "addLabel": "Ajouter une étiquette",
+      "dateLastRenewed": "Date du dernier renouvellement",
+      "validUntil": "Valable jusqu'au",
+      "afterDate": "Après",
+      "beforeDate": "Avant",
+      "validation": {
+        "nameRequired": "Le nom du filtre est requis",
+        "criteriaRequired": "Au moins un critère de filtre est requis",
+        "dateRangeInvalid": "La date \"après\" ne doit pas être postérieure à la date \"avant\""
+      }
     },
     "statusOptions": {
       "all": "Tous",
@@ -653,6 +668,11 @@
       "elapsed": "Expiré"
     },
     "registrationStatus": {
+      "active": "Actif",
+      "pending": "En attente",
+      "elapsed": "Expiré"
+    },
+    "status": {
       "active": "Actif",
       "pending": "En attente",
       "elapsed": "Expiré"
@@ -729,7 +749,8 @@
     },
     "details": {
       "backToTypes": "Retour à la liste",
-      "backToDatabase": "Retour à la base de données"
+      "backToDatabase": "Retour à la base de données",
+      "backToRegistrations": "Retour aux inscriptions"
     },
     "delete": {
       "title": "Supprimer le type d'inscription",
@@ -754,6 +775,8 @@
       "markUnprocessed": "Marquer comme non traité",
       "addLabels": "Ajouter des étiquettes",
       "removeLabels": "Supprimer des étiquettes",
+      "addRegistration": "Ajouter une inscription",
+      "cancel": "Annuler",
       "execute": "Exécuter",
       "add": "Ajouter",
       "saveLabels": "Enregistrer les étiquettes",
@@ -805,6 +828,21 @@
       "paid": "Payé",
       "pending": "En attente",
       "notSpecified": "Non spécifié"
+    },
+    "creation": {
+      "selectType": "Sélectionner le type d'inscription",
+      "title": "Créer une inscription",
+      "entityName": "Nom de l'entité",
+      "name": "Nom",
+      "ownerName": "Nom du propriétaire",
+      "loadingFields": "Chargement des champs du formulaire…",
+      "statusActive": "Cette inscription sera automatiquement approuvée (Actif)",
+      "statusPending": "Cette inscription nécessitera une approbation manuelle (En attente)",
+      "submit": "Créer l'inscription",
+      "submitting": "Création en cours…",
+      "success": "Inscription créée avec succès",
+      "error": "Échec de la création de l'inscription",
+      "validationError": "Veuillez remplir tous les champs obligatoires"
     },
     "processedStatus": {
       "processed": "Traité",
@@ -1788,8 +1826,9 @@
       "title": "Inscriptions",
       "description": "Gérer les types d'inscription et les inscriptions",
       "menu": {
-        "types": "Types d'inscription",
-        "database": "Base de données des inscriptions"
+        "registrationsDatabase": "Base de données des inscriptions",
+        "registrationTypes": "Types d'inscription",
+        "discounts": "Réductions"
       }
     },
     "ticketing": {

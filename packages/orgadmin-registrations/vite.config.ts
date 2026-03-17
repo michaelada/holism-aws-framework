@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 import { getModuleBuildConfig, getModuleResolveConfig, sharedOptimizeDeps } from '../vite.config.shared';
 
 // Plugin to mock CSS imports in tests
@@ -29,7 +30,13 @@ export default defineConfig({
   plugins: [react(), mockCssPlugin()],
   
   // Path resolution
-  resolve: getModuleResolveConfig(__dirname),
+  resolve: {
+    ...getModuleResolveConfig(__dirname),
+    alias: {
+      ...getModuleResolveConfig(__dirname).alias,
+      '@aws-web-framework/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
+    },
+  },
   
   // Optimize dependencies
   optimizeDeps: sharedOptimizeDeps,

@@ -716,6 +716,26 @@ export class DiscountService {
     }
   }
 
+  async getRegistrationTypesUsingDiscount(
+    discountId: string,
+    organisationId: string
+  ): Promise<string[]> {
+    try {
+      const result = await db.query(
+        `SELECT id FROM registration_types
+         WHERE organisation_id = $1
+         AND discount_ids @> $2::jsonb`,
+        [organisationId, JSON.stringify([discountId])]
+      );
+
+      return result.rows.map((row) => row.id);
+    } catch (error) {
+      logger.error('Error getting registration types using discount:', error);
+      throw error;
+    }
+  }
+
+
 }
 
 export const discountService = new DiscountService();

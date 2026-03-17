@@ -422,7 +422,22 @@
       "status": "Status",
       "customFilter": "Benutzerdefinierter Filter",
       "createFilter": "Filter erstellen",
-      "none": "Keine"
+      "createTitle": "Benutzerdefinierten Filter erstellen",
+      "none": "Keine",
+      "name": "Filtername",
+      "save": "Filter speichern",
+      "registrationTypes": "Registrierungstypen",
+      "labels": "Etiketten",
+      "addLabel": "Etikett hinzufügen",
+      "dateLastRenewed": "Datum der letzten Erneuerung",
+      "validUntil": "Gültig bis",
+      "afterDate": "Nach",
+      "beforeDate": "Vor",
+      "validation": {
+        "nameRequired": "Filtername ist erforderlich",
+        "criteriaRequired": "Mindestens ein Filterkriterium ist erforderlich",
+        "dateRangeInvalid": "Das \"Nach\"-Datum darf nicht nach dem \"Vor\"-Datum liegen"
+      }
     },
     "statusOptions": {
       "all": "Alle",
@@ -434,6 +449,11 @@
       "elapsed": "Abgelaufen"
     },
     "registrationStatus": {
+      "active": "Aktiv",
+      "pending": "Ausstehend",
+      "elapsed": "Abgelaufen"
+    },
+    "status": {
       "active": "Aktiv",
       "pending": "Ausstehend",
       "elapsed": "Abgelaufen"
@@ -510,7 +530,8 @@
     },
     "details": {
       "backToTypes": "Zurück zur Liste",
-      "backToDatabase": "Zurück zur Datenbank"
+      "backToDatabase": "Zurück zur Datenbank",
+      "backToRegistrations": "Zurück zu Registrierungen"
     },
     "delete": {
       "title": "Registrierungstyp löschen",
@@ -535,6 +556,8 @@
       "markUnprocessed": "Als unverarbeitet markieren",
       "addLabels": "Etiketten hinzufügen",
       "removeLabels": "Etiketten entfernen",
+      "addRegistration": "Registrierung hinzufügen",
+      "cancel": "Abbrechen",
       "execute": "Ausführen",
       "add": "Hinzufügen",
       "saveLabels": "Etiketten speichern",
@@ -586,6 +609,21 @@
       "paid": "Bezahlt",
       "pending": "Ausstehend",
       "notSpecified": "Nicht angegeben"
+    },
+    "creation": {
+      "selectType": "Registrierungstyp auswählen",
+      "title": "Registrierung erstellen",
+      "entityName": "Entitätsname",
+      "name": "Name",
+      "ownerName": "Eigentümername",
+      "loadingFields": "Formularfelder werden geladen…",
+      "statusActive": "Diese Registrierung wird automatisch genehmigt (Aktiv)",
+      "statusPending": "Diese Registrierung erfordert manuelle Genehmigung (Ausstehend)",
+      "submit": "Registrierung erstellen",
+      "submitting": "Wird erstellt…",
+      "success": "Registrierung erfolgreich erstellt",
+      "error": "Registrierung konnte nicht erstellt werden",
+      "validationError": "Bitte füllen Sie alle erforderlichen Felder aus"
     },
     "processedStatus": {
       "processed": "Verarbeitet",
@@ -1573,8 +1611,9 @@
       "title": "Registrierungen",
       "description": "Registrierungstypen und Registrierungen verwalten",
       "menu": {
-        "types": "Registrierungstypen",
-        "database": "Registrierungsdatenbank"
+        "registrationsDatabase": "Registrierungsdatenbank",
+        "registrationTypes": "Registrierungstypen",
+        "discounts": "Rabatte"
       }
     },
     "ticketing": {

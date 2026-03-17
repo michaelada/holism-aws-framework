@@ -1,11 +1,12 @@
 /**
  * Registrations Database Page
- * 
- * Comprehensive registration records with advanced filtering, batch operations, and Excel export
+ *
+ * Comprehensive registration records with advanced filtering, batch operations, and Excel export.
+ * Mirrors the MembersDatabasePage pattern from orgadmin-memberships.
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -30,51 +31,95 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Visibility as ViewIcon,
-  Edit as EditIcon,
   CheckCircle as ProcessedIcon,
   RadioButtonUnchecked as UnprocessedIcon,
   FileDownload as ExportIcon,
   Label as LabelIcon,
   FilterList as FilterIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatDate } from '@aws-web-framework/orgadmin-shell';
-import type { Registration, RegistrationFilter } from '../types/registration.types';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import type { Registration, RegistrationFilter, RegistrationType } from '../types/registration.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
 
-// Mock API hook
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    return [];
-  },
-});
-
 const RegistrationsDatabasePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { execute } = useApi();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { organisation } = useOrganisation();
 
+  // Core data state
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [filteredRegistrations, setFilteredRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'current' | 'elapsed' | 'all'>('current');
-  const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
   const [customFilters, setCustomFilters] = useState<RegistrationFilter[]>([]);
   const [selectedCustomFilter, setSelectedCustomFilter] = useState<string>('');
+
+  // Selection state
+  const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
+
+  // Dialog state
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchOperation, setBatchOperation] = useState<'mark_processed' | 'mark_unprocessed' | 'add_labels' | 'remove_labels'>('mark_processed');
 
+  // Registration types for "Add Registration" button visibility
+  const [registrationTypes, setRegistrationTypes] = useState<RegistrationType[]>([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
+
+  // User roles for admin check
+  const [userRoles, setUserRoles] = useState<Array<{ id: string; name: string; displayName: string }>>([]);
+  const [loadingRoles, setLoadingRoles] = useState(true);
+
+  // Registration type name lookup map
+  const [registrationTypeMap, setRegistrationTypeMap] = useState<Record<string, string>>({});
+
+  // Success notification state
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+
+  // Check for success message from navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage);
+      setShowSuccessNotification(true);
+
+      // Restore filter state if provided
+      if (location.state?.filterState) {
+        const { searchTerm: savedSearch, statusFilter: savedStatus, selectedCustomFilter: savedFilter } = location.state.filterState;
+        if (savedSearch !== undefined) setSearchTerm(savedSearch);
+        if (savedStatus !== undefined) setStatusFilter(savedStatus);
+        if (savedFilter !== undefined) setSelectedCustomFilter(savedFilter);
+      }
+
+      // Clear navigation state to prevent showing message on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
+
+  // Initial data loading
   useEffect(() => {
     loadRegistrations();
     loadCustomFilters();
+    loadRegistrationTypes();
+    loadUserRoles();
   }, []);
 
+  // Re-filter when dependencies change
   useEffect(() => {
     filterRegistrations();
   }, [registrations, searchTerm, statusFilter, selectedCustomFilter]);
@@ -84,7 +129,7 @@ const RegistrationsDatabasePage: React.FC = () => {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/registrations',
+        url: `/api/orgadmin/organisations/${organisation?.id}/registrations`,
       });
       setRegistrations(response || []);
     } catch (error) {
@@ -98,7 +143,7 @@ const RegistrationsDatabasePage: React.FC = () => {
     try {
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/registration-filters',
+        url: `/api/orgadmin/organisations/${organisation?.id}/registrations/filters`,
       });
       setCustomFilters(response || []);
     } catch (error) {
@@ -106,33 +151,105 @@ const RegistrationsDatabasePage: React.FC = () => {
     }
   };
 
-  const filterRegistrations = () => {
+  const loadRegistrationTypes = async () => {
+    try {
+      setLoadingTypes(true);
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation?.id}/registration-types`,
+      });
+      const typesArray = Array.isArray(response) ? response : [];
+      setRegistrationTypes(typesArray);
+      // Build lookup map for type names
+      const typeMap: Record<string, string> = {};
+      typesArray.forEach((rt: RegistrationType) => {
+        typeMap[rt.id] = rt.name;
+      });
+      setRegistrationTypeMap(typeMap);
+    } catch (error) {
+      console.error('Failed to load registration types:', error);
+      setRegistrationTypes([]);
+    } finally {
+      setLoadingTypes(false);
+    }
+  };
+
+  const loadUserRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      const response = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/auth/me',
+      });
+      setUserRoles(response.roles || []);
+    } catch (error) {
+      console.error('Failed to load user roles:', error);
+      setUserRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
+
+  const hasAdminRole = (): boolean => {
+    return userRoles.some(role => role.name === 'admin' || role.name === 'full-administrator');
+  };
+
+  const filterRegistrations = useCallback(() => {
     let filtered = [...registrations];
 
-    // Apply status filter
+    // Apply status filter: current = active + pending
     if (statusFilter === 'current') {
       filtered = filtered.filter(r => r.status === 'active' || r.status === 'pending');
     } else if (statusFilter === 'elapsed') {
       filtered = filtered.filter(r => r.status === 'elapsed');
     }
 
-    // Apply search filter (entity name or owner name)
+    // Apply search filter by entity name, owner name, or registration number
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
-        r.entityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase())
+        r.entityName.toLowerCase().includes(term) ||
+        r.ownerName.toLowerCase().includes(term) ||
+        r.registrationNumber.toLowerCase().includes(term)
       );
     }
 
-    // Apply custom filter (simplified - would need full implementation)
+    // Apply custom filter if selected
     if (selectedCustomFilter) {
-      // Custom filter logic would go here
+      const filter = customFilters.find(f => f.id === selectedCustomFilter);
+      if (filter) {
+        if (filter.registrationStatus.length > 0) {
+          filtered = filtered.filter(r => filter.registrationStatus.includes(r.status));
+        }
+        if (filter.registrationLabels.length > 0) {
+          filtered = filtered.filter(r =>
+            filter.registrationLabels.some(label => r.labels.includes(label))
+          );
+        }
+        if (filter.registrationTypes.length > 0) {
+          filtered = filtered.filter(r =>
+            filter.registrationTypes.includes(r.registrationTypeId)
+          );
+        }
+        if (filter.dateLastRenewedBefore) {
+          filtered = filtered.filter(r => new Date(r.dateLastRenewed) <= new Date(filter.dateLastRenewedBefore!));
+        }
+        if (filter.dateLastRenewedAfter) {
+          filtered = filtered.filter(r => new Date(r.dateLastRenewed) >= new Date(filter.dateLastRenewedAfter!));
+        }
+        if (filter.validUntilBefore) {
+          filtered = filtered.filter(r => new Date(r.validUntil) <= new Date(filter.validUntilBefore!));
+        }
+        if (filter.validUntilAfter) {
+          filtered = filtered.filter(r => new Date(r.validUntil) >= new Date(filter.validUntilAfter!));
+        }
+      }
     }
 
     setFilteredRegistrations(filtered);
-  };
+  }, [registrations, searchTerm, statusFilter, selectedCustomFilter, customFilters]);
 
+  // Selection handlers
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       setSelectedRegistrations(filteredRegistrations.map(r => r.id));
@@ -149,19 +266,28 @@ const RegistrationsDatabasePage: React.FC = () => {
     );
   };
 
+  // Navigation handlers
   const handleViewRegistration = (registrationId: string) => {
-    navigate(`/orgadmin/registrations/${registrationId}`);
+    const filterState = { searchTerm, statusFilter, selectedCustomFilter };
+    navigate(`/registrations/${registrationId}`, { state: { filterState } });
   };
 
-  const handleEditRegistration = (registrationId: string) => {
-    navigate(`/orgadmin/registrations/${registrationId}/edit`);
+  const handleAddRegistration = () => {
+    const filterState = { searchTerm, statusFilter, selectedCustomFilter };
+    if (registrationTypes.length === 1) {
+      navigate(`/registrations/create?typeId=${registrationTypes[0].id}`, { state: { filterState } });
+    } else {
+      navigate('/registrations/create', { state: { filterState } });
+    }
   };
 
-  const handleToggleProcessed = async (registrationId: string, currentStatus: boolean) => {
+  // Processed flag toggle via PATCH
+  const handleToggleProcessed = async (registrationId: string, currentProcessed: boolean) => {
     try {
       await execute({
         method: 'PATCH',
         url: `/api/orgadmin/registrations/${registrationId}`,
+        data: { processed: !currentProcessed },
       });
       loadRegistrations();
     } catch (error) {
@@ -169,29 +295,40 @@ const RegistrationsDatabasePage: React.FC = () => {
     }
   };
 
+  // Batch operations
   const handleBatchOperation = (operation: typeof batchOperation) => {
     setBatchOperation(operation);
     setBatchDialogOpen(true);
   };
 
+  // Export to Excel
   const handleExport = async () => {
     try {
-      // Export logic would go here
-      console.log('Exporting registrations...');
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation?.id}/registrations/export`,
+        responseType: 'blob',
+      });
+      const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'registrations.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to export registrations:', error);
     }
   };
 
-  const formatDate = (dateString: Date | string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+  // Date formatting using locale
+  const formatDateLocale = (dateValue: Date | string) => {
+    return formatDate(new Date(dateValue), 'dd MMM yyyy', i18n.language);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'warning' | 'default' => {
     switch (status) {
       case 'active':
         return 'success';
@@ -206,23 +343,38 @@ const RegistrationsDatabasePage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* Header with title and action buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">{t('registrations.registrationsDatabase')}</Typography>
-        <Button
-          variant="outlined"
-          startIcon={<ExportIcon />}
-          onClick={handleExport}
-          disabled={filteredRegistrations.length === 0}
-        >
-          {t('registrations.actions.exportToExcel')}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<ExportIcon />}
+            onClick={handleExport}
+            data-testid="export-button"
+          >
+            {t('registrations.actions.exportToExcel')}
+          </Button>
+          {/* Add Registration button: visible when types exist AND user has admin role */}
+          {!loadingTypes && !loadingRoles && registrationTypes.length > 0 && hasAdminRole() && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddRegistration}
+              data-testid="add-registration-button"
+            >
+              {t('registrations.actions.addRegistration')}
+            </Button>
+          )}
+        </Box>
       </Box>
 
+      {/* Search, filters, and status toggle */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             <TextField
-              placeholder="Search by entity name or owner name..."
+              placeholder={t('registrations.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: 250 }}
@@ -233,15 +385,17 @@ const RegistrationsDatabasePage: React.FC = () => {
                   </InputAdornment>
                 ),
               }}
+              data-testid="search-field"
             />
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Custom Filter</InputLabel>
+              <InputLabel>{t('registrations.filters.customFilter')}</InputLabel>
               <Select
                 value={selectedCustomFilter}
-                label="Custom Filter"
+                label={t('registrations.filters.customFilter')}
                 onChange={(e) => setSelectedCustomFilter(e.target.value)}
+                data-testid="custom-filter-select"
               >
-                <MenuItem value="">None</MenuItem>
+                <MenuItem value="">{t('registrations.filters.none')}</MenuItem>
                 {customFilters.map((filter) => (
                   <MenuItem key={filter.id} value={filter.id}>
                     {filter.name}
@@ -253,8 +407,9 @@ const RegistrationsDatabasePage: React.FC = () => {
               variant="outlined"
               startIcon={<FilterIcon />}
               onClick={() => setFilterDialogOpen(true)}
+              data-testid="create-filter-button"
             >
-              Create Filter
+              {t('registrations.filters.createFilter')}
             </Button>
           </Box>
 
@@ -262,45 +417,43 @@ const RegistrationsDatabasePage: React.FC = () => {
             <ToggleButtonGroup
               value={statusFilter}
               exclusive
-              onChange={(e, value) => value && setStatusFilter(value)}
+              onChange={(_, value) => value && setStatusFilter(value)}
               size="small"
+              data-testid="status-toggle"
             >
-              <ToggleButton value="current">Current</ToggleButton>
-              <ToggleButton value="elapsed">Elapsed</ToggleButton>
-              <ToggleButton value="all">All</ToggleButton>
+              <ToggleButton value="current">{t('registrations.statusOptions.current')}</ToggleButton>
+              <ToggleButton value="elapsed">{t('registrations.statusOptions.elapsed')}</ToggleButton>
+              <ToggleButton value="all">{t('registrations.statusOptions.all')}</ToggleButton>
             </ToggleButtonGroup>
 
+            {/* Batch operation buttons: visible when registrations are selected */}
             {selectedRegistrations.length > 0 && (
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1 }} data-testid="batch-operations">
                 <Button
                   size="small"
-                  variant="outlined"
                   onClick={() => handleBatchOperation('mark_processed')}
                 >
-                  Mark Processed
+                  {t('registrations.actions.markProcessed')}
                 </Button>
                 <Button
                   size="small"
-                  variant="outlined"
                   onClick={() => handleBatchOperation('mark_unprocessed')}
                 >
-                  Mark Unprocessed
+                  {t('registrations.actions.markUnprocessed')}
                 </Button>
                 <Button
                   size="small"
-                  variant="outlined"
                   startIcon={<LabelIcon />}
                   onClick={() => handleBatchOperation('add_labels')}
                 >
-                  Add Labels
+                  {t('registrations.actions.addLabels')}
                 </Button>
                 <Button
                   size="small"
-                  variant="outlined"
                   startIcon={<LabelIcon />}
                   onClick={() => handleBatchOperation('remove_labels')}
                 >
-                  Remove Labels
+                  {t('registrations.actions.removeLabels')}
                 </Button>
               </Box>
             )}
@@ -308,6 +461,7 @@ const RegistrationsDatabasePage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Registrations table */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -319,31 +473,29 @@ const RegistrationsDatabasePage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>Registration Type</TableCell>
-              <TableCell>Entity Name</TableCell>
-              <TableCell>Registration Number</TableCell>
-              <TableCell>Owner Name</TableCell>
-              <TableCell>Date Last Renewed</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Valid Until</TableCell>
-              <TableCell>Labels</TableCell>
-              <TableCell>Processed</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('registrations.table.registrationType')}</TableCell>
+              <TableCell>{t('registrations.table.entityName')}</TableCell>
+              <TableCell>{t('registrations.table.ownerName')}</TableCell>
+              <TableCell>{t('registrations.table.registrationNumber')}</TableCell>
+              <TableCell>{t('registrations.table.dateLastRenewed')}</TableCell>
+              <TableCell>{t('registrations.table.status')}</TableCell>
+              <TableCell>{t('registrations.table.validUntil')}</TableCell>
+              <TableCell>{t('registrations.table.labels')}</TableCell>
+              <TableCell>{t('registrations.table.processed')}</TableCell>
+              <TableCell align="right">{t('registrations.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={11} align="center">
-                  Loading registrations...
+                  {t('registrations.loadingRegistrations')}
                 </TableCell>
               </TableRow>
             ) : filteredRegistrations.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} align="center">
-                  {searchTerm || statusFilter !== 'current' || selectedCustomFilter
-                    ? 'No registrations match your filters'
-                    : 'No registrations yet.'}
+                  {t('registrations.noRegistrationsFound')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -356,25 +508,22 @@ const RegistrationsDatabasePage: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      {/* Would show registration type name from join */}
-                      Registration Type
-                    </Typography>
+                    {registrationTypeMap[registration.registrationTypeId] || registration.registrationTypeId}
                   </TableCell>
                   <TableCell>
                     <Chip label={registration.entityName} color="primary" size="small" />
                   </TableCell>
-                  <TableCell>{registration.registrationNumber}</TableCell>
                   <TableCell>{registration.ownerName}</TableCell>
-                  <TableCell>{formatDate(registration.dateLastRenewed)}</TableCell>
+                  <TableCell>{registration.registrationNumber}</TableCell>
+                  <TableCell>{formatDateLocale(registration.dateLastRenewed)}</TableCell>
                   <TableCell>
                     <Chip
-                      label={registration.status}
+                      label={t(`registrations.status.${registration.status}`)}
                       color={getStatusColor(registration.status)}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{formatDate(registration.validUntil)}</TableCell>
+                  <TableCell>{formatDateLocale(registration.validUntil)}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       {registration.labels.slice(0, 2).map((label) => (
@@ -389,7 +538,10 @@ const RegistrationsDatabasePage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleToggleProcessed(registration.id, registration.processed)}
-                      title={registration.processed ? 'Mark Unprocessed' : 'Mark Processed'}
+                      title={registration.processed
+                        ? t('registrations.tooltips.markUnprocessed')
+                        : t('registrations.tooltips.markProcessed')}
+                      data-testid={`processed-toggle-${registration.id}`}
                     >
                       {registration.processed ? <ProcessedIcon color="success" /> : <UnprocessedIcon />}
                     </IconButton>
@@ -398,16 +550,10 @@ const RegistrationsDatabasePage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleViewRegistration(registration.id)}
-                      title="View Details"
+                      title={t('registrations.tooltips.viewDetails')}
+                      data-testid={`view-button-${registration.id}`}
                     >
                       <ViewIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditRegistration(registration.id)}
-                      title="Edit"
-                    >
-                      <EditIcon />
                     </IconButton>
                   </TableCell>
                 </TableRow>
@@ -439,6 +585,23 @@ const RegistrationsDatabasePage: React.FC = () => {
           loadRegistrations();
         }}
       />
+
+      {/* Success notification */}
+      <Snackbar
+        open={showSuccessNotification}
+        autoHideDuration={6000}
+        onClose={() => setShowSuccessNotification(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccessNotification(false)}
+          severity="success"
+          sx={{ width: '100%' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
+
     </Box>
   );
 };

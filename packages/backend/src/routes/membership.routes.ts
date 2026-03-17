@@ -5,8 +5,27 @@ import { requireOrgAdmin } from '../middleware/orgadmin-role.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 import { orgPaymentMethodDataService } from '../services/org-payment-method-data.service';
+import validator from 'validator';
+import DOMPurify from 'isomorphic-dompurify';
+import { richTextConfig } from '../middleware/xss-protection.middleware';
 
 const router = Router();
+
+/**
+ * Restore rich text HTML that was escaped by the global sanitizeBody middleware.
+ * Unescapes HTML entities then re-sanitizes with DOMPurify to allow safe formatting tags.
+ */
+function restoreRichTextField(data: any, field: string): void {
+  if (data && typeof data[field] === 'string') {
+    const unescaped = validator.unescape(data[field]);
+    data[field] = DOMPurify.sanitize(unescaped, {
+      ALLOWED_TAGS: richTextConfig.allowedTags || [],
+      ALLOWED_ATTR: Object.values(richTextConfig.allowedAttributes || {}).flat(),
+      FORBID_TAGS: richTextConfig.stripIgnoreTagBody || [],
+      FORBID_CONTENTS: richTextConfig.stripIgnoreTagBody || [],
+    }) as unknown as string;
+  }
+}
 
 /**
  * Middleware to check if organisation has memberships capability
@@ -158,6 +177,11 @@ router.get(
       if (!membershipType) {
         return res.status(404).json({ error: 'Membership type not found' });
       }
+
+      // Unescape any previously-escaped rich text HTML stored in the database
+      if (membershipType.termsAndConditions) {
+        membershipType.termsAndConditions = validator.unescape(membershipType.termsAndConditions);
+      }
       
       return res.json(membershipType);
     } catch (error) {
@@ -230,6 +254,9 @@ router.post(
         ...req.body,
         organisationId
       };
+
+      // Restore rich text HTML escaped by global sanitizeBody middleware
+      restoreRichTextField(membershipTypeData, 'termsAndConditions');
       
       const membershipType = await membershipService.createMembershipType(membershipTypeData);
       return res.status(201).json(membershipType);
@@ -274,7 +301,12 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const membershipType = await membershipService.updateMembershipType(id, req.body);
+      const updateData = { ...req.body };
+
+      // Restore rich text HTML escaped by global sanitizeBody middleware
+      restoreRichTextField(updateData, 'termsAndConditions');
+
+      const membershipType = await membershipService.updateMembershipType(id, updateData);
       res.json(membershipType);
     } catch (error) {
       logger.error('Error in PUT /membership-types/:id:', error);

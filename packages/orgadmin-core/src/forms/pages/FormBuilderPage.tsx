@@ -193,7 +193,7 @@ const FormBuilderPage: React.FC = () => {
           fieldLabel: f.label,
           fieldType: f.datatype,
           order: f.order,
-          required: false, // Backend doesn't store this yet
+          required: f.required ?? false,
           groupName: f.groupName,
           groupOrder: f.groupOrder,
           wizardStep: f.wizardStep,
@@ -257,9 +257,25 @@ const FormBuilderPage: React.FC = () => {
       }
 
       // Step 2: Save field associations
-      // For now, we'll need to delete existing associations and recreate them
-      // This is a simplified approach - a better approach would be to diff and update
-      if (formId && selectedFields.length > 0) {
+      // Delete existing associations and recreate them with the current selection
+      if (formId) {
+        // First, get existing fields to know what to remove
+        const existingForm = await execute({
+          method: 'GET',
+          url: `/api/orgadmin/application-forms/${formId}/with-fields`,
+        });
+
+        // Remove all existing field associations
+        if (existingForm?.fields) {
+          for (const existingField of existingForm.fields) {
+            await execute({
+              method: 'DELETE',
+              url: `/api/orgadmin/application-forms/${formId}/fields/${existingField.id}`,
+            });
+          }
+        }
+
+        // Re-add current selected fields
         for (const field of selectedFields) {
           await execute({
             method: 'POST',
@@ -267,6 +283,7 @@ const FormBuilderPage: React.FC = () => {
             data: {
               fieldId: field.fieldId,
               order: field.order,
+              required: field.required,
               groupName: field.groupName,
               groupOrder: field.groupOrder,
               wizardStep: field.wizardStep,

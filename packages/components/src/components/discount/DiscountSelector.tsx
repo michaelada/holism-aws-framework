@@ -65,6 +65,12 @@ export interface DiscountSelectorProps {
   
   /** Optional: Helper text */
   helperText?: string;
+  
+  /** Optional: Currency symbol for fixed-amount discounts (default: '$') */
+  currencySymbol?: string;
+  
+  /** Optional: ISO 4217 currency code (e.g., 'EUR', 'GBP'). Overrides currencySymbol when provided. */
+  currencyCode?: string;
 }
 
 export const DiscountSelector: React.FC<DiscountSelectorProps> = ({
@@ -77,11 +83,27 @@ export const DiscountSelector: React.FC<DiscountSelectorProps> = ({
   disabled = false,
   label = 'Select Discounts',
   helperText,
+  currencySymbol = '$',
+  currencyCode,
 }) => {
   const [discounts, setDiscounts] = useState<Discount[]>(providedDiscounts || []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Resolve currency symbol from currencyCode if provided
+  const resolvedCurrencySymbol = useMemo(() => {
+    if (currencyCode) {
+      try {
+        const parts = new Intl.NumberFormat('en', { style: 'currency', currency: currencyCode })
+          .formatToParts(0);
+        return parts.find(p => p.type === 'currency')?.value || currencyCode;
+      } catch {
+        return currencyCode;
+      }
+    }
+    return currencySymbol;
+  }, [currencyCode, currencySymbol]);
 
   // Fetch discounts if not provided
   useEffect(() => {
@@ -149,7 +171,7 @@ export const DiscountSelector: React.FC<DiscountSelectorProps> = ({
   const getDiscountLabel = (discount: Discount): string => {
     const valueStr = discount.discountType === 'percentage'
       ? `${discount.discountValue}%`
-      : `$${discount.discountValue.toFixed(2)}`;
+      : `${resolvedCurrencySymbol}${discount.discountValue.toFixed(2)}`;
     
     return `${discount.name} (${valueStr})`;
   };
@@ -157,7 +179,7 @@ export const DiscountSelector: React.FC<DiscountSelectorProps> = ({
   const getDiscountValueDisplay = (discount: Discount): string => {
     return discount.discountType === 'percentage'
       ? `${discount.discountValue}%`
-      : `$${discount.discountValue.toFixed(2)}`;
+      : `${resolvedCurrencySymbol}${discount.discountValue.toFixed(2)}`;
   };
 
   // Don't render if no active discounts and not loading

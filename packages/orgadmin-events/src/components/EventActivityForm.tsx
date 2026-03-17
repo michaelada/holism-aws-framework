@@ -320,6 +320,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                 moduleType="events"
                 disabled={loading}
                 label="Apply Discounts to Activity"
+                currencyCode={organisation?.currency || 'EUR'}
               />
             </Grid>
           )}
