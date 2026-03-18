@@ -28,11 +28,18 @@ import 'react-quill/dist/quill.snow.css';
 import { useTranslation } from 'react-i18next';
 import type { CreateMembershipTypeDto } from '../types/membership.types';
 
+interface Organisation {
+  id: string;
+  currency?: string;
+  [key: string]: any;
+}
+
 interface MembershipTypeFormProps {
   formData: CreateMembershipTypeDto;
   onChange: (field: keyof CreateMembershipTypeDto, value: any) => void;
   applicationForms: Array<{ id: string; name: string }>;
   paymentMethods: Array<{ id: string; name: string }>;
+  organisation?: Organisation | null;
 }
 
 const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
@@ -40,9 +47,29 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
   onChange,
   applicationForms,
   paymentMethods,
+  organisation,
 }) => {
   const { t } = useTranslation();
-  
+
+  const fee = formData.fee ?? 0;
+  const isCardPaymentMethod = (methodId: string) => {
+    const method = paymentMethods.find(pm => pm.id === methodId);
+    if (!method) return methodId === 'stripe' || methodId === 'card';
+    const name = (method.name || '').toLowerCase();
+    return name.includes('card') || name.includes('stripe') || name.includes('helix');
+  };
+  const hasCardPayment = (formData.supportedPaymentMethods || []).some(isCardPaymentMethod);
+  const showHandlingFee = hasCardPayment && fee > 0;
+
+  const handlePaymentMethodsChange = (value: any) => {
+    const newMethods = value as string[];
+    const newHasCard = newMethods.some(isCardPaymentMethod);
+    if (!newHasCard && formData.handlingFeeIncluded) {
+      onChange('handlingFeeIncluded', false);
+    }
+    onChange('supportedPaymentMethods', newMethods);
+  };
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -146,6 +173,18 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
           />
         </Grid>
 
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            type="number"
+            label={t('payment.fee', { currency: organisation?.currency || 'EUR' })}
+            value={formData.fee ?? 0}
+            onChange={(e) => onChange('fee', parseFloat(e.target.value) || 0)}
+            helperText={t('payment.feeHelper')}
+            inputProps={{ min: 0, step: 0.01 }}
+          />
+        </Grid>
+
         <Grid item xs={12}>
           <FormControl fullWidth required>
             <InputLabel>{t('memberships.fields.supportedPaymentMethods')}</InputLabel>
@@ -153,7 +192,7 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
               multiple
               value={formData.supportedPaymentMethods}
               label={t('memberships.fields.supportedPaymentMethods')}
-              onChange={(e) => onChange('supportedPaymentMethods', e.target.value)}
+              onChange={(e) => handlePaymentMethodsChange(e.target.value)}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {selected.map((value) => {
@@ -171,6 +210,23 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
             </Select>
           </FormControl>
         </Grid>
+
+        {showHandlingFee && (
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.handlingFeeIncluded ?? false}
+                  onChange={(e) => onChange('handlingFeeIncluded', e.target.checked)}
+                />
+              }
+              label={t('payment.handlingFeeIncluded')}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {t('payment.handlingFeeIncludedHelper')}
+            </Typography>
+          </Grid>
+        )}
 
         <Grid item xs={12}>
           <FormControlLabel

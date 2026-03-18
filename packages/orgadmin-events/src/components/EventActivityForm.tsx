@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Checkbox,
+  Chip,
   FormControl,
   FormControlLabel,
   Grid,
@@ -27,7 +28,7 @@ import {
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
 import { DiscountSelector, type Discount } from '@aws-web-framework/components';
 import type { EventActivityFormData } from '../types/event.types';
 
@@ -36,6 +37,7 @@ interface EventActivityFormProps {
   index: number;
   onChange: (activity: EventActivityFormData) => void;
   onRemove: () => void;
+  paymentMethods: Array<{ id: string; name: string }>;
 }
 
 interface ApplicationForm {
@@ -43,15 +45,22 @@ interface ApplicationForm {
   name: string;
 }
 
+const isCardPaymentMethod = (name: string): boolean => {
+  const lower = name.toLowerCase();
+  return lower.includes('card') || lower.includes('stripe') || lower.includes('helix');
+};
+
 const EventActivityForm: React.FC<EventActivityFormProps> = ({
   activity,
   index,
   onChange,
   onRemove,
+  paymentMethods,
 }) => {
   const { execute } = useApi();
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
+  const { locale } = useLocale();
   const [expanded, setExpanded] = useState(true);
   const [applicationForms, setApplicationForms] = useState<ApplicationForm[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,6 +113,29 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
   const handleChange = (field: keyof EventActivityFormData, value: any) => {
     onChange({ ...activity, [field]: value });
   };
+
+  const handlePaymentMethodsChange = (value: any) => {
+    const newMethods = value as string[];
+    const newHasCard = newMethods.some((id) => {
+      const method = paymentMethods.find((pm) => pm.id === id);
+      return method ? isCardPaymentMethod(method.name) : false;
+    });
+    if (!newHasCard && activity.handlingFeeIncluded) {
+      onChange({ ...activity, supportedPaymentMethods: newMethods, handlingFeeIncluded: false });
+      return;
+    }
+    onChange({ ...activity, supportedPaymentMethods: newMethods });
+  };
+
+  const hasCardPayment = (activity.supportedPaymentMethods || []).some((id) => {
+    const method = paymentMethods.find((pm) => pm.id === id);
+    return method ? isCardPaymentMethod(method.name) : false;
+  });
+
+  const hasOfflinePayment = (activity.supportedPaymentMethods || []).some((id) => {
+    const method = paymentMethods.find((pm) => pm.id === id);
+    return method ? !isCardPaymentMethod(method.name) : false;
+  });
 
   return (
     <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
@@ -254,10 +286,10 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             <TextField
               fullWidth
               type="number"
-              label={t('events.activities.activity.fee')}
+              label={t('events.activities.activity.feeCurrency', { currency: organisation?.currency || 'EUR' })}
               value={activity.fee}
               onChange={(e) => handleChange('fee', parseFloat(e.target.value) || 0)}
-              helperText={t('events.activities.activity.feeHelper')}
+              helperText={activity.fee > 0 ? formatCurrency(activity.fee, organisation?.currency || 'EUR', locale) : t('events.activities.activity.feeHelper')}
               inputProps={{ min: 0, step: 0.01 }}
             />
           </Grid>
@@ -266,20 +298,31 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             <>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>{t('events.activities.activity.allowedPaymentMethod')}</InputLabel>
+                  <InputLabel>{t('events.activities.activity.supportedPaymentMethods')}</InputLabel>
                   <Select
-                    value={activity.allowedPaymentMethod}
-                    label={t('events.activities.activity.allowedPaymentMethod')}
-                    onChange={(e) => handleChange('allowedPaymentMethod', e.target.value)}
+                    multiple
+                    value={activity.supportedPaymentMethods || []}
+                    label={t('events.activities.activity.supportedPaymentMethods')}
+                    onChange={(e) => handlePaymentMethodsChange(e.target.value)}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => {
+                          const method = paymentMethods.find((m) => m.id === value);
+                          return <Chip key={value} label={method?.name || value} size="small" />;
+                        })}
+                      </Box>
+                    )}
                   >
-                    <MenuItem value="card">{t('events.activities.activity.paymentMethods.card')}</MenuItem>
-                    <MenuItem value="cheque">{t('events.activities.activity.paymentMethods.cheque')}</MenuItem>
-                    <MenuItem value="both">{t('events.activities.activity.paymentMethods.both')}</MenuItem>
+                    {paymentMethods.map((method) => (
+                      <MenuItem key={method.id} value={method.id}>
+                        {method.name}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
 
-              {(activity.allowedPaymentMethod === 'card' || activity.allowedPaymentMethod === 'both') && (
+              {hasCardPayment && (
                 <Grid item xs={12}>
                   <FormControlLabel
                     control={
@@ -293,7 +336,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                 </Grid>
               )}
 
-              {(activity.allowedPaymentMethod === 'cheque' || activity.allowedPaymentMethod === 'both') && (
+              {hasOfflinePayment && (
                 <Grid item xs={12}>
                   <TextField
                     fullWidth

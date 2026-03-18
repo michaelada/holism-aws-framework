@@ -27,6 +27,8 @@ export interface MembershipType {
   personLabels?: string[][];
   fieldConfiguration?: Record<string, 'common' | 'unique'>;
   discountIds: string[];
+  fee: number;
+  handlingFeeIncluded: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +84,8 @@ export interface CreateMembershipTypeDto {
   personLabels?: string[][];
   fieldConfiguration?: Record<string, 'common' | 'unique'>;
   discountIds?: string[];
+  fee?: number;
+  handlingFeeIncluded?: boolean;
 }
 
 /**
@@ -107,6 +111,8 @@ export interface UpdateMembershipTypeDto {
   personLabels?: string[][];
   fieldConfiguration?: Record<string, 'common' | 'unique'>;
   discountIds?: string[];
+  fee?: number;
+  handlingFeeIncluded?: boolean;
 }
 
 /**
@@ -182,6 +188,8 @@ export class MembershipService {
       discountIds: row.discount_ids ? 
         (Array.isArray(row.discount_ids) ? row.discount_ids : JSON.parse(row.discount_ids)) 
         : [],
+      fee: parseFloat(row.fee) || 0,
+      handlingFeeIncluded: row.handling_fee_included || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -303,8 +311,9 @@ export class MembershipService {
           is_rolling_membership, valid_until, number_of_months, automatically_approve,
           member_labels, supported_payment_methods, use_terms_and_conditions, terms_and_conditions,
           membership_type_category, max_people_in_application, min_people_in_application,
-          person_titles, person_labels, field_configuration, discount_ids)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          person_titles, person_labels, field_configuration, discount_ids,
+          fee, handling_fee_included)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
          RETURNING *`,
         [
           data.organisationId,
@@ -327,6 +336,8 @@ export class MembershipService {
           data.personLabels ? JSON.stringify(data.personLabels) : null,
           data.fieldConfiguration ? JSON.stringify(data.fieldConfiguration) : null,
           JSON.stringify(data.discountIds || []),
+          data.fee ?? 0,
+          data.handlingFeeIncluded ?? false,
         ]
       );
 
@@ -475,6 +486,14 @@ export class MembershipService {
       if (data.discountIds !== undefined) {
         updates.push(`discount_ids = $${paramCount++}`);
         values.push(JSON.stringify(data.discountIds));
+      }
+      if (data.fee !== undefined) {
+        updates.push(`fee = $${paramCount++}`);
+        values.push(data.fee);
+      }
+      if (data.handlingFeeIncluded !== undefined) {
+        updates.push(`handling_fee_included = $${paramCount++}`);
+        values.push(data.handlingFeeIncluded);
       }
 
       values.push(id);

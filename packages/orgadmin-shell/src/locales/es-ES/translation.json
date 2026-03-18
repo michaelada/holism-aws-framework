@@ -211,6 +211,7 @@
         "fee": "Tarifa",
         "feeHelper": "Tarifa de inscripción para esta actividad (0.00 para gratis)",
         "allowedPaymentMethod": "Método de pago permitido",
+        "supportedPaymentMethods": "Métodos de pago admitidos",
         "paymentMethods": {
           "card": "Solo tarjeta",
           "cheque": "Solo cheque/fuera de línea",
@@ -223,10 +224,9 @@
     },
     "review": {
       "title": "Revisar y confirmar",
-      "description": "Por favor, revisa los detalles de tu evento antes de publicar",
+      "description": "Descripción:",
       "basicInfo": "Información básica",
       "eventName": "Nombre del evento:",
-      "description": "Descripción:",
       "emailNotifications": "Notificaciones por correo electrónico:",
       "entryLimit": "Límite de inscripciones:",
       "eventDates": "Fechas del evento",
@@ -857,7 +857,16 @@
   "merchandise": {
     "title": "Mercancía",
     "merchandiseTypes": "Tipos de mercancía",
-    "orders": "Pedidos",
+    "orders": {
+      "title": "Pedidos de mercancía",
+      "exportToExcel": "Exportar a Excel",
+      "selectedOrders": "{{count}} pedido{{plural}} seleccionado{{plural}}",
+      "updateStatus": "Actualizar estado",
+      "loadingOrders": "Cargando pedidos...",
+      "noOrders": "No se encontraron pedidos",
+      "totalOrders": "Total de pedidos: {{count}}",
+      "totalRevenue": "Ingresos totales: €{{amount}}"
+    },
     "createMerchandiseType": "Crear tipo de mercancía",
     "editMerchandiseType": "Editar tipo de mercancía",
     "merchandiseTypeDetails": "Detalles del tipo de mercancía",
@@ -1030,16 +1039,6 @@
     "quantityRules": {
       "title": "Reglas de cantidad de pedido"
     },
-    "orders": {
-      "title": "Pedidos de mercancía",
-      "exportToExcel": "Exportar a Excel",
-      "selectedOrders": "{{count}} pedido{{plural}} seleccionado{{plural}}",
-      "updateStatus": "Actualizar estado",
-      "loadingOrders": "Cargando pedidos...",
-      "noOrders": "No se encontraron pedidos",
-      "totalOrders": "Total de pedidos: {{count}}",
-      "totalRevenue": "Ingresos totales: €{{amount}}"
-    },
     "batchOperations": {
       "title": "Actualización masiva de pedidos",
       "updatingCount": "Actualizando {{count}} pedido{{plural}}",
@@ -1202,9 +1201,9 @@
     "formNameRequired": "El nombre del formulario es obligatorio",
     "organisationContextMissing": "Falta el contexto de la organización",
     "table": {
-      "name": "Nombre",
+      "label": "Etiqueta",
       "description": "Descripción",
-      "status": "Estado",
+      "type": "Tipo",
       "created": "Creado",
       "actions": "Acciones"
     },
@@ -1318,36 +1317,37 @@
         "failedToSave": "Error al guardar el formulario"
       }
     },
-      "noFieldsFound": "Aún no hay campos. Crea tu primer campo para comenzar.",
-      "noMatchingFields": "Ningún campo coincide con tus filtros",
-      "loadingFields": "Cargando campos...",
-      "failedToCreate": "Error al crear el campo",
-      "failedToUpdate": "Error al actualizar el campo",
-      "failedToDelete": "Error al eliminar el campo",
-      "fieldLabelRequired": "La etiqueta del campo es obligatoria",
-      "organisationContextNotAvailable": "El contexto de la organización no está disponible",
-      "invalidFieldLabel": "La etiqueta del campo debe contener al menos un carácter alfanumérico",
-      "optionsRequired": "El tipo de campo \"{{type}}\" requiere al menos una opción",
-      "table": {
-        "label": "Etiqueta",
-        "description": "Descripción",
-        "type": "Tipo",
-        "created": "Creado",
-        "actions": "Acciones"
-      },
-      "filters": {
-        "type": "Tipo",
-        "allTypes": "Todos los tipos"
-      },
-      "messages": {
-        "fieldCreated": "Campo creado con éxito",
-        "fieldUpdated": "Campo actualizado con éxito"
-      }
+    "noFieldsFound": "Aún no hay campos. Crea tu primer campo para comenzar.",
+    "noMatchingFields": "Ningún campo coincide con tus filtros",
+    "loadingFields": "Cargando campos...",
+    "failedToCreate": "Error al crear el campo",
+    "failedToUpdate": "Error al actualizar el campo",
+    "failedToDelete": "Error al eliminar el campo",
+    "fieldLabelRequired": "La etiqueta del campo es obligatoria",
+    "organisationContextNotAvailable": "El contexto de la organización no está disponible",
+    "invalidFieldLabel": "La etiqueta del campo debe contener al menos un carácter alfanumérico",
+    "optionsRequired": "El tipo de campo \"{{type}}\" requiere al menos una opción",
+    "filters": {
+      "type": "Tipo",
+      "allTypes": "Todos los tipos"
     },
-    "preview": {
+    "messages": {
+      "fieldCreated": "Campo creado con éxito",
+      "fieldUpdated": "Campo actualizado con éxito"
+    }
+  },
+  "preview": {
     "title": "Pagos",
     "paymentDetails": "Detalles del pago",
-    "lodgements": "Depósitos",
+    "lodgements": {
+      "title": "Depósitos",
+      "totalLodged": "Total depositado",
+      "cardPayments": "Pagos con tarjeta",
+      "chequePayments": "Pagos con cheque",
+      "offlinePayments": "Pagos fuera de línea",
+      "lodgementsCount": "{{count}} depósitos",
+      "percentOfTotal": "{{percent}}% del total"
+    },
     "searchPlaceholder": "Buscar pagos...",
     "noPaymentsFound": "Aún no hay pagos.",
     "noMatchingPayments": "Ningún pago coincide con tus filtros",
@@ -1436,15 +1436,6 @@
       "reasonRequired": "El motivo del reembolso es obligatorio",
       "confirmButton": "Confirmar reembolso",
       "processing": "Procesando..."
-    },
-    "lodgements": {
-      "title": "Depósitos",
-      "totalLodged": "Total depositado",
-      "cardPayments": "Pagos con tarjeta",
-      "chequePayments": "Pagos con cheque",
-      "offlinePayments": "Pagos fuera de línea",
-      "lodgementsCount": "{{count}} depósitos",
-      "percentOfTotal": "{{percent}}% del total"
     }
   },
   "settings": {
@@ -1948,5 +1939,11 @@
       "reasonRequiredError": "Por favor, proporcione una razón para el reembolso",
       "failedToProcess": "Error al procesar el reembolso"
     }
+  },
+  "payment": {
+    "fee": "Fee ({{currency}})",
+    "feeHelper": "The amount to charge for this type",
+    "handlingFeeIncluded": "Handling fee included",
+    "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
   }
 }

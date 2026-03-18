@@ -83,6 +83,8 @@ const CreateGroupMembershipTypePage: React.FC = () => {
     automaticallyApprove: false,
     memberLabels: [],
     supportedPaymentMethods: [],
+    fee: 0,
+    handlingFeeIncluded: false,
     useTermsAndConditions: false,
     termsAndConditions: undefined,
     membershipTypeCategory: 'group',
@@ -603,6 +605,18 @@ const CreateGroupMembershipTypePage: React.FC = () => {
             </Typography>
 
             <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label={`Fee (${organisation?.currency || 'EUR'})`}
+                  value={formData.fee ?? 0}
+                  onChange={(e) => handleChange('fee', parseFloat(e.target.value) || 0)}
+                  helperText="The amount to charge for this type"
+                  inputProps={{ min: 0, step: 0.01 }}
+                />
+              </Grid>
+
               <Grid item xs={12}>
                 <FormControl fullWidth required>
                   <InputLabel>Supported Payment Methods</InputLabel>
@@ -610,7 +624,20 @@ const CreateGroupMembershipTypePage: React.FC = () => {
                     multiple
                     value={formData.supportedPaymentMethods}
                     label="Supported Payment Methods"
-                    onChange={(e) => handleChange('supportedPaymentMethods', e.target.value)}
+                    onChange={(e) => {
+                      const newMethods = e.target.value as string[];
+                      const isCardMethod = (methodId: string) => {
+                        const method = paymentMethods.find(pm => pm.id === methodId);
+                        if (!method) return methodId === 'stripe' || methodId === 'card';
+                        const n = (method.name || '').toLowerCase();
+                        return n.includes('card') || n.includes('stripe') || n.includes('helix');
+                      };
+                      const newHasCard = newMethods.some(isCardMethod);
+                      if (!newHasCard && formData.handlingFeeIncluded) {
+                        handleChange('handlingFeeIncluded', false);
+                      }
+                      handleChange('supportedPaymentMethods', newMethods);
+                    }}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {selected.map((value) => {
@@ -628,6 +655,28 @@ const CreateGroupMembershipTypePage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
+              {(formData.fee ?? 0) > 0 && formData.supportedPaymentMethods.some((methodId: string) => {
+                const method = paymentMethods.find(pm => pm.id === methodId);
+                if (!method) return methodId === 'stripe' || methodId === 'card';
+                const n = (method.name || '').toLowerCase();
+                return n.includes('card') || n.includes('stripe') || n.includes('helix');
+              }) && (
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.handlingFeeIncluded ?? false}
+                        onChange={(e) => handleChange('handlingFeeIncluded', e.target.checked)}
+                      />
+                    }
+                    label="Handling fee included"
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout.
+                  </Typography>
+                </Grid>
+              )}
             </Grid>
           </CardContent>
         </Card>

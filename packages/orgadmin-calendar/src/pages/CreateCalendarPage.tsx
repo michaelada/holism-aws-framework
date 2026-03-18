@@ -26,11 +26,19 @@ import { Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import type { CalendarFormData } from '../types/calendar.types';
 import CalendarForm from '../components/CalendarForm';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+}
 
 const CreateCalendarPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
+  const { organisation } = useOrganisation();
+  const { execute } = useApi();
 
   const [formData, setFormData] = useState<CalendarFormData>({
     name: '',
@@ -44,6 +52,7 @@ const CreateCalendarPage: React.FC = () => {
     useTermsAndConditions: false,
     termsAndConditions: '',
     supportedPaymentMethods: [],
+    handlingFeeIncluded: false,
     allowCancellations: false,
     cancelDaysInAdvance: 2,
     refundPaymentAutomatically: false,
@@ -54,9 +63,14 @@ const CreateCalendarPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   // Register page for contextual help
   usePageHelp(isEditMode ? 'edit' : 'create');
+
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -74,6 +88,26 @@ const CreateCalendarPage: React.FC = () => {
       console.error('Failed to load calendar:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPaymentMethods = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/payment-methods',
+      });
+      const methods: PaymentMethod[] = response || [
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ];
+      setPaymentMethods(methods);
+    } catch (err) {
+      console.error('Failed to load payment methods:', err);
+      setPaymentMethods([
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ]);
     }
   };
 
@@ -144,6 +178,8 @@ const CreateCalendarPage: React.FC = () => {
       <CalendarForm
         formData={formData}
         onChange={setFormData}
+        paymentMethods={paymentMethods}
+        organisation={organisation}
       />
     </Box>
   );

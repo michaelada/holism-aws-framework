@@ -22,6 +22,8 @@ export interface RegistrationType {
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   discountIds: string[];
+  fee: number;
+  handlingFeeIncluded: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,6 +89,8 @@ export interface CreateRegistrationTypeDto {
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   discountIds?: string[];
+  fee?: number;
+  handlingFeeIncluded?: boolean;
 }
 
 /**
@@ -107,6 +111,8 @@ export interface UpdateRegistrationTypeDto {
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   discountIds?: string[];
+  fee?: number;
+  handlingFeeIncluded?: boolean;
 }
 
 /**
@@ -193,6 +199,8 @@ export class RegistrationService {
       discountIds: row.discount_ids ? 
         (Array.isArray(row.discount_ids) ? row.discount_ids : JSON.parse(row.discount_ids)) 
         : [],
+      fee: parseFloat(row.fee) || 0,
+      handlingFeeIncluded: row.handling_fee_included || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -322,8 +330,8 @@ export class RegistrationService {
          (organisation_id, name, description, entity_name, registration_form_id, registration_status,
           is_rolling_registration, valid_until, number_of_months, automatically_approve,
           registration_labels, supported_payment_methods, use_terms_and_conditions, terms_and_conditions,
-          discount_ids)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          discount_ids, fee, handling_fee_included)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING *`,
         [
           data.organisationId,
@@ -341,6 +349,8 @@ export class RegistrationService {
           data.useTermsAndConditions || false,
           data.termsAndConditions || null,
           JSON.stringify(data.discountIds || []),
+          data.fee ?? 0,
+          data.handlingFeeIncluded ?? false,
         ]
       );
 
@@ -458,6 +468,14 @@ export class RegistrationService {
       if (data.discountIds !== undefined) {
         updates.push(`discount_ids = $${paramCount++}`);
         values.push(JSON.stringify(data.discountIds));
+      }
+      if (data.fee !== undefined) {
+        updates.push(`fee = $${paramCount++}`);
+        values.push(data.fee);
+      }
+      if (data.handlingFeeIncluded !== undefined) {
+        updates.push(`handling_fee_included = $${paramCount++}`);
+        values.push(data.handlingFeeIncluded);
       }
 
       values.push(id);

@@ -209,8 +209,10 @@
         "useTermsAndConditions": "Utiliser les conditions générales",
         "termsAndConditions": "Conditions générales",
         "fee": "Frais",
+        "feeCurrency": "Frais ({{currency}})",
         "feeHelper": "Frais d'inscription pour cette activité (0,00 pour gratuit)",
         "allowedPaymentMethod": "Méthode de paiement autorisée",
+        "supportedPaymentMethods": "Méthodes de paiement prises en charge",
         "paymentMethods": {
           "card": "Carte uniquement",
           "cheque": "Chèque/Hors ligne uniquement",
@@ -223,10 +225,9 @@
     },
     "review": {
       "title": "Révision et confirmation",
-      "description": "Veuillez vérifier les détails de votre événement avant de publier",
+      "description": "Description :",
       "basicInfo": "Informations de base",
       "eventName": "Nom de l'événement :",
-      "description": "Description :",
       "emailNotifications": "Notifications par e-mail :",
       "entryLimit": "Limite d'inscription :",
       "eventDates": "Dates de l'événement",
@@ -857,7 +858,16 @@
   "merchandise": {
     "title": "Marchandises",
     "merchandiseTypes": "Types de marchandises",
-    "orders": "Commandes",
+    "orders": {
+      "title": "Commandes de marchandises",
+      "exportToExcel": "Exporter vers Excel",
+      "selectedOrders": "{{count}} commande{{plural}} sélectionnée{{plural}}",
+      "updateStatus": "Mettre à jour le statut",
+      "loadingOrders": "Chargement des commandes...",
+      "noOrders": "Aucune commande trouvée",
+      "totalOrders": "Total des commandes : {{count}}",
+      "totalRevenue": "Revenu total : €{{amount}}"
+    },
     "createMerchandiseType": "Créer un type de marchandise",
     "editMerchandiseType": "Modifier le type de marchandise",
     "merchandiseTypeDetails": "Détails du type de marchandise",
@@ -1030,16 +1040,6 @@
     "quantityRules": {
       "title": "Règles de quantité de commande"
     },
-    "orders": {
-      "title": "Commandes de marchandises",
-      "exportToExcel": "Exporter vers Excel",
-      "selectedOrders": "{{count}} commande{{plural}} sélectionnée{{plural}}",
-      "updateStatus": "Mettre à jour le statut",
-      "loadingOrders": "Chargement des commandes...",
-      "noOrders": "Aucune commande trouvée",
-      "totalOrders": "Total des commandes : {{count}}",
-      "totalRevenue": "Revenu total : €{{amount}}"
-    },
     "batchOperations": {
       "title": "Mise à jour groupée des commandes",
       "updatingCount": "Mise à jour de {{count}} commande{{plural}}",
@@ -1202,9 +1202,9 @@
     "formNameRequired": "Le nom du formulaire est requis",
     "organisationContextMissing": "Le contexte de l'organisation est manquant",
     "table": {
-      "name": "Nom",
+      "label": "Libellé",
       "description": "Description",
-      "status": "Statut",
+      "type": "Type",
       "created": "Créé",
       "actions": "Actions"
     },
@@ -1318,36 +1318,37 @@
         "failedToSave": "Échec de l'enregistrement du formulaire"
       }
     },
-      "noFieldsFound": "Aucun champ pour le moment. Créez votre premier champ pour commencer.",
-      "noMatchingFields": "Aucun champ ne correspond à vos filtres",
-      "loadingFields": "Chargement des champs...",
-      "failedToCreate": "Échec de la création du champ",
-      "failedToUpdate": "Échec de la mise à jour du champ",
-      "failedToDelete": "Échec de la suppression du champ",
-      "fieldLabelRequired": "Le libellé du champ est requis",
-      "organisationContextNotAvailable": "Le contexte de l'organisation n'est pas disponible",
-      "invalidFieldLabel": "Le libellé du champ doit contenir au moins un caractère alphanumérique",
-      "optionsRequired": "Le type de champ \"{{type}}\" nécessite au moins une option",
-      "table": {
-        "label": "Libellé",
-        "description": "Description",
-        "type": "Type",
-        "created": "Créé",
-        "actions": "Actions"
-      },
-      "filters": {
-        "type": "Type",
-        "allTypes": "Tous les types"
-      },
-      "messages": {
-        "fieldCreated": "Champ créé avec succès",
-        "fieldUpdated": "Champ mis à jour avec succès"
-      }
+    "noFieldsFound": "Aucun champ pour le moment. Créez votre premier champ pour commencer.",
+    "noMatchingFields": "Aucun champ ne correspond à vos filtres",
+    "loadingFields": "Chargement des champs...",
+    "failedToCreate": "Échec de la création du champ",
+    "failedToUpdate": "Échec de la mise à jour du champ",
+    "failedToDelete": "Échec de la suppression du champ",
+    "fieldLabelRequired": "Le libellé du champ est requis",
+    "organisationContextNotAvailable": "Le contexte de l'organisation n'est pas disponible",
+    "invalidFieldLabel": "Le libellé du champ doit contenir au moins un caractère alphanumérique",
+    "optionsRequired": "Le type de champ \"{{type}}\" nécessite au moins une option",
+    "filters": {
+      "type": "Type",
+      "allTypes": "Tous les types"
     },
-    "preview": {
+    "messages": {
+      "fieldCreated": "Champ créé avec succès",
+      "fieldUpdated": "Champ mis à jour avec succès"
+    }
+  },
+  "preview": {
     "title": "Paiements",
     "paymentDetails": "Détails du paiement",
-    "lodgements": "Versements",
+    "lodgements": {
+      "title": "Versements",
+      "totalLodged": "Total versé",
+      "cardPayments": "Paiements par carte",
+      "chequePayments": "Paiements par chèque",
+      "offlinePayments": "Paiements hors ligne",
+      "lodgementsCount": "{{count}} versements",
+      "percentOfTotal": "{{percent}}% du total"
+    },
     "searchPlaceholder": "Rechercher des paiements...",
     "noPaymentsFound": "Aucun paiement pour le moment.",
     "noMatchingPayments": "Aucun paiement ne correspond à vos filtres",
@@ -1436,15 +1437,6 @@
       "reasonRequired": "La raison du remboursement est requise",
       "confirmButton": "Confirmer le remboursement",
       "processing": "Traitement..."
-    },
-    "lodgements": {
-      "title": "Versements",
-      "totalLodged": "Total versé",
-      "cardPayments": "Paiements par carte",
-      "chequePayments": "Paiements par chèque",
-      "offlinePayments": "Paiements hors ligne",
-      "lodgementsCount": "{{count}} versements",
-      "percentOfTotal": "{{percent}}% du total"
     }
   },
   "settings": {
@@ -1948,5 +1940,11 @@
       "reasonRequiredError": "Veuillez fournir une raison pour le remboursement",
       "failedToProcess": "Échec du traitement du remboursement"
     }
+  },
+  "payment": {
+    "fee": "Fee ({{currency}})",
+    "feeHelper": "The amount to charge for this type",
+    "handlingFeeIncluded": "Handling fee included",
+    "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
   }
 }

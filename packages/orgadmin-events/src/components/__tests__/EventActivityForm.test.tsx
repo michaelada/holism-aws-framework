@@ -10,9 +10,14 @@ const mockActivity = {
   allowSpecifyQuantity: false,
   useTermsAndConditions: false,
   fee: 0,
-  allowedPaymentMethod: 'both' as const,
+  supportedPaymentMethods: [] as string[],
   handlingFeeIncluded: false,
 };
+
+const mockPaymentMethods = [
+  { id: 'pm-card', name: 'Card Payment' },
+  { id: 'pm-offline', name: 'Pay Offline' },
+];
 
 describe('EventActivityForm', () => {
   it('renders activity form', () => {
@@ -22,6 +27,7 @@ describe('EventActivityForm', () => {
         index={0}
         onChange={vi.fn()}
         onRemove={vi.fn()}
+        paymentMethods={mockPaymentMethods}
       />
     );
     
@@ -35,6 +41,7 @@ describe('EventActivityForm', () => {
         index={0}
         onChange={vi.fn()}
         onRemove={vi.fn()}
+        paymentMethods={mockPaymentMethods}
       />
     );
     

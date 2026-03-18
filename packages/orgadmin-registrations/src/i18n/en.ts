@@ -193,6 +193,12 @@ const registrationsTranslationKeys = {
   'common.actions.delete': 'Delete',
   'common.actions.cancel': 'Cancel',
   'common.actions.save': 'Save',
+
+  // ── Payment configuration (shared pattern) ─────────────────────────
+  'payment.fee': 'Fee ({{currency}})',
+  'payment.feeHelper': 'The amount to charge for this type',
+  'payment.handlingFeeIncluded': 'Handling fee included',
+  'payment.handlingFeeIncludedHelper': 'When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout.',
 } as const;
 
 export type TranslationKey = keyof typeof registrationsTranslationKeys;

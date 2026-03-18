@@ -72,8 +72,12 @@ export interface MerchandiseType {
   
   // Payment configuration
   supportedPaymentMethods: string[];
+  handlingFeeIncluded: boolean;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
+  
+  // Discount integration
+  discountIds?: string[];
   
   // Email notifications
   adminNotificationEmails?: string;
@@ -171,8 +175,11 @@ export interface MerchandiseTypeFormData {
   applicationFormId?: string;
   
   supportedPaymentMethods: string[];
+  handlingFeeIncluded: boolean;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
+  
+  discountIds?: string[];
   
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;

@@ -4,13 +4,15 @@
  * Comprehensive form for creating or editing merchandise types with all configuration sections.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Checkbox,
+  Chip,
   TextField,
   Typography,
   FormControl,
@@ -23,6 +25,7 @@ import {
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import ImageGalleryUpload from '../components/ImageGalleryUpload';
 import OptionsConfigurationSection from '../components/OptionsConfigurationSection';
 import StockManagementSection from '../components/StockManagementSection';
@@ -30,11 +33,20 @@ import DeliveryConfigurationSection from '../components/DeliveryConfigurationSec
 import OrderQuantityRulesSection from '../components/OrderQuantityRulesSection';
 import type { MerchandiseTypeFormData, MerchandiseStatus, DeliveryType } from '../types/merchandise.types';
 
+interface PaymentMethod {
+  id: string;
+  name: string;
+}
+
 const CreateMerchandiseTypePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
   const { t } = useTranslation();
+  const { organisation } = useOrganisation();
+  const { execute } = useApi();
+
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   const [formData, setFormData] = useState<MerchandiseTypeFormData>({
     name: '',
@@ -46,6 +58,7 @@ const CreateMerchandiseTypePage: React.FC = () => {
     deliveryType: 'free',
     requireApplicationForm: false,
     supportedPaymentMethods: [],
+    handlingFeeIncluded: false,
     useTermsAndConditions: false,
   });
 
@@ -53,6 +66,49 @@ const CreateMerchandiseTypePage: React.FC = () => {
 
   const handleFieldChange = (field: keyof MerchandiseTypeFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
+
+  const loadPaymentMethods = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: '/api/payment-methods',
+      });
+      const methods = (response as PaymentMethod[]) || [
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ];
+      setPaymentMethods(methods);
+    } catch (err) {
+      console.error('Failed to load payment methods:', err);
+      setPaymentMethods([
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ]);
+    }
+  };
+
+  const isCardPaymentMethod = (methodId: string) => {
+    const method = paymentMethods.find(pm => pm.id === methodId);
+    if (!method) return methodId === 'stripe' || methodId === 'card';
+    const name = (method.name || '').toLowerCase();
+    return name.includes('card') || name.includes('stripe') || name.includes('helix');
+  };
+  const hasCardPayment = formData.supportedPaymentMethods.some(isCardPaymentMethod);
+  const showHandlingFee = hasCardPayment; // Merchandise has inherent pricing (option prices)
+
+  const handlePaymentMethodsChange = (value: any) => {
+    const newMethods = value as string[];
+    const newHasCard = newMethods.some(isCardPaymentMethod);
+    if (!newHasCard && formData.handlingFeeIncluded) {
+      setFormData(prev => ({ ...prev, handlingFeeIncluded: false, supportedPaymentMethods: newMethods }));
+    } else {
+      setFormData(prev => ({ ...prev, supportedPaymentMethods: newMethods }));
+    }
   };
 
   const handleSave = async () => {
@@ -214,26 +270,66 @@ const CreateMerchandiseTypePage: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.payment')}</Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.useTermsAndConditions}
-                onChange={(e) => handleFieldChange('useTermsAndConditions', e.target.checked)}
-              />
-            }
-            label={t('merchandise.fields.useTermsAndConditions')}
-          />
-          {formData.useTermsAndConditions && (
-            <TextField
-              label={t('merchandise.fields.termsAndConditions')}
-              value={formData.termsAndConditions || ''}
-              onChange={(e) => handleFieldChange('termsAndConditions', e.target.value)}
-              multiline
-              rows={4}
-              fullWidth
-              sx={{ mt: 2 }}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>{t('merchandise.fields.supportedPaymentMethods')}</InputLabel>
+              <Select
+                multiple
+                value={formData.supportedPaymentMethods}
+                label={t('merchandise.fields.supportedPaymentMethods')}
+                onChange={(e) => handlePaymentMethodsChange(e.target.value)}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const method = paymentMethods.find(m => m.id === value);
+                      return <Chip key={value} label={method?.name || value} size="small" />;
+                    })}
+                  </Box>
+                )}
+              >
+                {paymentMethods.map((method) => (
+                  <MenuItem key={method.id} value={method.id}>
+                    {method.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {showHandlingFee && (
+              <Box>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.handlingFeeIncluded ?? false}
+                      onChange={(e) => handleFieldChange('handlingFeeIncluded', e.target.checked)}
+                    />
+                  }
+                  label={t('payment.handlingFeeIncluded')}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {t('payment.handlingFeeIncludedHelper')}
+                </Typography>
+              </Box>
+            )}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.useTermsAndConditions}
+                  onChange={(e) => handleFieldChange('useTermsAndConditions', e.target.checked)}
+                />
+              }
+              label={t('merchandise.fields.useTermsAndConditions')}
             />
-          )}
+            {formData.useTermsAndConditions && (
+              <TextField
+                label={t('merchandise.fields.termsAndConditions')}
+                value={formData.termsAndConditions || ''}
+                onChange={(e) => handleFieldChange('termsAndConditions', e.target.value)}
+                multiline
+                rows={4}
+                fullWidth
+              />
+            )}
+          </Box>
         </CardContent>
       </Card>
 

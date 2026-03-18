@@ -34,6 +34,7 @@ export interface Calendar {
   adminNotificationEmails?: string;
   sendReminderEmails: boolean;
   reminderHoursBefore?: number;
+  handlingFeeIncluded: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -89,6 +90,7 @@ export interface CreateCalendarDto {
   adminNotificationEmails?: string;
   sendReminderEmails?: boolean;
   reminderHoursBefore?: number;
+  handlingFeeIncluded?: boolean;
 }
 
 /**
@@ -111,6 +113,7 @@ export interface UpdateCalendarDto {
   adminNotificationEmails?: string;
   sendReminderEmails?: boolean;
   reminderHoursBefore?: number;
+  handlingFeeIncluded?: boolean;
 }
 
 /**
@@ -155,6 +158,7 @@ export class CalendarService {
       adminNotificationEmails: row.admin_notification_emails,
       sendReminderEmails: row.send_reminder_emails,
       reminderHoursBefore: row.reminder_hours_before,
+      handlingFeeIncluded: row.handling_fee_included || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -297,8 +301,9 @@ export class CalendarService {
           enable_automated_schedule, min_days_in_advance, max_days_in_advance,
           use_terms_and_conditions, terms_and_conditions, supported_payment_methods,
           allow_cancellations, cancel_days_in_advance, refund_payment_automatically,
-          admin_notification_emails, send_reminder_emails, reminder_hours_before)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+          admin_notification_emails, send_reminder_emails, reminder_hours_before,
+          handling_fee_included)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING *`,
         [
           data.organisationId,
@@ -318,6 +323,7 @@ export class CalendarService {
           data.adminNotificationEmails || null,
           data.sendReminderEmails || false,
           data.reminderHoursBefore || null,
+          data.handlingFeeIncluded ?? false,
         ]
       );
 
@@ -456,8 +462,12 @@ export class CalendarService {
         values.push(data.sendReminderEmails);
       }
       if (data.reminderHoursBefore !== undefined) {
-        updates.push(`reminder_hours_before = $${paramCount++}`);
+        updates.push(`reminder_hours_before = ${paramCount++}`);
         values.push(data.reminderHoursBefore || null);
+      }
+      if (data.handlingFeeIncluded !== undefined) {
+        updates.push(`handling_fee_included = ${paramCount++}`);
+        values.push(data.handlingFeeIncluded);
       }
 
       values.push(id);

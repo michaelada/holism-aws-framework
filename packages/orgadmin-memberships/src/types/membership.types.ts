@@ -51,6 +51,8 @@ export interface MembershipType {
   automaticallyApprove: boolean;
   memberLabels: string[];
   supportedPaymentMethods: string[];
+  fee: number;
+  handlingFeeIncluded: boolean;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   membershipTypeCategory: MembershipTypeCategory;
@@ -125,6 +127,8 @@ export interface CreateMembershipTypeDto {
   automaticallyApprove: boolean;
   memberLabels: string[];
   supportedPaymentMethods: string[];
+  fee: number;
+  handlingFeeIncluded: boolean;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   membershipTypeCategory: MembershipTypeCategory;

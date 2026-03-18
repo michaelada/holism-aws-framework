@@ -5,7 +5,7 @@
  * Steps: Basic Info -> Dates -> Ticketing -> Activities -> Confirm
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -42,7 +42,7 @@ import {
   NavigateBefore as BackIcon,
   HelpOutline as HelpIcon,
 } from '@mui/icons-material';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
 import { DiscountSelector, type Discount } from '@aws-web-framework/components';
 import type { EventFormData, EventActivityFormData } from '../types/event.types';
@@ -54,6 +54,7 @@ const CreateEventPage: React.FC = () => {
   const { execute } = useApi();
   const { t } = useTranslation();
   const { hasCapability } = useCapabilities();
+  const { organisation } = useOrganisation();
   const isEditMode = Boolean(id);
 
   const steps = [
@@ -72,6 +73,9 @@ const CreateEventPage: React.FC = () => {
   // Event types and venues
   const [eventTypes, setEventTypes] = useState<Array<{ id: string; name: string }>>([]);
   const [venues, setVenues] = useState<Array<{ id: string; name: string }>>([]);
+  
+  // Payment methods
+  const [paymentMethods, setPaymentMethods] = useState<Array<{ id: string; name: string }>>([]);
   const [addEventType, setAddEventType] = useState(false);
   const [addVenue, setAddVenue] = useState(false);
   
@@ -111,6 +115,7 @@ const CreateEventPage: React.FC = () => {
   useEffect(() => {
     loadEventTypesAndVenues();
     loadDiscounts();
+    loadPaymentMethods();
     if (isEditMode && id) {
       loadEvent(id);
     }
@@ -154,6 +159,38 @@ const CreateEventPage: React.FC = () => {
       setLoadingDiscounts(false);
     }
   };
+
+  const loadPaymentMethods = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/payment-methods',
+      });
+      setPaymentMethods(response || [
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ]);
+    } catch (error) {
+      console.error('Failed to load payment methods:', error);
+      setPaymentMethods([
+        { id: 'pay-offline', name: 'Pay Offline' },
+        { id: 'stripe', name: 'Card Payment (Stripe)' },
+      ]);
+    }
+  };
+
+  const fetchDiscounts = useCallback(async (organisationId: string, moduleType: string) => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisationId}/discounts/${moduleType}`,
+      });
+      return response.discounts || [];
+    } catch (error) {
+      console.error('Failed to fetch discounts:', error);
+      return [];
+    }
+  }, [execute]);
 
   const loadEvent = async (eventId: string) => {
     try {
@@ -251,7 +288,7 @@ const CreateEventPage: React.FC = () => {
       useTermsAndConditions: false,
       termsAndConditions: undefined,
       fee: 0,
-      allowedPaymentMethod: 'both',
+      supportedPaymentMethods: [],
       handlingFeeIncluded: false,
       chequePaymentInstructions: undefined,
       discountIds: [],
@@ -680,16 +717,17 @@ const CreateEventPage: React.FC = () => {
           )}
 
           {/* Discount Selection */}
-          {hasCapability('entry-discounts') && discounts.length > 0 && (
+          {hasCapability('entry-discounts') && (
             <Grid item xs={12}>
               <DiscountSelector
-                discounts={discounts}
-                selectedDiscounts={formData.discountIds || []}
+                selectedDiscountIds={formData.discountIds || []}
                 onChange={(discountIds) => handleChange('discountIds', discountIds)}
-                multiSelect={true}
-                disabled={loading}
+                organisationId={organisation?.id || ''}
+                moduleType="events"
+                fetchDiscounts={fetchDiscounts}
                 label="Apply Discounts to Event"
-                loading={loadingDiscounts}
+                helperText="Choose which discounts can be applied to this event"
+                currencyCode={organisation?.currency || 'EUR'}
               />
             </Grid>
           )}
@@ -1052,6 +1090,7 @@ const CreateEventPage: React.FC = () => {
                   }
                 }}
                 onRemove={() => handleRemoveActivity(index)}
+                paymentMethods={paymentMethods}
               />
             </Box>
           ))

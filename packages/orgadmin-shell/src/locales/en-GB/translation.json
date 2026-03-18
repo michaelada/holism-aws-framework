@@ -216,8 +216,10 @@
         "useTermsAndConditions": "Use Terms and Conditions",
         "termsAndConditions": "Terms and Conditions",
         "fee": "Fee",
+        "feeCurrency": "Fee ({{currency}})",
         "feeHelper": "Entry fee for this activity (0.00 for free)",
         "allowedPaymentMethod": "Allowed Payment Method",
+        "supportedPaymentMethods": "Supported Payment Methods",
         "paymentMethods": {
           "card": "Card Only",
           "cheque": "Cheque/Offline Only",
@@ -230,10 +232,9 @@
     },
     "review": {
       "title": "Review & Confirm",
-      "description": "Please review your event details before publishing",
+      "description": "Description:",
       "basicInfo": "Basic Information",
       "eventName": "Event Name:",
-      "description": "Description:",
       "emailNotifications": "Email Notifications:",
       "entryLimit": "Entry Limit:",
       "eventDates": "Event Dates",
@@ -703,10 +704,6 @@
       "formData": "Registration Form Data",
       "formSubmissionData": "Form Submission Data",
       "registrationInfo": "Registration Information",
-      "registrationForm": "Registration Form",
-      "duration": "Duration Settings",
-      "approval": "Approval Settings",
-      "payment": "Payment Configuration",
       "discounts": "Discounts"
     },
     "fields": {
@@ -891,7 +888,16 @@
   "merchandise": {
     "title": "Merchandise",
     "merchandiseTypes": "Merchandise Types",
-    "orders": "Orders",
+    "orders": {
+      "title": "Merchandise Orders",
+      "exportToExcel": "Export to Excel",
+      "selectedOrders": "{{count}} order{{plural}} selected",
+      "updateStatus": "Update Status",
+      "loadingOrders": "Loading orders...",
+      "noOrders": "No orders found",
+      "totalOrders": "Total Orders: {{count}}",
+      "totalRevenue": "Total Revenue: €{{amount}}"
+    },
     "createMerchandiseType": "Create Merchandise Type",
     "editMerchandiseType": "Edit Merchandise Type",
     "merchandiseTypeDetails": "Merchandise Type Details",
@@ -1063,16 +1069,6 @@
     },
     "quantityRules": {
       "title": "Order Quantity Rules"
-    },
-    "orders": {
-      "title": "Merchandise Orders",
-      "exportToExcel": "Export to Excel",
-      "selectedOrders": "{{count}} order{{plural}} selected",
-      "updateStatus": "Update Status",
-      "loadingOrders": "Loading orders...",
-      "noOrders": "No orders found",
-      "totalOrders": "Total Orders: {{count}}",
-      "totalRevenue": "Total Revenue: €{{amount}}"
     },
     "batchOperations": {
       "title": "Batch Update Orders",
@@ -1374,60 +1370,20 @@
       "backButton": "Back",
       "nextButton": "Next",
       "formNotFound": "Form not found"
-    },
-    "fields": {
-      "title": "Field Definitions",
-      "createField": "Create Field",
-      "editField": "Edit Field",
-      "createFieldPage": "Create Field Definition",
-      "editFieldPage": "Edit Field Definition",
-      "searchPlaceholder": "Search fields...",
-      "noFieldsFound": "No fields yet. Create your first field to get started.",
-      "noMatchingFields": "No fields match your filters",
-      "loadingFields": "Loading fields...",
-      "fieldLabel": "Field Label",
-      "fieldLabelHelper": "Display label (e.g., First Name) - field name will be auto-generated",
-      "fieldDescription": "Description",
-      "fieldDescriptionHelper": "Optional detailed explanation of what this field is for",
-      "fieldType": "Field Type",
-      "datatypeLockedNoCapability": "Field type cannot be changed because your organization does not have the document management capability",
-      "fieldOptions": "Options",
-      "fieldConfiguration": "Field Configuration",
-      "livePreview": "Live Preview",
-      "previewDescription": "This is how the field will appear to users",
-      "previewPlaceholder": "Start typing a field label to see a preview",
-      "addOption": "Add option",
-      "optionsRequired": "At least one option is required for {{type}} fields",
-      "fieldNameWillBe": "Field name will be: {{name}}",
-      "invalidFieldName": "(invalid)",
-      "allTypes": "All Types",
-      "table": {
-        "label": "Label",
-        "description": "Description",
-        "type": "Type",
-        "created": "Created",
-        "actions": "Actions"
-      },
-      "validation": {
-        "labelRequired": "Field label is required",
-        "labelAlphanumeric": "Field label must contain at least one alphanumeric character",
-        "optionsRequired": "Field type \"{{type}}\" requires at least one option"
-      },
-      "messages": {
-        "fieldCreated": "Field created successfully",
-        "fieldUpdated": "Field updated successfully",
-        "fieldNotFound": "Field not found"
-      },
-      "delete": {
-        "title": "Delete Field Definition",
-        "message": "Are you sure you want to delete the field \"{{label}}\"? This action cannot be undone."
-      }
     }
   },
   "payments": {
     "title": "Payments",
     "paymentDetails": "Payment Details",
-    "lodgements": "Lodgements",
+    "lodgements": {
+      "title": "Lodgements",
+      "totalLodged": "Total Lodged",
+      "cardPayments": "Card Payments",
+      "chequePayments": "Cheque Payments",
+      "offlinePayments": "Offline Payments",
+      "lodgementsCount": "{{count}} lodgements",
+      "percentOfTotal": "{{percent}}% of total"
+    },
     "searchPlaceholder": "Search payments...",
     "noPaymentsFound": "No payments yet.",
     "noMatchingPayments": "No payments match your filters",
@@ -1516,15 +1472,6 @@
       "reasonRequired": "Refund reason is required",
       "confirmButton": "Confirm Refund",
       "processing": "Processing..."
-    },
-    "lodgements": {
-      "title": "Lodgements",
-      "totalLodged": "Total Lodged",
-      "cardPayments": "Card Payments",
-      "chequePayments": "Cheque Payments",
-      "offlinePayments": "Offline Payments",
-      "lodgementsCount": "{{count}} lodgements",
-      "percentOfTotal": "{{percent}}% of total"
     }
   },
   "settings": {
@@ -2078,10 +2025,9 @@
     },
     "review": {
       "title": "Review & Confirm",
-      "description": "Review your discount settings before saving",
+      "description": "Description:",
       "basicInformation": "Basic Information",
       "name": "Name:",
-      "description": "Description:",
       "code": "Code:",
       "status": "Status:",
       "discountConfiguration": "Discount Configuration",
@@ -2284,5 +2230,11 @@
       "reasonRequiredError": "Please provide a reason for the refund",
       "failedToProcess": "Failed to process refund"
     }
+  },
+  "payment": {
+    "fee": "Fee ({{currency}})",
+    "feeHelper": "The amount to charge for this type",
+    "handlingFeeIncluded": "Handling fee included",
+    "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
   }
 }

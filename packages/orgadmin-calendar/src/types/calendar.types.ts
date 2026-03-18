@@ -38,6 +38,7 @@ export interface Calendar {
   
   // Payment Configuration
   supportedPaymentMethods: string[];   // Payment method IDs from Payments module
+  handlingFeeIncluded: boolean;        // Whether card processing fee is absorbed into the price
   
   // Cancellation Policy
   allowCancellations: boolean;         // Enable self-service cancellations (default false)
@@ -240,6 +241,7 @@ export interface CalendarFormData {
   termsAndConditions?: string;
   
   supportedPaymentMethods: string[];
+  handlingFeeIncluded: boolean;
   
   allowCancellations: boolean;
   cancelDaysInAdvance?: number;

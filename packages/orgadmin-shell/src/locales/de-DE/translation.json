@@ -208,6 +208,7 @@
         "fee": "Gebühr",
         "feeHelper": "Anmeldegebühr für diese Aktivität (0,00 für kostenlos)",
         "allowedPaymentMethod": "Zulässige Zahlungsmethode",
+        "supportedPaymentMethods": "Unterstützte Zahlungsmethoden",
         "paymentMethods": {
           "card": "Nur Karte",
           "cheque": "Nur Scheck/Offline",
@@ -1221,15 +1222,6 @@
       "reasonRequired": "Grund für Rückerstattung ist erforderlich",
       "confirmButton": "Rückerstattung bestätigen",
       "processing": "Wird verarbeitet..."
-    },
-    "lodgements": {
-      "title": "Einzahlungen",
-      "totalLodged": "Gesamt eingezahlt",
-      "cardPayments": "Kartenzahlungen",
-      "chequePayments": "Scheckzahlungen",
-      "offlinePayments": "Offline-Zahlungen",
-      "lodgementsCount": "{{count}} Einzahlungen",
-      "percentOfTotal": "{{percent}}% der Gesamtsumme"
     }
   },
   "reporting": {
@@ -1733,5 +1725,11 @@
       "reasonRequiredError": "Bitte geben Sie einen Grund für die Rückerstattung an",
       "failedToProcess": "Fehler beim Verarbeiten der Rückerstattung"
     }
+  },
+  "payment": {
+    "fee": "Fee ({{currency}})",
+    "feeHelper": "The amount to charge for this type",
+    "handlingFeeIncluded": "Handling fee included",
+    "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
   }
 }

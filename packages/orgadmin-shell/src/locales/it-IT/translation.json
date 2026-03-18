@@ -208,6 +208,7 @@
         "fee": "Tariffa",
         "feeHelper": "Tariffa di iscrizione per questa attività (0.00 per gratuito)",
         "allowedPaymentMethod": "Metodo di pagamento consentito",
+        "supportedPaymentMethods": "Metodi di pagamento supportati",
         "paymentMethods": {
           "card": "Solo carta",
           "cheque": "Solo assegno/offline",
@@ -1221,15 +1222,6 @@
       "reasonRequired": "Il motivo del rimborso è obbligatorio",
       "confirmButton": "Conferma rimborso",
       "processing": "Elaborazione..."
-    },
-    "lodgements": {
-      "title": "Versamenti",
-      "totalLodged": "Totale versato",
-      "cardPayments": "Pagamenti con carta",
-      "chequePayments": "Pagamenti con assegno",
-      "offlinePayments": "Pagamenti offline",
-      "lodgementsCount": "{{count}} versamenti",
-      "percentOfTotal": "{{percent}}% del totale"
     }
   },
   "reporting": {
@@ -1733,5 +1725,11 @@
       "reasonRequiredError": "Si prega di fornire un motivo per il rimborso",
       "failedToProcess": "Impossibile elaborare il rimborso"
     }
+  },
+  "payment": {
+    "fee": "Fee ({{currency}})",
+    "feeHelper": "The amount to charge for this type",
+    "handlingFeeIncluded": "Handling fee included",
+    "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
   }
 }

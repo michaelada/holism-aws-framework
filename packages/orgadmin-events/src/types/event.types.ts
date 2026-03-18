@@ -38,7 +38,7 @@ export interface EventActivity {
   useTermsAndConditions: boolean;      // Use Terms and Conditions
   termsAndConditions?: string;         // Rich text T&Cs
   fee: number;                         // Entry fee (0.00 for free)
-  allowedPaymentMethod: 'card' | 'cheque' | 'both';  // Payment methods
+  supportedPaymentMethods: string[];   // Payment method UUIDs
   handlingFeeIncluded: boolean;        // For card payments
   chequePaymentInstructions?: string;  // Instructions for cheque/offline
   createdAt: Date | string;
@@ -102,7 +102,7 @@ export interface EventActivityFormData {
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
-  allowedPaymentMethod: 'card' | 'cheque' | 'both';
+  supportedPaymentMethods: string[];
   handlingFeeIncluded: boolean;
   chequePaymentInstructions?: string;
   // Discount configuration (conditional on entry-discounts capability)

@@ -15,7 +15,7 @@ export interface EventActivity {
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
-  allowedPaymentMethod: 'card' | 'cheque' | 'both';
+  supportedPaymentMethods: string[];
   handlingFeeIncluded: boolean;
   chequePaymentInstructions?: string;
 }
@@ -554,7 +554,7 @@ export class EventService {
           useTermsAndConditions: activity.useTermsAndConditions,
           termsAndConditions: activity.termsAndConditions,
           fee: activity.fee,
-          allowedPaymentMethod: activity.allowedPaymentMethod,
+          supportedPaymentMethods: activity.supportedPaymentMethods,
           handlingFeeIncluded: activity.handlingFeeIncluded,
           chequePaymentInstructions: activity.chequePaymentInstructions,
         })) || [],

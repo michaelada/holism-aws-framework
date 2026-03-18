@@ -17,9 +17,10 @@ export interface EventActivity {
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
-  allowedPaymentMethod: 'card' | 'cheque' | 'both';
+  supportedPaymentMethods: string[];
   handlingFeeIncluded: boolean;
   chequePaymentInstructions?: string;
+  discountIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,9 +40,10 @@ export interface CreateEventActivityDto {
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   fee?: number;
-  allowedPaymentMethod?: 'card' | 'cheque' | 'both';
+  supportedPaymentMethods?: string[];
   handlingFeeIncluded?: boolean;
   chequePaymentInstructions?: string;
+  discountIds?: string[];
 }
 
 /**
@@ -65,9 +67,12 @@ export class EventActivityService {
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
       fee: parseFloat(row.fee),
-      allowedPaymentMethod: row.allowed_payment_method,
+      supportedPaymentMethods: row.supported_payment_methods || [],
       handlingFeeIncluded: row.handling_fee_included,
       chequePaymentInstructions: row.cheque_payment_instructions,
+      discountIds: row.discount_ids ? 
+        (Array.isArray(row.discount_ids) ? row.discount_ids : JSON.parse(row.discount_ids)) 
+        : [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -123,8 +128,8 @@ export class EventActivityService {
          (event_id, name, description, show_publicly, application_form_id,
           limit_applicants, applicants_limit, allow_specify_quantity,
           use_terms_and_conditions, terms_and_conditions, fee,
-          allowed_payment_method, handling_fee_included, cheque_payment_instructions)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          supported_payment_methods, handling_fee_included, cheque_payment_instructions, discount_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
         [
           data.eventId,
@@ -138,9 +143,10 @@ export class EventActivityService {
           data.useTermsAndConditions || false,
           data.termsAndConditions || null,
           data.fee || 0,
-          data.allowedPaymentMethod || 'both',
+          JSON.stringify(data.supportedPaymentMethods || []),
           data.handlingFeeIncluded || false,
           data.chequePaymentInstructions || null,
+          JSON.stringify(data.discountIds || []),
         ]
       );
 
@@ -156,85 +162,90 @@ export class EventActivityService {
    * Update an event activity
    */
   async updateActivity(id: string, data: Partial<CreateEventActivityDto>): Promise<EventActivity> {
-    try {
-      const updates: string[] = ['updated_at = NOW()'];
-      const values: any[] = [];
-      let paramCount = 1;
+      try {
+        const updates: string[] = ['updated_at = NOW()'];
+        const values: any[] = [];
+        let paramCount = 1;
 
-      if (data.name !== undefined) {
-        updates.push(`name = $${paramCount++}`);
-        values.push(data.name);
-      }
-      if (data.description !== undefined) {
-        updates.push(`description = $${paramCount++}`);
-        values.push(data.description);
-      }
-      if (data.showPublicly !== undefined) {
-        updates.push(`show_publicly = $${paramCount++}`);
-        values.push(data.showPublicly);
-      }
-      if (data.applicationFormId !== undefined) {
-        updates.push(`application_form_id = $${paramCount++}`);
-        values.push(data.applicationFormId || null);
-      }
-      if (data.limitApplicants !== undefined) {
-        updates.push(`limit_applicants = $${paramCount++}`);
-        values.push(data.limitApplicants);
-      }
-      if (data.applicantsLimit !== undefined) {
-        updates.push(`applicants_limit = $${paramCount++}`);
-        values.push(data.applicantsLimit || null);
-      }
-      if (data.allowSpecifyQuantity !== undefined) {
-        updates.push(`allow_specify_quantity = $${paramCount++}`);
-        values.push(data.allowSpecifyQuantity);
-      }
-      if (data.useTermsAndConditions !== undefined) {
-        updates.push(`use_terms_and_conditions = $${paramCount++}`);
-        values.push(data.useTermsAndConditions);
-      }
-      if (data.termsAndConditions !== undefined) {
-        updates.push(`terms_and_conditions = $${paramCount++}`);
-        values.push(data.termsAndConditions || null);
-      }
-      if (data.fee !== undefined) {
-        updates.push(`fee = $${paramCount++}`);
-        values.push(data.fee);
-      }
-      if (data.allowedPaymentMethod !== undefined) {
-        updates.push(`allowed_payment_method = $${paramCount++}`);
-        values.push(data.allowedPaymentMethod);
-      }
-      if (data.handlingFeeIncluded !== undefined) {
-        updates.push(`handling_fee_included = $${paramCount++}`);
-        values.push(data.handlingFeeIncluded);
-      }
-      if (data.chequePaymentInstructions !== undefined) {
-        updates.push(`cheque_payment_instructions = $${paramCount++}`);
-        values.push(data.chequePaymentInstructions || null);
-      }
+        if (data.name !== undefined) {
+          updates.push(`name = $${paramCount++}`);
+          values.push(data.name);
+        }
+        if (data.description !== undefined) {
+          updates.push(`description = $${paramCount++}`);
+          values.push(data.description);
+        }
+        if (data.showPublicly !== undefined) {
+          updates.push(`show_publicly = $${paramCount++}`);
+          values.push(data.showPublicly);
+        }
+        if (data.applicationFormId !== undefined) {
+          updates.push(`application_form_id = $${paramCount++}`);
+          values.push(data.applicationFormId || null);
+        }
+        if (data.limitApplicants !== undefined) {
+          updates.push(`limit_applicants = $${paramCount++}`);
+          values.push(data.limitApplicants);
+        }
+        if (data.applicantsLimit !== undefined) {
+          updates.push(`applicants_limit = $${paramCount++}`);
+          values.push(data.applicantsLimit || null);
+        }
+        if (data.allowSpecifyQuantity !== undefined) {
+          updates.push(`allow_specify_quantity = $${paramCount++}`);
+          values.push(data.allowSpecifyQuantity);
+        }
+        if (data.useTermsAndConditions !== undefined) {
+          updates.push(`use_terms_and_conditions = $${paramCount++}`);
+          values.push(data.useTermsAndConditions);
+        }
+        if (data.termsAndConditions !== undefined) {
+          updates.push(`terms_and_conditions = $${paramCount++}`);
+          values.push(data.termsAndConditions || null);
+        }
+        if (data.fee !== undefined) {
+          updates.push(`fee = $${paramCount++}`);
+          values.push(data.fee);
+        }
+        if (data.supportedPaymentMethods !== undefined) {
+          updates.push(`supported_payment_methods = $${paramCount++}`);
+          values.push(JSON.stringify(data.supportedPaymentMethods));
+        }
+        if (data.handlingFeeIncluded !== undefined) {
+          updates.push(`handling_fee_included = $${paramCount++}`);
+          values.push(data.handlingFeeIncluded);
+        }
+        if (data.chequePaymentInstructions !== undefined) {
+          updates.push(`cheque_payment_instructions = $${paramCount++}`);
+          values.push(data.chequePaymentInstructions || null);
+        }
+        if (data.discountIds !== undefined) {
+          updates.push(`discount_ids = $${paramCount++}`);
+          values.push(JSON.stringify(data.discountIds));
+        }
 
-      values.push(id);
+        values.push(id);
 
-      const result = await db.query(
-        `UPDATE event_activities 
-         SET ${updates.join(', ')}
-         WHERE id = $${paramCount}
-         RETURNING *`,
-        values
-      );
+        const result = await db.query(
+          `UPDATE event_activities 
+           SET ${updates.join(', ')}
+           WHERE id = $${paramCount}
+           RETURNING *`,
+          values
+        );
 
-      if (result.rows.length === 0) {
-        throw new Error('Event activity not found');
+        if (result.rows.length === 0) {
+          throw new Error('Event activity not found');
+        }
+
+        logger.info(`Event activity updated: ${id}`);
+        return this.rowToActivity(result.rows[0]);
+      } catch (error) {
+        logger.error('Error updating event activity:', error);
+        throw error;
       }
-
-      logger.info(`Event activity updated: ${id}`);
-      return this.rowToActivity(result.rows[0]);
-    } catch (error) {
-      logger.error('Error updating event activity:', error);
-      throw error;
     }
-  }
+
 
   /**
    * Delete an event activity

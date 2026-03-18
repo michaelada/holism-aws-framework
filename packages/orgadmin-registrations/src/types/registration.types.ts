@@ -16,6 +16,8 @@ export interface RegistrationType {
   automaticallyApprove: boolean;       // true = auto Active, false = Pending
   registrationLabels: string[];        // Tags automatically assigned to registrations
   supportedPaymentMethods: string[];   // Payment method IDs from Payments module
+  fee: number;                         // Fee amount in organisation currency, DECIMAL(10,2), default 0.00
+  handlingFeeIncluded: boolean;        // Whether card processing fee is absorbed, default false
   useTermsAndConditions: boolean;      // Include T&Cs in application
   termsAndConditions?: string;         // Rich text T&Cs
   createdAt: Date;
@@ -81,6 +83,8 @@ export interface RegistrationTypeFormData {
   automaticallyApprove: boolean;
   registrationLabels: string[];
   supportedPaymentMethods: string[];
+  fee: number;                         // Fee amount in organisation currency, default 0.00
+  handlingFeeIncluded: boolean;        // Whether card processing fee is absorbed, default false
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   discountIds?: string[];

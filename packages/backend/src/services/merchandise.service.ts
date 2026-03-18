@@ -23,10 +23,12 @@ export interface MerchandiseType {
   requireApplicationForm: boolean;
   applicationFormId?: string;
   supportedPaymentMethods: string[];
+  handlingFeeIncluded: boolean;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
+  discountIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,10 +77,12 @@ export interface CreateMerchandiseTypeDto {
   requireApplicationForm?: boolean;
   applicationFormId?: string;
   supportedPaymentMethods: string[];
+  handlingFeeIncluded?: boolean;
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
+  discountIds?: string[];
 }
 
 /**
@@ -100,10 +104,12 @@ export interface UpdateMerchandiseTypeDto {
   requireApplicationForm?: boolean;
   applicationFormId?: string;
   supportedPaymentMethods?: string[];
+  handlingFeeIncluded?: boolean;
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
+  discountIds?: string[];
 }
 
 /**
@@ -157,10 +163,12 @@ export class MerchandiseService {
       requireApplicationForm: row.require_application_form,
       applicationFormId: row.application_form_id,
       supportedPaymentMethods: row.supported_payment_methods || [],
+      handlingFeeIncluded: row.handling_fee_included || false,
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
       adminNotificationEmails: row.admin_notification_emails,
       customConfirmationMessage: row.custom_confirmation_message,
+      discountIds: row.discount_ids || [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -269,8 +277,8 @@ export class MerchandiseService {
           min_order_quantity, max_order_quantity, quantity_increments,
           require_application_form, application_form_id, supported_payment_methods,
           use_terms_and_conditions, terms_and_conditions, admin_notification_emails,
-          custom_confirmation_message)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          custom_confirmation_message, handling_fee_included, discount_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
          RETURNING *`,
         [
           data.organisationId,
@@ -293,6 +301,8 @@ export class MerchandiseService {
           data.termsAndConditions || null,
           data.adminNotificationEmails || null,
           data.customConfirmationMessage || null,
+          data.handlingFeeIncluded ?? false,
+          JSON.stringify(data.discountIds || []),
         ]
       );
 
@@ -433,8 +443,16 @@ export class MerchandiseService {
         values.push(data.adminNotificationEmails || null);
       }
       if (data.customConfirmationMessage !== undefined) {
-        updates.push(`custom_confirmation_message = $${paramCount++}`);
+        updates.push(`custom_confirmation_message = ${paramCount++}`);
         values.push(data.customConfirmationMessage || null);
+      }
+      if (data.handlingFeeIncluded !== undefined) {
+        updates.push(`handling_fee_included = $${paramCount++}`);
+        values.push(data.handlingFeeIncluded);
+      }
+      if (data.discountIds !== undefined) {
+        updates.push(`discount_ids = ${paramCount++}`);
+        values.push(JSON.stringify(data.discountIds));
       }
 
       values.push(id);

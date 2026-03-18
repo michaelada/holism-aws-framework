@@ -64,6 +64,8 @@ const DEFAULT_FORM_DATA: RegistrationTypeFormData = {
   automaticallyApprove: false,
   registrationLabels: [],
   supportedPaymentMethods: [],
+  fee: 0,
+  handlingFeeIncluded: false,
   useTermsAndConditions: false,
   termsAndConditions: undefined,
   discountIds: [],
@@ -88,6 +90,16 @@ const RegistrationTypeForm: React.FC<RegistrationTypeFormProps> = ({
     initialValues || { ...DEFAULT_FORM_DATA },
   );
   const [labelInput, setLabelInput] = useState('');
+
+  const fee = formData.fee ?? 0;
+  const isCardPaymentMethod = (methodId: string) => {
+    const method = paymentMethods.find(pm => pm.id === methodId);
+    if (!method) return methodId === 'stripe' || methodId === 'card';
+    const name = (method.name || '').toLowerCase();
+    return name.includes('card') || name.includes('stripe') || name.includes('helix');
+  };
+  const hasCardPayment = (formData.supportedPaymentMethods || []).some(isCardPaymentMethod);
+  const showHandlingFee = hasCardPayment && fee > 0;
 
   // Sync initialValues when they arrive (e.g. after async fetch in edit mode)
   useEffect(() => {
@@ -175,6 +187,16 @@ const RegistrationTypeForm: React.FC<RegistrationTypeFormProps> = ({
       ...prev,
       registrationLabels: prev.registrationLabels.filter(l => l !== label),
     }));
+  };
+
+  const handlePaymentMethodsChange = (value: any) => {
+    const newMethods = value as string[];
+    const newHasCard = newMethods.some(isCardPaymentMethod);
+    if (!newHasCard && formData.handlingFeeIncluded) {
+      setFormData(prev => ({ ...prev, handlingFeeIncluded: false, supportedPaymentMethods: newMethods }));
+    } else {
+      setFormData(prev => ({ ...prev, supportedPaymentMethods: newMethods }));
+    }
   };
 
   const validateForm = (): boolean => {
@@ -453,36 +475,67 @@ const RegistrationTypeForm: React.FC<RegistrationTypeFormProps> = ({
             </Card>
           </Grid>
 
-          {/* Payment Methods */}
+          {/* Payment Configuration */}
           <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Payment Configuration
                 </Typography>
-                <FormControl fullWidth required>
-                  <InputLabel>Supported Payment Methods</InputLabel>
-                  <Select
-                    multiple
-                    value={formData.supportedPaymentMethods}
-                    label="Supported Payment Methods"
-                    onChange={(e) => handleChange('supportedPaymentMethods', e.target.value)}
-                    renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {selected.map((value) => {
-                          const method = paymentMethods.find(m => m.id === value);
-                          return <Chip key={value} label={method?.name || value} size="small" />;
-                        })}
-                      </Box>
-                    )}
-                  >
-                    {paymentMethods.map((method) => (
-                      <MenuItem key={method.id} value={method.id}>
-                        {method.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label={t('payment.fee', { currency: organisation?.currency || 'EUR' })}
+                      value={formData.fee ?? 0}
+                      onChange={(e) => handleChange('fee', parseFloat(e.target.value) || 0)}
+                      helperText={t('payment.feeHelper')}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Supported Payment Methods</InputLabel>
+                      <Select
+                        multiple
+                        value={formData.supportedPaymentMethods}
+                        label="Supported Payment Methods"
+                        onChange={(e) => handlePaymentMethodsChange(e.target.value)}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.map((value) => {
+                              const method = paymentMethods.find(m => m.id === value);
+                              return <Chip key={value} label={method?.name || value} size="small" />;
+                            })}
+                          </Box>
+                        )}
+                      >
+                        {paymentMethods.map((method) => (
+                          <MenuItem key={method.id} value={method.id}>
+                            {method.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  {showHandlingFee && (
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={formData.handlingFeeIncluded ?? false}
+                            onChange={(e) => handleChange('handlingFeeIncluded', e.target.checked)}
+                          />
+                        }
+                        label={t('payment.handlingFeeIncluded')}
+                      />
+                      <Typography variant="body2" color="text.secondary">
+                        {t('payment.handlingFeeIncludedHelper')}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
               </CardContent>
             </Card>
           </Grid>

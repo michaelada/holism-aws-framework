@@ -358,7 +358,7 @@ describe('EventActivityService', () => {
         useTermsAndConditions: true,
         termsAndConditions: 'You must agree to the terms',
         fee: 10.0,
-        allowedPaymentMethod: 'both' as const,
+        supportedPaymentMethods: ['pm-card-1', 'pm-offline-1'],
         handlingFeeIncluded: true,
         chequePaymentInstructions: 'Make cheque payable to...',
       };
@@ -376,7 +376,7 @@ describe('EventActivityService', () => {
         use_terms_and_conditions: true,
         terms_and_conditions: 'You must agree to the terms',
         fee: '10.00',
-        allowed_payment_method: 'both',
+        supported_payment_methods: ['pm-card-1', 'pm-offline-1'],
         handling_fee_included: true,
         cheque_payment_instructions: 'Make cheque payable to...',
         created_at: new Date(),
@@ -409,7 +409,7 @@ describe('EventActivityService', () => {
         eventId: 'event-1',
         name: 'Test Activity',
         fee: 10.0,
-        allowedPaymentMethod: 'cheque' as const,
+        supportedPaymentMethods: ['pm-offline-1'],
       };
 
       await expect(service.createActivity(invalidActivity)).rejects.toThrow(
@@ -433,7 +433,7 @@ describe('EventActivityService', () => {
         use_terms_and_conditions: false,
         terms_and_conditions: null,
         fee: '10.00',
-        allowed_payment_method: 'card',
+        supported_payment_methods: [],
         handling_fee_included: false,
         cheque_payment_instructions: null,
         created_at: new Date(),

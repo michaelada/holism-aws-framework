@@ -208,6 +208,7 @@
         "fee": "Taxa",
         "feeHelper": "Taxa de inscrição para esta atividade (0.00 para gratuito)",
         "allowedPaymentMethod": "Método de pagamento permitido",
+        "supportedPaymentMethods": "Métodos de pagamento suportados",
         "paymentMethods": {
           "card": "Apenas cartão",
           "cheque": "Apenas cheque/offline",
@@ -1221,15 +1222,6 @@
       "reasonRequired": "O motivo do reembolso é obrigatório",
       "confirmButton": "Confirmar reembolso",
       "processing": "A processar..."
-    },
-    "lodgements": {
-      "title": "Depósitos",
-      "totalLodged": "Total depositado",
-      "cardPayments": "Pagamentos com cartão",
-      "chequePayments": "Pagamentos com cheque",
-      "offlinePayments": "Pagamentos offline",
-      "lodgementsCount": "{{count}} depósitos",
-      "percentOfTotal": "{{percent}}% do total"
     }
   },
   "reporting": {
@@ -1733,5 +1725,11 @@
       "reasonRequiredError": "Por favor, forneça um motivo para o reembolso",
       "failedToProcess": "Falha ao processar o reembolso"
     }
+  },
+  "payment": {
+    "fee": "Fee ({{currency}})",
+    "feeHelper": "The amount to charge for this type",
+    "handlingFeeIncluded": "Handling fee included",
+    "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
   }
 }

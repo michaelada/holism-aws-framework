@@ -9,6 +9,8 @@ import {
   Box,
   Card,
   CardContent,
+  Checkbox,
+  Chip,
   TextField,
   FormControl,
   InputLabel,
@@ -17,22 +19,53 @@ import {
   FormControlLabel,
   Switch,
   Typography,
-  Divider,
 } from '@mui/material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { CalendarFormData } from '../types/calendar.types';
 import ScheduleRulesSection from './ScheduleRulesSection';
 
+interface Organisation {
+  id: string;
+  currency?: string;
+  [key: string]: any;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+}
+
 interface CalendarFormProps {
   formData: CalendarFormData;
   onChange: (data: CalendarFormData) => void;
+  paymentMethods?: PaymentMethod[];
+  organisation?: Organisation | null;
 }
 
-const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
+const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, paymentMethods = [], organisation }) => {
   const { t } = useTranslation();
 
   const handleChange = (field: keyof CalendarFormData, value: any) => {
     onChange({ ...formData, [field]: value });
+  };
+
+  const isCardPaymentMethod = (methodId: string) => {
+    const method = (paymentMethods || []).find(pm => pm.id === methodId);
+    if (!method) return methodId === 'stripe' || methodId === 'card';
+    const name = (method.name || '').toLowerCase();
+    return name.includes('card') || name.includes('stripe') || name.includes('helix');
+  };
+  const hasCardPayment = (formData.supportedPaymentMethods || []).some(isCardPaymentMethod);
+  const showHandlingFee = hasCardPayment; // Calendar has inherent pricing (time slot prices)
+
+  const handlePaymentMethodsChange = (value: any) => {
+    const newMethods = value as string[];
+    const newHasCard = newMethods.some(isCardPaymentMethod);
+    if (!newHasCard && formData.handlingFeeIncluded) {
+      onChange({ ...formData, handlingFeeIncluded: false, supportedPaymentMethods: newMethods });
+    } else {
+      onChange({ ...formData, supportedPaymentMethods: newMethods });
+    }
   };
 
   return (
@@ -123,6 +156,54 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange }) => {
               onChange={(e) => handleChange('maxDaysInAdvance', parseInt(e.target.value))}
               fullWidth
             />
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Payment Configuration */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>{t('calendar.sections.paymentConfiguration')}</Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>{t('calendar.fields.supportedPaymentMethods')}</InputLabel>
+              <Select
+                multiple
+                value={formData.supportedPaymentMethods}
+                label={t('calendar.fields.supportedPaymentMethods')}
+                onChange={(e) => handlePaymentMethodsChange(e.target.value)}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const method = paymentMethods.find(m => m.id === value);
+                      return <Chip key={value} label={method?.name || value} size="small" />;
+                    })}
+                  </Box>
+                )}
+              >
+                {paymentMethods.map((method) => (
+                  <MenuItem key={method.id} value={method.id}>
+                    {method.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {showHandlingFee && (
+              <Box>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.handlingFeeIncluded ?? false}
+                      onChange={(e) => handleChange('handlingFeeIncluded', e.target.checked)}
+                    />
+                  }
+                  label={t('payment.handlingFeeIncluded')}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {t('payment.handlingFeeIncludedHelper')}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </CardContent>
       </Card>

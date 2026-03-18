@@ -1,0 +1,128 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Hardcoded Single-Select Payment Method in EventActivityForm
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to the concrete failing case: render EventActivityForm with fee > 0 and a `paymentMethods` prop containing dynamic payment methods from the API
+  - Test file: `packages/orgadmin-events/src/components/__tests__/EventActivityForm.payment-methods.property.test.tsx`
+  - Bug Condition from design: `isBugCondition(input)` where `input.component == 'EventActivityForm' AND input.fee > 0 AND input.field == 'paymentMethodSelection'`
+  - Test assertions (Expected Behavior):
+    - Render EventActivityForm with `fee > 0` and `paymentMethods: [{ id: 'uuid-1', name: 'Card Payment' }, { id: 'uuid-2', name: 'Pay Offline' }]`
+    - Assert a multi-select dropdown labeled "Supported Payment Methods" is rendered (not "Allowed Payment Methods")
+    - Assert the dropdown contains the dynamic payment method names from props (not hardcoded 'card'/'cheque'/'both')
+    - Assert selecting payment methods produces `supportedPaymentMethods: string[]` (UUID array) in onChange (not `allowedPaymentMethod: string`)
+    - Assert handling fee toggle visibility is determined by checking if any selected method name contains 'card', 'stripe', or 'helix' (case-insensitive)
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists because the form renders a hardcoded single-select with 'card'/'cheque'/'both' options)
+  - Document counterexamples found (e.g., "EventActivityForm renders `<Select>` with hardcoded MenuItems instead of multi-select with API data")
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Fee-Zero Hides Payment UI and Other Fields Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Test file: `packages/orgadmin-events/src/components/__tests__/EventActivityForm.preservation.property.test.tsx`
+  - **Observation Phase** (run on UNFIXED code):
+    - Observe: When `fee = 0`, the payment method selection UI (Select for allowedPaymentMethod) is NOT rendered
+    - Observe: When `fee = 0`, the handling fee toggle is NOT rendered
+    - Observe: When `fee = 0`, the cheque payment instructions field is NOT rendered
+    - Observe: Name, description, showPublicly, applicationForm, limitApplicants, allowSpecifyQuantity, useTermsAndConditions fields all render and function correctly regardless of payment method changes
+    - Observe: `handlingFeeIncluded` boolean value is stored correctly when checkbox is toggled
+    - Observe: `chequePaymentInstructions` text value is stored correctly when entered
+  - **Property Tests**:
+    - Property: For all fee values where `fee === 0`, no payment method UI is rendered (generates random activity data with fee=0, asserts no payment Select/dropdown exists)
+    - Property: For all non-payment fields (name, description, showPublicly, limitApplicants, allowSpecifyQuantity, useTermsAndConditions), changing the field value via onChange produces the correct updated activity object regardless of payment method configuration
+    - Property: For all boolean values of handlingFeeIncluded, toggling the checkbox produces the correct value in onChange
+    - Property: For all string values of chequePaymentInstructions, entering text produces the correct value in onChange
+  - Verify tests pass on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.3, 3.4, 3.5, 3.6_
+
+- [x] 3. Fix: Standardize Event Activity payment methods to dynamic multi-select
+
+  - [x] 3.1 Database migration: Replace `allowed_payment_method` with `supported_payment_methods`
+    - Create migration file `packages/backend/src/database/migrations/011_event_activity_payment_methods_standardization.sql`
+    - `ALTER TABLE event_activities ADD COLUMN supported_payment_methods JSONB DEFAULT '[]'::jsonb;`
+    - Migrate existing data: convert `allowed_payment_method` values to empty arrays (or look up corresponding payment method UUIDs if feasible)
+    - `ALTER TABLE event_activities DROP COLUMN allowed_payment_method;`
+    - _Bug_Condition: isBugCondition(input) where input.field == 'paymentMethodStorage' — database stores VARCHAR(20) instead of JSONB array_
+    - _Expected_Behavior: Database stores supported_payment_methods as JSONB array of UUID strings_
+    - _Preservation: All other columns in event_activities table remain unchanged_
+    - _Requirements: 2.6, 1.6_
+
+  - [x] 3.2 Backend: Update `EventActivityService` interfaces and SQL
+    - In `packages/backend/src/services/event-activity.service.ts`:
+      - Replace `allowedPaymentMethod: 'card' | 'cheque' | 'both'` with `supportedPaymentMethods: string[]` in `EventActivity` interface
+      - Replace `allowedPaymentMethod` with `supportedPaymentMethods: string[]` in `CreateEventActivityDto`
+      - Update `rowToActivity`: replace `allowedPaymentMethod: row.allowed_payment_method` with `supportedPaymentMethods: row.supported_payment_methods || []`
+      - Update `createActivity` SQL: replace `allowed_payment_method` column with `supported_payment_methods` and use `JSON.stringify()` for the value
+      - Update `updateActivity` SQL: replace `allowed_payment_method` column reference with `supported_payment_methods` and use `JSON.stringify()`
+    - In `packages/backend/src/services/event.service.ts`:
+      - Replace `allowedPaymentMethod: 'card' | 'cheque' | 'both'` with `supportedPaymentMethods: string[]` in `EventActivity` interface
+      - Update `cloneEvent` activity mapping: replace `allowedPaymentMethod: activity.allowedPaymentMethod` with `supportedPaymentMethods: activity.supportedPaymentMethods`
+    - _Bug_Condition: Backend reads/writes allowed_payment_method as single string instead of supported_payment_methods as JSON array_
+    - _Expected_Behavior: Backend stores/retrieves supportedPaymentMethods as string[] via JSONB column_
+    - _Preservation: All other fields in create/update/read operations remain unchanged_
+    - _Requirements: 2.2, 2.6, 1.2, 1.6_
+
+  - [x] 3.3 Frontend types: Update `EventActivityFormData` and `EventActivity`
+    - In `packages/orgadmin-events/src/types/event.types.ts`:
+      - Replace `allowedPaymentMethod: 'card' | 'cheque' | 'both'` with `supportedPaymentMethods: string[]` in `EventActivity` interface
+      - Replace `allowedPaymentMethod: 'card' | 'cheque' | 'both'` with `supportedPaymentMethods: string[]` in `EventActivityFormData` interface
+    - _Bug_Condition: Type defines allowedPaymentMethod as string enum instead of supportedPaymentMethods as string[]_
+    - _Expected_Behavior: Type defines supportedPaymentMethods: string[] for UUID array storage_
+    - _Preservation: All other fields in both interfaces remain unchanged_
+    - _Requirements: 2.2, 1.2_
+
+  - [x] 3.4 Frontend: Update `EventActivityForm` to dynamic multi-select
+    - In `packages/orgadmin-events/src/components/EventActivityForm.tsx`:
+      - Add `paymentMethods: Array<{ id: string; name: string }>` to `EventActivityFormProps`
+      - Add `isCardPaymentMethod(name: string): boolean` helper — returns true if name contains 'card', 'stripe', or 'helix' (case-insensitive), matching `MembershipTypeForm` pattern
+      - Replace hardcoded single-select `<Select>` (with 'card'/'cheque'/'both' MenuItems) with a `multiple` `<Select>` that renders `<MenuItem>` for each payment method from props, with `<Chip>` display for selected values
+      - Change label from "Allowed Payment Methods" to "Supported Payment Methods"
+      - Add `handlePaymentMethodsChange` handler that updates `supportedPaymentMethods` and auto-resets `handlingFeeIncluded` to false when no card-based method is selected
+      - Update handling fee toggle visibility: replace `activity.allowedPaymentMethod === 'card' || activity.allowedPaymentMethod === 'both'` with dynamic check using `isCardPaymentMethod` on selected methods' names
+      - Update cheque/offline instructions visibility: replace `activity.allowedPaymentMethod === 'cheque' || activity.allowedPaymentMethod === 'both'` with dynamic check for any non-card payment method in selected methods
+    - _Bug_Condition: Form renders hardcoded single-select with string enum values_
+    - _Expected_Behavior: Form renders dynamic multi-select loaded from API, stores UUID array, uses name-based detection for toggle visibility_
+    - _Preservation: Fee field, handling fee boolean storage, cheque instructions text storage, all other form fields unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 1.1, 1.2, 1.3, 1.4, 1.5_
+
+  - [x] 3.5 Frontend: Update `CreateEventPage` to load and pass payment methods
+    - In `packages/orgadmin-events/src/pages/CreateEventPage.tsx`:
+      - Add state: `const [paymentMethods, setPaymentMethods] = useState<Array<{ id: string; name: string }>>([]);`
+      - Add `loadPaymentMethods` function that fetches from `/api/orgadmin/payment-methods`, matching `CreateSingleMembershipTypePage` pattern
+      - Call `loadPaymentMethods` in `useEffect`
+      - Pass `paymentMethods` prop to each `<EventActivityForm>` instance
+      - Update `handleAddActivity`: change `allowedPaymentMethod: 'both'` to `supportedPaymentMethods: []`
+    - _Bug_Condition: Parent page does not load payment methods from API and does not pass them to EventActivityForm_
+    - _Expected_Behavior: Parent page loads payment methods from /api/orgadmin/payment-methods and passes them as props_
+    - _Preservation: All other page functionality (event types, venues, discounts, wizard steps) unchanged_
+    - _Requirements: 2.1, 2.5, 1.1, 1.5_
+
+  - [x] 3.6 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Dynamic Payment Method Multi-Select Rendering
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.7 Verify preservation tests still pass
+    - **Property 2: Preservation** - Fee-Zero Hides Payment UI and Other Fields Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run all unit tests and property-based tests across the affected packages
+  - Verify no regressions in existing modules (Memberships, Registrations, Calendar, Merchandise)
+  - Verify exploration test (task 1) now passes
+  - Verify preservation tests (task 2) still pass
+  - Ensure all tests pass, ask the user if questions arise
