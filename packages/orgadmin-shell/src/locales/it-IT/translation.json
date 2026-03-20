@@ -647,8 +647,27 @@
       "loadingOrders": "Caricamento ordini...",
       "noOrders": "Nessun ordine trovato",
       "totalOrders": "Totale ordini: {{count}}",
-      "totalRevenue": "Ricavi totali: €{{amount}}"
+      "totalRevenue": "Ricavi totali: €{{amount}}",
+      "orderInformation": "Informazioni ordine",
+      "orderDate": "Data ordine",
+      "customer": "Cliente",
+      "email": "Email",
+      "orderStatus": "Stato ordine",
+      "paymentStatus": "Stato pagamento",
+      "orderItems": "Articoli dell'ordine",
+      "merchandiseType": "Tipo di merce",
+      "selectedOptions": "Opzioni selezionate",
+      "quantity": "Quantità",
+      "unitPrice": "Prezzo unitario",
+      "subtotal": "Subtotale",
+      "deliveryFee": "Costo di consegna",
+      "total": "Totale",
+      "adminNotes": "Note amministratore",
+      "adminNotesPlaceholder": "Aggiungi note su questo ordine...",
+      "orderHistory": "Cronologia ordine",
+      "noHistory": "Nessuna cronologia ordine disponibile"
     },
+    "orderNotFound": "Ordine non trovato",
     "createMerchandiseType": "Crea tipo di merce",
     "editMerchandiseType": "Modifica tipo di merce",
     "merchandiseTypeDetails": "Dettagli del tipo di merce",
@@ -666,6 +685,8 @@
     "table": {
       "name": "Nome",
       "status": "Stato",
+      "image": "Immagine",
+      "options": "Opzioni",
       "priceRange": "Fascia di prezzo",
       "stockStatus": "Stato delle scorte",
       "actions": "Azioni",
@@ -684,11 +705,19 @@
       "delete": "Elimina",
       "viewOrder": "Visualizza ordine"
     },
+    "deleteDialog": {
+      "title": "Elimina tipo di merce",
+      "message": "Sei sicuro di voler eliminare questo tipo di merce? Questa azione non può essere annullata.",
+      "cancel": "Annulla",
+      "confirm": "Elimina"
+    },
     "filters": {
       "status": "Stato",
       "stockLevel": "Livello scorte",
       "paymentStatus": "Stato pagamento",
       "orderStatus": "Stato ordine",
+      "dateFrom": "Data da",
+      "dateTo": "Data a",
       "all": "Tutti"
     },
     "statusOptions": {
@@ -727,20 +756,26 @@
       "inStock": "Disponibile",
       "lowStock": "Scorte basse",
       "outOfStock": "Esaurito",
-      "notTracked": "Non tracciato"
+      "notTracked": "Non tracciato",
+      "tracking": "Tracciamento scorte",
+      "lowStockThreshold": "Soglia scorte basse",
+      "outOfStockBehavior": "Comportamento esaurito"
     },
     "sections": {
       "basicInfo": "Informazioni di base",
       "images": "Immagini del prodotto",
       "options": "Configurazione opzioni",
       "stockManagement": "Gestione scorte",
+      "stockStatus": "Stato delle scorte",
       "delivery": "Configurazione consegna",
       "quantityRules": "Regole quantità ordine",
       "applicationForm": "Modulo di domanda",
       "payment": "Configurazione pagamento",
       "emailNotifications": "Notifiche email",
+      "emailConfig": "Configurazione email",
       "optionsAndPricing": "Opzioni e prezzi",
-      "orderStatistics": "Statistiche ordini"
+      "orderStatistics": "Statistiche ordini",
+      "discounts": "Sconti"
     },
     "fields": {
       "name": "Nome",
@@ -758,6 +793,7 @@
       "selectForm": "Seleziona un modulo...",
       "useTermsAndConditions": "Usa termini e condizioni",
       "termsAndConditions": "Termini e condizioni",
+      "termsAndConditionsContent": "Contenuto dei termini e condizioni",
       "adminNotificationEmails": "Email di notifica amministratore",
       "adminNotificationEmailsPlaceholder": "email1@esempio.com, email2@esempio.com",
       "adminNotificationEmailsHelper": "Indirizzi email separati da virgole",
@@ -770,7 +806,11 @@
       "quantityIncrements": "Incrementi quantità",
       "quantityIncrementsHelper": "Deve ordinare in multipli di questo numero (ad es., 6 per confezioni da 6)",
       "noLimit": "Nessun limite",
-      "anyQuantity": "Qualsiasi quantità"
+      "anyQuantity": "Qualsiasi quantità",
+      "supportedPaymentMethods": "Metodi di pagamento supportati",
+      "selectDiscounts": "Seleziona sconti",
+      "selectDiscountsHelper": "Scegli quali sconti possono essere applicati a questo tipo di merce",
+      "noDiscountsHint": "Nessuno sconto disponibile al momento. Crea sconti dal sottomenu Sconti per assegnarli qui."
     },
     "images": {
       "title": "Immagini del prodotto",
@@ -800,6 +840,8 @@
     "delivery": {
       "title": "Configurazione consegna",
       "deliveryType": "Tipo di consegna",
+      "free": "Consegna gratuita",
+      "fixed": "Costo fisso",
       "freeDelivery": "Consegna gratuita",
       "fixedFee": "Costo di consegna fisso",
       "quantityBased": "Consegna basata sulla quantità",
@@ -847,6 +889,32 @@
       "save": "Salva",
       "saving": "Salvataggio...",
       "cancel": "Annulla"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare i tipi di merce",
+      "loadOrderFailed": "Impossibile caricare i dettagli dell'ordine",
+      "loadOrdersFailed": "Impossibile caricare gli ordini",
+      "deleteFailed": "Impossibile eliminare il tipo di merce",
+      "saveNotesFailed": "Impossibile salvare le note amministratore",
+      "updateStatusFailed": "Impossibile aggiornare lo stato dell'ordine",
+      "batchUpdateFailed": "Aggiornamento batch degli ordini non riuscito",
+      "exportFailed": "Esportazione degli ordini non riuscita",
+      "paymentMethodsLoadFailed": "Impossibile caricare i metodi di pagamento"
+    },
+    "email": {
+      "confirmationMessage": "Messaggio di conferma",
+      "notificationEmails": "Email di notifica",
+      "noNotificationEmails": "Nessuna email di notifica configurata"
+    },
+    "payment": {
+      "handlingFeeIncluded": "Costo di gestione incluso",
+      "noMethods": "Nessun metodo di pagamento configurato",
+      "termsEnabled": "Termini e condizioni attivati"
+    },
+    "quantity": {
+      "min": "Quantità minima",
+      "max": "Quantità massima",
+      "increment": "Incremento quantità"
     }
   },
   "ticketing": {
@@ -1619,7 +1687,10 @@
       "description": "Gestire merchandising e negozio online",
       "menu": {
         "types": "Tipi di merchandising",
-        "orders": "Ordini"
+        "orders": "Ordini",
+        "merchandiseTypes": "Tipi di merce",
+        "discounts": "Sconti",
+        "merchandiseOrders": "Ordini di merce"
       }
     }
   },

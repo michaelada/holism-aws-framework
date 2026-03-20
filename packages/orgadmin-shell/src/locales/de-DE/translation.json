@@ -647,8 +647,27 @@
       "loadingOrders": "Bestellungen werden geladen...",
       "noOrders": "Keine Bestellungen gefunden",
       "totalOrders": "Gesamtbestellungen: {{count}}",
-      "totalRevenue": "Gesamtumsatz: €{{amount}}"
+      "totalRevenue": "Gesamtumsatz: €{{amount}}",
+      "orderInformation": "Bestellinformationen",
+      "orderDate": "Bestelldatum",
+      "customer": "Kunde",
+      "email": "E-Mail",
+      "orderStatus": "Bestellstatus",
+      "paymentStatus": "Zahlungsstatus",
+      "orderItems": "Bestellpositionen",
+      "merchandiseType": "Warentyp",
+      "selectedOptions": "Ausgewählte Optionen",
+      "quantity": "Menge",
+      "unitPrice": "Stückpreis",
+      "subtotal": "Zwischensumme",
+      "deliveryFee": "Liefergebühr",
+      "total": "Gesamt",
+      "adminNotes": "Admin-Notizen",
+      "adminNotesPlaceholder": "Notizen zu dieser Bestellung hinzufügen...",
+      "orderHistory": "Bestellverlauf",
+      "noHistory": "Kein Bestellverlauf verfügbar"
     },
+    "orderNotFound": "Bestellung nicht gefunden",
     "createMerchandiseType": "Warentyp erstellen",
     "editMerchandiseType": "Warentyp bearbeiten",
     "merchandiseTypeDetails": "Warentyp-Details",
@@ -666,6 +685,8 @@
     "table": {
       "name": "Name",
       "status": "Status",
+      "image": "Bild",
+      "options": "Optionen",
       "priceRange": "Preisspanne",
       "stockStatus": "Lagerstatus",
       "actions": "Aktionen",
@@ -684,11 +705,19 @@
       "delete": "Löschen",
       "viewOrder": "Bestellung anzeigen"
     },
+    "deleteDialog": {
+      "title": "Warentyp löschen",
+      "message": "Sind Sie sicher, dass Sie diesen Warentyp löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "cancel": "Abbrechen",
+      "confirm": "Löschen"
+    },
     "filters": {
       "status": "Status",
       "stockLevel": "Lagerbestand",
       "paymentStatus": "Zahlungsstatus",
       "orderStatus": "Bestellstatus",
+      "dateFrom": "Datum von",
+      "dateTo": "Datum bis",
       "all": "Alle"
     },
     "statusOptions": {
@@ -727,20 +756,26 @@
       "inStock": "Auf Lager",
       "lowStock": "Niedriger Lagerbestand",
       "outOfStock": "Nicht vorrätig",
-      "notTracked": "Nicht verfolgt"
+      "notTracked": "Nicht verfolgt",
+      "tracking": "Lagerverfolgung",
+      "lowStockThreshold": "Schwellenwert für niedrigen Lagerbestand",
+      "outOfStockBehavior": "Verhalten bei Nicht-Verfügbarkeit"
     },
     "sections": {
       "basicInfo": "Grundinformationen",
       "images": "Produktbilder",
       "options": "Optionskonfiguration",
       "stockManagement": "Lagerverwaltung",
+      "stockStatus": "Lagerstatus",
       "delivery": "Lieferkonfiguration",
       "quantityRules": "Bestellmengenregeln",
       "applicationForm": "Bewerbungsformular",
       "payment": "Zahlungskonfiguration",
       "emailNotifications": "E-Mail-Benachrichtigungen",
+      "emailConfig": "E-Mail-Konfiguration",
       "optionsAndPricing": "Optionen und Preise",
-      "orderStatistics": "Bestellstatistiken"
+      "orderStatistics": "Bestellstatistiken",
+      "discounts": "Rabatte"
     },
     "fields": {
       "name": "Name",
@@ -758,6 +793,7 @@
       "selectForm": "Formular auswählen...",
       "useTermsAndConditions": "Allgemeine Geschäftsbedingungen verwenden",
       "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "termsAndConditionsContent": "Inhalt der Allgemeinen Geschäftsbedingungen",
       "adminNotificationEmails": "Administrator-Benachrichtigungs-E-Mails",
       "adminNotificationEmailsPlaceholder": "email1@beispiel.com, email2@beispiel.com",
       "adminNotificationEmailsHelper": "Durch Kommas getrennte E-Mail-Adressen",
@@ -770,7 +806,11 @@
       "quantityIncrements": "Mengenerhöhungen",
       "quantityIncrementsHelper": "Muss in Vielfachen dieser Zahl bestellt werden (z.B. 6 für 6er-Packungen)",
       "noLimit": "Kein Limit",
-      "anyQuantity": "Beliebige Menge"
+      "anyQuantity": "Beliebige Menge",
+      "supportedPaymentMethods": "Unterstützte Zahlungsmethoden",
+      "selectDiscounts": "Rabatte auswählen",
+      "selectDiscountsHelper": "Wählen Sie aus, welche Rabatte auf diesen Warentyp angewendet werden können",
+      "noDiscountsHint": "Noch keine Rabatte verfügbar. Erstellen Sie Rabatte im Untermenü Rabatte, um sie hier zuzuweisen."
     },
     "images": {
       "title": "Produktbilder",
@@ -800,6 +840,8 @@
     "delivery": {
       "title": "Lieferkonfiguration",
       "deliveryType": "Lieferart",
+      "free": "Kostenlose Lieferung",
+      "fixed": "Feste Gebühr",
       "freeDelivery": "Kostenlose Lieferung",
       "fixedFee": "Feste Liefergebühr",
       "quantityBased": "Mengenbasierte Lieferung",
@@ -847,6 +889,32 @@
       "save": "Speichern",
       "saving": "Speichern...",
       "cancel": "Abbrechen"
+    },
+    "errors": {
+      "loadFailed": "Warentypen konnten nicht geladen werden",
+      "loadOrderFailed": "Bestelldetails konnten nicht geladen werden",
+      "loadOrdersFailed": "Bestellungen konnten nicht geladen werden",
+      "deleteFailed": "Warentyp konnte nicht gelöscht werden",
+      "saveNotesFailed": "Admin-Notizen konnten nicht gespeichert werden",
+      "updateStatusFailed": "Bestellstatus konnte nicht aktualisiert werden",
+      "batchUpdateFailed": "Stapelaktualisierung der Bestellungen fehlgeschlagen",
+      "exportFailed": "Export der Bestellungen fehlgeschlagen",
+      "paymentMethodsLoadFailed": "Zahlungsmethoden konnten nicht geladen werden"
+    },
+    "email": {
+      "confirmationMessage": "Bestätigungsnachricht",
+      "notificationEmails": "Benachrichtigungs-E-Mails",
+      "noNotificationEmails": "Keine Benachrichtigungs-E-Mails konfiguriert"
+    },
+    "payment": {
+      "handlingFeeIncluded": "Bearbeitungsgebühr enthalten",
+      "noMethods": "Keine Zahlungsmethoden konfiguriert",
+      "termsEnabled": "Allgemeine Geschäftsbedingungen aktiviert"
+    },
+    "quantity": {
+      "min": "Mindestmenge",
+      "max": "Maximale Menge",
+      "increment": "Mengenerhöhung"
     }
   },
   "ticketing": {
@@ -1619,7 +1687,10 @@
       "description": "Merchandise und Online-Shop verwalten",
       "menu": {
         "types": "Merchandise-Typen",
-        "orders": "Bestellungen"
+        "orders": "Bestellungen",
+        "merchandiseTypes": "Warentypen",
+        "discounts": "Rabatte",
+        "merchandiseOrders": "Warenbestellungen"
       }
     }
   },

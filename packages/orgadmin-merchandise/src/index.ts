@@ -20,6 +20,7 @@
 
 import { lazy } from 'react';
 import { Store as MerchandiseIcon } from '@mui/icons-material';
+import { LocalOffer as DiscountIcon } from '@mui/icons-material';
 import type { ModuleRegistration } from './types/module.types';
 
 export const merchandiseModule: ModuleRegistration = {
@@ -38,35 +39,63 @@ export const merchandiseModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/merchandise',
+      path: 'merchandise',
       component: lazy(() => import('./pages/MerchandiseTypesListPage')),
     },
     {
-      path: '/merchandise/new',
+      path: 'merchandise/new',
       component: lazy(() => import('./pages/CreateMerchandiseTypePage')),
     },
     {
-      path: '/merchandise/:id',
+      path: 'merchandise/:id',
       component: lazy(() => import('./pages/MerchandiseTypeDetailsPage')),
     },
     {
-      path: '/merchandise/:id/edit',
+      path: 'merchandise/:id/edit',
       component: lazy(() => import('./pages/CreateMerchandiseTypePage')),
     },
     {
-      path: '/merchandise/orders',
+      path: 'merchandise/orders',
       component: lazy(() => import('./pages/MerchandiseOrdersListPage')),
     },
     {
-      path: '/merchandise/orders/:id',
+      path: 'merchandise/orders/:id',
       component: lazy(() => import('./pages/MerchandiseOrderDetailsPage')),
     },
+    {
+      path: 'merchandise/discounts',
+      component: lazy(() => import('./pages/DiscountsListPage')),
+      capability: 'merchandise-discounts',
+    },
+    {
+      path: 'merchandise/discounts/new',
+      component: lazy(() => import('./pages/CreateDiscountPage')),
+      capability: 'merchandise-discounts',
+    },
+    {
+      path: 'merchandise/discounts/:id/edit',
+      component: lazy(() => import('./pages/EditDiscountPage')),
+      capability: 'merchandise-discounts',
+    },
   ],
-  menuItem: {
-    label: 'modules.merchandise.name',
-    path: '/merchandise',
-    icon: MerchandiseIcon,
-  },
+  subMenuItems: [
+    {
+      label: 'modules.merchandise.menu.merchandiseTypes',
+      path: '/merchandise',
+      icon: MerchandiseIcon,
+    },
+    {
+      label: 'modules.merchandise.menu.discounts',
+      path: '/merchandise/discounts',
+      icon: DiscountIcon,
+      capability: 'merchandise-discounts',
+    },
+    {
+      label: 'modules.merchandise.menu.merchandiseOrders',
+      path: '/merchandise/orders',
+      icon: MerchandiseIcon,
+    },
+  ],
 };
 
 // Export pages for direct use if needed

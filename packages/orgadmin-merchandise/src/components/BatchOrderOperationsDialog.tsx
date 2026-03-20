@@ -45,10 +45,13 @@ const BatchOrderOperationsDialog: React.FC<BatchOrderOperationsDialogProps> = ({
   const handleUpdate = async () => {
     setProcessing(true);
     setProgress(0);
-    
+
     try {
-      await onUpdate(selectedOrderIds, newStatus, notes || undefined);
-      setProgress(100);
+      const total = selectedOrderIds.length;
+      for (let i = 0; i < total; i++) {
+        await onUpdate([selectedOrderIds[i]], newStatus, notes || undefined);
+        setProgress(Math.round(((i + 1) / total) * 100));
+      }
       setTimeout(() => {
         setNotes('');
         setProcessing(false);

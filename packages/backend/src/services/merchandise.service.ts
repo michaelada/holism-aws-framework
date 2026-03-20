@@ -1,6 +1,10 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import ExcelJS from 'exceljs';
+import { merchandiseOptionService } from './merchandise-option.service';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
 
 /**
  * Merchandise Type interface matching database schema
@@ -29,6 +33,26 @@ export interface MerchandiseType {
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
   discountIds?: string[];
+  optionTypes?: {
+    id: string;
+    name: string;
+    order: number;
+    optionValues: {
+      id: string;
+      name: string;
+      price: number;
+      sku?: string;
+      stockQuantity?: number;
+      order: number;
+    }[];
+  }[];
+  deliveryRules?: {
+    id: string;
+    minQuantity: number;
+    maxQuantity?: number;
+    deliveryFee: number;
+    order: number;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -142,15 +166,45 @@ export interface OrderFilterOptions {
  */
 export class MerchandiseService {
   /**
+   * Unescape HTML entities that the global sanitizeBody middleware may have added.
+   * e.g. &#x2F; -> /  &amp; -> &  &lt; -> <  &gt; -> >  &quot; -> "  &#x27; -> '
+   */
+  private unescapeHtml(str: string): string {
+    return str
+      .replace(/&#x2F;/g, '/')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  }
+
+  /**
+   * Unescape an array of strings (e.g. S3 keys that were HTML-escaped by middleware)
+   */
+  private unescapeImages(images: string[]): string[] {
+    return images.map(img => this.unescapeHtml(img));
+  }
+
+  /**
    * Convert database row to MerchandiseType object
    */
-  private rowToMerchandiseType(row: any): MerchandiseType {
+  private rowToMerchandiseType(row: any, optionTypes?: any[], deliveryRules?: any[]): MerchandiseType {
+    // Handle JSONB fields that may be double-encoded as strings
+    const parseJsonField = (val: any, fallback: any[] = []) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try { return JSON.parse(val); } catch { return fallback; }
+      }
+      return fallback;
+    };
+
     return {
       id: row.id,
       organisationId: row.organisation_id,
       name: row.name,
       description: row.description,
-      images: row.images || [],
+      images: this.unescapeImages(parseJsonField(row.images)),
       status: row.status,
       trackStockLevels: row.track_stock_levels,
       lowStockAlert: row.low_stock_alert,
@@ -162,17 +216,165 @@ export class MerchandiseService {
       quantityIncrements: row.quantity_increments,
       requireApplicationForm: row.require_application_form,
       applicationFormId: row.application_form_id,
-      supportedPaymentMethods: row.supported_payment_methods || [],
+      supportedPaymentMethods: parseJsonField(row.supported_payment_methods),
       handlingFeeIncluded: row.handling_fee_included || false,
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
       adminNotificationEmails: row.admin_notification_emails,
       customConfirmationMessage: row.custom_confirmation_message,
-      discountIds: row.discount_ids || [],
+      discountIds: [],
+      optionTypes: optionTypes || [],
+      deliveryRules: deliveryRules || [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
   }
+
+  /**
+   * Fetch option types and their values for a merchandise type
+   */
+  private async fetchOptionTypes(merchandiseTypeId: string): Promise<any[]> {
+    const otResult = await db.query(
+      `SELECT * FROM merchandise_option_types WHERE merchandise_type_id = $1 ORDER BY "order"`,
+      [merchandiseTypeId]
+    );
+    if (otResult.rows.length === 0) return [];
+
+    const otIds = otResult.rows.map((r: any) => r.id);
+    const ovResult = await db.query(
+      `SELECT * FROM merchandise_option_values WHERE option_type_id = ANY($1) ORDER BY "order"`,
+      [otIds]
+    );
+
+    const valuesByType = new Map<string, any[]>();
+    for (const row of ovResult.rows) {
+      const vals = valuesByType.get(row.option_type_id) || [];
+      vals.push({
+        id: row.id,
+        name: row.name,
+        price: parseFloat(row.price),
+        sku: row.sku,
+        stockQuantity: row.stock_quantity,
+        order: row.order,
+      });
+      valuesByType.set(row.option_type_id, vals);
+    }
+
+    return otResult.rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      order: row.order,
+      optionValues: valuesByType.get(row.id) || [],
+    }));
+  }
+
+  /**
+   * Save option types and values for a merchandise type (replace all)
+   */
+  private async saveOptionTypes(merchandiseTypeId: string, optionTypes: any[]): Promise<void> {
+    // Delete existing option values first (FK constraint), then option types
+    const existingOts = await db.query(
+      `SELECT id FROM merchandise_option_types WHERE merchandise_type_id = $1`,
+      [merchandiseTypeId]
+    );
+    if (existingOts.rows.length > 0) {
+      const existingIds = existingOts.rows.map((r: any) => r.id);
+      await db.query(
+        `DELETE FROM merchandise_option_values WHERE option_type_id = ANY($1)`,
+        [existingIds]
+      );
+      await db.query(
+        `DELETE FROM merchandise_option_types WHERE merchandise_type_id = $1`,
+        [merchandiseTypeId]
+      );
+    }
+
+    // Insert new option types and values
+    for (let i = 0; i < optionTypes.length; i++) {
+      const ot = optionTypes[i];
+      const otResult = await db.query(
+        `INSERT INTO merchandise_option_types (merchandise_type_id, name, "order")
+         VALUES ($1, $2, $3) RETURNING id`,
+        [merchandiseTypeId, ot.name, i]
+      );
+      const optionTypeId = otResult.rows[0].id;
+
+      for (let j = 0; j < (ot.optionValues || []).length; j++) {
+        const ov = ot.optionValues[j];
+        await db.query(
+          `INSERT INTO merchandise_option_values (option_type_id, name, price, sku, stock_quantity, "order")
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [optionTypeId, ov.name, ov.price, ov.sku || null, ov.stockQuantity || null, j]
+        );
+      }
+    }
+  }
+
+  /**
+   * Fetch delivery rules for a merchandise type
+   */
+  private async fetchDeliveryRules(merchandiseTypeId: string): Promise<any[]> {
+    const result = await db.query(
+      `SELECT * FROM delivery_rules WHERE merchandise_type_id = $1 ORDER BY "order"`,
+      [merchandiseTypeId]
+    );
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      minQuantity: row.min_quantity,
+      maxQuantity: row.max_quantity,
+      deliveryFee: parseFloat(row.delivery_fee),
+      order: row.order,
+    }));
+  }
+
+  /**
+   * Save delivery rules for a merchandise type (delete-then-insert)
+   */
+  private async saveDeliveryRules(merchandiseTypeId: string, rules: any[]): Promise<void> {
+    await db.query(
+      `DELETE FROM delivery_rules WHERE merchandise_type_id = $1`,
+      [merchandiseTypeId]
+    );
+
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      await db.query(
+        `INSERT INTO delivery_rules (merchandise_type_id, min_quantity, max_quantity, delivery_fee, "order")
+         VALUES ($1, $2, $3, $4, $5)`,
+        [merchandiseTypeId, rule.minQuantity, rule.maxQuantity || null, rule.deliveryFee, i]
+      );
+    }
+  }
+
+  /**
+   * Resolve S3 keys in images array to signed URLs.
+   * Returns the merchandise type with an additional imageUrls field.
+   * The images field retains the original S3 keys for saving.
+   */
+  async resolveImageUrls(merchandiseType: MerchandiseType): Promise<MerchandiseType & { imageUrls: string[] }> {
+    if (!merchandiseType.images || merchandiseType.images.length === 0) {
+      return { ...merchandiseType, imageUrls: [] };
+    }
+
+    const imageUrls = await Promise.all(
+      merchandiseType.images.map(async (img: string) => {
+        if (img.startsWith('data:') || img.startsWith('http')) return img;
+        try {
+          return await getSignedUrl(
+            s3Client,
+            new GetObjectCommand({ Bucket: S3_BUCKET_NAME, Key: img }),
+            { expiresIn: 3600 }
+          );
+        } catch (err) {
+          logger.error('Failed to resolve image URL for key:', img);
+          return img;
+        }
+      })
+    );
+
+    return { ...merchandiseType, imageUrls };
+  }
+
 
   /**
    * Convert database row to MerchandiseOrder object
@@ -212,7 +414,13 @@ export class MerchandiseService {
         [organisationId]
       );
 
-      return result.rows.map(row => this.rowToMerchandiseType(row));
+      const types: MerchandiseType[] = [];
+      for (const row of result.rows) {
+        const optionTypes = await this.fetchOptionTypes(row.id);
+        const deliveryRules = await this.fetchDeliveryRules(row.id);
+        types.push(this.rowToMerchandiseType(row, optionTypes, deliveryRules));
+      }
+      return types;
     } catch (error) {
       logger.error('Error getting merchandise types by organisation:', error);
       throw error;
@@ -233,7 +441,9 @@ export class MerchandiseService {
         return null;
       }
 
-      return this.rowToMerchandiseType(result.rows[0]);
+      const optionTypes = await this.fetchOptionTypes(id);
+      const deliveryRules = await this.fetchDeliveryRules(id);
+      return this.rowToMerchandiseType(result.rows[0], optionTypes, deliveryRules);
     } catch (error) {
       logger.error('Error getting merchandise type by ID:', error);
       throw error;
@@ -277,14 +487,14 @@ export class MerchandiseService {
           min_order_quantity, max_order_quantity, quantity_increments,
           require_application_form, application_form_id, supported_payment_methods,
           use_terms_and_conditions, terms_and_conditions, admin_notification_emails,
-          custom_confirmation_message, handling_fee_included, discount_ids)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+          custom_confirmation_message, handling_fee_included)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
          RETURNING *`,
         [
           data.organisationId,
           data.name,
           data.description,
-          JSON.stringify(data.images),
+          JSON.stringify(this.unescapeImages(data.images)),
           data.status || 'active',
           data.trackStockLevels || false,
           data.lowStockAlert || null,
@@ -302,12 +512,25 @@ export class MerchandiseService {
           data.adminNotificationEmails || null,
           data.customConfirmationMessage || null,
           data.handlingFeeIncluded ?? false,
-          JSON.stringify(data.discountIds || []),
         ]
       );
 
       logger.info(`Merchandise type created: ${data.name} (${result.rows[0].id})`);
-      return this.rowToMerchandiseType(result.rows[0]);
+
+      // Save option types if provided
+      const merchandiseTypeId = result.rows[0].id;
+      if ((data as any).optionTypes && (data as any).optionTypes.length > 0) {
+        await this.saveOptionTypes(merchandiseTypeId, (data as any).optionTypes);
+      }
+
+      // Save delivery rules if provided
+      if ((data as any).deliveryRules && (data as any).deliveryRules.length > 0) {
+        await this.saveDeliveryRules(merchandiseTypeId, (data as any).deliveryRules);
+      }
+
+      const optionTypes = await this.fetchOptionTypes(merchandiseTypeId);
+      const deliveryRules = await this.fetchDeliveryRules(merchandiseTypeId);
+      return this.rowToMerchandiseType(result.rows[0], optionTypes, deliveryRules);
     } catch (error) {
       logger.error('Error creating merchandise type:', error);
       throw error;
@@ -380,7 +603,7 @@ export class MerchandiseService {
       }
       if (data.images !== undefined) {
         updates.push(`images = $${paramCount++}`);
-        values.push(JSON.stringify(data.images));
+        values.push(JSON.stringify(this.unescapeImages(data.images)));
       }
       if (data.status !== undefined) {
         updates.push(`status = $${paramCount++}`);
@@ -443,18 +666,13 @@ export class MerchandiseService {
         values.push(data.adminNotificationEmails || null);
       }
       if (data.customConfirmationMessage !== undefined) {
-        updates.push(`custom_confirmation_message = ${paramCount++}`);
+        updates.push(`custom_confirmation_message = $${paramCount++}`);
         values.push(data.customConfirmationMessage || null);
       }
       if (data.handlingFeeIncluded !== undefined) {
         updates.push(`handling_fee_included = $${paramCount++}`);
         values.push(data.handlingFeeIncluded);
       }
-      if (data.discountIds !== undefined) {
-        updates.push(`discount_ids = ${paramCount++}`);
-        values.push(JSON.stringify(data.discountIds));
-      }
-
       values.push(id);
 
       const result = await db.query(
@@ -470,7 +688,20 @@ export class MerchandiseService {
       }
 
       logger.info(`Merchandise type updated: ${id}`);
-      return this.rowToMerchandiseType(result.rows[0]);
+
+      // Save option types if provided
+      if ((data as any).optionTypes !== undefined) {
+        await this.saveOptionTypes(id, (data as any).optionTypes || []);
+      }
+
+      // Save delivery rules if provided
+      if ((data as any).deliveryRules !== undefined) {
+        await this.saveDeliveryRules(id, (data as any).deliveryRules || []);
+      }
+
+      const optionTypes = await this.fetchOptionTypes(id);
+      const deliveryRules = await this.fetchDeliveryRules(id);
+      return this.rowToMerchandiseType(result.rows[0], optionTypes, deliveryRules);
     } catch (error) {
       logger.error('Error updating merchandise type:', error);
       throw error;
@@ -482,6 +713,20 @@ export class MerchandiseService {
    */
   async deleteMerchandiseType(id: string): Promise<void> {
     try {
+      // Clean up option values and types first
+      const otResult = await db.query(
+        'SELECT id FROM merchandise_option_types WHERE merchandise_type_id = $1',
+        [id]
+      );
+      if (otResult.rows.length > 0) {
+        const otIds = otResult.rows.map((r: any) => r.id);
+        await db.query('DELETE FROM merchandise_option_values WHERE option_type_id = ANY($1)', [otIds]);
+        await db.query('DELETE FROM merchandise_option_types WHERE merchandise_type_id = $1', [id]);
+      }
+
+      // Clean up delivery rules
+      await db.query('DELETE FROM delivery_rules WHERE merchandise_type_id = $1', [id]);
+
       const result = await db.query(
         'DELETE FROM merchandise_types WHERE id = $1',
         [id]

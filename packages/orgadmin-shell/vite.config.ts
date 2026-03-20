@@ -27,9 +27,8 @@ export default defineConfig({
       '@aws-web-framework/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
       '@aws-web-framework/orgadmin-memberships': path.resolve(__dirname, '../orgadmin-memberships/src'),
       '@aws-web-framework/orgadmin-registrations': path.resolve(__dirname, '../orgadmin-registrations/src'),
-      // Mock capability modules for development (they don't have built dist folders yet)
-      '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, './src/test/mocks/orgadmin-merchandise.ts'),
-      '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, './src/test/mocks/orgadmin-calendar.ts'),
+      '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, '../orgadmin-merchandise/src'),
+      '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, '../orgadmin-calendar/src'),
       '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, './src/test/mocks/orgadmin-ticketing.ts'),
     },
     
@@ -105,7 +104,8 @@ export default defineConfig({
       '@aws-web-framework/orgadmin-core', 
       '@aws-web-framework/orgadmin-events', 
       '@aws-web-framework/orgadmin-memberships',
-      '@aws-web-framework/orgadmin-registrations'
+      '@aws-web-framework/orgadmin-registrations',
+      '@aws-web-framework/orgadmin-merchandise'
     ],
   },
   

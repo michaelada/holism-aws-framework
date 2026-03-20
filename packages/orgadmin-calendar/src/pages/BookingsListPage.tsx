@@ -57,7 +57,7 @@ const BookingsListPage: React.FC = () => {
   };
 
   const handleViewBooking = (bookingId: string) => {
-    navigate(`/orgadmin/calendar/bookings/${bookingId}`);
+    navigate(`/calendar/bookings/${bookingId}`);
   };
 
   const handleExport = async () => {

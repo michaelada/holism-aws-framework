@@ -73,7 +73,7 @@ interface DiscountFormData {
 }
 
 interface CreateDiscountPageProps {
-  moduleType?: 'events' | 'memberships' | 'registrations';
+  moduleType?: 'events' | 'memberships' | 'registrations' | 'merchandise';
 }
 
 const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'events' }) => {
@@ -132,7 +132,12 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
 
   // Set current module for help context
   useEffect(() => {
-    setCurrentModule(moduleType === 'memberships' ? 'memberships' : moduleType === 'registrations' ? 'registrations' : 'events');
+    const moduleMap: Record<string, string> = {
+      memberships: 'memberships',
+      registrations: 'registrations',
+      merchandise: 'merchandise',
+    };
+    setCurrentModule(moduleMap[moduleType] || 'events');
   }, [setCurrentModule, moduleType]);
 
   // Load membership types from API
@@ -408,7 +413,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
         });
       }
 
-      navigate(moduleType === 'memberships' ? '/members/discounts' : moduleType === 'registrations' ? '/registrations/discounts' : '/events/discounts');
+      navigate(getDiscountsPath());
     } catch (error) {
       console.error('Failed to save discount:', error);
       setError('Failed to save discount');
@@ -417,8 +422,17 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
     }
   };
 
+  const getDiscountsPath = () => {
+    const pathMap: Record<string, string> = {
+      memberships: '/members/discounts',
+      registrations: '/registrations/discounts',
+      merchandise: '/merchandise/discounts',
+    };
+    return pathMap[moduleType] || '/events/discounts';
+  };
+
   const handleCancel = () => {
-    navigate(moduleType === 'memberships' ? '/members/discounts' : moduleType === 'registrations' ? '/registrations/discounts' : '/events/discounts');
+    navigate(getDiscountsPath());
   };
 
   const renderStepContent = (step: number) => {

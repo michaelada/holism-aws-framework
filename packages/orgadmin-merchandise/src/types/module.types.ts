@@ -11,12 +11,14 @@ export interface ModuleCard {
 export interface ModuleRoute {
   path: string;
   component: LazyExoticComponent<ComponentType<any>>;
+  capability?: string;
 }
 
 export interface MenuItem {
   label: string;
   path: string;
-  icon: ComponentType;
+  icon?: ComponentType;
+  capability?: string;
 }
 
 export interface ModuleRegistration {
@@ -28,5 +30,6 @@ export interface ModuleRegistration {
   card: ModuleCard;
   routes: ModuleRoute[];
   menuItem?: MenuItem;
+  subMenuItems?: MenuItem[];
   order?: number;
 }

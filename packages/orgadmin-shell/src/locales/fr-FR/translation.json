@@ -866,8 +866,27 @@
       "loadingOrders": "Chargement des commandes...",
       "noOrders": "Aucune commande trouvée",
       "totalOrders": "Total des commandes : {{count}}",
-      "totalRevenue": "Revenu total : €{{amount}}"
+      "totalRevenue": "Revenu total : €{{amount}}",
+      "orderInformation": "Informations de commande",
+      "orderDate": "Date de commande",
+      "customer": "Client",
+      "email": "E-mail",
+      "orderStatus": "Statut de la commande",
+      "paymentStatus": "Statut du paiement",
+      "orderItems": "Articles de la commande",
+      "merchandiseType": "Type de marchandise",
+      "selectedOptions": "Options sélectionnées",
+      "quantity": "Quantité",
+      "unitPrice": "Prix unitaire",
+      "subtotal": "Sous-total",
+      "deliveryFee": "Frais de livraison",
+      "total": "Total",
+      "adminNotes": "Notes administrateur",
+      "adminNotesPlaceholder": "Ajouter des notes sur cette commande...",
+      "orderHistory": "Historique de la commande",
+      "noHistory": "Aucun historique de commande disponible"
     },
+    "orderNotFound": "Commande introuvable",
     "createMerchandiseType": "Créer un type de marchandise",
     "editMerchandiseType": "Modifier le type de marchandise",
     "merchandiseTypeDetails": "Détails du type de marchandise",
@@ -885,6 +904,8 @@
     "table": {
       "name": "Nom",
       "status": "Statut",
+      "image": "Image",
+      "options": "Options",
       "priceRange": "Fourchette de prix",
       "stockStatus": "État du stock",
       "actions": "Actions",
@@ -903,11 +924,19 @@
       "delete": "Supprimer",
       "viewOrder": "Voir la commande"
     },
+    "deleteDialog": {
+      "title": "Supprimer le type de marchandise",
+      "message": "Êtes-vous sûr de vouloir supprimer ce type de marchandise ? Cette action ne peut pas être annulée.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
     "filters": {
       "status": "Statut",
       "stockLevel": "Niveau de stock",
       "paymentStatus": "Statut de paiement",
       "orderStatus": "Statut de commande",
+      "dateFrom": "Date de début",
+      "dateTo": "Date de fin",
       "all": "Tous"
     },
     "statusOptions": {
@@ -946,20 +975,26 @@
       "inStock": "En stock",
       "lowStock": "Stock faible",
       "outOfStock": "Rupture de stock",
-      "notTracked": "Non suivi"
+      "notTracked": "Non suivi",
+      "tracking": "Suivi des stocks",
+      "lowStockThreshold": "Seuil de stock faible",
+      "outOfStockBehavior": "Comportement en rupture de stock"
     },
     "sections": {
       "basicInfo": "Informations de base",
       "images": "Images du produit",
       "options": "Configuration des options",
       "stockManagement": "Gestion des stocks",
+      "stockStatus": "État du stock",
       "delivery": "Configuration de la livraison",
       "quantityRules": "Règles de quantité de commande",
       "applicationForm": "Formulaire de candidature",
       "payment": "Configuration du paiement",
       "emailNotifications": "Notifications par e-mail",
+      "emailConfig": "Configuration des e-mails",
       "optionsAndPricing": "Options et tarification",
-      "orderStatistics": "Statistiques de commande"
+      "orderStatistics": "Statistiques de commande",
+      "discounts": "Remises"
     },
     "fields": {
       "name": "Nom",
@@ -977,6 +1012,7 @@
       "selectForm": "Sélectionner un formulaire...",
       "useTermsAndConditions": "Utiliser les conditions générales",
       "termsAndConditions": "Conditions générales",
+      "termsAndConditionsContent": "Contenu des conditions générales",
       "adminNotificationEmails": "E-mails de notification administrateur",
       "adminNotificationEmailsPlaceholder": "email1@exemple.com, email2@exemple.com",
       "adminNotificationEmailsHelper": "Adresses e-mail séparées par des virgules",
@@ -989,7 +1025,11 @@
       "quantityIncrements": "Incréments de quantité",
       "quantityIncrementsHelper": "Doit commander par multiples de ce nombre (par exemple, 6 pour des packs de 6)",
       "noLimit": "Aucune limite",
-      "anyQuantity": "N'importe quelle quantité"
+      "anyQuantity": "N'importe quelle quantité",
+      "supportedPaymentMethods": "Méthodes de paiement prises en charge",
+      "selectDiscounts": "Sélectionner les remises",
+      "selectDiscountsHelper": "Choisissez les remises applicables à ce type de marchandise",
+      "noDiscountsHint": "Aucune remise disponible pour le moment. Créez des remises depuis le sous-menu Réductions pour les attribuer ici."
     },
     "images": {
       "title": "Images du produit",
@@ -1019,6 +1059,8 @@
     "delivery": {
       "title": "Configuration de la livraison",
       "deliveryType": "Type de livraison",
+      "free": "Livraison gratuite",
+      "fixed": "Frais fixes",
       "freeDelivery": "Livraison gratuite",
       "fixedFee": "Frais de livraison fixes",
       "quantityBased": "Livraison basée sur la quantité",
@@ -1066,6 +1108,32 @@
       "save": "Enregistrer",
       "saving": "Enregistrement...",
       "cancel": "Annuler"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des types de marchandises",
+      "loadOrderFailed": "Échec du chargement des détails de la commande",
+      "loadOrdersFailed": "Échec du chargement des commandes",
+      "deleteFailed": "Échec de la suppression du type de marchandise",
+      "saveNotesFailed": "Échec de l'enregistrement des notes administrateur",
+      "updateStatusFailed": "Échec de la mise à jour du statut de la commande",
+      "batchUpdateFailed": "Échec de la mise à jour groupée des commandes",
+      "exportFailed": "Échec de l'exportation des commandes",
+      "paymentMethodsLoadFailed": "Échec du chargement des méthodes de paiement"
+    },
+    "email": {
+      "confirmationMessage": "Message de confirmation",
+      "notificationEmails": "E-mails de notification",
+      "noNotificationEmails": "Aucun e-mail de notification configuré"
+    },
+    "payment": {
+      "handlingFeeIncluded": "Frais de traitement inclus",
+      "noMethods": "Aucune méthode de paiement configurée",
+      "termsEnabled": "Conditions générales activées"
+    },
+    "quantity": {
+      "min": "Quantité minimale",
+      "max": "Quantité maximale",
+      "increment": "Incrément de quantité"
     }
   },
   "ticketing": {
@@ -1834,7 +1902,10 @@
       "description": "Gérer les marchandises et la boutique en ligne",
       "menu": {
         "types": "Types de marchandises",
-        "orders": "Commandes"
+        "orders": "Commandes",
+        "merchandiseTypes": "Types de marchandises",
+        "discounts": "Réductions",
+        "merchandiseOrders": "Commandes de marchandises"
       }
     }
   },

@@ -4,9 +4,10 @@
  * Comprehensive form for creating or editing merchandise types with all configuration sections.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -24,8 +25,11 @@ import {
   Divider,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
 import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { DiscountSelector } from '@aws-web-framework/components';
 import ImageGalleryUpload from '../components/ImageGalleryUpload';
 import OptionsConfigurationSection from '../components/OptionsConfigurationSection';
 import StockManagementSection from '../components/StockManagementSection';
@@ -43,10 +47,12 @@ const CreateMerchandiseTypePage: React.FC = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const { t } = useTranslation();
+  const { hasCapability } = useCapabilities();
   const { organisation } = useOrganisation();
   const { execute } = useApi();
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [applicationForms, setApplicationForms] = useState<{id: string, name: string}[]>([]);
 
   const [formData, setFormData] = useState<MerchandiseTypeFormData>({
     name: '',
@@ -63,6 +69,9 @@ const CreateMerchandiseTypePage: React.FC = () => {
   });
 
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const handleFieldChange = (field: keyof MerchandiseTypeFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -72,23 +81,99 @@ const CreateMerchandiseTypePage: React.FC = () => {
     loadPaymentMethods();
   }, []);
 
+  useEffect(() => {
+    if (id) {
+      loadMerchandiseType(id);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (formData.requireApplicationForm && organisation?.id) {
+      loadApplicationForms();
+    }
+  }, [formData.requireApplicationForm, organisation?.id]);
+
+  const loadMerchandiseType = async (merchandiseTypeId: string) => {
+    try {
+      setLoading(true);
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/merchandise-types/${merchandiseTypeId}`,
+      });
+      if (response) {
+        const data = response as any;
+        setFormData({
+          name: data.name || '',
+          description: data.description || '',
+          images: data.images || [],
+          status: data.status || 'active',
+          optionTypes: (data.optionTypes || []).map((ot: any) => ({
+            name: ot.name,
+            optionValues: (ot.optionValues || []).map((ov: any) => ({
+              name: ov.name,
+              price: ov.price,
+              sku: ov.sku,
+              stockQuantity: ov.stockQuantity,
+            })),
+          })),
+          trackStockLevels: data.trackStockLevels ?? false,
+          lowStockAlert: data.lowStockAlert,
+          outOfStockBehavior: data.outOfStockBehavior,
+          deliveryType: data.deliveryType || 'free',
+          deliveryFee: data.deliveryFee,
+          deliveryRules: data.deliveryRules?.map((r: any) => ({
+            minQuantity: r.minQuantity,
+            maxQuantity: r.maxQuantity,
+            deliveryFee: r.deliveryFee,
+          })),
+          minOrderQuantity: data.minOrderQuantity,
+          maxOrderQuantity: data.maxOrderQuantity,
+          quantityIncrements: data.quantityIncrements,
+          requireApplicationForm: data.requireApplicationForm ?? false,
+          applicationFormId: data.applicationFormId,
+          supportedPaymentMethods: data.supportedPaymentMethods || [],
+          handlingFeeIncluded: data.handlingFeeIncluded ?? false,
+          useTermsAndConditions: data.useTermsAndConditions ?? false,
+          termsAndConditions: data.termsAndConditions,
+          discountIds: data.discountIds,
+          adminNotificationEmails: data.adminNotificationEmails,
+          customConfirmationMessage: data.customConfirmationMessage,
+        });
+        // Store signed URLs for display (separate from S3 keys)
+        setImageUrls(data.imageUrls || []);
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.error || err?.message || 'Failed to load merchandise type';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadPaymentMethods = async () => {
     try {
       const response = await execute({
         method: 'GET',
-        url: '/api/payment-methods',
+        url: '/api/orgadmin/payment-methods',
       });
-      const methods = (response as PaymentMethod[]) || [
-        { id: 'pay-offline', name: 'Pay Offline' },
-        { id: 'stripe', name: 'Card Payment (Stripe)' },
-      ];
-      setPaymentMethods(methods);
+      setPaymentMethods((response as PaymentMethod[]) || []);
     } catch (err) {
       console.error('Failed to load payment methods:', err);
-      setPaymentMethods([
-        { id: 'pay-offline', name: 'Pay Offline' },
-        { id: 'stripe', name: 'Card Payment (Stripe)' },
-      ]);
+      setError(t('merchandise.errors.paymentMethodsLoadFailed'));
+      setPaymentMethods([]);
+    }
+  };
+
+  const loadApplicationForms = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation?.id}/application-forms`,
+      });
+      setApplicationForms(response || []);
+    } catch (err) {
+      console.error('Failed to load application forms:', err);
+      setApplicationForms([]);
     }
   };
 
@@ -98,6 +183,19 @@ const CreateMerchandiseTypePage: React.FC = () => {
     const name = (method.name || '').toLowerCase();
     return name.includes('card') || name.includes('stripe') || name.includes('helix');
   };
+
+  const fetchDiscounts = useCallback(async (organisationId: string, moduleType: string) => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisationId}/discounts/${moduleType}`,
+      });
+      return response.discounts || [];
+    } catch (error) {
+      console.error('Failed to fetch discounts:', error);
+      return [];
+    }
+  }, [execute]);
   const hasCardPayment = formData.supportedPaymentMethods.some(isCardPaymentMethod);
   const showHandlingFee = hasCardPayment; // Merchandise has inherent pricing (option prices)
 
@@ -113,16 +211,37 @@ const CreateMerchandiseTypePage: React.FC = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
-      // TODO: Implement API call
-      console.log('Saving merchandise type:', formData);
+      if (isEdit) {
+        await execute({
+          method: 'PUT',
+          url: `/api/orgadmin/merchandise-types/${id}`,
+          data: formData,
+        });
+      } else {
+        await execute({
+          method: 'POST',
+          url: '/api/orgadmin/merchandise-types',
+          data: { ...formData, organisationId: organisation?.id },
+        });
+      }
       navigate('/merchandise');
-    } catch (error) {
-      console.error('Failed to save merchandise type:', error);
+    } catch (err: any) {
+      const message = err?.response?.data?.error || err?.message || 'Failed to save merchandise type';
+      setError(message);
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography>{t('common.loading')}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -144,6 +263,12 @@ const CreateMerchandiseTypePage: React.FC = () => {
           </Button>
         </Box>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       {/* Basic Information */}
       <Card sx={{ mb: 3 }}>
@@ -186,7 +311,9 @@ const CreateMerchandiseTypePage: React.FC = () => {
         <CardContent>
           <ImageGalleryUpload
             images={formData.images}
+            imageUrls={imageUrls}
             onChange={(images) => handleFieldChange('images', images)}
+            organisationId={organisation?.id || ''}
           />
         </CardContent>
       </Card>
@@ -261,6 +388,11 @@ const CreateMerchandiseTypePage: React.FC = () => {
               sx={{ mt: 2 }}
             >
               <MenuItem value="">{t('merchandise.fields.selectForm')}</MenuItem>
+              {applicationForms.map((form) => (
+                <MenuItem key={form.id} value={form.id}>
+                  {form.name}
+                </MenuItem>
+              ))}
             </TextField>
           )}
         </CardContent>
@@ -320,18 +452,50 @@ const CreateMerchandiseTypePage: React.FC = () => {
               label={t('merchandise.fields.useTermsAndConditions')}
             />
             {formData.useTermsAndConditions && (
-              <TextField
-                label={t('merchandise.fields.termsAndConditions')}
-                value={formData.termsAndConditions || ''}
-                onChange={(e) => handleFieldChange('termsAndConditions', e.target.value)}
-                multiline
-                rows={4}
-                fullWidth
-              />
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  {t('merchandise.fields.termsAndConditionsContent')}
+                </Typography>
+                <ReactQuill
+                  theme="snow"
+                  value={formData.termsAndConditions || ''}
+                  onChange={(value) => handleFieldChange('termsAndConditions', value)}
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline'],
+                      [{ list: 'ordered' }, { list: 'bullet' }],
+                      ['clean'],
+                    ],
+                  }}
+                />
+              </Box>
             )}
           </Box>
         </CardContent>
       </Card>
+
+      {/* Discounts */}
+      {hasCapability('merchandise-discounts') && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 2 }}>{t('merchandise.sections.discounts')}</Typography>
+            <DiscountSelector
+              selectedDiscountIds={formData.discountIds || []}
+              onChange={(discountIds) => handleFieldChange('discountIds', discountIds)}
+              organisationId={organisation?.id || ''}
+              moduleType="merchandise"
+              fetchDiscounts={fetchDiscounts}
+              label={t('merchandise.fields.selectDiscounts')}
+              helperText={t('merchandise.fields.selectDiscountsHelper')}
+              currencyCode={organisation?.currency || 'EUR'}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {t('merchandise.fields.noDiscountsHint')}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Email Notifications */}
       <Card sx={{ mb: 3 }}>

@@ -58,7 +58,7 @@ import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-
 import type { Discount, DiscountStatus, DiscountType, ApplicationScope } from '../types/discount.types';
 
 interface DiscountsListPageProps {
-  moduleType?: 'events' | 'memberships' | 'registrations';
+  moduleType?: 'events' | 'memberships' | 'registrations' | 'merchandise';
 }
 
 const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'events' }) => {
@@ -86,7 +86,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
 
   // Set current module for help context
   useEffect(() => {
-    setCurrentModule(moduleType === 'memberships' ? 'memberships' : moduleType === 'registrations' ? 'registrations' : 'events');
+    setCurrentModule(moduleType === 'memberships' ? 'memberships' : moduleType === 'registrations' ? 'registrations' : moduleType === 'merchandise' ? 'merchandise' : 'events');
   }, [setCurrentModule, moduleType]);
 
   useEffect(() => {
@@ -164,14 +164,21 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
     setPage(0); // Reset to first page when filters change
   };
 
+  const getBasePath = () => {
+    const pathMap: Record<string, string> = {
+      memberships: '/members',
+      registrations: '/registrations',
+      merchandise: '/merchandise',
+    };
+    return pathMap[moduleType] || '/events';
+  };
+
   const handleCreate = () => {
-    const basePath = moduleType === 'memberships' ? '/members' : moduleType === 'registrations' ? '/registrations' : '/events';
-    navigate(`${basePath}/discounts/new`);
+    navigate(`${getBasePath()}/discounts/new`);
   };
 
   const handleEdit = (discount: Discount) => {
-    const basePath = moduleType === 'memberships' ? '/members' : moduleType === 'registrations' ? '/registrations' : '/events';
-    navigate(`${basePath}/discounts/${discount.id}/edit`);
+    navigate(`${getBasePath()}/discounts/${discount.id}/edit`);
   };
 
   const handleToggleStatus = async (discount: Discount) => {
@@ -217,8 +224,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
   };
 
   const handleViewStats = (discount: Discount) => {
-    const basePath = moduleType === 'memberships' ? '/members' : moduleType === 'registrations' ? '/registrations' : '/events';
-    navigate(`${basePath}/discounts/${discount.id}/stats`);
+    navigate(`${getBasePath()}/discounts/${discount.id}/stats`);
   };
 
   const getStatusColor = (status: DiscountStatus): 'success' | 'default' | 'error' => {
@@ -275,7 +281,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">
-          {moduleType === 'memberships' ? 'Membership Discounts' : moduleType === 'registrations' ? 'Registration Discounts' : 'Event Discounts'}
+          {moduleType === 'memberships' ? 'Membership Discounts' : moduleType === 'registrations' ? 'Registration Discounts' : moduleType === 'merchandise' ? 'Merchandise Discounts' : 'Event Discounts'}
         </Typography>
         <Button
           variant="contained"

@@ -6,19 +6,19 @@ Connect the scaffolded frontend UI in `packages/orgadmin-merchandise/` to the ex
 
 ## Tasks
 
-- [ ] 1. Update types and add discount support
+- [x] 1. Update types and add discount support
   - [x] 1.1 Add `discountIds` to frontend types
     - In `packages/orgadmin-merchandise/src/types/merchandise.types.ts`, add `discountIds?: string[]` to both `MerchandiseType` and `MerchandiseTypeFormData` interfaces
     - _Requirements: 10.5_
 
-  - [-] 1.2 Add `discountIds` to backend DTOs
+  - [x] 1.2 Add `discountIds` to backend DTOs
     - In `packages/backend/src/services/merchandise.service.ts`, add `discountIds?: string[]` to `CreateMerchandiseTypeDto` and `UpdateMerchandiseTypeDto`
     - Update `rowToMerchandiseType()` to map `row.discount_ids` (JSONB column)
     - Update `createMerchandiseType()` and `updateMerchandiseType()` SQL to include `discount_ids` column with `JSON.stringify()`
     - _Requirements: 10.4, 10.5_
 
-- [ ] 2. Merchandise Types List Page — replace mock with real API
-  - [~] 2.1 Wire MerchandiseTypesListPage to real API
+- [x] 2. Merchandise Types List Page — replace mock with real API
+  - [x] 2.1 Wire MerchandiseTypesListPage to real API
     - In `packages/orgadmin-merchandise/src/pages/MerchandiseTypesListPage.tsx`:
     - Remove the local mock `useApi` function
     - Import `useApi` from `@aws-web-framework/orgadmin-core` and `useOrganisation` for `organisationId`
@@ -27,77 +27,77 @@ Connect the scaffolded frontend UI in `packages/orgadmin-merchandise/` to the ex
     - Display image thumbnail, name, status chip, and option count per row
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [~] 2.2 Add delete action to list page
+  - [x] 2.2 Add delete action to list page
     - Add delete icon button per row with confirmation dialog
     - On confirm, call `DELETE /api/orgadmin/merchandise-types/{id}` and refresh the list
     - _Requirements: 1.6_
 
-- [ ] 3. Create/Edit Merchandise Type Page — full API integration
-  - [~] 3.1 Wire create form submission to POST endpoint
+- [x] 3. Create/Edit Merchandise Type Page — full API integration
+  - [x] 3.1 Wire create form submission to POST endpoint
     - In `packages/orgadmin-merchandise/src/pages/CreateMerchandiseTypePage.tsx`:
     - Wire `handleSave` to call `POST /api/orgadmin/merchandise-types` with `MerchandiseTypeFormData` + `organisationId`
     - Display API validation errors inline or as top-level alert
     - Navigate to list page on success
     - _Requirements: 2.1, 2.4, 2.5_
 
-  - [~] 3.2 Wire edit mode — load existing data and PUT on save
+  - [x] 3.2 Wire edit mode — load existing data and PUT on save
     - Detect edit mode from route params (e.g. `/merchandise/:id/edit`)
     - Call `GET /api/orgadmin/merchandise-types/{id}` on mount and populate all form fields
     - Wire save to call `PUT /api/orgadmin/merchandise-types/{id}` with updated payload
     - _Requirements: 2.2, 2.3, 2.4, 2.5_
 
-  - [~] 3.3 Add form validation — name and images required
+  - [x] 3.3 Add form validation — name and images required
     - Disable save button when `name` is empty or `images` array is empty
     - _Requirements: 2.6, 14.5_
 
-  - [~] 3.4 Integrate DiscountSelector component
+  - [x] 3.4 Integrate DiscountSelector component
     - Import `DiscountSelector` from `@aws-web-framework/components`
     - Conditionally render when organisation has discount capability
     - Fetch discounts from `GET /api/orgadmin/organisations/{organisationId}/discounts/merchandise`
     - Bind selected discount IDs to `formData.discountIds`
     - _Requirements: 10.1, 10.2, 10.3, 10.4_
 
-  - [~] 3.5 Integrate application form selection
+  - [x] 3.5 Integrate application form selection
     - When `requireApplicationForm` toggle is enabled, fetch forms from `GET /api/orgadmin/organisations/{organisationId}/application-forms`
     - Populate select dropdown with available forms, bind to `formData.applicationFormId`
     - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 4. Checkpoint — Verify types, list page, and create/edit page
+- [x] 4. Checkpoint — Verify types, list page, and create/edit page
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Merchandise Type Details Page — API integration
-  - [~] 5.1 Wire MerchandiseTypeDetailsPage to real API
+- [x] 5. Merchandise Type Details Page — API integration
+  - [x] 5.1 Wire MerchandiseTypeDetailsPage to real API
     - In `packages/orgadmin-merchandise/src/pages/MerchandiseTypeDetailsPage.tsx`:
     - Call `GET /api/orgadmin/merchandise-types/{id}` on mount
     - Render read-only sections: basic info, images gallery, options with prices, delivery config, stock status, quantity rules, payment config, email config
     - Show "not found" message for 404 responses
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.6_
 
-  - [~] 5.2 Add delete with confirmation on details page
+  - [x] 5.2 Add delete with confirmation on details page
     - Add delete button with confirmation dialog
     - Call `DELETE /api/orgadmin/merchandise-types/{id}` on confirm, navigate to list
     - _Requirements: 3.5_
 
-- [ ] 6. Orders List Page — API integration
-  - [~] 6.1 Wire MerchandiseOrdersListPage to real API
+- [x] 6. Orders List Page — API integration
+  - [x] 6.1 Wire MerchandiseOrdersListPage to real API
     - In `packages/orgadmin-merchandise/src/pages/MerchandiseOrdersListPage.tsx`:
     - Import real `useApi` and `useOrganisation`
     - Call `GET /api/orgadmin/organisations/{organisationId}/merchandise-orders` on mount
     - Display order ID, customer name, merchandise type name, quantity, total price, payment status, order status per row
     - _Requirements: 11.1, 11.4_
 
-  - [~] 6.2 Add order filtering
+  - [x] 6.2 Add order filtering
     - Pass filter params as query string: `merchandiseTypeId`, `paymentStatus`, `orderStatus`, `dateFrom`, `dateTo`, `customerName`
     - Re-fetch when filters change
     - _Requirements: 11.2, 11.3_
 
-  - [~] 6.3 Add batch selection and export
+  - [x] 6.3 Add batch selection and export
     - Add checkbox selection for batch operations
     - Export button calls `GET /api/orgadmin/organisations/{organisationId}/merchandise-orders/export` and triggers file download
     - _Requirements: 11.5, 11.6_
 
-- [ ] 7. Order Details Page — API integration
-  - [~] 7.1 Wire MerchandiseOrderDetailsPage to real API
+- [x] 7. Order Details Page — API integration
+  - [x] 7.1 Wire MerchandiseOrderDetailsPage to real API
     - In `packages/orgadmin-merchandise/src/pages/MerchandiseOrderDetailsPage.tsx`:
     - Call `GET /api/orgadmin/merchandise-orders/{id}` on mount
     - Display order date, customer name/email, order status, payment status
@@ -106,25 +106,25 @@ Connect the scaffolded frontend UI in `packages/orgadmin-merchandise/` to the ex
     - Show "not found" for 404
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.6_
 
-  - [~] 7.2 Add admin notes save functionality
+  - [x] 7.2 Add admin notes save functionality
     - Admin notes text field with save button
     - Persist notes via API
     - _Requirements: 12.5_
 
-- [ ] 8. Order Status Management — dialogs and batch operations
-  - [~] 8.1 Wire OrderStatusUpdateDialog to API
+- [x] 8. Order Status Management — dialogs and batch operations
+  - [x] 8.1 Wire OrderStatusUpdateDialog to API
     - In `packages/orgadmin-merchandise/src/components/OrderStatusUpdateDialog.tsx`:
     - On confirm, call `PUT /api/orgadmin/merchandise-orders/{id}/status` with `{ status, userId, notes }`
     - Support "send email" checkbox option
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-  - [~] 8.2 Wire BatchOrderOperationsDialog to API
+  - [x] 8.2 Wire BatchOrderOperationsDialog to API
     - In `packages/orgadmin-merchandise/src/components/BatchOrderOperationsDialog.tsx`:
     - Iterate over selected order IDs, call status update API for each
     - Show progress indicator during batch operation
     - _Requirements: 13.6, 13.7_
 
-- [ ] 9. Checkpoint — Verify all pages and order management
+- [x] 9. Checkpoint — Verify all pages and order management
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Price calculator property tests
@@ -179,7 +179,7 @@ Connect the scaffolded frontend UI in `packages/orgadmin-merchandise/` to the ex
     - **Property 7: Handling fee visibility tied to card payment methods**
     - **Validates: Requirements 9.3, 9.4**
 
-- [ ] 12. Final checkpoint — Ensure all tests pass
+- [x] 12. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

@@ -647,8 +647,27 @@
       "loadingOrders": "A carregar encomendas...",
       "noOrders": "Nenhuma encomenda encontrada",
       "totalOrders": "Total de encomendas: {{count}}",
-      "totalRevenue": "Receita total: €{{amount}}"
+      "totalRevenue": "Receita total: €{{amount}}",
+      "orderInformation": "Informações da encomenda",
+      "orderDate": "Data da encomenda",
+      "customer": "Cliente",
+      "email": "Email",
+      "orderStatus": "Estado da encomenda",
+      "paymentStatus": "Estado do pagamento",
+      "orderItems": "Artigos da encomenda",
+      "merchandiseType": "Tipo de mercadoria",
+      "selectedOptions": "Opções selecionadas",
+      "quantity": "Quantidade",
+      "unitPrice": "Preço unitário",
+      "subtotal": "Subtotal",
+      "deliveryFee": "Taxa de entrega",
+      "total": "Total",
+      "adminNotes": "Notas do administrador",
+      "adminNotesPlaceholder": "Adicionar notas sobre esta encomenda...",
+      "orderHistory": "Histórico da encomenda",
+      "noHistory": "Nenhum histórico de encomenda disponível"
     },
+    "orderNotFound": "Encomenda não encontrada",
     "createMerchandiseType": "Criar tipo de mercadoria",
     "editMerchandiseType": "Editar tipo de mercadoria",
     "merchandiseTypeDetails": "Detalhes do tipo de mercadoria",
@@ -666,6 +685,8 @@
     "table": {
       "name": "Nome",
       "status": "Estado",
+      "image": "Imagem",
+      "options": "Opções",
       "priceRange": "Intervalo de preços",
       "stockStatus": "Estado do stock",
       "actions": "Ações",
@@ -684,11 +705,19 @@
       "delete": "Eliminar",
       "viewOrder": "Ver encomenda"
     },
+    "deleteDialog": {
+      "title": "Eliminar tipo de mercadoria",
+      "message": "Tem a certeza de que deseja eliminar este tipo de mercadoria? Esta ação não pode ser revertida.",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar"
+    },
     "filters": {
       "status": "Estado",
       "stockLevel": "Nível de stock",
       "paymentStatus": "Estado do pagamento",
       "orderStatus": "Estado da encomenda",
+      "dateFrom": "Data de",
+      "dateTo": "Data até",
       "all": "Todos"
     },
     "statusOptions": {
@@ -727,20 +756,26 @@
       "inStock": "Em stock",
       "lowStock": "Stock baixo",
       "outOfStock": "Esgotado",
-      "notTracked": "Não rastreado"
+      "notTracked": "Não rastreado",
+      "tracking": "Rastreamento de stock",
+      "lowStockThreshold": "Limite de stock baixo",
+      "outOfStockBehavior": "Comportamento sem stock"
     },
     "sections": {
       "basicInfo": "Informações básicas",
       "images": "Imagens do produto",
       "options": "Configuração de opções",
       "stockManagement": "Gestão de stock",
+      "stockStatus": "Estado do stock",
       "delivery": "Configuração de entrega",
       "quantityRules": "Regras de quantidade de encomenda",
       "applicationForm": "Formulário de candidatura",
       "payment": "Configuração de pagamento",
       "emailNotifications": "Notificações por e-mail",
+      "emailConfig": "Configuração de e-mail",
       "optionsAndPricing": "Opções e preços",
-      "orderStatistics": "Estatísticas de encomendas"
+      "orderStatistics": "Estatísticas de encomendas",
+      "discounts": "Descontos"
     },
     "fields": {
       "name": "Nome",
@@ -758,6 +793,7 @@
       "selectForm": "Selecionar um formulário...",
       "useTermsAndConditions": "Usar termos e condições",
       "termsAndConditions": "Termos e condições",
+      "termsAndConditionsContent": "Conteúdo dos termos e condições",
       "adminNotificationEmails": "E-mails de notificação do administrador",
       "adminNotificationEmailsPlaceholder": "email1@exemplo.com, email2@exemplo.com",
       "adminNotificationEmailsHelper": "Endereços de e-mail separados por vírgulas",
@@ -770,7 +806,11 @@
       "quantityIncrements": "Incrementos de quantidade",
       "quantityIncrementsHelper": "Deve encomendar em múltiplos deste número (por exemplo, 6 para pacotes de 6)",
       "noLimit": "Sem limite",
-      "anyQuantity": "Qualquer quantidade"
+      "anyQuantity": "Qualquer quantidade",
+      "supportedPaymentMethods": "Métodos de pagamento suportados",
+      "selectDiscounts": "Selecionar descontos",
+      "selectDiscountsHelper": "Escolha quais descontos podem ser aplicados a este tipo de mercadoria",
+      "noDiscountsHint": "Ainda não há descontos disponíveis. Crie descontos no submenu Descontos para os atribuir aqui."
     },
     "images": {
       "title": "Imagens do produto",
@@ -800,6 +840,8 @@
     "delivery": {
       "title": "Configuração de entrega",
       "deliveryType": "Tipo de entrega",
+      "free": "Entrega gratuita",
+      "fixed": "Taxa fixa",
       "freeDelivery": "Entrega gratuita",
       "fixedFee": "Taxa de entrega fixa",
       "quantityBased": "Entrega baseada em quantidade",
@@ -847,6 +889,32 @@
       "save": "Guardar",
       "saving": "A guardar...",
       "cancel": "Cancelar"
+    },
+    "errors": {
+      "loadFailed": "Falha ao carregar tipos de mercadoria",
+      "loadOrderFailed": "Falha ao carregar detalhes da encomenda",
+      "loadOrdersFailed": "Falha ao carregar encomendas",
+      "deleteFailed": "Falha ao eliminar tipo de mercadoria",
+      "saveNotesFailed": "Falha ao guardar notas do administrador",
+      "updateStatusFailed": "Falha ao atualizar o estado da encomenda",
+      "batchUpdateFailed": "Falha na atualização em lote das encomendas",
+      "exportFailed": "Falha ao exportar encomendas",
+      "paymentMethodsLoadFailed": "Falha ao carregar os métodos de pagamento"
+    },
+    "email": {
+      "confirmationMessage": "Mensagem de confirmação",
+      "notificationEmails": "E-mails de notificação",
+      "noNotificationEmails": "Nenhum e-mail de notificação configurado"
+    },
+    "payment": {
+      "handlingFeeIncluded": "Taxa de manuseamento incluída",
+      "noMethods": "Nenhum método de pagamento configurado",
+      "termsEnabled": "Termos e condições ativados"
+    },
+    "quantity": {
+      "min": "Quantidade mínima",
+      "max": "Quantidade máxima",
+      "increment": "Incremento de quantidade"
     }
   },
   "ticketing": {
@@ -1619,7 +1687,10 @@
       "description": "Gerir mercadoria e loja online",
       "menu": {
         "types": "Tipos de mercadoria",
-        "orders": "Encomendas"
+        "orders": "Encomendas",
+        "merchandiseTypes": "Tipos de mercadoria",
+        "discounts": "Descontos",
+        "merchandiseOrders": "Encomendas de mercadoria"
       }
     }
   },

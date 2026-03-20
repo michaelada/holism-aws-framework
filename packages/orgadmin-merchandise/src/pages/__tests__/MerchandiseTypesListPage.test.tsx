@@ -16,6 +16,11 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('@aws-web-framework/orgadmin-core', () => ({
+  useApi: () => ({ execute: vi.fn().mockResolvedValue([]) }),
+  useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Test Org' } }),
+}));
+
 describe('MerchandiseTypesListPage', () => {
   it('should render the page title', () => {
     render(

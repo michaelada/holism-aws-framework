@@ -21,12 +21,14 @@ import {
   Delete as DeleteIcon,
   CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { Calendar } from '../types/calendar.types';
 
 const CalendarDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [calendar, _setCalendar] = useState<Calendar | null>(null);
+  const { execute } = useApi();
+  const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +37,14 @@ const CalendarDetailsPage: React.FC = () => {
     }
   }, [id]);
 
-  const loadCalendar = async (_calendarId: string) => {
+  const loadCalendar = async (calendarId: string) => {
     try {
       setLoading(true);
-      // API call
-      // const data = await api.get(`/api/orgadmin/calendars/${calendarId}`);
-      // setCalendar(data);
+      const data = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/calendars/${calendarId}`,
+      });
+      setCalendar(data);
     } catch (error) {
       console.error('Failed to load calendar:', error);
     } finally {
@@ -71,7 +75,7 @@ const CalendarDetailsPage: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<EditIcon />}
-            onClick={() => navigate(`/orgadmin/calendar/${id}/edit`)}
+            onClick={() => navigate(`/calendar/${id}/edit`)}
           >
             Edit
           </Button>

@@ -79,8 +79,8 @@ const DeliveryConfigurationSection: React.FC<DeliveryConfigurationSectionProps> 
         <TextField
           label={t('merchandise.delivery.deliveryFee')}
           type="number"
-          value={deliveryFee || 0}
-          onChange={(e) => onChange('deliveryFee', parseFloat(e.target.value) || 0)}
+          value={deliveryFee ?? ''}
+          onChange={(e) => onChange('deliveryFee', e.target.value === '' ? undefined : parseFloat(e.target.value))}
           inputProps={{ min: 0, step: 0.01 }}
           fullWidth
           required

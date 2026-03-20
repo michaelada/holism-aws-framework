@@ -78,12 +78,16 @@ const CreateCalendarPage: React.FC = () => {
     }
   }, [id, isEditMode]);
 
-  const loadCalendar = async (_calendarId: string) => {
+  const loadCalendar = async (calendarId: string) => {
     try {
       setLoading(true);
-      // API call to load calendar
-      // const calendar = await api.get(`/api/orgadmin/calendars/${calendarId}`);
-      // setFormData(calendar);
+      const calendar = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/calendars/${calendarId}`,
+      });
+      if (calendar) {
+        setFormData(calendar);
+      }
     } catch (error) {
       console.error('Failed to load calendar:', error);
     } finally {
@@ -123,9 +127,17 @@ const CreateCalendarPage: React.FC = () => {
 
       // API call to save calendar
       if (isEditMode) {
-        // await api.put(`/api/orgadmin/calendars/${id}`, formData);
+        await execute({
+          method: 'PUT',
+          url: `/api/orgadmin/calendars/${id}`,
+          data: { ...formData, organisationId: organisation?.id },
+        });
       } else {
-        // await api.post('/api/orgadmin/calendars', formData);
+        await execute({
+          method: 'POST',
+          url: '/api/orgadmin/calendars',
+          data: { ...formData, organisationId: organisation?.id },
+        });
       }
 
       navigate('/calendar');

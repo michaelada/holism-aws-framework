@@ -4,9 +4,10 @@
  * Displays all merchandise orders with filtering, batch operations, and Excel export.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -35,63 +36,61 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatCurrency, formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import BatchOrderOperationsDialog from '../components/BatchOrderOperationsDialog';
 import type { MerchandiseOrder, OrderStatus, PaymentStatus } from '../types/merchandise.types';
 
 const MerchandiseOrdersListPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { execute } = useApi();
+  const { organisation } = useOrganisation();
   const [orders, setOrders] = useState<MerchandiseOrder[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<MerchandiseOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | PaymentStatus>('all');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | OrderStatus>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, paymentStatusFilter, orderStatusFilter]);
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
-      // TODO: Implement API call
+      setError(null);
+
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('customerName', searchTerm);
+      if (paymentStatusFilter !== 'all') params.append('paymentStatus', paymentStatusFilter);
+      if (orderStatusFilter !== 'all') params.append('orderStatus', orderStatusFilter);
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
+
+      const queryString = params.toString();
+      const url = `/api/orgadmin/organisations/${organisation?.id}/merchandise-orders${queryString ? `?${queryString}` : ''}`;
+
+      const response = await execute({
+        method: 'GET',
+        url,
+      });
+      setOrders(response || []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+      setError(t('merchandise.errors.loadOrdersFailed'));
       setOrders([]);
-    } catch (error) {
-      console.error('Failed to load orders:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organisation?.id, searchTerm, paymentStatusFilter, orderStatusFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filterOrders = () => {
-    let filtered = [...orders];
-
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (paymentStatusFilter !== 'all') {
-      filtered = filtered.filter(order => order.paymentStatus === paymentStatusFilter);
-    }
-
-    if (orderStatusFilter !== 'all') {
-      filtered = filtered.filter(order => order.orderStatus === orderStatusFilter);
-    }
-
-    setFilteredOrders(filtered);
-  };
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedOrderIds(checked ? filteredOrders.map(o => o.id) : []);
+    setSelectedOrderIds(checked ? orders.map(o => o.id) : []);
   };
 
   const handleSelectOrder = (orderId: string, checked: boolean) => {
@@ -101,19 +100,46 @@ const MerchandiseOrdersListPage: React.FC = () => {
   };
 
   const handleBatchUpdate = async (orderIds: string[], newStatus: OrderStatus, notes?: string) => {
-    // TODO: Implement API call
-    console.log('Batch update:', { orderIds, newStatus, notes });
-    await loadOrders();
-    setSelectedOrderIds([]);
+    try {
+      for (const orderId of orderIds) {
+        await execute({
+          method: 'PUT',
+          url: `/api/orgadmin/merchandise-orders/${orderId}/status`,
+          data: { status: newStatus, notes },
+        });
+      }
+      await loadOrders();
+      setSelectedOrderIds([]);
+    } catch (err) {
+      console.error('Failed to batch update orders:', err);
+      setError(t('merchandise.errors.batchUpdateFailed'));
+    }
   };
 
-  const handleExport = () => {
-    // TODO: Implement Excel export
-    console.log('Exporting orders...');
+  const handleExport = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation?.id}/merchandise-orders/export`,
+        responseType: 'blob',
+      });
+      const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'merchandise-orders.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export orders:', err);
+      setError(t('merchandise.errors.exportFailed'));
+    }
   };
 
   const handleViewOrder = (orderId: string) => {
-    navigate(`/orgadmin/merchandise/orders/${orderId}`);
+    navigate(`/merchandise/orders/${orderId}`);
   };
 
   return (
@@ -124,6 +150,12 @@ const MerchandiseOrdersListPage: React.FC = () => {
           {t('merchandise.orders.exportToExcel')}
         </Button>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
@@ -169,6 +201,22 @@ const MerchandiseOrdersListPage: React.FC = () => {
                 <MenuItem value="cancelled">{t('merchandise.orderStatusOptions.cancelled')}</MenuItem>
               </Select>
             </FormControl>
+            <TextField
+              label={t('merchandise.filters.dateFrom')}
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 160 }}
+            />
+            <TextField
+              label={t('merchandise.filters.dateTo')}
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 160 }}
+            />
           </Box>
 
           {selectedOrderIds.length > 0 && (
@@ -197,8 +245,8 @@ const MerchandiseOrdersListPage: React.FC = () => {
             <TableRow>
               <TableCell padding="checkbox">
                 <Checkbox
-                  checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
-                  indeterminate={selectedOrderIds.length > 0 && selectedOrderIds.length < filteredOrders.length}
+                  checked={selectedOrderIds.length === orders.length && orders.length > 0}
+                  indeterminate={selectedOrderIds.length > 0 && selectedOrderIds.length < orders.length}
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </TableCell>
@@ -220,14 +268,14 @@ const MerchandiseOrdersListPage: React.FC = () => {
                   {t('merchandise.loadingOrders')}
                 </TableCell>
               </TableRow>
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} align="center">
                   {t('merchandise.noOrdersFound')}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOrders.map((order) => (
+              orders.map((order) => (
                 <TableRow key={order.id} hover>
                   <TableCell padding="checkbox">
                     <Checkbox

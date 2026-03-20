@@ -1,11 +1,24 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { merchandiseService } from '../services/merchandise.service';
 import { merchandiseOptionService } from '../services/merchandise-option.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
+import crypto from 'crypto';
+import path from 'path';
 
 const router = Router();
+
+// Configure multer for memory storage (merchandise images)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 /**
  * Middleware to check if organisation has merchandise capability
@@ -69,7 +82,8 @@ router.get(
     try {
       const { organisationId } = req.params;
       const merchandiseTypes = await merchandiseService.getMerchandiseTypesByOrganisation(organisationId);
-      res.json(merchandiseTypes);
+      const resolved = await Promise.all(merchandiseTypes.map(mt => merchandiseService.resolveImageUrls(mt)));
+      res.json(resolved);
     } catch (error) {
       logger.error('Error in GET /merchandise-types:', error);
       res.status(500).json({ error: 'Failed to fetch merchandise types' });
@@ -96,7 +110,8 @@ router.get(
         return res.status(404).json({ error: 'Merchandise type not found' });
       }
       
-      return res.json(merchandiseType);
+      const resolved = await merchandiseService.resolveImageUrls(merchandiseType);
+      return res.json(resolved);
     } catch (error) {
       logger.error('Error in GET /merchandise-types/:id:', error);
       return res.status(500).json({ error: 'Failed to fetch merchandise type' });
@@ -479,6 +494,133 @@ router.post(
       } else {
         return res.status(500).json({ error: 'Failed to adjust stock levels' });
       }
+    }
+  }
+);
+
+// ============================================================================
+// Merchandise Image Routes
+// ============================================================================
+
+/**
+ * Upload a merchandise image to S3
+ * S3 key format: merchandise/{organisationId}/{uniqueFilename}
+ */
+router.post(
+  '/merchandise-images/upload',
+  authenticateToken(),
+  upload.single('file'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { organisationId } = req.body;
+      const file = req.file;
+
+      if (!file) {
+        res.status(400).json({ error: 'No file provided' });
+        return;
+      }
+      if (!organisationId) {
+        res.status(400).json({ error: 'organisationId is required' });
+        return;
+      }
+
+      // Validate image type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        res.status(400).json({ error: `File type ${file.mimetype} is not allowed. Allowed: ${allowedTypes.join(', ')}` });
+        return;
+      }
+
+      // Generate unique S3 key
+      const ext = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, ext);
+      const uniqueName = `${baseName}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}${ext}`;
+      const s3Key = `merchandise/${organisationId}/${uniqueName}`;
+
+      await s3Client.send(new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }));
+
+      logger.info('Merchandise image uploaded to S3', { s3Key, organisationId });
+
+      res.json({ success: true, s3Key });
+    } catch (error: any) {
+      logger.error('Error uploading merchandise image:', error);
+      res.status(500).json({ error: 'Failed to upload image' });
+    }
+  }
+);
+
+/**
+ * Unescape HTML entities added by the global sanitizeBody/sanitizeQuery middleware
+ */
+function unescapeHtml(str: string): string {
+  return str
+    .replace(/&#x2F;/g, '/')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'");
+}
+
+/**
+ * Get a signed URL for a merchandise image
+ */
+router.get(
+  '/merchandise-images/url',
+  authenticateToken(),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { key } = req.query;
+      if (!key || typeof key !== 'string') {
+        res.status(400).json({ error: 's3 key is required' });
+        return;
+      }
+
+      const s3Key = unescapeHtml(key);
+      const signedUrl = await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({ Bucket: S3_BUCKET_NAME, Key: s3Key }),
+        { expiresIn: 3600 }
+      );
+
+      res.json({ url: signedUrl });
+    } catch (error: any) {
+      logger.error('Error generating merchandise image URL:', error);
+      res.status(500).json({ error: 'Failed to generate image URL' });
+    }
+  }
+);
+
+/**
+ * Delete a merchandise image from S3
+ */
+router.delete(
+  '/merchandise-images',
+  authenticateToken(),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { key } = req.query;
+      if (!key || typeof key !== 'string') {
+        res.status(400).json({ error: 's3 key is required' });
+        return;
+      }
+
+      const s3Key = unescapeHtml(key);
+      await s3Client.send(new DeleteObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+      }));
+
+      logger.info('Merchandise image deleted from S3', { key: s3Key });
+      res.json({ success: true });
+    } catch (error: any) {
+      logger.error('Error deleting merchandise image:', error);
+      res.status(500).json({ error: 'Failed to delete image' });
     }
   }
 );

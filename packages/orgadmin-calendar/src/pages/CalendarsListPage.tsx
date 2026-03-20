@@ -40,22 +40,15 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import type { Calendar, CalendarStatus } from '../types/calendar.types';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    // Mock data for development
-    console.log(`Mock implementation for ${url} - ${method}`)
-    return [];
-  },
-});
 
 const CalendarsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
   const { checkModuleVisit } = useOnboarding();
+  const { organisation } = useOrganisation();
   
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [filteredCalendars, setFilteredCalendars] = useState<Calendar[]>([]);
@@ -73,18 +66,19 @@ const CalendarsListPage: React.FC = () => {
 
   useEffect(() => {
     loadCalendars();
-  }, []);
+  }, [organisation?.id]);
 
   useEffect(() => {
     filterCalendars();
   }, [calendars, searchTerm, statusFilter]);
 
   const loadCalendars = async () => {
+    if (!organisation?.id) return;
     try {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/calendars',
+        url: `/api/orgadmin/organisations/${organisation.id}/calendars`,
       });
       setCalendars(response || []);
     } catch (error) {
@@ -119,11 +113,11 @@ const CalendarsListPage: React.FC = () => {
   };
 
   const handleEditCalendar = (calendarId: string) => {
-    navigate(`/orgadmin/calendar/${calendarId}/edit`);
+    navigate(`/calendar/${calendarId}/edit`);
   };
 
   const handleViewCalendar = (calendarId: string) => {
-    navigate(`/orgadmin/calendar/${calendarId}`);
+    navigate(`/calendar/${calendarId}`);
   };
 
   const handleToggleStatus = async (calendar: Calendar) => {

@@ -37,39 +37,46 @@ export const calendarModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/calendar',
+      path: 'calendar',
       component: lazy(() => import('./pages/CalendarsListPage')),
     },
     {
-      path: '/calendar/new',
+      path: 'calendar/new',
       component: lazy(() => import('./pages/CreateCalendarPage')),
     },
     {
-      path: '/calendar/:id',
+      path: 'calendar/:id',
       component: lazy(() => import('./pages/CalendarDetailsPage')),
     },
     {
-      path: '/calendar/:id/edit',
+      path: 'calendar/:id/edit',
       component: lazy(() => import('./pages/CreateCalendarPage')),
     },
     {
-      path: '/calendar/bookings',
+      path: 'calendar/bookings',
       component: lazy(() => import('./pages/BookingsListPage')),
     },
     {
-      path: '/calendar/bookings/calendar-view',
+      path: 'calendar/bookings/calendar-view',
       component: lazy(() => import('./pages/BookingsCalendarPage')),
     },
     {
-      path: '/calendar/bookings/:id',
+      path: 'calendar/bookings/:id',
       component: lazy(() => import('./pages/BookingDetailsPage')),
     },
   ],
-  menuItem: {
-    label: 'modules.calendar.name',
-    path: '/calendar',
-    icon: CalendarIcon,
-  },
+  subMenuItems: [
+    {
+      label: 'modules.calendar.menu.calendars',
+      path: '/calendar',
+      icon: CalendarIcon,
+    },
+    {
+      label: 'modules.calendar.menu.bookings',
+      path: '/calendar/bookings',
+      icon: CalendarIcon,
+    },
+  ],
 };
 
 // Export pages for direct use if needed

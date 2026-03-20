@@ -8,6 +8,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -28,9 +30,15 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
+  Delete as DeleteIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
   Search as SearchIcon,
@@ -39,27 +47,24 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import type { MerchandiseType, StockLevel } from '../types/merchandise.types';
-
-// Mock API hook - will be replaced with actual implementation
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    // Mock data for development
-    return [];
-  },
-});
 
 const MerchandiseTypesListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   const { t } = useTranslation();
   
   const [merchandiseTypes, setMerchandiseTypes] = useState<MerchandiseType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<MerchandiseType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [typeToDelete, setTypeToDelete] = useState<MerchandiseType | null>(null);
 
   useEffect(() => {
     loadMerchandiseTypes();
@@ -72,13 +77,15 @@ const MerchandiseTypesListPage: React.FC = () => {
   const loadMerchandiseTypes = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/merchandise-types',
+        url: `/api/orgadmin/organisations/${organisation?.id}/merchandise-types`,
       });
       setMerchandiseTypes(response || []);
-    } catch (error) {
-      console.error('Failed to load merchandise types:', error);
+    } catch (err) {
+      console.error('Failed to load merchandise types:', err);
+      setError(t('merchandise.errors.loadFailed'));
       setMerchandiseTypes([]);
     } finally {
       setLoading(false);
@@ -126,8 +133,8 @@ const MerchandiseTypesListPage: React.FC = () => {
     let hasOutOfStock = false;
     let hasLowStock = false;
     
-    for (const optionType of type.optionTypes) {
-      for (const optionValue of optionType.optionValues) {
+    for (const optionType of (type.optionTypes || [])) {
+      for (const optionValue of (optionType.optionValues || [])) {
         const quantity = optionValue.stockQuantity || 0;
         if (quantity === 0) {
           hasOutOfStock = true;
@@ -147,11 +154,39 @@ const MerchandiseTypesListPage: React.FC = () => {
   };
 
   const handleEditType = (typeId: string) => {
-    navigate(`/orgadmin/merchandise/${typeId}/edit`);
+    navigate(`/merchandise/${typeId}/edit`);
   };
 
   const handleViewType = (typeId: string) => {
-    navigate(`/orgadmin/merchandise/${typeId}`);
+    navigate(`/merchandise/${typeId}`);
+  };
+
+  const handleDeleteClick = (type: MerchandiseType) => {
+    setTypeToDelete(type);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setTypeToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!typeToDelete) return;
+    try {
+      await execute({
+        method: 'DELETE',
+        url: `/api/orgadmin/merchandise-types/${typeToDelete.id}`,
+      });
+      setDeleteDialogOpen(false);
+      setTypeToDelete(null);
+      loadMerchandiseTypes();
+    } catch (err) {
+      console.error('Failed to delete merchandise type:', err);
+      setError(t('merchandise.errors.deleteFailed'));
+      setDeleteDialogOpen(false);
+      setTypeToDelete(null);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -166,12 +201,12 @@ const MerchandiseTypesListPage: React.FC = () => {
   };
 
   const getPriceRange = (type: MerchandiseType): string => {
-    if (type.optionTypes.length === 0) {
+    if (!type.optionTypes || type.optionTypes.length === 0) {
       return t('merchandise.pricing.noOptions');
     }
     
     const prices = type.optionTypes.flatMap(ot => 
-      ot.optionValues.map(ov => ov.price)
+      (ot.optionValues || []).map(ov => ov.price)
     );
     
     if (prices.length === 0) return t('merchandise.pricing.noPricing');
@@ -291,12 +326,20 @@ const MerchandiseTypesListPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell>{t('merchandise.table.image')}</TableCell>
               <TableCell>{t('merchandise.table.name')}</TableCell>
               <TableCell>{t('merchandise.table.status')}</TableCell>
+              <TableCell>{t('merchandise.table.options')}</TableCell>
               <TableCell>{t('merchandise.table.priceRange')}</TableCell>
               <TableCell>{t('merchandise.table.stockStatus')}</TableCell>
               <TableCell align="right">{t('merchandise.table.actions')}</TableCell>
@@ -305,13 +348,13 @@ const MerchandiseTypesListPage: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={7} align="center">
                   {t('merchandise.loadingTypes')}
                 </TableCell>
               </TableRow>
             ) : filteredTypes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={7} align="center">
                   {searchTerm || statusFilter !== 'all' || stockFilter !== 'all'
                     ? t('merchandise.noMatchingTypes')
                     : t('merchandise.noTypesFound')}
@@ -320,6 +363,14 @@ const MerchandiseTypesListPage: React.FC = () => {
             ) : (
               filteredTypes.map((type) => (
                 <TableRow key={type.id} hover>
+                  <TableCell>
+                    <Avatar
+                      variant="rounded"
+                      src={(type as any).imageUrls?.[0] || type.images?.[0]}
+                      alt={type.name}
+                      sx={{ width: 48, height: 48 }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">
                       {type.name}
@@ -333,6 +384,13 @@ const MerchandiseTypesListPage: React.FC = () => {
                       label={type.status}
                       color={getStatusColor(type.status)}
                       size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={type.optionTypes?.length || 0}
+                      size="small"
+                      variant="outlined"
                     />
                   </TableCell>
                   <TableCell>
@@ -356,6 +414,13 @@ const MerchandiseTypesListPage: React.FC = () => {
                     >
                       <EditIcon />
                     </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteClick(type)}
+                      title={t('merchandise.tooltips.delete')}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))
@@ -363,6 +428,26 @@ const MerchandiseTypesListPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+      >
+        <DialogTitle>{t('merchandise.deleteDialog.title')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t('merchandise.deleteDialog.message', { name: typeToDelete?.name })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel}>
+            {t('merchandise.deleteDialog.cancel')}
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            {t('merchandise.deleteDialog.confirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

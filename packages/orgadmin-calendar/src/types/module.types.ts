@@ -26,6 +26,7 @@ export interface MenuItem {
   label: string;
   path: string;
   icon?: ComponentType;
+  capability?: string;  // Optional capability required to see this menu item
 }
 
 /**
@@ -41,5 +42,6 @@ export interface ModuleRegistration {
   card: ModuleCard;
   routes: ModuleRoute[];
   menuItem?: MenuItem;                 // Optional menu item for navigation drawer
+  subMenuItems?: MenuItem[];           // Optional sub-menu items for nested navigation
   order?: number;                      // Display order (lower = first)
 }
