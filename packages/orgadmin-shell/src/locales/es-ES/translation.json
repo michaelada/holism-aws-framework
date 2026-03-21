@@ -95,6 +95,14 @@
     "failedToLoad": "Error al cargar eventos",
     "failedToSave": "Error al guardar el evento",
     "fixValidationErrors": "Por favor, corrige los errores de validación antes de guardar",
+    "editPage": {
+      "sidebarTitle": "Secciones",
+      "saveDraft": "Guardar como borrador",
+      "publish": "Publicar",
+      "cancel": "Cancelar",
+      "saving": "Guardando...",
+      "unsavedChanges": "Tienes cambios sin guardar"
+    },
     "table": {
       "eventName": "Nombre del evento",
       "dates": "Fechas",

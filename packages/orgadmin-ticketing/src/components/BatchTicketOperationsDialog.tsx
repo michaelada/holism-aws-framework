@@ -21,7 +21,8 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { BatchTicketOperationResult } from '../types/ticketing.types';
 
 interface BatchTicketOperationsDialogProps {
@@ -32,18 +33,6 @@ interface BatchTicketOperationsDialogProps {
   onComplete: () => void;
 }
 
-// Mock API hook
-const useApi = () => ({
-  execute: async ({ method, url, data }: { method: string; url: string; data?: any }) => {
-    // Simulate API call
-    return {
-      success: true,
-      processedCount: data?.ticketIds?.length || 0,
-      failedCount: 0,
-      errors: [],
-    };
-  },
-});
 
 const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = ({
   open,

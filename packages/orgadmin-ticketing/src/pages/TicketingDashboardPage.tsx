@@ -38,19 +38,15 @@ import {
   FileDownload as ExportIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
-import { formatDateTime } from '@orgadmin/shell/utils/dateFormatting';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { ElectronicTicket, TicketFilters } from '../types/ticketing.types';
 import TicketingStatsCards from '../components/TicketingStatsCards';
 import TicketDetailsDialog from '../components/TicketDetailsDialog';
 import BatchTicketOperationsDialog from '../components/BatchTicketOperationsDialog';
 
-// Mock API hook
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    return [];
-  },
-});
+
 
 const TicketingDashboardPage: React.FC = () => {
   const { execute } = useApi();

@@ -102,7 +102,7 @@ describe('Events Module Configuration', () => {
         { path: 'events', component: 'EventsListPage' },
         { path: 'events/new', component: 'CreateEventPage' },
         { path: 'events/:id', component: 'EventDetailsPage' },
-        { path: 'events/:id/edit', component: 'CreateEventPage' },
+        { path: 'events/:id/edit', component: 'EditEventPage' },
         { path: 'events/:id/entries', component: 'EventEntriesPage' },
       ];
 

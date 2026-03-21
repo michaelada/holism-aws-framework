@@ -45,6 +45,9 @@ vi.mock('@aws-web-framework/orgadmin-shell', () => ({
   useLocale: () => ({
     locale: 'en-GB',
   }),
+  useCapabilities: () => ({
+    hasCapability: (cap: string) => true,
+  }),
   formatDateTime: (date: any, _locale?: string) => String(date),
   formatCurrency: (value: number, currency: string) => `${currency} ${value.toFixed(2)}`,
 }));

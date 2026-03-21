@@ -29,7 +29,7 @@ export default defineConfig({
       '@aws-web-framework/orgadmin-registrations': path.resolve(__dirname, '../orgadmin-registrations/src'),
       '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, '../orgadmin-merchandise/src'),
       '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, '../orgadmin-calendar/src'),
-      '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, './src/test/mocks/orgadmin-ticketing.ts'),
+      '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, '../orgadmin-ticketing/src'),
     },
     
     /**
@@ -105,7 +105,8 @@ export default defineConfig({
       '@aws-web-framework/orgadmin-events', 
       '@aws-web-framework/orgadmin-memberships',
       '@aws-web-framework/orgadmin-registrations',
-      '@aws-web-framework/orgadmin-merchandise'
+      '@aws-web-framework/orgadmin-merchandise',
+      '@aws-web-framework/orgadmin-ticketing'
     ],
   },
   

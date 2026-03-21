@@ -31,8 +31,10 @@ import {
   Email as EmailIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
-import { formatDateTime } from '@orgadmin/shell/utils/dateFormatting';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
+import { format } from 'date-fns';
 import QRCode from 'qrcode';
 import type { ElectronicTicket, TicketScanHistory } from '../types/ticketing.types';
 
@@ -43,12 +45,6 @@ interface TicketDetailsDialogProps {
   onUpdate: () => void;
 }
 
-// Mock API hook
-const useApi = () => ({
-  execute: async ({ method, url }: { method: string; url: string }) => {
-    return [];
-  },
-});
 
 const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
   open,

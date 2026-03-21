@@ -95,6 +95,14 @@
     "failedToLoad": "Échec du chargement des événements",
     "failedToSave": "Échec de l'enregistrement de l'événement",
     "fixValidationErrors": "Veuillez corriger les erreurs de validation avant d'enregistrer",
+    "editPage": {
+      "sidebarTitle": "Sections",
+      "saveDraft": "Enregistrer comme brouillon",
+      "publish": "Publier",
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "unsavedChanges": "Vous avez des modifications non enregistrées"
+    },
     "table": {
       "eventName": "Nom de l'événement",
       "dates": "Périodes",

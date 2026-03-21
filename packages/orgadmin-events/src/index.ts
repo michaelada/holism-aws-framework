@@ -53,7 +53,7 @@ export const eventsModule: ModuleRegistration = {
     },
     {
       path: 'events/:id/edit',
-      component: lazy(() => import('./pages/CreateEventPage')),
+      component: lazy(() => import('./pages/EditEventPage')),
     },
     {
       path: 'events/:id/entries',
@@ -115,6 +115,7 @@ export const eventsModule: ModuleRegistration = {
 // Export pages for direct use if needed
 export { default as EventsListPage } from './pages/EventsListPage';
 export { default as CreateEventPage } from './pages/CreateEventPage';
+export { default as EditEventPage } from './pages/EditEventPage';
 export { default as EventDetailsPage } from './pages/EventDetailsPage';
 export { default as EventEntriesPage } from './pages/EventEntriesPage';
 export { default as EventTypesListPage } from './pages/EventTypesListPage';

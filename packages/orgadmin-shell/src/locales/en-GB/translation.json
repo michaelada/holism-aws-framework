@@ -95,6 +95,14 @@
     "failedToLoad": "Failed to load events",
     "failedToSave": "Failed to save event",
     "fixValidationErrors": "Please fix the validation errors before saving",
+    "editPage": {
+      "sidebarTitle": "Sections",
+      "saveDraft": "Save as Draft",
+      "publish": "Publish",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "unsavedChanges": "You have unsaved changes"
+    },
     "table": {
       "eventName": "Event Name",
       "dates": "Dates",

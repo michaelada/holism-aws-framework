@@ -92,6 +92,14 @@
     "failedToLoad": "Impossibile caricare gli eventi",
     "failedToSave": "Impossibile salvare l'evento",
     "fixValidationErrors": "Correggi gli errori di validazione prima di salvare",
+    "editPage": {
+      "sidebarTitle": "Sezioni",
+      "saveDraft": "Salva come bozza",
+      "publish": "Pubblica",
+      "cancel": "Annulla",
+      "saving": "Salvataggio...",
+      "unsavedChanges": "Hai modifiche non salvate"
+    },
     "table": {
       "eventName": "Nome evento",
       "dates": "Date",

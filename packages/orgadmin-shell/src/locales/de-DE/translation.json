@@ -92,6 +92,14 @@
     "failedToLoad": "Fehler beim Laden der Veranstaltungen",
     "failedToSave": "Fehler beim Speichern der Veranstaltung",
     "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler vor dem Speichern",
+    "editPage": {
+      "sidebarTitle": "Abschnitte",
+      "saveDraft": "Als Entwurf speichern",
+      "publish": "Veröffentlichen",
+      "cancel": "Abbrechen",
+      "saving": "Wird gespeichert...",
+      "unsavedChanges": "Sie haben ungespeicherte Änderungen"
+    },
     "table": {
       "eventName": "Veranstaltungsname",
       "dates": "Termine",
