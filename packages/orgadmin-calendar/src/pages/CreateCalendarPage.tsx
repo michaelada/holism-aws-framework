@@ -53,23 +53,29 @@ const CreateCalendarPage: React.FC = () => {
     termsAndConditions: '',
     supportedPaymentMethods: [],
     handlingFeeIncluded: false,
+    discountIds: [],
     allowCancellations: false,
     cancelDaysInAdvance: 2,
     refundPaymentAutomatically: false,
     adminNotificationEmails: '',
     sendReminderEmails: false,
     reminderHoursBefore: 24,
+    applicationFormId: undefined,
+    timeSlotConfigurations: [],
+    blockedPeriods: [],
   });
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [applicationForms, setApplicationForms] = useState<Array<{ id: string; name: string }>>([]);
 
   // Register page for contextual help
   usePageHelp(isEditMode ? 'edit' : 'create');
 
   useEffect(() => {
     loadPaymentMethods();
+    loadApplicationForms();
   }, []);
 
   useEffect(() => {
@@ -86,7 +92,13 @@ const CreateCalendarPage: React.FC = () => {
         url: `/api/orgadmin/calendars/${calendarId}`,
       });
       if (calendar) {
-        setFormData(calendar);
+        setFormData(prev => ({
+          ...prev,
+          ...calendar,
+          scheduleRules: calendar.scheduleRules || [],
+          timeSlotConfigurations: calendar.timeSlotConfigurations || [],
+          blockedPeriods: calendar.blockedPeriods || [],
+        }));
       }
     } catch (error) {
       console.error('Failed to load calendar:', error);
@@ -112,6 +124,19 @@ const CreateCalendarPage: React.FC = () => {
         { id: 'pay-offline', name: 'Pay Offline' },
         { id: 'stripe', name: 'Card Payment (Stripe)' },
       ]);
+    }
+  };
+
+  const loadApplicationForms = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation?.id}/application-forms`,
+      });
+      setApplicationForms(response || []);
+    } catch (err) {
+      console.error('Failed to load application forms:', err);
+      setApplicationForms([]);
     }
   };
 
@@ -191,6 +216,7 @@ const CreateCalendarPage: React.FC = () => {
         formData={formData}
         onChange={setFormData}
         paymentMethods={paymentMethods}
+        applicationForms={applicationForms}
         organisation={organisation}
       />
     </Box>

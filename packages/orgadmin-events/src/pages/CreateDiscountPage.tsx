@@ -73,7 +73,7 @@ interface DiscountFormData {
 }
 
 interface CreateDiscountPageProps {
-  moduleType?: 'events' | 'memberships' | 'registrations' | 'merchandise';
+  moduleType?: 'events' | 'memberships' | 'registrations' | 'merchandise' | 'calendar';
 }
 
 const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'events' }) => {
@@ -427,6 +427,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
       memberships: '/members/discounts',
       registrations: '/registrations/discounts',
       merchandise: '/merchandise/discounts',
+      calendar: '/calendar/discounts',
     };
     return pathMap[moduleType] || '/events/discounts';
   };

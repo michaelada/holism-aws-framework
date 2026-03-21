@@ -58,7 +58,7 @@ import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-
 import type { Discount, DiscountStatus, DiscountType, ApplicationScope } from '../types/discount.types';
 
 interface DiscountsListPageProps {
-  moduleType?: 'events' | 'memberships' | 'registrations' | 'merchandise';
+  moduleType?: 'events' | 'memberships' | 'registrations' | 'merchandise' | 'calendar';
 }
 
 const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'events' }) => {
@@ -169,6 +169,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
       memberships: '/members',
       registrations: '/registrations',
       merchandise: '/merchandise',
+      calendar: '/calendar',
     };
     return pathMap[moduleType] || '/events';
   };

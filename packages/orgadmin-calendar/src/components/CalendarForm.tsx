@@ -4,7 +4,7 @@
  * Reusable form component for creating/editing calendars with all configuration sections.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   Box,
   Card,
@@ -21,8 +21,13 @@ import {
   Typography,
 } from '@mui/material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
+import { DiscountSelector } from '@aws-web-framework/components';
 import type { CalendarFormData } from '../types/calendar.types';
 import ScheduleRulesSection from './ScheduleRulesSection';
+import TimeSlotConfigurationSection from './TimeSlotConfigurationSection';
+import BlockedPeriodsSection from './BlockedPeriodsSection';
 
 interface Organisation {
   id: string;
@@ -39,11 +44,27 @@ interface CalendarFormProps {
   formData: CalendarFormData;
   onChange: (data: CalendarFormData) => void;
   paymentMethods?: PaymentMethod[];
+  applicationForms?: Array<{ id: string; name: string }>;
   organisation?: Organisation | null;
 }
 
-const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, paymentMethods = [], organisation }) => {
+const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, paymentMethods = [], applicationForms = [], organisation }) => {
   const { t } = useTranslation();
+  const { execute } = useApi();
+  const { hasCapability } = useCapabilities();
+
+  const fetchDiscounts = useCallback(async (organisationId: string, moduleType: string) => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisationId}/discounts/${moduleType}`,
+      });
+      return response.discounts || [];
+    } catch (error) {
+      console.error('Failed to fetch discounts:', error);
+      return [];
+    }
+  }, []);
 
   const handleChange = (field: keyof CalendarFormData, value: any) => {
     onChange({ ...formData, [field]: value });
@@ -109,6 +130,23 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
                 <MenuItem value="closed">{t('calendar.statusOptions.closed')}</MenuItem>
               </Select>
             </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>{t('calendar.fields.applicationForm')}</InputLabel>
+              <Select
+                value={formData.applicationFormId || ''}
+                label={t('calendar.fields.applicationForm')}
+                onChange={(e) => handleChange('applicationFormId', e.target.value || undefined)}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {applicationForms.map((form) => (
+                  <MenuItem key={form.id} value={form.id}>
+                    {form.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </CardContent>
       </Card>
@@ -145,16 +183,18 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
             <TextField
               label={t('calendar.fields.minDaysInAdvance')}
               type="number"
-              value={formData.minDaysInAdvance}
-              onChange={(e) => handleChange('minDaysInAdvance', parseInt(e.target.value))}
+              value={formData.minDaysInAdvance ?? 0}
+              onChange={(e) => handleChange('minDaysInAdvance', Math.max(0, parseInt(e.target.value) || 0))}
               fullWidth
+              inputProps={{ min: 0 }}
             />
             <TextField
               label={t('calendar.fields.maxDaysInAdvance')}
               type="number"
-              value={formData.maxDaysInAdvance}
-              onChange={(e) => handleChange('maxDaysInAdvance', parseInt(e.target.value))}
+              value={formData.maxDaysInAdvance ?? 90}
+              onChange={(e) => handleChange('maxDaysInAdvance', Math.max(0, parseInt(e.target.value) || 0))}
               fullWidth
+              inputProps={{ min: 0 }}
             />
           </Box>
         </CardContent>
@@ -205,6 +245,45 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
               </Box>
             )}
           </Box>
+        </CardContent>
+      </Card>
+
+      {/* Discounts */}
+      {hasCapability('calendar-discounts') && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>{t('calendar.sections.discounts')}</Typography>
+            <DiscountSelector
+              selectedDiscountIds={formData.discountIds || []}
+              onChange={(discountIds) => handleChange('discountIds', discountIds)}
+              organisationId={organisation?.id || ''}
+              moduleType="calendar"
+              fetchDiscounts={fetchDiscounts}
+              label={t('calendar.fields.selectDiscounts')}
+              helperText={t('calendar.fields.selectDiscountsHelper')}
+              currencyCode={organisation?.currency || 'EUR'}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Time Slot Configuration */}
+      <Card>
+        <CardContent>
+          <TimeSlotConfigurationSection
+            configurations={formData.timeSlotConfigurations || []}
+            onChange={(configs) => handleChange('timeSlotConfigurations', configs)}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Blocked Periods */}
+      <Card>
+        <CardContent>
+          <BlockedPeriodsSection
+            blockedPeriods={formData.blockedPeriods || []}
+            onChange={(periods) => handleChange('blockedPeriods', periods)}
+          />
         </CardContent>
       </Card>
 

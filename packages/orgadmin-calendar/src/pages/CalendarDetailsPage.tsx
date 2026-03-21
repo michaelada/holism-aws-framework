@@ -22,12 +22,15 @@ import {
   CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import type { Calendar } from '../types/calendar.types';
+import EmbeddedCalendarView from '../components/EmbeddedCalendarView';
 
 const CalendarDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { execute } = useApi();
+  const { t } = useTranslation();
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -117,6 +120,18 @@ const CalendarDetailsPage: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Embedded Calendar Booking View */}
+      {id && (
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              {t('calendar.bookingView.title')}
+            </Typography>
+            <EmbeddedCalendarView calendarId={id} />
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 };

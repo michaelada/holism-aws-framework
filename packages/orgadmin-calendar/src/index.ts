@@ -18,7 +18,10 @@
  */
 
 import { lazy } from 'react';
-import { CalendarMonth as CalendarIcon } from '@mui/icons-material';
+import {
+  CalendarMonth as CalendarIcon,
+  LocalOffer as DiscountIcon,
+} from '@mui/icons-material';
 import type { ModuleRegistration } from './types/module.types';
 
 export const calendarModule: ModuleRegistration = {
@@ -64,6 +67,21 @@ export const calendarModule: ModuleRegistration = {
       path: 'calendar/bookings/:id',
       component: lazy(() => import('./pages/BookingDetailsPage')),
     },
+    {
+      path: 'calendar/discounts',
+      component: lazy(() => import('./pages/DiscountsListPage')),
+      capability: 'calendar-discounts',
+    },
+    {
+      path: 'calendar/discounts/new',
+      component: lazy(() => import('./pages/CreateDiscountPage')),
+      capability: 'calendar-discounts',
+    },
+    {
+      path: 'calendar/discounts/:id/edit',
+      component: lazy(() => import('./pages/EditDiscountPage')),
+      capability: 'calendar-discounts',
+    },
   ],
   subMenuItems: [
     {
@@ -75,6 +93,12 @@ export const calendarModule: ModuleRegistration = {
       label: 'modules.calendar.menu.bookings',
       path: '/calendar/bookings',
       icon: CalendarIcon,
+    },
+    {
+      label: 'modules.calendar.menu.discounts',
+      path: '/calendar/discounts',
+      icon: DiscountIcon,
+      capability: 'calendar-discounts',
     },
   ],
 };

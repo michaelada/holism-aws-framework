@@ -40,6 +40,9 @@ export interface Calendar {
   supportedPaymentMethods: string[];   // Payment method IDs from Payments module
   handlingFeeIncluded: boolean;        // Whether card processing fee is absorbed into the price
   
+  // Discount Configuration
+  discountIds: string[];               // Associated discount IDs from Discounts module
+  
   // Cancellation Policy
   allowCancellations: boolean;         // Enable self-service cancellations (default false)
   cancelDaysInAdvance?: number;        // Days before timeslot that cancellations allowed
@@ -214,6 +217,10 @@ export interface CalendarSlotView {
   isFull: boolean;                     // All places booked
   isMinimumMet: boolean;               // Minimum places requirement met (if applicable)
   bookings: Booking[];                 // Existing bookings for this slot
+  isBookedByOverlap: boolean;          // Slot is unavailable due to an overlapping booking of a different duration
+  isReserved: boolean;                 // Slot is admin-reserved (exact or overlap)
+  isExactReservation: boolean;         // True only when this slot IS the original reservation (can be freed)
+  reservation?: SlotReservation;       // Reservation details if reserved
 }
 
 /**
@@ -242,6 +249,7 @@ export interface CalendarFormData {
   
   supportedPaymentMethods: string[];
   handlingFeeIncluded: boolean;
+  discountIds: string[];
   
   allowCancellations: boolean;
   cancelDaysInAdvance?: number;
@@ -250,6 +258,12 @@ export interface CalendarFormData {
   adminNotificationEmails?: string;
   sendReminderEmails: boolean;
   reminderHoursBefore?: number;
+
+  applicationFormId?: string;
+
+  timeSlotConfigurations: TimeSlotConfigurationFormData[];
+
+  blockedPeriods: BlockedPeriodFormData[];
 }
 
 /**
@@ -309,3 +323,53 @@ export interface CancellationValidation {
   reason?: string;
   daysUntilBooking: number;
 }
+
+/**
+ * Represents an admin-reserved time slot
+ */
+export interface SlotReservation {
+  id: string;
+  calendarId: string;
+  reservedBy: string;                  // Admin user ID
+  slotDate: string;                    // ISO date string (YYYY-MM-DD)
+  startTime: string;                   // HH:MM format
+  duration: number;                    // Minutes
+  reason?: string;                     // Optional reservation reason
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Request payload for reserving a time slot
+ */
+export interface ReserveSlotRequest {
+  calendarId: string;
+  slotDate: string;                    // YYYY-MM-DD
+  startTime: string;                   // HH:MM
+  duration: number;                    // Minutes
+  reason?: string;
+}
+
+/**
+ * Request payload for cancelling a booking
+ */
+export interface CancelBookingRequest {
+  reason: string;
+  refund: boolean;
+}
+
+/**
+ * Maps CalendarSlotView to react-big-calendar Event
+ */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resource: {
+    slot: CalendarSlotView;
+    status: 'available' | 'booked' | 'reserved' | 'bookedOverlap';
+    durationIndex: number;
+  };
+}
+

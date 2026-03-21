@@ -25,15 +25,19 @@ import {
 import {
   Visibility as ViewIcon,
   FileDownload as ExportIcon,
+  CalendarMonth as CalendarViewIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatDate, formatCurrency, usePageHelp, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import type { Booking, BookingsFilterOptions } from '../types/calendar.types';
 
 const BookingsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { locale } = useLocale();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const { organisation } = useOrganisation();
+  const { execute } = useApi();
+  const [bookings, setBookings] = useState<(Booking & { calendarName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, _setFilters] = useState<BookingsFilterOptions>({});
 
@@ -41,16 +45,23 @@ const BookingsListPage: React.FC = () => {
   usePageHelp('bookings-list');
 
   useEffect(() => {
-    loadBookings();
-  }, [filters]);
+    if (organisation?.id) {
+      loadBookings();
+    }
+  }, [organisation?.id, filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBookings = async () => {
+    if (!organisation?.id) return;
     try {
       setLoading(true);
-      // API call with filters
-      setBookings([]);
+      const data = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/organisations/${organisation.id}/bookings`,
+      });
+      setBookings(data || []);
     } catch (error) {
       console.error('Failed to load bookings:', error);
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -69,6 +80,13 @@ const BookingsListPage: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">{t('calendar.bookings')}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<CalendarViewIcon />}
+            onClick={() => navigate('/calendar/bookings/calendar-view')}
+          >
+            {t('calendar.bookingView.title')}
+          </Button>
           <Button
             variant="outlined"
             startIcon={<ExportIcon />}
@@ -115,14 +133,21 @@ const BookingsListPage: React.FC = () => {
               bookings.map((booking) => (
                 <TableRow key={booking.id} hover>
                   <TableCell>{booking.bookingReference}</TableCell>
-                  <TableCell>{booking.calendar?.name}</TableCell>
+                  <TableCell>{(booking as any).calendarName || '—'}</TableCell>
                   <TableCell>{booking.userName}</TableCell>
                   <TableCell>{formatDate(new Date(booking.bookingDate), 'dd/MM/yyyy', locale)}</TableCell>
                   <TableCell>{booking.startTime}</TableCell>
                   <TableCell>{t('calendar.duration.minutes', { count: booking.duration })}</TableCell>
                   <TableCell>{formatCurrency(booking.totalPrice, 'EUR', locale)}</TableCell>
                   <TableCell>
-                    <Chip label={booking.bookingStatus} size="small" />
+                    <Chip
+                      label={booking.bookingStatus}
+                      size="small"
+                      sx={{
+                        bgcolor: booking.bookingStatus === 'confirmed' ? '#e8f5e9' : booking.bookingStatus === 'cancelled' ? '#ffebee' : undefined,
+                        color: booking.bookingStatus === 'confirmed' ? '#2e7d32' : booking.bookingStatus === 'cancelled' ? '#c62828' : undefined,
+                      }}
+                    />
                   </TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => handleViewBooking(booking.id)} title={t('calendar.tooltips.viewBooking')}>
