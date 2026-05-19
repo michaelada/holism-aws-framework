@@ -11,8 +11,6 @@ import React from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Typography,
   Divider,
   Alert,
@@ -40,24 +38,20 @@ const EventActivitiesSection: React.FC<EventActivitiesSectionProps> = ({
   paymentMethods,
 }) => {
   return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box>
-            <Typography variant="h6">
-              Event Activities
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Add activities that people can register for
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            onClick={onAddActivity}
-          >
-            Add Activity
-          </Button>
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="body2" color="textSecondary">
+            Add activities that people can register for
+          </Typography>
         </Box>
+        <Button
+          variant="outlined"
+          onClick={onAddActivity}
+        >
+          Add Activity
+        </Button>
+      </Box>
 
         {fieldErrors.activities && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -88,8 +82,7 @@ const EventActivitiesSection: React.FC<EventActivitiesSectionProps> = ({
             </Box>
           ))
         )}
-      </CardContent>
-    </Card>
+    </>
   );
 };
 

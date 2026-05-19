@@ -12,7 +12,10 @@ export type ModuleId =
   | 'memberships' 
   | 'registrations'
   | 'calendar' 
-  | 'payments';
+  | 'payments'
+  | 'merchandise'
+  | 'ticketing'
+  | 'settings';
 
 /**
  * User preferences for onboarding dialogs
@@ -56,8 +59,9 @@ export interface OnboardingContextValue {
   /**
    * Dismiss a module introduction dialog
    * @param moduleId - The module whose introduction is being dismissed
+   * @param dontShowAgain - If true, permanently dismiss the dialog for this module
    */
-  dismissModuleIntro: (moduleId: ModuleId) => Promise<void>;
+  dismissModuleIntro: (moduleId: ModuleId, dontShowAgain: boolean) => Promise<void>;
   
   /**
    * Toggle the help drawer open/closed

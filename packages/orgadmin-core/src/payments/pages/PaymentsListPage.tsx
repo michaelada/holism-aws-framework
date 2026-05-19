@@ -33,7 +33,7 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation, useLocale, useOnboarding, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, useOnboarding, usePageHelp, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
 
 interface Payment {
   id: string;
@@ -52,6 +52,9 @@ const PaymentsListPage: React.FC = () => {
   const { t } = useTranslation();
   const { locale } = useLocale();
   const { checkModuleVisit } = useOnboarding();
+  
+  // Register page for contextual help
+  usePageHelp('list');
   
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);

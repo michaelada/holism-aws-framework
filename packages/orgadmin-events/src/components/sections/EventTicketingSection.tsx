@@ -10,8 +10,6 @@
 
 import React from 'react';
 import {
-  Card,
-  CardContent,
   Checkbox,
   FormControlLabel,
   Grid,
@@ -34,16 +32,12 @@ const EventTicketingSection: React.FC<EventTicketingSectionProps> = ({
   onChange,
 }) => {
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Ticketing Settings
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          Configure electronic tickets with QR codes for this event
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Configure electronic tickets with QR codes for this event
+      </Typography>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           <Grid item xs={12}>
             <Tooltip title="Enable automatic generation of electronic tickets with QR codes for all bookings" arrow placement="right">
               <FormControlLabel
@@ -195,8 +189,7 @@ const EventTicketingSection: React.FC<EventTicketingSectionProps> = ({
             </>
           )}
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
 };
 

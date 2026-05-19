@@ -34,7 +34,7 @@ import {
   Visibility as ViewIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { RegistrationType } from '../types/registration.types';
 
@@ -43,6 +43,15 @@ const RegistrationTypesListPage: React.FC = () => {
   const { execute } = useApi();
   const { t } = useTranslation();
   const { organisation } = useOrganisation();
+  const { setCurrentModule, checkModuleVisit } = useOnboarding();
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  useEffect(() => {
+    setCurrentModule('registrations');
+    checkModuleVisit('registrations');
+  }, [setCurrentModule, checkModuleVisit]);
   
   const [registrationTypes, setRegistrationTypes] = useState<RegistrationType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<RegistrationType[]>([]);

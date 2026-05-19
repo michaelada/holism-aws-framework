@@ -35,6 +35,22 @@
     "payments": {
       "title": "Payment Processing",
       "content": "# Payments Module\n\nAccept and manage payments for memberships, events, and other services.\n\n## Core Features\n\n- **Payment Collection** - Accept credit cards, bank transfers, and other payment methods\n- **Transaction History** - View all payment transactions\n- **Invoicing** - Generate and send invoices\n- **Refunds** - Process refunds when needed\n- **Reporting** - Financial reports and reconciliation\n- **Security** - PCI-compliant payment processing\n\n## Integration\n\nPayments are integrated throughout OrgAdmin - collect fees during event registration, membership signup, and more."
+    },
+    "merchandise": {
+      "title": "Merchandise",
+      "content": "# Merchandise Module\n\nCreate and sell products through your organisation's online store.\n\n## Key Features\n\n- **Product Management** - Create merchandise types with images, descriptions, and pricing\n- **Variants & Options** - Define sizes, colours, and other product options\n- **Stock Tracking** - Monitor inventory levels with low-stock alerts\n- **Order Management** - View and process orders, handle fulfilment\n- **Handling Fees** - Configure additional fees per item\n- **Discounts** - Create promotional discounts and codes\n\n## Getting Started\n\nCreate your first merchandise type, add images and pricing, then publish it for your members to purchase."
+    },
+    "registrations": {
+      "title": "Registrations",
+      "content": "# Registrations Module\n\nManage sign-ups and enrolments for your organisation's programmes and activities.\n\n## Key Features\n\n- **Registration Types** - Create different registration categories for programmes, classes, and activities\n- **Registration Database** - View and manage all registrations with advanced filtering\n- **Batch Operations** - Process multiple registrations at once with labels and status updates\n- **Custom Filters** - Save filter sets for quick access to common views\n- **Excel Export** - Download registration data for reporting\n- **Payment Integration** - Collect fees during the registration process\n\n## Getting Started\n\nSet up your registration types, then start accepting registrations from your members."
+    },
+    "ticketing": {
+      "title": "Event Ticketing",
+      "content": "# Event Ticketing Module\n\nManage ticket sales and attendance across all your ticketed events.\n\n## Key Features\n\n- **Ticketed Events Overview** - See all events with ticketing enabled at a glance\n- **Ticket Configuration** - Set up ticket types, pricing, and capacity per event\n- **Sales Monitoring** - Track ticket sales in real time\n- **Attendee Management** - View ticket holders and check-in status\n- **Revenue Tracking** - Monitor ticket revenue per event\n\n## Getting Started\n\nEnable ticketing on your events from the event edit page, then manage all ticketed events from this module."
+    },
+    "settings": {
+      "title": "Organisation Settings",
+      "content": "# Settings Module\n\nConfigure your organisation's profile, payment settings, and preferences.\n\n## Key Areas\n\n- **Organisation Details** - Update your organisation's name, description, and contact information\n- **Payment Settings** - Configure payment methods and processing options\n- **Email Templates** - Customise automated email communications\n- **Branding** - Set your organisation's logo, colours, and visual identity\n\n## Getting Started\n\nReview your organisation details and ensure your payment settings are configured correctly."
     }
   }
 }

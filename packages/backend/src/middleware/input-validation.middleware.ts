@@ -11,12 +11,26 @@ interface SanitizationOptions {
   trimWhitespace?: boolean;
   escapeHtml?: boolean;
   maxLength?: number;
+  /** Field names that contain rich text HTML (from editors like ReactQuill) */
+  richTextFields?: string[];
 }
+
+/** Fields known to contain rich text HTML from ReactQuill editors */
+const RICH_TEXT_FIELDS = new Set([
+  'termsAndConditions',
+  'terms_and_conditions',
+  'confirmationMessage',
+  'confirmation_message',
+  'content',
+  'body',
+  'htmlContent',
+]);
 
 /**
  * Sanitize a string value
+ * @param fieldName - the field name, used to determine if this is a rich text field
  */
-function sanitizeString(value: string, options: SanitizationOptions = {}): string {
+function sanitizeString(value: string, options: SanitizationOptions = {}, fieldName?: string): string {
   let sanitized = value;
 
   // Trim whitespace
@@ -24,14 +38,36 @@ function sanitizeString(value: string, options: SanitizationOptions = {}): strin
     sanitized = sanitized.trim();
   }
 
-  // Strip HTML tags
+  // Strip HTML tags completely (plain text only)
   if (options.stripHtml) {
     sanitized = DOMPurify.sanitize(sanitized, { ALLOWED_TAGS: [] });
   }
 
-  // Escape HTML entities
+  // For escapeHtml mode: check if this is a rich text field
   if (options.escapeHtml) {
-    sanitized = validator.escape(sanitized);
+    const isRichText = fieldName && (
+      RICH_TEXT_FIELDS.has(fieldName) ||
+      (options.richTextFields && options.richTextFields.includes(fieldName))
+    );
+
+    if (isRichText) {
+      // Rich text fields: strip only dangerous tags/attributes but preserve
+      // the HTML structure exactly as-is. DOMPurify.sanitize() reformats
+      // whitespace between block elements which causes content drift on
+      // repeated save cycles, so we avoid it for trusted rich-text content.
+      sanitized = sanitized
+        // Remove script tags and their content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // Remove event handler attributes (onclick, onerror, etc.)
+        .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+        // Remove javascript: URLs
+        .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '')
+        // Remove iframe, object, embed tags
+        .replace(/<\/?(?:iframe|object|embed|form|input|button|textarea|select)\b[^>]*>/gi, '');
+    } else {
+      // Plain text fields: strip ALL HTML tags
+      sanitized = DOMPurify.sanitize(sanitized, { ALLOWED_TAGS: [] });
+    }
   }
 
   // Enforce max length
@@ -44,25 +80,26 @@ function sanitizeString(value: string, options: SanitizationOptions = {}): strin
 
 /**
  * Recursively sanitize an object
+ * @param fieldName - current field name for context-aware sanitization
  */
-function sanitizeObject(obj: any, options: SanitizationOptions = {}): any {
+function sanitizeObject(obj: any, options: SanitizationOptions = {}, fieldName?: string): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
 
   if (typeof obj === 'string') {
-    return sanitizeString(obj, options);
+    return sanitizeString(obj, options, fieldName);
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeObject(item, options));
+    return obj.map(item => sanitizeObject(item, options, fieldName));
   }
 
   if (typeof obj === 'object') {
     const sanitized: any = {};
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
-        sanitized[key] = sanitizeObject(obj[key], options);
+        sanitized[key] = sanitizeObject(obj[key], options, key);
       }
     }
     return sanitized;

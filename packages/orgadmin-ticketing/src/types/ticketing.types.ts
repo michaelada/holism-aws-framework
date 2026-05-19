@@ -25,6 +25,29 @@ export interface EventTicketingConfig {
   updatedAt: Date;
 }
 
+// Ticketed event summary for overview page
+export interface TicketedEventSummary {
+  eventId: string;
+  eventName: string;
+  eventDate: Date;
+  generateElectronicTickets: boolean;
+  totalTickets: number;
+  ticketsScanned: number;
+  ticketsNotScanned: number;
+  scanPercentage: number;
+}
+
+// Ticket sales summary response from GET /events/:eventId/ticket-sales
+export interface TicketSalesSummary {
+  eventId: string;
+  eventName: string;
+  totalIssued: number;
+  totalScanned: number;
+  totalNotScanned: number;
+  lastScanTime?: Date;
+  tickets: ElectronicTicket[];
+}
+
 // Electronic Ticket entity
 export interface ElectronicTicket {
   id: string;

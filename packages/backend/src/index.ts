@@ -53,6 +53,30 @@ dotenv.config();
 const app = express();
 const PORT = process.env.API_PORT || 3000;
 
+// CORS must be configured BEFORE helmet so preflight OPTIONS requests are handled correctly
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || ['http://localhost:3000'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // In development, allow any localhost origin
+    if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost')) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
+}));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -61,30 +85,24 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", 'http://localhost:*'],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"]
     }
   },
-  hsts: {
+  // Disable HSTS in development (it causes issues with localhost)
+  hsts: process.env.NODE_ENV === 'production' ? {
     maxAge: 31536000,
     includeSubDomains: true,
     preload: true
-  }
+  } : false,
+  // Don't set crossOriginResourcePolicy in development
+  crossOriginResourcePolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
 
 // XSS protection headers
-app.use(xssSecurityHeaders());
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
-}));
 
 // Body parsing and cookie parsing
 app.use(express.json({ limit: '10mb' }));

@@ -46,7 +46,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
-import { useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { useApi } from '@aws-web-framework/orgadmin-core';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { Member, MemberFilter } from '../types/membership.types';
@@ -60,6 +60,9 @@ const MembersDatabasePage: React.FC = () => {
   const { t } = useTranslation();
   const { checkModuleVisit } = useOnboarding();
   const { organisation } = useOrganisation();
+
+  // Register page for contextual help
+  usePageHelp('list');
 
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);

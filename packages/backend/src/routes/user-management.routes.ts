@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { orgAdminUserService } from '../services/org-admin-user.service';
 import { accountUserService } from '../services/account-user.service';
+import { organizationAdminRoleService } from '../services/organization-admin-role.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
 
 const router = Router();
 
 // Apply authentication middleware to all routes
-router.use(authenticateToken);
+router.use(authenticateToken());
 
 /**
  * Org Admin Users Routes
@@ -74,7 +75,8 @@ router.post('/admins/:organizationId', async (req: Request, res: Response): Prom
     });
   } catch (error) {
     logger.error('Error creating admin user:', error);
-    res.status(500).json({
+    const statusCode = (error as any).statusCode || 500;
+    res.status(statusCode).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create admin user'
     });
@@ -153,21 +155,21 @@ router.post('/admins/:id/roles', async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    logger.info('Assigning roles to admin user', { id, roleIds });
+    logger.info('Syncing roles for admin user', { id, roleIds });
 
     const assignedBy = (req as any).user?.sub;
 
-    await orgAdminUserService.assignRoles(id, roleIds, assignedBy);
+    await orgAdminUserService.syncRoles(id, roleIds, assignedBy);
 
     res.json({
       success: true,
-      message: 'Roles assigned successfully'
+      message: 'Roles updated successfully'
     });
   } catch (error) {
-    logger.error('Error assigning roles:', error);
+    logger.error('Error syncing roles:', error);
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to assign roles'
+      error: error instanceof Error ? error.message : 'Failed to update roles'
     });
   }
 });
@@ -193,6 +195,32 @@ router.delete('/admins/:id/roles/:roleId', async (req: Request, res: Response): 
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to remove role'
+    });
+  }
+});
+
+/**
+ * POST /api/orgadmin/users/admins/:id/resend-invite
+ * Resend invitation email to an admin user who hasn't activated
+ */
+router.post('/admins/:id/resend-invite', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Resending invite for admin user', { id });
+
+    await orgAdminUserService.resendInvite(id);
+
+    res.json({
+      success: true,
+      message: 'Invitation resent successfully'
+    });
+  } catch (error) {
+    logger.error('Error resending invite:', error);
+    const statusCode = (error as any).statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to resend invitation'
     });
   }
 });
@@ -389,6 +417,28 @@ router.post('/accounts/:id/reset-password', async (req: Request, res: Response):
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to reset password'
+    });
+  }
+});
+
+/**
+ * GET /api/orgadmin/users/roles/:organizationId
+ * Get all admin roles for an organization (accessible by org admins)
+ */
+router.get('/roles/:organizationId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { organizationId } = req.params;
+
+    logger.info('Getting organization roles', { organizationId });
+
+    const roles = await organizationAdminRoleService.getRolesByOrganization(organizationId);
+
+    res.json(roles);
+  } catch (error) {
+    logger.error('Error getting organization roles:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get roles'
     });
   }
 });

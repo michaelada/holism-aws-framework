@@ -29,17 +29,19 @@ import {
   Send as SendIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 const InviteAdminUserPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -52,12 +54,13 @@ const InviteAdminUserPage: React.FC = () => {
   }, []);
 
   const loadAvailableRoles = async () => {
+    if (!organisation?.id) return;
     try {
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/roles',
+        url: `/api/orgadmin/users/roles/${organisation.id}`,
       });
-      setAvailableRoles(response.map((role: any) => role.name) || []);
+      setAvailableRoles((response || []).map((role: any) => ({ id: role.id, name: role.name })));
     } catch (error) {
       console.error('Failed to load roles:', error);
     }
@@ -86,16 +89,23 @@ const InviteAdminUserPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      await execute({
+      const result = await execute({
         method: 'POST',
-        url: '/api/orgadmin/users/admins',
+        url: `/api/orgadmin/users/admins/${organisation?.id}`,
         data: {
           email,
           firstName,
           lastName,
-          roles: selectedRoles,
+          roleIds: selectedRoles,
         },
+        retryCount: 0,
+        onError: (errorMsg) => setError(errorMsg),
       });
+
+      if (!result) {
+        // onError callback already set the error message
+        return;
+      }
 
       setSuccess(true);
       
@@ -105,7 +115,7 @@ const InviteAdminUserPage: React.FC = () => {
       }, 2000);
     } catch (error: any) {
       console.error('Failed to invite admin user:', error);
-      setError(error.response?.data?.message || 'Failed to invite admin user');
+      setError(error.response?.data?.error || 'Failed to invite admin user');
     } finally {
       setLoading(false);
     }
@@ -220,16 +230,17 @@ const InviteAdminUserPage: React.FC = () => {
                     input={<OutlinedInput label="Roles" />}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {selected.map((value) => (
-                          <Chip key={value} label={value} size="small" />
-                        ))}
+                        {selected.map((roleId) => {
+                          const role = availableRoles.find(r => r.id === roleId);
+                          return <Chip key={roleId} label={role?.name || roleId} size="small" />;
+                        })}
                       </Box>
                     )}
                     disabled={loading || success}
                   >
                     {availableRoles.map((role) => (
-                      <MenuItem key={role} value={role}>
-                        {role}
+                      <MenuItem key={role.id} value={role.id}>
+                        {role.name}
                       </MenuItem>
                     ))}
                   </Select>

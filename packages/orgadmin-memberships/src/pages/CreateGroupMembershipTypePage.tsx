@@ -32,6 +32,7 @@ import { enGB } from 'date-fns/locale';
 import { Save as SaveIcon, Cancel as CancelIcon, Publish as PublishIcon } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
 import type { CreateMembershipTypeDto, FieldConfiguration } from '../types/membership.types';
 import FieldConfigurationTable from '../components/FieldConfigurationTable';
 import PersonConfigurationSection from '../components/PersonConfigurationSection';

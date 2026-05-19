@@ -31,6 +31,7 @@ import { enGB } from 'date-fns/locale';
 import { Save as SaveIcon, Cancel as CancelIcon, Publish as PublishIcon } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
 import type { CreateMembershipTypeDto } from '../types/membership.types';
 import { DiscountSelector } from '@aws-web-framework/components';
 import { useCapabilities } from '@aws-web-framework/orgadmin-shell';

@@ -1127,6 +1127,64 @@
       "loadScanHistoryFailed": "Laden des Scan-Verlaufs fehlgeschlagen",
       "generateQRCodeFailed": "Generierung des QR-Codes fehlgeschlagen",
       "batchOperationFailed": "Vorgang fehlgeschlagen"
+    },
+    "overview": {
+      "title": "Veranstaltungen mit Ticketing",
+      "noTicketedEvents": "Keine Veranstaltungen haben Ticketing aktiviert",
+      "columns": {
+        "eventName": "Veranstaltungsname",
+        "eventDate": "Veranstaltungsdatum",
+        "totalTickets": "Tickets gesamt",
+        "scanned": "Gescannt",
+        "notScanned": "Nicht gescannt",
+        "scanPercentage": "Scan %",
+        "actions": "Aktionen"
+      },
+      "tooltips": {
+        "editSettings": "Ticketing-Einstellungen bearbeiten",
+        "viewTickets": "Tickets anzeigen"
+      }
+    },
+    "detail": {
+      "backToOverview": "Zurück zur Übersicht"
+    },
+    "settings": {
+      "title": "Ticketing-Einstellungen",
+      "description": "Konfigurieren Sie die elektronischen Ticketing-Optionen für diese Veranstaltung.",
+      "backToOverview": "Zurück zur Übersicht",
+      "save": "Speichern",
+      "saveSuccess": "Ticketing-Einstellungen erfolgreich gespeichert",
+      "saveError": "Ticketing-Einstellungen konnten nicht gespeichert werden",
+      "fields": {
+        "generateElectronicTickets": "Elektronische Tickets generieren",
+        "ticketHeaderText": "Ticket-Kopftext",
+        "ticketInstructions": "Ticket-Anweisungen",
+        "ticketFooterText": "Ticket-Fußtext",
+        "ticketValidityPeriod": "Ticket-Gültigkeitsdauer (Stunden)",
+        "ticketBackgroundColor": "Ticket-Hintergrundfarbe",
+        "includeEventLogo": "Veranstaltungslogo einbeziehen"
+      },
+      "helpers": {
+        "ticketHeaderText": "Text, der oben auf dem Ticket angezeigt wird",
+        "ticketInstructions": "Anweisungen für den Ticketinhaber",
+        "ticketFooterText": "Text, der unten auf dem Ticket angezeigt wird",
+        "ticketValidityPeriod": "Wie viele Stunden vor der Veranstaltung das Ticket gültig wird",
+        "ticketBackgroundColor": "Hintergrundfarbe des Tickets",
+        "includeEventLogo": "Veranstaltungslogo auf dem Ticket anzeigen"
+      },
+      "tooltips": {
+        "generateElectronicTickets": "Automatische Generierung elektronischer Tickets mit QR-Codes aktivieren",
+        "ticketHeaderText": "Benutzerdefinierter Kopftext auf jedem Ticket",
+        "ticketInstructions": "Anweisungen, die den Teilnehmern auf ihrem Ticket angezeigt werden",
+        "ticketFooterText": "Benutzerdefinierter Fußtext auf jedem Ticket",
+        "ticketValidityPeriod": "Anzahl der Stunden vor Veranstaltungsbeginn, ab denen Tickets zum Scannen gültig sind",
+        "ticketBackgroundColor": "Wählen Sie eine Hintergrundfarbe für die Ticketvorlage",
+        "includeEventLogo": "Veranstaltungslogo auf dem generierten Ticket einbeziehen"
+      }
+    },
+    "errors": {
+      "invalidEvent": "Veranstaltung nicht gefunden oder Ticketing nicht aktiviert",
+      "loadFailed": "Ticketing-Daten konnten nicht geladen werden"
     }
   },
   "forms": {

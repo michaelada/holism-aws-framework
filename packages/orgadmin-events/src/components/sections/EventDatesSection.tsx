@@ -8,8 +8,6 @@
 
 import React from 'react';
 import {
-  Card,
-  CardContent,
   Grid,
   TextField,
   Typography,
@@ -32,16 +30,12 @@ const EventDatesSection: React.FC<EventDatesSectionProps> = ({
   onChange,
 }) => {
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Event Dates
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          Set the event dates and entry opening/closing times
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Set the event dates and entry opening/closing times
+      </Typography>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <DatePicker
               label="Event Start Date"
@@ -167,8 +161,7 @@ const EventDatesSection: React.FC<EventDatesSectionProps> = ({
             />
           </Grid>
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
 };
 

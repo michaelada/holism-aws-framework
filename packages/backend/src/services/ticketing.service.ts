@@ -99,6 +99,20 @@ export interface TicketSalesSummary {
 }
 
 /**
+ * Ticketed event summary for overview page
+ */
+export interface TicketedEventSummary {
+  eventId: string;
+  eventName: string;
+  eventDate: Date;
+  generateElectronicTickets: boolean;
+  totalTickets: number;
+  ticketsScanned: number;
+  ticketsNotScanned: number;
+  scanPercentage: number;
+}
+
+/**
  * Service for managing event ticketing
  */
 export class TicketingService {
@@ -152,24 +166,45 @@ export class TicketingService {
   /**
    * Get all ticketed events (events with ticketing enabled) for an organisation
    */
-  async getTicketedEventsByOrganisation(organisationId: string): Promise<EventTicketingConfig[]> {
-    try {
-      const result = await db.query(
-        `SELECT etc.* 
-         FROM event_ticketing_config etc
-         INNER JOIN events e ON etc.event_id = e.id
-         WHERE e.organisation_id = $1 
-         AND etc.generate_electronic_tickets = true
-         ORDER BY e.start_date DESC`,
-        [organisationId]
-      );
+  async getTicketedEventsByOrganisation(organisationId: string): Promise<TicketedEventSummary[]> {
+      try {
+        const result = await db.query(
+          `SELECT etc.event_id,
+                  e.name AS event_name,
+                  e.start_date AS event_date,
+                  etc.generate_electronic_tickets,
+                  COUNT(et.id)::int AS total_tickets,
+                  COUNT(CASE WHEN et.scan_status = 'scanned' THEN 1 END)::int AS tickets_scanned,
+                  (COUNT(et.id) - COUNT(CASE WHEN et.scan_status = 'scanned' THEN 1 END))::int AS tickets_not_scanned,
+                  CASE WHEN COUNT(et.id) > 0
+                    THEN ROUND((COUNT(CASE WHEN et.scan_status = 'scanned' THEN 1 END)::numeric / COUNT(et.id)) * 100, 1)
+                    ELSE 0
+                  END AS scan_percentage
+           FROM event_ticketing_config etc
+           INNER JOIN events e ON etc.event_id = e.id
+           LEFT JOIN electronic_tickets et ON et.event_id = etc.event_id
+           WHERE e.organisation_id = $1 
+           AND etc.generate_electronic_tickets = true
+           GROUP BY etc.event_id, e.name, e.start_date, etc.generate_electronic_tickets
+           ORDER BY e.start_date DESC`,
+          [organisationId]
+        );
 
-      return result.rows.map(row => this.rowToTicketingConfig(row));
-    } catch (error) {
-      logger.error('Error getting ticketed events by organisation:', error);
-      throw error;
+        return result.rows.map(row => ({
+          eventId: row.event_id,
+          eventName: row.event_name,
+          eventDate: new Date(row.event_date),
+          generateElectronicTickets: row.generate_electronic_tickets,
+          totalTickets: row.total_tickets,
+          ticketsScanned: row.tickets_scanned,
+          ticketsNotScanned: row.tickets_not_scanned,
+          scanPercentage: parseFloat(row.scan_percentage),
+        }));
+      } catch (error) {
+        logger.error('Error getting ticketed events by organisation:', error);
+        throw error;
+      }
     }
-  }
 
   /**
    * Create ticketing configuration for an event

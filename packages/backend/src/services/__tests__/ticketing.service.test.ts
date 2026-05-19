@@ -15,30 +15,32 @@ describe('TicketingService', () => {
   });
 
   describe('getTicketedEventsByOrganisation', () => {
-    it('should return all ticketed events for an organisation', async () => {
-      const mockConfigs = [
+    it('should return ticketed event summaries for an organisation', async () => {
+      const mockRows = [
         {
-          id: '1',
           event_id: 'event-1',
+          event_name: 'Summer Camp',
+          event_date: new Date('2024-07-15'),
           generate_electronic_tickets: true,
-          ticket_header_text: 'Welcome!',
-          ticket_instructions: 'Present at entrance',
-          ticket_footer_text: 'Thank you',
-          ticket_validity_period: 2,
-          include_event_logo: true,
-          ticket_background_color: '#FFFFFF',
-          created_at: new Date(),
-          updated_at: new Date(),
+          total_tickets: 10,
+          tickets_scanned: 4,
+          tickets_not_scanned: 6,
+          scan_percentage: '40.0',
         },
       ];
 
-      mockDb.query.mockResolvedValue({ rows: mockConfigs } as any);
+      mockDb.query.mockResolvedValue({ rows: mockRows } as any);
 
       const result = await service.getTicketedEventsByOrganisation('org-1');
 
       expect(result).toHaveLength(1);
+      expect(result[0].eventId).toBe('event-1');
+      expect(result[0].eventName).toBe('Summer Camp');
       expect(result[0].generateElectronicTickets).toBe(true);
-      expect(result[0].ticketHeaderText).toBe('Welcome!');
+      expect(result[0].totalTickets).toBe(10);
+      expect(result[0].ticketsScanned).toBe(4);
+      expect(result[0].ticketsNotScanned).toBe(6);
+      expect(result[0].scanPercentage).toBe(40.0);
       expect(mockDb.query).toHaveBeenCalledWith(
         expect.stringContaining('WHERE e.organisation_id = $1'),
         ['org-1']

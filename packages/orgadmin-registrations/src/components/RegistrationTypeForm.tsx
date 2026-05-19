@@ -33,6 +33,7 @@ import { DiscountSelector } from '@aws-web-framework/components';
 import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
 import type { RegistrationTypeFormData } from '../types/registration.types';
 
 interface ApplicationForm {

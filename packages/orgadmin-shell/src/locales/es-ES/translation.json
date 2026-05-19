@@ -1345,6 +1345,64 @@
       "loadScanHistoryFailed": "Error al cargar historial de escaneos",
       "generateQRCodeFailed": "Error al generar código QR",
       "batchOperationFailed": "Error en la operación"
+    },
+    "overview": {
+      "title": "Eventos con entradas",
+      "noTicketedEvents": "Ningún evento tiene la venta de entradas activada",
+      "columns": {
+        "eventName": "Nombre del evento",
+        "eventDate": "Fecha del evento",
+        "totalTickets": "Total de entradas",
+        "scanned": "Escaneadas",
+        "notScanned": "No escaneadas",
+        "scanPercentage": "% escaneado",
+        "actions": "Acciones"
+      },
+      "tooltips": {
+        "editSettings": "Editar configuración de entradas",
+        "viewTickets": "Ver entradas"
+      }
+    },
+    "detail": {
+      "backToOverview": "Volver al resumen"
+    },
+    "settings": {
+      "title": "Configuración de entradas",
+      "description": "Configure las opciones de entradas electrónicas para este evento.",
+      "backToOverview": "Volver al resumen",
+      "save": "Guardar",
+      "saveSuccess": "Configuración de entradas guardada correctamente",
+      "saveError": "Error al guardar la configuración de entradas",
+      "fields": {
+        "generateElectronicTickets": "Generar entradas electrónicas",
+        "ticketHeaderText": "Texto de encabezado de la entrada",
+        "ticketInstructions": "Instrucciones de la entrada",
+        "ticketFooterText": "Texto de pie de página de la entrada",
+        "ticketValidityPeriod": "Período de validez de la entrada (horas)",
+        "ticketBackgroundColor": "Color de fondo de la entrada",
+        "includeEventLogo": "Incluir logo del evento"
+      },
+      "helpers": {
+        "ticketHeaderText": "Texto que se muestra en la parte superior de la entrada",
+        "ticketInstructions": "Instrucciones para el titular de la entrada",
+        "ticketFooterText": "Texto que se muestra en la parte inferior de la entrada",
+        "ticketValidityPeriod": "Cuántas horas antes del evento la entrada se vuelve válida",
+        "ticketBackgroundColor": "Color de fondo de la entrada",
+        "includeEventLogo": "Mostrar el logo del evento en la entrada"
+      },
+      "tooltips": {
+        "generateElectronicTickets": "Habilitar la generación automática de entradas electrónicas con códigos QR",
+        "ticketHeaderText": "Texto de encabezado personalizado impreso en cada entrada",
+        "ticketInstructions": "Instrucciones mostradas a los asistentes en su entrada",
+        "ticketFooterText": "Texto de pie de página personalizado impreso en cada entrada",
+        "ticketValidityPeriod": "Número de horas antes del inicio del evento en que las entradas son válidas para escaneo",
+        "ticketBackgroundColor": "Elija un color de fondo para la plantilla de entrada",
+        "includeEventLogo": "Incluir la imagen del logo del evento en la entrada generada"
+      }
+    },
+    "errors": {
+      "invalidEvent": "Evento no encontrado o sin venta de entradas activada",
+      "loadFailed": "Error al cargar los datos de entradas"
     }
   },
   "forms": {

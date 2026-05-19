@@ -35,6 +35,22 @@
     "payments": {
       "title": "Zahlungsabwicklung",
       "content": "# Zahlungsmodul\n\nAkzeptieren und verwalten Sie Zahlungen für Mitgliedschaften, Veranstaltungen und andere Dienstleistungen.\n\n## Kernfunktionen\n\n- **Zahlungseinzug** - Akzeptieren Sie Kreditkarten, Banküberweisungen und andere Zahlungsmethoden\n- **Transaktionsverlauf** - Alle Zahlungstransaktionen anzeigen\n- **Rechnungsstellung** - Rechnungen erstellen und versenden\n- **Rückerstattungen** - Rückerstattungen bei Bedarf bearbeiten\n- **Berichterstattung** - Finanzberichte und Abstimmung\n- **Sicherheit** - PCI-konforme Zahlungsabwicklung\n\n## Integration\n\nZahlungen sind in OrgAdmin integriert - erheben Sie Gebühren während der Veranstaltungsanmeldung, Mitgliedschaftsanmeldung und mehr."
+    },
+    "merchandise": {
+      "title": "Merchandise",
+      "content": "# Merchandise-Modul\n\nErstellen und verkaufen Sie Produkte über den Online-Shop Ihrer Organisation.\n\n## Hauptfunktionen\n\n- **Produktverwaltung** - Erstellen Sie Merchandise-Typen mit Bildern, Beschreibungen und Preisen\n- **Varianten & Optionen** - Definieren Sie Größen, Farben und andere Produktoptionen\n- **Bestandsverfolgung** - Überwachen Sie Lagerbestände mit Warnungen bei niedrigem Bestand\n- **Bestellverwaltung** - Bestellungen anzeigen und bearbeiten, Versand abwickeln\n- **Bearbeitungsgebühren** - Zusätzliche Gebühren pro Artikel konfigurieren\n- **Rabatte** - Werberabatte und Codes erstellen\n\n## Erste Schritte\n\nErstellen Sie Ihren ersten Merchandise-Typ, fügen Sie Bilder und Preise hinzu und veröffentlichen Sie ihn zum Kauf."
+    },
+    "registrations": {
+      "title": "Anmeldungen",
+      "content": "# Anmeldungsmodul\n\nVerwalten Sie Anmeldungen und Einschreibungen für die Programme und Aktivitäten Ihrer Organisation.\n\n## Hauptfunktionen\n\n- **Anmeldungstypen** - Erstellen Sie verschiedene Anmeldungskategorien für Programme, Kurse und Aktivitäten\n- **Anmeldungsdatenbank** - Alle Anmeldungen mit erweiterter Filterung anzeigen und verwalten\n- **Stapelverarbeitung** - Mehrere Anmeldungen gleichzeitig mit Labels und Statusaktualisierungen bearbeiten\n- **Benutzerdefinierte Filter** - Filtersätze für schnellen Zugriff auf häufige Ansichten speichern\n- **Excel-Export** - Anmeldungsdaten für Berichte herunterladen\n- **Zahlungsintegration** - Gebühren während des Anmeldeprozesses erheben\n\n## Erste Schritte\n\nRichten Sie Ihre Anmeldungstypen ein und beginnen Sie dann, Anmeldungen von Ihren Mitgliedern entgegenzunehmen."
+    },
+    "ticketing": {
+      "title": "Veranstaltungstickets",
+      "content": "# Veranstaltungsticket-Modul\n\nVerwalten Sie Ticketverkäufe und Teilnahme für alle Ihre Veranstaltungen mit Tickets.\n\n## Hauptfunktionen\n\n- **Übersicht Veranstaltungen mit Tickets** - Alle Veranstaltungen mit aktiviertem Ticketing auf einen Blick\n- **Ticketkonfiguration** - Tickettypen, Preise und Kapazität pro Veranstaltung einrichten\n- **Verkaufsüberwachung** - Ticketverkäufe in Echtzeit verfolgen\n- **Teilnehmerverwaltung** - Ticketinhaber und Check-in-Status anzeigen\n- **Umsatzverfolgung** - Ticketumsatz pro Veranstaltung überwachen\n\n## Erste Schritte\n\nAktivieren Sie Ticketing für Ihre Veranstaltungen auf der Veranstaltungsbearbeitungsseite und verwalten Sie dann alle Veranstaltungen mit Tickets von diesem Modul aus."
+    },
+    "settings": {
+      "title": "Organisationseinstellungen",
+      "content": "# Einstellungsmodul\n\nKonfigurieren Sie das Profil, die Zahlungseinstellungen und die Präferenzen Ihrer Organisation.\n\n## Hauptbereiche\n\n- **Organisationsdetails** - Name, Beschreibung und Kontaktinformationen Ihrer Organisation aktualisieren\n- **Zahlungseinstellungen** - Zahlungsmethoden und Verarbeitungsoptionen konfigurieren\n- **E-Mail-Vorlagen** - Automatisierte E-Mail-Kommunikation anpassen\n- **Branding** - Logo, Farben und visuelle Identität Ihrer Organisation festlegen\n\n## Erste Schritte\n\nÜberprüfen Sie Ihre Organisationsdetails und stellen Sie sicher, dass Ihre Zahlungseinstellungen korrekt konfiguriert sind."
     }
   }
 }

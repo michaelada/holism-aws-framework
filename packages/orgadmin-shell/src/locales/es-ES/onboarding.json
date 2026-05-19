@@ -35,6 +35,22 @@
     "payments": {
       "title": "Procesamiento de Pagos",
       "content": "# Módulo de Pagos\n\nAcepte y gestione pagos para membresías, eventos y otros servicios.\n\n## Funciones Principales\n\n- **Recopilación de Pagos** - Acepte tarjetas de crédito, transferencias bancarias y otros métodos de pago\n- **Historial de Transacciones** - Vea todas las transacciones de pago\n- **Facturación** - Genere y envíe facturas\n- **Reembolsos** - Procese reembolsos cuando sea necesario\n- **Informes** - Informes financieros y conciliación\n- **Seguridad** - Procesamiento de pagos conforme a PCI\n\n## Integración\n\nLos pagos están integrados en todo OrgAdmin: recopile tarifas durante el registro de eventos, inscripción de membresía y más."
+    },
+    "merchandise": {
+      "title": "Mercancía",
+      "content": "# Módulo de Mercancía\n\nCree y venda productos a través de la tienda en línea de su organización.\n\n## Funciones Principales\n\n- **Gestión de productos** - Cree tipos de mercancía con imágenes, descripciones y precios\n- **Variantes y opciones** - Defina tallas, colores y otras opciones de producto\n- **Seguimiento de inventario** - Monitoree niveles de stock con alertas de stock bajo\n- **Gestión de pedidos** - Vea y procese pedidos\n- **Tarifas de manejo** - Configure tarifas adicionales por artículo\n- **Descuentos** - Cree descuentos promocionales y códigos\n\n## Para empezar\n\nCree su primer tipo de mercancía, agregue imágenes y precios, y publíquelo para que sus miembros lo compren."
+    },
+    "registrations": {
+      "title": "Inscripciones",
+      "content": "# Módulo de Inscripciones\n\nGestione inscripciones y matriculaciones para los programas y actividades de su organización.\n\n## Funciones Principales\n\n- **Tipos de inscripción** - Cree diferentes categorías de inscripción para programas, clases y actividades\n- **Base de datos de inscripciones** - Vea y gestione todas las inscripciones con filtrado avanzado\n- **Operaciones por lotes** - Procese múltiples inscripciones a la vez\n- **Filtros personalizados** - Guarde conjuntos de filtros para acceso rápido\n- **Exportación Excel** - Descargue datos de inscripción para informes\n- **Integración de pagos** - Recopile tarifas durante el proceso de inscripción\n\n## Para empezar\n\nConfigure sus tipos de inscripción y comience a aceptar inscripciones de sus miembros."
+    },
+    "ticketing": {
+      "title": "Venta de Entradas",
+      "content": "# Módulo de Venta de Entradas\n\nGestione ventas de entradas y asistencia para todos sus eventos con entradas.\n\n## Funciones Principales\n\n- **Vista general de eventos** - Vea todos los eventos con venta de entradas activada\n- **Configuración de entradas** - Configure tipos de entradas, precios y capacidad por evento\n- **Monitoreo de ventas** - Siga las ventas de entradas en tiempo real\n- **Gestión de asistentes** - Vea titulares de entradas y estado de registro\n- **Seguimiento de ingresos** - Monitoree ingresos por entradas por evento\n\n## Para empezar\n\nActive la venta de entradas en sus eventos desde la página de edición de eventos, luego gestione todos los eventos con entradas desde este módulo."
+    },
+    "settings": {
+      "title": "Configuración de la Organización",
+      "content": "# Módulo de Configuración\n\nConfigure el perfil, la configuración de pagos y las preferencias de su organización.\n\n## Áreas Principales\n\n- **Detalles de la organización** - Actualice el nombre, descripción e información de contacto de su organización\n- **Configuración de pagos** - Configure métodos de pago y opciones de procesamiento\n- **Plantillas de correo** - Personalice las comunicaciones por correo electrónico automatizadas\n- **Marca** - Establezca el logotipo, colores e identidad visual de su organización\n\n## Para empezar\n\nRevise los detalles de su organización y asegúrese de que su configuración de pagos esté correctamente configurada."
     }
   }
 }

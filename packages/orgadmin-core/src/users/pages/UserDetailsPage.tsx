@@ -5,7 +5,7 @@
  * Supports both admin and account user types
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -34,17 +34,21 @@ import {
   Save as SaveIcon,
   Delete as DeleteIcon,
   Block as DeactivateIcon,
+  Send as ResendIcon,
 } from '@mui/icons-material';
-import { useApi } from '../../hooks/useApi';
+import { useApi, AuthTokenContext } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 interface User {
   id: string;
+  keycloakUserId?: string;
   email: string;
   firstName: string;
   lastName: string;
   phone?: string;
   roles?: string[];
+  roleIds?: string[];
   status: 'active' | 'inactive';
   lastLogin?: string;
   createdAt: string;
@@ -54,17 +58,37 @@ const UserDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { type, id } = useParams<{ type: string; id: string }>();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
+  const getToken = useContext(AuthTokenContext);
   
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<{ id: string; name: string }[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const isAdminUser = type === 'admins';
+
+  // Determine if the user being viewed is the currently logged-in user
+  const currentKeycloakUserId = useMemo(() => {
+    try {
+      const token = getToken?.();
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.sub as string;
+    } catch {
+      return null;
+    }
+  }, [getToken]);
+
+  const isCurrentUser = Boolean(
+    user?.keycloakUserId && currentKeycloakUserId && user.keycloakUserId === currentKeycloakUserId
+  );
 
   // Register page for contextual help
   usePageHelp('detail');
@@ -77,19 +101,22 @@ const UserDetailsPage: React.FC = () => {
   }, [id, type]);
 
   const loadUser = async () => {
+    if (!organisation?.id) return;
     try {
       setLoading(true);
       const endpoint = isAdminUser
-        ? `/api/orgadmin/users/admins/${id}`
-        : `/api/orgadmin/users/accounts/${id}`;
+        ? `/api/orgadmin/users/admins/${organisation.id}`
+        : `/api/orgadmin/users/accounts/${organisation.id}`;
       
       const response = await execute({
         method: 'GET',
         url: endpoint,
       });
-      setUser(response);
-      if (isAdminUser && response.roles) {
-        setSelectedRoles(response.roles);
+      const users = response?.data || [];
+      const found = users.find((u: any) => u.id === id);
+      setUser(found || null);
+      if (isAdminUser && found?.roleIds) {
+        setSelectedRoles(found.roleIds);
       }
     } catch (error) {
       console.error('Failed to load user:', error);
@@ -100,12 +127,13 @@ const UserDetailsPage: React.FC = () => {
   };
 
   const loadAvailableRoles = async () => {
+    if (!organisation?.id) return;
     try {
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/roles',
+        url: `/api/orgadmin/users/roles/${organisation.id}`,
       });
-      setAvailableRoles(response.map((role: any) => role.name) || []);
+      setAvailableRoles((response || []).map((role: any) => ({ id: role.id, name: role.name })));
     } catch (error) {
       console.error('Failed to load roles:', error);
     }
@@ -118,21 +146,22 @@ const UserDetailsPage: React.FC = () => {
       setSaving(true);
       setError(null);
       
-      const endpoint = isAdminUser
-        ? `/api/orgadmin/users/admins/${id}`
-        : `/api/orgadmin/users/accounts/${id}`;
-      
-      const payload = isAdminUser
-        ? { roles: selectedRoles }
-        : { firstName: user.firstName, lastName: user.lastName, phone: user.phone };
+      if (isAdminUser) {
+        // Update roles via dedicated endpoint
+        await execute({
+          method: 'POST',
+          url: `/api/orgadmin/users/admins/${id}/roles`,
+          data: { roleIds: selectedRoles },
+        });
+      } else {
+        await execute({
+          method: 'PUT',
+          url: `/api/orgadmin/users/accounts/${id}`,
+          data: { firstName: user.firstName, lastName: user.lastName, phone: user.phone },
+        });
+      }
 
-      await execute({
-        method: 'PUT',
-        url: endpoint,
-        data: payload,
-      });
-
-      navigate(isAdminUser ? '/orgadmin/users/admins' : '/orgadmin/users/accounts');
+      navigate(isAdminUser ? '/users/admins' : '/users/accounts');
     } catch (error) {
       console.error('Failed to save user:', error);
       setError('Failed to save user details');
@@ -156,7 +185,7 @@ const UserDetailsPage: React.FC = () => {
       });
 
       setDeactivateDialogOpen(false);
-      navigate(isAdminUser ? '/orgadmin/users/admins' : '/orgadmin/users/accounts');
+      navigate(isAdminUser ? '/users/admins' : '/users/accounts');
     } catch (error) {
       console.error('Failed to deactivate user:', error);
       setError('Failed to deactivate user');
@@ -177,10 +206,33 @@ const UserDetailsPage: React.FC = () => {
       });
 
       setDeleteDialogOpen(false);
-      navigate(isAdminUser ? '/orgadmin/users/admins' : '/orgadmin/users/accounts');
+      navigate(isAdminUser ? '/users/admins' : '/users/accounts');
     } catch (error) {
       console.error('Failed to delete user:', error);
       setError('Failed to delete user');
+    }
+  };
+
+  const handleResendInvite = async () => {
+    if (!user) return;
+    try {
+      setResending(true);
+      setError(null);
+      const result = await execute({
+        method: 'POST',
+        url: `/api/orgadmin/users/admins/${id}/resend-invite`,
+        retryCount: 0,
+        onError: (errorMsg) => setError(errorMsg),
+      });
+      if (result) {
+        setResendSuccess(true);
+        setTimeout(() => setResendSuccess(false), 4000);
+      }
+    } catch (err) {
+      console.error('Failed to resend invite:', err);
+      setError('Failed to resend invitation');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -217,7 +269,7 @@ const UserDetailsPage: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
             startIcon={<BackIcon />}
-            onClick={() => navigate(isAdminUser ? '/orgadmin/users/admins' : '/orgadmin/users/accounts')}
+            onClick={() => navigate(isAdminUser ? '/users/admins' : '/users/accounts')}
           >
             Back
           </Button>
@@ -226,12 +278,22 @@ const UserDetailsPage: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          {isAdminUser && !user.lastLogin && (
+            <Button
+              variant="outlined"
+              startIcon={<ResendIcon />}
+              onClick={handleResendInvite}
+              disabled={resending || isCurrentUser}
+            >
+              {resending ? 'Sending...' : 'Resend Invite'}
+            </Button>
+          )}
           <Button
             variant="outlined"
             color="warning"
             startIcon={<DeactivateIcon />}
             onClick={() => setDeactivateDialogOpen(true)}
-            disabled={user.status === 'inactive'}
+            disabled={user.status === 'inactive' || isCurrentUser}
           >
             Deactivate
           </Button>
@@ -240,6 +302,7 @@ const UserDetailsPage: React.FC = () => {
             color="error"
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteDialogOpen(true)}
+            disabled={isCurrentUser}
           >
             Delete
           </Button>
@@ -258,6 +321,18 @@ const UserDetailsPage: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+
+      {resendSuccess && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResendSuccess(false)}>
+          Invitation email resent successfully.
+        </Alert>
+      )}
+
+      {isCurrentUser && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          You cannot change your own roles or status.
         </Alert>
       )}
 
@@ -316,7 +391,7 @@ const UserDetailsPage: React.FC = () => {
                   </Typography>
                   <Divider sx={{ mb: 2 }} />
                   
-                  <FormControl fullWidth>
+                  <FormControl fullWidth disabled={isCurrentUser}>
                     <InputLabel>Roles</InputLabel>
                     <Select
                       multiple
@@ -325,15 +400,16 @@ const UserDetailsPage: React.FC = () => {
                       input={<OutlinedInput label="Roles" />}
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {selected.map((value) => (
-                            <Chip key={value} label={value} size="small" />
-                          ))}
+                          {selected.map((roleId) => {
+                            const role = availableRoles.find(r => r.id === roleId);
+                            return <Chip key={roleId} label={role?.name || roleId} size="small" />;
+                          })}
                         </Box>
                       )}
                     >
                       {availableRoles.map((role) => (
-                        <MenuItem key={role} value={role}>
-                          {role}
+                        <MenuItem key={role.id} value={role.id}>
+                          {role.name}
                         </MenuItem>
                       ))}
                     </Select>

@@ -1,0 +1,496 @@
+/**
+ * Event Ticketing Detail Page
+ *
+ * Event-scoped ticketing dashboard showing stats, filters, and ticket list
+ * for a single event. Refactored from TicketingDashboardPage with event
+ * context established via route parameter instead of a filter dropdown.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link as RouterLink } from 'react-router-dom';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  SelectChangeEvent,
+} from '@mui/material';
+import {
+  ArrowBack as ArrowBackIcon,
+  Search as SearchIcon,
+  Visibility as ViewIcon,
+  CheckCircle as ScannedIcon,
+  RadioButtonUnchecked as NotScannedIcon,
+  FileDownload as ExportIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
+import type { ElectronicTicket, TicketSalesSummary } from '../types/ticketing.types';
+import TicketingStatsCards from '../components/TicketingStatsCards';
+import TicketDetailsDialog from '../components/TicketDetailsDialog';
+import BatchTicketOperationsDialog from '../components/BatchTicketOperationsDialog';
+
+const EventTicketingDetailPage: React.FC = () => {
+  const { eventId } = useParams<{ eventId: string }>();
+  const { execute } = useApi();
+  const { t, i18n } = useTranslation();
+
+  const [eventName, setEventName] = useState<string>('');
+  const [tickets, setTickets] = useState<ElectronicTicket[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<ElectronicTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
+  const [ticketDetailsOpen, setTicketDetailsOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<ElectronicTicket | null>(null);
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchOperation, setBatchOperation] = useState<'mark_scanned' | 'mark_not_scanned'>('mark_scanned');
+
+  // Filters (no event filter — event context comes from route param)
+  const [activityFilter, setActivityFilter] = useState<string>('');
+  const [scanStatusFilter, setScanStatusFilter] = useState<string[]>([]);
+  const [dateRangeStart, setDateRangeStart] = useState<string>('');
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const loadTickets = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const response: TicketSalesSummary = await execute({
+        method: 'GET',
+        url: `/api/orgadmin/events/${eventId}/ticket-sales`,
+      });
+      setEventName(response.eventName);
+      setTickets(response.tickets || []);
+    } catch (err: any) {
+      console.error('Failed to load tickets:', err);
+      if (err?.response?.status === 404 || err?.status === 404) {
+        setError(t('ticketing.errors.invalidEvent'));
+      } else {
+        setError(t('ticketing.errors.loadFailed'));
+      }
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId]);
+
+  // Initial load + 30-second auto-refresh polling
+  useEffect(() => {
+    loadTickets();
+
+    const interval = setInterval(() => {
+      loadTickets();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loadTickets]);
+
+  // Apply filters whenever tickets or filter values change
+  useEffect(() => {
+    let filtered = [...tickets];
+
+    if (activityFilter) {
+      filtered = filtered.filter(t => t.eventActivityId === activityFilter);
+    }
+
+    if (scanStatusFilter.length > 0) {
+      filtered = filtered.filter(t => scanStatusFilter.includes(t.scanStatus));
+    }
+
+    if (dateRangeStart) {
+      const startDate = new Date(dateRangeStart);
+      filtered = filtered.filter(t => new Date(t.issueDate) >= startDate);
+    }
+    if (dateRangeEnd) {
+      const endDate = new Date(dateRangeEnd);
+      filtered = filtered.filter(t => new Date(t.issueDate) <= endDate);
+    }
+
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(t =>
+        t.ticketReference.toLowerCase().includes(searchLower) ||
+        t.customerName.toLowerCase().includes(searchLower) ||
+        t.customerEmail.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredTickets(filtered);
+  }, [tickets, activityFilter, scanStatusFilter, dateRangeStart, dateRangeEnd, searchTerm]);
+
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      setSelectedTickets(filteredTickets.map(t => t.id));
+    } else {
+      setSelectedTickets([]);
+    }
+  };
+
+  const handleSelectTicket = (ticketId: string) => {
+    setSelectedTickets(prev =>
+      prev.includes(ticketId)
+        ? prev.filter(id => id !== ticketId)
+        : [...prev, ticketId]
+    );
+  };
+
+  const handleViewTicket = (ticket: ElectronicTicket) => {
+    setSelectedTicket(ticket);
+    setTicketDetailsOpen(true);
+  };
+
+  const handleBatchOperation = (operation: 'mark_scanned' | 'mark_not_scanned') => {
+    setBatchOperation(operation);
+    setBatchDialogOpen(true);
+  };
+
+  const handleExportToExcel = async () => {
+    try {
+      await execute({
+        method: 'POST',
+        url: '/api/orgadmin/tickets/export',
+        data: { eventId },
+      });
+    } catch (err) {
+      console.error('Failed to export tickets:', err);
+    }
+  };
+
+  const getScanStatusColor = (scanStatus: string) => {
+    return scanStatus === 'scanned' ? 'success' : 'default';
+  };
+
+  const getScanStatusIcon = (scanStatus: string) => {
+    return scanStatus === 'scanned' ? <ScannedIcon /> : <NotScannedIcon />;
+  };
+
+  // Get unique activities from tickets for the activity filter dropdown
+  const activityOptions = Array.from(
+    new Map(
+      tickets
+        .filter(t => t.eventActivityId)
+        .map(t => [t.eventActivityId, t.ticketData?.activityName || t.eventActivityId])
+    ).entries()
+  );
+
+  // Error state with back navigation
+  if (error && tickets.length === 0) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Box
+          component={RouterLink}
+          to="/tickets"
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mb: 3, textDecoration: 'none', color: 'primary.main' }}
+        >
+          <ArrowBackIcon fontSize="small" />
+          <Typography variant="body2">{t('ticketing.detail.backToOverview')}</Typography>
+        </Box>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (loading && tickets.length === 0) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Box
+          component={RouterLink}
+          to="/tickets"
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mb: 3, textDecoration: 'none', color: 'primary.main' }}
+        >
+          <ArrowBackIcon fontSize="small" />
+          <Typography variant="body2">{t('ticketing.detail.backToOverview')}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      {/* Back navigation */}
+      <Box
+        component={RouterLink}
+        to="/tickets"
+        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mb: 2, textDecoration: 'none', color: 'primary.main' }}
+      >
+        <ArrowBackIcon fontSize="small" />
+        <Typography variant="body2">{t('ticketing.detail.backToOverview')}</Typography>
+      </Box>
+
+      {/* Header with event name and action buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">{eventName}</Typography>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={loadTickets}
+          >
+            {t('ticketing.actions.refresh')}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<ExportIcon />}
+            onClick={handleExportToExcel}
+            disabled={filteredTickets.length === 0}
+          >
+            {t('ticketing.actions.exportToExcel')}
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Error alert (non-blocking, for refresh failures) */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Statistics Cards */}
+      <TicketingStatsCards tickets={tickets} />
+
+      {/* Filters — no event filter dropdown */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            {t('ticketing.filters.title')}
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>{t('ticketing.filters.eventActivity')}</InputLabel>
+              <Select
+                value={activityFilter}
+                label={t('ticketing.filters.eventActivity')}
+                onChange={(e: SelectChangeEvent) => setActivityFilter(e.target.value)}
+              >
+                <MenuItem value="">{t('ticketing.filters.allActivities')}</MenuItem>
+                {activityOptions.map(([id, name]) => (
+                  <MenuItem key={id} value={id}>{name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>{t('ticketing.filters.scanStatus')}</InputLabel>
+              <Select
+                multiple
+                value={scanStatusFilter}
+                label={t('ticketing.filters.scanStatus')}
+                onChange={(e: SelectChangeEvent<string[]>) => {
+                  const value = e.target.value;
+                  setScanStatusFilter(typeof value === 'string' ? value.split(',') : value);
+                }}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value === 'scanned' ? t('ticketing.scanStatus.scanned') : t('ticketing.scanStatus.notScanned')} size="small" />
+                    ))}
+                  </Box>
+                )}
+              >
+                <MenuItem value="scanned">{t('ticketing.scanStatus.scanned')}</MenuItem>
+                <MenuItem value="not_scanned">{t('ticketing.scanStatus.notScanned')}</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              size="small"
+              label={t('ticketing.filters.dateFrom')}
+              type="date"
+              value={dateRangeStart}
+              onChange={(e) => setDateRangeStart(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              fullWidth
+              size="small"
+              label={t('ticketing.filters.dateTo')}
+              type="date"
+              value={dateRangeEnd}
+              onChange={(e) => setDateRangeEnd(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              fullWidth
+              size="small"
+              placeholder={t('ticketing.searchPlaceholder')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Batch Operations */}
+      {selectedTickets.length > 0 && (
+        <Card sx={{ mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1">
+                {t('ticketing.batch.selectedTickets', { count: selectedTickets.length })}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => handleBatchOperation('mark_scanned')}
+                >
+                  {t('ticketing.batch.markScanned')}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="warning"
+                  onClick={() => handleBatchOperation('mark_not_scanned')}
+                >
+                  {t('ticketing.batch.markNotScanned')}
+                </Button>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tickets Table — no event name column */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedTickets.length === filteredTickets.length && filteredTickets.length > 0}
+                  indeterminate={selectedTickets.length > 0 && selectedTickets.length < filteredTickets.length}
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
+              <TableCell>{t('ticketing.table.ticketReference')}</TableCell>
+              <TableCell>{t('ticketing.table.eventActivity')}</TableCell>
+              <TableCell>{t('ticketing.table.customerName')}</TableCell>
+              <TableCell>{t('ticketing.table.customerEmail')}</TableCell>
+              <TableCell>{t('ticketing.table.issueDate')}</TableCell>
+              <TableCell>{t('ticketing.table.scanStatus')}</TableCell>
+              <TableCell>{t('ticketing.table.scanDate')}</TableCell>
+              <TableCell>{t('ticketing.table.actions')}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredTickets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center">
+                  {t('ticketing.noTicketsFound')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredTickets.map((ticket) => (
+                <TableRow key={ticket.id} hover>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedTickets.includes(ticket.id)}
+                      onChange={() => handleSelectTicket(ticket.id)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight="medium">
+                      {ticket.ticketReference}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{ticket.ticketData?.activityName || t('ticketing.details.notAvailable')}</TableCell>
+                  <TableCell>{ticket.customerName}</TableCell>
+                  <TableCell>{ticket.customerEmail}</TableCell>
+                  <TableCell>{formatDateTime(new Date(ticket.issueDate), i18n.language)}</TableCell>
+                  <TableCell>
+                    <Chip
+                      icon={getScanStatusIcon(ticket.scanStatus)}
+                      label={ticket.scanStatus === 'scanned' ? t('ticketing.scanStatus.scanned') : t('ticketing.scanStatus.notScanned')}
+                      color={getScanStatusColor(ticket.scanStatus)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {ticket.scanDate ? formatDateTime(new Date(ticket.scanDate), i18n.language) : '-'}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleViewTicket(ticket)}
+                      title={t('ticketing.tooltips.viewTicketDetails')}
+                    >
+                      <ViewIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Dialogs */}
+      {selectedTicket && (
+        <TicketDetailsDialog
+          open={ticketDetailsOpen}
+          ticket={selectedTicket}
+          onClose={() => {
+            setTicketDetailsOpen(false);
+            setSelectedTicket(null);
+          }}
+          onUpdate={loadTickets}
+        />
+      )}
+
+      <BatchTicketOperationsDialog
+        open={batchDialogOpen}
+        ticketIds={selectedTickets}
+        operation={batchOperation}
+        onClose={() => {
+          setBatchDialogOpen(false);
+          setSelectedTickets([]);
+        }}
+        onComplete={() => {
+          loadTickets();
+          setSelectedTickets([]);
+        }}
+      />
+    </Box>
+  );
+};
+
+export default EventTicketingDetailPage;

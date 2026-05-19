@@ -7,13 +7,15 @@
  * Requirements: 2.1, 2.2, 2.3, 2.5, 5.2, 6.1, 6.5, 7.3
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
+  FormControlLabel,
+  Checkbox,
   Box,
 } from '@mui/material';
 import { useTranslation } from '../hooks/useTranslation';
@@ -25,8 +27,8 @@ interface ModuleIntroductionDialogProps {
   open: boolean;
   /** The module identifier for which to show the introduction */
   moduleId: ModuleId;
-  /** Callback when dialog is closed */
-  onClose: () => void;
+  /** Callback when dialog is closed, receives whether user chose "don't show again" */
+  onClose: (dontShowAgain: boolean) => void;
 }
 
 /**
@@ -43,11 +45,17 @@ const ModuleIntroductionDialogComponent: React.FC<ModuleIntroductionDialogProps>
   onClose 
 }) => {
   const { t } = useTranslation('onboarding');
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  const handleClose = () => {
+    onClose(dontShowAgain);
+    setDontShowAgain(false);
+  };
 
   return (
     <Dialog 
       open={open} 
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="md" 
       fullWidth
       aria-labelledby="module-intro-dialog-title"
@@ -90,10 +98,24 @@ const ModuleIntroductionDialogComponent: React.FC<ModuleIntroductionDialogProps>
         </Box>
       </DialogContent>
       
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} variant="contained" color="primary">
-          {t('actions.gotIt')}
-        </Button>
+      <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', alignItems: 'stretch', gap: 1 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              inputProps={{
+                'aria-label': t('welcome.dontShowAgain'),
+              }}
+            />
+          }
+          label={t('welcome.dontShowAgain')}
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button onClick={handleClose} variant="contained" color="primary">
+            {t('actions.gotIt')}
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   );

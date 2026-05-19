@@ -46,7 +46,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatCurrency, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import type { MerchandiseType, StockLevel } from '../types/merchandise.types';
 
@@ -55,6 +55,15 @@ const MerchandiseTypesListPage: React.FC = () => {
   const { execute } = useApi();
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
+  const { setCurrentModule, checkModuleVisit } = useOnboarding();
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  useEffect(() => {
+    setCurrentModule('merchandise');
+    checkModuleVisit('merchandise');
+  }, [setCurrentModule, checkModuleVisit]);
   
   const [merchandiseTypes, setMerchandiseTypes] = useState<MerchandiseType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<MerchandiseType[]>([]);

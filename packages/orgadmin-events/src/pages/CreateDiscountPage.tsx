@@ -5,7 +5,7 @@
  * Steps: Basic Information -> Discount Configuration -> Eligibility Criteria -> Validity & Limits -> Review & Confirm
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -44,6 +44,8 @@ import {
 } from '@mui/icons-material';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
+import CollapsibleSection from '../components/CollapsibleSection';
+import StickySaveBar from '../components/StickySaveBar';
 import type { CreateDiscountDto, DiscountStatus, ApplicationScope } from '../../../backend/src/types/discount.types';
 
 interface DiscountFormData {
@@ -104,6 +106,28 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Edit mode: collapsible section state
+  const editSections = [
+    { id: 'basic-info', title: 'Basic Information' },
+    { id: 'discount-config', title: 'Discount Configuration' },
+    { id: 'eligibility', title: 'Eligibility Criteria' },
+    { id: 'validity-limits', title: 'Validity & Limits' },
+  ];
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() =>
+    editSections.reduce(
+      (acc, section) => ({ ...acc, [section.id]: true }),
+      {} as Record<string, boolean>,
+    ),
+  );
+
+  const handleToggleSection = useCallback((sectionId: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
+  }, []);
 
   // Derive currency symbol from organisation currency code
   const currencySymbol = React.useMemo(() => {
@@ -437,33 +461,44 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   };
 
   const renderStepContent = (step: number) => {
-    switch (step) {
-      case 0:
-        return renderBasicInformation();
-      case 1:
-        return renderDiscountConfiguration();
-      case 2:
-        return renderEligibilityCriteria();
-      case 3:
-        return renderValidityAndLimits();
-      case 4:
-        return renderReviewConfirm();
-      default:
-        return null;
-    }
+    const content = (() => {
+      switch (step) {
+        case 0:
+          return renderBasicInformation();
+        case 1:
+          return renderDiscountConfiguration();
+        case 2:
+          return renderEligibilityCriteria();
+        case 3:
+          return renderValidityAndLimits();
+        case 4:
+          return renderReviewConfirm();
+        default:
+          return null;
+      }
+    })();
+
+    // Review step already has its own Card; other steps need one
+    if (step === 4 || content === null) return content;
+    return (
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            {steps[step]}
+          </Typography>
+          {content}
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderBasicInformation = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Basic Information
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          Enter the basic details for your discount
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Enter the basic details for your discount
+      </Typography>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -527,21 +562,16 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
             </FormControl>
           </Grid>
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
 
   const renderDiscountConfiguration = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Discount Configuration
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          Configure the discount type, value, and how it should be applied
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Configure the discount type, value, and how it should be applied
+      </Typography>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           {/* Discount Type */}
           <Grid item xs={12}>
             <FormControl component="fieldset" error={!!fieldErrors.discountType}>
@@ -744,21 +774,16 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
             </>
           )}
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
 
   const renderEligibilityCriteria = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Eligibility Criteria
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          Set eligibility requirements for this discount
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Set eligibility requirements for this discount
+      </Typography>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           {/* Requires Code Entry */}
           <Grid item xs={12}>
             <FormControlLabel
@@ -907,19 +932,14 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
             />
           </Grid>
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
 
   const renderValidityAndLimits = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Validity & Limits
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          Set validity period and usage limits for this discount
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        Set validity period and usage limits for this discount
+      </Typography>
 
         <Grid container spacing={3}>
           {/* Validity Period */}
@@ -1130,8 +1150,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
             />
           </Grid>
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('en-US', {
@@ -1341,6 +1360,74 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
         </CardContent>
       </Card>
     );
+
+  if (isEditMode) {
+    // Edit mode: collapsible sections layout (like EditEventPage)
+    return (
+      <Box sx={{ p: 3, pb: 10 }}>
+        <Typography variant="h4" gutterBottom>
+          Edit Discount
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        <Box sx={{ mb: 3 }}>
+          <CollapsibleSection
+            id="basic-info"
+            title="Basic Information"
+            expanded={expandedSections['basic-info'] ?? true}
+            onToggle={() => handleToggleSection('basic-info')}
+          >
+            {renderBasicInformation()}
+          </CollapsibleSection>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <CollapsibleSection
+            id="discount-config"
+            title="Discount Configuration"
+            expanded={expandedSections['discount-config'] ?? true}
+            onToggle={() => handleToggleSection('discount-config')}
+          >
+            {renderDiscountConfiguration()}
+          </CollapsibleSection>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <CollapsibleSection
+            id="eligibility"
+            title="Eligibility Criteria"
+            expanded={expandedSections['eligibility'] ?? true}
+            onToggle={() => handleToggleSection('eligibility')}
+          >
+            {renderEligibilityCriteria()}
+          </CollapsibleSection>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <CollapsibleSection
+            id="validity-limits"
+            title="Validity & Limits"
+            expanded={expandedSections['validity-limits'] ?? true}
+            onToggle={() => handleToggleSection('validity-limits')}
+          >
+            {renderValidityAndLimits()}
+          </CollapsibleSection>
+        </Box>
+
+        <StickySaveBar
+          onCancel={handleCancel}
+          onSaveDraft={() => handleSave()}
+          onPublish={() => handleSave()}
+          loading={loading}
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>

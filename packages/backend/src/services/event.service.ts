@@ -268,6 +268,19 @@ export class EventService {
       const activities = await eventActivityService.getActivitiesByEvent(id);
       event.activities = activities;
 
+      // Load ticketing configuration if it exists
+      const { ticketingService } = await import('./ticketing.service');
+      const ticketingConfig = await ticketingService.getTicketingConfigByEvent(id);
+      if (ticketingConfig) {
+        event.generateElectronicTickets = ticketingConfig.generateElectronicTickets;
+        event.ticketHeaderText = ticketingConfig.ticketHeaderText;
+        event.ticketInstructions = ticketingConfig.ticketInstructions;
+        event.ticketFooterText = ticketingConfig.ticketFooterText;
+        event.ticketValidityPeriod = ticketingConfig.ticketValidityPeriod;
+        event.includeEventLogo = ticketingConfig.includeEventLogo;
+        event.ticketBackgroundColor = ticketingConfig.ticketBackgroundColor;
+      }
+
       return event;
     } catch (error) {
       logger.error('Error getting event by ID:', error);
@@ -477,6 +490,40 @@ export class EventService {
         // Load existing activities
         const { eventActivityService } = await import('./event-activity.service');
         event.activities = await eventActivityService.getActivitiesByEvent(id);
+      }
+
+      // Persist ticketing configuration if any ticketing field is present
+      const hasTicketingFields =
+        data.generateElectronicTickets !== undefined ||
+        data.ticketHeaderText !== undefined ||
+        data.ticketInstructions !== undefined ||
+        data.ticketFooterText !== undefined ||
+        data.ticketValidityPeriod !== undefined ||
+        data.includeEventLogo !== undefined ||
+        data.ticketBackgroundColor !== undefined;
+
+      if (hasTicketingFields) {
+        const { ticketingService } = await import('./ticketing.service');
+        const existingConfig = await ticketingService.getTicketingConfigByEvent(id);
+
+        const ticketingFields: Record<string, any> = {};
+        if (data.generateElectronicTickets !== undefined) ticketingFields.generateElectronicTickets = data.generateElectronicTickets;
+        if (data.ticketHeaderText !== undefined) ticketingFields.ticketHeaderText = data.ticketHeaderText;
+        if (data.ticketInstructions !== undefined) ticketingFields.ticketInstructions = data.ticketInstructions;
+        if (data.ticketFooterText !== undefined) ticketingFields.ticketFooterText = data.ticketFooterText;
+        if (data.ticketValidityPeriod !== undefined) ticketingFields.ticketValidityPeriod = data.ticketValidityPeriod;
+        if (data.includeEventLogo !== undefined) ticketingFields.includeEventLogo = data.includeEventLogo;
+        if (data.ticketBackgroundColor !== undefined) ticketingFields.ticketBackgroundColor = data.ticketBackgroundColor;
+
+        if (!existingConfig) {
+          await ticketingService.createTicketedEvent({
+            eventId: id,
+            generateElectronicTickets: data.generateElectronicTickets ?? false,
+            ...ticketingFields,
+          });
+        } else {
+          await ticketingService.updateTicketedEvent(id, ticketingFields);
+        }
       }
 
       logger.info(`Event updated: ${id}`);

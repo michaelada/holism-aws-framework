@@ -174,6 +174,12 @@ export function useEventForm(): UseEventFormReturn {
 
         const eventData: EventFormData = {
           ...response,
+          // Ensure string fields are never null (MUI TextFields require '' not null)
+          name: response.name || '',
+          description: response.description || '',
+          eventOwner: response.eventOwner || '',
+          emailNotifications: response.emailNotifications || '',
+          confirmationMessage: response.confirmationMessage || '',
           startDate: response.startDate ? new Date(response.startDate) : new Date(),
           endDate: response.endDate ? new Date(response.endDate) : new Date(),
           openDateEntries: response.openDateEntries
@@ -184,6 +190,11 @@ export function useEventForm(): UseEventFormReturn {
             : new Date(),
           activities: Array.isArray(response.activities) ? response.activities : [],
           discountIds: response.discountIds || [],
+          // Ticketing fields — ensure not null
+          ticketHeaderText: response.ticketHeaderText || '',
+          ticketInstructions: response.ticketInstructions || '',
+          ticketFooterText: response.ticketFooterText || '',
+          ticketBackgroundColor: response.ticketBackgroundColor || '#ffffff',
         };
 
         setFormData(eventData);

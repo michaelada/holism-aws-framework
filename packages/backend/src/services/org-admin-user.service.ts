@@ -1,6 +1,12 @@
+import crypto from 'crypto';
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { KeycloakAdminService } from './keycloak-admin.service';
+import { sendAdminInviteEmail } from './email.service';
+
+function generateTemporaryPassword(): string {
+  return crypto.randomBytes(12).toString('base64url');
+}
 
 /**
  * Data Transfer Objects for Org Admin User operations
@@ -28,6 +34,7 @@ export interface OrgAdminUser {
   lastName: string;
   status: 'active' | 'inactive';
   roles: string[];
+  roleIds: string[];
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -70,7 +77,8 @@ export class OrgAdminUserService {
       firstName: row.first_name,
       lastName: row.last_name,
       status: row.status,
-      roles: rolesResult.rows.map((r: any) => r.id),
+      roles: rolesResult.rows.map((r: any) => r.name),
+      roleIds: rolesResult.rows.map((r: any) => r.id),
       lastLogin: row.last_login,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -139,7 +147,7 @@ export class OrgAdminUserService {
     try {
       // Verify organization exists and get Keycloak group ID
       const orgResult = await db.query(
-        'SELECT id, keycloak_group_id FROM organizations WHERE id = $1',
+        'SELECT id, display_name, keycloak_group_id FROM organizations WHERE id = $1',
         [organizationId]
       );
 
@@ -148,6 +156,7 @@ export class OrgAdminUserService {
       }
 
       const keycloakGroupId = orgResult.rows[0].keycloak_group_id;
+      const organizationName = orgResult.rows[0].display_name || 'the organization';
 
       // Check if user already exists in this organization
       const existingResult = await db.query(
@@ -156,7 +165,7 @@ export class OrgAdminUserService {
       );
 
       if (existingResult.rows.length > 0) {
-        throw new Error('User with this email already exists in organization');
+        throw Object.assign(new Error('User with this email already exists in organization'), { statusCode: 409 });
       }
 
       // Create user in Keycloak
@@ -168,6 +177,9 @@ export class OrgAdminUserService {
         organizationId 
       });
 
+      // Generate a temporary password if not provided
+      const temporaryPassword = data.temporaryPassword || generateTemporaryPassword();
+
       const kcUser = await client.users.create({
         email: data.email,
         firstName: data.firstName,
@@ -175,11 +187,11 @@ export class OrgAdminUserService {
         enabled: true,
         emailVerified: false,
         username: data.email,
-        credentials: data.temporaryPassword ? [{
+        credentials: [{
           type: 'password',
-          value: data.temporaryPassword,
+          value: temporaryPassword,
           temporary: true
-        }] : undefined
+        }]
       });
 
       if (!kcUser.id) {
@@ -255,8 +267,28 @@ export class OrgAdminUserService {
           'SELECT * FROM organization_users WHERE id = $1',
           [user.id]
         );
-        return await this.rowToOrgAdminUser(updatedResult.rows[0]);
+        const updatedUser = await this.rowToOrgAdminUser(updatedResult.rows[0]);
+
+        // Send invitation email (non-blocking)
+        sendAdminInviteEmail({
+          toEmail: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          organizationName,
+          temporaryPassword,
+        });
+
+        return updatedUser;
       }
+
+      // Send invitation email (non-blocking)
+      sendAdminInviteEmail({
+        toEmail: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        organizationName,
+        temporaryPassword,
+      });
 
       logger.info('Admin user created successfully', { 
         id: user.id,
@@ -437,6 +469,54 @@ export class OrgAdminUserService {
   }
 
   /**
+   * Sync roles for admin user (replace all existing roles with new set)
+   */
+  async syncRoles(
+    userId: string,
+    roleIds: string[],
+    assignedBy?: string
+  ): Promise<void> {
+    try {
+      logger.debug('Syncing roles for admin user', { userId, roleIds });
+
+      // Verify user exists and is an admin
+      const userResult = await db.query(
+        'SELECT id FROM organization_users WHERE id = $1 AND user_type = $2',
+        [userId, 'org-admin']
+      );
+
+      if (userResult.rows.length === 0) {
+        throw new Error('Admin user not found');
+      }
+
+      // Remove all existing role assignments
+      await db.query(
+        'DELETE FROM organization_user_roles WHERE organization_user_id = $1',
+        [userId]
+      );
+
+      // Assign new roles
+      for (const roleId of roleIds) {
+        await db.query(
+          `INSERT INTO organization_user_roles 
+           (organization_user_id, organization_admin_role_id, assigned_by)
+           VALUES ($1, $2, $3)`,
+          [userId, roleId, assignedBy]
+        );
+      }
+
+      logger.info('Roles synced successfully', { userId, roleIds });
+    } catch (error) {
+      logger.error('Failed to sync roles', { 
+        userId,
+        roleIds,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Assign roles to admin user
    * 
    * Assigns organization-specific roles to the admin user.
@@ -520,6 +600,72 @@ export class OrgAdminUserService {
         userId,
         roleId,
         error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Resend invitation to an admin user who hasn't activated their account.
+   * Generates a new temporary password and sends a reminder email.
+   */
+  async resendInvite(userId: string): Promise<void> {
+    try {
+      logger.info('Resending invite for admin user', { userId });
+
+      // Get user and organization details
+      const result = await db.query(
+        `SELECT ou.*, o.display_name as organization_name
+         FROM organization_users ou
+         JOIN organizations o ON o.id = ou.organization_id
+         WHERE ou.id = $1 AND ou.user_type = 'org-admin'`,
+        [userId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Admin user not found');
+      }
+
+      const row = result.rows[0];
+
+      // Check if user has already logged in
+      if (row.last_login) {
+        throw Object.assign(
+          new Error('User has already activated their account'),
+          { statusCode: 400 }
+        );
+      }
+
+      // Generate new temporary password
+      const temporaryPassword = generateTemporaryPassword();
+
+      // Reset password in Keycloak with temporary flag
+      await this.kcAdmin.ensureAuthenticated();
+      const client = this.kcAdmin.getClient();
+
+      await client.users.resetPassword({
+        id: row.keycloak_user_id,
+        credential: {
+          type: 'password',
+          value: temporaryPassword,
+          temporary: true,
+        },
+      });
+
+      // Send reminder email
+      const { sendResendInviteEmail } = await import('./email.service');
+      await sendResendInviteEmail({
+        toEmail: row.email,
+        firstName: row.first_name,
+        organizationName: row.organization_name || 'the organization',
+        temporaryPassword,
+      });
+
+      logger.info('Invite resent successfully', { userId });
+    } catch (error) {
+      logger.error('Failed to resend invite', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }

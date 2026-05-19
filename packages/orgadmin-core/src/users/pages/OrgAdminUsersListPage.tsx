@@ -32,7 +32,8 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useOrganisation } from '../../context/OrganisationContext';
+import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
 
 interface OrgAdminUser {
   id: string;
@@ -48,6 +49,13 @@ interface OrgAdminUser {
 const OrgAdminUsersListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
+  const { setCurrentModule, checkModuleVisit } = useOnboarding();
+
+  useEffect(() => {
+    setCurrentModule('users');
+    checkModuleVisit('users');
+  }, [setCurrentModule, checkModuleVisit]);
   
   const [users, setUsers] = useState<OrgAdminUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<OrgAdminUser[]>([]);
@@ -60,20 +68,22 @@ const OrgAdminUsersListPage: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organisation?.id]);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm]);
 
   const loadUsers = async () => {
+    if (!organisation?.id) return;
     try {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/users/admins',
+        url: `/api/orgadmin/users/admins/${organisation.id}`,
       });
-      setUsers(response || []);
+      setUsers(response?.data || []);
     } catch (error) {
       console.error('Failed to load admin users:', error);
       setUsers([]);
@@ -102,7 +112,7 @@ const OrgAdminUsersListPage: React.FC = () => {
   };
 
   const handleEditUser = (userId: string) => {
-    navigate(`/orgadmin/users/admins/${userId}`);
+    navigate(`/users/admins/${userId}`);
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {

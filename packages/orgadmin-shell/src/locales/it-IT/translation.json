@@ -1127,6 +1127,64 @@
       "loadScanHistoryFailed": "Caricamento cronologia scansioni fallito",
       "generateQRCodeFailed": "Generazione codice QR fallita",
       "batchOperationFailed": "Operazione fallita"
+    },
+    "overview": {
+      "title": "Eventi con biglietteria",
+      "noTicketedEvents": "Nessun evento ha la biglietteria attivata",
+      "columns": {
+        "eventName": "Nome evento",
+        "eventDate": "Data evento",
+        "totalTickets": "Biglietti totali",
+        "scanned": "Scansionati",
+        "notScanned": "Non scansionati",
+        "scanPercentage": "% scansione",
+        "actions": "Azioni"
+      },
+      "tooltips": {
+        "editSettings": "Modifica impostazioni biglietteria",
+        "viewTickets": "Visualizza biglietti"
+      }
+    },
+    "detail": {
+      "backToOverview": "Torna alla panoramica"
+    },
+    "settings": {
+      "title": "Impostazioni biglietteria",
+      "description": "Configura le opzioni di biglietteria elettronica per questo evento.",
+      "backToOverview": "Torna alla panoramica",
+      "save": "Salva",
+      "saveSuccess": "Impostazioni biglietteria salvate con successo",
+      "saveError": "Salvataggio impostazioni biglietteria fallito",
+      "fields": {
+        "generateElectronicTickets": "Genera biglietti elettronici",
+        "ticketHeaderText": "Testo intestazione biglietto",
+        "ticketInstructions": "Istruzioni biglietto",
+        "ticketFooterText": "Testo piè di pagina biglietto",
+        "ticketValidityPeriod": "Periodo di validità del biglietto (ore)",
+        "ticketBackgroundColor": "Colore di sfondo del biglietto",
+        "includeEventLogo": "Includi logo evento"
+      },
+      "helpers": {
+        "ticketHeaderText": "Testo visualizzato nella parte superiore del biglietto",
+        "ticketInstructions": "Istruzioni per il titolare del biglietto",
+        "ticketFooterText": "Testo visualizzato nella parte inferiore del biglietto",
+        "ticketValidityPeriod": "Quante ore prima dell'evento il biglietto diventa valido",
+        "ticketBackgroundColor": "Colore di sfondo del biglietto",
+        "includeEventLogo": "Mostra il logo dell'evento sul biglietto"
+      },
+      "tooltips": {
+        "generateElectronicTickets": "Abilita la generazione automatica di biglietti elettronici con codici QR",
+        "ticketHeaderText": "Testo di intestazione personalizzato stampato su ogni biglietto",
+        "ticketInstructions": "Istruzioni mostrate ai partecipanti sul loro biglietto",
+        "ticketFooterText": "Testo di piè di pagina personalizzato stampato su ogni biglietto",
+        "ticketValidityPeriod": "Numero di ore prima dell'inizio dell'evento in cui i biglietti sono validi per la scansione",
+        "ticketBackgroundColor": "Scegli un colore di sfondo per il modello del biglietto",
+        "includeEventLogo": "Includi l'immagine del logo dell'evento sul biglietto generato"
+      }
+    },
+    "errors": {
+      "invalidEvent": "Evento non trovato o biglietteria non attivata",
+      "loadFailed": "Caricamento dati biglietteria fallito"
     }
   },
   "forms": {

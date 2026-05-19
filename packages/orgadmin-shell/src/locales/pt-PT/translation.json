@@ -1127,6 +1127,64 @@
       "loadScanHistoryFailed": "Falha ao carregar histórico de digitalizações",
       "generateQRCodeFailed": "Falha ao gerar código QR",
       "batchOperationFailed": "Falha na operação"
+    },
+    "overview": {
+      "title": "Eventos com bilheteira",
+      "noTicketedEvents": "Nenhum evento tem a bilheteira ativada",
+      "columns": {
+        "eventName": "Nome do evento",
+        "eventDate": "Data do evento",
+        "totalTickets": "Total de bilhetes",
+        "scanned": "Digitalizados",
+        "notScanned": "Não digitalizados",
+        "scanPercentage": "% digitalização",
+        "actions": "Ações"
+      },
+      "tooltips": {
+        "editSettings": "Editar definições de bilheteira",
+        "viewTickets": "Ver bilhetes"
+      }
+    },
+    "detail": {
+      "backToOverview": "Voltar à visão geral"
+    },
+    "settings": {
+      "title": "Definições de bilheteira",
+      "description": "Configure as opções de bilheteira eletrónica para este evento.",
+      "backToOverview": "Voltar à visão geral",
+      "save": "Guardar",
+      "saveSuccess": "Definições de bilheteira guardadas com sucesso",
+      "saveError": "Falha ao guardar definições de bilheteira",
+      "fields": {
+        "generateElectronicTickets": "Gerar bilhetes eletrónicos",
+        "ticketHeaderText": "Texto de cabeçalho do bilhete",
+        "ticketInstructions": "Instruções do bilhete",
+        "ticketFooterText": "Texto de rodapé do bilhete",
+        "ticketValidityPeriod": "Período de validade do bilhete (horas)",
+        "ticketBackgroundColor": "Cor de fundo do bilhete",
+        "includeEventLogo": "Incluir logótipo do evento"
+      },
+      "helpers": {
+        "ticketHeaderText": "Texto apresentado no topo do bilhete",
+        "ticketInstructions": "Instruções para o titular do bilhete",
+        "ticketFooterText": "Texto apresentado na parte inferior do bilhete",
+        "ticketValidityPeriod": "Quantas horas antes do evento o bilhete se torna válido",
+        "ticketBackgroundColor": "Cor de fundo do bilhete",
+        "includeEventLogo": "Mostrar o logótipo do evento no bilhete"
+      },
+      "tooltips": {
+        "generateElectronicTickets": "Ativar a geração automática de bilhetes eletrónicos com códigos QR",
+        "ticketHeaderText": "Texto de cabeçalho personalizado impresso em cada bilhete",
+        "ticketInstructions": "Instruções apresentadas aos participantes no seu bilhete",
+        "ticketFooterText": "Texto de rodapé personalizado impresso em cada bilhete",
+        "ticketValidityPeriod": "Número de horas antes do início do evento em que os bilhetes são válidos para digitalização",
+        "ticketBackgroundColor": "Escolha uma cor de fundo para o modelo de bilhete",
+        "includeEventLogo": "Incluir a imagem do logótipo do evento no bilhete gerado"
+      }
+    },
+    "errors": {
+      "invalidEvent": "Evento não encontrado ou bilheteira não ativada",
+      "loadFailed": "Falha ao carregar dados de bilheteira"
     }
   },
   "forms": {

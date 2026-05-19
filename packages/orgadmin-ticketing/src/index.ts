@@ -41,8 +41,16 @@ export const ticketingModule: ModuleRegistration = {
   },
   routes: [
     {
-      path: '/tickets',
-      component: lazy(() => import('./pages/TicketingDashboardPage')),
+      path: 'tickets',
+      component: lazy(() => import('./pages/TicketedEventsOverviewPage')),
+    },
+    {
+      path: 'tickets/:eventId',
+      component: lazy(() => import('./pages/EventTicketingDetailPage')),
+    },
+    {
+      path: 'tickets/:eventId/settings',
+      component: lazy(() => import('./pages/EditTicketingSettingsPage')),
     },
   ],
   menuItem: {
@@ -53,6 +61,11 @@ export const ticketingModule: ModuleRegistration = {
 };
 
 // Export pages for direct use if needed
+export { default as TicketedEventsOverviewPage } from './pages/TicketedEventsOverviewPage';
+export { default as EventTicketingDetailPage } from './pages/EventTicketingDetailPage';
+export { default as EditTicketingSettingsPage } from './pages/EditTicketingSettingsPage';
+
+/** @deprecated Use TicketedEventsOverviewPage and EventTicketingDetailPage instead */
 export { default as TicketingDashboardPage } from './pages/TicketingDashboardPage';
 
 // Export components

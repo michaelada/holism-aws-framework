@@ -78,18 +78,24 @@ export function useSectionObserver(): UseSectionObserverReturn {
     const observer = observerRef.current;
 
     if (element) {
+      // Only register if this is a new element or a different element
+      const existing = sectionRefs.current.get(id);
+      if (existing === element) return; // Same element, skip
+      
+      if (existing) {
+        observer?.unobserve(existing);
+      }
       sectionRefs.current.set(id, element);
       observer?.observe(element);
     } else {
       const existing = sectionRefs.current.get(id);
       if (existing) {
         observer?.unobserve(existing);
+        sectionRefs.current.delete(id);
+        ratiosRef.current.delete(id);
       }
-      sectionRefs.current.delete(id);
-      ratiosRef.current.delete(id);
-      updateActiveSection();
     }
-  }, [updateActiveSection]);
+  }, []);
 
   return { activeSectionId, sectionRefs, registerSection };
 }

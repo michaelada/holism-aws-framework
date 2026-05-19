@@ -44,7 +44,7 @@ import {
   FilterList as FilterIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
 import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
 import type { Registration, RegistrationFilter, RegistrationType } from '../types/registration.types';
@@ -57,6 +57,15 @@ const RegistrationsDatabasePage: React.FC = () => {
   const { execute } = useApi();
   const { t, i18n } = useTranslation();
   const { organisation } = useOrganisation();
+  const { setCurrentModule, checkModuleVisit } = useOnboarding();
+
+  // Register page for contextual help
+  usePageHelp('list');
+
+  React.useEffect(() => {
+    setCurrentModule('registrations');
+    checkModuleVisit('registrations');
+  }, [setCurrentModule, checkModuleVisit]);
 
   // Core data state
   const [registrations, setRegistrations] = useState<Registration[]>([]);

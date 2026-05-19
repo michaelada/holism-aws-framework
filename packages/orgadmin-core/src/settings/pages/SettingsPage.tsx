@@ -23,6 +23,7 @@ import {
   Email as EmailIcon,
   Palette as BrandingIcon,
 } from '@mui/icons-material';
+import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import OrganisationDetailsTab from '../components/OrganisationDetailsTab';
 import PaymentSettingsTab from '../components/PaymentSettingsTab';
 import EmailTemplatesTab from '../components/EmailTemplatesTab';
@@ -49,6 +50,15 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 
 const SettingsPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
+  const { setCurrentModule, checkModuleVisit } = useOnboarding();
+
+  // Register page for contextual help
+  usePageHelp('overview');
+
+  React.useEffect(() => {
+    setCurrentModule('settings');
+    checkModuleVisit('settings');
+  }, [setCurrentModule, checkModuleVisit]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);

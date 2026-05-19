@@ -37,7 +37,7 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
 import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { MembershipType } from '../types/membership.types';
 
@@ -45,6 +45,12 @@ const MembershipTypesListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { setCurrentModule, checkModuleVisit } = useOnboarding();
+
+  useEffect(() => {
+    setCurrentModule('memberships');
+    checkModuleVisit('memberships');
+  }, [setCurrentModule, checkModuleVisit]);
   
   const [membershipTypes, setMembershipTypes] = useState<MembershipType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<MembershipType[]>([]);

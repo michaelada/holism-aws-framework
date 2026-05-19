@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext, ReactNode } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useRef, ReactNode } from 'react';
 import axios from 'axios';
 import { 
   OnboardingContext, 
@@ -10,6 +10,7 @@ import {
 import { AuthTokenContext } from '@aws-web-framework/orgadmin-core';
 import { WelcomeDialog } from '../components/WelcomeDialog';
 import { HelpDrawer } from '../components/HelpDrawer';
+import { ModuleIntroductionDialog } from '../components/ModuleIntroductionDialog';
 
 interface OnboardingProviderProps {
   children: ReactNode;
@@ -30,9 +31,16 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const [loading, setLoading] = useState(true);
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
   const [moduleIntroDialogOpen, setModuleIntroDialogOpen] = useState(false);
+  const moduleIntroDialogOpenRef = useRef(false);
   const [currentModule, setCurrentModule] = useState<ModuleId | null>(null);
   const [helpDrawerOpen, setHelpDrawerOpen] = useState(false);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+  
+  // Refs for checkModuleVisit to always read current values
+  // This prevents stale closures when the callback is used in useEffect deps
+  const loadingRef = useRef(true);
+  const welcomeDialogOpenRef = useRef(false);
+  const preferencesRef = useRef<OnboardingPreferences>(DEFAULT_PREFERENCES);
   
   // Cache state to prevent repeated API calls
   // Requirements: Performance - 21.3
@@ -42,8 +50,17 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   // Prevents dialog from re-appearing after temporary dismissal
   const [welcomeShownThisSession, setWelcomeShownThisSession] = useState(false);
 
+  // Track which modules have shown their intro dialog this session
+  // Resets on full page reload (new login session) but persists across SPA navigation
+  const modulesShownThisSessionRef = useRef<Set<ModuleId>>(new Set());
+
   // Get auth token from context
   const getToken = useContext(AuthTokenContext);
+
+  // Sync refs during render (not in effects) so checkModuleVisit always reads current values
+  loadingRef.current = loading;
+  welcomeDialogOpenRef.current = welcomeDialogOpen;
+  preferencesRef.current = preferences;
 
   /**
    * Load user preferences from backend on mount
@@ -185,12 +202,17 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
 
   /**
    * Dismiss a module introduction dialog
-   * Optimistically updates cache and persists to backend
+   * Only persists to modulesVisited when user checks "Don't show again"
    * Requirements: 2.3, 4.1, Performance - 21.3
    */
-  const dismissModuleIntro = useCallback(async (moduleId: ModuleId) => {
+  const dismissModuleIntro = useCallback(async (moduleId: ModuleId, dontShowAgain: boolean) => {
+    moduleIntroDialogOpenRef.current = false;
     setModuleIntroDialogOpen(false);
-    setCurrentModule(null);
+
+    // Only persist if user explicitly opted out
+    if (!dontShowAgain) {
+      return;
+    }
 
     if (!getToken) {
       console.warn('No auth token available, cannot save preference');
@@ -252,24 +274,32 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
    * Requirements: 2.1, 2.4, 6.3
    */
   const checkModuleVisit = useCallback((moduleId: ModuleId) => {
+    // Always set current module for help context
+    setCurrentModule(moduleId);
+
     // Don't show module intro if:
     // - Still loading preferences (wait for backend data)
     // - Welcome dialog is currently open (priority - welcome must be dismissed first)
-    // - Module already visited (user has seen this intro before)
+    // - Module permanently dismissed via "Don't show again"
+    // - Module already shown this session (once per login session)
     // - Another module intro is already open (only one dialog at a time)
     if (
-      loading ||
-      welcomeDialogOpen ||
-      preferences.modulesVisited.includes(moduleId) ||
-      moduleIntroDialogOpen
+      loadingRef.current ||
+      welcomeDialogOpenRef.current ||
+      preferencesRef.current.modulesVisited.includes(moduleId) ||
+      modulesShownThisSessionRef.current.has(moduleId) ||
+      moduleIntroDialogOpenRef.current
     ) {
       return;
     }
 
+    // Mark as shown this session so it won't show again until next login
+    modulesShownThisSessionRef.current.add(moduleId);
+
     // Show module introduction
-    setCurrentModule(moduleId);
+    moduleIntroDialogOpenRef.current = true;
     setModuleIntroDialogOpen(true);
-  }, [loading, welcomeDialogOpen, preferences.modulesVisited, moduleIntroDialogOpen]);
+  }, []);
 
   /**
    * Toggle the help drawer open/closed
@@ -345,6 +375,13 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
         open={welcomeDialogOpen} 
         onClose={dismissWelcomeDialog} 
       />
+      {moduleIntroDialogOpen && currentModule && (
+        <ModuleIntroductionDialog
+          open={moduleIntroDialogOpen}
+          moduleId={currentModule}
+          onClose={(dontShowAgain) => dismissModuleIntro(currentModule, dontShowAgain)}
+        />
+      )}
       {/* Only render HelpDrawer when we have module and page context */}
       {helpDrawerOpen && currentModule && currentPageId && (
         <HelpDrawer
@@ -354,8 +391,17 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
           pageId={currentPageId}
         />
       )}
-      {/* Render HelpDrawer with dashboard defaults when no specific context */}
-      {helpDrawerOpen && (!currentModule || !currentPageId) && (
+      {/* Render HelpDrawer with module overview when page context is missing */}
+      {helpDrawerOpen && currentModule && !currentPageId && (
+        <HelpDrawer
+          open={helpDrawerOpen}
+          onClose={toggleHelpDrawer}
+          moduleId={currentModule}
+          pageId="overview"
+        />
+      )}
+      {/* Render HelpDrawer with dashboard defaults when no module context */}
+      {helpDrawerOpen && !currentModule && (
         <HelpDrawer
           open={helpDrawerOpen}
           onClose={toggleHelpDrawer}

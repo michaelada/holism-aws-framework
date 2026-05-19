@@ -9,8 +9,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  CardContent,
   Checkbox,
   FormControlLabel,
   Grid,
@@ -69,16 +67,12 @@ const EventBasicInfoSection: React.FC<EventBasicInfoSectionProps> = ({
   }, [formData.venueId]);
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          {t('events.basicInfo.title')}
-        </Typography>
-        <Typography variant="body2" color="textSecondary" paragraph>
-          {t('events.basicInfo.description')}
-        </Typography>
+    <>
+      <Typography variant="body2" color="textSecondary" paragraph>
+        {t('events.basicInfo.description')}
+      </Typography>
 
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -343,8 +337,7 @@ const EventBasicInfoSection: React.FC<EventBasicInfoSectionProps> = ({
             </Grid>
           )}
         </Grid>
-      </CardContent>
-    </Card>
+    </>
   );
 };
 

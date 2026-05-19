@@ -18,6 +18,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModuleId } from '../context/OnboardingContext';
 import { LazyMarkdown } from './LazyMarkdown';
+import { getHelpContent } from '../locales/helpLoader';
 
 interface HelpDrawerProps {
   /** Whether the drawer is currently open */
@@ -51,44 +52,14 @@ const HelpDrawerComponent: React.FC<HelpDrawerProps> = ({
   const { t, i18n } = useTranslation('help');
   
   /**
-   * Resolve help content with fallback logic
-   * Tries multiple keys in order until content is found
+   * Resolve help content from markdown files with fallback logic
+   * Uses getHelpContent which handles locale and page/overview fallbacks
    */
   const helpContent = useMemo(() => {
     const currentLang = i18n.language;
     
-    // Try page-specific content in current language
-    const pageKey = `${moduleId}.${pageId}`;
-    const pageContent = t(pageKey, { defaultValue: '' });
-    
-    if (pageContent && pageContent !== pageKey) {
-      return pageContent;
-    }
-    
-    // Fall back to module overview in current language
-    const overviewKey = `${moduleId}.overview`;
-    const overviewContent = t(overviewKey, { defaultValue: '' });
-    
-    if (overviewContent && overviewContent !== overviewKey) {
-      return overviewContent;
-    }
-    
-    // Fall back to en-GB if current language is not en-GB
-    if (currentLang !== 'en-GB') {
-      // Try page-specific in en-GB
-      const pageContentEnGB = t(pageKey, { lng: 'en-GB', defaultValue: '' });
-      
-      if (pageContentEnGB && pageContentEnGB !== pageKey) {
-        return pageContentEnGB;
-      }
-      
-      // Fall back to module overview in en-GB
-      const overviewContentEnGB = t(overviewKey, { lng: 'en-GB', defaultValue: '' });
-      
-      if (overviewContentEnGB && overviewContentEnGB !== overviewKey) {
-        return overviewContentEnGB;
-      }
-    }
+    const content = getHelpContent(currentLang, moduleId, pageId);
+    if (content) return content;
     
     // If all else fails, show a helpful message
     return t('noContentAvailable', { 

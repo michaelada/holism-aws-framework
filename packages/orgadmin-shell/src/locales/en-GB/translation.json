@@ -1376,6 +1376,64 @@
       "loadScanHistoryFailed": "Failed to load scan history",
       "generateQRCodeFailed": "Failed to generate QR code",
       "batchOperationFailed": "Operation failed"
+    },
+    "overview": {
+      "title": "Ticketed Events",
+      "noTicketedEvents": "No events have ticketing activated",
+      "columns": {
+        "eventName": "Event Name",
+        "eventDate": "Event Date",
+        "totalTickets": "Total Tickets",
+        "scanned": "Scanned",
+        "notScanned": "Not Scanned",
+        "scanPercentage": "Scan %",
+        "actions": "Actions"
+      },
+      "tooltips": {
+        "editSettings": "Edit Ticketing Settings",
+        "viewTickets": "View Tickets"
+      }
+    },
+    "detail": {
+      "backToOverview": "Back to Overview"
+    },
+    "settings": {
+      "title": "Ticketing Settings",
+      "description": "Configure electronic ticketing options for this event.",
+      "backToOverview": "Back to Overview",
+      "save": "Save",
+      "saveSuccess": "Ticketing settings saved successfully",
+      "saveError": "Failed to save ticketing settings",
+      "fields": {
+        "generateElectronicTickets": "Generate Electronic Tickets",
+        "ticketHeaderText": "Ticket Header Text",
+        "ticketInstructions": "Ticket Instructions",
+        "ticketFooterText": "Ticket Footer Text",
+        "ticketValidityPeriod": "Ticket Validity Period (hours)",
+        "ticketBackgroundColor": "Ticket Background Color",
+        "includeEventLogo": "Include Event Logo"
+      },
+      "helpers": {
+        "ticketHeaderText": "Text displayed at the top of the ticket",
+        "ticketInstructions": "Instructions for the ticket holder",
+        "ticketFooterText": "Text displayed at the bottom of the ticket",
+        "ticketValidityPeriod": "How many hours before the event the ticket becomes valid",
+        "ticketBackgroundColor": "Background colour of the ticket",
+        "includeEventLogo": "Show the event logo on the ticket"
+      },
+      "tooltips": {
+        "generateElectronicTickets": "Enable automatic generation of electronic tickets with QR codes",
+        "ticketHeaderText": "Custom header text printed on each ticket",
+        "ticketInstructions": "Instructions shown to attendees on their ticket",
+        "ticketFooterText": "Custom footer text printed on each ticket",
+        "ticketValidityPeriod": "Number of hours before the event start that tickets become valid for scanning",
+        "ticketBackgroundColor": "Choose a background colour for the ticket template",
+        "includeEventLogo": "Include the event logo image on the generated ticket"
+      }
+    },
+    "errors": {
+      "invalidEvent": "Event not found or does not have ticketing activated",
+      "loadFailed": "Failed to load ticketing data"
     }
   },
   "forms": {

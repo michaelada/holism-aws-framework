@@ -35,6 +35,22 @@
     "payments": {
       "title": "Processamento de Pagamentos",
       "content": "# Módulo de Pagamentos\n\nAceite e gira pagamentos para membros, eventos e outros serviços.\n\n## Funcionalidades Principais\n\n- **Recolha de Pagamentos** - Aceite cartões de crédito, transferências bancárias e outros métodos de pagamento\n- **Histórico de Transações** - Visualize todas as transações de pagamento\n- **Faturação** - Gere e envie faturas\n- **Reembolsos** - Processe reembolsos quando necessário\n- **Relatórios** - Relatórios financeiros e reconciliação\n- **Segurança** - Processamento de pagamentos em conformidade com PCI\n\n## Integração\n\nOs pagamentos estão integrados em todo o OrgAdmin - recolha taxas durante a inscrição em eventos, adesão de membros e muito mais."
+    },
+    "merchandise": {
+      "title": "Merchandising",
+      "content": "# Módulo de Merchandising\n\nCrie e venda produtos através da loja online da sua organização.\n\n## Funcionalidades Principais\n\n- **Gestão de produtos** - Crie tipos de merchandising com imagens, descrições e preços\n- **Variantes e opções** - Defina tamanhos, cores e outras opções de produto\n- **Rastreamento de stock** - Monitorize níveis de inventário com alertas de stock baixo\n- **Gestão de encomendas** - Visualize e processe encomendas\n- **Taxas de manuseamento** - Configure taxas adicionais por artigo\n- **Descontos** - Crie descontos promocionais e códigos\n\n## Para começar\n\nCrie o seu primeiro tipo de merchandising, adicione imagens e preços, e publique-o para os seus membros comprarem."
+    },
+    "registrations": {
+      "title": "Inscrições",
+      "content": "# Módulo de Inscrições\n\nGira inscrições e matrículas para os programas e atividades da sua organização.\n\n## Funcionalidades Principais\n\n- **Tipos de inscrição** - Crie diferentes categorias de inscrição para programas, aulas e atividades\n- **Base de dados de inscrições** - Visualize e gira todas as inscrições com filtragem avançada\n- **Operações em lote** - Processe múltiplas inscrições de uma vez\n- **Filtros personalizados** - Guarde conjuntos de filtros para acesso rápido\n- **Exportação Excel** - Descarregue dados de inscrição para relatórios\n- **Integração de pagamentos** - Recolha taxas durante o processo de inscrição\n\n## Para começar\n\nConfigure os seus tipos de inscrição e comece a aceitar inscrições dos seus membros."
+    },
+    "ticketing": {
+      "title": "Bilhética de Eventos",
+      "content": "# Módulo de Bilhética\n\nGira vendas de bilhetes e participação para todos os seus eventos com bilhética.\n\n## Funcionalidades Principais\n\n- **Vista geral de eventos** - Veja todos os eventos com bilhética ativada\n- **Configuração de bilhetes** - Configure tipos de bilhetes, preços e capacidade por evento\n- **Monitorização de vendas** - Acompanhe as vendas de bilhetes em tempo real\n- **Gestão de participantes** - Visualize titulares de bilhetes e estado de check-in\n- **Rastreamento de receitas** - Monitorize receitas de bilhetes por evento\n\n## Para começar\n\nAtive a bilhética nos seus eventos a partir da página de edição de evento, depois gira todos os eventos com bilhética a partir deste módulo."
+    },
+    "settings": {
+      "title": "Definições da Organização",
+      "content": "# Módulo de Definições\n\nConfigure o perfil, as definições de pagamento e as preferências da sua organização.\n\n## Áreas Principais\n\n- **Detalhes da organização** - Atualize o nome, descrição e informações de contacto da sua organização\n- **Definições de pagamento** - Configure métodos de pagamento e opções de processamento\n- **Modelos de email** - Personalize as comunicações por email automatizadas\n- **Marca** - Defina o logótipo, cores e identidade visual da sua organização\n\n## Para começar\n\nReveja os detalhes da sua organização e certifique-se de que as suas definições de pagamento estão corretamente configuradas."
     }
   }
 }

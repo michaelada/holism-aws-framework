@@ -25,6 +25,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
 import { useTranslation } from 'react-i18next';
 import type { CreateMembershipTypeDto } from '../types/membership.types';
 

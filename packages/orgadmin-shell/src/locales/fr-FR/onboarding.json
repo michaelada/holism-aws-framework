@@ -35,6 +35,22 @@
     "payments": {
       "title": "Traitement des paiements",
       "content": "# Module Paiements\n\nAcceptez et gérez les paiements pour les adhésions, les événements et autres services.\n\n## Fonctionnalités principales\n\n- **Collecte de paiements** - Acceptez les cartes de crédit, les virements bancaires et autres méthodes de paiement\n- **Historique des transactions** - Consultez toutes les transactions de paiement\n- **Facturation** - Générez et envoyez des factures\n- **Remboursements** - Traitez les remboursements si nécessaire\n- **Rapports** - Rapports financiers et rapprochement\n- **Sécurité** - Traitement des paiements conforme PCI\n\n## Intégration\n\nLes paiements sont intégrés dans tout OrgAdmin - collectez des frais lors de l'inscription aux événements, de l'adhésion, et plus encore."
+    },
+    "merchandise": {
+      "title": "Marchandise",
+      "content": "# Module Marchandise\n\nCréez et vendez des produits via la boutique en ligne de votre organisation.\n\n## Fonctionnalités principales\n\n- **Gestion des produits** - Créez des types de marchandise avec images, descriptions et prix\n- **Variantes et options** - Définissez les tailles, couleurs et autres options de produit\n- **Suivi des stocks** - Surveillez les niveaux d'inventaire avec des alertes de stock bas\n- **Gestion des commandes** - Consultez et traitez les commandes\n- **Frais de traitement** - Configurez des frais supplémentaires par article\n- **Réductions** - Créez des réductions promotionnelles et des codes\n\n## Pour commencer\n\nCréez votre premier type de marchandise, ajoutez des images et des prix, puis publiez-le pour que vos membres puissent l'acheter."
+    },
+    "registrations": {
+      "title": "Inscriptions",
+      "content": "# Module Inscriptions\n\nGérez les inscriptions et les enregistrements pour les programmes et activités de votre organisation.\n\n## Fonctionnalités principales\n\n- **Types d'inscription** - Créez différentes catégories d'inscription pour les programmes, cours et activités\n- **Base de données des inscriptions** - Consultez et gérez toutes les inscriptions avec un filtrage avancé\n- **Opérations par lots** - Traitez plusieurs inscriptions à la fois\n- **Filtres personnalisés** - Enregistrez des ensembles de filtres pour un accès rapide\n- **Export Excel** - Téléchargez les données d'inscription pour les rapports\n- **Intégration des paiements** - Collectez les frais pendant le processus d'inscription\n\n## Pour commencer\n\nConfigurez vos types d'inscription, puis commencez à accepter les inscriptions de vos membres."
+    },
+    "ticketing": {
+      "title": "Billetterie événementielle",
+      "content": "# Module Billetterie\n\nGérez les ventes de billets et la participation pour tous vos événements avec billetterie.\n\n## Fonctionnalités principales\n\n- **Vue d'ensemble des événements** - Consultez tous les événements avec billetterie activée\n- **Configuration des billets** - Configurez les types de billets, les prix et la capacité par événement\n- **Suivi des ventes** - Suivez les ventes de billets en temps réel\n- **Gestion des participants** - Consultez les détenteurs de billets et le statut d'enregistrement\n- **Suivi des revenus** - Surveillez les revenus de billetterie par événement\n\n## Pour commencer\n\nActivez la billetterie sur vos événements depuis la page de modification d'événement, puis gérez tous les événements avec billetterie depuis ce module."
+    },
+    "settings": {
+      "title": "Paramètres de l'organisation",
+      "content": "# Module Paramètres\n\nConfigurez le profil, les paramètres de paiement et les préférences de votre organisation.\n\n## Domaines principaux\n\n- **Détails de l'organisation** - Mettez à jour le nom, la description et les coordonnées de votre organisation\n- **Paramètres de paiement** - Configurez les méthodes de paiement et les options de traitement\n- **Modèles d'e-mail** - Personnalisez les communications par e-mail automatisées\n- **Image de marque** - Définissez le logo, les couleurs et l'identité visuelle de votre organisation\n\n## Pour commencer\n\nVérifiez les détails de votre organisation et assurez-vous que vos paramètres de paiement sont correctement configurés."
     }
   }
 }
