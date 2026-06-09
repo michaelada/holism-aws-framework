@@ -1456,7 +1456,9 @@
       "exportReport": "Bericht exportieren",
       "detailedReports": "Detaillierte Berichte",
       "noData": "Keine Berichtsdaten für den ausgewählten Datumsbereich verfügbar. Bitte versuchen Sie einen anderen Datumsbereich.",
-      "vsPreviousPeriod": "vs vorheriger Zeitraum"
+      "vsPreviousPeriod": "vs vorheriger Zeitraum",
+      "period": "Zeitraum",
+      "lastNDays": "Letzte {{days}} Tage"
     },
     "metrics": {
       "events": "Veranstaltungen",
@@ -1464,7 +1466,8 @@
       "revenue": "Einnahmen",
       "eventsSubtitle": "{{upcoming}} bevorstehend, {{completed}} abgeschlossen, {{totalAttendance}} Gesamtteilnahme",
       "membersSubtitle": "{{active}} aktiv, {{new}} neu, {{renewals}} Verlängerungen",
-      "revenueSubtitle": "Veranstaltungen: {{events}}, Mitgliedschaften: {{memberships}}, Waren: {{merchandise}}"
+      "revenueSubtitle": "Veranstaltungen: {{events}}, Mitgliedschaften: {{memberships}}, Waren: {{merchandise}}",
+      "recentSubtitle": "{{count}} in den letzten {{days}} Tagen"
     },
     "reports": {
       "eventsReport": "Veranstaltungsbericht",
@@ -1509,7 +1512,9 @@
         "renewals": "Verlängerungen",
         "retentionRate": "{{rate}} Bindung",
         "totalRevenue": "Gesamteinnahmen",
-        "expiringSoon": "{{count}} läuft bald ab"
+        "expiringSoon": "{{count}} läuft bald ab",
+        "pendingMembers": "Ausstehende Mitglieder",
+        "elapsedMembers": "Abgelaufene Mitglieder"
       },
       "table": {
         "membershipType": "Mitgliedschaftstyp",
@@ -1518,7 +1523,9 @@
         "new": "Neu",
         "renewals": "Verlängerungen",
         "expiring": "Ablaufend",
-        "revenue": "Einnahmen"
+        "revenue": "Einnahmen",
+        "pending": "Ausstehend",
+        "elapsed": "Abgelaufen"
       },
       "noData": "Keine Mitgliedschaftsdaten für die ausgewählten Filter gefunden. Versuchen Sie, Ihren Datumsbereich oder Statusfilter anzupassen."
     },
@@ -1586,8 +1593,11 @@
         "displayName": "Anzeigename",
         "domain": "Domain",
         "domainPlaceholder": "beispiel.de",
+        "domainHelper": "Wird von Ihrem Administrator festgelegt und kann nicht geändert werden",
         "currency": "Währung",
+        "currencyHelper": "Wird von Ihrem Administrator festgelegt und kann nicht geändert werden",
         "language": "Sprache",
+        "languageHelper": "Wird von Ihrem Administrator festgelegt und kann nicht geändert werden",
         "address": "Adresse",
         "city": "Stadt",
         "postcode": "Postleitzahl",

@@ -1709,8 +1709,11 @@
         "displayName": "Display Name",
         "domain": "Domain",
         "domainPlaceholder": "example.com",
+        "domainHelper": "Set by your administrator and cannot be changed",
         "currency": "Currency",
+        "currencyHelper": "Set by your administrator and cannot be changed",
         "language": "Language",
+        "languageHelper": "Set by your administrator and cannot be changed",
         "address": "Address",
         "city": "City",
         "postcode": "Postcode",
@@ -1873,7 +1876,9 @@
       "exportReport": "Export Report",
       "detailedReports": "Detailed Reports",
       "noData": "No reporting data available for the selected date range. Please try a different date range.",
-      "vsPreviousPeriod": "vs previous period"
+      "vsPreviousPeriod": "vs previous period",
+      "period": "Period",
+      "lastNDays": "Last {{days}} days"
     },
     "metrics": {
       "events": "Events",
@@ -1881,7 +1886,8 @@
       "revenue": "Revenue",
       "eventsSubtitle": "{{upcoming}} upcoming, {{completed}} completed, {{totalAttendance}} total attendance",
       "membersSubtitle": "{{active}} active, {{new}} new, {{renewals}} renewals",
-      "revenueSubtitle": "Events: {{events}}, Memberships: {{memberships}}, Merchandise: {{merchandise}}"
+      "revenueSubtitle": "Events: {{events}}, Memberships: {{memberships}}, Merchandise: {{merchandise}}",
+      "recentSubtitle": "{{count}} in the last {{days}} days"
     },
     "reports": {
       "eventsReport": "Events Report",
@@ -1926,7 +1932,9 @@
         "renewals": "Renewals",
         "retentionRate": "{{rate}} retention",
         "totalRevenue": "Total Revenue",
-        "expiringSoon": "{{count}} expiring soon"
+        "expiringSoon": "{{count}} expiring soon",
+        "pendingMembers": "Pending Members",
+        "elapsedMembers": "Elapsed Members"
       },
       "table": {
         "membershipType": "Membership Type",
@@ -1935,7 +1943,9 @@
         "new": "New",
         "renewals": "Renewals",
         "expiring": "Expiring",
-        "revenue": "Revenue"
+        "revenue": "Revenue",
+        "pending": "Pending",
+        "elapsed": "Elapsed"
       },
       "noData": "No membership data found for the selected filters. Try adjusting your date range or status filter."
     },

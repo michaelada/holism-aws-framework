@@ -4,7 +4,7 @@
  * Shows membership growth and retention with filters and export functionality
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -22,50 +22,30 @@ import {
   TableRow,
   Paper,
   Chip,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Skeleton,
   Grid,
 } from '@mui/material';
 import {
   FileDownload as ExportIcon,
   ArrowBack as BackIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
- * Membership type report data structure
+ * Membership type report row, matching the backend reporting service shape
  */
-interface MembershipTypeReport {
-  id: string;
-  name: string;
-  totalMembers: number;
+interface MembershipTypeRow {
+  membershipTypeId: string;
+  membershipTypeName: string;
   activeMembers: number;
-  newMembers: number;
-  renewals: number;
-  expiringMembers: number;
-  revenue: number;
-}
-
-interface MembersReportData {
-  membershipTypes: MembershipTypeReport[];
-  summary: {
-    totalMembers: number;
-    activeMembers: number;
-    newMembers: number;
-    renewals: number;
-    expiringMembers: number;
-    totalRevenue: number;
-    growthRate: number;
-    retentionRate: number;
-  };
+  pendingMembers: number;
+  elapsedMembers: number;
+  totalMembers: number;
+  totalRevenue: number;
 }
 
 /**
@@ -74,6 +54,7 @@ interface MembersReportData {
 const MembersReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { organisation } = useOrganisation();
 
   // Filter state
   const [startDate, setStartDate] = useState<string>(() => {
@@ -84,21 +65,30 @@ const MembersReportPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data, error, loading, execute } = useApiGet<MembersReportData>(
-    `/api/orgadmin/reports/members?startDate=${startDate}&endDate=${endDate}&status=${statusFilter}`
+  const { data, error, loading, execute } = useApiGet<MembershipTypeRow[]>(
+    `/api/orgadmin/organisations/${organisation?.id}/reports/members?startDate=${startDate}&endDate=${endDate}`
   );
 
   // Fetch report on mount and when filters change
   useEffect(() => {
+    if (!organisation?.id) return;
     execute();
-  }, [execute, startDate, endDate, statusFilter]);
+  }, [execute, startDate, endDate, organisation?.id]);
 
-  // Format percentage
-  const formatPercentage = (value: number): string => {
-    return `${value.toFixed(1)}%`;
-  };
+  const membershipTypes = data ?? [];
+
+  // Summary totals are derived from the per-type rows
+  const summary = useMemo(
+    () => ({
+      totalMembers: membershipTypes.reduce((sum, m) => sum + m.totalMembers, 0),
+      activeMembers: membershipTypes.reduce((sum, m) => sum + m.activeMembers, 0),
+      pendingMembers: membershipTypes.reduce((sum, m) => sum + m.pendingMembers, 0),
+      elapsedMembers: membershipTypes.reduce((sum, m) => sum + m.elapsedMembers, 0),
+      totalRevenue: membershipTypes.reduce((sum, m) => sum + m.totalRevenue, 0),
+    }),
+    [membershipTypes]
+  );
 
   // Handle export
   const handleExport = () => {
@@ -158,19 +148,6 @@ const MembersReportPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
-            <FormControl fullWidth>
-              <InputLabel>{t('reporting.filters.status')}</InputLabel>
-              <Select
-                value={statusFilter}
-                label={t('reporting.filters.status')}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="all">{t('reporting.filters.all')}</MenuItem>
-                <MenuItem value="active">{t('reporting.filters.active')}</MenuItem>
-                <MenuItem value="expired">{t('reporting.filters.expired')}</MenuItem>
-                <MenuItem value="cancelled">{t('reporting.filters.cancelled')}</MenuItem>
-              </Select>
-            </FormControl>
           </Stack>
         </CardContent>
       </Card>
@@ -192,9 +169,9 @@ const MembersReportPage: React.FC = () => {
                   <Typography variant="body2" color="textSecondary" gutterBottom>
                     {t('reporting.members.summary.totalMembers')}
                   </Typography>
-                  <Typography variant="h4">{data.summary.totalMembers}</Typography>
+                  <Typography variant="h4">{summary.totalMembers}</Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {t('reporting.members.summary.activeMembers', { count: data.summary.activeMembers })}
+                    {t('reporting.members.summary.activeMembers', { count: summary.activeMembers })}
                   </Typography>
                 </CardContent>
               </Card>
@@ -203,22 +180,9 @@ const MembersReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {t('reporting.members.summary.newMembers')}
+                    {t('reporting.members.summary.pendingMembers')}
                   </Typography>
-                  <Typography variant="h4">{data.summary.newMembers}</Typography>
-                  <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
-                    {data.summary.growthRate >= 0 ? (
-                      <TrendingUpIcon fontSize="small" color="success" />
-                    ) : (
-                      <TrendingDownIcon fontSize="small" color="error" />
-                    )}
-                    <Typography
-                      variant="caption"
-                      color={data.summary.growthRate >= 0 ? 'success.main' : 'error.main'}
-                    >
-                      {t('reporting.members.summary.growthRate', { rate: formatPercentage(Math.abs(data.summary.growthRate)) })}
-                    </Typography>
-                  </Box>
+                  <Typography variant="h4">{summary.pendingMembers}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -226,12 +190,9 @@ const MembersReportPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {t('reporting.members.summary.renewals')}
+                    {t('reporting.members.summary.elapsedMembers')}
                   </Typography>
-                  <Typography variant="h4">{data.summary.renewals}</Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {t('reporting.members.summary.retentionRate', { rate: formatPercentage(data.summary.retentionRate) })}
-                  </Typography>
+                  <Typography variant="h4">{summary.elapsedMembers}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -242,10 +203,7 @@ const MembersReportPage: React.FC = () => {
                     {t('reporting.members.summary.totalRevenue')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(data.summary.totalRevenue, 'EUR', i18n.language)}
-                  </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    {t('reporting.members.summary.expiringSoon', { count: data.summary.expiringMembers })}
+                    {formatCurrency(summary.totalRevenue, 'EUR', i18n.language)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -269,7 +227,7 @@ const MembersReportPage: React.FC = () => {
             </Box>
           )}
 
-          {!loading && data && data.membershipTypes.length > 0 && (
+          {!loading && data && membershipTypes.length > 0 && (
             <TableContainer component={Paper} variant="outlined">
               <Table>
                 <TableHead>
@@ -277,18 +235,17 @@ const MembersReportPage: React.FC = () => {
                     <TableCell>{t('reporting.members.table.membershipType')}</TableCell>
                     <TableCell align="right">{t('reporting.members.table.total')}</TableCell>
                     <TableCell align="right">{t('reporting.members.table.active')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.new')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.renewals')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.expiring')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.pending')}</TableCell>
+                    <TableCell align="right">{t('reporting.members.table.elapsed')}</TableCell>
                     <TableCell align="right">{t('reporting.members.table.revenue')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.membershipTypes.map((type) => (
-                    <TableRow key={type.id} hover>
+                  {membershipTypes.map((type) => (
+                    <TableRow key={type.membershipTypeId} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">
-                          {type.name}
+                          {type.membershipTypeName}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
@@ -303,26 +260,14 @@ const MembersReportPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2">{type.newMembers}</Typography>
+                        <Typography variant="body2">{type.pendingMembers}</Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2">{type.renewals}</Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        {type.expiringMembers > 0 ? (
-                          <Chip
-                            label={type.expiringMembers}
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                          />
-                        ) : (
-                          <Typography variant="body2">0</Typography>
-                        )}
+                        <Typography variant="body2">{type.elapsedMembers}</Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" fontWeight="medium">
-                          {formatCurrency(type.revenue, 'EUR', i18n.language)}
+                          {formatCurrency(type.totalRevenue, 'EUR', i18n.language)}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -332,7 +277,7 @@ const MembersReportPage: React.FC = () => {
             </TableContainer>
           )}
 
-          {!loading && data && data.membershipTypes.length === 0 && (
+          {!loading && data && membershipTypes.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
               {t('reporting.members.noData')}
             </Alert>

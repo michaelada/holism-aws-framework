@@ -74,9 +74,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
-// Handle preflight requests explicitly
-app.options('*', cors());
-
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {

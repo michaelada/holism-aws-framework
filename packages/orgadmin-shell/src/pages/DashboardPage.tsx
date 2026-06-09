@@ -2,7 +2,10 @@ import React, { useEffect } from 'react';
 import { Box, Typography, Grid } from '@mui/material';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useCapabilities } from '../context/CapabilityContext';
-import { DashboardCard } from '../components/DashboardCard';
+// Active dashboard card style. Alternative treatments are kept as sibling
+// components for easy switching: DashboardCard (compact icon), DashboardCardHero
+// (gradient hero band), DashboardCardPhoto (photographic header).
+import { DashboardCardIllustration } from '../components/DashboardCardIllustration';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -108,10 +111,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
       {/* Module Cards Grid */}
       {sortedModules.length > 0 ? (
         <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2.5}>
             {sortedModules.map((module) => (
-              <Grid item xs={12} sm={6} md={3} key={module.id}>
-                <DashboardCard module={module} />
+              <Grid item xs={12} sm={6} md={3} lg={2} key={module.id}>
+                <DashboardCardIllustration module={module} />
               </Grid>
             ))}
           </Grid>

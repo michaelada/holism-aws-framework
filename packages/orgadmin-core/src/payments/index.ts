@@ -20,7 +20,7 @@ export const paymentsModule: ModuleRegistration = {
     title: 'modules.payments.title',
     description: 'modules.payments.description',
     icon: PaymentIcon,
-    color: '#388e3c',
+    color: '#f9a825',
     path: '/payments',
   },
   routes: [

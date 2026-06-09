@@ -15,8 +15,10 @@ import {
   Alert,
   Skeleton,
   Button,
-  TextField,
-  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Event as EventIcon,
@@ -25,7 +27,9 @@ import {
   TrendingUp as TrendingUpIcon,
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
@@ -33,30 +37,14 @@ import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currency
  * Reporting dashboard metrics data structure
  */
 interface ReportingMetrics {
-  events: {
-    total: number;
-    upcoming: number;
-    completed: number;
-    totalAttendance: number;
-    trend: 'up' | 'down' | 'stable';
-    trendPercentage: number;
-  };
-  members: {
-    total: number;
-    active: number;
-    new: number;
-    renewals: number;
-    trend: 'up' | 'down' | 'stable';
-    trendPercentage: number;
-  };
-  revenue: {
-    total: number;
-    events: number;
-    memberships: number;
-    merchandise: number;
-    trend: 'up' | 'down' | 'stable';
-    trendPercentage: number;
-  };
+  totalEvents: number;
+  totalMembers: number;
+  totalRevenue: number;
+  totalPayments: number;
+  recentEvents: number;
+  recentMembers: number;
+  recentRevenue: number;
+  recentPayments: number;
 }
 
 /**
@@ -168,30 +156,26 @@ const MetricCard: React.FC<MetricCardProps> = ({
  */
 const ReportingDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { organisation } = useOrganisation();
+  const navigate = useNavigate();
 
-  // Date range state
-  const [startDate, setStartDate] = useState<string>(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    return date.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  // Recent activity window (days), matching the backend's recentDays parameter
+  const [recentDays, setRecentDays] = useState<number>(30);
 
   const { data, error, loading, execute } = useApiGet<ReportingMetrics>(
-    `/api/orgadmin/reports/dashboard?startDate=${startDate}&endDate=${endDate}`
+    `/api/orgadmin/organisations/${organisation?.id}/reports/dashboard?recentDays=${recentDays}`
   );
 
-  // Fetch metrics on mount and when date range changes
+  // Fetch metrics on mount and when the window changes
   useEffect(() => {
+    if (!organisation?.id) return;
     execute();
-  }, [execute, startDate, endDate]);
+  }, [execute, recentDays, organisation?.id]);
 
   // Handle export
   const handleExport = () => {
     // TODO: Implement export functionality
-    console.log('Export report for date range:', startDate, 'to', endDate);
+    console.log('Export report for last', recentDays, 'days');
   };
 
   return (
@@ -215,30 +199,29 @@ const ReportingDashboardPage: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Date Range Selector */}
+      {/* Recent activity window selector */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            {t('reporting.dashboard.dateRange')}
+            {t('reporting.dashboard.period')}
           </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label={t('reporting.dashboard.startDate')}
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
-            <TextField
-              label={t('reporting.dashboard.endDate')}
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
-          </Stack>
+          <FormControl sx={{ minWidth: 240 }}>
+            <InputLabel id="reporting-period-label">
+              {t('reporting.dashboard.period')}
+            </InputLabel>
+            <Select
+              labelId="reporting-period-label"
+              label={t('reporting.dashboard.period')}
+              value={recentDays}
+              onChange={(e) => setRecentDays(Number(e.target.value))}
+            >
+              {[7, 30, 90].map((days) => (
+                <MenuItem key={days} value={days}>
+                  {t('reporting.dashboard.lastNDays', { days })}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </CardContent>
       </Card>
 
@@ -273,16 +256,13 @@ const ReportingDashboardPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <MetricCard
               title={t('reporting.metrics.events')}
-              value={data.events.total}
-              subtitle={t('reporting.metrics.eventsSubtitle', {
-                upcoming: data.events.upcoming,
-                completed: data.events.completed,
-                totalAttendance: data.events.totalAttendance,
+              value={data.totalEvents}
+              subtitle={t('reporting.metrics.recentSubtitle', {
+                count: data.recentEvents,
+                days: recentDays,
               })}
               icon={<EventIcon sx={{ color: '#1976d2', fontSize: 32 }} />}
               color="#1976d2"
-              trend={data.events.trend}
-              trendPercentage={data.events.trendPercentage}
             />
           </Grid>
 
@@ -290,16 +270,13 @@ const ReportingDashboardPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <MetricCard
               title={t('reporting.metrics.members')}
-              value={data.members.total}
-              subtitle={t('reporting.metrics.membersSubtitle', {
-                active: data.members.active,
-                new: data.members.new,
-                renewals: data.members.renewals,
+              value={data.totalMembers}
+              subtitle={t('reporting.metrics.recentSubtitle', {
+                count: data.recentMembers,
+                days: recentDays,
               })}
               icon={<PeopleIcon sx={{ color: '#2e7d32', fontSize: 32 }} />}
               color="#2e7d32"
-              trend={data.members.trend}
-              trendPercentage={data.members.trendPercentage}
             />
           </Grid>
 
@@ -307,16 +284,13 @@ const ReportingDashboardPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <MetricCard
               title={t('reporting.metrics.revenue')}
-              value={formatCurrency(data.revenue.total, 'EUR', i18n.language)}
-              subtitle={t('reporting.metrics.revenueSubtitle', {
-                events: formatCurrency(data.revenue.events, 'EUR', i18n.language),
-                memberships: formatCurrency(data.revenue.memberships, 'EUR', i18n.language),
-                merchandise: formatCurrency(data.revenue.merchandise, 'EUR', i18n.language),
+              value={formatCurrency(data.totalRevenue, 'EUR', i18n.language)}
+              subtitle={t('reporting.metrics.recentSubtitle', {
+                count: formatCurrency(data.recentRevenue, 'EUR', i18n.language),
+                days: recentDays,
               })}
               icon={<MoneyIcon sx={{ color: '#ed6c02', fontSize: 32 }} />}
               color="#ed6c02"
-              trend={data.revenue.trend}
-              trendPercentage={data.revenue.trendPercentage}
             />
           </Grid>
         </Grid>
@@ -334,7 +308,7 @@ const ReportingDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<EventIcon />}
-                href="/reporting/events"
+                onClick={() => navigate('/reporting/events')}
                 sx={{ py: 2 }}
               >
                 {t('reporting.reports.eventsReport')}
@@ -345,7 +319,7 @@ const ReportingDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<PeopleIcon />}
-                href="/reporting/members"
+                onClick={() => navigate('/reporting/members')}
                 sx={{ py: 2 }}
               >
                 {t('reporting.reports.membersReport')}
@@ -356,7 +330,7 @@ const ReportingDashboardPage: React.FC = () => {
                 variant="outlined"
                 fullWidth
                 startIcon={<TrendingUpIcon />}
-                href="/reporting/revenue"
+                onClick={() => navigate('/reporting/revenue')}
                 sx={{ py: 2 }}
               >
                 {t('reporting.reports.revenueReport')}

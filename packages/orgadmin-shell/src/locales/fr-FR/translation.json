@@ -1674,8 +1674,11 @@
         "displayName": "Nom d'affichage",
         "domain": "Domaine",
         "domainPlaceholder": "exemple.com",
+        "domainHelper": "Défini par votre administrateur et ne peut pas être modifié",
         "currency": "Devise",
+        "currencyHelper": "Défini par votre administrateur et ne peut pas être modifié",
         "language": "Langue",
+        "languageHelper": "Défini par votre administrateur et ne peut pas être modifié",
         "address": "Adresse",
         "city": "Ville",
         "postcode": "Code postal",
@@ -1838,7 +1841,9 @@
       "exportReport": "Exporter le rapport",
       "detailedReports": "Rapports détaillés",
       "noData": "Aucune donnée de rapport disponible pour la plage de dates sélectionnée. Veuillez essayer une autre plage de dates.",
-      "vsPreviousPeriod": "par rapport à la période précédente"
+      "vsPreviousPeriod": "par rapport à la période précédente",
+      "period": "Période",
+      "lastNDays": "{{days}} derniers jours"
     },
     "metrics": {
       "events": "Événements",
@@ -1846,7 +1851,8 @@
       "revenue": "Revenus",
       "eventsSubtitle": "{{upcoming}} à venir, {{completed}} terminés, {{totalAttendance}} participation totale",
       "membersSubtitle": "{{active}} actifs, {{new}} nouveaux, {{renewals}} renouvellements",
-      "revenueSubtitle": "Événements : {{events}}, Adhésions : {{memberships}}, Marchandises : {{merchandise}}"
+      "revenueSubtitle": "Événements : {{events}}, Adhésions : {{memberships}}, Marchandises : {{merchandise}}",
+      "recentSubtitle": "{{count}} au cours des {{days}} derniers jours"
     },
     "reports": {
       "eventsReport": "Rapport des événements",
@@ -1891,7 +1897,9 @@
         "renewals": "Renouvellements",
         "retentionRate": "{{rate}} de rétention",
         "totalRevenue": "Revenus totaux",
-        "expiringSoon": "{{count}} expirant bientôt"
+        "expiringSoon": "{{count}} expirant bientôt",
+        "pendingMembers": "Membres en attente",
+        "elapsedMembers": "Membres expirés"
       },
       "table": {
         "membershipType": "Type d'adhésion",
@@ -1900,7 +1908,9 @@
         "new": "Nouveaux",
         "renewals": "Renouvellements",
         "expiring": "Expirant",
-        "revenue": "Revenus"
+        "revenue": "Revenus",
+        "pending": "En attente",
+        "elapsed": "Expiré"
       },
       "noData": "Aucune donnée d'adhésion trouvée pour les filtres sélectionnés. Essayez d'ajuster votre plage de dates ou votre filtre de statut."
     },

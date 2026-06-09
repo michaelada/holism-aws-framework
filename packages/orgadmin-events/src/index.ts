@@ -35,7 +35,7 @@ export const eventsModule: ModuleRegistration = {
     title: 'modules.events.title',
     description: 'modules.events.description',
     icon: EventIcon,
-    color: '#d84315',
+    color: '#e53935',
     path: '/events',
   },
   routes: [

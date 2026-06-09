@@ -113,9 +113,13 @@ export function useApi<T = any>() {
 
         return response.data;
       } catch (err) {
-        const axiosError = err as AxiosError<{ error?: string; message?: string }>;
+        const axiosError = err as AxiosError<{
+          error?: string | { code?: string; message?: string };
+          message?: string;
+        }>;
+        const responseError = axiosError.response?.data?.error;
         lastError =
-          axiosError.response?.data?.error ||
+          (typeof responseError === 'string' ? responseError : responseError?.message) ||
           axiosError.response?.data?.message ||
           axiosError.message ||
           'An unexpected error occurred';
@@ -170,17 +174,18 @@ export function useApi<T = any>() {
  */
 export function useApiGet<T = any>(url: string, options?: Omit<ApiCallOptions, 'method' | 'url'>) {
   const api = useApi<T>();
+  const { execute: runRequest } = api;
 
   const execute = useCallback(
     async (additionalOptions?: Omit<ApiCallOptions, 'method' | 'url'>) => {
-      return api.execute({
+      return runRequest({
         method: 'GET',
         url,
         ...options,
         ...additionalOptions,
       });
     },
-    [api, url, options]
+    [runRequest, url, options]
   );
 
   return {
@@ -194,10 +199,11 @@ export function useApiGet<T = any>(url: string, options?: Omit<ApiCallOptions, '
  */
 export function useApiPost<T = any>(url: string, options?: Omit<ApiCallOptions, 'method' | 'url'>) {
   const api = useApi<T>();
+  const { execute: runRequest } = api;
 
   const execute = useCallback(
     async (data?: any, additionalOptions?: Omit<ApiCallOptions, 'method' | 'url' | 'data'>) => {
-      return api.execute({
+      return runRequest({
         method: 'POST',
         url,
         data,
@@ -205,7 +211,7 @@ export function useApiPost<T = any>(url: string, options?: Omit<ApiCallOptions, 
         ...additionalOptions,
       });
     },
-    [api, url, options]
+    [runRequest, url, options]
   );
 
   return {
@@ -219,10 +225,11 @@ export function useApiPost<T = any>(url: string, options?: Omit<ApiCallOptions, 
  */
 export function useApiPut<T = any>(url: string, options?: Omit<ApiCallOptions, 'method' | 'url'>) {
   const api = useApi<T>();
+  const { execute: runRequest } = api;
 
   const execute = useCallback(
     async (data?: any, additionalOptions?: Omit<ApiCallOptions, 'method' | 'url' | 'data'>) => {
-      return api.execute({
+      return runRequest({
         method: 'PUT',
         url,
         data,
@@ -230,7 +237,7 @@ export function useApiPut<T = any>(url: string, options?: Omit<ApiCallOptions, '
         ...additionalOptions,
       });
     },
-    [api, url, options]
+    [runRequest, url, options]
   );
 
   return {
@@ -244,17 +251,18 @@ export function useApiPut<T = any>(url: string, options?: Omit<ApiCallOptions, '
  */
 export function useApiDelete<T = any>(url: string, options?: Omit<ApiCallOptions, 'method' | 'url'>) {
   const api = useApi<T>();
+  const { execute: runRequest } = api;
 
   const execute = useCallback(
     async (additionalOptions?: Omit<ApiCallOptions, 'method' | 'url'>) => {
-      return api.execute({
+      return runRequest({
         method: 'DELETE',
         url,
         ...options,
         ...additionalOptions,
       });
     },
-    [api, url, options]
+    [runRequest, url, options]
   );
 
   return {

@@ -1456,7 +1456,9 @@
       "exportReport": "Exportar relatório",
       "detailedReports": "Relatórios detalhados",
       "noData": "Não há dados de relatório disponíveis para o intervalo de datas selecionado. Por favor, tente um intervalo de datas diferente.",
-      "vsPreviousPeriod": "vs período anterior"
+      "vsPreviousPeriod": "vs período anterior",
+      "period": "Período",
+      "lastNDays": "Últimos {{days}} dias"
     },
     "metrics": {
       "events": "Eventos",
@@ -1464,7 +1466,8 @@
       "revenue": "Receitas",
       "eventsSubtitle": "{{upcoming}} próximos, {{completed}} concluídos, {{totalAttendance}} participação total",
       "membersSubtitle": "{{active}} ativos, {{new}} novos, {{renewals}} renovações",
-      "revenueSubtitle": "Eventos: {{events}}, Adesões: {{memberships}}, Mercadorias: {{merchandise}}"
+      "revenueSubtitle": "Eventos: {{events}}, Adesões: {{memberships}}, Mercadorias: {{merchandise}}",
+      "recentSubtitle": "{{count}} nos últimos {{days}} dias"
     },
     "reports": {
       "eventsReport": "Relatório de eventos",
@@ -1509,7 +1512,9 @@
         "renewals": "Renovações",
         "retentionRate": "{{rate}} de retenção",
         "totalRevenue": "Receitas totais",
-        "expiringSoon": "{{count}} a expirar em breve"
+        "expiringSoon": "{{count}} a expirar em breve",
+        "pendingMembers": "Membros pendentes",
+        "elapsedMembers": "Membros expirados"
       },
       "table": {
         "membershipType": "Tipo de adesão",
@@ -1518,7 +1523,9 @@
         "new": "Novos",
         "renewals": "Renovações",
         "expiring": "A expirar",
-        "revenue": "Receitas"
+        "revenue": "Receitas",
+        "pending": "Pendente",
+        "elapsed": "Expirado"
       },
       "noData": "Nenhum dado de adesão encontrado para os filtros selecionados. Tente ajustar o seu intervalo de datas ou filtro de estado."
     },
@@ -1586,8 +1593,11 @@
         "displayName": "Nome de exibição",
         "domain": "Domínio",
         "domainPlaceholder": "exemplo.pt",
+        "domainHelper": "Definido pelo seu administrador e não pode ser alterado",
         "currency": "Moeda",
+        "currencyHelper": "Definido pelo seu administrador e não pode ser alterado",
         "language": "Idioma",
+        "languageHelper": "Definido pelo seu administrador e não pode ser alterado",
         "address": "Morada",
         "city": "Cidade",
         "postcode": "Código postal",

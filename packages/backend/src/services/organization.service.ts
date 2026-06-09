@@ -248,11 +248,11 @@ export class OrganizationService {
 
       // Insert into database
       const result = await db.query(
-        `INSERT INTO organizations 
-         (organization_type_id, keycloak_group_id, name, display_name, domain, 
+        `INSERT INTO organizations
+         (organization_type_id, keycloak_group_id, name, display_name, domain,
           contact_name, contact_email, contact_mobile, status,
-          currency, language, enabled_capabilities, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          currency, language, enabled_capabilities, settings, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
         [
           data.organizationTypeId,
@@ -267,6 +267,7 @@ export class OrganizationService {
           data.currency || orgType.currency,
           data.language || orgType.language,
           JSON.stringify(data.enabledCapabilities),
+          JSON.stringify(data.settings || {}),
           userId,
           userId
         ]

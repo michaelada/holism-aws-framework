@@ -124,6 +124,7 @@ export interface CreateOrganizationDto {
   language?: string;
   enabledCapabilities: string[];
   enabledPaymentMethods?: string[];
+  settings?: Record<string, any>;
 }
 
 export interface UpdateOrganizationDto {

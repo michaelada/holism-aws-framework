@@ -1456,7 +1456,9 @@
       "exportReport": "Esporta report",
       "detailedReports": "Report dettagliati",
       "noData": "Nessun dato di report disponibile per l'intervallo di date selezionato. Prova con un intervallo di date diverso.",
-      "vsPreviousPeriod": "vs periodo precedente"
+      "vsPreviousPeriod": "vs periodo precedente",
+      "period": "Periodo",
+      "lastNDays": "Ultimi {{days}} giorni"
     },
     "metrics": {
       "events": "Eventi",
@@ -1464,7 +1466,8 @@
       "revenue": "Entrate",
       "eventsSubtitle": "{{upcoming}} in arrivo, {{completed}} completati, {{totalAttendance}} partecipazione totale",
       "membersSubtitle": "{{active}} attivi, {{new}} nuovi, {{renewals}} rinnovi",
-      "revenueSubtitle": "Eventi: {{events}}, Iscrizioni: {{memberships}}, Merce: {{merchandise}}"
+      "revenueSubtitle": "Eventi: {{events}}, Iscrizioni: {{memberships}}, Merce: {{merchandise}}",
+      "recentSubtitle": "{{count}} negli ultimi {{days}} giorni"
     },
     "reports": {
       "eventsReport": "Report eventi",
@@ -1509,7 +1512,9 @@
         "renewals": "Rinnovi",
         "retentionRate": "{{rate}} di retention",
         "totalRevenue": "Entrate totali",
-        "expiringSoon": "{{count}} in scadenza"
+        "expiringSoon": "{{count}} in scadenza",
+        "pendingMembers": "Membri in attesa",
+        "elapsedMembers": "Membri scaduti"
       },
       "table": {
         "membershipType": "Tipo di iscrizione",
@@ -1518,7 +1523,9 @@
         "new": "Nuovi",
         "renewals": "Rinnovi",
         "expiring": "In scadenza",
-        "revenue": "Entrate"
+        "revenue": "Entrate",
+        "pending": "In attesa",
+        "elapsed": "Scaduto"
       },
       "noData": "Nessun dato di iscrizione trovato per i filtri selezionati. Prova ad adattare l'intervallo di date o il filtro di stato."
     },
@@ -1586,8 +1593,11 @@
         "displayName": "Nome visualizzato",
         "domain": "Dominio",
         "domainPlaceholder": "esempio.it",
+        "domainHelper": "Impostato dall'amministratore e non può essere modificato",
         "currency": "Valuta",
+        "currencyHelper": "Impostato dall'amministratore e non può essere modificato",
         "language": "Lingua",
+        "languageHelper": "Impostato dall'amministratore e non può essere modificato",
         "address": "Indirizzo",
         "city": "Città",
         "postcode": "Codice postale",

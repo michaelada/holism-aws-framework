@@ -4,7 +4,7 @@
  * Shows revenue breakdown by source with charts and export functionality
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -14,13 +14,6 @@ import {
   Button,
   TextField,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Skeleton,
   Grid,
   LinearProgress,
@@ -36,39 +29,19 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
- * Revenue source data structure
+ * Revenue source row, matching the backend reporting service shape
  */
-interface RevenueSource {
-  source: 'events' | 'memberships' | 'merchandise' | 'calendar' | 'registrations' | 'tickets';
-  amount: number;
-  percentage: number;
+interface RevenueSourceRow {
+  source: string;
+  totalRevenue: number;
   transactionCount: number;
-}
-
-interface MonthlyRevenue {
-  month: string;
-  events: number;
-  memberships: number;
-  merchandise: number;
-  calendar: number;
-  registrations: number;
-  tickets: number;
-  total: number;
-}
-
-interface RevenueReportData {
-  sources: RevenueSource[];
-  monthlyBreakdown: MonthlyRevenue[];
-  summary: {
-    totalRevenue: number;
-    totalTransactions: number;
-    averageTransactionValue: number;
-    topSource: string;
-  };
+  averageTransaction: number;
+  currency: string;
 }
 
 /**
@@ -77,6 +50,7 @@ interface RevenueReportData {
 const RevenueReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { organisation } = useOrganisation();
 
   // Filter state
   const [startDate, setStartDate] = useState<string>(() => {
@@ -88,14 +62,33 @@ const RevenueReportPage: React.FC = () => {
     return new Date().toISOString().split('T')[0];
   });
 
-  const { data, error, loading, execute } = useApiGet<RevenueReportData>(
-    `/api/orgadmin/reports/revenue?startDate=${startDate}&endDate=${endDate}`
+  const { data, error, loading, execute } = useApiGet<RevenueSourceRow[]>(
+    `/api/orgadmin/organisations/${organisation?.id}/reports/revenue?startDate=${startDate}&endDate=${endDate}`
   );
 
   // Fetch report on mount and when filters change
   useEffect(() => {
+    if (!organisation?.id) return;
     execute();
-  }, [execute, startDate, endDate]);
+  }, [execute, startDate, endDate, organisation?.id]);
+
+  const sources = data ?? [];
+
+  // Summary and per-source share are derived from the source rows
+  const summary = useMemo(() => {
+    const totalRevenue = sources.reduce((s, r) => s + r.totalRevenue, 0);
+    const totalTransactions = sources.reduce((s, r) => s + r.transactionCount, 0);
+    const top = sources.reduce<RevenueSourceRow | null>(
+      (best, r) => (!best || r.totalRevenue > best.totalRevenue ? r : best),
+      null
+    );
+    return {
+      totalRevenue,
+      totalTransactions,
+      averageTransactionValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
+      topSource: top?.source ?? '',
+    };
+  }, [sources]);
 
   // Format percentage
   const formatPercentage = (value: number): string => {
@@ -220,7 +213,7 @@ const RevenueReportPage: React.FC = () => {
                     {t('reporting.revenue.summary.totalRevenue')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(data.summary.totalRevenue, 'EUR', i18n.language)}
+                    {formatCurrency(summary.totalRevenue, 'EUR', i18n.language)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -231,7 +224,7 @@ const RevenueReportPage: React.FC = () => {
                   <Typography variant="body2" color="textSecondary" gutterBottom>
                     {t('reporting.revenue.summary.totalTransactions')}
                   </Typography>
-                  <Typography variant="h4">{data.summary.totalTransactions}</Typography>
+                  <Typography variant="h4">{summary.totalTransactions}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -242,7 +235,7 @@ const RevenueReportPage: React.FC = () => {
                     {t('reporting.revenue.summary.avgTransaction')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(data.summary.averageTransactionValue, 'EUR', i18n.language)}
+                    {formatCurrency(summary.averageTransactionValue, 'EUR', i18n.language)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -254,7 +247,7 @@ const RevenueReportPage: React.FC = () => {
                     {t('reporting.revenue.summary.topSource')}
                   </Typography>
                   <Typography variant="h4" sx={{ textTransform: 'capitalize' }}>
-                    {t(`reporting.revenue.sources.${data.summary.topSource}`)}
+                    {summary.topSource ? t(`reporting.revenue.sources.${summary.topSource}`) : '-'}
                   </Typography>
                 </CardContent>
               </Card>
@@ -278,148 +271,66 @@ const RevenueReportPage: React.FC = () => {
             </Box>
           )}
 
-          {!loading && data && data.sources.length > 0 && (
+          {!loading && data && sources.length > 0 && (
             <Stack spacing={2} sx={{ mt: 2 }}>
-              {data.sources.map((source) => (
-                <Box key={source.source}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Box
-                        sx={{
-                          color: getSourceColor(source.source),
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        {getSourceIcon(source.source)}
+              {sources.map((source) => {
+                const percentage =
+                  summary.totalRevenue > 0
+                    ? (source.totalRevenue / summary.totalRevenue) * 100
+                    : 0;
+                return (
+                  <Box key={source.source}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Box
+                          sx={{
+                            color: getSourceColor(source.source),
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          {getSourceIcon(source.source)}
+                        </Box>
+                        <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
+                          {t(`reporting.revenue.sources.${source.source}`)}
+                        </Typography>
                       </Box>
-                      <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>
-                        {t(`reporting.revenue.sources.${source.source}`)}
-                      </Typography>
+                      <Box textAlign="right">
+                        <Typography variant="body1" fontWeight="medium">
+                          {formatCurrency(source.totalRevenue, 'EUR', i18n.language)}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {t('reporting.revenue.table.transactions', { count: source.transactionCount })}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Box textAlign="right">
-                      <Typography variant="body1" fontWeight="medium">
-                        {formatCurrency(source.amount, 'EUR', i18n.language)}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {t('reporting.revenue.table.transactions', { count: source.transactionCount })}
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={percentage}
+                        sx={{
+                          flex: 1,
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: `${getSourceColor(source.source)}20`,
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: getSourceColor(source.source),
+                          },
+                        }}
+                      />
+                      <Typography variant="body2" color="textSecondary" sx={{ minWidth: 45 }}>
+                        {formatPercentage(percentage)}
                       </Typography>
                     </Box>
                   </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={source.percentage}
-                      sx={{
-                        flex: 1,
-                        height: 8,
-                        borderRadius: 4,
-                        bgcolor: `${getSourceColor(source.source)}20`,
-                        '& .MuiLinearProgress-bar': {
-                          bgcolor: getSourceColor(source.source),
-                        },
-                      }}
-                    />
-                    <Typography variant="body2" color="textSecondary" sx={{ minWidth: 45 }}>
-                      {formatPercentage(source.percentage)}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Stack>
           )}
 
-          {!loading && data && data.sources.length === 0 && (
+          {!loading && data && sources.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
               {t('reporting.revenue.noData')}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Monthly Breakdown Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            {t('reporting.revenue.monthlyBreakdown')}
-          </Typography>
-
-          {loading && (
-            <Box>
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} variant="rectangular" height={60} sx={{ mb: 1 }} />
-              ))}
-            </Box>
-          )}
-
-          {!loading && data && data.monthlyBreakdown.length > 0 && (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t('reporting.revenue.table.month')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.events')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.memberships')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.merchandise')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.calendar')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.registrations')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.tickets')}</TableCell>
-                    <TableCell align="right">{t('reporting.revenue.table.total')}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.monthlyBreakdown.map((month) => (
-                    <TableRow key={month.month} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {month.month}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatCurrency(month.events, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatCurrency(month.memberships, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatCurrency(month.merchandise, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatCurrency(month.calendar, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatCurrency(month.registrations, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatCurrency(month.tickets, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" fontWeight="bold">
-                          {formatCurrency(month.total, 'EUR', i18n.language)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-
-          {!loading && data && data.monthlyBreakdown.length === 0 && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              {t('reporting.revenue.noMonthlyData')}
             </Alert>
           )}
         </CardContent>

@@ -76,6 +76,14 @@ export const CreateOrganizationPage: React.FC = () => {
     language: 'en-GB',
     enabledCapabilities: [],
     enabledPaymentMethods: ['pay-offline'], // Default to pay-offline
+    settings: {
+      address: '',
+      city: '',
+      postcode: '',
+      country: 'Ireland',
+      phone: '',
+      website: '',
+    },
   });
 
   useEffect(() => {
@@ -157,6 +165,16 @@ export const CreateOrganizationPage: React.FC = () => {
         .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
     }
     setFormData({ ...formData, [field]: value });
+  };
+
+  const handleSettingsChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [field]: value,
+      },
+    }));
   };
 
   const handleCancel = () => {
@@ -269,6 +287,74 @@ export const CreateOrganizationPage: React.FC = () => {
                   value={formData.contactMobile}
                   onChange={(e) => handleChange('contactMobile', e.target.value)}
                   helperText="Primary contact mobile number"
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+                  Address & Contact Details
+                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Optional address and contact information for this organisation.
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Address"
+                  value={formData.settings?.address || ''}
+                  onChange={(e) => handleSettingsChange('address', e.target.value)}
+                  multiline
+                  rows={2}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  value={formData.settings?.city || ''}
+                  onChange={(e) => handleSettingsChange('city', e.target.value)}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Postcode"
+                  value={formData.settings?.postcode || ''}
+                  onChange={(e) => handleSettingsChange('postcode', e.target.value)}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Country"
+                  value={formData.settings?.country || ''}
+                  onChange={(e) => handleSettingsChange('country', e.target.value)}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Phone"
+                  type="tel"
+                  value={formData.settings?.phone || ''}
+                  onChange={(e) => handleSettingsChange('phone', e.target.value)}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Website"
+                  type="url"
+                  value={formData.settings?.website || ''}
+                  onChange={(e) => handleSettingsChange('website', e.target.value)}
+                  placeholder="https://example.com"
                 />
               </Grid>
 

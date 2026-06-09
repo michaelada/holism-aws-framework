@@ -1673,8 +1673,11 @@
         "displayName": "Nombre para mostrar",
         "domain": "Dominio",
         "domainPlaceholder": "ejemplo.com",
+        "domainHelper": "Establecido por su administrador y no se puede cambiar",
         "currency": "Moneda",
+        "currencyHelper": "Establecido por su administrador y no se puede cambiar",
         "language": "Idioma",
+        "languageHelper": "Establecido por su administrador y no se puede cambiar",
         "address": "Dirección",
         "city": "Ciudad",
         "postcode": "Código postal",
@@ -1837,7 +1840,9 @@
       "exportReport": "Exportar informe",
       "detailedReports": "Informes detallados",
       "noData": "No hay datos de informes disponibles para el rango de fechas seleccionado. Por favor, pruebe con un rango de fechas diferente.",
-      "vsPreviousPeriod": "vs período anterior"
+      "vsPreviousPeriod": "vs período anterior",
+      "period": "Período",
+      "lastNDays": "Últimos {{days}} días"
     },
     "metrics": {
       "events": "Eventos",
@@ -1845,7 +1850,8 @@
       "revenue": "Ingresos",
       "eventsSubtitle": "{{upcoming}} próximos, {{completed}} completados, {{totalAttendance}} asistencia total",
       "membersSubtitle": "{{active}} activos, {{new}} nuevos, {{renewals}} renovaciones",
-      "revenueSubtitle": "Eventos: {{events}}, Membresías: {{memberships}}, Mercancías: {{merchandise}}"
+      "revenueSubtitle": "Eventos: {{events}}, Membresías: {{memberships}}, Mercancías: {{merchandise}}",
+      "recentSubtitle": "{{count}} en los últimos {{days}} días"
     },
     "reports": {
       "eventsReport": "Informe de eventos",
@@ -1890,7 +1896,9 @@
         "renewals": "Renovaciones",
         "retentionRate": "{{rate}} de retención",
         "totalRevenue": "Ingresos totales",
-        "expiringSoon": "{{count}} expirando pronto"
+        "expiringSoon": "{{count}} expirando pronto",
+        "pendingMembers": "Miembros pendientes",
+        "elapsedMembers": "Miembros vencidos"
       },
       "table": {
         "membershipType": "Tipo de membresía",
@@ -1899,7 +1907,9 @@
         "new": "Nuevos",
         "renewals": "Renovaciones",
         "expiring": "Expirando",
-        "revenue": "Ingresos"
+        "revenue": "Ingresos",
+        "pending": "Pendiente",
+        "elapsed": "Vencido"
       },
       "noData": "No se encontraron datos de membresía para los filtros seleccionados. Intente ajustar su rango de fechas o filtro de estado."
     },

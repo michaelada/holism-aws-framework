@@ -20,7 +20,7 @@ export const reportingModule: ModuleRegistration = {
     title: 'modules.reporting.title',
     description: 'modules.reporting.description',
     icon: ReportingIcon,
-    color: '#0288d1',
+    color: '#3949ab',
     path: '/reporting',
   },
   routes: [

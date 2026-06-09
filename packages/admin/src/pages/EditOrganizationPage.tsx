@@ -78,6 +78,14 @@ export const EditOrganizationPage: React.FC = () => {
     language: 'en-GB',
     enabledCapabilities: [],
     enabledPaymentMethods: [],
+    settings: {
+      address: '',
+      city: '',
+      postcode: '',
+      country: 'Ireland',
+      phone: '',
+      website: '',
+    },
   });
 
   useEffect(() => {
@@ -119,6 +127,14 @@ export const EditOrganizationPage: React.FC = () => {
         language: orgData.language || 'en-GB',
         enabledCapabilities: orgData.enabledCapabilities,
         enabledPaymentMethods: selectedPaymentMethodNames,
+        settings: {
+          address: orgData.settings?.address || '',
+          city: orgData.settings?.city || '',
+          postcode: orgData.settings?.postcode || '',
+          country: orgData.settings?.country || 'Ireland',
+          phone: orgData.settings?.phone || '',
+          website: orgData.settings?.website || '',
+        },
       });
     } catch (error) {
       showError('Failed to load organisation');
@@ -154,6 +170,16 @@ export const EditOrganizationPage: React.FC = () => {
         .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
     }
     setFormData({ ...formData, [field]: value });
+  };
+
+  const handleSettingsChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [field]: value,
+      },
+    }));
   };
 
   if (loading) {
@@ -243,6 +269,62 @@ export const EditOrganizationPage: React.FC = () => {
                 value={formData.contactMobile}
                 onChange={(e) => handleChange('contactMobile', e.target.value)}
                 placeholder="+44 7700 900000"
+                fullWidth
+              />
+
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Address & Contact Details
+                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Optional address and contact information for this organisation.
+                </Typography>
+              </Box>
+
+              <TextField
+                label="Address"
+                value={formData.settings?.address || ''}
+                onChange={(e) => handleSettingsChange('address', e.target.value)}
+                multiline
+                rows={2}
+                fullWidth
+              />
+
+              <TextField
+                label="City"
+                value={formData.settings?.city || ''}
+                onChange={(e) => handleSettingsChange('city', e.target.value)}
+                fullWidth
+              />
+
+              <TextField
+                label="Postcode"
+                value={formData.settings?.postcode || ''}
+                onChange={(e) => handleSettingsChange('postcode', e.target.value)}
+                fullWidth
+              />
+
+              <TextField
+                label="Country"
+                value={formData.settings?.country || ''}
+                onChange={(e) => handleSettingsChange('country', e.target.value)}
+                fullWidth
+              />
+
+              <TextField
+                label="Phone"
+                type="tel"
+                value={formData.settings?.phone || ''}
+                onChange={(e) => handleSettingsChange('phone', e.target.value)}
+                fullWidth
+              />
+
+              <TextField
+                label="Website"
+                type="url"
+                value={formData.settings?.website || ''}
+                onChange={(e) => handleSettingsChange('website', e.target.value)}
+                placeholder="https://example.com"
                 fullWidth
               />
 

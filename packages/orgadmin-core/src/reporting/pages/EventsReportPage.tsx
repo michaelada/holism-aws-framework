@@ -4,7 +4,7 @@
  * Shows event attendance and revenue with filters and export functionality
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -21,11 +21,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Skeleton,
 } from '@mui/material';
 import {
@@ -34,35 +29,29 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useApiGet } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
 
 /**
- * Event report data structure
+ * Event report row, matching the backend reporting service shape
  */
-interface EventReport {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
-  totalEntries: number;
-  totalRevenue: number;
-  activities: {
-    name: string;
-    entries: number;
-    revenue: number;
-  }[];
+interface EventActivityRow {
+  activityId: string;
+  activityName: string;
+  entries: number;
+  revenue: number;
 }
 
-interface EventsReportData {
-  events: EventReport[];
-  summary: {
-    totalEvents: number;
-    totalEntries: number;
-    totalRevenue: number;
-  };
+interface EventReportRow {
+  eventId: string;
+  eventName: string;
+  startDate: string;
+  endDate: string;
+  totalEntries: number;
+  totalRevenue: number;
+  activities: EventActivityRow[];
 }
 
 /**
@@ -71,6 +60,7 @@ interface EventsReportData {
 const EventsReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { organisation } = useOrganisation();
 
   // Filter state
   const [startDate, setStartDate] = useState<string>(() => {
@@ -81,30 +71,28 @@ const EventsReportPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data, error, loading, execute } = useApiGet<EventsReportData>(
-    `/api/orgadmin/reports/events?startDate=${startDate}&endDate=${endDate}&status=${statusFilter}`
+  const { data, error, loading, execute } = useApiGet<EventReportRow[]>(
+    `/api/orgadmin/organisations/${organisation?.id}/reports/events?startDate=${startDate}&endDate=${endDate}`
   );
 
   // Fetch report on mount and when filters change
   useEffect(() => {
+    if (!organisation?.id) return;
     execute();
-  }, [execute, startDate, endDate, statusFilter]);
+  }, [execute, startDate, endDate, organisation?.id]);
 
-  // Get status color
-  const getStatusColor = (status: string): 'default' | 'primary' | 'success' | 'error' => {
-    switch (status) {
-      case 'published':
-        return 'primary';
-      case 'completed':
-        return 'success';
-      case 'cancelled':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
+  const events = data ?? [];
+
+  // Summary totals are derived from the per-event rows
+  const summary = useMemo(
+    () => ({
+      totalEvents: events.length,
+      totalEntries: events.reduce((sum, e) => sum + e.totalEntries, 0),
+      totalRevenue: events.reduce((sum, e) => sum + e.totalRevenue, 0),
+    }),
+    [events]
+  );
 
   // Handle export
   const handleExport = () => {
@@ -164,20 +152,6 @@ const EventsReportPage: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
-            <FormControl fullWidth>
-              <InputLabel>{t('reporting.filters.status')}</InputLabel>
-              <Select
-                value={statusFilter}
-                label={t('reporting.filters.status')}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="all">{t('reporting.filters.all')}</MenuItem>
-                <MenuItem value="draft">{t('reporting.filters.draft')}</MenuItem>
-                <MenuItem value="published">{t('reporting.filters.published')}</MenuItem>
-                <MenuItem value="completed">{t('reporting.filters.completed')}</MenuItem>
-                <MenuItem value="cancelled">{t('reporting.filters.cancelled')}</MenuItem>
-              </Select>
-            </FormControl>
           </Stack>
         </CardContent>
       </Card>
@@ -198,7 +172,7 @@ const EventsReportPage: React.FC = () => {
                 <Typography variant="body2" color="textSecondary" gutterBottom>
                   {t('reporting.events.summary.totalEvents')}
                 </Typography>
-                <Typography variant="h4">{data.summary.totalEvents}</Typography>
+                <Typography variant="h4">{summary.totalEvents}</Typography>
               </CardContent>
             </Card>
             <Card sx={{ flex: 1 }}>
@@ -206,7 +180,7 @@ const EventsReportPage: React.FC = () => {
                 <Typography variant="body2" color="textSecondary" gutterBottom>
                   {t('reporting.events.summary.totalEntries')}
                 </Typography>
-                <Typography variant="h4">{data.summary.totalEntries}</Typography>
+                <Typography variant="h4">{summary.totalEntries}</Typography>
               </CardContent>
             </Card>
             <Card sx={{ flex: 1 }}>
@@ -215,7 +189,7 @@ const EventsReportPage: React.FC = () => {
                   {t('reporting.events.summary.totalRevenue')}
                 </Typography>
                 <Typography variant="h4">
-                  {formatCurrency(data.summary.totalRevenue, 'EUR', i18n.language)}
+                  {formatCurrency(summary.totalRevenue, 'EUR', i18n.language)}
                 </Typography>
               </CardContent>
             </Card>
@@ -238,38 +212,30 @@ const EventsReportPage: React.FC = () => {
             </Box>
           )}
 
-          {!loading && data && data.events.length > 0 && (
+          {!loading && data && events.length > 0 && (
             <TableContainer component={Paper} variant="outlined">
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>{t('reporting.events.table.eventName')}</TableCell>
                     <TableCell>{t('reporting.events.table.dateRange')}</TableCell>
-                    <TableCell>{t('reporting.events.table.status')}</TableCell>
                     <TableCell align="right">{t('reporting.events.table.entries')}</TableCell>
                     <TableCell align="right">{t('reporting.events.table.revenue')}</TableCell>
                     <TableCell>{t('reporting.events.table.activities')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.events.map((event) => (
-                    <TableRow key={event.id} hover>
+                  {events.map((event) => (
+                    <TableRow key={event.eventId} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">
-                          {event.name}
+                          {event.eventName}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
                           {formatDate(new Date(event.startDate), 'dd MMM yyyy', i18n.language)} - {formatDate(new Date(event.endDate), 'dd MMM yyyy', i18n.language)}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={event.status}
-                          size="small"
-                          color={getStatusColor(event.status)}
-                        />
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">{event.totalEntries}</Typography>
@@ -283,14 +249,14 @@ const EventsReportPage: React.FC = () => {
                         <Typography variant="body2" color="textSecondary">
                           {t('reporting.events.table.activitiesCount', { count: event.activities.length })}
                         </Typography>
-                        {event.activities.map((activity, idx) => (
+                        {event.activities.map((activity) => (
                           <Typography
-                            key={idx}
+                            key={activity.activityId}
                             variant="caption"
                             display="block"
                             color="textSecondary"
                           >
-                            {activity.name}: {activity.entries} {t('reporting.events.table.entries').toLowerCase()}, {formatCurrency(activity.revenue, 'EUR', i18n.language)}
+                            {activity.activityName}: {activity.entries} {t('reporting.events.table.entries').toLowerCase()}, {formatCurrency(activity.revenue, 'EUR', i18n.language)}
                           </Typography>
                         ))}
                       </TableCell>
@@ -301,7 +267,7 @@ const EventsReportPage: React.FC = () => {
             </TableContainer>
           )}
 
-          {!loading && data && data.events.length === 0 && (
+          {!loading && data && events.length === 0 && (
             <Alert severity="info" sx={{ mt: 2 }}>
               {t('reporting.events.noData')}
             </Alert>

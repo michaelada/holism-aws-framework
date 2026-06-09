@@ -18,6 +18,7 @@ import {
 import { Save as SaveIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
 
 interface OrganisationDetails {
   id: string;
@@ -40,6 +41,7 @@ interface OrganisationDetails {
 const OrganisationDetailsTab: React.FC = () => {
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { organisation } = useOrganisation();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,34 +84,34 @@ const OrganisationDetailsTab: React.FC = () => {
 
   useEffect(() => {
     loadOrganisationDetails();
-  }, []);
+  }, [organisation]);
 
-  const loadOrganisationDetails = async () => {
+  const loadOrganisationDetails = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Get current organisation from context/API
-      const response = await execute({
-        method: 'GET',
-        url: '/api/orgadmin/organisation',
-      });
-      
+
+      // The current organisation is already loaded by the shell (via
+      // /api/orgadmin/auth/me) and provided through OrganisationContext.
+      if (!organisation) {
+        return;
+      }
+
       setFormData({
-        id: response.id,
-        name: response.name,
-        displayName: response.displayName,
-        domain: response.domain || '',
-        currency: response.currency || 'GBP',
-        language: response.language || 'en-GB',
+        id: organisation.id,
+        name: organisation.name,
+        displayName: organisation.displayName,
+        domain: organisation.domain || '',
+        currency: organisation.currency || 'GBP',
+        language: organisation.language || 'en-GB',
         settings: {
-          address: response.settings?.address || '',
-          city: response.settings?.city || '',
-          postcode: response.settings?.postcode || '',
-          country: response.settings?.country || '',
-          phone: response.settings?.phone || '',
-          email: response.settings?.email || '',
-          website: response.settings?.website || '',
+          address: organisation.settings?.address || '',
+          city: organisation.settings?.city || '',
+          postcode: organisation.settings?.postcode || '',
+          country: organisation.settings?.country || '',
+          phone: organisation.settings?.phone || '',
+          email: organisation.settings?.email || '',
+          website: organisation.settings?.website || '',
         },
       });
     } catch (err: any) {
@@ -148,10 +150,9 @@ const OrganisationDetailsTab: React.FC = () => {
         method: 'PUT',
         url: `/api/orgadmin/organisation/${formData.id}`,
         data: {
+          // domain, currency and language are managed by the super admin
+          // and are read-only here, so they are not sent.
           displayName: formData.displayName,
-          domain: formData.domain,
-          currency: formData.currency,
-          language: formData.language,
           settings: formData.settings,
         },
       });
@@ -220,8 +221,8 @@ const OrganisationDetailsTab: React.FC = () => {
             fullWidth
             label={t('settings.organisationDetails.fields.domain')}
             value={formData.domain}
-            onChange={(e) => handleChange('domain', e.target.value)}
-            placeholder={t('settings.organisationDetails.fields.domainPlaceholder')}
+            disabled
+            helperText={t('settings.organisationDetails.fields.domainHelper')}
           />
         </Grid>
 
@@ -231,7 +232,8 @@ const OrganisationDetailsTab: React.FC = () => {
             select
             label={t('settings.organisationDetails.fields.currency')}
             value={formData.currency}
-            onChange={(e) => handleChange('currency', e.target.value)}
+            disabled
+            helperText={t('settings.organisationDetails.fields.currencyHelper')}
           >
             {CURRENCIES.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -247,7 +249,8 @@ const OrganisationDetailsTab: React.FC = () => {
             select
             label={t('settings.organisationDetails.fields.language')}
             value={formData.language}
-            onChange={(e) => handleChange('language', e.target.value)}
+            disabled
+            helperText={t('settings.organisationDetails.fields.languageHelper')}
           >
             {LANGUAGES.map((option) => (
               <MenuItem key={option.value} value={option.value}>

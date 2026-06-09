@@ -21,7 +21,7 @@ export const usersModule: ModuleRegistration = {
     title: 'modules.users.title',
     description: 'modules.users.description',
     icon: UsersIcon,
-    color: '#7b1fa2',
+    color: '#d81b60',
     path: '/users',
   },
   routes: [

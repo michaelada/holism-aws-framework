@@ -137,6 +137,7 @@ export interface CreateOrganizationDto {
   enabledCapabilities: string[];
   currency?: string;
   language?: string;
+  settings?: Record<string, any>;
   enabledPaymentMethods?: string[];
 }
 

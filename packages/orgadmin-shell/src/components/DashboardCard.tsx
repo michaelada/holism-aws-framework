@@ -63,7 +63,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
         overflow: 'hidden',
         background: '#FFFFFF',
         border: '1px solid rgba(0,0,0,0.04)',
-        borderRadius: '20px',
+        borderRadius: '16px',
         '&:hover': {
           transform: 'translateY(-4px)',
           boxShadow: '0 10px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)',
@@ -86,22 +86,22 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
       }}
       onClick={handleClick}
     >
-      <CardContent sx={{ p: '2.5rem 2rem', position: 'relative', zIndex: 1 }}>
+      <CardContent sx={{ p: '1.5rem 1.25rem', position: 'relative', zIndex: 1 }}>
         {/* Icon */}
         {Icon && (
           <Box
             sx={{
-              width: 56,
-              height: 56,
-              borderRadius: '14px',
+              width: 44,
+              height: 44,
+              borderRadius: '12px',
               background: getSoftColor(card.color || '#FF9800'),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              mb: '1.5rem',
+              mb: '1rem',
             }}
           >
-            <Box sx={{ fontSize: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color || '#FF9800' }}>
+            <Box sx={{ fontSize: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color || '#FF9800' }}>
               <Icon />
             </Box>
           </Box>
@@ -113,8 +113,8 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
           sx={{
             fontWeight: 600,
             color: 'text.primary',
-            mb: '0.75rem',
-            fontSize: '1.25rem',
+            mb: '0.4rem',
+            fontSize: '1.05rem',
           }}
         >
           {t(card.title)}
@@ -125,10 +125,13 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
           variant="body2"
           color="text.secondary"
           sx={{
-            fontSize: '0.9rem',
-            lineHeight: 1.7,
-            mb: '1.25rem',
-            minHeight: '3em',
+            fontSize: '0.825rem',
+            lineHeight: 1.55,
+            mb: '0.85rem',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
           }}
         >
           {t(card.description)}
@@ -140,7 +143,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module }) => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.3rem',
-            fontSize: '0.85rem',
+            fontSize: '0.8rem',
             fontWeight: 600,
             color: card.color || '#FF9800',
             transition: 'gap 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
