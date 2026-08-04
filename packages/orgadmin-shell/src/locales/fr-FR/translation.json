@@ -1714,7 +1714,8 @@
       "sections": {
         "stripeConfig": "Configuration Stripe",
         "paymentConfig": "Configuration des paiements",
-        "offlinePayments": "Paiements hors ligne"
+        "offlinePayments": "Paiements hors ligne",
+        "helixPay": "Paiements par carte (Helix-Pay)"
       },
       "fields": {
         "stripeEnabled": "Activer les paiements Stripe",
@@ -1735,10 +1736,15 @@
         "chequePaymentsEnabled": "Activer les paiements par chèque/hors ligne",
         "chequePaymentInstructions": "Instructions de paiement par chèque",
         "chequePaymentInstructionsPlaceholder": "Veuillez libeller les chèques à l'ordre de...",
-        "chequePaymentInstructionsHelper": "Instructions affichées aux utilisateurs lors de la sélection du paiement par chèque/hors ligne"
+        "chequePaymentInstructionsHelper": "Instructions affichées aux utilisateurs lors de la sélection du paiement par chèque/hors ligne",
+        "helixPayEnabled": "Activer les paiements Helix-Pay",
+        "helixPayApiKey": "Clé API Helix-Pay",
+        "helixPayApiKeyPlaceholder": "Saisissez votre clé API Helix-Pay",
+        "helixPayApiKeyHelper": "Votre clé API Helix-Pay, utilisée pour traiter les paiements par carte"
       },
       "validation": {
-        "stripeKeysRequired": "La clé publique et la clé secrète Stripe sont requises lorsque Stripe est activé"
+        "stripeKeysRequired": "La clé publique et la clé secrète Stripe sont requises lorsque Stripe est activé",
+        "helixPayApiKeyRequired": "Une clé API Helix-Pay est requise lorsque Helix-Pay est activé"
       },
       "messages": {
         "loadFailed": "Échec du chargement des paramètres de paiement",

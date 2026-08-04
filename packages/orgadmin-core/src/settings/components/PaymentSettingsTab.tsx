@@ -15,7 +15,6 @@ import {
   CircularProgress,
   FormControlLabel,
   Switch,
-  MenuItem,
   InputAdornment,
   IconButton,
 } from '@mui/material';
@@ -32,10 +31,9 @@ interface PaymentSettings {
   stripePublishableKey: string;
   stripeSecretKey: string;
   stripeWebhookSecret: string;
-  defaultCurrency: string;
   acceptedPaymentMethods: string[];
-  handlingFeePercentage: number;
-  handlingFeeFixed: number;
+  helixPayEnabled: boolean;
+  helixPayApiKey: string;
   chequePaymentsEnabled: boolean;
   chequePaymentInstructions: string;
 }
@@ -51,27 +49,20 @@ const PaymentSettingsTab: React.FC = () => {
   
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
-  
+  const [showHelixApiKey, setShowHelixApiKey] = useState(false);
+  const [helixPaySupported, setHelixPaySupported] = useState(false);
+
   const [formData, setFormData] = useState<PaymentSettings>({
     stripeEnabled: false,
     stripePublishableKey: '',
     stripeSecretKey: '',
     stripeWebhookSecret: '',
-    defaultCurrency: 'GBP',
     acceptedPaymentMethods: ['card'],
-    handlingFeePercentage: 0,
-    handlingFeeFixed: 0,
+    helixPayEnabled: false,
+    helixPayApiKey: '',
     chequePaymentsEnabled: false,
     chequePaymentInstructions: '',
   });
-
-  const CURRENCIES = [
-    { value: 'GBP', label: t('settings.organisationDetails.currencies.gbp') },
-    { value: 'EUR', label: t('settings.organisationDetails.currencies.eur') },
-    { value: 'USD', label: t('settings.organisationDetails.currencies.usd') },
-    { value: 'AUD', label: t('settings.organisationDetails.currencies.aud') },
-    { value: 'CAD', label: t('settings.organisationDetails.currencies.cad') },
-  ];
 
   useEffect(() => {
     loadPaymentSettings();
@@ -82,21 +73,37 @@ const PaymentSettingsTab: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await execute({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
-      });
-      
+      // Load saved payment settings and the org's enabled payment methods.
+      // Helix-Pay options are only shown when the org has a Helix-Pay
+      // payment method enabled (configured by the super admin).
+      const [response, methods] = await Promise.all([
+        execute({
+          method: 'GET',
+          url: '/api/orgadmin/organisation/payment-settings',
+        }),
+        execute({
+          method: 'GET',
+          url: '/api/orgadmin/payment-methods',
+        }),
+      ]);
+
+      if (Array.isArray(methods)) {
+        setHelixPaySupported(
+          methods.some((pm: { name?: string }) =>
+            (pm.name || '').toLowerCase().includes('helix')
+          )
+        );
+      }
+
       if (response) {
         setFormData({
           stripeEnabled: response.stripeEnabled || false,
           stripePublishableKey: response.stripePublishableKey || '',
           stripeSecretKey: response.stripeSecretKey || '',
           stripeWebhookSecret: response.stripeWebhookSecret || '',
-          defaultCurrency: response.defaultCurrency || 'GBP',
           acceptedPaymentMethods: response.acceptedPaymentMethods || ['card'],
-          handlingFeePercentage: response.handlingFeePercentage || 0,
-          handlingFeeFixed: response.handlingFeeFixed || 0,
+          helixPayEnabled: response.helixPayEnabled || false,
+          helixPayApiKey: response.helixPayApiKey || '',
           chequePaymentsEnabled: response.chequePaymentsEnabled || false,
           chequePaymentInstructions: response.chequePaymentInstructions || '',
         });
@@ -129,6 +136,13 @@ const PaymentSettingsTab: React.FC = () => {
           setSaving(false);
           return;
         }
+      }
+
+      // Validate Helix-Pay API key if enabled
+      if (formData.helixPayEnabled && !formData.helixPayApiKey) {
+        setError(t('settings.paymentSettings.validation.helixPayApiKeyRequired'));
+        setSaving(false);
+        return;
       }
 
       await execute({
@@ -259,54 +273,54 @@ const PaymentSettingsTab: React.FC = () => {
           </>
         )}
 
-        <Grid item xs={12}>
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            {t('settings.paymentSettings.sections.paymentConfig')}
-          </Typography>
-        </Grid>
+        {helixPaySupported && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                {t('settings.paymentSettings.sections.helixPay')}
+              </Typography>
+            </Grid>
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            select
-            label={t('settings.paymentSettings.fields.defaultCurrency')}
-            value={formData.defaultCurrency}
-            onChange={(e) => handleChange('defaultCurrency', e.target.value)}
-          >
-            {CURRENCIES.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.helixPayEnabled}
+                    onChange={(e) => handleChange('helixPayEnabled', e.target.checked)}
+                  />
+                }
+                label={t('settings.paymentSettings.fields.helixPayEnabled')}
+              />
+            </Grid>
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label={t('settings.paymentSettings.fields.handlingFeePercentage')}
-            type="number"
-            value={formData.handlingFeePercentage}
-            onChange={(e) => handleChange('handlingFeePercentage', parseFloat(e.target.value) || 0)}
-            inputProps={{ min: 0, max: 100, step: 0.1 }}
-            helperText={t('settings.paymentSettings.fields.handlingFeePercentageHelper')}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label={t('settings.paymentSettings.fields.handlingFeeFixed')}
-            type="number"
-            value={formData.handlingFeeFixed}
-            onChange={(e) => handleChange('handlingFeeFixed', parseFloat(e.target.value) || 0)}
-            inputProps={{ min: 0, step: 0.01 }}
-            InputProps={{
-              startAdornment: <InputAdornment position="start">£</InputAdornment>,
-            }}
-            helperText={t('settings.paymentSettings.fields.handlingFeeFixedHelper')}
-          />
-        </Grid>
+            {formData.helixPayEnabled && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('settings.paymentSettings.fields.helixPayApiKey')}
+                  type={showHelixApiKey ? 'text' : 'password'}
+                  value={formData.helixPayApiKey}
+                  onChange={(e) => handleChange('helixPayApiKey', e.target.value)}
+                  placeholder={t('settings.paymentSettings.fields.helixPayApiKeyPlaceholder')}
+                  required
+                  helperText={t('settings.paymentSettings.fields.helixPayApiKeyHelper')}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowHelixApiKey(!showHelixApiKey)}
+                          edge="end"
+                        >
+                          {showHelixApiKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+            )}
+          </>
+        )}
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>

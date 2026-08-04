@@ -1713,7 +1713,8 @@
       "sections": {
         "stripeConfig": "Configuración de Stripe",
         "paymentConfig": "Configuración de pagos",
-        "offlinePayments": "Pagos fuera de línea"
+        "offlinePayments": "Pagos fuera de línea",
+        "helixPay": "Pagos con tarjeta (Helix-Pay)"
       },
       "fields": {
         "stripeEnabled": "Habilitar pagos con Stripe",
@@ -1734,10 +1735,15 @@
         "chequePaymentsEnabled": "Habilitar pagos con cheque/fuera de línea",
         "chequePaymentInstructions": "Instrucciones de pago con cheque",
         "chequePaymentInstructionsPlaceholder": "Por favor, haga los cheques a nombre de...",
-        "chequePaymentInstructionsHelper": "Instrucciones mostradas a los usuarios al seleccionar pago con cheque/fuera de línea"
+        "chequePaymentInstructionsHelper": "Instrucciones mostradas a los usuarios al seleccionar pago con cheque/fuera de línea",
+        "helixPayEnabled": "Activar pagos con Helix-Pay",
+        "helixPayApiKey": "Clave API de Helix-Pay",
+        "helixPayApiKeyPlaceholder": "Introduzca su clave API de Helix-Pay",
+        "helixPayApiKeyHelper": "Su clave API de Helix-Pay, utilizada para procesar pagos con tarjeta"
       },
       "validation": {
-        "stripeKeysRequired": "La clave pública y la clave secreta de Stripe son obligatorias cuando Stripe está habilitado"
+        "stripeKeysRequired": "La clave pública y la clave secreta de Stripe son obligatorias cuando Stripe está habilitado",
+        "helixPayApiKeyRequired": "Se requiere una clave API de Helix-Pay cuando Helix-Pay está activado"
       },
       "messages": {
         "loadFailed": "Error al cargar la configuración de pagos",

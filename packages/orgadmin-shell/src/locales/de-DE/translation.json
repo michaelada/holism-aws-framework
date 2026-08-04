@@ -1633,7 +1633,8 @@
       "sections": {
         "stripeConfig": "Stripe-Konfiguration",
         "paymentConfig": "Zahlungskonfiguration",
-        "offlinePayments": "Offline-Zahlungen"
+        "offlinePayments": "Offline-Zahlungen",
+        "helixPay": "Kartenzahlungen (Helix-Pay)"
       },
       "fields": {
         "stripeEnabled": "Stripe-Zahlungen aktivieren",
@@ -1654,10 +1655,15 @@
         "chequePaymentsEnabled": "Scheck-/Offline-Zahlungen aktivieren",
         "chequePaymentInstructions": "Scheck-Zahlungsanweisungen",
         "chequePaymentInstructionsPlaceholder": "Bitte stellen Sie Schecks aus an...",
-        "chequePaymentInstructionsHelper": "Anweisungen, die Benutzern angezeigt werden, wenn sie Scheck-/Offline-Zahlung auswählen"
+        "chequePaymentInstructionsHelper": "Anweisungen, die Benutzern angezeigt werden, wenn sie Scheck-/Offline-Zahlung auswählen",
+        "helixPayEnabled": "Helix-Pay-Zahlungen aktivieren",
+        "helixPayApiKey": "Helix-Pay API-Schlüssel",
+        "helixPayApiKeyPlaceholder": "Geben Sie Ihren Helix-Pay API-Schlüssel ein",
+        "helixPayApiKeyHelper": "Ihr API-Schlüssel von Helix-Pay zur Verarbeitung von Kartenzahlungen"
       },
       "validation": {
-        "stripeKeysRequired": "Stripe Publishable Key und Secret Key sind erforderlich, wenn Stripe aktiviert ist"
+        "stripeKeysRequired": "Stripe Publishable Key und Secret Key sind erforderlich, wenn Stripe aktiviert ist",
+        "helixPayApiKeyRequired": "Ein Helix-Pay API-Schlüssel ist erforderlich, wenn Helix-Pay aktiviert ist"
       },
       "messages": {
         "loadFailed": "Fehler beim Laden der Zahlungseinstellungen",

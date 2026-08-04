@@ -1633,7 +1633,8 @@
       "sections": {
         "stripeConfig": "Configurazione Stripe",
         "paymentConfig": "Configurazione pagamento",
-        "offlinePayments": "Pagamenti offline"
+        "offlinePayments": "Pagamenti offline",
+        "helixPay": "Pagamenti con carta (Helix-Pay)"
       },
       "fields": {
         "stripeEnabled": "Abilita pagamenti Stripe",
@@ -1654,10 +1655,15 @@
         "chequePaymentsEnabled": "Abilita pagamenti con assegno/offline",
         "chequePaymentInstructions": "Istruzioni pagamento assegno",
         "chequePaymentInstructionsPlaceholder": "Si prega di intestare gli assegni a...",
-        "chequePaymentInstructionsHelper": "Istruzioni mostrate agli utenti quando selezionano il pagamento con assegno/offline"
+        "chequePaymentInstructionsHelper": "Istruzioni mostrate agli utenti quando selezionano il pagamento con assegno/offline",
+        "helixPayEnabled": "Abilita i pagamenti Helix-Pay",
+        "helixPayApiKey": "Chiave API Helix-Pay",
+        "helixPayApiKeyPlaceholder": "Inserisci la tua chiave API Helix-Pay",
+        "helixPayApiKeyHelper": "La tua chiave API Helix-Pay, utilizzata per elaborare i pagamenti con carta"
       },
       "validation": {
-        "stripeKeysRequired": "La chiave pubblicabile e la chiave segreta Stripe sono obbligatorie quando Stripe è abilitato"
+        "stripeKeysRequired": "La chiave pubblicabile e la chiave segreta Stripe sono obbligatorie quando Stripe è abilitato",
+        "helixPayApiKeyRequired": "È richiesta una chiave API Helix-Pay quando Helix-Pay è abilitato"
       },
       "messages": {
         "loadFailed": "Impossibile caricare le impostazioni di pagamento",

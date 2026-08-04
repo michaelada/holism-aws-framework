@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(sed -n '780,820p' packages/backend/src/routes/membership.routes.ts)",
+      "Bash(sed -n '188,205p' packages/orgadmin-events/src/pages/EventDetailsPage.tsx)"
     ]
   }
 }

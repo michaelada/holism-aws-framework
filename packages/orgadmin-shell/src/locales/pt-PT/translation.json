@@ -1633,7 +1633,8 @@
       "sections": {
         "stripeConfig": "Configuração Stripe",
         "paymentConfig": "Configuração de pagamento",
-        "offlinePayments": "Pagamentos offline"
+        "offlinePayments": "Pagamentos offline",
+        "helixPay": "Pagamentos com cartão (Helix-Pay)"
       },
       "fields": {
         "stripeEnabled": "Ativar pagamentos Stripe",
@@ -1654,10 +1655,15 @@
         "chequePaymentsEnabled": "Ativar pagamentos por cheque/offline",
         "chequePaymentInstructions": "Instruções de pagamento por cheque",
         "chequePaymentInstructionsPlaceholder": "Por favor, faça os cheques à ordem de...",
-        "chequePaymentInstructionsHelper": "Instruções mostradas aos utilizadores ao selecionar pagamento por cheque/offline"
+        "chequePaymentInstructionsHelper": "Instruções mostradas aos utilizadores ao selecionar pagamento por cheque/offline",
+        "helixPayEnabled": "Ativar pagamentos Helix-Pay",
+        "helixPayApiKey": "Chave API Helix-Pay",
+        "helixPayApiKeyPlaceholder": "Introduza a sua chave API Helix-Pay",
+        "helixPayApiKeyHelper": "A sua chave API Helix-Pay, utilizada para processar pagamentos com cartão"
       },
       "validation": {
-        "stripeKeysRequired": "A chave publicável e a chave secreta Stripe são obrigatórias quando o Stripe está ativado"
+        "stripeKeysRequired": "A chave publicável e a chave secreta Stripe são obrigatórias quando o Stripe está ativado",
+        "helixPayApiKeyRequired": "É necessária uma chave API Helix-Pay quando o Helix-Pay está ativado"
       },
       "messages": {
         "loadFailed": "Falha ao carregar as definições de pagamento",

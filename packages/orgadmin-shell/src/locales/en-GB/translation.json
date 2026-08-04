@@ -1749,7 +1749,8 @@
       "sections": {
         "stripeConfig": "Stripe Configuration",
         "paymentConfig": "Payment Configuration",
-        "offlinePayments": "Offline Payments"
+        "offlinePayments": "Offline Payments",
+        "helixPay": "Card Payments (Helix-Pay)"
       },
       "fields": {
         "stripeEnabled": "Enable Stripe Payments",
@@ -1770,10 +1771,15 @@
         "chequePaymentsEnabled": "Enable Cheque/Offline Payments",
         "chequePaymentInstructions": "Cheque Payment Instructions",
         "chequePaymentInstructionsPlaceholder": "Please make cheques payable to...",
-        "chequePaymentInstructionsHelper": "Instructions shown to users when selecting cheque/offline payment"
+        "chequePaymentInstructionsHelper": "Instructions shown to users when selecting cheque/offline payment",
+        "helixPayEnabled": "Enable Helix-Pay Payments",
+        "helixPayApiKey": "Helix-Pay API Key",
+        "helixPayApiKeyPlaceholder": "Enter your Helix-Pay API key",
+        "helixPayApiKeyHelper": "Your API key from Helix-Pay, used to process card payments"
       },
       "validation": {
-        "stripeKeysRequired": "Stripe publishable key and secret key are required when Stripe is enabled"
+        "stripeKeysRequired": "Stripe publishable key and secret key are required when Stripe is enabled",
+        "helixPayApiKeyRequired": "A Helix-Pay API key is required when Helix-Pay is enabled"
       },
       "messages": {
         "loadFailed": "Failed to load payment settings",

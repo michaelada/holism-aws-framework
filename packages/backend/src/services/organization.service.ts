@@ -384,7 +384,11 @@ export class OrganizationService {
           values.push(JSON.stringify(data.enabledCapabilities));
         }
         if (data.settings !== undefined) {
-          updates.push(`settings = $${paramCount++}`);
+          // Merge into the existing settings JSONB rather than replacing it,
+          // so updating one group of settings (e.g. address) does not wipe
+          // others stored under the same column (e.g. paymentSettings, which
+          // is managed by the org admin's payment settings screen).
+          updates.push(`settings = COALESCE(settings, '{}'::jsonb) || $${paramCount++}::jsonb`);
           values.push(JSON.stringify(data.settings));
         }
 
