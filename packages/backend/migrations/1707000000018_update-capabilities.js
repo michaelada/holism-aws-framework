@@ -1,9 +1,16 @@
 /**
  * Migration: Update Capabilities
- * 
+ *
  * This migration updates the capabilities table:
  * - Removes: discounts, document-uploads, email-notifications, sms-notifications
  * - Adds: 14 new capabilities for document management, discounts by area, and integrations
+ *
+ * The inserts are `ON CONFLICT (name) DO NOTHING` because migration 004 was
+ * later amended to seed these same capabilities. On a database that ran the
+ * original 004 there is no overlap and nothing changes; on a fresh one, 004 now
+ * seeds them first and an unguarded insert here aborted the whole run with a
+ * duplicate key — which meant `npm run migrate:up` could not bootstrap a new
+ * database at all. Migration 024 already takes the same approach.
  */
 
 exports.shorthands = undefined;
@@ -43,6 +50,7 @@ exports.up = (pgm) => {
     pgm.sql(`
       INSERT INTO capabilities (name, display_name, description, category, is_active)
       VALUES ('${name}', '${displayName}', '${description}', '${category}', true)
+      ON CONFLICT (name) DO NOTHING
     `);
   });
 };
@@ -82,6 +90,7 @@ exports.down = (pgm) => {
     pgm.sql(`
       INSERT INTO capabilities (name, display_name, description, category, is_active)
       VALUES ('${name}', '${displayName}', '${description}', '${category}', true)
+      ON CONFLICT (name) DO NOTHING
     `);
   });
 };
