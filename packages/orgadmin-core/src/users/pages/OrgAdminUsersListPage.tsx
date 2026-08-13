@@ -32,6 +32,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
 
@@ -47,6 +48,7 @@ interface OrgAdminUser {
 }
 
 const OrgAdminUsersListPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { execute } = useApi();
   const { organisation } = useOrganisation();
@@ -140,26 +142,25 @@ const OrgAdminUsersListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">User Management</Typography>
+        <Typography variant="h4">{t('users.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<InviteIcon />}
-          onClick={handleInviteUser}
-        >
-          Invite Admin User
+          onClick={handleInviteUser}        >
+          {t('users.admins.invite')}
         </Button>
       </Box>
 
       <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-        <Tab label="Admin Users" />
-        <Tab label="Account Users" />
+        <Tab label={t('users.tabs.admins')} />
+        <Tab label={t('users.tabs.accounts')} />
       </Tabs>
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <TextField
-            placeholder="Search users by name or email..."
+            placeholder={t('users.search')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
@@ -178,20 +179,18 @@ const OrgAdminUsersListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Roles</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Last Login</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('users.fields.name')}</TableCell>
+              <TableCell>{t('users.fields.email')}</TableCell>
+              <TableCell>{t('users.fields.roles')}</TableCell>
+              <TableCell>{t('users.fields.status')}</TableCell>
+              <TableCell>{t('users.fields.lastLogin')}</TableCell>
+              <TableCell align="right">{t('users.fields.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
-                  Loading admin users...
-                </TableCell>
+                <TableCell colSpan={6} align="center">{t('users.loading.admins')}</TableCell>
               </TableRow>
             ) : filteredUsers.length === 0 ? (
               <TableRow>
@@ -221,9 +220,7 @@ const OrgAdminUsersListPage: React.FC = () => {
                           <Chip key={index} label={role} size="small" variant="outlined" />
                         ))
                       ) : (
-                        <Typography variant="body2" color="textSecondary">
-                          No roles assigned
-                        </Typography>
+                        <Typography variant="body2" color="textSecondary">{t('users.noRoles')}</Typography>
                       )}
                     </Box>
                   </TableCell>
@@ -239,7 +236,8 @@ const OrgAdminUsersListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleEditUser(user.id)}
-                      title="Edit"
+                      title={t('common.actions.edit')}
+                      aria-label={t('common.actions.edit')}
                     >
                       <EditIcon />
                     </IconButton>

@@ -43,7 +43,7 @@ import {
   HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp, useOnboarding, formatCurrency, useLocale, useTranslation } from '@aws-web-framework/orgadmin-shell';
 import CollapsibleSection from '../components/CollapsibleSection';
 import StickySaveBar from '../components/StickySaveBar';
 import type { CreateDiscountDto, DiscountStatus, ApplicationScope } from '../../../backend/src/types/discount.types';
@@ -63,6 +63,7 @@ interface DiscountFormData {
   // Step 3 fields
   requiresCode: boolean;
   membershipTypeIds: string[];
+  userGroupIds: string[];
   minimumPurchaseAmount?: number;
   maximumDiscountAmount?: number;
   // Step 4 fields
@@ -92,6 +93,8 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
 
   // State for membership types loaded from API
   const [membershipTypes, setMembershipTypes] = useState<Array<{ id: string; name: string }>>([]);
+  const [userGroups, setUserGroups] = useState<Array<{ id: string; name: string }>>([]);
+  const { t } = useTranslation();
   const [loadingMembershipTypes, setLoadingMembershipTypes] = useState(true);
 
   const steps = [
@@ -150,6 +153,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
     applicationScope: 'item',
     requiresCode: false,
     membershipTypeIds: [],
+    userGroupIds: [],
     combinable: true,
     priority: 0,
   });
@@ -167,6 +171,7 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
   // Load membership types from API
   useEffect(() => {
     loadMembershipTypes();
+    loadUserGroups();
   }, []);
 
   useEffect(() => {
@@ -189,6 +194,22 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
       setMembershipTypes([]);
     } finally {
       setLoadingMembershipTypes(false);
+    }
+  };
+
+  const loadUserGroups = async () => {
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/user-groups',
+      });
+      setUserGroups(response?.groups || []);
+    } catch (error) {
+      // The section simply does not render when there are no groups, so a
+      // failure here degrades to "no group restriction available" rather than
+      // blocking the whole discount form.
+      console.error('Failed to load user groups:', error);
+      setUserGroups([]);
     }
   };
 
@@ -217,7 +238,13 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
         applyToQuantity: response.quantityRules?.applyToQuantity,
         applyEveryN: response.quantityRules?.applyEveryN,
         requiresCode: response.eligibilityCriteria?.requiresCode || false,
-        membershipTypeIds: response.eligibilityCriteria?.membershipTypeIds || [],
+        // Read either spelling: discounts saved before the key was corrected
+        // still carry membershipTypeIds.
+        membershipTypeIds:
+          response.eligibilityCriteria?.membershipTypes ||
+          response.eligibilityCriteria?.membershipTypeIds ||
+          [],
+        userGroupIds: response.eligibilityCriteria?.userGroups || [],
         minimumPurchaseAmount: response.eligibilityCriteria?.minimumPurchaseAmount,
         maximumDiscountAmount: response.eligibilityCriteria?.maximumDiscountAmount,
         validFrom: response.validFrom ? new Date(response.validFrom) : undefined,
@@ -392,7 +419,12 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
 
       const eligibilityCriteria = {
         requiresCode: formData.requiresCode,
-        membershipTypeIds: formData.membershipTypeIds.length > 0 ? formData.membershipTypeIds : undefined,
+        // `membershipTypes`, not `membershipTypeIds` — the validator reads the
+        // former, and writing the latter meant the restriction was silently
+        // never applied.
+        membershipTypes:
+          formData.membershipTypeIds.length > 0 ? formData.membershipTypeIds : undefined,
+        userGroups: formData.userGroupIds.length > 0 ? formData.userGroupIds : undefined,
         minimumPurchaseAmount: formData.minimumPurchaseAmount,
         maximumDiscountAmount: formData.maximumDiscountAmount,
       };
@@ -823,6 +855,42 @@ const CreateDiscountPage: React.FC<CreateDiscountPageProps> = ({ moduleType = 'e
                   ),
                 }}
               />
+            </Grid>
+          )}
+
+          {/* User Groups - only shown once the organisation has some */}
+          {userGroups.length > 0 && (
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel id="user-groups-label">
+                  {t('discounts.eligibility.userGroups')}
+                </InputLabel>
+                <Select
+                  labelId="user-groups-label"
+                  multiple
+                  value={formData.userGroupIds}
+                  onChange={(e) => handleChange('userGroupIds', e.target.value as string[])}
+                  input={<OutlinedInput label={t('discounts.eligibility.userGroups')} />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((id) => {
+                        const group = userGroups.find((g) => g.id === id);
+                        return group ? <Chip key={id} label={group.name} size="small" /> : null;
+                      })}
+                    </Box>
+                  )}
+                >
+                  {userGroups.map((group) => (
+                    <MenuItem key={group.id} value={group.id}>
+                      <Checkbox checked={formData.userGroupIds.indexOf(group.id) > -1} />
+                      {group.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {t('discounts.eligibility.userGroupsHelper')}
+                </FormHelperText>
+              </FormControl>
             </Grid>
           )}
 

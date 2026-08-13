@@ -43,6 +43,7 @@ function validateBasicInfo(
  * Validates the Activities step (step 3).
  * - At least one activity is required
  * - Every activity must have a non-empty name and description
+ * - Every activity must have an application form selected
  */
 function validateActivities(
   formData: EventFormData,
@@ -52,13 +53,23 @@ function validateActivities(
 
   if (formData.activities.length === 0) {
     errors.activities = t('events.activities.validation.atLeastOne');
-  } else {
-    const invalidActivities = formData.activities.filter(
-      (activity) => !activity.name.trim() || !activity.description.trim(),
-    );
-    if (invalidActivities.length > 0) {
-      errors.activities = t('events.activities.validation.allFieldsRequired');
-    }
+    return errors;
+  }
+
+  const invalidActivities = formData.activities.filter(
+    (activity) => !activity.name.trim() || !activity.description.trim(),
+  );
+  if (invalidActivities.length > 0) {
+    errors.activities = t('events.activities.validation.allFieldsRequired');
+    return errors;
+  }
+
+  // An application form is mandatory – entries cannot be captured without one.
+  const missingApplicationForm = formData.activities.filter(
+    (activity) => !activity.applicationFormId,
+  );
+  if (missingApplicationForm.length > 0) {
+    errors.activities = t('events.activities.validation.applicationFormRequired');
   }
 
   return errors;

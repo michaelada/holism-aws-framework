@@ -1,22 +1,32 @@
 /**
  * Payment Settings Tab
- * 
- * Form for managing Stripe configuration, currency, and payment method settings
+ *
+ * Form for managing the organisation's payment methods — Helix-Pay and offline
+ * (cheque) payments.
+ *
+ * Card payments via Stripe are **not** configured here. Under Connect
+ * destination charges the platform holds the only Stripe credentials (from the
+ * environment) and the organisation holds only a connected account id, so the
+ * organisation's entire Stripe configuration is the onboarding flow in
+ * `StripeConnectPanel` above. The per-organisation key fields that used to sit
+ * here belonged to the older direct-charge model and were never read — see
+ * docs/ACCOUNT_USER_APP_PHASE8_CHECKOUT.md §1.
  */
 
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
+  Divider,
+  FormControlLabel,
   Grid,
+  IconButton,
+  InputAdornment,
+  Switch,
   TextField,
   Typography,
-  Alert,
-  CircularProgress,
-  FormControlLabel,
-  Switch,
-  InputAdornment,
-  IconButton,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -25,13 +35,9 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
+import StripeConnectPanel from './StripeConnectPanel';
 
 interface PaymentSettings {
-  stripeEnabled: boolean;
-  stripePublishableKey: string;
-  stripeSecretKey: string;
-  stripeWebhookSecret: string;
-  acceptedPaymentMethods: string[];
   helixPayEnabled: boolean;
   helixPayApiKey: string;
   chequePaymentsEnabled: boolean;
@@ -47,17 +53,10 @@ const PaymentSettingsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
-  const [showSecretKey, setShowSecretKey] = useState(false);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [showHelixApiKey, setShowHelixApiKey] = useState(false);
   const [helixPaySupported, setHelixPaySupported] = useState(false);
 
   const [formData, setFormData] = useState<PaymentSettings>({
-    stripeEnabled: false,
-    stripePublishableKey: '',
-    stripeSecretKey: '',
-    stripeWebhookSecret: '',
-    acceptedPaymentMethods: ['card'],
     helixPayEnabled: false,
     helixPayApiKey: '',
     chequePaymentsEnabled: false,
@@ -97,11 +96,6 @@ const PaymentSettingsTab: React.FC = () => {
 
       if (response) {
         setFormData({
-          stripeEnabled: response.stripeEnabled || false,
-          stripePublishableKey: response.stripePublishableKey || '',
-          stripeSecretKey: response.stripeSecretKey || '',
-          stripeWebhookSecret: response.stripeWebhookSecret || '',
-          acceptedPaymentMethods: response.acceptedPaymentMethods || ['card'],
           helixPayEnabled: response.helixPayEnabled || false,
           helixPayApiKey: response.helixPayApiKey || '',
           chequePaymentsEnabled: response.chequePaymentsEnabled || false,
@@ -128,15 +122,6 @@ const PaymentSettingsTab: React.FC = () => {
       setSaving(true);
       setError(null);
       setSuccess(false);
-
-      // Validate Stripe keys if enabled
-      if (formData.stripeEnabled) {
-        if (!formData.stripePublishableKey || !formData.stripeSecretKey) {
-          setError(t('settings.paymentSettings.validation.stripeKeysRequired'));
-          setSaving(false);
-          return;
-        }
-      }
 
       // Validate Helix-Pay API key if enabled
       if (formData.helixPayEnabled && !formData.helixPayApiKey) {
@@ -170,6 +155,15 @@ const PaymentSettingsTab: React.FC = () => {
 
   return (
     <Box>
+      {/*
+        Connect onboarding comes first, because nothing else on this tab
+        matters until it is done: without a connected account the club cannot
+        be paid at all, and checkout refuses it.
+      */}
+      <StripeConnectPanel />
+
+      <Divider sx={{ my: 4 }} />
+
       <Typography variant="h6" gutterBottom>
         {t('settings.paymentSettings.title')}
       </Typography>
@@ -190,89 +184,6 @@ const PaymentSettingsTab: React.FC = () => {
       )}
 
       <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Typography variant="subtitle1" gutterBottom>
-            {t('settings.paymentSettings.sections.stripeConfig')}
-          </Typography>
-        </Grid>
-
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.stripeEnabled}
-                onChange={(e) => handleChange('stripeEnabled', e.target.checked)}
-              />
-            }
-            label={t('settings.paymentSettings.fields.stripeEnabled')}
-          />
-        </Grid>
-
-        {formData.stripeEnabled && (
-          <>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label={t('settings.paymentSettings.fields.stripePublishableKey')}
-                value={formData.stripePublishableKey}
-                onChange={(e) => handleChange('stripePublishableKey', e.target.value)}
-                placeholder={t('settings.paymentSettings.fields.stripePublishableKeyPlaceholder')}
-                required
-                helperText={t('settings.paymentSettings.fields.stripePublishableKeyHelper')}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label={t('settings.paymentSettings.fields.stripeSecretKey')}
-                type={showSecretKey ? 'text' : 'password'}
-                value={formData.stripeSecretKey}
-                onChange={(e) => handleChange('stripeSecretKey', e.target.value)}
-                placeholder={t('settings.paymentSettings.fields.stripeSecretKeyPlaceholder')}
-                required
-                helperText={t('settings.paymentSettings.fields.stripeSecretKeyHelper')}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowSecretKey(!showSecretKey)}
-                        edge="end"
-                      >
-                        {showSecretKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label={t('settings.paymentSettings.fields.stripeWebhookSecret')}
-                type={showWebhookSecret ? 'text' : 'password'}
-                value={formData.stripeWebhookSecret}
-                onChange={(e) => handleChange('stripeWebhookSecret', e.target.value)}
-                placeholder={t('settings.paymentSettings.fields.stripeWebhookSecretPlaceholder')}
-                helperText={t('settings.paymentSettings.fields.stripeWebhookSecretHelper')}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                        edge="end"
-                      >
-                        {showWebhookSecret ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          </>
-        )}
-
         {helixPaySupported && (
           <>
             <Grid item xs={12}>

@@ -1,91 +1,74 @@
 /**
  * Unit tests for PaymentSettingsTab component
+ *
+ * The tab loads two things in parallel on mount — the saved settings and the
+ * organisation's enabled payment methods — so the API mock here is keyed on the
+ * request rather than on call order.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { I18nextProvider } from 'react-i18next';
-import i18n from 'i18next';
 import PaymentSettingsTab from '../PaymentSettingsTab';
 import * as useApiModule from '../../../hooks/useApi';
+import { resolveTranslation } from '../../../test/i18nTestUtils';
 
-// Initialize i18n for testing
-i18n.init({
-  lng: 'en-GB',
-  fallbackLng: 'en-GB',
-  resources: {
-    'en-GB': {
-      translation: {
-        settings: {
-          paymentSettings: {
-            title: 'Payment Settings',
-            subtitle: 'Configure payment processing and accepted payment methods',
-            sections: {
-              stripeConfig: 'Stripe Configuration',
-              paymentConfig: 'Payment Configuration',
-              offlinePayments: 'Offline Payments',
-            },
-            fields: {
-              stripeEnabled: 'Enable Stripe Payments',
-              stripePublishableKey: 'Stripe Publishable Key',
-              stripeSecretKey: 'Stripe Secret Key',
-              stripeWebhookSecret: 'Stripe Webhook Secret',
-              defaultCurrency: 'Default Currency',
-              handlingFeePercentage: 'Handling Fee (%)',
-              handlingFeeFixed: 'Fixed Handling Fee',
-              chequePaymentsEnabled: 'Enable Cheque/Offline Payments',
-              chequePaymentInstructions: 'Cheque Payment Instructions',
-            },
-            validation: {
-              stripeKeysRequired: 'Stripe publishable key and secret key are required when Stripe is enabled',
-            },
-            messages: {
-              loadFailed: 'Failed to load payment settings',
-              saveFailed: 'Failed to save payment settings',
-              saveSuccess: 'Payment settings saved successfully',
-            },
-          },
-          organisationDetails: {
-            currencies: {
-              gbp: '£ GBP - British Pound',
-              eur: '€ EUR - Euro',
-              usd: '$ USD - US Dollar',
-              aud: '$ AUD - Australian Dollar',
-              cad: '$ CAD - Canadian Dollar',
-            },
-          },
-          actions: {
-            saveChanges: 'Save Changes',
-            saving: 'Saving...',
-          },
-        },
-      },
-    },
-  },
-});
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options),
+    i18n: { language: 'en-GB' },
+  }),
+}));
 
-const renderWithI18n = (component: React.ReactElement) => {
-  return render(
-    <I18nextProvider i18n={i18n}>
-      {component}
-    </I18nextProvider>
-  );
-};
+const label = (key: string) => resolveTranslation(key);
+const field = (name: string) => label(`settings.paymentSettings.fields.${name}`);
+
+/**
+ * MUI appends " *" to the label of a required field, so match on the label's
+ * start rather than the whole string.
+ */
+const fieldLabel = (name: string) =>
+  new RegExp(`^${field(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+
+const SETTINGS_URL = '/api/orgadmin/organisation/payment-settings';
+const METHODS_URL = '/api/orgadmin/payment-methods';
 
 describe('PaymentSettingsTab', () => {
   const mockExecute = vi.fn();
+
+  /** Matches the backend's PaymentSettings contract. */
   const mockPaymentSettings = {
-    stripeEnabled: true,
-    stripePublishableKey: 'pk_test_123',
-    stripeSecretKey: 'sk_test_456',
-    stripeWebhookSecret: 'whsec_789',
-    defaultCurrency: 'GBP',
-    acceptedPaymentMethods: ['card'],
-    handlingFeePercentage: 2.5,
-    handlingFeeFixed: 0.3,
+    helixPayEnabled: false,
+    helixPayApiKey: '',
     chequePaymentsEnabled: true,
     chequePaymentInstructions: 'Please make cheques payable to Test Org',
   };
+
+  /**
+   * Route the mock by request. `settings`/`methods` override the payloads and
+   * `save` decides how the PUT resolves.
+   */
+  const mockApi = ({
+    settings = mockPaymentSettings,
+    methods = [{ id: 'pm-1', name: 'Card Payment' }],
+    save = { success: true } as unknown,
+    saveRejects = false,
+  }: {
+    settings?: Record<string, unknown> | null;
+    methods?: Array<{ id: string; name: string }>;
+    save?: unknown;
+    saveRejects?: boolean;
+  } = {}) => {
+    mockExecute.mockImplementation((config: { method: string; url: string }) => {
+      if (config.method === 'PUT') {
+        return saveRejects ? Promise.reject(save) : Promise.resolve(save);
+      }
+      if (config.url === METHODS_URL) return Promise.resolve(methods);
+      return Promise.resolve(settings);
+    });
+  };
+
+  const saveButton = () =>
+    screen.getByRole('button', { name: label('settings.actions.saveChanges') });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -95,280 +78,283 @@ describe('PaymentSettingsTab', () => {
       loading: false,
       execute: mockExecute,
       reset: vi.fn(),
-    });
+    } as any);
+    mockApi();
   });
 
-  it('should load payment settings on mount', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
+  describe('Loading', () => {
+    it('should load payment settings on mount', async () => {
+      render(<PaymentSettingsTab />);
 
-    renderWithI18n(<PaymentSettingsTab />);
+      await waitFor(() => {
+        expect(mockExecute).toHaveBeenCalledWith({ method: 'GET', url: SETTINGS_URL });
+      });
+    });
 
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
+    it('should load the enabled payment methods on mount', async () => {
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(mockExecute).toHaveBeenCalledWith({ method: 'GET', url: METHODS_URL });
+      });
+    });
+
+    it('should display a loading state while fetching', () => {
+      mockExecute.mockImplementation(() => new Promise(() => {}));
+
+      render(<PaymentSettingsTab />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('should display the saved settings after loading', async () => {
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
       });
     });
   });
 
-  it('should display loading state', () => {
-    vi.spyOn(useApiModule, 'useApi').mockReturnValue({
-      data: null,
-      error: null,
-      loading: true,
-      execute: mockExecute,
-      reset: vi.fn(),
+  /**
+   * Stripe is configured entirely through Connect onboarding
+   * (`StripeConnectPanel`), never through this form. Organisations onboarded
+   * before the move to Connect destination charges may still have the old
+   * direct-charge keys stored, so the guard is that the tab neither renders nor
+   * re-submits them.
+   */
+  describe('Stripe credentials are not part of this form', () => {
+    const LEGACY_KEYS = {
+      stripeEnabled: true,
+      stripePublishableKey: 'pk_test_123',
+      stripeSecretKey: 'sk_test_123',
+      stripeWebhookSecret: 'whsec_test_123',
+    };
+
+    it('should not render legacy per-organisation Stripe keys returned by the API', async () => {
+      mockApi({ settings: { ...mockPaymentSettings, ...LEGACY_KEYS } });
+
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
+      });
+
+      expect(screen.queryByDisplayValue('pk_test_123')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('sk_test_123')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('whsec_test_123')).not.toBeInTheDocument();
     });
 
-    renderWithI18n(<PaymentSettingsTab />);
-    
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
-  });
+    it('should not write Stripe keys back when saving', async () => {
+      mockApi({ settings: { ...mockPaymentSettings, ...LEGACY_KEYS } });
 
-  it('should display payment settings after loading', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
+      render(<PaymentSettingsTab />);
 
-    renderWithI18n(<PaymentSettingsTab />);
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('pk_test_123')).toBeInTheDocument();
-    });
+      fireEvent.click(saveButton());
 
-    expect(screen.getByDisplayValue('2.5')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('0.3')).toBeInTheDocument();
-  });
+      await waitFor(() => {
+        expect(mockExecute).toHaveBeenCalledWith(
+          expect.objectContaining({ method: 'PUT', url: SETTINGS_URL })
+        );
+      });
 
-  it('should toggle Stripe enabled switch', async () => {
-    mockExecute.mockResolvedValueOnce({ ...mockPaymentSettings, stripeEnabled: false });
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      const stripeSwitch = screen.getByRole('checkbox', { name: /enable stripe payments/i });
-      expect(stripeSwitch).not.toBeChecked();
-    });
-
-    const stripeSwitch = screen.getByRole('checkbox', { name: /enable stripe payments/i });
-    fireEvent.click(stripeSwitch);
-
-    expect(stripeSwitch).toBeChecked();
-  });
-
-  it('should show Stripe fields when Stripe is enabled', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText(/stripe publishable key/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByLabelText(/stripe secret key/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/stripe webhook secret/i)).toBeInTheDocument();
-  });
-
-  it('should hide Stripe fields when Stripe is disabled', async () => {
-    mockExecute.mockResolvedValueOnce({ ...mockPaymentSettings, stripeEnabled: false });
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      const stripeSwitch = screen.getByRole('checkbox', { name: /enable stripe payments/i });
-      expect(stripeSwitch).not.toBeChecked();
-    });
-
-    expect(screen.queryByLabelText(/stripe publishable key/i)).not.toBeInTheDocument();
-  });
-
-  it('should validate Stripe keys when enabled', async () => {
-    mockExecute
-      .mockResolvedValueOnce({ ...mockPaymentSettings, stripePublishableKey: '', stripeSecretKey: '' })
-      .mockResolvedValueOnce({ success: true });
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /enable stripe payments/i })).toBeChecked();
-    });
-
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/stripe publishable key and secret key are required/i)).toBeInTheDocument();
+      const put = mockExecute.mock.calls
+        .map(([config]) => config)
+        .find((config: { method: string }) => config.method === 'PUT');
+      expect(Object.keys(put.data).filter(key => key.startsWith('stripe'))).toEqual([]);
     });
   });
 
-  it('should save payment settings when save button clicked', async () => {
-    mockExecute
-      .mockResolvedValueOnce(mockPaymentSettings)
-      .mockResolvedValueOnce({ success: true });
+  describe('Helix-Pay configuration', () => {
+    it('should hide the Helix-Pay section when the organisation has no Helix-Pay method', async () => {
+      render(<PaymentSettingsTab />);
 
-    renderWithI18n(<PaymentSettingsTab />);
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
+      });
 
-    // Wait for component to finish loading
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
+      expect(
+        screen.queryByText(label('settings.paymentSettings.sections.helixPay'))
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show the Helix-Pay section when a Helix-Pay method is enabled', async () => {
+      mockApi({ methods: [{ id: 'pm-2', name: 'Helix-Pay' }] });
+
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(label('settings.paymentSettings.sections.helixPay'))
+        ).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('checkbox', { name: field('helixPayEnabled') })).toBeInTheDocument();
+    });
+
+    it('should require an API key when Helix-Pay is enabled', async () => {
+      mockApi({
+        methods: [{ id: 'pm-2', name: 'Helix-Pay' }],
+        settings: { ...mockPaymentSettings, helixPayEnabled: true, helixPayApiKey: '' },
+      });
+
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('checkbox', { name: field('helixPayEnabled') })).toBeChecked();
+      });
+
+      fireEvent.click(saveButton());
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(label('settings.paymentSettings.validation.helixPayApiKeyRequired'))
+        ).toBeInTheDocument();
       });
     });
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
+    it('should save the Helix-Pay API key', async () => {
+      mockApi({
+        methods: [{ id: 'pm-2', name: 'Helix-Pay' }],
+        settings: { ...mockPaymentSettings, helixPayEnabled: true, helixPayApiKey: 'hp_key_1' },
+      });
 
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledTimes(2);
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('hp_key_1')).toBeInTheDocument();
+      });
+
+      fireEvent.click(saveButton());
+
+      await waitFor(() => {
+        expect(mockExecute).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: 'PUT',
+            url: SETTINGS_URL,
+            data: expect.objectContaining({ helixPayEnabled: true, helixPayApiKey: 'hp_key_1' }),
+          })
+        );
+      });
     });
-
-    // Verify the save was called
-    const calls = mockExecute.mock.calls;
-    expect(calls.length).toBe(2);
-    expect(calls[1][0].method).toBe('PUT');
-    expect(calls[1][0].url).toBe('/api/orgadmin/organisation/payment-settings');
   });
 
-  it('should display success message after successful save', async () => {
-    mockExecute
-      .mockResolvedValueOnce(mockPaymentSettings)
-      .mockResolvedValueOnce({ success: true });
+  describe('Offline payments', () => {
+    it('should toggle cheque payments', async () => {
+      render(<PaymentSettingsTab />);
 
-    renderWithI18n(<PaymentSettingsTab />);
+      await waitFor(() => {
+        expect(screen.getByRole('checkbox', { name: field('chequePaymentsEnabled') })).toBeChecked();
+      });
 
-    // Wait for component to finish loading
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
+      fireEvent.click(screen.getByRole('checkbox', { name: field('chequePaymentsEnabled') }));
+
+      expect(
+        screen.getByRole('checkbox', { name: field('chequePaymentsEnabled') })
+      ).not.toBeChecked();
+    });
+
+    it('should show cheque instructions when cheque payments are enabled', async () => {
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(fieldLabel('chequePaymentInstructions'))).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByDisplayValue('Please make cheques payable to Test Org')
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Saving', () => {
+    it('should save payment settings when the save button is clicked', async () => {
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.click(saveButton());
+
+      await waitFor(() => {
+        expect(mockExecute).toHaveBeenCalledWith(
+          expect.objectContaining({ method: 'PUT', url: SETTINGS_URL })
+        );
       });
     });
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
+    it('should display a success message after a successful save', async () => {
+      render(<PaymentSettingsTab />);
 
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledTimes(2);
-    });
-  });
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
+      });
 
-  it('should toggle password visibility for secret key', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
+      fireEvent.click(saveButton());
 
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
+      await waitFor(() => {
+        expect(
+          screen.getByText(label('settings.paymentSettings.messages.saveSuccess'))
+        ).toBeInTheDocument();
       });
     });
 
-    // Just verify the component loaded successfully
-    // The password visibility toggle is a UI feature that's hard to test in this environment
-    expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
-  });
+    it('should display an error message when the save fails', async () => {
+      mockApi({ save: { message: 'Failed to save' }, saveRejects: true });
 
-  it('should toggle cheque payments enabled switch', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
+      render(<PaymentSettingsTab />);
 
-    renderWithI18n(<PaymentSettingsTab />);
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('Please make cheques payable to Test Org')
+        ).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
+      fireEvent.click(saveButton());
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to save')).toBeInTheDocument();
       });
     });
-
-    // Wait for the cheque switch to appear
-    await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /enable cheque\/offline payments/i })).toBeInTheDocument();
-    });
-
-    const chequeSwitch = screen.getByRole('checkbox', { name: /enable cheque\/offline payments/i });
-    // The mock data has chequePaymentsEnabled: true
-    expect(chequeSwitch).toBeChecked();
-
-    fireEvent.click(chequeSwitch);
-
-    // After clicking, it should be unchecked
-    expect(chequeSwitch).not.toBeChecked();
   });
 
-  it('should show cheque instructions when cheque payments enabled', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(mockExecute).toHaveBeenCalledWith({
-        method: 'GET',
-        url: '/api/orgadmin/organisation/payment-settings',
+  describe('Secret visibility', () => {
+    it('should toggle visibility for the Helix-Pay API key', async () => {
+      mockApi({
+        methods: [{ id: 'pm-2', name: 'Helix-Pay' }],
+        settings: { ...mockPaymentSettings, helixPayEnabled: true, helixPayApiKey: 'hp_key_1' },
       });
+
+      render(<PaymentSettingsTab />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(fieldLabel('helixPayApiKey'))).toBeInTheDocument();
+      });
+
+      const apiKey = screen.getByLabelText(fieldLabel('helixPayApiKey'));
+      expect(apiKey).toHaveAttribute('type', 'password');
+
+      const toggle = apiKey.parentElement!.querySelector('button')!;
+      fireEvent.click(toggle);
+
+      expect(screen.getByLabelText(fieldLabel('helixPayApiKey'))).toHaveAttribute('type', 'text');
     });
-
-    // Wait for cheque instructions field to appear (since chequePaymentsEnabled is true in mock)
-    await waitFor(() => {
-      expect(screen.getByLabelText(/cheque payment instructions/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByDisplayValue('Please make cheques payable to Test Org')).toBeInTheDocument();
-  });
-
-  it('should update handling fee percentage', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('2.5')).toBeInTheDocument();
-    });
-
-    const feeInput = screen.getByLabelText(/handling fee \(%\)/i);
-    fireEvent.change(feeInput, { target: { value: '3.0' } });
-
-    expect(feeInput).toHaveValue(3.0);
-  });
-
-  it('should update fixed handling fee', async () => {
-    mockExecute.mockResolvedValueOnce(mockPaymentSettings);
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('0.3')).toBeInTheDocument();
-    });
-
-    const feeInput = screen.getByLabelText(/fixed handling fee/i);
-    fireEvent.change(feeInput, { target: { value: '0.5' } });
-
-    expect(feeInput).toHaveValue(0.5);
-  });
-
-  it('should display error message on save failure', async () => {
-    const mockExecuteWithError = vi.fn()
-      .mockResolvedValueOnce(mockPaymentSettings)
-      .mockRejectedValueOnce({ message: 'Failed to save payment settings' });
-
-    vi.spyOn(useApiModule, 'useApi').mockReturnValue({
-      data: null,
-      error: null,
-      loading: false,
-      execute: mockExecuteWithError,
-      reset: vi.fn(),
-    });
-
-    renderWithI18n(<PaymentSettingsTab />);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText(/stripe publishable key/i)).toBeInTheDocument();
-    });
-
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(mockExecuteWithError).toHaveBeenCalledTimes(2);
-    }, { timeout: 3000 });
   });
 });

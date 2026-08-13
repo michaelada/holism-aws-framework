@@ -8,6 +8,16 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import PaymentsListPage from '../PaymentsListPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -73,11 +83,7 @@ describe('PaymentsListPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <PaymentsListPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<PaymentsListPage />);
   };
 
   describe('Payment List Rendering', () => {
@@ -128,9 +134,9 @@ describe('PaymentsListPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('paid')).toBeInTheDocument();
-        expect(screen.getByText('pending')).toBeInTheDocument();
-        expect(screen.getByText('refunded')).toBeInTheDocument();
+        expect(screen.getByText('Paid')).toBeInTheDocument();
+        expect(screen.getByText('Pending')).toBeInTheDocument();
+        expect(screen.getByText('Refunded')).toBeInTheDocument();
       });
     });
 
@@ -223,7 +229,7 @@ describe('PaymentsListPage', () => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const startDateInput = screen.getByLabelText('Start Date');
+      const startDateInput = screen.getByLabelText(/Start Date/);
       fireEvent.change(startDateInput, { target: { value: '2024-01-20' } });
 
       await waitFor(() => {
@@ -241,7 +247,7 @@ describe('PaymentsListPage', () => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const startDateInput = screen.getByLabelText('Start Date');
+      const startDateInput = screen.getByLabelText(/Start Date/);
       fireEvent.change(startDateInput, { target: { value: '2025-01-01' } });
 
       await waitFor(() => {

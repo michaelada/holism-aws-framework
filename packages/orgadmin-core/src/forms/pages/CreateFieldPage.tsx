@@ -36,7 +36,7 @@ import { enGB } from 'date-fns/locale';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation, useOnboarding } from '@aws-web-framework/orgadmin-shell';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer, applicationFieldToFieldDefinition } from '@aws-web-framework/components';
 import { useFilteredFieldTypes } from '../hooks/useFilteredFieldTypes';
 
 const CreateFieldPage: React.FC = () => {
@@ -63,47 +63,6 @@ const CreateFieldPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [previewValue, setPreviewValue] = useState<any>('');
-
-  // Map database field types to FieldRenderer expected types
-  const mapDatatypeToRenderer = (datatype: string): string => {
-    const mapping: Record<string, string> = {
-      'text': 'text',
-      'textarea': 'text_area',
-      'number': 'number',
-      'email': 'email',
-      'phone': 'text',
-      'date': 'date',
-      'time': 'time',
-      'datetime': 'datetime',
-      'boolean': 'boolean',
-      'select': 'single_select',
-      'multiselect': 'multi_select',
-      'radio': 'single_select',
-      'checkbox': 'multi_select',
-      'file': 'document_upload',
-      'image': 'document_upload',
-    };
-    return mapping[datatype] || 'text';
-  };
-
-  // Transform field options for preview
-  const transformOptionsForPreview = () => {
-    if (fieldOptions.length === 0) {
-      return {};
-    }
-
-    const options = fieldOptions.map((opt: string) => ({
-      value: opt,
-      label: opt,
-    }));
-
-    const displayMode = fieldType === 'radio' ? 'radio' : 'dropdown';
-
-    return {
-      options,
-      displayMode,
-    };
-  };
 
   // Helper function to generate field name from label
   const generateFieldName = (label: string): string => {
@@ -426,14 +385,13 @@ const CreateFieldPage: React.FC = () => {
                   </Typography>
                   <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
                     <FieldRenderer
-                      fieldDefinition={{
-                        shortName: generatedName || 'field_name',
-                        displayName: fieldLabel || 'Field Label',
+                      fieldDefinition={applicationFieldToFieldDefinition({
+                        name: generatedName || 'field_name',
+                        label: fieldLabel || 'Field Label',
                         description: fieldDescription || '',
-                        datatype: mapDatatypeToRenderer(fieldType) as any,
-                        datatypeProperties: transformOptionsForPreview(),
-                        validationRules: [],
-                      }}
+                        datatype: fieldType,
+                        options: fieldOptions,
+                      })}
                       value={previewValue}
                       onChange={setPreviewValue}
                       disabled={false}

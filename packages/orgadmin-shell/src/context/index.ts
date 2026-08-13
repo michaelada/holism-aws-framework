@@ -1,9 +1,10 @@
 export { CapabilityProvider, useCapabilities } from './CapabilityContext';
 export { OrganisationProvider, useOrganisation, type Organisation } from '@aws-web-framework/orgadmin-core';
-export { 
-  OnboardingContext, 
-  useOnboarding, 
+export {
+  OnboardingContext,
+  useOnboarding,
   DEFAULT_PREFERENCES,
+  MODULE_IDS,
   type OnboardingContextValue,
   type OnboardingPreferences,
   type ModuleId

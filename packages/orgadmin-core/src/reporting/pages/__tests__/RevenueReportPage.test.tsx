@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, fireEvent } from '@testing-library/react';
 import RevenueReportPage from '../RevenueReportPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -17,63 +17,57 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Wrapper component for router
-const RouterWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
+// The page resolves its copy through the shell's i18n; returning the key keeps
+// these assertions stable and independent of translation wording.
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) =>
+      options && 'count' in options ? `${key}:${options.count}` : key,
+    i18n: { language: 'en-GB' },
+  }),
+}));
+
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => ({
+  formatCurrency: (value: number, currency: string) => `${currency} ${value.toFixed(2)}`,
+}));
+
+/** Rows in the shape the backend's RevenueReportData actually returns. */
+const REVENUE_ROWS = [
+  {
+    source: 'events',
+    totalRevenue: 30000,
+    transactionCount: 150,
+    averageTransaction: 200,
+    currency: 'EUR',
+  },
+  {
+    source: 'memberships',
+    totalRevenue: 20000,
+    transactionCount: 100,
+    averageTransaction: 200,
+    currency: 'EUR',
+  },
+  {
+    source: 'merchandise',
+    totalRevenue: 10000,
+    transactionCount: 50,
+    averageTransaction: 200,
+    currency: 'EUR',
+  },
+];
 
 describe('RevenueReportPage', () => {
   const mockExecute = vi.fn();
 
-  const mockRevenueReportData = {
-    sources: [
-      {
-        source: 'events' as const,
-        amount: 30000,
-        percentage: 50.0,
-        transactionCount: 150,
-      },
-      {
-        source: 'memberships' as const,
-        amount: 20000,
-        percentage: 33.3,
-        transactionCount: 100,
-      },
-      {
-        source: 'merchandise' as const,
-        amount: 10000,
-        percentage: 16.7,
-        transactionCount: 50,
-      },
-    ],
-    monthlyBreakdown: [
-      {
-        month: 'January 2024',
-        events: 10000,
-        memberships: 5000,
-        merchandise: 2000,
-        calendar: 1000,
-        registrations: 500,
-        tickets: 500,
-        total: 19000,
-      },
-      {
-        month: 'February 2024',
-        events: 12000,
-        memberships: 6000,
-        merchandise: 3000,
-        calendar: 1500,
-        registrations: 1000,
-        tickets: 1000,
-        total: 24500,
-      },
-    ],
-    summary: {
-      totalRevenue: 60000,
-      totalTransactions: 300,
-      averageTransactionValue: 200,
-      topSource: 'events',
-    },
+  const mockApi = (overrides: Record<string, unknown> = {}) => {
+    vi.mocked(useApiModule.useApiGet).mockReturnValue({
+      data: null,
+      error: null,
+      loading: false,
+      execute: mockExecute,
+      reset: vi.fn(),
+      ...overrides,
+    } as any);
   };
 
   beforeEach(() => {
@@ -82,365 +76,251 @@ describe('RevenueReportPage', () => {
 
   describe('Report data fetching', () => {
     it('should call execute on mount to fetch revenue report data', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      mockApi({ loading: true });
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<RevenueReportPage />);
 
       expect(mockExecute).toHaveBeenCalled();
     });
 
+    it('should not fetch until the organisation is known', () => {
+      mockApi({ loading: true });
+
+      renderWithProviders(<RevenueReportPage />, { organisation: null });
+
+      expect(mockExecute).not.toHaveBeenCalled();
+    });
+
+    it('should request the organisation-scoped revenue endpoint', () => {
+      mockApi({ loading: true });
+
+      renderWithProviders(<RevenueReportPage />);
+
+      const url = vi.mocked(useApiModule.useApiGet).mock.calls[0][0];
+      expect(url).toContain('/api/orgadmin/organisations/org-1/reports/revenue');
+      expect(url).toContain('startDate=');
+      expect(url).toContain('endDate=');
+    });
+
     it('should display loading skeletons while fetching data', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      mockApi({ loading: true });
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      const { container } = renderWithProviders(<RevenueReportPage />);
 
-      const skeletons = document.querySelectorAll('.MuiSkeleton-root');
-      expect(skeletons.length).toBeGreaterThan(0);
+      expect(container.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
     });
 
     it('should display error message when data fetching fails', () => {
-      const errorMessage = 'Failed to fetch revenue report';
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: errorMessage,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      mockApi({ error: 'Network error' });
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 
   describe('Date range filtering', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+    beforeEach(() => mockApi({ data: REVENUE_ROWS }));
 
     it('should render date range filters', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
-      expect(screen.getByLabelText('End Date')).toBeInTheDocument();
+      expect(screen.getByLabelText('reporting.filters.startDate')).toBeInTheDocument();
+      expect(screen.getByLabelText('reporting.filters.endDate')).toBeInTheDocument();
     });
 
-    it('should have default date range of last 6 months', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should default to a range ending today', () => {
+      renderWithProviders(<RevenueReportPage />);
 
-      const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
-      const endDateInput = screen.getByLabelText('End Date') as HTMLInputElement;
-
-      expect(startDateInput.value).toBeTruthy();
-      expect(endDateInput.value).toBeTruthy();
+      const today = new Date().toISOString().split('T')[0];
+      expect(screen.getByLabelText('reporting.filters.endDate')).toHaveValue(today);
     });
 
-    it('should update date range when changed', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should default the start date earlier than the end date', () => {
+      renderWithProviders(<RevenueReportPage />);
 
-      const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
-      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } });
+      const start = (screen.getByLabelText('reporting.filters.startDate') as HTMLInputElement).value;
+      const end = (screen.getByLabelText('reporting.filters.endDate') as HTMLInputElement).value;
+      expect(start < end).toBe(true);
+    });
 
-      expect(startDateInput.value).toBe('2024-01-01');
+    it('should update the date range when changed', () => {
+      renderWithProviders(<RevenueReportPage />);
+
+      const startDate = screen.getByLabelText('reporting.filters.startDate');
+      fireEvent.change(startDate, { target: { value: '2024-01-01' } });
+
+      expect(startDate).toHaveValue('2024-01-01');
     });
   });
 
   describe('Summary cards', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    beforeEach(() => mockApi({ data: REVENUE_ROWS }));
+
+    it('should display total revenue summed from the source rows', () => {
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getByText('reporting.revenue.summary.totalRevenue')).toBeInTheDocument();
+      expect(screen.getByText('EUR 60000.00')).toBeInTheDocument();
     });
 
-    it('should display total revenue summary', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should display total transactions summed from the source rows', () => {
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-      expect(screen.getByText(/€60,000.00/)).toBeInTheDocument();
-    });
-
-    it('should display total transactions summary', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Total Transactions')).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.summary.totalTransactions')).toBeInTheDocument();
       expect(screen.getByText('300')).toBeInTheDocument();
     });
 
-    it('should display average transaction value', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should display the derived average transaction value', () => {
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText('Avg Transaction')).toBeInTheDocument();
-      expect(screen.getByText(/€200.00/)).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.summary.avgTransaction')).toBeInTheDocument();
+      // 60000 / 300
+      expect(screen.getByText('EUR 200.00')).toBeInTheDocument();
     });
 
-    it('should display top revenue source', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should display the highest-earning source', () => {
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText('Top Source')).toBeInTheDocument();
-      const eventsElements = screen.getAllByText('events');
-      expect(eventsElements.length).toBeGreaterThan(0);
+      expect(screen.getByText('reporting.revenue.summary.topSource')).toBeInTheDocument();
+      // The top-source card renders the same source label as the list below it
+      expect(screen.getAllByText('reporting.revenue.sources.events').length).toBe(2);
+    });
+
+    it('should show a zero average when there are no transactions', () => {
+      mockApi({ data: [] });
+
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getAllByText('EUR 0.00').length).toBeGreaterThan(0);
     });
   });
 
   describe('Revenue by source', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should render the revenue by source section', () => {
+      mockApi({ data: REVENUE_ROWS });
+
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getByText('reporting.revenue.revenueBySource')).toBeInTheDocument();
     });
 
-    it('should render revenue by source section', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should display every revenue source', () => {
+      mockApi({ data: REVENUE_ROWS });
 
-      expect(screen.getByText('Revenue by Source')).toBeInTheDocument();
-    });
+      renderWithProviders(<RevenueReportPage />);
 
-    it('should display all revenue sources', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      const eventsElements = screen.getAllByText('events');
-      expect(eventsElements.length).toBeGreaterThan(0);
-      expect(screen.getByText('memberships')).toBeInTheDocument();
-      expect(screen.getByText('merchandise')).toBeInTheDocument();
+      expect(screen.getAllByText('reporting.revenue.sources.events').length).toBeGreaterThan(0);
+      expect(screen.getByText('reporting.revenue.sources.memberships')).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.sources.merchandise')).toBeInTheDocument();
     });
 
     it('should display revenue amounts with currency formatting', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      mockApi({ data: REVENUE_ROWS });
 
-      const thirtyKElements = screen.getAllByText(/€30,000.00/);
-      expect(thirtyKElements.length).toBeGreaterThan(0);
-      const twentyKElements = screen.getAllByText(/€20,000.00/);
-      expect(twentyKElements.length).toBeGreaterThan(0);
-      const tenKElements = screen.getAllByText(/€10,000.00/);
-      expect(tenKElements.length).toBeGreaterThan(0);
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getByText('EUR 30000.00')).toBeInTheDocument();
+      expect(screen.getByText('EUR 20000.00')).toBeInTheDocument();
+      expect(screen.getByText('EUR 10000.00')).toBeInTheDocument();
     });
 
     it('should display transaction counts for each source', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      mockApi({ data: REVENUE_ROWS });
 
-      expect(screen.getByText('150 transactions')).toBeInTheDocument();
-      expect(screen.getByText('100 transactions')).toBeInTheDocument();
-      expect(screen.getByText('50 transactions')).toBeInTheDocument();
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getByText('reporting.revenue.table.transactions:150')).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.table.transactions:100')).toBeInTheDocument();
     });
 
-    it('should display percentage for each source', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should display each source share as a percentage of the total', () => {
+      mockApi({ data: REVENUE_ROWS });
 
+      renderWithProviders(<RevenueReportPage />);
+
+      // 30000/60000, 20000/60000, 10000/60000
       expect(screen.getByText('50.0%')).toBeInTheDocument();
       expect(screen.getByText('33.3%')).toBeInTheDocument();
       expect(screen.getByText('16.7%')).toBeInTheDocument();
     });
 
-    it('should display progress bars for each source', () => {
-      const { container } = render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should display a progress bar for each source', () => {
+      mockApi({ data: REVENUE_ROWS });
 
-      const progressBars = container.querySelectorAll('.MuiLinearProgress-root');
-      expect(progressBars.length).toBe(3);
+      const { container } = renderWithProviders(<RevenueReportPage />);
+
+      expect(container.querySelectorAll('.MuiLinearProgress-root')).toHaveLength(
+        REVENUE_ROWS.length
+      );
     });
 
-    it('should display info message when no revenue data found', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: {
-          sources: [],
-          monthlyBreakdown: [],
-          summary: {
-            totalRevenue: 0,
-            totalTransactions: 0,
-            averageTransactionValue: 0,
-            topSource: '',
-          },
-        },
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should display an info message when no revenue data is found', () => {
+      mockApi({ data: [] });
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText(/No revenue data found for the selected date range/)).toBeInTheDocument();
-    });
-  });
-
-  describe('Monthly breakdown table', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
-
-    it('should render monthly breakdown table with headers', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Month')).toBeInTheDocument();
-      expect(screen.getByText('Events')).toBeInTheDocument();
-      expect(screen.getByText('Memberships')).toBeInTheDocument();
-      expect(screen.getByText('Merchandise')).toBeInTheDocument();
-      expect(screen.getByText('Calendar')).toBeInTheDocument();
-      expect(screen.getByText('Registrations')).toBeInTheDocument();
-      expect(screen.getByText('Tickets')).toBeInTheDocument();
-      expect(screen.getByText('Total')).toBeInTheDocument();
-    });
-
-    it('should display all months in the table', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('January 2024')).toBeInTheDocument();
-      expect(screen.getByText('February 2024')).toBeInTheDocument();
-    });
-
-    it('should display monthly revenue with currency formatting', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      const tenKElements = screen.getAllByText(/€10,000.00/);
-      expect(tenKElements.length).toBeGreaterThan(0);
-      const twelveKElements = screen.getAllByText(/€12,000.00/);
-      expect(twelveKElements.length).toBeGreaterThan(0);
-      const nineteenKElements = screen.getAllByText(/€19,000.00/);
-      expect(nineteenKElements.length).toBeGreaterThan(0);
-      const twentyFourKElements = screen.getAllByText(/€24,500.00/);
-      expect(twentyFourKElements.length).toBeGreaterThan(0);
-    });
-
-    it('should display info message when no monthly breakdown available', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: {
-          sources: mockRevenueReportData.sources,
-          monthlyBreakdown: [],
-          summary: mockRevenueReportData.summary,
-        },
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      expect(
-        screen.getByText(/No monthly breakdown data available for the selected date range/)
-      ).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.noData')).toBeInTheDocument();
     });
   });
 
   describe('Export functionality', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should render the export button', () => {
+      mockApi({ data: REVENUE_ROWS });
+
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getByText('reporting.revenue.exportToCSV')).toBeInTheDocument();
     });
 
-    it('should render export button', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should disable the export button while loading', () => {
+      mockApi({ loading: true });
 
-      expect(screen.getByText('Export to CSV')).toBeInTheDocument();
+      renderWithProviders(<RevenueReportPage />);
+
+      expect(screen.getByText('reporting.revenue.exportToCSV').closest('button')).toBeDisabled();
     });
 
-    it('should disable export button when loading', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should disable the export button when there is no data', () => {
+      mockApi({ data: null });
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<RevenueReportPage />);
 
-      const exportButton = screen.getByText('Export to CSV').closest('button');
-      expect(exportButton).toBeDisabled();
+      expect(screen.getByText('reporting.revenue.exportToCSV').closest('button')).toBeDisabled();
     });
   });
 
   describe('Navigation', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+    beforeEach(() => mockApi({ data: REVENUE_ROWS }));
 
     it('should render back button', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText('Back to Reports')).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.backToReports')).toBeInTheDocument();
     });
 
-    it('should navigate back when back button is clicked', () => {
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
+    it('should navigate back to reporting when back button is clicked', () => {
+      renderWithProviders(<RevenueReportPage />);
 
-      const backButton = screen.getByText('Back to Reports');
-      fireEvent.click(backButton);
+      fireEvent.click(screen.getByText('reporting.revenue.backToReports'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/reporting');
+      expect(mockNavigate).toHaveBeenCalledWith('/reporting');
     });
   });
 
   describe('Page layout', () => {
+    beforeEach(() => mockApi({ data: REVENUE_ROWS }));
+
     it('should render page title', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      renderWithProviders(<RevenueReportPage />);
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Revenue Report')).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.title')).toBeInTheDocument();
     });
 
     it('should render page description', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockRevenueReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      renderWithProviders(<RevenueReportPage />);
 
-      render(<RevenueReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Revenue breakdown by source and trends')).toBeInTheDocument();
+      expect(screen.getByText('reporting.revenue.subtitle')).toBeInTheDocument();
     });
   });
 });

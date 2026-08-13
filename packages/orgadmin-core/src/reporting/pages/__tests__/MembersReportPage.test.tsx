@@ -1,63 +1,63 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, fireEvent, within } from '@testing-library/react';
 import MembersReportPage from '../MembersReportPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+import { resolveTranslation, formatCurrencyMock } from '../../../test/i18nTestUtils';
 
-// Mock the useApi hook
 vi.mock('../../../hooks/useApi');
 
-// Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
+  return { ...actual, useNavigate: () => mockNavigate };
 });
 
-// Wrapper component for router
-const RouterWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options),
+    i18n: { language: 'en-GB' },
+  }),
+}));
+
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => ({
+  formatCurrency: (value: number, currency: string) => formatCurrencyMock(value, currency),
+}));
+
+/** Rows in the shape the backend's MembersReportData actually returns. */
+const MEMBERSHIP_TYPE_ROWS = [
+  {
+    membershipTypeId: 'type-1',
+    membershipTypeName: 'Full Member',
+    activeMembers: 85,
+    pendingMembers: 10,
+    elapsedMembers: 5,
+    totalMembers: 100,
+    totalRevenue: 25000,
+  },
+  {
+    membershipTypeId: 'type-2',
+    membershipTypeName: 'Junior Member',
+    activeMembers: 120,
+    pendingMembers: 20,
+    elapsedMembers: 10,
+    totalMembers: 150,
+    totalRevenue: 15000,
+  },
+];
 
 describe('MembersReportPage', () => {
   const mockExecute = vi.fn();
 
-  const mockMembersReportData = {
-    membershipTypes: [
-      {
-        id: '1',
-        name: 'Gold Membership',
-        totalMembers: 100,
-        activeMembers: 85,
-        newMembers: 15,
-        renewals: 70,
-        expiringMembers: 10,
-        revenue: 10000,
-      },
-      {
-        id: '2',
-        name: 'Silver Membership',
-        totalMembers: 150,
-        activeMembers: 120,
-        newMembers: 30,
-        renewals: 90,
-        expiringMembers: 15,
-        revenue: 7500,
-      },
-    ],
-    summary: {
-      totalMembers: 250,
-      activeMembers: 205,
-      newMembers: 45,
-      renewals: 160,
-      expiringMembers: 25,
-      totalRevenue: 17500,
-      growthRate: 12.5,
-      retentionRate: 78.0,
-    },
+  const mockApi = (overrides: Record<string, unknown> = {}) => {
+    vi.mocked(useApiModule.useApiGet).mockReturnValue({
+      data: null,
+      error: null,
+      loading: false,
+      execute: mockExecute,
+      reset: vi.fn(),
+      ...overrides,
+    } as any);
   };
 
   beforeEach(() => {
@@ -66,311 +66,229 @@ describe('MembersReportPage', () => {
 
   describe('Report data fetching', () => {
     it('should call execute on mount to fetch members report data', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      mockApi({ loading: true });
 
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<MembersReportPage />);
 
       expect(mockExecute).toHaveBeenCalled();
     });
 
-    it('should display loading skeletons while fetching data', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should not fetch until the organisation is known', () => {
+      mockApi({ loading: true });
 
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<MembersReportPage />, { organisation: null });
 
-      const skeletons = document.querySelectorAll('.MuiSkeleton-root');
-      expect(skeletons.length).toBeGreaterThan(0);
+      expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should display error message when data fetching fails', () => {
-      const errorMessage = 'Failed to fetch members report';
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: errorMessage,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should request the organisation-scoped members endpoint', () => {
+      mockApi({ loading: true });
 
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      expect(vi.mocked(useApiModule.useApiGet).mock.calls[0][0]).toContain(
+        '/api/orgadmin/organisations/org-1/reports/members'
+      );
+    });
+
+    it('should display loading skeletons while fetching data', () => {
+      mockApi({ loading: true });
+
+      const { container } = renderWithProviders(<MembersReportPage />);
+
+      expect(container.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
+    });
+
+    it('should display an error message when data fetching fails', () => {
+      mockApi({ error: 'Network error' });
+
+      renderWithProviders(<MembersReportPage />);
+
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 
-  describe('Filters', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+  describe('Date range filtering', () => {
+    beforeEach(() => mockApi({ data: MEMBERSHIP_TYPE_ROWS }));
 
     it('should render date range filters', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
-      expect(screen.getByLabelText('End Date')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(resolveTranslation('reporting.filters.startDate'))
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(resolveTranslation('reporting.filters.endDate'))
+      ).toBeInTheDocument();
     });
 
-    it('should render status filter', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should default to a range ending today', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      // Check that the Status select exists by finding the FormControl
-      const statusElements = screen.getAllByText('Status');
-      expect(statusElements.length).toBeGreaterThan(0);
+      const today = new Date().toISOString().split('T')[0];
+      expect(screen.getByLabelText(resolveTranslation('reporting.filters.endDate'))).toHaveValue(
+        today
+      );
     });
 
-    it('should update filters when changed', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should update the date range when changed', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
-      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } });
+      const startDate = screen.getByLabelText(resolveTranslation('reporting.filters.startDate'));
+      fireEvent.change(startDate, { target: { value: '2024-01-01' } });
 
-      expect(startDateInput.value).toBe('2024-01-01');
+      expect(startDate).toHaveValue('2024-01-01');
     });
   });
 
   describe('Summary cards', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+    beforeEach(() => mockApi({ data: MEMBERSHIP_TYPE_ROWS }));
 
-    it('should display total members summary', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should total members across every membership type', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByText('Total Members')).toBeInTheDocument();
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.summary.totalMembers'))
+      ).toBeInTheDocument();
       expect(screen.getByText('250')).toBeInTheDocument();
-      expect(screen.getByText('205 active')).toBeInTheDocument();
     });
 
-    it('should display new members summary with growth rate', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should total pending members across every membership type', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByText('New Members')).toBeInTheDocument();
-      expect(screen.getByText('45')).toBeInTheDocument();
-      expect(screen.getByText(/12.5% growth/)).toBeInTheDocument();
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.summary.pendingMembers'))
+      ).toBeInTheDocument();
+      expect(screen.getByText('30')).toBeInTheDocument();
     });
 
-    it('should display renewals summary with retention rate', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should total elapsed members across every membership type', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      const renewalsCards = screen.getAllByText('Renewals');
-      expect(renewalsCards.length).toBeGreaterThan(0);
-      expect(screen.getByText('160')).toBeInTheDocument();
-      expect(screen.getByText(/78.0% retention/)).toBeInTheDocument();
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.summary.elapsedMembers'))
+      ).toBeInTheDocument();
+      expect(screen.getByText('15')).toBeInTheDocument();
     });
 
-    it('should display total revenue summary', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should total revenue across every membership type', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-      expect(screen.getByText(/€17,500.00/)).toBeInTheDocument();
-      expect(screen.getByText('25 expiring soon')).toBeInTheDocument();
-    });
-
-    it('should display growth trend icon correctly', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      // Check for trending up icon (positive growth)
-      const trendIcons = document.querySelectorAll('[data-testid="TrendingUpIcon"]');
-      expect(trendIcons.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.summary.totalRevenue'))
+      ).toBeInTheDocument();
+      expect(screen.getByText(formatCurrencyMock(40000))).toBeInTheDocument();
     });
   });
 
-  describe('Membership types table', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+  describe('Membership type breakdown', () => {
+    it('should render the breakdown table', () => {
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
 
-    it('should render membership types table with headers', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Membership Type')).toBeInTheDocument();
-      expect(screen.getByText('Total')).toBeInTheDocument();
-      expect(screen.getByText('Active')).toBeInTheDocument();
-      expect(screen.getByText('New')).toBeInTheDocument();
-      const renewalsElements = screen.getAllByText('Renewals');
-      expect(renewalsElements.length).toBeGreaterThan(0);
-      expect(screen.getByText('Expiring')).toBeInTheDocument();
-      expect(screen.getByText('Revenue')).toBeInTheDocument();
-    });
-
-    it('should display all membership types in the table', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Gold Membership')).toBeInTheDocument();
-      expect(screen.getByText('Silver Membership')).toBeInTheDocument();
-    });
-
-    it('should display membership metrics correctly', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('100')).toBeInTheDocument();
-      expect(screen.getByText('150')).toBeInTheDocument();
-      expect(screen.getByText('85')).toBeInTheDocument();
-      expect(screen.getByText('120')).toBeInTheDocument();
-    });
-
-    it('should display revenue with currency formatting', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText(/€10,000.00/)).toBeInTheDocument();
-      expect(screen.getByText(/€7,500.00/)).toBeInTheDocument();
-    });
-
-    it('should display expiring members with warning chips', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      const tenElements = screen.getAllByText('10');
-      expect(tenElements.length).toBeGreaterThan(0);
-      const fifteenElements = screen.getAllByText('15');
-      expect(fifteenElements.length).toBeGreaterThan(0);
-    });
-
-    it('should display info message when no membership data found', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: {
-          membershipTypes: [],
-          summary: {
-            totalMembers: 0,
-            activeMembers: 0,
-            newMembers: 0,
-            renewals: 0,
-            expiringMembers: 0,
-            totalRevenue: 0,
-            growthRate: 0,
-            retentionRate: 0,
-          },
-        },
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<MembersReportPage />);
 
       expect(
-        screen.getByText(/No membership data found for the selected filters/)
+        screen.getByText(resolveTranslation('reporting.members.membershipTypeBreakdown'))
       ).toBeInTheDocument();
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    it('should render a row per membership type', () => {
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
+
+      renderWithProviders(<MembersReportPage />);
+
+      expect(screen.getByText('Full Member')).toBeInTheDocument();
+      expect(screen.getByText('Junior Member')).toBeInTheDocument();
+      // header row plus one row per membership type
+      expect(screen.getAllByRole('row')).toHaveLength(MEMBERSHIP_TYPE_ROWS.length + 1);
+    });
+
+    it("should show each type's member counts", () => {
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
+
+      renderWithProviders(<MembersReportPage />);
+
+      const row = screen.getByText('Full Member').closest('tr')!;
+      expect(within(row).getByText('100')).toBeInTheDocument();
+      expect(within(row).getByText('85')).toBeInTheDocument();
+      expect(within(row).getByText('10')).toBeInTheDocument();
+      expect(within(row).getByText('5')).toBeInTheDocument();
+    });
+
+    it("should show each type's revenue with currency formatting", () => {
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
+
+      renderWithProviders(<MembersReportPage />);
+
+      expect(screen.getByText(formatCurrencyMock(25000))).toBeInTheDocument();
+      expect(screen.getByText(formatCurrencyMock(15000))).toBeInTheDocument();
+    });
+
+    it('should not render the table when there are no membership types', () => {
+      mockApi({ data: [] });
+
+      renderWithProviders(<MembersReportPage />);
+
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
     });
   });
 
   describe('Export functionality', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should render the export button', () => {
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
+
+      renderWithProviders(<MembersReportPage />);
+
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.exportToCSV'))
+      ).toBeInTheDocument();
     });
 
-    it('should render export button', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should disable the export button while loading', () => {
+      mockApi({ loading: true });
 
-      expect(screen.getByText('Export to CSV')).toBeInTheDocument();
-    });
+      renderWithProviders(<MembersReportPage />);
 
-    it('should disable export button when loading', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      const exportButton = screen.getByText('Export to CSV').closest('button');
-      expect(exportButton).toBeDisabled();
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.exportToCSV')).closest('button')
+      ).toBeDisabled();
     });
   });
 
   describe('Navigation', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    beforeEach(() => mockApi({ data: MEMBERSHIP_TYPE_ROWS }));
+
+    it('should render the back button', () => {
+      renderWithProviders(<MembersReportPage />);
+
+      expect(
+        screen.getByText(resolveTranslation('reporting.members.backToReports'))
+      ).toBeInTheDocument();
     });
 
-    it('should render back button', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should navigate back to reporting when the back button is clicked', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByText('Back to Reports')).toBeInTheDocument();
-    });
+      fireEvent.click(screen.getByText(resolveTranslation('reporting.members.backToReports')));
 
-    it('should navigate back when back button is clicked', () => {
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      const backButton = screen.getByText('Back to Reports');
-      fireEvent.click(backButton);
-
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/reporting');
+      expect(mockNavigate).toHaveBeenCalledWith('/reporting');
     });
   });
 
   describe('Page layout', () => {
-    it('should render page title', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    beforeEach(() => mockApi({ data: MEMBERSHIP_TYPE_ROWS }));
 
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
+    it('should render the page title', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      expect(screen.getByText('Members Report')).toBeInTheDocument();
+      expect(screen.getByText(resolveTranslation('reporting.members.title'))).toBeInTheDocument();
     });
 
-    it('should render page description', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockMembersReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should render the page subtitle', () => {
+      renderWithProviders(<MembersReportPage />);
 
-      render(<MembersReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Membership growth and retention analysis')).toBeInTheDocument();
+      expect(screen.getByText(resolveTranslation('reporting.members.subtitle'))).toBeInTheDocument();
     });
   });
 });

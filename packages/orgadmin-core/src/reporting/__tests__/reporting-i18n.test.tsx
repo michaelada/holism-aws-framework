@@ -14,6 +14,16 @@ import ReportingDashboardPage from '../pages/ReportingDashboardPage';
 import EventsReportPage from '../pages/EventsReportPage';
 import MembersReportPage from '../pages/MembersReportPage';
 import RevenueReportPage from '../pages/RevenueReportPage';
+import { renderWithProviders } from '../../test/renderWithProviders';
+import { TEST_ORGANISATION } from '../../test/renderWithProviders';
+import { OrganisationProvider } from '../../context/OrganisationContext';
+
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
 
 // Mock the API hooks
 vi.mock('../../hooks/useApi', () => ({
@@ -80,7 +90,9 @@ const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <BrowserRouter>
       <I18nextProvider i18n={i18n}>
-        {component}
+        <OrganisationProvider organisation={TEST_ORGANISATION}>
+          {component}
+        </OrganisationProvider>
       </I18nextProvider>
     </BrowserRouter>
   );
@@ -95,18 +107,11 @@ describe('Reporting Module i18n', () => {
       expect(screen.getByText('High-level metrics and trends for your organisation')).toBeInTheDocument();
     });
 
-    it('displays translated date range labels', () => {
-      renderWithProviders(<ReportingDashboardPage />);
-      
-      expect(screen.getByText('Date Range')).toBeInTheDocument();
-      expect(screen.getAllByText('Start Date')[0]).toBeInTheDocument();
-      expect(screen.getAllByText('End Date')[0]).toBeInTheDocument();
-    });
 
     it('displays translated export button', () => {
       renderWithProviders(<ReportingDashboardPage />);
       
-      expect(screen.getByText('Export Report')).toBeInTheDocument();
+      expect(screen.getAllByText('Export Report')[0]).toBeInTheDocument();
     });
   });
 

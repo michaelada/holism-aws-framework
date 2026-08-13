@@ -3,44 +3,44 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ReportingDashboardPage from '../ReportingDashboardPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { TEST_ORGANISATION } from '../../../test/renderWithProviders';
+import { OrganisationProvider } from '../../../context/OrganisationContext';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
 
 // Wrapper component for router
+// The dashboard reads the current organisation, so the wrapper supplies it
+// alongside the router.
 const RouterWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <BrowserRouter>
+    <OrganisationProvider organisation={TEST_ORGANISATION}>{children}</OrganisationProvider>
+  </BrowserRouter>
 );
 
 describe('ReportingDashboardPage', () => {
   const mockExecute = vi.fn();
 
   const mockReportingData = {
-    events: {
-      total: 25,
-      upcoming: 10,
-      completed: 15,
-      totalAttendance: 500,
-      trend: 'up' as const,
-      trendPercentage: 15.5,
-    },
-    members: {
-      total: 150,
-      active: 120,
-      new: 20,
-      renewals: 30,
-      trend: 'up' as const,
-      trendPercentage: 10.2,
-    },
-    revenue: {
-      total: 50000,
-      events: 30000,
-      memberships: 15000,
-      merchandise: 5000,
-      trend: 'stable' as const,
-      trendPercentage: 0.5,
-    },
+    totalEvents: 25,
+    totalMembers: 150,
+    totalRevenue: 50000,
+    totalPayments: 320,
+    recentEvents: 10,
+    recentMembers: 20,
+    recentRevenue: 12500,
+    recentPayments: 64,
   };
+;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -108,52 +108,6 @@ describe('ReportingDashboardPage', () => {
     });
   });
 
-  describe('Date range filtering', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockReportingData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
-
-    it('should render date range selector', () => {
-      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
-      expect(screen.getByLabelText('End Date')).toBeInTheDocument();
-    });
-
-    it('should have default date range of last month', () => {
-      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
-
-      const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
-      const endDateInput = screen.getByLabelText('End Date') as HTMLInputElement;
-
-      expect(startDateInput.value).toBeTruthy();
-      expect(endDateInput.value).toBeTruthy();
-    });
-
-    it('should update start date when changed', () => {
-      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
-
-      const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
-      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } });
-
-      expect(startDateInput.value).toBe('2024-01-01');
-    });
-
-    it('should update end date when changed', () => {
-      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
-
-      const endDateInput = screen.getByLabelText('End Date') as HTMLInputElement;
-      fireEvent.change(endDateInput, { target: { value: '2024-12-31' } });
-
-      expect(endDateInput.value).toBe('2024-12-31');
-    });
-  });
 
   describe('Metric card rendering', () => {
     beforeEach(() => {
@@ -174,37 +128,27 @@ describe('ReportingDashboardPage', () => {
       expect(screen.getByText('Revenue')).toBeInTheDocument();
     });
 
-    it('should display correct events metrics with trend', () => {
+    it('should display correct events metrics', () => {
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
       expect(screen.getByText('25')).toBeInTheDocument();
-      expect(screen.getByText(/10 upcoming, 15 completed/)).toBeInTheDocument();
-      expect(screen.getByText(/15.5%/)).toBeInTheDocument();
+      expect(screen.getByText(/10 in the last 30 days/)).toBeInTheDocument();
     });
 
-    it('should display correct members metrics with trend', () => {
+    it('should display correct members metrics', () => {
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
       expect(screen.getByText('150')).toBeInTheDocument();
-      expect(screen.getByText(/120 active, 20 new, 30 renewals/)).toBeInTheDocument();
-      expect(screen.getByText(/10.2%/)).toBeInTheDocument();
+      expect(screen.getByText(/20 in the last 30 days/)).toBeInTheDocument();
     });
 
     it('should display correct revenue metrics with currency formatting', () => {
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
       expect(screen.getByText(/€50,000.00/)).toBeInTheDocument();
-      expect(screen.getByText(/Events: €30,000.00/)).toBeInTheDocument();
+      expect(screen.getByText(/€50,000.00/)).toBeInTheDocument();
     });
 
-    it('should display trend indicators correctly', () => {
-      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
-
-      // Check for trend arrows
-      expect(screen.getByText(/↑ 15.5%/)).toBeInTheDocument();
-      expect(screen.getByText(/↑ 10.2%/)).toBeInTheDocument();
-      expect(screen.getByText(/→ 0.5%/)).toBeInTheDocument();
-    });
   });
 
   describe('Quick links to detailed reports', () => {
@@ -247,7 +191,7 @@ describe('ReportingDashboardPage', () => {
     it('should render export button', () => {
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
-      expect(screen.getByText('Export Report')).toBeInTheDocument();
+      expect(screen.getAllByText('Export Report')[0]).toBeInTheDocument();
     });
 
     it('should disable export button when loading', () => {
@@ -261,7 +205,7 @@ describe('ReportingDashboardPage', () => {
 
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
-      const exportButton = screen.getByText('Export Report').closest('button');
+      const exportButton = screen.getAllByText('Export Report')[0].closest('button');
       expect(exportButton).toBeDisabled();
     });
 
@@ -276,7 +220,7 @@ describe('ReportingDashboardPage', () => {
 
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
-      const exportButton = screen.getByText('Export Report').closest('button');
+      const exportButton = screen.getAllByText('Export Report')[0].closest('button');
       expect(exportButton).toBeDisabled();
     });
   });

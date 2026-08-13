@@ -36,12 +36,25 @@ export default defineConfig({
         statements: 70,
       },
     },
-    // Resolve date-fns and MUI date pickers for tests
-    deps: {
-      inline: [
-        '@mui/x-date-pickers',
-        'date-fns',
-      ],
+    /**
+     * Inline the date-picker packages so Vitest transforms them itself.
+     *
+     * Without this the ESM build supplies LocalizationProvider while the CJS
+     * build under @mui/x-date-pickers/node supplies useLocalizationContext —
+     * two module instances of a single install, so the provider's React context
+     * never reaches the picker and it throws "Can not find the date and time
+     * pickers localization context".
+     *
+     * This was previously written as `deps.inline`, which Vitest deprecated and
+     * now ignores; the option only takes effect under `server.deps`.
+     */
+    server: {
+      deps: {
+        inline: [
+          '@mui/x-date-pickers',
+          'date-fns',
+        ],
+      },
     },
   },
   

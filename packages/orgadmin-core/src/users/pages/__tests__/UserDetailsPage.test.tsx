@@ -8,6 +8,34 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import UserDetailsPage from '../UserDetailsPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { TEST_ORGANISATION } from '../../../test/renderWithProviders';
+import { OrganisationProvider } from '../../../context/OrganisationContext';
+
+// The pages read onboarding, page-help and translations from the shell package.
+// Mocking the module is simpler than standing up its providers, and the stable
+// references matter: these hooks feed useEffect dependencies, and a fresh object
+// per render re-triggers the effect forever (CLAUDE.md §3.4).
+const shell = vi.hoisted(() => {
+  const checkModuleVisit = vi.fn();
+  const setCurrentModule = vi.fn();
+  return {
+    checkModuleVisit,
+    setCurrentModule,
+    onboarding: { checkModuleVisit, setCurrentModule },
+  };
+});
+
+vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+  useOnboarding: () => shell.onboarding,
+  usePageHelp: () => undefined,
+  // No i18next instance in tests, so t() returns the key — assertions below
+  // match keys rather than English.
+  useTranslation: () => ({ t: (key: string) => key }),
+  useLocale: () => ({ locale: 'en-GB' }),
+  formatDate: (value: string) => String(value),
+  formatCurrency: (value: number) => String(value),
+}));
+
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -16,6 +44,7 @@ vi.mock('../../../hooks/useApi');
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
+
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -27,7 +56,7 @@ const mockAdminUser = {
   email: 'admin@example.com',
   firstName: 'John',
   lastName: 'Doe',
-  roles: ['Admin', 'Event Manager'],
+  roleIds: ['1', '2'],
   status: 'active' as const,
   lastLogin: '2024-01-15T10:00:00Z',
   createdAt: '2024-01-01T10:00:00Z',
@@ -72,18 +101,20 @@ describe('UserDetailsPage', () => {
     const initialRoute = `/orgadmin/users/${type}/${id}`;
     
     return render(
+      <OrganisationProvider organisation={TEST_ORGANISATION}>
       <MemoryRouter initialEntries={[initialRoute]}>
         <Routes>
           <Route path="/orgadmin/users/:type/:id" element={<UserDetailsPage />} />
         </Routes>
       </MemoryRouter>
+      </OrganisationProvider>
     );
   };
 
   describe('Admin User Details', () => {
     it('should load and display admin user details', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser) // User details
+        .mockResolvedValueOnce({ data: [mockAdminUser] }) // User details
         .mockResolvedValueOnce(mockAvailableRoles); // Available roles
 
       renderComponent('admins', '1');
@@ -91,7 +122,7 @@ describe('UserDetailsPage', () => {
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/users/admins/1',
+          url: '/api/orgadmin/users/admins/org-1',
         });
       });
 
@@ -104,19 +135,19 @@ describe('UserDetailsPage', () => {
 
     it('should display role assignment section for admin users', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByText('Role Assignment')).toBeInTheDocument();
+        expect(screen.getByText('users.details.roleAssignment')).toBeInTheDocument();
       });
     });
 
     it('should display current roles as chips', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
@@ -130,7 +161,7 @@ describe('UserDetailsPage', () => {
 
     it('should load available roles for selection', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
@@ -138,21 +169,21 @@ describe('UserDetailsPage', () => {
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/roles',
+          url: '/api/orgadmin/users/roles/org-1',
         });
       });
     });
 
     it('should allow changing role assignments', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
 
       // Wait for both user and roles to load
       await waitFor(() => {
-        expect(screen.getByText('Role Assignment')).toBeInTheDocument();
+        expect(screen.getByText('users.details.roleAssignment')).toBeInTheDocument();
       });
 
       // Wait for the Select to render with roles
@@ -166,31 +197,31 @@ describe('UserDetailsPage', () => {
 
     it('should save role changes when save button is clicked', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles)
         .mockResolvedValueOnce({}); // Save response
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByText('Role Assignment')).toBeInTheDocument();
+        expect(screen.getByText('users.details.roleAssignment')).toBeInTheDocument();
       });
 
-      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      const saveButton = screen.getByRole('button', { name: /users.details.saveChanges/i });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
-          method: 'PUT',
-          url: '/api/orgadmin/users/admins/1',
-          data: { roles: ['Admin', 'Event Manager'] },
+          method: 'POST',
+          url: '/api/orgadmin/users/admins/1/roles',
+          data: { roleIds: ['1', '2'] },
         });
       });
     });
 
     it('should disable name fields for admin users', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
@@ -207,14 +238,14 @@ describe('UserDetailsPage', () => {
 
   describe('Account User Details', () => {
     it('should load and display account user details', async () => {
-      mockExecute.mockResolvedValueOnce(mockAccountUser);
+      mockExecute.mockResolvedValueOnce({ data: [mockAccountUser] });
 
       renderComponent('accounts', '2');
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/users/accounts/2',
+          url: '/api/orgadmin/users/accounts/org-1',
         });
       });
 
@@ -227,7 +258,7 @@ describe('UserDetailsPage', () => {
     });
 
     it('should not display role assignment section for account users', async () => {
-      mockExecute.mockResolvedValueOnce(mockAccountUser);
+      mockExecute.mockResolvedValueOnce({ data: [mockAccountUser] });
 
       renderComponent('accounts', '2');
 
@@ -235,11 +266,11 @@ describe('UserDetailsPage', () => {
         expect(screen.getByDisplayValue('Jane')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Role Assignment')).not.toBeInTheDocument();
+      expect(screen.queryByText('users.details.roleAssignment')).not.toBeInTheDocument();
     });
 
     it('should allow editing name and phone for account users', async () => {
-      mockExecute.mockResolvedValueOnce(mockAccountUser);
+      mockExecute.mockResolvedValueOnce({ data: [mockAccountUser] });
 
       renderComponent('accounts', '2');
 
@@ -256,7 +287,7 @@ describe('UserDetailsPage', () => {
 
     it('should save account user changes when save button is clicked', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAccountUser)
+        .mockResolvedValueOnce({ data: [mockAccountUser] })
         .mockResolvedValueOnce({}); // Save response
 
       renderComponent('accounts', '2');
@@ -265,7 +296,7 @@ describe('UserDetailsPage', () => {
         expect(screen.getByDisplayValue('Jane')).toBeInTheDocument();
       });
 
-      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      const saveButton = screen.getByRole('button', { name: /users.details.saveChanges/i });
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -285,7 +316,7 @@ describe('UserDetailsPage', () => {
   describe('User Status and Actions', () => {
     it('should display user status', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
@@ -297,7 +328,7 @@ describe('UserDetailsPage', () => {
 
     it('should display last login date', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
@@ -309,7 +340,7 @@ describe('UserDetailsPage', () => {
 
     it('should display created date', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
@@ -321,16 +352,16 @@ describe('UserDetailsPage', () => {
 
     it('should open deactivate dialog when deactivate button is clicked', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /deactivate/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /users.details.deactivate/i })).toBeInTheDocument();
       });
 
-      const deactivateButton = screen.getByRole('button', { name: /deactivate/i });
+      const deactivateButton = screen.getByRole('button', { name: /users.details.deactivate/i });
       fireEvent.click(deactivateButton);
 
       await waitFor(() => {
@@ -340,16 +371,16 @@ describe('UserDetailsPage', () => {
 
     it('should open delete dialog when delete button is clicked', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /common.actions.delete/i })).toBeInTheDocument();
       });
 
-      const deleteButton = screen.getByRole('button', { name: /delete/i });
+      const deleteButton = screen.getByRole('button', { name: /common.actions.delete/i });
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
@@ -360,13 +391,13 @@ describe('UserDetailsPage', () => {
     it('should disable deactivate button for inactive users', async () => {
       const inactiveUser = { ...mockAdminUser, status: 'inactive' as const };
       mockExecute
-        .mockResolvedValueOnce(inactiveUser)
+        .mockResolvedValueOnce({ data: [inactiveUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        const deactivateButton = screen.getByRole('button', { name: /deactivate/i });
+        const deactivateButton = screen.getByRole('button', { name: /users.details.deactivate/i });
         expect(deactivateButton).toBeDisabled();
       });
     });
@@ -375,34 +406,34 @@ describe('UserDetailsPage', () => {
   describe('Navigation', () => {
     it('should navigate back to admin users list when back button is clicked', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles);
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /common.actions.back/i })).toBeInTheDocument();
       });
 
-      const backButton = screen.getByRole('button', { name: /back/i });
+      const backButton = screen.getByRole('button', { name: /common.actions.back/i });
       fireEvent.click(backButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/admins');
+      expect(mockNavigate).toHaveBeenCalledWith('/users/admins');
     });
 
     it('should navigate back to account users list for account users', async () => {
-      mockExecute.mockResolvedValueOnce(mockAccountUser);
+      mockExecute.mockResolvedValueOnce({ data: [mockAccountUser] });
 
       renderComponent('accounts', '2');
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /common.actions.back/i })).toBeInTheDocument();
       });
 
-      const backButton = screen.getByRole('button', { name: /back/i });
+      const backButton = screen.getByRole('button', { name: /common.actions.back/i });
       fireEvent.click(backButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/accounts');
+      expect(mockNavigate).toHaveBeenCalledWith('/users/accounts');
     });
   });
 
@@ -412,7 +443,7 @@ describe('UserDetailsPage', () => {
 
       renderComponent('admins', '1');
 
-      expect(screen.getByText('Loading user details...')).toBeInTheDocument();
+      expect(screen.getByText('users.loading.details')).toBeInTheDocument();
     });
 
     it('should display error message when user not found', async () => {
@@ -421,7 +452,7 @@ describe('UserDetailsPage', () => {
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByText('User not found')).toBeInTheDocument();
+        expect(screen.getByText('users.details.notFound')).toBeInTheDocument();
       });
     });
 
@@ -431,23 +462,23 @@ describe('UserDetailsPage', () => {
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByText(/user not found|failed to load user details/i)).toBeInTheDocument();
+        expect(screen.getByText('users.details.notFound')).toBeInTheDocument();
       });
     });
 
     it('should display error alert when save fails', async () => {
       mockExecute
-        .mockResolvedValueOnce(mockAdminUser)
+        .mockResolvedValueOnce({ data: [mockAdminUser] })
         .mockResolvedValueOnce(mockAvailableRoles)
         .mockRejectedValueOnce(new Error('Save failed'));
 
       renderComponent('admins', '1');
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /users.details.saveChanges/i })).toBeInTheDocument();
       });
 
-      const saveButton = screen.getByRole('button', { name: /save changes/i });
+      const saveButton = screen.getByRole('button', { name: /users.details.saveChanges/i });
       fireEvent.click(saveButton);
 
       await waitFor(() => {

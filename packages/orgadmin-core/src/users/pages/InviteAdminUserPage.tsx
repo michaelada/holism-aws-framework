@@ -29,10 +29,12 @@ import {
   Send as SendIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 const InviteAdminUserPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { execute } = useApi();
   const { organisation } = useOrganisation();
@@ -133,19 +135,17 @@ const InviteAdminUserPage: React.FC = () => {
           component="button"
           variant="body1"
           onClick={() => navigate('/users/admins')}
-          sx={{ textDecoration: 'none', cursor: 'pointer' }}
-        >
-          User Management
+          sx={{ textDecoration: 'none', cursor: 'pointer' }}        >
+          {t('users.title')}
         </Link>
         <Link
           component="button"
           variant="body1"
           onClick={() => navigate('/users/admins')}
-          sx={{ textDecoration: 'none', cursor: 'pointer' }}
-        >
-          Admin Users
+          sx={{ textDecoration: 'none', cursor: 'pointer' }}        >
+          {t('users.tabs.admins')}
         </Link>
-        <Typography color="text.primary">Invite Admin User</Typography>
+        <Typography color="text.primary">{t('users.admins.invite')}</Typography>
       </Breadcrumbs>
 
       {/* Header */}
@@ -155,16 +155,14 @@ const InviteAdminUserPage: React.FC = () => {
           onClick={handleCancel}
           sx={{ mr: 2 }}
         >
-          Back
+          {t('common.actions.back')}
         </Button>
-        <Typography variant="h4">Invite Admin User</Typography>
+        <Typography variant="h4">{t('users.admins.invite')}</Typography>
       </Box>
 
       {/* Success Message */}
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Admin user invitation sent successfully! Redirecting...
-        </Alert>
+        <Alert severity="success" sx={{ mb: 3 }}>{t('users.admins.inviteSuccess')}</Alert>
       )}
 
       {/* Error Message */}
@@ -186,21 +184,21 @@ const InviteAdminUserPage: React.FC = () => {
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TextField
-                  label="Email Address"
+                  label={t('users.fields.emailAddress')}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   fullWidth
                   required
                   autoFocus
-                  helperText="The invitation will be sent to this email address"
+                  helperText={t('users.admins.emailHelper')}
                   disabled={loading || success}
                 />
               </Grid>
               
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="First Name"
+                  label={t('users.fields.firstName')}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   fullWidth
@@ -211,7 +209,7 @@ const InviteAdminUserPage: React.FC = () => {
               
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Last Name"
+                  label={t('users.fields.lastName')}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   fullWidth
@@ -222,12 +220,12 @@ const InviteAdminUserPage: React.FC = () => {
 
               <Grid item xs={12}>
                 <FormControl fullWidth required>
-                  <InputLabel>Roles</InputLabel>
+                  <InputLabel>{t('users.fields.roles')}</InputLabel>
                   <Select
                     multiple
                     value={selectedRoles}
                     onChange={(e) => setSelectedRoles(e.target.value as string[])}
-                    input={<OutlinedInput label="Roles" />}
+                    input={<OutlinedInput label={t('users.fields.roles')} />}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {selected.map((roleId) => {
@@ -265,7 +263,7 @@ const InviteAdminUserPage: React.FC = () => {
               disabled={loading || success}
               size="large"
             >
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button
               type="submit"
@@ -275,7 +273,7 @@ const InviteAdminUserPage: React.FC = () => {
               startIcon={<SendIcon />}
               size="large"
             >
-              {loading ? 'Sending Invitation...' : 'Send Invitation'}
+              {loading ? t('users.actions.sendingInvitation') : t('users.actions.sendInvitation')}
             </Button>
           </Box>
         </Box>

@@ -14,8 +14,6 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  Card,
-  CardContent,
   Avatar,
 } from '@mui/material';
 import {
@@ -25,9 +23,17 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
+import BrandingPreview from './BrandingPreview';
 
 interface BrandingSettings {
   logoUrl: string;
+  /**
+   * Set when the logo lives in our own S3 bucket. That bucket blocks public
+   * access, so `logoUrl` is a signed URL the server regenerates on every read —
+   * the key is the durable reference and is what gets saved.
+   */
+  logoS3Key?: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -45,6 +51,7 @@ const DEFAULT_COLORS = {
 
 const BrandingTab: React.FC = () => {
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   const { t } = useTranslation();
   
   const [loading, setLoading] = useState(true);
@@ -75,6 +82,7 @@ const BrandingTab: React.FC = () => {
       if (response) {
         setFormData({
           logoUrl: response.logoUrl || '',
+          logoS3Key: response.logoS3Key || '',
           primaryColor: response.primaryColor || DEFAULT_COLORS.primaryColor,
           secondaryColor: response.secondaryColor || DEFAULT_COLORS.secondaryColor,
           accentColor: response.accentColor || DEFAULT_COLORS.accentColor,
@@ -119,21 +127,36 @@ const BrandingTab: React.FC = () => {
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'logo');
+      // The organisation is required; `/files/upload` is the *form field*
+      // endpoint and additionally demands a formId and fieldId, which a logo
+      // has neither of — sending a logo there fails with
+      // "Missing required fields: organizationId, formId, fieldId".
+      formData.append('organizationId', organisation?.id ?? '');
 
       const response = await execute({
         method: 'POST',
-        url: '/api/orgadmin/files/upload',
+        url: '/api/orgadmin/files/branding-logo',
         data: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      if (response?.url) {
-        handleChange('logoUrl', response.url);
+      if (response?.s3Key) {
+        /*
+         * Both are kept: the key is what persists, the signed URL is what the
+         * preview can render right now. Saving only the URL would store a
+         * reference that stops working within the hour.
+         */
+        setFormData((prev) => ({
+          ...prev,
+          logoS3Key: response.s3Key,
+          logoUrl: response.url || prev.logoUrl,
+        }));
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(t('settings.branding.messages.uploadFailed'));
       }
     } catch (err: any) {
       setError(err.message || t('settings.branding.messages.uploadFailed'));
@@ -143,7 +166,8 @@ const BrandingTab: React.FC = () => {
   };
 
   const handleRemoveLogo = () => {
-    handleChange('logoUrl', '');
+    // Clear both, or the server would keep signing the old key on every read.
+    setFormData((prev) => ({ ...prev, logoUrl: '', logoS3Key: '' }));
   };
 
   const handleSave = async () => {
@@ -275,6 +299,9 @@ const BrandingTab: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <input
               type="color"
+              aria-label={t('settings.branding.fields.colourPicker', {
+                colour: t('settings.branding.fields.primaryColour'),
+              })}
               value={formData.primaryColor}
               onChange={(e) => handleChange('primaryColor', e.target.value)}
               style={{ width: 60, height: 40, border: 'none', cursor: 'pointer' }}
@@ -293,6 +320,9 @@ const BrandingTab: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <input
               type="color"
+              aria-label={t('settings.branding.fields.colourPicker', {
+                colour: t('settings.branding.fields.secondaryColour'),
+              })}
               value={formData.secondaryColor}
               onChange={(e) => handleChange('secondaryColor', e.target.value)}
               style={{ width: 60, height: 40, border: 'none', cursor: 'pointer' }}
@@ -311,6 +341,9 @@ const BrandingTab: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <input
               type="color"
+              aria-label={t('settings.branding.fields.colourPicker', {
+                colour: t('settings.branding.fields.accentColour'),
+              })}
               value={formData.accentColor}
               onChange={(e) => handleChange('accentColor', e.target.value)}
               style={{ width: 60, height: 40, border: 'none', cursor: 'pointer' }}
@@ -329,6 +362,9 @@ const BrandingTab: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <input
               type="color"
+              aria-label={t('settings.branding.fields.colourPicker', {
+                colour: t('settings.branding.fields.backgroundColour'),
+              })}
               value={formData.backgroundColor}
               onChange={(e) => handleChange('backgroundColor', e.target.value)}
               style={{ width: 60, height: 40, border: 'none', cursor: 'pointer' }}
@@ -347,6 +383,9 @@ const BrandingTab: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <input
               type="color"
+              aria-label={t('settings.branding.fields.colourPicker', {
+                colour: t('settings.branding.fields.textColour'),
+              })}
               value={formData.textColor}
               onChange={(e) => handleChange('textColor', e.target.value)}
               style={{ width: 60, height: 40, border: 'none', cursor: 'pointer' }}
@@ -378,72 +417,7 @@ const BrandingTab: React.FC = () => {
         </Grid>
 
         <Grid item xs={12}>
-          <Card
-            sx={{
-              backgroundColor: formData.backgroundColor,
-              color: formData.textColor,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                {formData.logoUrl && (
-                  <Avatar
-                    src={formData.logoUrl}
-                    alt="Logo Preview"
-                    sx={{ width: 50, height: 50 }}
-                    variant="rounded"
-                  />
-                )}
-                <Typography variant="h6">{t('settings.branding.preview.organisationName')}</Typography>
-              </Box>
-              
-              <Button
-                variant="contained"
-                sx={{
-                  backgroundColor: formData.primaryColor,
-                  color: '#fff',
-                  mr: 1,
-                  '&:hover': {
-                    backgroundColor: formData.primaryColor,
-                    opacity: 0.9,
-                  },
-                }}
-              >
-                {t('settings.branding.preview.primaryButton')}
-              </Button>
-              
-              <Button
-                variant="contained"
-                sx={{
-                  backgroundColor: formData.secondaryColor,
-                  color: '#fff',
-                  mr: 1,
-                  '&:hover': {
-                    backgroundColor: formData.secondaryColor,
-                    opacity: 0.9,
-                  },
-                }}
-              >
-                {t('settings.branding.preview.secondaryButton')}
-              </Button>
-              
-              <Button
-                variant="contained"
-                sx={{
-                  backgroundColor: formData.accentColor,
-                  color: '#fff',
-                  '&:hover': {
-                    backgroundColor: formData.accentColor,
-                    opacity: 0.9,
-                  },
-                }}
-              >
-                {t('settings.branding.preview.accentButton')}
-              </Button>
-            </CardContent>
-          </Card>
+          <BrandingPreview colours={formData} />
         </Grid>
 
         <Grid item xs={12}>

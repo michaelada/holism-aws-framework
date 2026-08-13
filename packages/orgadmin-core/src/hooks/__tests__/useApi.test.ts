@@ -41,7 +41,7 @@ describe('useApi', () => {
 
   it('should handle API error', async () => {
     const errorMessage = 'Network error';
-    mockedAxios.mockRejectedValueOnce({
+    mockedAxios.mockRejectedValue({
       response: { data: { error: errorMessage } },
       message: 'Request failed',
     });

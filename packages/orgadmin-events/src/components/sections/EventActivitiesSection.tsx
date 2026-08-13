@@ -78,6 +78,7 @@ const EventActivitiesSection: React.FC<EventActivitiesSectionProps> = ({
                 }}
                 onRemove={() => onRemoveActivity(index)}
                 paymentMethods={paymentMethods}
+                showErrors={Boolean(fieldErrors.activities)}
               />
             </Box>
           ))

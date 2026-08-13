@@ -22,12 +22,14 @@ import {
   Payment as PaymentIcon,
   Email as EmailIcon,
   Palette as BrandingIcon,
+  HowToReg as HowToRegIcon,
 } from '@mui/icons-material';
-import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useOnboarding, usePageHelp, useTranslation } from '@aws-web-framework/orgadmin-shell';
 import OrganisationDetailsTab from '../components/OrganisationDetailsTab';
 import PaymentSettingsTab from '../components/PaymentSettingsTab';
 import EmailTemplatesTab from '../components/EmailTemplatesTab';
 import BrandingTab from '../components/BrandingTab';
+import RegistrationSettingsTab from '../components/RegistrationSettingsTab';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,6 +52,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 
 const SettingsPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
+  const { t } = useTranslation();
   const { setCurrentModule, checkModuleVisit } = useOnboarding();
 
   // Register page for contextual help
@@ -64,13 +67,23 @@ const SettingsPage: React.FC = () => {
     setCurrentTab(newValue);
   };
 
+  // Tab labels reuse each tab's own title key, so the tab and the panel it
+  // opens are always named identically in every locale.
+  const tabs = [
+    { icon: <BusinessIcon />, labelKey: 'settings.organisationDetails.title' },
+    { icon: <PaymentIcon />, labelKey: 'settings.paymentSettings.title' },
+    { icon: <EmailIcon />, labelKey: 'settings.emailTemplates.title' },
+    { icon: <BrandingIcon />, labelKey: 'settings.branding.title' },
+    { icon: <HowToRegIcon />, labelKey: 'settings.registration.title' },
+  ];
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Organisation Settings
+        {t('settings.pageTitle')}
       </Typography>
       <Typography variant="body1" color="textSecondary" paragraph>
-        Manage your organisation's configuration and preferences
+        {t('settings.pageSubtitle')}
       </Typography>
 
       <Card>
@@ -78,38 +91,20 @@ const SettingsPage: React.FC = () => {
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
-            aria-label="settings tabs"
+            aria-label={t('settings.tabsAriaLabel')}
             variant="scrollable"
             scrollButtons="auto"
           >
-            <Tab
-              icon={<BusinessIcon />}
-              iconPosition="start"
-              label="Organisation Details"
-              id="settings-tab-0"
-              aria-controls="settings-tabpanel-0"
-            />
-            <Tab
-              icon={<PaymentIcon />}
-              iconPosition="start"
-              label="Payment Settings"
-              id="settings-tab-1"
-              aria-controls="settings-tabpanel-1"
-            />
-            <Tab
-              icon={<EmailIcon />}
-              iconPosition="start"
-              label="Email Templates"
-              id="settings-tab-2"
-              aria-controls="settings-tabpanel-2"
-            />
-            <Tab
-              icon={<BrandingIcon />}
-              iconPosition="start"
-              label="Branding"
-              id="settings-tab-3"
-              aria-controls="settings-tabpanel-3"
-            />
+            {tabs.map((tab, index) => (
+              <Tab
+                key={tab.labelKey}
+                icon={tab.icon}
+                iconPosition="start"
+                label={t(tab.labelKey)}
+                id={`settings-tab-${index}`}
+                aria-controls={`settings-tabpanel-${index}`}
+              />
+            ))}
           </Tabs>
 
           <TabPanel value={currentTab} index={0}>
@@ -126,6 +121,10 @@ const SettingsPage: React.FC = () => {
 
           <TabPanel value={currentTab} index={3}>
             <BrandingTab />
+          </TabPanel>
+
+          <TabPanel value={currentTab} index={4}>
+            <RegistrationSettingsTab />
           </TabPanel>
         </CardContent>
       </Card>

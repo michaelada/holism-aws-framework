@@ -8,6 +8,33 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import OrgAdminUsersListPage from '../OrgAdminUsersListPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+// The pages read onboarding, page-help and translations from the shell package.
+// Mocking the module is simpler than standing up its providers, and the stable
+// references matter: these hooks feed useEffect dependencies, and a fresh object
+// per render re-triggers the effect forever (CLAUDE.md §3.4).
+const shell = vi.hoisted(() => {
+  const checkModuleVisit = vi.fn();
+  const setCurrentModule = vi.fn();
+  return {
+    checkModuleVisit,
+    setCurrentModule,
+    onboarding: { checkModuleVisit, setCurrentModule },
+  };
+});
+
+vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+  useOnboarding: () => shell.onboarding,
+  usePageHelp: () => undefined,
+  // No i18next instance in tests, so t() returns the key — assertions below
+  // match keys rather than English.
+  useTranslation: () => ({ t: (key: string) => key }),
+  useLocale: () => ({ locale: 'en-GB' }),
+  formatDate: (value: string) => String(value),
+  formatCurrency: (value: number) => String(value),
+}));
+
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -16,6 +43,7 @@ vi.mock('../../../hooks/useApi');
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
+
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -72,30 +100,26 @@ describe('OrgAdminUsersListPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <OrgAdminUsersListPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<OrgAdminUsersListPage />);
   };
 
   describe('User List Rendering', () => {
     it('should render the page title and invite button', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ data: [] });
       renderComponent();
 
-      expect(screen.getByText('User Management')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /invite admin user/i })).toBeInTheDocument();
+      expect(screen.getByText('users.title')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /users.admins.invite/i })).toBeInTheDocument();
     });
 
     it('should load and display admin users on mount', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/users/admins',
+          url: '/api/orgadmin/users/admins/org-1',
         });
       });
 
@@ -110,11 +134,11 @@ describe('OrgAdminUsersListPage', () => {
       mockExecute.mockImplementation(() => new Promise(() => {})); // Never resolves
       renderComponent();
 
-      expect(screen.getByText('Loading admin users...')).toBeInTheDocument();
+      expect(screen.getByText('users.loading.admins')).toBeInTheDocument();
     });
 
     it('should display empty state when no users exist', async () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ data: [] });
       renderComponent();
 
       await waitFor(() => {
@@ -123,7 +147,7 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should display user emails', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
@@ -134,7 +158,7 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should display user roles as chips', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
@@ -145,16 +169,16 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should display "No roles assigned" for users without roles', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('No roles assigned')).toBeInTheDocument();
+        expect(screen.getByText('users.noRoles')).toBeInTheDocument();
       });
     });
 
     it('should display user status with correct colors', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
@@ -167,7 +191,7 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should format last login dates correctly', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
@@ -177,7 +201,7 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should display "Never" for users who have not logged in', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
@@ -186,24 +210,24 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should display tabs for Admin Users and Account Users', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ data: [] });
       renderComponent();
 
-      expect(screen.getByRole('tab', { name: /admin users/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /account users/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /users.tabs.admins/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /users.tabs.accounts/i })).toBeInTheDocument();
     });
   });
 
   describe('Search Functionality', () => {
     it('should filter users by email', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'admin1' } });
 
       await waitFor(() => {
@@ -214,14 +238,14 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should filter users by first name', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'Jane' } });
 
       await waitFor(() => {
@@ -232,14 +256,14 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should filter users by last name', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'Johnson' } });
 
       await waitFor(() => {
@@ -250,14 +274,14 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should be case-insensitive when searching', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'JOHN' } });
 
       await waitFor(() => {
@@ -266,14 +290,14 @@ describe('OrgAdminUsersListPage', () => {
     });
 
     it('should show "no users match" message when search returns no results', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'NonexistentUser' } });
 
       await waitFor(() => {
@@ -283,41 +307,40 @@ describe('OrgAdminUsersListPage', () => {
   });
 
   describe('Navigation', () => {
-    it('should open invite dialog when invite button is clicked', async () => {
-      mockExecute.mockResolvedValue([]);
+    it('should navigate to the invite page when the invite button is clicked', async () => {
+      mockExecute.mockResolvedValue({ data: [] });
       renderComponent();
 
-      const inviteButton = screen.getByRole('button', { name: /invite admin user/i });
+      const inviteButton = screen.getByRole('button', { name: /users.admins.invite/i });
       fireEvent.click(inviteButton);
 
       await waitFor(() => {
-        const dialogTitles = screen.getAllByText(/invite admin user/i);
-        expect(dialogTitles.length).toBeGreaterThan(1); // Button + Dialog title
+        expect(mockNavigate).toHaveBeenCalledWith('/users/admins/invite');
       });
     });
 
     it('should navigate to user details when edit button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockAdminUsers);
+      mockExecute.mockResolvedValue({ data: mockAdminUsers });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const editButtons = screen.getAllByTitle('Edit');
+      const editButtons = screen.getAllByTitle('common.actions.edit');
       fireEvent.click(editButtons[0]);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/admins/1');
+      expect(mockNavigate).toHaveBeenCalledWith('/users/admins/1');
     });
 
     it('should navigate to account users tab when clicked', async () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ data: [] });
       renderComponent();
 
-      const accountUsersTab = screen.getByRole('tab', { name: /account users/i });
+      const accountUsersTab = screen.getByRole('tab', { name: /users.tabs.accounts/i });
       fireEvent.click(accountUsersTab);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/accounts');
+      expect(mockNavigate).toHaveBeenCalledWith('/users/accounts');
     });
   });
 

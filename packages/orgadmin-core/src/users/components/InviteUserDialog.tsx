@@ -24,6 +24,8 @@ import {
   Grid,
 } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 
 interface InviteUserDialogProps {
   open: boolean;
@@ -38,7 +40,9 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
   onSuccess,
   userType,
 }) => {
+  const { t } = useTranslation();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -90,9 +94,15 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
       setLoading(true);
       setError(null);
 
+      /*
+       * Both creation endpoints take the organisation as a path segment —
+       * `/admins/:organizationId` and `/accounts/:organizationId`. Without it
+       * the POST matches no route and fails as a 404, which looks like a
+       * missing feature rather than a malformed URL.
+       */
       const endpoint = isAdminUser
-        ? '/api/orgadmin/users/admins'
-        : '/api/orgadmin/users/accounts';
+        ? `/api/orgadmin/users/admins/${organisation?.id}`
+        : `/api/orgadmin/users/accounts/${organisation?.id}`;
 
       const payload = isAdminUser
         ? { email, firstName, lastName, roles: selectedRoles }
@@ -136,7 +146,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {isAdminUser ? 'Invite Admin User' : 'Create Account User'}
+        {isAdminUser ? t('users.admins.invite') : t('users.accounts.create')}
       </DialogTitle>
       <DialogContent>
         {error && (
@@ -148,7 +158,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12}>
             <TextField
-              label="Email"
+              label={t('users.fields.email')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -160,7 +170,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
           
           <Grid item xs={12} sm={6}>
             <TextField
-              label="First Name"
+              label={t('users.fields.firstName')}
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               fullWidth
@@ -170,7 +180,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
           
           <Grid item xs={12} sm={6}>
             <TextField
-              label="Last Name"
+              label={t('users.fields.lastName')}
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               fullWidth
@@ -181,7 +191,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
           {!isAdminUser && (
             <Grid item xs={12}>
               <TextField
-                label="Phone"
+                label={t('users.fields.phone')}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 fullWidth
@@ -192,12 +202,12 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
           {isAdminUser && (
             <Grid item xs={12}>
               <FormControl fullWidth required>
-                <InputLabel>Roles</InputLabel>
+                <InputLabel>{t('users.fields.roles')}</InputLabel>
                 <Select
                   multiple
                   value={selectedRoles}
                   onChange={(e) => setSelectedRoles(e.target.value as string[])}
-                  input={<OutlinedInput label="Roles" />}
+                  input={<OutlinedInput label={t('users.fields.roles')} />}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => (
@@ -219,7 +229,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>
-          Cancel
+          {t('common.actions.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -227,7 +237,7 @@ const InviteUserDialog: React.FC<InviteUserDialogProps> = ({
           color="primary"
           disabled={loading}
         >
-          {loading ? 'Creating...' : isAdminUser ? 'Send Invitation' : 'Create User'}
+          {loading ? 'Creating...' : isAdminUser ? t('users.actions.sendInvitation') : t('users.actions.createUser')}
         </Button>
       </DialogActions>
     </Dialog>

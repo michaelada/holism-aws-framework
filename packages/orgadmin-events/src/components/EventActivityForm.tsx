@@ -11,6 +11,7 @@ import {
   Chip,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   Grid,
   IconButton,
   InputLabel,
@@ -38,6 +39,12 @@ interface EventActivityFormProps {
   onChange: (activity: EventActivityFormData) => void;
   onRemove: () => void;
   paymentMethods: Array<{ id: string; name: string }>;
+  /**
+   * When true, mandatory fields that have not been completed are highlighted.
+   * The parent sets this once the user has tried to save or advance, so a
+   * freshly added activity does not open covered in errors.
+   */
+  showErrors?: boolean;
 }
 
 interface ApplicationForm {
@@ -56,6 +63,7 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
   onChange,
   onRemove,
   paymentMethods,
+  showErrors = false,
 }) => {
   const { execute } = useApi();
   const { organisation } = useOrganisation();
@@ -109,6 +117,11 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
     loadApplicationForms();
     loadDiscounts();
   }, [loadApplicationForms, loadDiscounts]);
+
+  // An application form must always be selected; only flag it once the parent
+  // has told us the user has attempted to save.
+  const applicationFormError = showErrors && !activity.applicationFormId;
+  const applicationFormLabelId = `activity-${index}-application-form-label`;
 
   const handleChange = (field: keyof EventActivityFormData, value: any) => {
     onChange({ ...activity, [field]: value });
@@ -192,15 +205,20 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
           </Grid>
 
           <Grid item xs={12}>
-            <FormControl fullWidth required>
-              <InputLabel>{t('events.activities.activity.applicationForm')}</InputLabel>
+            <FormControl fullWidth required error={applicationFormError}>
+              <InputLabel id={applicationFormLabelId}>
+                {t('events.activities.activity.applicationForm')}
+              </InputLabel>
               <Select
+                labelId={applicationFormLabelId}
                 value={activity.applicationFormId || ''}
                 label={t('events.activities.activity.applicationForm')}
                 onChange={(e) => handleChange('applicationFormId', e.target.value)}
                 disabled={loading}
               >
-                <MenuItem value="">
+                {/* Placeholder only – an application form is mandatory, so it
+                    cannot be chosen to clear a previous selection. */}
+                <MenuItem value="" disabled>
                   <em>{loading ? t('events.activities.activity.loadingForms') : t('events.activities.activity.selectForm')}</em>
                 </MenuItem>
                 {applicationForms.map((form) => (
@@ -209,6 +227,11 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
                   </MenuItem>
                 ))}
               </Select>
+              {applicationFormError && (
+                <FormHelperText>
+                  {t('events.activities.validation.applicationFormRequired')}
+                </FormHelperText>
+              )}
             </FormControl>
           </Grid>
 

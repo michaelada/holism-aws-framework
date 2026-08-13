@@ -8,6 +8,17 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import PaymentDetailsPage from '../PaymentDetailsPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { TEST_ORGANISATION } from '../../../test/renderWithProviders';
+import { OrganisationProvider } from '../../../context/OrganisationContext';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -69,11 +80,13 @@ describe('PaymentDetailsPage', () => {
 
   const renderComponent = (paymentId = '1') => {
     return render(
+      <OrganisationProvider organisation={TEST_ORGANISATION}>
       <BrowserRouter>
         <Routes>
           <Route path="/payments/:id" element={<PaymentDetailsPage />} />
         </Routes>
-      </BrowserRouter>,
+      </BrowserRouter>
+      </OrganisationProvider>,
       { wrapper: ({ children }) => <div>{children}</div> }
     );
   };
@@ -140,8 +153,8 @@ describe('PaymentDetailsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Payment Information')).toBeInTheDocument();
         expect(screen.getByText('£50.00')).toBeInTheDocument();
-        expect(screen.getByText('paid')).toBeInTheDocument();
-        expect(screen.getByText('card')).toBeInTheDocument();
+        expect(screen.getAllByText('Paid')[0]).toBeInTheDocument();
+        expect(screen.getAllByText(/Card/)[0]).toBeInTheDocument();
         expect(screen.getByText('txn_123456789')).toBeInTheDocument();
       });
     });
@@ -254,7 +267,7 @@ describe('PaymentDetailsPage', () => {
         fireEvent.click(refundButton);
       });
 
-      const reasonInput = screen.getByLabelText('Refund Reason');
+      const reasonInput = screen.getByLabelText(/Refund Reason/);
       fireEvent.change(reasonInput, { target: { value: 'Customer request' } });
 
       await waitFor(() => {
@@ -277,7 +290,7 @@ describe('PaymentDetailsPage', () => {
         fireEvent.click(refundButton);
       });
 
-      const reasonInput = screen.getByLabelText('Refund Reason');
+      const reasonInput = screen.getByLabelText(/Refund Reason/);
       fireEvent.change(reasonInput, { target: { value: 'Customer request' } });
 
       const confirmButton = screen.getByRole('button', { name: /confirm refund/i });
@@ -308,7 +321,7 @@ describe('PaymentDetailsPage', () => {
         fireEvent.click(refundButton);
       });
 
-      const reasonInput = screen.getByLabelText('Refund Reason');
+      const reasonInput = screen.getByLabelText(/Refund Reason/);
       fireEvent.change(reasonInput, { target: { value: 'Customer request' } });
 
       const confirmButton = screen.getByRole('button', { name: /confirm refund/i });
@@ -350,7 +363,7 @@ describe('PaymentDetailsPage', () => {
         fireEvent.click(refundButton);
       });
 
-      const reasonInput = screen.getByLabelText('Refund Reason');
+      const reasonInput = screen.getByLabelText(/Refund Reason/);
       fireEvent.change(reasonInput, { target: { value: 'Customer request' } });
 
       const confirmButton = screen.getByRole('button', { name: /confirm refund/i });

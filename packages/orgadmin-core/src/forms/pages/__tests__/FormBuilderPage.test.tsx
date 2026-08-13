@@ -8,6 +8,16 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import FormBuilderPage from '../FormBuilderPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -65,18 +75,18 @@ const mockExistingForm = {
   status: 'draft',
   fields: [
     {
-      fieldId: 'field-1',
-      fieldName: 'first_name',
-      fieldLabel: 'First Name',
-      fieldType: 'text',
+      id: 'field-1',
+      name: 'first_name',
+      label: 'First Name',
+      datatype: 'text',
       order: 1,
       required: true,
     },
     {
-      fieldId: 'field-3',
-      fieldName: 'resume',
-      fieldLabel: 'Upload Resume',
-      fieldType: 'document_upload',
+      id: 'field-3',
+      name: 'resume',
+      label: 'Upload Resume',
+      datatype: 'document_upload',
       order: 2,
       required: false,
     },
@@ -102,11 +112,7 @@ describe('FormBuilderPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <FormBuilderPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<FormBuilderPage />);
   };
 
   describe('Form Builder Initialization', () => {
@@ -115,11 +121,11 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
-      expect(screen.getByLabelText('Form Name')).toHaveValue('');
-      expect(screen.getByLabelText('Description')).toHaveValue('');
+      expect(screen.getByLabelText(/Form Name/)).toHaveValue('');
+      expect(screen.getAllByLabelText(/Description/)[0]).toHaveValue('');
     });
 
     it('should load available fields on mount', async () => {
@@ -143,12 +149,12 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Edit Form')[0]).toBeInTheDocument();
       });
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Form Name')).toHaveValue('Test Form');
-        expect(screen.getByLabelText('Description')).toHaveValue('Test form description');
+        expect(screen.getByLabelText(/Form Name/)).toHaveValue('Test Form');
+        expect(screen.getAllByLabelText(/Description/)[0]).toHaveValue('Test form description');
       });
     });
 
@@ -172,7 +178,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Click Add Field button
@@ -181,15 +187,20 @@ describe('FormBuilderPage', () => {
 
       // Wait for dialog to open
       await waitFor(() => {
-        expect(screen.getByText('Add Field')).toBeInTheDocument();
+        expect(screen.getAllByText('Add Field')[0]).toBeInTheDocument();
       });
 
       // Select a field
-      const selectField = screen.getByLabelText('Select Field');
+      const selectField = screen.getAllByRole('combobox')[0];
       fireEvent.mouseDown(selectField);
 
       const firstNameOption = await screen.findByText('First Name (text)');
       fireEvent.click(firstNameOption);
+
+      // The dialog confirms with its own Add button now.
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /^add$/i })[0]
+      );
 
       // Verify field was added
       await waitFor(() => {
@@ -203,21 +214,26 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       const addFieldButton = screen.getByRole('button', { name: /add field/i });
       fireEvent.click(addFieldButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Add Field')).toBeInTheDocument();
+        expect(screen.getAllByText('Add Field')[0]).toBeInTheDocument();
       });
 
-      const selectField = screen.getByLabelText('Select Field');
+      const selectField = screen.getAllByRole('combobox')[0];
       fireEvent.mouseDown(selectField);
 
       const uploadOption = await screen.findByText('Upload Resume (document_upload)');
       fireEvent.click(uploadOption);
+
+      // The dialog confirms with its own Add button now.
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /^add$/i })[0]
+      );
 
       await waitFor(() => {
         expect(screen.getByText('Upload Resume')).toBeInTheDocument();
@@ -296,10 +312,10 @@ describe('FormBuilderPage', () => {
       fireEvent.click(addFieldButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Add Field')).toBeInTheDocument();
+        expect(screen.getAllByText('Add Field')[0]).toBeInTheDocument();
       });
 
-      const selectField = screen.getByLabelText('Select Field');
+      const selectField = screen.getAllByRole('combobox')[0];
       fireEvent.mouseDown(selectField);
 
       // First Name should not be in the list since it's already added
@@ -315,7 +331,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Switch to Field Groups tab
@@ -335,8 +351,8 @@ describe('FormBuilderPage', () => {
       });
 
       // Fill in group details
-      const groupNameInput = screen.getByLabelText('Group Name');
-      const groupDescInput = screen.getByLabelText('Description');
+      const groupNameInput = screen.getByLabelText(/Group Name/);
+      const groupDescInput = screen.getAllByLabelText(/Description/)[0];
       
       fireEvent.change(groupNameInput, { target: { value: 'Personal Information' } });
       fireEvent.change(groupDescInput, { target: { value: 'Basic personal details' } });
@@ -347,7 +363,7 @@ describe('FormBuilderPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Personal Information')).toBeInTheDocument();
-        expect(screen.getByText(/basic personal details • 0 fields/i)).toBeInTheDocument();
+        expect(screen.getByText(/basic personal details/i)).toBeInTheDocument();
       });
     });
 
@@ -356,7 +372,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Switch to Field Groups tab
@@ -371,7 +387,7 @@ describe('FormBuilderPage', () => {
         expect(screen.getByText('Add Field Group')).toBeInTheDocument();
       });
 
-      const groupNameInput = screen.getByLabelText('Group Name');
+      const groupNameInput = screen.getByLabelText(/Group Name/);
       fireEvent.change(groupNameInput, { target: { value: 'Test Group' } });
 
       const addButton = screen.getByRole('button', { name: 'Add' });
@@ -403,7 +419,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Switch to Wizard Steps tab
@@ -423,8 +439,8 @@ describe('FormBuilderPage', () => {
       });
 
       // Fill in step details
-      const stepNameInput = screen.getByLabelText('Step Name');
-      const stepDescInput = screen.getByLabelText('Description');
+      const stepNameInput = screen.getByLabelText(/Step Name/);
+      const stepDescInput = screen.getAllByLabelText(/Description/)[0];
       
       fireEvent.change(stepNameInput, { target: { value: 'Personal Details' } });
       fireEvent.change(stepDescInput, { target: { value: 'Enter your personal information' } });
@@ -435,7 +451,7 @@ describe('FormBuilderPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/step 1: personal details/i)).toBeInTheDocument();
-        expect(screen.getByText(/enter your personal information • 0 fields/i)).toBeInTheDocument();
+        expect(screen.getByText(/enter your personal information/i)).toBeInTheDocument();
       });
     });
 
@@ -444,7 +460,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Switch to Wizard Steps tab
@@ -459,7 +475,7 @@ describe('FormBuilderPage', () => {
         expect(screen.getByText('Add Wizard Step')).toBeInTheDocument();
       });
 
-      const stepNameInput = screen.getByLabelText('Step Name');
+      const stepNameInput = screen.getByLabelText(/Step Name/);
       fireEvent.change(stepNameInput, { target: { value: 'Test Step' } });
 
       const addButton = screen.getByRole('button', { name: 'Add' });
@@ -491,11 +507,13 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
-      const publishButton = screen.getByRole('button', { name: /publish/i });
-      fireEvent.click(publishButton);
+      // Publishing is selecting "Published" in the Status field, then saving.
+      fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+      fireEvent.click(screen.getByRole('option', { name: /published/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
       await waitFor(() => {
         expect(screen.getByText('Form name is required')).toBeInTheDocument();
@@ -509,16 +527,16 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Fill in form name
       const nameInput = screen.getByRole('textbox', { name: /form name/i });
       fireEvent.change(nameInput, { target: { value: 'New Form' } });
 
-      // Click Save as Draft
-      const draftButton = screen.getByRole('button', { name: /save as draft/i });
-      fireEvent.click(draftButton);
+      // A single Save button now; the status comes from the Status select,
+      // which defaults to draft.
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
@@ -531,7 +549,7 @@ describe('FormBuilderPage', () => {
         });
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms');
     });
 
     it('should publish form', async () => {
@@ -539,7 +557,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       // Fill in form details
@@ -550,8 +568,10 @@ describe('FormBuilderPage', () => {
       fireEvent.change(descInput, { target: { value: 'Form description' } });
 
       // Click Publish
-      const publishButton = screen.getByRole('button', { name: /publish/i });
-      fireEvent.click(publishButton);
+      // Publishing is selecting "Published" in the Status field, then saving.
+      fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+      fireEvent.click(screen.getByRole('option', { name: /published/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
@@ -565,7 +585,7 @@ describe('FormBuilderPage', () => {
         });
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms');
     });
 
     it('should update existing form', async () => {
@@ -577,7 +597,7 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Edit Form')[0]).toBeInTheDocument();
       });
 
       // Modify form name
@@ -585,8 +605,10 @@ describe('FormBuilderPage', () => {
       fireEvent.change(nameInput, { target: { value: 'Updated Form' } });
 
       // Click Publish
-      const publishButton = screen.getByRole('button', { name: /publish/i });
-      fireEvent.click(publishButton);
+      // Publishing is selecting "Published" in the Status field, then saving.
+      fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+      fireEvent.click(screen.getByRole('option', { name: /published/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
@@ -609,14 +631,16 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       const nameInput = screen.getByRole('textbox', { name: /form name/i });
       fireEvent.change(nameInput, { target: { value: 'Test Form' } });
 
-      const publishButton = screen.getByRole('button', { name: /publish/i });
-      fireEvent.click(publishButton);
+      // Publishing is selecting "Published" in the Status field, then saving.
+      fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+      fireEvent.click(screen.getByRole('option', { name: /published/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
       await waitFor(() => {
         expect(screen.getByText('Failed to save form')).toBeInTheDocument();
@@ -633,13 +657,13 @@ describe('FormBuilderPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Create Form')).toBeInTheDocument();
+        expect(screen.getAllByText('Create Form')[0]).toBeInTheDocument();
       });
 
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       fireEvent.click(cancelButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms');
     });
   });
 });

@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { renderWithProviders, createWrapper } from '../../../test/renderWithProviders';
 import InviteUserDialog from '../InviteUserDialog';
 import * as useApiModule from '../../../hooks/useApi';
 
@@ -37,7 +38,7 @@ describe('InviteUserDialog', () => {
   });
 
   const renderComponent = (userType: 'admin' | 'account', open = true) => {
-    return render(
+    return renderWithProviders(
       <InviteUserDialog
         open={open}
         onClose={mockOnClose}
@@ -47,20 +48,51 @@ describe('InviteUserDialog', () => {
     );
   };
 
+  /** The three text fields an admin invitation requires. */
+  const fillAdminDetails = () => {
+    fireEvent.change(screen.getByLabelText(/users.fields.email/i), {
+      target: { value: 'admin@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/users.fields.firstName/i), {
+      target: { value: 'John' },
+    });
+    fireEvent.change(screen.getByLabelText(/users.fields.lastName/i), {
+      target: { value: 'Doe' },
+    });
+  };
+
+  /**
+   * Pick a role, then close the dropdown.
+   *
+   * The role Select is `multiple`, so MUI deliberately keeps its menu open
+   * after a choice — and while it is open the menu's backdrop sits over the
+   * dialog, so the submit button cannot be clicked. Escape is what dismisses
+   * it. These tests used to click the dialog title instead, which does nothing:
+   * the click lands on the title rather than on the backdrop MUI listens to,
+   * the menu stays open, and submitting is impossible. That is what made them
+   * "not close properly in test environment".
+   */
+  const selectRole = async (name: RegExp) => {
+    fireEvent.mouseDown(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name }));
+    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape', code: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+  };
+
   describe('Admin User Invitation', () => {
     it('should render dialog with correct title for admin users', () => {
       renderComponent('admin');
 
-      expect(screen.getByText('Invite Admin User')).toBeInTheDocument();
+      expect(screen.getByText('users.admins.invite')).toBeInTheDocument();
     });
 
     it('should display all required fields for admin users', async () => {
       mockExecute.mockResolvedValue(mockAvailableRoles);
       renderComponent('admin');
 
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.firstName/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.lastName/i)).toBeInTheDocument();
       
       // Wait for roles to load and the Select to render
       await waitFor(() => {
@@ -71,7 +103,7 @@ describe('InviteUserDialog', () => {
     it('should not display phone field for admin users', () => {
       renderComponent('admin');
 
-      expect(screen.queryByLabelText(/phone/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/users.fields.phone/i)).not.toBeInTheDocument();
     });
 
     it('should load available roles when dialog opens', async () => {
@@ -107,7 +139,7 @@ describe('InviteUserDialog', () => {
     it('should validate that email is required', async () => {
       renderComponent('admin');
 
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -122,16 +154,16 @@ describe('InviteUserDialog', () => {
     it('should validate email format', async () => {
       renderComponent('admin');
 
-      const emailInput = screen.getByLabelText(/email/i);
+      const emailInput = screen.getByLabelText(/users.fields.email/i);
       fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
+      const firstNameInput = screen.getByLabelText(/users.fields.firstName/i);
       fireEvent.change(firstNameInput, { target: { value: 'John' } });
 
-      const lastNameInput = screen.getByLabelText(/last name/i);
+      const lastNameInput = screen.getByLabelText(/users.fields.lastName/i);
       fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
 
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -155,16 +187,16 @@ describe('InviteUserDialog', () => {
       // Wait for state to update
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const emailInput = screen.getByLabelText(/email/i);
+      const emailInput = screen.getByLabelText(/users.fields.email/i);
       fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
+      const firstNameInput = screen.getByLabelText(/users.fields.firstName/i);
       fireEvent.change(firstNameInput, { target: { value: 'John' } });
 
-      const lastNameInput = screen.getByLabelText(/last name/i);
+      const lastNameInput = screen.getByLabelText(/users.fields.lastName/i);
       fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
 
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -172,48 +204,23 @@ describe('InviteUserDialog', () => {
       });
     });
 
-    // TODO: Fix this test - MUI Select dropdown doesn't close properly in test environment
-    it.skip('should submit admin user invitation with correct data', async () => {
+    it('should submit admin user invitation with correct data', async () => {
       mockExecute
         .mockResolvedValueOnce(mockAvailableRoles) // Load roles
         .mockResolvedValueOnce({}); // Submit invitation
       
       renderComponent('admin');
 
-      // Fill in form
-      const emailInput = screen.getByLabelText(/email/i);
-      fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
+      fillAdminDetails();
+      await selectRole(/^admin$/i);
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-
-      // Wait for roles to load and select role
-      const roleSelect = await screen.findByRole('combobox');
-      fireEvent.mouseDown(roleSelect);
-
-      const adminOption = await screen.findByRole('option', { name: /^admin$/i });
-      fireEvent.click(adminOption);
-
-      // Click outside the dropdown to close it (click on the dialog title)
-      const dialogTitle = screen.getByText('Invite Admin User');
-      fireEvent.click(dialogTitle);
-
-      // Wait for dropdown to close
-      await waitFor(() => {
-        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      });
-
-      // Now the dialog buttons should be accessible
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'POST',
-          url: '/api/orgadmin/users/admins',
+          url: '/api/orgadmin/users/admins/org-1',
           data: {
             email: 'admin@example.com',
             firstName: 'John',
@@ -229,7 +236,7 @@ describe('InviteUserDialog', () => {
     it('should display correct button text for admin users', () => {
       renderComponent('admin');
 
-      expect(screen.getByRole('button', { name: /send invitation/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /users.actions.sendInvitation/i })).toBeInTheDocument();
     });
   });
 
@@ -237,22 +244,22 @@ describe('InviteUserDialog', () => {
     it('should render dialog with correct title for account users', () => {
       renderComponent('account');
 
-      expect(screen.getByText('Create Account User')).toBeInTheDocument();
+      expect(screen.getByText('users.accounts.create')).toBeInTheDocument();
     });
 
     it('should display all required fields for account users', () => {
       renderComponent('account');
 
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.firstName/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.lastName/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.phone/i)).toBeInTheDocument();
     });
 
     it('should not display roles field for account users', () => {
       renderComponent('account');
 
-      expect(screen.queryByLabelText(/roles/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/users.fields.roles/i)).not.toBeInTheDocument();
     });
 
     it('should not load roles for account users', () => {
@@ -270,26 +277,26 @@ describe('InviteUserDialog', () => {
       renderComponent('account');
 
       // Fill in form
-      const emailInput = screen.getByLabelText(/email/i);
+      const emailInput = screen.getByLabelText(/users.fields.email/i);
       fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
+      const firstNameInput = screen.getByLabelText(/users.fields.firstName/i);
       fireEvent.change(firstNameInput, { target: { value: 'Jane' } });
 
-      const lastNameInput = screen.getByLabelText(/last name/i);
+      const lastNameInput = screen.getByLabelText(/users.fields.lastName/i);
       fireEvent.change(lastNameInput, { target: { value: 'Smith' } });
 
-      const phoneInput = screen.getByLabelText(/phone/i);
+      const phoneInput = screen.getByLabelText(/users.fields.phone/i);
       fireEvent.change(phoneInput, { target: { value: '+44 1234 567890' } });
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: /create user/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.createUser/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'POST',
-          url: '/api/orgadmin/users/accounts',
+          url: '/api/orgadmin/users/accounts/org-1',
           data: {
             email: 'user@example.com',
             firstName: 'Jane',
@@ -308,23 +315,23 @@ describe('InviteUserDialog', () => {
       renderComponent('account');
 
       // Fill in form without phone
-      const emailInput = screen.getByLabelText(/email/i);
+      const emailInput = screen.getByLabelText(/users.fields.email/i);
       fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
+      const firstNameInput = screen.getByLabelText(/users.fields.firstName/i);
       fireEvent.change(firstNameInput, { target: { value: 'Jane' } });
 
-      const lastNameInput = screen.getByLabelText(/last name/i);
+      const lastNameInput = screen.getByLabelText(/users.fields.lastName/i);
       fireEvent.change(lastNameInput, { target: { value: 'Smith' } });
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: /create user/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.createUser/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'POST',
-          url: '/api/orgadmin/users/accounts',
+          url: '/api/orgadmin/users/accounts/org-1',
           data: {
             email: 'user@example.com',
             firstName: 'Jane',
@@ -338,7 +345,7 @@ describe('InviteUserDialog', () => {
     it('should display correct button text for account users', () => {
       renderComponent('account');
 
-      expect(screen.getByRole('button', { name: /create user/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /users.actions.createUser/i })).toBeInTheDocument();
     });
   });
 
@@ -346,13 +353,13 @@ describe('InviteUserDialog', () => {
     it('should not render when open is false', () => {
       renderComponent('admin', false);
 
-      expect(screen.queryByText('Invite Admin User')).not.toBeInTheDocument();
+      expect(screen.queryByText('users.admins.invite')).not.toBeInTheDocument();
     });
 
     it('should call onClose when cancel button is clicked', () => {
       renderComponent('admin');
 
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      const cancelButton = screen.getByRole('button', { name: /common.actions.cancel/i });
       fireEvent.click(cancelButton);
 
       expect(mockOnClose).toHaveBeenCalled();
@@ -364,11 +371,11 @@ describe('InviteUserDialog', () => {
       const { rerender } = renderComponent('admin');
 
       // Fill in form
-      const emailInput = screen.getByLabelText(/email/i);
+      const emailInput = screen.getByLabelText(/users.fields.email/i);
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
 
       // Close dialog
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      const cancelButton = screen.getByRole('button', { name: /common.actions.cancel/i });
       fireEvent.click(cancelButton);
 
       // Reopen dialog
@@ -378,57 +385,33 @@ describe('InviteUserDialog', () => {
           onClose={mockOnClose}
           onSuccess={mockOnSuccess}
           userType="admin"
-        />
+        />,
+        { wrapper: createWrapper() }
       );
 
       // Check form is reset
       await waitFor(() => {
-        const emailInputAfter = screen.getByLabelText(/email/i) as HTMLInputElement;
+        const emailInputAfter = screen.getByLabelText(/users.fields.email/i) as HTMLInputElement;
         expect(emailInputAfter.value).toBe('');
       });
     });
 
-    // TODO: Fix this test - MUI Select dropdown doesn't close properly in test environment
-    it.skip('should disable buttons while submitting', async () => {
+    it('should disable buttons while submitting', async () => {
       mockExecute
         .mockResolvedValueOnce(mockAvailableRoles)
         .mockImplementation(() => new Promise(() => {})); // Never resolves
       
       renderComponent('admin');
 
-      // Fill in form
-      const emailInput = screen.getByLabelText(/email/i);
-      fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
+      fillAdminDetails();
+      await selectRole(/^admin$/i);
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-
-      // Wait for roles to load and select role
-      const roleSelect = await screen.findByRole('combobox');
-      fireEvent.mouseDown(roleSelect);
-
-      const adminOption = await screen.findByRole('option', { name: /^admin$/i });
-      fireEvent.click(adminOption);
-
-      // Click outside the dropdown to close it (click on the dialog title)
-      const dialogTitle = screen.getByText('Invite Admin User');
-      fireEvent.click(dialogTitle);
-
-      // Wait for dropdown to close
-      await waitFor(() => {
-        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      });
-
-      // Now the dialog buttons should be accessible
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
         const creatingButton = screen.getByRole('button', { name: /creating/i });
-        const cancelButton = screen.getByRole('button', { name: /cancel/i });
+        const cancelButton = screen.getByRole('button', { name: /common.actions.cancel/i });
         expect(creatingButton).toBeDisabled();
         expect(cancelButton).toBeDisabled();
       });
@@ -436,8 +419,7 @@ describe('InviteUserDialog', () => {
   });
 
   describe('Error Handling', () => {
-    // TODO: Fix this test - MUI Select dropdown doesn't close properly in test environment
-    it.skip('should display error message when API call fails', async () => {
+    it('should display error message when API call fails', async () => {
       mockExecute
         .mockResolvedValueOnce(mockAvailableRoles)
         .mockRejectedValueOnce({
@@ -446,34 +428,10 @@ describe('InviteUserDialog', () => {
       
       renderComponent('admin');
 
-      // Fill in form
-      const emailInput = screen.getByLabelText(/email/i);
-      fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
+      fillAdminDetails();
+      await selectRole(/^admin$/i);
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-
-      // Wait for roles to load and select role
-      const roleSelect = await screen.findByRole('combobox');
-      fireEvent.mouseDown(roleSelect);
-
-      const adminOption = await screen.findByRole('option', { name: /^admin$/i });
-      fireEvent.click(adminOption);
-
-      // Click outside the dropdown to close it (click on the dialog title)
-      const dialogTitle = screen.getByText('Invite Admin User');
-      fireEvent.click(dialogTitle);
-
-      // Wait for dropdown to close
-      await waitFor(() => {
-        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      });
-
-      // Now the dialog buttons should be accessible
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -483,8 +441,7 @@ describe('InviteUserDialog', () => {
       expect(mockOnSuccess).not.toHaveBeenCalled();
     });
 
-    // TODO: Fix this test - MUI Select dropdown doesn't close properly in test environment
-    it.skip('should display generic error message when API error has no message', async () => {
+    it('should display generic error message when API error has no message', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockExecute
         .mockResolvedValueOnce(mockAvailableRoles)
@@ -492,34 +449,10 @@ describe('InviteUserDialog', () => {
       
       renderComponent('admin');
 
-      // Fill in form
-      const emailInput = screen.getByLabelText(/email/i);
-      fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
+      fillAdminDetails();
+      await selectRole(/^admin$/i);
 
-      const firstNameInput = screen.getByLabelText(/first name/i);
-      fireEvent.change(firstNameInput, { target: { value: 'John' } });
-
-      const lastNameInput = screen.getByLabelText(/last name/i);
-      fireEvent.change(lastNameInput, { target: { value: 'Doe' } });
-
-      // Wait for roles to load and select role
-      const roleSelect = await screen.findByRole('combobox');
-      fireEvent.mouseDown(roleSelect);
-
-      const adminOption = await screen.findByRole('option', { name: /^admin$/i });
-      fireEvent.click(adminOption);
-
-      // Click outside the dropdown to close it (click on the dialog title)
-      const dialogTitle = screen.getByText('Invite Admin User');
-      fireEvent.click(dialogTitle);
-
-      // Wait for dropdown to close
-      await waitFor(() => {
-        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      });
-
-      // Now the dialog buttons should be accessible
-      const submitButton = screen.getByRole('button', { name: /send invitation/i });
+      const submitButton = screen.getByRole('button', { name: /users.actions.sendInvitation/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -543,9 +476,9 @@ describe('InviteUserDialog', () => {
       });
 
       // The component should still render the form fields even if roles fail to load
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.firstName/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/users.fields.lastName/i)).toBeInTheDocument();
     });
   });
 });

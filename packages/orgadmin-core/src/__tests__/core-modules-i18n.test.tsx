@@ -394,9 +394,10 @@ describe('Core Modules i18n Tests', () => {
 
       it('should have Payment Settings field translations', () => {
         const fields = [
-          'stripePublishableKey',
-          'stripeSecretKey',
-          'defaultCurrency',
+          'helixPayEnabled',
+          'helixPayApiKey',
+          'chequePaymentsEnabled',
+          'chequePaymentInstructions',
         ];
 
         fields.forEach(field => {

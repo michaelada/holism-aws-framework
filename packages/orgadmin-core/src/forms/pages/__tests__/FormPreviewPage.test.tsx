@@ -8,18 +8,19 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import FormPreviewPage from '../FormPreviewPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
-
-// Mock MUI X Date Pickers to avoid date-fns internal import issues in tests
-vi.mock('@mui/x-date-pickers/LocalizationProvider', () => ({
-  LocalizationProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="localization-provider">{children}</div>,
-}));
-
-vi.mock('@mui/x-date-pickers/AdapterDateFns', () => ({
-  AdapterDateFns: vi.fn(),
-}));
 
 // Mock useNavigate and useParams
 const mockNavigate = vi.fn();
@@ -41,28 +42,28 @@ const mockSimpleForm = {
   status: 'published',
   fields: [
     {
-      fieldId: 'field-1',
-      fieldName: 'first_name',
-      fieldLabel: 'First Name',
-      fieldType: 'text',
+      id: 'field-1',
+      name: 'first_name',
+      label: 'First Name',
+      datatype: 'text',
       order: 1,
-      required: true,
+      validation: { required: true },
     },
     {
-      fieldId: 'field-2',
-      fieldName: 'email',
-      fieldLabel: 'Email Address',
-      fieldType: 'email',
+      id: 'field-2',
+      name: 'email',
+      label: 'Email Address',
+      datatype: 'email',
       order: 2,
-      required: true,
+      validation: { required: true },
     },
     {
-      fieldId: 'field-3',
-      fieldName: 'resume',
-      fieldLabel: 'Upload Resume',
-      fieldType: 'document_upload',
+      id: 'field-3',
+      name: 'resume',
+      label: 'Upload Resume',
+      datatype: 'document_upload',
       order: 3,
-      required: false,
+      validation: { required: false },
     },
   ],
 };
@@ -74,28 +75,28 @@ const mockFormWithGroups = {
   status: 'draft',
   fields: [
     {
-      fieldId: 'field-1',
-      fieldName: 'first_name',
-      fieldLabel: 'First Name',
-      fieldType: 'text',
+      id: 'field-1',
+      name: 'first_name',
+      label: 'First Name',
+      datatype: 'text',
       order: 1,
-      required: true,
+      validation: { required: true },
     },
     {
-      fieldId: 'field-2',
-      fieldName: 'last_name',
-      fieldLabel: 'Last Name',
-      fieldType: 'text',
+      id: 'field-2',
+      name: 'last_name',
+      label: 'Last Name',
+      datatype: 'text',
       order: 2,
-      required: true,
+      validation: { required: true },
     },
     {
-      fieldId: 'field-3',
-      fieldName: 'company',
-      fieldLabel: 'Company',
-      fieldType: 'text',
+      id: 'field-3',
+      name: 'company',
+      label: 'Company',
+      datatype: 'text',
       order: 3,
-      required: false,
+      validation: { required: false },
     },
   ],
   fieldGroups: [
@@ -121,28 +122,28 @@ const mockFormWithWizard = {
   status: 'published',
   fields: [
     {
-      fieldId: 'field-1',
-      fieldName: 'first_name',
-      fieldLabel: 'First Name',
-      fieldType: 'text',
+      id: 'field-1',
+      name: 'first_name',
+      label: 'First Name',
+      datatype: 'text',
       order: 1,
-      required: true,
+      validation: { required: true },
     },
     {
-      fieldId: 'field-2',
-      fieldName: 'email',
-      fieldLabel: 'Email',
-      fieldType: 'email',
+      id: 'field-2',
+      name: 'email',
+      label: 'Email',
+      datatype: 'email',
       order: 2,
-      required: true,
+      validation: { required: true },
     },
     {
-      fieldId: 'field-3',
-      fieldName: 'cv',
-      fieldLabel: 'Upload CV',
-      fieldType: 'document_upload',
+      id: 'field-3',
+      name: 'cv',
+      label: 'Upload CV',
+      datatype: 'document_upload',
       order: 3,
-      required: false,
+      validation: { required: false },
     },
   ],
   wizardConfig: {
@@ -181,13 +182,25 @@ describe('FormPreviewPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <FormPreviewPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<FormPreviewPage />);
   };
 
+  /**
+   * These exercise the real MUI pickers, so they need the real
+   * LocalizationProvider — do not reintroduce a stub for it.
+   *
+   * They used to fail with "Can not find the date and time pickers localization
+   * context", which reads like the duplicate-install problem MUI's message
+   * suggests. It was not: there is one install, and the suite stubbed
+   * `@mui/x-date-pickers/LocalizationProvider` with a plain `<div>`, so nothing
+   * ever published the context the pickers look for. That stub existed to dodge
+   * a separate fault — Vitest served the ESM build to the provider and the CJS
+   * build under `@mui/x-date-pickers/node` to the pickers — now fixed by
+   * inlining the package in vite.config.ts.
+   *
+   * The `localization-provider` test id is the page's own Box, which sits
+   * inside the real provider.
+   */
   describe('LocalizationProvider Configuration', () => {
     it('should render LocalizationProvider component', async () => {
       mockExecute.mockResolvedValue(mockSimpleForm);
@@ -198,7 +211,7 @@ describe('FormPreviewPage', () => {
       });
 
       // Verify LocalizationProvider wrapper is present
-      expect(screen.getByTestId('localization-provider')).toBeInTheDocument();
+      expect(screen.getAllByTestId('localization-provider')[0]).toBeInTheDocument();
     });
 
     it('should configure AdapterDateFns for date localization', async () => {
@@ -211,7 +224,7 @@ describe('FormPreviewPage', () => {
             label: 'Date of Birth',
             datatype: 'date',
             order: 1,
-            required: false,
+            validation: { required: false },
           },
         ],
       });
@@ -219,12 +232,12 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Date of Birth')).toBeInTheDocument();
+        expect(screen.getAllByText('Date of Birth')[0]).toBeInTheDocument();
       });
 
       // Verify LocalizationProvider wraps the content
-      expect(screen.getByTestId('localization-provider')).toBeInTheDocument();
-      expect(screen.getByText('Date of Birth')).toBeInTheDocument();
+      expect(screen.getAllByTestId('localization-provider')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Date of Birth')[0]).toBeInTheDocument();
     });
 
     it('should support date picker fields without context errors', async () => {
@@ -237,7 +250,7 @@ describe('FormPreviewPage', () => {
             label: 'Event Date',
             datatype: 'date',
             order: 1,
-            required: true,
+            validation: { required: true },
           },
         ],
       };
@@ -250,7 +263,7 @@ describe('FormPreviewPage', () => {
       });
 
       // Verify the field renders within LocalizationProvider context
-      const provider = screen.getByTestId('localization-provider');
+      const provider = screen.getAllByTestId('localization-provider')[0];
       expect(provider).toBeInTheDocument();
       expect(screen.getByText('Event Date')).toBeInTheDocument();
     });
@@ -265,7 +278,7 @@ describe('FormPreviewPage', () => {
             label: 'Appointment Time',
             datatype: 'time',
             order: 1,
-            required: true,
+            validation: { required: true },
           },
         ],
       };
@@ -278,7 +291,7 @@ describe('FormPreviewPage', () => {
       });
 
       // Verify the field renders within LocalizationProvider context
-      const provider = screen.getByTestId('localization-provider');
+      const provider = screen.getAllByTestId('localization-provider')[0];
       expect(provider).toBeInTheDocument();
       expect(screen.getByText('Appointment Time')).toBeInTheDocument();
     });
@@ -293,7 +306,7 @@ describe('FormPreviewPage', () => {
             label: 'Meeting Date & Time',
             datatype: 'datetime',
             order: 1,
-            required: true,
+            validation: { required: true },
           },
         ],
       };
@@ -306,7 +319,7 @@ describe('FormPreviewPage', () => {
       });
 
       // Verify the field renders within LocalizationProvider context
-      const provider = screen.getByTestId('localization-provider');
+      const provider = screen.getAllByTestId('localization-provider')[0];
       expect(provider).toBeInTheDocument();
       expect(screen.getByText('Meeting Date & Time')).toBeInTheDocument();
     });
@@ -321,7 +334,7 @@ describe('FormPreviewPage', () => {
             label: 'Start Date',
             datatype: 'date',
             order: 1,
-            required: true,
+            validation: { required: true },
           },
           {
             id: 'field-2',
@@ -329,7 +342,7 @@ describe('FormPreviewPage', () => {
             label: 'End Date',
             datatype: 'date',
             order: 2,
-            required: true,
+            validation: { required: true },
           },
           {
             id: 'field-3',
@@ -337,7 +350,7 @@ describe('FormPreviewPage', () => {
             label: 'Meeting Time',
             datatype: 'time',
             order: 3,
-            required: false,
+            validation: { required: false },
           },
         ],
       };
@@ -348,15 +361,15 @@ describe('FormPreviewPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Start Date')).toBeInTheDocument();
         expect(screen.getByText('End Date')).toBeInTheDocument();
-        expect(screen.getByText('Meeting Time')).toBeInTheDocument();
+        expect(screen.getAllByText('Meeting Time')[0]).toBeInTheDocument();
       });
 
       // Verify all date/time fields render within the same LocalizationProvider context
-      const provider = screen.getByTestId('localization-provider');
+      const provider = screen.getAllByTestId('localization-provider')[0];
       expect(provider).toBeInTheDocument();
       expect(screen.getByText('Start Date')).toBeInTheDocument();
       expect(screen.getByText('End Date')).toBeInTheDocument();
-      expect(screen.getByText('Meeting Time')).toBeInTheDocument();
+      expect(screen.getAllByText('Meeting Time')[0]).toBeInTheDocument();
     });
   });
 
@@ -377,7 +390,7 @@ describe('FormPreviewPage', () => {
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/application-forms/form-1',
+          url: '/api/orgadmin/application-forms/form-1/with-fields',
         });
       });
 
@@ -402,7 +415,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText(/this is a preview of how your form will appear/i)).toBeInTheDocument();
+        expect(screen.getByText(/this is a live preview of your form/i)).toBeInTheDocument();
       });
     });
   });
@@ -413,9 +426,9 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('First Name')).toBeInTheDocument();
+        expect(screen.getAllByText('First Name')[0]).toBeInTheDocument();
         expect(screen.getByText('Email Address')).toBeInTheDocument();
-        expect(screen.getByText('Upload Resume')).toBeInTheDocument();
+        expect(screen.getAllByText('Upload Resume')[0]).toBeInTheDocument();
       });
     });
 
@@ -424,7 +437,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        const firstNameLabel = screen.getByText('First Name');
+        const firstNameLabel = screen.getAllByText('First Name')[0];
         expect(firstNameLabel.parentElement?.textContent).toContain('*');
       });
     });
@@ -434,9 +447,10 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Type: text')).toBeInTheDocument();
-        expect(screen.getByText('Type: email')).toBeInTheDocument();
-        expect(screen.getByText('Type: document_upload')).toBeInTheDocument();
+        // The preview renders the field itself now, not a 'Type: …' caption.
+        expect(screen.getByLabelText(/First Name/i)).toBeInTheDocument();
+        expect(screen.getAllByLabelText(/Email Address/i)[0]).toBeInTheDocument();
+        expect(screen.getAllByText(/Upload Resume/i)[0]).toBeInTheDocument();
       });
     });
 
@@ -445,7 +459,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('[File upload field - users can upload documents here]')).toBeInTheDocument();
+        expect(screen.getAllByLabelText(/Upload Resume/i)[0]).toBeInTheDocument();
       });
     });
 
@@ -454,7 +468,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        const textInputs = screen.getAllByText('[Text input field]');
+        const textInputs = screen.getAllByRole('textbox');
         expect(textInputs.length).toBeGreaterThan(0);
       });
     });
@@ -464,12 +478,12 @@ describe('FormPreviewPage', () => {
         ...mockSimpleForm,
         fields: [
           {
-            fieldId: 'field-1',
-            fieldName: 'country',
-            fieldLabel: 'Country',
-            fieldType: 'single_select',
+            id: 'field-1',
+            name: 'country',
+            label: 'Country',
+            datatype: 'single_select',
             order: 1,
-            required: false,
+            validation: { required: false },
             options: ['USA', 'UK', 'Canada'],
           },
         ],
@@ -479,7 +493,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('[Dropdown/Select field with 3 options]')).toBeInTheDocument();
+        expect(screen.getByLabelText(/Country/i)).toBeInTheDocument();
       });
     });
 
@@ -488,12 +502,12 @@ describe('FormPreviewPage', () => {
         ...mockSimpleForm,
         fields: [
           {
-            fieldId: 'field-1',
-            fieldName: 'agree',
-            fieldLabel: 'I agree to terms',
-            fieldType: 'boolean',
+            id: 'field-1',
+            name: 'agree',
+            label: 'I agree to terms',
+            datatype: 'boolean',
             order: 1,
-            required: true,
+            validation: { required: true },
           },
         ],
       };
@@ -502,7 +516,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('[Checkbox field]')).toBeInTheDocument();
+        expect(screen.getAllByText(/I agree to terms/i)[0]).toBeInTheDocument();
       });
     });
 
@@ -511,12 +525,12 @@ describe('FormPreviewPage', () => {
         ...mockSimpleForm,
         fields: [
           {
-            fieldId: 'field-1',
-            fieldName: 'birth_date',
-            fieldLabel: 'Date of Birth',
-            fieldType: 'date',
+            id: 'field-1',
+            name: 'birth_date',
+            label: 'Date of Birth',
+            datatype: 'date',
             order: 1,
-            required: false,
+            validation: { required: false },
           },
         ],
       };
@@ -525,7 +539,7 @@ describe('FormPreviewPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('[Date picker field]')).toBeInTheDocument();
+        expect(screen.getAllByText(/Date of Birth/i)[0]).toBeInTheDocument();
       });
     });
   });
@@ -560,12 +574,12 @@ describe('FormPreviewPage', () => {
         fields: [
           ...mockFormWithGroups.fields,
           {
-            fieldId: 'field-4',
-            fieldName: 'notes',
-            fieldLabel: 'Additional Notes',
-            fieldType: 'text',
+            id: 'field-4',
+            name: 'notes',
+            label: 'Additional Notes',
+            datatype: 'text',
             order: 4,
-            required: false,
+            validation: { required: false },
           },
         ],
       };
@@ -575,7 +589,7 @@ describe('FormPreviewPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Additional Information')).toBeInTheDocument();
-        expect(screen.getByText('Additional Notes')).toBeInTheDocument();
+        expect(screen.getAllByText('Additional Notes')[0]).toBeInTheDocument();
       });
     });
   });
@@ -585,10 +599,14 @@ describe('FormPreviewPage', () => {
       mockExecute.mockResolvedValue(mockFormWithWizard);
       renderComponent();
 
+      // The wizard is a preview mode now — switch to it first.
+      await waitFor(() => expect(screen.getByLabelText('wizard view')).toBeInTheDocument());
+      fireEvent.click(screen.getByLabelText('wizard view'));
+
       await waitFor(() => {
-        expect(screen.getByText('Multi-Step Form (Wizard)')).toBeInTheDocument();
-        expect(screen.getByText(/step 1: basic information/i)).toBeInTheDocument();
-        expect(screen.getByText(/step 2: documents/i)).toBeInTheDocument();
+        expect(screen.getByText('Multi-Step Form')).toBeInTheDocument();
+        expect(screen.getAllByText(/basic information/i)[0]).toBeInTheDocument();
+        expect(screen.getAllByText(/documents/i)[0]).toBeInTheDocument();
       });
     });
 
@@ -596,9 +614,14 @@ describe('FormPreviewPage', () => {
       mockExecute.mockResolvedValue(mockFormWithWizard);
       renderComponent();
 
+      // The wizard is a preview mode now — switch to it first.
+      await waitFor(() => expect(screen.getByLabelText('wizard view')).toBeInTheDocument());
+      fireEvent.click(screen.getByLabelText('wizard view'));
+
       await waitFor(() => {
-        expect(screen.getByText('Enter your basic details')).toBeInTheDocument();
-        expect(screen.getByText('Upload required documents')).toBeInTheDocument();
+        expect(screen.getAllByText('Enter your basic details')[0]).toBeInTheDocument();
+        // Only the active step's description is shown; step 2's appears after advancing.
+        expect(screen.queryByText('Upload required documents')).not.toBeInTheDocument();
       });
     });
 
@@ -606,15 +629,24 @@ describe('FormPreviewPage', () => {
       mockExecute.mockResolvedValue(mockFormWithWizard);
       renderComponent();
 
-      await waitFor(() => {
-        const step1Section = screen.getByText(/step 1: basic information/i).closest('div');
-        expect(step1Section?.textContent).toContain('First Name');
-        expect(step1Section?.textContent).toContain('Email');
-      });
+      // The wizard is a preview mode now — switch to it first.
+      await waitFor(() => expect(screen.getByLabelText('wizard view')).toBeInTheDocument());
+      fireEvent.click(screen.getByLabelText('wizard view'));
 
       await waitFor(() => {
-        const step2Section = screen.getByText(/step 2: documents/i).closest('div');
-        expect(step2Section?.textContent).toContain('Upload CV');
+        // The step heading in the Stepper is not an ancestor of the fields —
+        // assert against the rendered step content instead.
+        expect(screen.getAllByLabelText(/First Name/i)[0]).toBeInTheDocument();
+        expect(screen.getAllByLabelText(/Email/i)[0]).toBeInTheDocument();
+      });
+
+      // Step two's fields are not in the DOM until the wizard advances to it —
+      // the previous assertion matched the Stepper's "Documents" label rather
+      // than any step content, so it could never have seen Upload CV.
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Upload CV')[0]).toBeInTheDocument();
       });
     });
   });
@@ -631,7 +663,7 @@ describe('FormPreviewPage', () => {
       const backButton = screen.getByRole('button', { name: /back to forms/i });
       fireEvent.click(backButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms');
     });
 
     it('should navigate to edit page when edit button is clicked', async () => {
@@ -645,7 +677,7 @@ describe('FormPreviewPage', () => {
       const editButton = screen.getByRole('button', { name: /edit form/i });
       fireEvent.click(editButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms/form-1/edit');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms/form-1/edit');
     });
 
     it('should have disabled submit and cancel buttons in preview mode', async () => {

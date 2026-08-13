@@ -297,9 +297,13 @@ describe('CreateFieldPage - LocalizationProvider Tests', () => {
     });
 
     it('should support date, time, and datetime field types', () => {
-      const fileContent = readFileSync(componentPath, 'utf-8');
-      
-      // Verify field types array includes date/time types
+      // The page offers whatever useFilteredFieldTypes returns; that list is
+      // where a missing type would actually go missing.
+      const fileContent = readFileSync(
+        join(__dirname, '../../hooks/useFilteredFieldTypes.ts'),
+        'utf-8'
+      );
+
       expect(fileContent).toContain("'date'");
       expect(fileContent).toContain("'time'");
       expect(fileContent).toContain("'datetime'");

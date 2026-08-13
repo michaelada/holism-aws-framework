@@ -8,6 +8,33 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import AccountUsersListPage from '../AccountUsersListPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+// The pages read onboarding, page-help and translations from the shell package.
+// Mocking the module is simpler than standing up its providers, and the stable
+// references matter: these hooks feed useEffect dependencies, and a fresh object
+// per render re-triggers the effect forever (CLAUDE.md §3.4).
+const shell = vi.hoisted(() => {
+  const checkModuleVisit = vi.fn();
+  const setCurrentModule = vi.fn();
+  return {
+    checkModuleVisit,
+    setCurrentModule,
+    onboarding: { checkModuleVisit, setCurrentModule },
+  };
+});
+
+vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+  useOnboarding: () => shell.onboarding,
+  usePageHelp: () => undefined,
+  // No i18next instance in tests, so t() returns the key — assertions below
+  // match keys rather than English.
+  useTranslation: () => ({ t: (key: string) => key }),
+  useLocale: () => ({ locale: 'en-GB' }),
+  formatDate: (value: string) => String(value),
+  formatCurrency: (value: number) => String(value),
+}));
+
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -16,6 +43,7 @@ vi.mock('../../../hooks/useApi');
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
+
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -71,30 +99,27 @@ describe('AccountUsersListPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <AccountUsersListPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<AccountUsersListPage />);
   };
 
   describe('User List Rendering', () => {
     it('should render the page title and create button', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ success: true, data: [], count: 0 });
       renderComponent();
 
-      expect(screen.getByText('User Management')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /create account user/i })).toBeInTheDocument();
+      expect(screen.getByText('users.title')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /users.accounts.create/i })).toBeInTheDocument();
     });
 
     it('should load and display account users on mount', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/users/accounts',
+          // The organisation is a path segment; without it the request 404s.
+          url: '/api/orgadmin/users/accounts/org-1',
         });
       });
 
@@ -109,11 +134,11 @@ describe('AccountUsersListPage', () => {
       mockExecute.mockImplementation(() => new Promise(() => {})); // Never resolves
       renderComponent();
 
-      expect(screen.getByText('Loading account users...')).toBeInTheDocument();
+      expect(screen.getByText('users.loading.accounts')).toBeInTheDocument();
     });
 
     it('should display empty state when no users exist', async () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ success: true, data: [], count: 0 });
       renderComponent();
 
       await waitFor(() => {
@@ -122,7 +147,7 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should display user emails', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
@@ -133,7 +158,7 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should display user phone numbers', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
@@ -143,7 +168,7 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should display "-" for users without phone numbers', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
@@ -153,7 +178,7 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should display user status with correct colors', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
@@ -166,7 +191,7 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should format last login dates correctly', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
@@ -176,7 +201,7 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should display "Never" for users who have not logged in', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
@@ -185,31 +210,31 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should display capability description', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ success: true, data: [], count: 0 });
       renderComponent();
 
       expect(screen.getByText(/account users can enter events/i)).toBeInTheDocument();
     });
 
     it('should display tabs for Admin Users and Account Users', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ success: true, data: [], count: 0 });
       renderComponent();
 
-      expect(screen.getByRole('tab', { name: /admin users/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /account users/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /users.tabs.admins/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /users.tabs.accounts/i })).toBeInTheDocument();
     });
   });
 
   describe('Search Functionality', () => {
     it('should filter users by email', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Alice Brown')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'user1' } });
 
       await waitFor(() => {
@@ -220,14 +245,14 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should filter users by first name', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Alice Brown')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'Charlie' } });
 
       await waitFor(() => {
@@ -238,14 +263,14 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should filter users by last name', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Alice Brown')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'Wilson' } });
 
       await waitFor(() => {
@@ -256,14 +281,14 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should be case-insensitive when searching', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Alice Brown')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'ALICE' } });
 
       await waitFor(() => {
@@ -272,14 +297,14 @@ describe('AccountUsersListPage', () => {
     });
 
     it('should show "no users match" message when search returns no results', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Alice Brown')).toBeInTheDocument();
       });
 
-      const searchInput = screen.getByPlaceholderText('Search users by name or email...');
+      const searchInput = screen.getByPlaceholderText('users.search');
       fireEvent.change(searchInput, { target: { value: 'NonexistentUser' } });
 
       await waitFor(() => {
@@ -289,41 +314,40 @@ describe('AccountUsersListPage', () => {
   });
 
   describe('Navigation', () => {
-    it('should open create dialog when create button is clicked', async () => {
-      mockExecute.mockResolvedValue([]);
+    it('should navigate to the create page when the create button is clicked', async () => {
+      mockExecute.mockResolvedValue({ success: true, data: [], count: 0 });
       renderComponent();
 
-      const createButton = screen.getByRole('button', { name: /create account user/i });
+      const createButton = screen.getByRole('button', { name: /users.accounts.create/i });
       fireEvent.click(createButton);
 
       await waitFor(() => {
-        const dialogTitles = screen.getAllByText(/create account user/i);
-        expect(dialogTitles.length).toBeGreaterThan(1); // Button + Dialog title
+        expect(mockNavigate).toHaveBeenCalledWith('/users/accounts/create');
       });
     });
 
     it('should navigate to user details when edit button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockAccountUsers);
+      mockExecute.mockResolvedValue({ success: true, data: mockAccountUsers, count: mockAccountUsers.length });
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Alice Brown')).toBeInTheDocument();
       });
 
-      const editButtons = screen.getAllByTitle('Edit');
+      const editButtons = screen.getAllByTitle('common.actions.edit');
       fireEvent.click(editButtons[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/accounts/1');
     });
 
     it('should navigate to admin users tab when clicked', async () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue({ success: true, data: [], count: 0 });
       renderComponent();
 
-      const adminUsersTab = screen.getByRole('tab', { name: /admin users/i });
+      const adminUsersTab = screen.getByRole('tab', { name: /users.tabs.admins/i });
       fireEvent.click(adminUsersTab);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/admins');
+      expect(mockNavigate).toHaveBeenCalledWith('/users/admins');
     });
   });
 

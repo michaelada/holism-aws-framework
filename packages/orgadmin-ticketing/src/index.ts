@@ -73,8 +73,26 @@ export { default as TicketDetailsDialog } from './components/TicketDetailsDialog
 export { default as BatchTicketOperationsDialog } from './components/BatchTicketOperationsDialog';
 export { default as TicketingStatsCards } from './components/TicketingStatsCards';
 
-// Export services
-export * from './services/ticketGeneration';
+/*
+ * Ticket generation moved to `packages/components` (CLAUDE.md §1.5): the
+ * account-user app renders the same ticket a member is handed at a gate, and
+ * two implementations of one ticket is exactly the kind of drift that ends with
+ * a QR code that scans in one app and not the other.
+ *
+ * Re-exported here so existing `@holism/orgadmin-ticketing` imports keep
+ * working — the module boundary changed, not the API.
+ */
+export {
+  generateTicketReference,
+  generateQRCodeUUID,
+  generateQRCodeDataURL,
+  generateQRCodeBuffer,
+  generateTicketPDFHTML,
+  generateMultipleTickets,
+  validateTicketReference,
+  parseTicketReference,
+} from '@aws-web-framework/components';
+export type { TicketPDFData } from '@aws-web-framework/components';
 
 // Export types
 export * from './types/ticketing.types';

@@ -8,6 +8,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import LodgementsPage from '../LodgementsPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -73,11 +83,7 @@ describe('LodgementsPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <LodgementsPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<LodgementsPage />);
   };
 
   describe('Lodgements Rendering', () => {
@@ -127,9 +133,9 @@ describe('LodgementsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('£500.00')).toBeInTheDocument();
-        expect(screen.getByText('£750.00')).toBeInTheDocument();
-        expect(screen.getByText('£400.00')).toBeInTheDocument();
+        expect(screen.getAllByText('£500.00')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('£750.00')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('£400.00')[0]).toBeInTheDocument();
       });
     });
 
@@ -149,8 +155,8 @@ describe('LodgementsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        const completedStatuses = screen.getAllByText('completed');
-        const pendingStatuses = screen.getAllByText('pending');
+        const completedStatuses = screen.getAllByText('Completed');
+        const pendingStatuses = screen.getAllByText('Pending');
         
         expect(completedStatuses.length).toBeGreaterThan(0);
         expect(pendingStatuses.length).toBeGreaterThan(0);
@@ -165,7 +171,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Total Lodged')).toBeInTheDocument();
-        expect(screen.getByText('£1,650.00')).toBeInTheDocument(); // 500 + 750 + 400
+        expect(screen.getAllByText('£1,650.00')[0]).toBeInTheDocument(); // 500 + 750 + 400
         expect(screen.getByText('3 lodgements')).toBeInTheDocument();
       });
     });
@@ -176,7 +182,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Card Payments')).toBeInTheDocument();
-        expect(screen.getByText('£1,050.00')).toBeInTheDocument(); // 300 + 500 + 250
+        expect(screen.getAllByText('£1,050.00')[0]).toBeInTheDocument(); // 300 + 500 + 250
       });
     });
 
@@ -186,7 +192,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Cheque Payments')).toBeInTheDocument();
-        expect(screen.getByText('£450.00')).toBeInTheDocument(); // 150 + 200 + 100
+        expect(screen.getAllByText('£450.00')[0]).toBeInTheDocument(); // 150 + 200 + 100
       });
     });
 
@@ -196,7 +202,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Offline Payments')).toBeInTheDocument();
-        expect(screen.getByText('£150.00')).toBeInTheDocument(); // 50 + 50 + 50
+        expect(screen.getAllByText('£150.00')[0]).toBeInTheDocument(); // 50 + 50 + 50
       });
     });
 
@@ -219,7 +225,7 @@ describe('LodgementsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('£0.00')).toBeInTheDocument();
+        expect(screen.getAllByText('£0.00')[0]).toBeInTheDocument();
       });
     });
   });
@@ -231,9 +237,9 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         // First lodgement
-        expect(screen.getByText('£300.00')).toBeInTheDocument(); // Card
-        expect(screen.getByText('£150.00')).toBeInTheDocument(); // Cheque
-        expect(screen.getByText('£50.00')).toBeInTheDocument(); // Offline
+        expect(screen.getAllByText('£300.00')[0]).toBeInTheDocument(); // Card
+        expect(screen.getAllByText('£150.00')[0]).toBeInTheDocument(); // Cheque
+        expect(screen.getAllByText('£50.00')[0]).toBeInTheDocument(); // Offline
       });
     });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import CreateEventPage from '../CreateEventPage';
@@ -72,6 +72,27 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
   };
 });
 
+const APPLICATION_FORMS = [{ id: 'form-1', name: 'Standard Entry Form' }];
+
+/**
+ * An application form is mandatory on every activity, so any test that
+ * advances past the Activities step must pick one. MUI's Select opens on
+ * mouseDown rather than click.
+ */
+const selectApplicationForm = async (index = 0) => {
+  const selects = await screen.findAllByRole('combobox', {
+    name: /events\.activities\.activity\.applicationForm/i,
+  });
+  fireEvent.mouseDown(selects[index]);
+
+  // The first option is the disabled "select a form" placeholder; take the
+  // first real form, whichever the surrounding mock happens to provide.
+  const options = await screen.findAllByRole('option');
+  const form = options.find((o) => o.getAttribute('aria-disabled') !== 'true');
+  if (!form) throw new Error('No selectable application form was rendered');
+  fireEvent.click(form);
+};
+
 describe('CreateEventPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -88,7 +109,7 @@ describe('CreateEventPage', () => {
         return Promise.resolve([]);
       }
       if (url.includes('/application-forms')) {
-        return Promise.resolve([]);
+        return Promise.resolve(APPLICATION_FORMS);
       }
       return Promise.resolve({});
     });
@@ -505,6 +526,9 @@ describe('CreateEventPage', () => {
       
       await user.type(activityNameInputs[0], 'Test Activity');
       await user.type(activityDescInputs[0], 'Test Activity Description');
+
+      // An application form is mandatory for every activity
+      await selectApplicationForm();
 
       // Don't enable discounts - leave checkbox unchecked
 

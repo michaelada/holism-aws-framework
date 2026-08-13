@@ -23,11 +23,15 @@ import {
   PersonAdd as CreateIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
 const CreateAccountUserPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -60,7 +64,8 @@ const CreateAccountUserPage: React.FC = () => {
 
       await execute({
         method: 'POST',
-        url: '/api/orgadmin/users/accounts',
+        // The organisation is a path segment, not inferred from the token.
+        url: `/api/orgadmin/users/accounts/${organisation?.id}`,
         data: {
           email,
           firstName,
@@ -95,19 +100,17 @@ const CreateAccountUserPage: React.FC = () => {
           component="button"
           variant="body1"
           onClick={() => navigate('/users/accounts')}
-          sx={{ textDecoration: 'none', cursor: 'pointer' }}
-        >
-          User Management
+          sx={{ textDecoration: 'none', cursor: 'pointer' }}        >
+          {t('users.title')}
         </Link>
         <Link
           component="button"
           variant="body1"
           onClick={() => navigate('/users/accounts')}
-          sx={{ textDecoration: 'none', cursor: 'pointer' }}
-        >
-          Account Users
+          sx={{ textDecoration: 'none', cursor: 'pointer' }}        >
+          {t('users.tabs.accounts')}
         </Link>
-        <Typography color="text.primary">Create Account User</Typography>
+        <Typography color="text.primary">{t('users.accounts.create')}</Typography>
       </Breadcrumbs>
 
       {/* Header */}
@@ -117,16 +120,14 @@ const CreateAccountUserPage: React.FC = () => {
           onClick={handleCancel}
           sx={{ mr: 2 }}
         >
-          Back
+          {t('common.actions.back')}
         </Button>
-        <Typography variant="h4">Create Account User</Typography>
+        <Typography variant="h4">{t('users.accounts.create')}</Typography>
       </Box>
 
       {/* Success Message */}
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Account user created successfully! Redirecting...
-        </Alert>
+        <Alert severity="success" sx={{ mb: 3 }}>{t('users.accounts.createSuccess')}</Alert>
       )}
 
       {/* Error Message */}
@@ -149,7 +150,7 @@ const CreateAccountUserPage: React.FC = () => {
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TextField
-                  label="Email Address"
+                  label={t('users.fields.emailAddress')}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -163,7 +164,7 @@ const CreateAccountUserPage: React.FC = () => {
               
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="First Name"
+                  label={t('users.fields.firstName')}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   fullWidth
@@ -174,7 +175,7 @@ const CreateAccountUserPage: React.FC = () => {
               
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Last Name"
+                  label={t('users.fields.lastName')}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   fullWidth
@@ -185,11 +186,11 @@ const CreateAccountUserPage: React.FC = () => {
 
               <Grid item xs={12}>
                 <TextField
-                  label="Phone Number"
+                  label={t('users.fields.phoneNumber')}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   fullWidth
-                  helperText="Optional - can be used for notifications and contact"
+                  helperText={t('users.accounts.phoneHelper')}
                   disabled={loading || success}
                 />
               </Grid>
@@ -212,7 +213,7 @@ const CreateAccountUserPage: React.FC = () => {
               disabled={loading || success}
               size="large"
             >
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button
               type="submit"
@@ -222,7 +223,7 @@ const CreateAccountUserPage: React.FC = () => {
               startIcon={<CreateIcon />}
               size="large"
             >
-              {loading ? 'Creating User...' : 'Create User'}
+              {loading ? t('users.actions.creatingUser') : t('users.actions.createUser')}
             </Button>
           </Box>
         </Box>

@@ -13,6 +13,14 @@ describe('Date Field Rendering Tests', () => {
   const formPreviewPagePath = join(__dirname, '../FormPreviewPage.tsx');
   const createFieldPagePath = join(__dirname, '../CreateFieldPage.tsx');
   const dateRendererPath = join(__dirname, '../../../../../components/src/components/FieldRenderer/renderers/DateRenderer.tsx');
+  /*
+   * The builder-datatype → renderer-datatype mapping used to be copied into
+   * each page that previewed a form. It now lives in the shared library, so
+   * that the org-admin preview and the member-facing form cannot disagree —
+   * they did, and the member's copy rendered every choice field as a text box.
+   */
+  const applicationFieldPath = join(__dirname, '../../../../../components/src/utils/applicationField.ts');
+  const fieldTypesPath = join(__dirname, '../../hooks/useFilteredFieldTypes.ts');
 
   describe('FormPreviewPage - Date field rendering setup', () => {
     it('should wrap content in LocalizationProvider for date field support', () => {
@@ -30,19 +38,20 @@ describe('Date Field Rendering Tests', () => {
     });
 
     it('should support date, time, and datetime field types', () => {
-      const fileContent = readFileSync(formPreviewPagePath, 'utf-8');
-      
-      // Verify the datatype mapping includes date/time/datetime
-      expect(fileContent).toContain("'date': 'date'");
-      expect(fileContent).toContain("'time': 'time'");
-      expect(fileContent).toContain("'datetime': 'datetime'");
+      const fileContent = readFileSync(applicationFieldPath, 'utf-8');
+
+      // Verify the shared datatype mapping includes date/time/datetime
+      expect(fileContent).toContain('date: FieldDatatype.DATE');
+      expect(fileContent).toContain('time: FieldDatatype.TIME');
+      expect(fileContent).toContain('datetime: FieldDatatype.DATETIME');
     });
 
     it('should render fields using FieldRenderer component', () => {
       const fileContent = readFileSync(formPreviewPagePath, 'utf-8');
-      
+
       // Verify FieldRenderer is imported and used
-      expect(fileContent).toContain("import { FieldRenderer } from '@aws-web-framework/components'");
+      expect(fileContent).toContain('FieldRenderer');
+      expect(fileContent).toContain("from '@aws-web-framework/components'");
       expect(fileContent).toContain('<FieldRenderer');
       expect(fileContent).toContain('fieldDefinition={');
     });
@@ -72,9 +81,9 @@ describe('Date Field Rendering Tests', () => {
     });
 
     it('should support date, time, and datetime field types in preview', () => {
-      const fileContent = readFileSync(createFieldPagePath, 'utf-8');
-      
-      // Verify date/time/datetime are available field types
+      // The types on offer are the hook's list; the page renders whatever it returns.
+      const fileContent = readFileSync(fieldTypesPath, 'utf-8');
+
       expect(fileContent).toContain("'date'");
       expect(fileContent).toContain("'time'");
       expect(fileContent).toContain("'datetime'");
@@ -198,17 +207,21 @@ describe('Date Field Rendering Tests', () => {
 
     it('should ensure all date field types can coexist without conflicts', () => {
       const formPreviewContent = readFileSync(formPreviewPagePath, 'utf-8');
-      
+      const applicationFieldContent = readFileSync(applicationFieldPath, 'utf-8');
+
       // Verify all three date field types are mapped correctly
-      const hasDatatypeMapping = formPreviewContent.includes("'date': 'date'") &&
-                                formPreviewContent.includes("'time': 'time'") &&
-                                formPreviewContent.includes("'datetime': 'datetime'");
+      const hasDatatypeMapping = applicationFieldContent.includes('date: FieldDatatype.DATE') &&
+                                applicationFieldContent.includes('time: FieldDatatype.TIME') &&
+                                applicationFieldContent.includes('datetime: FieldDatatype.DATETIME');
       expect(hasDatatypeMapping).toBe(true);
-      
+
       // Verify the mapping function handles all types
-      const hasMappingFunction = /const mapDatatypeToRenderer = \(datatype: string\): string/.test(formPreviewContent);
+      const hasMappingFunction = /export function mapApplicationDatatype/.test(applicationFieldContent);
       expect(hasMappingFunction).toBe(true);
-      
+
+      // ...and that the preview page routes its fields through it
+      expect(formPreviewContent).toContain('applicationFieldToFieldDefinition(field)');
+
       // Verify FieldRenderer is used for all field types
       const hasFieldRenderer = formPreviewContent.includes('<FieldRenderer') &&
                               formPreviewContent.includes('fieldDefinition={fieldDefinition}');

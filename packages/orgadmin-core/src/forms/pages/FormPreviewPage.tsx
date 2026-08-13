@@ -26,7 +26,11 @@ import { ArrowBack as BackIcon, ViewList as ViewListIcon, ViewModule as ViewModu
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
+import {
+  FieldRenderer,
+  applicationFieldToFieldDefinition,
+  emptyValueForField,
+} from '@aws-web-framework/components';
 import { useApi } from '../../hooks/useApi';
 
 interface ApplicationForm {
@@ -99,8 +103,6 @@ const FormPreviewPage: React.FC = () => {
         method: 'GET',
         url: `/api/orgadmin/application-forms/${id}/with-fields`,
       });
-      console.log('Form data received:', response);
-      console.log('Fields:', response.fields);
       setForm(response);
     } catch (err) {
       setError('Failed to load form');
@@ -110,74 +112,21 @@ const FormPreviewPage: React.FC = () => {
     }
   };
 
-  // Map database field types to FieldRenderer expected types
-  const mapDatatypeToRenderer = (datatype: string): string => {
-    const mapping: Record<string, string> = {
-      'text': 'text',
-      'textarea': 'text_area',
-      'number': 'number',
-      'email': 'email',
-      'phone': 'text',
-      'date': 'date',
-      'time': 'time',
-      'datetime': 'datetime',
-      'boolean': 'boolean',
-      'select': 'single_select',
-      'multiselect': 'multi_select',
-      'radio': 'single_select',
-      'checkbox': 'multi_select', // Checkbox list = multi-select with checkboxes
-      'file': 'document_upload',
-      'image': 'document_upload',
-    };
-    return mapping[datatype] || 'text';
-  };
-
-  // Transform field options from string array to {value, label} format
-  const transformOptions = (field: ApplicationFormField) => {
-    const baseProperties: Record<string, any> = {};
-
-    // Add file type property for image fields
-    if (field.datatype === 'image') {
-      baseProperties.fileType = 'image';
-      baseProperties.acceptImages = true;
-    }
-
-    if (!field.options || !Array.isArray(field.options)) {
-      return baseProperties;
-    }
-
-    // Convert string array to {value, label} format
-    const options = field.options.map((opt: string) => ({
-      value: opt,
-      label: opt,
-    }));
-
-    // Set displayMode based on field type
-    const displayMode = field.datatype === 'radio' ? 'radio' : 'dropdown';
-
-    return {
-      ...baseProperties,
-      options,
-      displayMode,
-    };
-  };
-
   const renderField = (field: ApplicationFormField) => {
-    // Convert ApplicationFormField to FieldDefinition format expected by FieldRenderer
-    const fieldDefinition = {
-      shortName: field.name,
-      displayName: field.label,
-      description: field.description || '',
-      datatype: mapDatatypeToRenderer(field.datatype) as any,
-      datatypeProperties: transformOptions(field),
-      validationRules: field.validation?.rules || [],
-    };
+    /*
+     * The builder's datatypes and options are translated into the renderer's
+     * by the shared helper rather than by a copy kept here, so that the
+     * preview an administrator sees and the form a member fills in cannot
+     * drift apart — they did, and the member's copy rendered everything as a
+     * text box.
+     */
+    const fieldDefinition = applicationFieldToFieldDefinition(field);
 
     return (
       <Box key={field.id} sx={{ mb: 3 }}>
         <FieldRenderer
           fieldDefinition={fieldDefinition}
-          value={formData[field.name] || ''}
+          value={formData[field.name] ?? emptyValueForField(field)}
           onChange={(value) => setFormData({ ...formData, [field.name]: value })}
           disabled={false}
           required={field.validation?.required || false}
@@ -264,7 +213,9 @@ const FormPreviewPage: React.FC = () => {
     // Placing the provider here ensures it wraps all date/time/datetime fields in the form preview.
     // See: .kiro/specs/date-picker-localization-fix/design.md for full technical details.
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
-      <Box sx={{ p: 3 }}>
+      {/* The test id is the regression guard for the provider staying at page
+          level — see the comment above. */}
+      <Box sx={{ p: 3 }} data-testid="localization-provider">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">Form Preview</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>

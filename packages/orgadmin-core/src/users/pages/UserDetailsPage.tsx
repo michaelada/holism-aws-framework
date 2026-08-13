@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -55,6 +56,7 @@ interface User {
 }
 
 const UserDetailsPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { type, id } = useParams<{ type: string; id: string }>();
   const { execute } = useApi();
@@ -250,7 +252,7 @@ const UserDetailsPage: React.FC = () => {
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography>Loading user details...</Typography>
+        <Typography>{t('users.loading.details')}</Typography>
       </Box>
     );
   }
@@ -258,7 +260,7 @@ const UserDetailsPage: React.FC = () => {
   if (!user) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography color="error">User not found</Typography>
+        <Typography color="error">{t('users.details.notFound')}</Typography>
       </Box>
     );
   }
@@ -271,10 +273,10 @@ const UserDetailsPage: React.FC = () => {
             startIcon={<BackIcon />}
             onClick={() => navigate(isAdminUser ? '/users/admins' : '/users/accounts')}
           >
-            Back
+            {t('common.actions.back')}
           </Button>
           <Typography variant="h4">
-            {isAdminUser ? 'Admin User Details' : 'Account User Details'}
+            {isAdminUser ? t('users.details.adminDetails') : t('users.details.accountDetails')}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -285,7 +287,7 @@ const UserDetailsPage: React.FC = () => {
               onClick={handleResendInvite}
               disabled={resending || isCurrentUser}
             >
-              {resending ? 'Sending...' : 'Resend Invite'}
+              {resending ? t('users.actions.sending') : t('users.actions.resendInvite')}
             </Button>
           )}
           <Button
@@ -293,9 +295,8 @@ const UserDetailsPage: React.FC = () => {
             color="warning"
             startIcon={<DeactivateIcon />}
             onClick={() => setDeactivateDialogOpen(true)}
-            disabled={user.status === 'inactive' || isCurrentUser}
-          >
-            Deactivate
+            disabled={user.status === 'inactive' || isCurrentUser}          >
+            {t('users.details.deactivate')}
           </Button>
           <Button
             variant="outlined"
@@ -304,7 +305,7 @@ const UserDetailsPage: React.FC = () => {
             onClick={() => setDeleteDialogOpen(true)}
             disabled={isCurrentUser}
           >
-            Delete
+            {t('common.actions.delete')}
           </Button>
           <Button
             variant="contained"
@@ -313,7 +314,7 @@ const UserDetailsPage: React.FC = () => {
             onClick={handleSave}
             disabled={saving}
           >
-            Save Changes
+            {t('users.details.saveChanges')}
           </Button>
         </Box>
       </Box>
@@ -325,30 +326,24 @@ const UserDetailsPage: React.FC = () => {
       )}
 
       {resendSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResendSuccess(false)}>
-          Invitation email resent successfully.
-        </Alert>
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResendSuccess(false)}>{t('users.details.resendSuccess')}</Alert>
       )}
 
       {isCurrentUser && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          You cannot change your own roles or status.
-        </Alert>
+        <Alert severity="info" sx={{ mb: 3 }}>{t('users.details.cannotChangeOwn')}</Alert>
       )}
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                User Information
-              </Typography>
+              <Typography variant="h6" gutterBottom>{t('users.details.information')}</Typography>
               <Divider sx={{ mb: 2 }} />
               
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="First Name"
+                    label={t('users.fields.firstName')}
                     value={user.firstName}
                     onChange={(e) => setUser({ ...user, firstName: e.target.value })}
                     fullWidth
@@ -357,7 +352,7 @@ const UserDetailsPage: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="Last Name"
+                    label={t('users.fields.lastName')}
                     value={user.lastName}
                     onChange={(e) => setUser({ ...user, lastName: e.target.value })}
                     fullWidth
@@ -366,7 +361,7 @@ const UserDetailsPage: React.FC = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
-                    label="Email"
+                    label={t('users.fields.email')}
                     value={user.email}
                     fullWidth
                     disabled
@@ -375,7 +370,7 @@ const UserDetailsPage: React.FC = () => {
                 {!isAdminUser && (
                   <Grid item xs={12}>
                     <TextField
-                      label="Phone"
+                      label={t('users.fields.phone')}
                       value={user.phone || ''}
                       onChange={(e) => setUser({ ...user, phone: e.target.value })}
                       fullWidth
@@ -386,18 +381,16 @@ const UserDetailsPage: React.FC = () => {
 
               {isAdminUser && (
                 <>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                    Role Assignment
-                  </Typography>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>{t('users.details.roleAssignment')}</Typography>
                   <Divider sx={{ mb: 2 }} />
                   
                   <FormControl fullWidth disabled={isCurrentUser}>
-                    <InputLabel>Roles</InputLabel>
+                    <InputLabel>{t('users.fields.roles')}</InputLabel>
                     <Select
                       multiple
                       value={selectedRoles}
                       onChange={(e) => setSelectedRoles(e.target.value as string[])}
-                      input={<OutlinedInput label="Roles" />}
+                      input={<OutlinedInput label={t('users.fields.roles')} />}
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           {selected.map((roleId) => {
@@ -423,15 +416,11 @@ const UserDetailsPage: React.FC = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Status
-              </Typography>
+              <Typography variant="h6" gutterBottom>{t('users.fields.status')}</Typography>
               <Divider sx={{ mb: 2 }} />
               
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Current Status
-                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>{t('users.details.currentStatus')}</Typography>
                 <Chip
                   label={user.status}
                   color={user.status === 'active' ? 'success' : 'default'}
@@ -439,18 +428,14 @@ const UserDetailsPage: React.FC = () => {
               </Box>
 
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Last Login
-                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>{t('users.fields.lastLogin')}</Typography>
                 <Typography variant="body1">
                   {formatDate(user.lastLogin)}
                 </Typography>
               </Box>
 
               <Box>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Created
-                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>{t('users.fields.created')}</Typography>
                 <Typography variant="body1">
                   {formatDate(user.createdAt)}
                 </Typography>
@@ -462,7 +447,7 @@ const UserDetailsPage: React.FC = () => {
 
       {/* Deactivate Dialog */}
       <Dialog open={deactivateDialogOpen} onClose={() => setDeactivateDialogOpen(false)}>
-        <DialogTitle>Deactivate User</DialogTitle>
+        <DialogTitle>{t('users.details.deactivateUser')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to deactivate {user.firstName} {user.lastName}? 
@@ -470,16 +455,14 @@ const UserDetailsPage: React.FC = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeactivateDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeactivate} color="warning" variant="contained">
-            Deactivate
-          </Button>
+          <Button onClick={() => setDeactivateDialogOpen(false)}>{t('common.actions.cancel')}</Button>
+          <Button onClick={handleDeactivate} color="warning" variant="contained">{t('users.details.deactivate')}</Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete User</DialogTitle>
+        <DialogTitle>{t('users.details.deleteUser')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to permanently delete {user.firstName} {user.lastName}? 
@@ -487,9 +470,9 @@ const UserDetailsPage: React.FC = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('common.actions.cancel')}</Button>
           <Button onClick={handleDelete} color="error" variant="contained">
-            Delete
+            {t('common.actions.delete')}
           </Button>
         </DialogActions>
       </Dialog>

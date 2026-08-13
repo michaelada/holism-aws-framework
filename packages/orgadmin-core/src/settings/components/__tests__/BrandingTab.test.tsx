@@ -1,77 +1,45 @@
 /**
  * Unit tests for BrandingTab component
+ *
+ * Each colour is edited through two controls — a native colour swatch and a
+ * text field — so queries here target one or the other explicitly rather than
+ * by display value, which matches both.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { I18nextProvider } from 'react-i18next';
-import i18n from 'i18next';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+// BrandingTab reads the current organisation (the logo upload posts its id), so
+// it needs the provider the rest of the package's tests already use.
+import { renderWithProviders as render } from '../../../test/renderWithProviders';
 import BrandingTab from '../BrandingTab';
 import * as useApiModule from '../../../hooks/useApi';
+import { resolveTranslation } from '../../../test/i18nTestUtils';
 
-// Initialize i18n for testing
-i18n.init({
-  lng: 'en-GB',
-  fallbackLng: 'en-GB',
-  resources: {
-    'en-GB': {
-      translation: {
-        settings: {
-          branding: {
-            title: 'Branding',
-            subtitle: 'Customise your organisation\'s visual identity',
-            sections: {
-              logo: 'Logo',
-              themeColours: 'Theme Colours',
-              preview: 'Preview',
-            },
-            fields: {
-              uploadLogo: 'Upload Logo',
-              removeLogo: 'Remove',
-              primaryColour: 'Primary Colour',
-              secondaryColour: 'Secondary Colour',
-              accentColour: 'Accent Colour',
-              backgroundColour: 'Background Colour',
-              textColour: 'Text Colour',
-              resetColours: 'Reset to Default Colours',
-            },
-            preview: {
-              organisationName: 'Organisation Name',
-              primaryButton: 'Primary Button',
-              secondaryButton: 'Secondary Button',
-              accentButton: 'Accent Button',
-            },
-            validation: {
-              invalidFileType: 'Please select an image file',
-              fileTooLarge: 'Image size must be less than 2MB',
-            },
-            messages: {
-              loadFailed: 'Failed to load branding settings',
-              saveFailed: 'Failed to save branding settings',
-              saveSuccess: 'Branding settings saved successfully',
-              uploadFailed: 'Failed to upload logo',
-            },
-          },
-          actions: {
-            saveChanges: 'Save Changes',
-            saving: 'Saving...',
-          },
-        },
-      },
-    },
-  },
-});
+// The component uses react-i18next directly; resolve against the real en-GB
+// bundle so the assertions describe what a user actually sees.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options),
+    i18n: { language: 'en-GB' },
+  }),
+}));
 
-const renderWithI18n = (component: React.ReactElement) => {
-  return render(
-    <I18nextProvider i18n={i18n}>
-      {component}
-    </I18nextProvider>
+const label = (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options);
+
+const colourTextField = (key: string) =>
+  screen.getByRole('textbox', { name: label(`settings.branding.fields.${key}`) });
+
+const colourSwatch = (key: string) =>
+  screen.getByLabelText(
+    label('settings.branding.fields.colourPicker', {
+      colour: label(`settings.branding.fields.${key}`),
+    })
   );
-};
 
 describe('BrandingTab', () => {
   const mockExecute = vi.fn();
+
+  /** Matches the backend's BrandingSettings contract. */
   const mockBrandingSettings = {
     logoUrl: 'https://example.com/logo.png',
     primaryColor: '#1976d2',
@@ -89,13 +57,13 @@ describe('BrandingTab', () => {
       loading: false,
       execute: mockExecute,
       reset: vi.fn(),
-    });
+    } as any);
   });
 
   it('should load branding settings on mount', async () => {
     mockExecute.mockResolvedValueOnce(mockBrandingSettings);
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -106,45 +74,85 @@ describe('BrandingTab', () => {
   });
 
   it('should display loading state', () => {
-    vi.spyOn(useApiModule, 'useApi').mockReturnValue({
-      data: null,
-      error: null,
-      loading: true,
-      execute: mockExecute,
-      reset: vi.fn(),
-    });
+    mockExecute.mockReturnValue(new Promise(() => {}));
 
-    renderWithI18n(<BrandingTab />);
-    
+    render(<BrandingTab />);
+
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('should display branding settings after loading', async () => {
     mockExecute.mockResolvedValueOnce(mockBrandingSettings);
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+      expect(colourTextField('primaryColour')).toHaveValue('#1976d2');
     });
 
-    expect(screen.getByDisplayValue('#dc004e')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('#ff9800')).toBeInTheDocument();
+    expect(colourTextField('secondaryColour')).toHaveValue('#dc004e');
+    expect(colourTextField('accentColour')).toHaveValue('#ff9800');
+    expect(colourTextField('backgroundColour')).toHaveValue('#ffffff');
+    expect(colourTextField('textColour')).toHaveValue('#000000');
   });
 
-  it('should update color field when changed', async () => {
-    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
+  it('should fall back to the default palette when the API returns nothing', async () => {
+    mockExecute.mockResolvedValueOnce(null);
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+      expect(colourTextField('primaryColour')).toHaveValue('#1976d2');
+    });
+  });
+
+  it('should give each colour swatch an accessible name', async () => {
+    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
+
+    render(<BrandingTab />);
+
+    await waitFor(() => {
+      expect(colourSwatch('primaryColour')).toBeInTheDocument();
     });
 
-    const primaryColorInput = screen.getByLabelText(/primary colour/i);
-    fireEvent.change(primaryColorInput, { target: { value: '#ff0000' } });
+    for (const key of [
+      'secondaryColour',
+      'accentColour',
+      'backgroundColour',
+      'textColour',
+    ]) {
+      expect(colourSwatch(key)).toBeInTheDocument();
+    }
+  });
 
-    expect(primaryColorInput).toHaveValue('#ff0000');
+  it('should update the colour when the text field changes', async () => {
+    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
+
+    render(<BrandingTab />);
+
+    await waitFor(() => {
+      expect(colourTextField('primaryColour')).toBeInTheDocument();
+    });
+
+    fireEvent.change(colourTextField('primaryColour'), { target: { value: '#ff0000' } });
+
+    expect(colourTextField('primaryColour')).toHaveValue('#ff0000');
+    // Both controls are bound to the same value
+    expect(colourSwatch('primaryColour')).toHaveValue('#ff0000');
+  });
+
+  it('should update the colour when the swatch changes', async () => {
+    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
+
+    render(<BrandingTab />);
+
+    await waitFor(() => {
+      expect(colourSwatch('accentColour')).toBeInTheDocument();
+    });
+
+    fireEvent.change(colourSwatch('accentColour'), { target: { value: '#00ff00' } });
+
+    expect(colourTextField('accentColour')).toHaveValue('#00ff00');
   });
 
   it('should save branding settings when save button clicked', async () => {
@@ -152,14 +160,15 @@ describe('BrandingTab', () => {
       .mockResolvedValueOnce(mockBrandingSettings)
       .mockResolvedValueOnce({ success: true });
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+      expect(colourTextField('primaryColour')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
+    fireEvent.click(
+      screen.getByRole('button', { name: label('settings.actions.saveChanges') })
+    );
 
     await waitFor(() => {
       expect(mockExecute).toHaveBeenCalledWith({
@@ -168,6 +177,10 @@ describe('BrandingTab', () => {
         data: expect.objectContaining({
           primaryColor: '#1976d2',
           secondaryColor: '#dc004e',
+          accentColor: '#ff9800',
+          backgroundColor: '#ffffff',
+          textColor: '#000000',
+          logoUrl: 'https://example.com/logo.png',
         }),
       });
     });
@@ -178,17 +191,20 @@ describe('BrandingTab', () => {
       .mockResolvedValueOnce(mockBrandingSettings)
       .mockResolvedValueOnce({ success: true });
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+      expect(colourTextField('primaryColour')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
+    fireEvent.click(
+      screen.getByRole('button', { name: label('settings.actions.saveChanges') })
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('Branding settings saved successfully')).toBeInTheDocument();
+      expect(
+        screen.getByText(label('settings.branding.messages.saveSuccess'))
+      ).toBeInTheDocument();
     });
   });
 
@@ -197,67 +213,70 @@ describe('BrandingTab', () => {
       .mockResolvedValueOnce(mockBrandingSettings)
       .mockRejectedValueOnce({ message: 'Failed to save' });
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+      expect(colourTextField('primaryColour')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i });
-    fireEvent.click(saveButton);
+    fireEvent.click(
+      screen.getByRole('button', { name: label('settings.actions.saveChanges') })
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Failed to save')).toBeInTheDocument();
     });
   });
 
-  it('should reset colors to default when reset button clicked', async () => {
-    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
+  it('should reset colours to the defaults when reset is clicked', async () => {
+    mockExecute.mockResolvedValueOnce({ ...mockBrandingSettings, primaryColor: '#123456' });
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+      expect(colourTextField('primaryColour')).toHaveValue('#123456');
     });
 
-    const resetButton = screen.getByRole('button', { name: /reset to default colours/i });
-    fireEvent.click(resetButton);
+    fireEvent.click(
+      screen.getByRole('button', { name: label('settings.branding.fields.resetColours') })
+    );
 
-    // After reset, colors should be back to defaults
-    expect(screen.getByDisplayValue('#1976d2')).toBeInTheDocument();
+    expect(colourTextField('primaryColour')).toHaveValue('#1976d2');
   });
 
-  it('should render upload logo button', async () => {
+  it('should render the upload logo control', async () => {
     mockExecute.mockResolvedValueOnce(mockBrandingSettings);
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByText(/upload logo/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should render remove logo button when logo exists', async () => {
-    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
-
-    renderWithI18n(<BrandingTab />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/remove/i)).toBeInTheDocument();
+      expect(screen.getByText(label('settings.branding.fields.uploadLogo'))).toBeInTheDocument();
     });
   });
 
-  it('should render preview section', async () => {
+  it('should render the remove logo control when a logo exists', async () => {
     mockExecute.mockResolvedValueOnce(mockBrandingSettings);
 
-    renderWithI18n(<BrandingTab />);
+    render(<BrandingTab />);
 
     await waitFor(() => {
-      expect(screen.getByText(/preview/i)).toBeInTheDocument();
+      expect(screen.getByText(label('settings.branding.fields.removeLogo'))).toBeInTheDocument();
+    });
+  });
+
+  it('should render the preview section', async () => {
+    mockExecute.mockResolvedValueOnce(mockBrandingSettings);
+
+    render(<BrandingTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText(label('settings.branding.sections.preview'))).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Primary Button')).toBeInTheDocument();
-    expect(screen.getByText('Secondary Button')).toBeInTheDocument();
-    expect(screen.getByText('Accent Button')).toBeInTheDocument();
+    expect(screen.getByText(label('settings.branding.preview.primaryButton'))).toBeInTheDocument();
+    expect(
+      screen.getByText(label('settings.branding.preview.secondaryButton'))
+    ).toBeInTheDocument();
+    expect(screen.getByText(label('settings.branding.preview.accentButton'))).toBeInTheDocument();
   });
 });

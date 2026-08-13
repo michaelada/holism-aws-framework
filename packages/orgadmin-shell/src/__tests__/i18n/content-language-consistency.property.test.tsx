@@ -35,6 +35,7 @@ import deDEOnboarding from '../../locales/de-DE/onboarding.json';
 import deDEHelp from '../../locales/de-DE/help.json';
 import ptPTOnboarding from '../../locales/pt-PT/onboarding.json';
 import ptPTHelp from '../../locales/pt-PT/help.json';
+import { getHelpContent } from '../../locales/helpLoader';
 
 /**
  * Arbitrary generator for supported languages
@@ -248,9 +249,12 @@ describe('Property 1: Content Language Consistency', () => {
             </I18nextProvider>
           );
 
-          // Assert: Property - Drawer should be rendered with content
-          // Check for the drawer title using the specific ID
-          const drawerTitle = screen.getByRole('heading', { name: /^help$/i });
+          // Assert: Property - the drawer heading is in the selected language.
+          // Asserting on /^help$/i here would only ever pass for en-GB, which
+          // defeats the point of a property parameterised over six languages.
+          const expectedTitle = getExpectedContent(language, 'help', 'drawer.title');
+          expect(expectedTitle).toBeTruthy();
+          const drawerTitle = screen.getByRole('heading', { name: expectedTitle });
           expect(drawerTitle).toBeTruthy();
           
           // Cleanup
@@ -361,13 +365,17 @@ describe('Property 1: Content Language Consistency', () => {
         languageArbitrary,
         moduleIdArbitrary,
         async (language, moduleId) => {
-          // Assert: Property - Help overview should exist
-          const overview = getExpectedContent(language, 'help', `${moduleId}.overview`);
-          
+          // Help content is markdown under locales/<locale>/help/*.md, loaded by
+          // helpLoader — NOT help.json, which holds only the drawer's chrome.
+          // getHelpContent is what HelpDrawer itself calls, including its
+          // page → overview → en-GB fallback chain, so this asserts what a user
+          // in this language actually gets.
+          const overview = getHelpContent(language, moduleId, 'overview');
+
           // Overview content should be non-empty
           expect(overview).toBeTruthy();
           expect(typeof overview).toBe('string');
-          expect(overview.length).toBeGreaterThan(0);
+          expect(overview!.length).toBeGreaterThan(0);
         }
       ),
       { numRuns: 100 }

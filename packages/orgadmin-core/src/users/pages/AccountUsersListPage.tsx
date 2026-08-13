@@ -32,6 +32,8 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
+import { useOrganisation } from '../../context/OrganisationContext';
+import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useOnboarding } from '@aws-web-framework/orgadmin-shell';
 import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
 
@@ -47,8 +49,10 @@ interface AccountUser {
 }
 
 const AccountUsersListPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { execute } = useApi();
+  const { organisation } = useOrganisation();
   const { checkModuleVisit } = useOnboarding();
   
   const [users, setUsers] = useState<AccountUser[]>([]);
@@ -65,22 +69,37 @@ const AccountUsersListPage: React.FC = () => {
     checkModuleVisit('users');
   }, [checkModuleVisit]);
 
+  // Keyed on the organisation: it resolves after the first render, and an
+  // empty dependency list would leave this screen permanently empty.
   useEffect(() => {
     loadUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organisation?.id]);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm]);
 
   const loadUsers = async () => {
+    /*
+     * The organisation is part of the path, not inferred from the token:
+     * `GET /api/orgadmin/users/accounts/:organizationId`. Calling it without
+     * the id matches no route at all and returns 404 — which reads as "the
+     * endpoint is missing" rather than "the URL is wrong", and is why this
+     * screen showed an empty list instead of an error.
+     */
+    if (!organisation?.id) return;
+
     try {
       setLoading(true);
       const response = await execute({
         method: 'GET',
-        url: '/api/orgadmin/users/accounts',
+        url: `/api/orgadmin/users/accounts/${organisation.id}`,
       });
-      setUsers(response || []);
+      // The endpoint answers with an envelope — { success, data, count } — as
+      // the admin list does. Storing `response` itself puts an object where the
+      // filtering below spreads an array.
+      setUsers(Array.isArray(response?.data) ? response.data : []);
     } catch (error) {
       console.error('Failed to load account users:', error);
       setUsers([]);
@@ -137,26 +156,25 @@ const AccountUsersListPage: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">User Management</Typography>
+        <Typography variant="h4">{t('users.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={handleCreateUser}
-        >
-          Create Account User
+          onClick={handleCreateUser}        >
+          {t('users.accounts.create')}
         </Button>
       </Box>
 
       <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-        <Tab label="Admin Users" />
-        <Tab label="Account Users" />
+        <Tab label={t('users.tabs.admins')} />
+        <Tab label={t('users.tabs.accounts')} />
       </Tabs>
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <TextField
-            placeholder="Search users by name or email..."
+            placeholder={t('users.search')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
@@ -179,20 +197,18 @@ const AccountUsersListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Last Login</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('users.fields.name')}</TableCell>
+              <TableCell>{t('users.fields.email')}</TableCell>
+              <TableCell>{t('users.fields.phone')}</TableCell>
+              <TableCell>{t('users.fields.status')}</TableCell>
+              <TableCell>{t('users.fields.lastLogin')}</TableCell>
+              <TableCell align="right">{t('users.fields.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
-                  Loading account users...
-                </TableCell>
+                <TableCell colSpan={6} align="center">{t('users.loading.accounts')}</TableCell>
               </TableRow>
             ) : filteredUsers.length === 0 ? (
               <TableRow>
@@ -232,7 +248,8 @@ const AccountUsersListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleEditUser(user.id)}
-                      title="Edit"
+                      title={t('common.actions.edit')}
+                      aria-label={t('common.actions.edit')}
                     >
                       <EditIcon />
                     </IconButton>

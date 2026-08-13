@@ -46,6 +46,16 @@ export const usersModule: ModuleRegistration = {
       component: lazy(() => import('./pages/CreateAccountUserPage')),
     },
     {
+      path: 'users/groups',
+      component: lazy(() => import('./pages/UserGroupsPage')),
+    },
+    {
+      // Declared before 'users/:type/:id' so it is not read as a user detail
+      // page for a member with the id "registrations".
+      path: 'users/registrations',
+      component: lazy(() => import('./pages/RegistrationsPage')),
+    },
+    {
       path: 'users/:type/:id',
       component: lazy(() => import('./pages/UserDetailsPage')),
     },
@@ -63,3 +73,5 @@ export { default as AccountUsersListPage } from './pages/AccountUsersListPage';
 export { default as UserDetailsPage } from './pages/UserDetailsPage';
 export { default as InviteAdminUserPage } from './pages/InviteAdminUserPage';
 export { default as CreateAccountUserPage } from './pages/CreateAccountUserPage';
+export { default as UserGroupsPage } from './pages/UserGroupsPage';
+export { default as RegistrationsPage } from './pages/RegistrationsPage';

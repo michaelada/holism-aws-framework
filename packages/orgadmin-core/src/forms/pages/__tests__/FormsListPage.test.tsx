@@ -8,6 +8,16 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import FormsListPage from '../FormsListPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+
+// Shell hooks (translations, onboarding, page help, capabilities, locale)
+// are mocked rather than provided — see test/orgadminShellMock.
+vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');
@@ -67,11 +77,7 @@ describe('FormsListPage', () => {
   });
 
   const renderComponent = () => {
-    return render(
-      <BrowserRouter>
-        <FormsListPage />
-      </BrowserRouter>
-    );
+    return renderWithProviders(<FormsListPage />);
   };
 
   describe('Form List Rendering', () => {
@@ -90,7 +96,7 @@ describe('FormsListPage', () => {
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'GET',
-          url: '/api/orgadmin/application-forms',
+          url: '/api/orgadmin/organisations/org-1/application-forms',
         });
       });
 
@@ -122,8 +128,8 @@ describe('FormsListPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        const publishedChips = screen.getAllByText('published');
-        const draftChips = screen.getAllByText('draft');
+        const publishedChips = screen.getAllByText('Published');
+        const draftChips = screen.getAllByText('Draft');
         
         expect(publishedChips).toHaveLength(2);
         expect(draftChips).toHaveLength(1);
@@ -266,7 +272,7 @@ describe('FormsListPage', () => {
       const createButton = screen.getByRole('button', { name: /create form/i });
       fireEvent.click(createButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms/new');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms/new');
     });
 
     it('should navigate to edit page when edit button is clicked', async () => {
@@ -280,7 +286,7 @@ describe('FormsListPage', () => {
       const editButtons = screen.getAllByTitle('Edit');
       fireEvent.click(editButtons[0]);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms/1/edit');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms/1/edit');
     });
 
     it('should navigate to preview page when preview button is clicked', async () => {
@@ -294,7 +300,7 @@ describe('FormsListPage', () => {
       const previewButtons = screen.getAllByTitle('Preview');
       fireEvent.click(previewButtons[0]);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/forms/1/preview');
+      expect(mockNavigate).toHaveBeenCalledWith('/forms/1/preview');
     });
   });
 

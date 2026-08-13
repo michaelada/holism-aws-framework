@@ -1,63 +1,70 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, fireEvent, within } from '@testing-library/react';
 import EventsReportPage from '../EventsReportPage';
 import * as useApiModule from '../../../hooks/useApi';
+import { renderWithProviders } from '../../../test/renderWithProviders';
+import { resolveTranslation, formatCurrencyMock } from '../../../test/i18nTestUtils';
 
-// Mock the useApi hook
 vi.mock('../../../hooks/useApi');
 
-// Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
+  return { ...actual, useNavigate: () => mockNavigate };
 });
 
-// Wrapper component for router
-const RouterWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
+vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options),
+    i18n: { language: 'en-GB' },
+  }),
+}));
+
+vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => ({
+  formatCurrency: (value: number, currency: string) => formatCurrencyMock(value, currency),
+}));
+
+vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => ({
+  formatDate: (date: Date) => date.toISOString().split('T')[0],
+}));
+
+/** Rows in the shape the backend's EventsReportData actually returns. */
+const EVENT_ROWS = [
+  {
+    eventId: 'event-1',
+    eventName: 'Summer Regatta',
+    startDate: '2024-06-01T00:00:00.000Z',
+    endDate: '2024-06-03T00:00:00.000Z',
+    totalEntries: 120,
+    totalRevenue: 6000,
+    activities: [
+      { activityId: 'act-1', activityName: 'Junior Race', entries: 40, revenue: 2000 },
+      { activityId: 'act-2', activityName: 'Senior Race', entries: 80, revenue: 4000 },
+    ],
+  },
+  {
+    eventId: 'event-2',
+    eventName: 'Winter Series',
+    startDate: '2024-11-01T00:00:00.000Z',
+    endDate: '2024-11-02T00:00:00.000Z',
+    totalEntries: 60,
+    totalRevenue: 3000,
+    activities: [],
+  },
+];
 
 describe('EventsReportPage', () => {
   const mockExecute = vi.fn();
 
-  const mockEventsReportData = {
-    events: [
-      {
-        id: '1',
-        name: 'Summer Festival',
-        startDate: '2024-06-01',
-        endDate: '2024-06-03',
-        status: 'completed' as const,
-        totalEntries: 150,
-        totalRevenue: 15000,
-        activities: [
-          { name: 'Workshop A', entries: 50, revenue: 5000 },
-          { name: 'Workshop B', entries: 100, revenue: 10000 },
-        ],
-      },
-      {
-        id: '2',
-        name: 'Winter Conference',
-        startDate: '2024-12-10',
-        endDate: '2024-12-12',
-        status: 'published' as const,
-        totalEntries: 200,
-        totalRevenue: 25000,
-        activities: [
-          { name: 'Keynote', entries: 200, revenue: 25000 },
-        ],
-      },
-    ],
-    summary: {
-      totalEvents: 2,
-      totalEntries: 350,
-      totalRevenue: 40000,
-    },
+  const mockApi = (overrides: Record<string, unknown> = {}) => {
+    vi.mocked(useApiModule.useApiGet).mockReturnValue({
+      data: null,
+      error: null,
+      loading: false,
+      execute: mockExecute,
+      reset: vi.fn(),
+      ...overrides,
+    } as any);
   };
 
   beforeEach(() => {
@@ -66,288 +73,218 @@ describe('EventsReportPage', () => {
 
   describe('Report data fetching', () => {
     it('should call execute on mount to fetch events report data', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+      mockApi({ loading: true });
 
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<EventsReportPage />);
 
       expect(mockExecute).toHaveBeenCalled();
     });
 
-    it('should display loading skeletons while fetching data', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should not fetch until the organisation is known', () => {
+      mockApi({ loading: true });
 
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<EventsReportPage />, { organisation: null });
 
-      const skeletons = document.querySelectorAll('.MuiSkeleton-root');
-      expect(skeletons.length).toBeGreaterThan(0);
+      expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should display error message when data fetching fails', () => {
-      const errorMessage = 'Failed to fetch events report';
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: errorMessage,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should request the organisation-scoped events endpoint', () => {
+      mockApi({ loading: true });
 
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      expect(vi.mocked(useApiModule.useApiGet).mock.calls[0][0]).toContain(
+        '/api/orgadmin/organisations/org-1/reports/events'
+      );
+    });
+
+    it('should display loading skeletons while fetching data', () => {
+      mockApi({ loading: true });
+
+      const { container } = renderWithProviders(<EventsReportPage />);
+
+      expect(container.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
+    });
+
+    it('should display an error message when data fetching fails', () => {
+      mockApi({ error: 'Network error' });
+
+      renderWithProviders(<EventsReportPage />);
+
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 
-  describe('Filters', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+  describe('Date range filtering', () => {
+    beforeEach(() => mockApi({ data: EVENT_ROWS }));
 
     it('should render date range filters', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
-      expect(screen.getByLabelText('End Date')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(resolveTranslation('reporting.filters.startDate'))
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(resolveTranslation('reporting.filters.endDate'))
+      ).toBeInTheDocument();
     });
 
-    it('should render status filter', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should default to a range ending today', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      // Check that the Status select exists by finding the FormControl
-      const statusElements = screen.getAllByText('Status');
-      expect(statusElements.length).toBeGreaterThan(0);
+      const today = new Date().toISOString().split('T')[0];
+      expect(screen.getByLabelText(resolveTranslation('reporting.filters.endDate'))).toHaveValue(
+        today
+      );
     });
 
-    it('should update start date when changed', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should update the date range when changed', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      const startDateInput = screen.getByLabelText('Start Date') as HTMLInputElement;
-      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } });
+      const startDate = screen.getByLabelText(resolveTranslation('reporting.filters.startDate'));
+      fireEvent.change(startDate, { target: { value: '2024-01-01' } });
 
-      expect(startDateInput.value).toBe('2024-01-01');
-    });
-
-    it('should update end date when changed', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      const endDateInput = screen.getByLabelText('End Date') as HTMLInputElement;
-      fireEvent.change(endDateInput, { target: { value: '2024-12-31' } });
-
-      expect(endDateInput.value).toBe('2024-12-31');
+      expect(startDate).toHaveValue('2024-01-01');
     });
   });
 
   describe('Summary cards', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+    beforeEach(() => mockApi({ data: EVENT_ROWS }));
 
-    it('should display total events summary', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should count the events returned', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByText('Total Events')).toBeInTheDocument();
+      expect(
+        screen.getByText(resolveTranslation('reporting.events.summary.totalEvents'))
+      ).toBeInTheDocument();
       expect(screen.getByText('2')).toBeInTheDocument();
     });
 
-    it('should display total entries summary', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should total entries across every event', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByText('Total Entries')).toBeInTheDocument();
-      expect(screen.getByText('350')).toBeInTheDocument();
+      expect(
+        screen.getByText(resolveTranslation('reporting.events.summary.totalEntries'))
+      ).toBeInTheDocument();
+      expect(screen.getByText('180')).toBeInTheDocument();
     });
 
-    it('should display total revenue summary with currency formatting', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should total revenue across every event', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-      expect(screen.getByText(/€40,000.00/)).toBeInTheDocument();
+      expect(
+        screen.getByText(resolveTranslation('reporting.events.summary.totalRevenue'))
+      ).toBeInTheDocument();
+      expect(screen.getByText(formatCurrencyMock(9000))).toBeInTheDocument();
     });
   });
 
-  describe('Events table', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-    });
+  describe('Event details table', () => {
+    it('should render the event details table', () => {
+      mockApi({ data: EVENT_ROWS });
 
-    it('should render events table with headers', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Event Name')).toBeInTheDocument();
-      expect(screen.getByText('Date Range')).toBeInTheDocument();
-      const statusElements = screen.getAllByText('Status');
-      expect(statusElements.length).toBeGreaterThan(0);
-      expect(screen.getByText('Entries')).toBeInTheDocument();
-      expect(screen.getByText('Revenue')).toBeInTheDocument();
-      expect(screen.getByText('Activities')).toBeInTheDocument();
-    });
-
-    it('should display all events in the table', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Summer Festival')).toBeInTheDocument();
-      expect(screen.getByText('Winter Conference')).toBeInTheDocument();
-    });
-
-    it('should display event entries and revenue', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('150')).toBeInTheDocument();
-      expect(screen.getByText('200')).toBeInTheDocument();
-      const fifteenKElements = screen.getAllByText(/€15,000.00/);
-      expect(fifteenKElements.length).toBeGreaterThan(0);
-      const twentyFiveKElements = screen.getAllByText(/€25,000.00/);
-      expect(twentyFiveKElements.length).toBeGreaterThan(0);
-    });
-
-    it('should display event status chips', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('completed')).toBeInTheDocument();
-      expect(screen.getByText('published')).toBeInTheDocument();
-    });
-
-    it('should display activity information', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('2 activities')).toBeInTheDocument();
-      expect(screen.getByText('1 activities')).toBeInTheDocument();
-      expect(screen.getByText(/Workshop A: 50 entries/)).toBeInTheDocument();
-    });
-
-    it('should display info message when no events found', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: { events: [], summary: { totalEvents: 0, totalEntries: 0, totalRevenue: 0 } },
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+      renderWithProviders(<EventsReportPage />);
 
       expect(
-        screen.getByText(/No events found for the selected filters/)
+        screen.getByText(resolveTranslation('reporting.events.eventDetails'))
       ).toBeInTheDocument();
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    it('should render a row per event', () => {
+      mockApi({ data: EVENT_ROWS });
+
+      renderWithProviders(<EventsReportPage />);
+
+      expect(screen.getByText('Summer Regatta')).toBeInTheDocument();
+      expect(screen.getByText('Winter Series')).toBeInTheDocument();
+      expect(screen.getAllByRole('row')).toHaveLength(EVENT_ROWS.length + 1);
+    });
+
+    it('should show entries and revenue per event', () => {
+      mockApi({ data: EVENT_ROWS });
+
+      renderWithProviders(<EventsReportPage />);
+
+      const row = screen.getByText('Summer Regatta').closest('tr')!;
+      expect(within(row).getByText('120')).toBeInTheDocument();
+      expect(within(row).getByText(formatCurrencyMock(6000))).toBeInTheDocument();
+    });
+
+    it("should list each event's activities", () => {
+      mockApi({ data: EVENT_ROWS });
+
+      renderWithProviders(<EventsReportPage />);
+
+      const row = screen.getByText('Summer Regatta').closest('tr')!;
+      expect(within(row).getByText(/Junior Race/)).toBeInTheDocument();
+      expect(within(row).getByText(/Senior Race/)).toBeInTheDocument();
+    });
+
+    it('should display an info message when no events are found', () => {
+      mockApi({ data: [] });
+
+      renderWithProviders(<EventsReportPage />);
+
+      expect(screen.getByText(resolveTranslation('reporting.events.noData'))).toBeInTheDocument();
     });
   });
 
   describe('Export functionality', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should render the export button', () => {
+      mockApi({ data: EVENT_ROWS });
+
+      renderWithProviders(<EventsReportPage />);
+
+      expect(
+        screen.getByText(resolveTranslation('reporting.events.exportToCSV'))
+      ).toBeInTheDocument();
     });
 
-    it('should render export button', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should disable the export button while loading', () => {
+      mockApi({ loading: true });
 
-      expect(screen.getByText('Export to CSV')).toBeInTheDocument();
-    });
+      renderWithProviders(<EventsReportPage />);
 
-    it('should disable export button when loading', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: null,
-        error: null,
-        loading: true,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
-
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      const exportButton = screen.getByText('Export to CSV').closest('button');
-      expect(exportButton).toBeDisabled();
+      expect(
+        screen.getByText(resolveTranslation('reporting.events.exportToCSV')).closest('button')
+      ).toBeDisabled();
     });
   });
 
   describe('Navigation', () => {
-    beforeEach(() => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    beforeEach(() => mockApi({ data: EVENT_ROWS }));
+
+    it('should render the back button', () => {
+      renderWithProviders(<EventsReportPage />);
+
+      expect(
+        screen.getByText(resolveTranslation('reporting.events.backToReports'))
+      ).toBeInTheDocument();
     });
 
-    it('should render back button', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should navigate back to reporting when the back button is clicked', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByText('Back to Reports')).toBeInTheDocument();
-    });
+      fireEvent.click(screen.getByText(resolveTranslation('reporting.events.backToReports')));
 
-    it('should navigate back when back button is clicked', () => {
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      const backButton = screen.getByText('Back to Reports');
-      fireEvent.click(backButton);
-
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/reporting');
+      expect(mockNavigate).toHaveBeenCalledWith('/reporting');
     });
   });
 
   describe('Page layout', () => {
-    it('should render page title', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    beforeEach(() => mockApi({ data: EVENT_ROWS }));
 
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
+    it('should render the page title', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      expect(screen.getByText('Events Report')).toBeInTheDocument();
+      expect(screen.getByText(resolveTranslation('reporting.events.title'))).toBeInTheDocument();
     });
 
-    it('should render page description', () => {
-      vi.mocked(useApiModule.useApiGet).mockReturnValue({
-        data: mockEventsReportData,
-        error: null,
-        loading: false,
-        execute: mockExecute,
-        reset: vi.fn(),
-      });
+    it('should render the page subtitle', () => {
+      renderWithProviders(<EventsReportPage />);
 
-      render(<EventsReportPage />, { wrapper: RouterWrapper });
-
-      expect(screen.getByText('Event attendance and revenue analysis')).toBeInTheDocument();
+      expect(screen.getByText(resolveTranslation('reporting.events.subtitle'))).toBeInTheDocument();
     });
   });
 });
