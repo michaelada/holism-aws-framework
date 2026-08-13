@@ -1,0 +1,31 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  ‹ My Entries          Spring Hunter Trials — Class 2 (90cm)               │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ✅ Confirmed                                                              │
+│                                                                            │
+│  ┌─ Event ────────────────────────┐ ┌─ Entry ──────────────────────────┐  │
+│  │ Spring Hunter Trials            │ │ Entrant   Sarah Adams            │  │
+│  │ Sat 14 Mar 2026, 10:00          │ │ Entered   02 Feb 2026, 19:14     │  │
+│  │ Punchestown, Co. Kildare        │ │ Ref       ENT-2026-00417         │  │
+│  │ [ View event ▸ ]                │ │ Fee       €45.00                 │  │
+│  └─────────────────────────────────┘ │ Payment   Card ✓ 02 Feb 2026     │  │
+│                                       │           [ View payment ▸ ]     │  │
+│                                       └──────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Your answers ──────────────────────────────────────────────────────┐  │
+│  │  Horse name              Ballyroan Star                              │  │
+│  │  Horse age               8                                           │  │
+│  │  Rider date of birth     12/04/2011                                  │  │
+│  │  Previous class won      Class 1 — 70cm                              │  │
+│  │  Vaccination cert        📎 vaccination-cert.pdf   [ Download ]      │  │
+│  │  Emergency contact       086 123 4567                                │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Your ticket ───────────────────────────────────────────────────────┐  │
+│  │   🎟  Ticket issued 02 Feb 2026 · valid Sat 14 Mar 2026              │  │
+│  │       Show this at the gate. It works without a signal.              │  │
+│  │                                        [ View ticket ▸ ]   → C10     │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  [ ⬇ Download confirmation ]                                               │
+└───────────────────────────────────────────────────────────────────────────┘

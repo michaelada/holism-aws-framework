@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="423" viewBox="0 0 632.60 423.00" role="img" aria-label="D4-D5-membership-types">
+<title>D4-D5-membership-types</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="423.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 160.5L238.3 160.5 M253.9 160.5L448.9 160.5 M464.5 160.5L597.1 160.5 M43.3 381.5L238.3 381.5 M253.9 381.5L448.9 381.5 M464.5 381.5L597.1 381.5 M19.9 398.5L612.7 398.5 M19.9 24.5L19.9 398.5 M43.3 160.5L43.3 381.5 M238.3 160.5L238.3 381.5 M253.9 160.5L253.9 381.5 M448.9 160.5L448.9 381.5 M464.5 160.5L464.5 381.5 M597.1 160.5L597.1 381.5 M612.7 24.5L612.7 398.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Memberships                                                              </text>
+<text class="tx" x="23.80" y="75.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  ⓘ You have an active Family Membership 2025 expiring 25 Feb 2026.        </text>
+<text class="tx" x="23.80" y="92.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">    [ Renew it ▸ ]                                                         </text>
+<text class="tx" x="23.80" y="126.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Available memberships — 2026 season                       [ 2026 ▾ ]     </text>
+<text class="tx" x="47.20" y="177.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> Single Membership 2026 </text>
+<text class="tx" x="257.80" y="177.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> Family Membership 2026 </text>
+<text class="tx" x="468.40" y="177.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Junior         </text>
+<text class="tx" x="257.80" y="194.50" textLength="187.20" lengthAdjust="spacingAndGlyphs">           ★ Your type  </text>
+<text class="tx" x="468.40" y="194.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Membership 2026</text>
+<text class="tx" x="47.20" y="211.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> €95.00                 </text>
+<text class="tx" x="257.80" y="211.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> €190.00                </text>
+<text class="tx" x="468.40" y="211.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> €45.00         </text>
+<text class="tx" x="47.20" y="228.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> 26 Feb 26 – 25 Feb 27  </text>
+<text class="tx" x="257.80" y="228.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> 26 Feb 26 – 25 Feb 27  </text>
+<text class="tx" x="468.40" y="228.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> 26 Feb–25 Feb  </text>
+<text class="tx" x="47.20" y="262.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • One adult            </text>
+<text class="tx" x="257.80" y="262.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • Two adults           </text>
+<text class="tx" x="468.40" y="262.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> • Under 18     </text>
+<text class="tx" x="47.20" y="279.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • Full grounds access  </text>
+<text class="tx" x="257.80" y="279.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • Up to 4 children     </text>
+<text class="tx" x="468.40" y="279.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> • Coaching     </text>
+<text class="tx" x="47.20" y="296.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • Event entry at       </text>
+<text class="tx" x="257.80" y="296.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • Full grounds access  </text>
+<text class="tx" x="468.40" y="296.50" textLength="124.80" lengthAdjust="spacingAndGlyphs">   included     </text>
+<text class="tx" x="47.20" y="313.50" textLength="187.20" lengthAdjust="spacingAndGlyphs">   member rates         </text>
+<text class="tx" x="257.80" y="313.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> • Event entry at       </text>
+<text class="tx" x="257.80" y="330.50" textLength="187.20" lengthAdjust="spacingAndGlyphs">   member rates         </text>
+<text class="tx" x="55.00" y="347.50">💳</text>
+<text class="tx" x="70.60" y="347.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> Card · </text>
+<text class="tx" x="133.00" y="347.50">🏦</text>
+<text class="tx" x="148.60" y="347.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> Offline   </text>
+<text class="tx" x="265.60" y="347.50">💳</text>
+<text class="tx" x="281.20" y="347.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> Card · </text>
+<text class="tx" x="343.60" y="347.50">🏦</text>
+<text class="tx" x="359.20" y="347.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> Offline   </text>
+<text class="tx" x="476.20" y="347.50">💳</text>
+<text class="tx" x="491.80" y="347.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> Card        </text>
+<text class="tx" x="47.20" y="364.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> [ Apply ▸ ]            </text>
+<text class="tx" x="257.80" y="364.50" textLength="187.20" lengthAdjust="spacingAndGlyphs"> [ Renew ▸ ] [Apply ▸]  </text>
+<text class="tx" x="468.40" y="364.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> [ Apply ▸ ]    </text>
+</svg>

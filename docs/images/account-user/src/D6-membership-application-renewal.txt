@@ -1,0 +1,36 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  ‹ Back              Renew Family Membership 2026                         │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ✅ We've filled this in from your 2025 membership.                        │
+│     Check everything is still correct, then add it to your cart.           │
+│                                                                            │
+│  ┌─ Your details ──────────────────────────────────────────── [ Edit ] ┐  │
+│  │  Name              Michael Adams                                     │  │
+│  │  Email             michael.adams@example.com                         │  │
+│  │  Mobile            086 123 4567                                      │  │
+│  │  Address           12 The Green, Naas, Co. Kildare                   │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ People on this membership ───────────────────────────────  [ Edit ] ┐  │
+│  │  Michael Adams   Primary                                             │  │
+│  │  Sarah Adams     Junior · b. 12 Apr 2011  · now 14                   │  │
+│  │  Tom Adams       Junior · b. 03 Sep 2014  · now 11                   │  │
+│  │                                              [ + Add a person ]      │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Needs your attention (2) ──────────────────────────────────────────┐  │
+│  │  ⚠ Emergency contact — please confirm this is still correct          │  │
+│  │     [ 086 765 4321________________________ ]                         │  │
+│  │                                                                      │  │
+│  │  ⚠ Photo consent — this is a new question for 2026 *                 │  │
+│  │     ( ) Yes, I consent    ( ) No                                     │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Fee ───────────────────────────────────────────────────────────────┐  │
+│  │  Family Membership 2026                                  €190.00     │  │
+│  │  Early renewal discount                                   −€10.00    │  │
+│  │  Total                                                    €180.00    │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  [ 🏦 Add to cart — Pay Offline ]   [ 💳 Add to cart — Pay By Card ]       │
+└───────────────────────────────────────────────────────────────────────────┘

@@ -207,6 +207,24 @@ When Fee > 0 and Payment Method includes "Cheque/Offline":
 │  Automatically included in confirmation email                        │
 ```
 
+**Validation Rules:**
+
+An event cannot be saved (as a draft or published) until every activity satisfies:
+
+| Field | Rule |
+|-------|------|
+| Activity Name | Required, non-blank |
+| Description | Required, non-blank |
+| Application Form | **Required** – one must always be selected; entries cannot be captured without a form |
+
+The Application Form dropdown has no "none" option: the "Select a form" placeholder is
+disabled, so an existing selection cannot be cleared, only changed. When a save or a
+wizard "Next" is attempted with a form missing, the field is highlighted in error with
+"Every activity must have an application form selected", alongside the section-level
+alert.
+
+In the wizard (Create Event) these rules also block advancing past the Activities step.
+
 ---
 
 ## 4. Event Details Page

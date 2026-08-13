@@ -1,0 +1,11 @@
+┌──────────────────────────────────────────────────┐
+│                    ⚠                              │
+│           Payment wasn't completed                │
+│                                                   │
+│   Your card was declined (insufficient funds).    │
+│   Nothing has been charged and your cart is       │
+│   exactly as you left it.                         │
+│                                                   │
+│   [ Try again ]   [ Use a different card ]        │
+│   [ Back to cart ]                                │
+└──────────────────────────────────────────────────┘

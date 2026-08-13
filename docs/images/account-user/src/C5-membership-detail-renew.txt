@@ -1,0 +1,32 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  ‹ My Memberships           Family Membership 2025                        │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ✅ Active · expires in 12 days                                            │
+│                                                                            │
+│  ┌─ Membership ────────────────────┐ ┌─ Payment ───────────────────────┐  │
+│  │ Type      Family Membership      │ │ Fee      €180.00                │  │
+│  │ Number    KHPC-0412              │ │ Method   Pay Offline            │  │
+│  │ Valid     26 Feb 25 – 25 Feb 26  │ │ Status   ✓ Received 03 Dec 25   │  │
+│  │ Joined    18 Mar 2019            │ │          [ View payment ▸ ]     │  │
+│  └──────────────────────────────────┘ └─────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ People on this membership ─────────────────────────────────────────┐  │
+│  │  Michael Adams    Primary   michael.adams@example.com   086 123 4567 │  │
+│  │  Sarah Adams      Junior    b. 12 Apr 2011                           │  │
+│  │  Tom Adams        Junior    b. 03 Sep 2014                           │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Your answers ──────────────────────────────────────────────────────┐  │
+│  │  Address                 12 The Green, Naas, Co. Kildare             │  │
+│  │  Emergency contact       086 765 4321                                │  │
+│  │  Photo consent           Yes                                         │  │
+│  │  Horse owned             Ballyroan Star                              │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  ⏰ Renew for 2026                                                    │ │
+│  │  Family Membership 2026 · €190.00 · valid to 25 Feb 2027              │ │
+│  │  We'll pre-fill your details — you can change anything before paying. │ │
+│  │                                            [ Renew membership ▸ ]     │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────────┘

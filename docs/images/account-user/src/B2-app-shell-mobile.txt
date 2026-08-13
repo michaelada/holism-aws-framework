@@ -1,0 +1,18 @@
+┌────────────────────────────┐
+│ ☰  [logo] Kildare Hunt  🛒4│   ← tap logo/name = switcher
+├────────────────────────────┤
+│ ⚠ You're offline — showing │   ← H1, only when offline
+│   saved information        │
+├────────────────────────────┤
+│                            │
+│                            │
+│      page content          │
+│      (single column)       │
+│                            │
+│                            │
+│                            │
+│                            │
+├────────────────────────────┤
+│  🏠     🔍     🎫    🛒   👤│
+│ Home  Browse  Mine  Cart  Me│
+└────────────────────────────┘

@@ -1,0 +1,26 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  ‹ PAY-2026-00913        Event entry — Class 2 (90cm)                     │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ┌─ Transaction ───────────────────────────────────────────────────────┐  │
+│  │  Item          Event entry                                           │  │
+│  │  Event         Spring Hunter Trials · Sat 14 Mar 2026                │  │
+│  │  Activity      Class 2 — 90cm                                        │  │
+│  │  Entrant       Sarah Adams                                           │  │
+│  │  Fee           €45.00  (handling fee included)                       │  │
+│  │  Method        💳 Pay By Card (Stripe)                               │  │
+│  │  Status        ✅ Confirmed                                          │  │
+│  │  Reference     ENT-2026-00417                                        │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ What you submitted ────────────────────────────────────────────────┐  │
+│  │  Horse name              Ballyroan Star                              │  │
+│  │  Horse age               8                                           │  │
+│  │  Rider date of birth     12/04/2011                                  │  │
+│  │  Previous class won      Class 1 — 70cm                              │  │
+│  │  Vaccination cert        📎 vaccination-cert.pdf   [ Download ]      │  │
+│  │  Emergency contact       086 123 4567                                │  │
+│  │  Terms accepted          Yes · 02 Feb 2026, 19:14                    │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  [ Go to this entry ▸ ]                                                    │
+└───────────────────────────────────────────────────────────────────────────┘

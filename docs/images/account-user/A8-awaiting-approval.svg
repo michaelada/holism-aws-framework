@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="601" height="491" viewBox="0 0 601.40 491.00" role="img" aria-label="A8-awaiting-approval">
+<title>A8-awaiting-approval</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="601.40" height="491.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L581.5 24.5 M51.1 194.5L526.9 194.5 M51.1 245.5L526.9 245.5 M51.1 347.5L58.9 347.5 M269.5 347.5L526.9 347.5 M51.1 364.5L300.7 364.5 M316.3 364.5L526.9 364.5 M51.1 415.5L300.7 415.5 M316.3 415.5L526.9 415.5 M19.9 466.5L581.5 466.5 M19.9 24.5L19.9 466.5 M51.1 194.5L51.1 245.5 M51.1 364.5L51.1 415.5 M300.7 364.5L300.7 415.5 M316.3 364.5L316.3 415.5 M526.9 194.5L526.9 211.5 M526.9 364.5L526.9 415.5 M581.5 24.5L581.5 177.5 M581.5 211.5L581.5 228.5 M581.5 262.5L581.5 466.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">                          [LOGO]                                       </text>
+<text class="tx" x="242.20" y="75.50">⏳</text>
+<text class="tx" x="23.80" y="92.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">                  Waiting for approval                                 </text>
+<text class="tx" x="23.80" y="126.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">   Thanks for registering with Kildare Hunt Pony Club.                 </text>
+<text class="tx" x="23.80" y="143.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">   Your account is active, but a club administrator needs to           </text>
+<text class="tx" x="23.80" y="160.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">   approve your membership of this club before you can use it.         </text>
+<text class="tx" x="70.60" y="211.50">✅</text>
+<text class="tx" x="86.20" y="211.50" textLength="436.80" lengthAdjust="spacingAndGlyphs"> Email address verified                                 </text>
+<text class="tx" x="70.60" y="228.50">⏳</text>
+<text class="tx" x="86.20" y="228.50" textLength="452.40" lengthAdjust="spacingAndGlyphs"> Awaiting club approval — requested 13 Feb 2026           </text>
+<text class="tx" x="23.80" y="279.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">   We'll email michael.adams@example.com as soon as you're approved.   </text>
+<text class="tx" x="23.80" y="313.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">   Questions?  secretary@khpc.ie  ·  045 123 456                       </text>
+<text class="tx" x="62.80" y="347.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Your other organisations </text>
+<text class="tx" x="55.00" y="381.50" textLength="241.80" lengthAdjust="spacingAndGlyphs"> [logo] Ballinasloe &amp; Districts</text>
+<text class="tx" x="320.20" y="381.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> [logo] Westport Sailing  </text>
+<text class="tx" x="55.00" y="398.50" textLength="241.80" lengthAdjust="spacingAndGlyphs">        Tennis Club        [▸] </text>
+<text class="tx" x="320.20" y="398.50" textLength="202.80" lengthAdjust="spacingAndGlyphs">        Club          [▸] </text>
+<text class="tx" x="23.80" y="449.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">              [ Check again ]            [ Sign out ]                  </text>
+</svg>

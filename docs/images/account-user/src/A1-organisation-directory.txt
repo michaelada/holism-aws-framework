@@ -1,0 +1,34 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⛵ ItsPlainSailing                                    [Sign in ▸]    │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│              Find your club or organisation                           │
+│                                                                       │
+│   ┌────────────────────────────────────────────────────────────┐    │
+│   │ 🔍  Search by name or code…                                 │    │
+│   └────────────────────────────────────────────────────────────┘    │
+│                                                                       │
+│   Filter:  [ All types ▾ ]   [ All countries ▾ ]                     │
+│                                                                       │
+│   ┌──────────────────────┐  ┌──────────────────────┐                 │
+│   │  [logo]              │  │  [logo]              │                 │
+│   │  Kildare Hunt Pony   │  │  Ballinasloe & Dist. │                 │
+│   │  Club                │  │  Tennis Club         │                 │
+│   │  khpc · Pony Club    │  │  bdtc · Tennis Club  │                 │
+│   │  Co. Kildare, IE     │  │  Co. Galway, IE      │                 │
+│   │             [Go ▸]   │  │             [Go ▸]   │                 │
+│   └──────────────────────┘  └──────────────────────┘                 │
+│   ┌──────────────────────┐  ┌──────────────────────┐                 │
+│   │  [logo]              │  │  [logo]              │                 │
+│   │  Dun Laoghaire       │  │  Westport Sailing    │                 │
+│   │  Sailing Club        │  │  Club                │                 │
+│   │  dlsc · Sailing Club │  │  wsc · Sailing Club  │                 │
+│   │             [Go ▸]   │  │             [Go ▸]   │                 │
+│   └──────────────────────┘  └──────────────────────┘                 │
+│                                                                       │
+│                    ‹  1  2  3  …  12  ›                              │
+│                                                                       │
+│   Already signed in?  Your organisations:                            │
+│   [ Kildare Hunt Pony Club ]  [ Ballinasloe & Districts TC ]         │
+│                                                                       │
+└──────────────────────────────────────────────────────────────────────┘

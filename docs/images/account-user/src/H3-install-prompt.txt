@@ -1,0 +1,10 @@
+┌──────────────────────────────────┐
+│  [logo]  Install Kildare Hunt     │
+│          Pony Club                │
+│                                   │
+│  Add to your home screen for      │
+│  quick access and offline         │
+│  viewing.                         │
+│                                   │
+│  [ Not now ]      [ Install ]     │
+└──────────────────────────────────┘

@@ -1,0 +1,54 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  ‹ Back                                                                    │
+│                                                                            │
+│  Enter Spring Hunter Trials — Class 2 (90cm)                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  ①────────②────────③                                                 │ │
+│  │  Details  Extras   Confirm                ← only when the form uses  │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │   wizard steps
+│                                                                            │
+│  ┌─ Entrant details ───────────────────────────────────────────────────┐  │
+│  │  Who is this entry for? *                                            │  │
+│  │  ( ) Michael Adams (me)                                              │  │
+│  │  (•) Sarah Adams        ← people on the user's membership            │  │
+│  │  ( ) Tom Adams                                                       │  │
+│  │  ( ) Someone else…                                                   │  │
+│  │                                                                      │  │
+│  │  Horse name *                                                        │  │
+│  │  [____________________________________________]                      │  │
+│  │                                                                      │  │
+│  │  Horse age *                    Rider date of birth *                │  │
+│  │  [________]                     [📅 12/04/2011]                      │  │
+│  │                                                                      │  │
+│  │  Previous class won                                                  │  │
+│  │  [ Class 1 — 70cm                                   ▾]               │  │
+│  │                                                                      │  │
+│  │  Vaccination certificate *                                           │  │
+│  │  ┌──────────────────────────────────────────────┐                    │  │
+│  │  │  📎 Drag a file here or [ Choose file ]      │                    │  │
+│  │  │     PDF or image, max 10 MB                  │                    │  │
+│  │  └──────────────────────────────────────────────┘                    │  │
+│  │                                                                      │  │
+│  │  ⚠ Vaccination certificate is required                               │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Terms and conditions ──────────────────────────────────────────────┐  │
+│  │  ┌────────────────────────────────────────────────────────────────┐ │  │
+│  │  │ All entrants must hold current membership and produce a valid  │ │  │
+│  │  │ vaccination certificate on the day…                        ⌄  │ │  │
+│  │  └────────────────────────────────────────────────────────────────┘ │  │
+│  │  ☐ I have read and accept the terms and conditions *                 │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Fee ───────────────────────────────────────────────────────────────┐  │
+│  │  Entry fee                                                €45.00     │  │
+│  │  Early-bird discount (applied automatically)              −€5.00     │  │
+│  │  ───────────────────────────────────────────────────────────────     │  │
+│  │  Total                                                    €40.00     │  │
+│  │  ⓘ A card handling fee will be added at checkout.                    │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  How would you like to pay?                                                │
+│  [ 🏦 Add to cart — Pay Offline ]   [ 💳 Add to cart — Pay By Card ]       │
+│                                                                            │
+└───────────────────────────────────────────────────────────────────────────┘

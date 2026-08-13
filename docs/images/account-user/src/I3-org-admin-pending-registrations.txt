@@ -1,0 +1,24 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  Users  ›  Account Users  ›  Pending registrations                        │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ⓘ Auto-registration is OFF — new registrations need your approval.       │
+│    [ Change this setting ▸ ]                                    → I4      │
+│                                                                            │
+│  [🔍 Search name or email…]      ( • Pending 4 ) ( Approved ) ( Rejected ) │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │ ☐ │ Name          │ Email                │ Registered │ Verified     │ │
+│  ├───┼───────────────┼──────────────────────┼────────────┼──────────────┤ │
+│  │ ☐ │ Michael Adams │ michael.adams@       │ 13 Feb 26  │ ✅ 13 Feb    │ │
+│  │   │               │ example.com          │ 19:04      │              │ │
+│  │   │ 086 123 4567                                                     │ │
+│  │   │                             [ Reject ]  [ Approve ]              │ │
+│  ├───┼───────────────┼──────────────────────┼────────────┼──────────────┤ │
+│  │ ☐ │ Aoife Byrne   │ aoife.b@example.com  │ 12 Feb 26  │ ⏳ Not yet   │ │
+│  │   │               │                      │ 08:41      │    verified  │ │
+│  │   │ ⓘ Hasn't activated their account yet                             │ │
+│  │   │                    [ Resend email ]  [ Reject ]  [ Approve ]     │ │
+│  └───┴───────────────┴──────────────────────┴────────────┴──────────────┘ │
+│                                                                            │
+│  2 selected   [ Approve selected ]  [ Reject selected ]                    │
+└───────────────────────────────────────────────────────────────────────────┘

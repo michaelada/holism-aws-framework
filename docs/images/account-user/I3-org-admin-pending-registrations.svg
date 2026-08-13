@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="440" viewBox="0 0 632.60 440.00" role="img" aria-label="I3-org-admin-pending-registrations">
+<title>I3-org-admin-pending-registrations</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="440.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 160.5L597.1 160.5 M43.3 194.5L597.1 194.5 M43.3 279.5L597.1 279.5 M43.3 364.5L597.1 364.5 M19.9 415.5L612.7 415.5 M19.9 24.5L19.9 415.5 M43.3 160.5L43.3 364.5 M74.5 177.5L74.5 364.5 M199.3 177.5L199.3 228.5 M199.3 279.5L199.3 313.5 M378.7 177.5L378.7 228.5 M378.7 279.5L378.7 313.5 M480.1 177.5L480.1 228.5 M480.1 279.5L480.1 313.5 M597.1 160.5L597.1 364.5 M612.7 24.5L612.7 415.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Users  ›  Account Users  ›  Pending registrations                        </text>
+<text class="tx" x="23.80" y="75.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  ⓘ Auto-registration is OFF — new registrations need your approval.       </text>
+<text class="tx" x="23.80" y="92.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">    [ Change this setting ▸ ]                                    → I4      </text>
+<text class="tx" x="23.80" y="126.50" textLength="23.40" lengthAdjust="spacingAndGlyphs">  [</text>
+<text class="tx" x="47.20" y="126.50">🔍</text>
+<text class="tx" x="62.80" y="126.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Search name or email…]      ( • Pending 4 ) ( Approved ) ( Rejected )</text>
+<text class="tx" x="47.20" y="177.50" textLength="23.40" lengthAdjust="spacingAndGlyphs"> ☐ </text>
+<text class="tx" x="78.40" y="177.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Name          </text>
+<text class="tx" x="203.20" y="177.50" textLength="171.60" lengthAdjust="spacingAndGlyphs"> Email                </text>
+<text class="tx" x="382.60" y="177.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Registered </text>
+<text class="tx" x="484.00" y="177.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Verified     </text>
+<text class="tx" x="47.20" y="211.50" textLength="23.40" lengthAdjust="spacingAndGlyphs"> ☐ </text>
+<text class="tx" x="78.40" y="211.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Michael Adams </text>
+<text class="tx" x="203.20" y="211.50" textLength="171.60" lengthAdjust="spacingAndGlyphs"> michael.adams@       </text>
+<text class="tx" x="382.60" y="211.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> 13 Feb 26  </text>
+<text class="tx" x="491.80" y="211.50">✅</text>
+<text class="tx" x="507.40" y="211.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 13 Feb    </text>
+<text class="tx" x="203.20" y="228.50" textLength="171.60" lengthAdjust="spacingAndGlyphs"> example.com          </text>
+<text class="tx" x="382.60" y="228.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> 19:04      </text>
+<text class="tx" x="78.40" y="245.50" textLength="514.80" lengthAdjust="spacingAndGlyphs"> 086 123 4567                                                     </text>
+<text class="tx" x="78.40" y="262.50" textLength="514.80" lengthAdjust="spacingAndGlyphs">                             [ Reject ]  [ Approve ]              </text>
+<text class="tx" x="47.20" y="296.50" textLength="23.40" lengthAdjust="spacingAndGlyphs"> ☐ </text>
+<text class="tx" x="78.40" y="296.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Aoife Byrne   </text>
+<text class="tx" x="203.20" y="296.50" textLength="171.60" lengthAdjust="spacingAndGlyphs"> aoife.b@example.com  </text>
+<text class="tx" x="382.60" y="296.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> 12 Feb 26  </text>
+<text class="tx" x="491.80" y="296.50">⏳</text>
+<text class="tx" x="507.40" y="296.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> Not yet   </text>
+<text class="tx" x="382.60" y="313.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> 08:41      </text>
+<text class="tx" x="484.00" y="313.50" textLength="109.20" lengthAdjust="spacingAndGlyphs">    verified  </text>
+<text class="tx" x="78.40" y="330.50" textLength="514.80" lengthAdjust="spacingAndGlyphs"> ⓘ Hasn't activated their account yet                             </text>
+<text class="tx" x="78.40" y="347.50" textLength="514.80" lengthAdjust="spacingAndGlyphs">                    [ Resend email ]  [ Reject ]  [ Approve ]     </text>
+<text class="tx" x="23.80" y="398.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  2 selected   [ Approve selected ]  [ Reject selected ]                   </text>
+</svg>

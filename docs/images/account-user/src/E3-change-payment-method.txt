@@ -1,0 +1,21 @@
+┌──────────────────────────────────────────────────┐
+│  How would you like to pay for this?         ✕   │
+├──────────────────────────────────────────────────┤
+│  Court 1 — Sat 14 Mar, 10:00–11:00       €12.00  │
+│                                                   │
+│  ( ) 🏦 Pay Offline                               │
+│         Pay the club directly. Instructions       │
+│         will be in your confirmation email.       │
+│         ─────────────────────────────────────     │
+│         Your order total becomes    €288.23       │
+│         Charged to your card now     €96.23       │
+│                                                   │
+│  (•) 💳 Pay By Card                               │
+│         Paid securely now by card. A handling     │
+│         fee applies to this item.                 │
+│         ─────────────────────────────────────     │
+│         Your order total becomes    €288.45       │
+│         Charged to your card now    €108.45       │
+│                                                   │
+│                        [ Cancel ]  [ Save ]       │
+└──────────────────────────────────────────────────┘

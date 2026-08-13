@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="457" viewBox="0 0 640.40 457.00" role="img" aria-label="I4-org-admin-registration-settings">
+<title>I4-org-admin-registration-settings</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="457.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M43.3 75.5L51.1 75.5 M230.5 75.5L597.1 75.5 M495.7 109.5L511.3 109.5 M43.3 398.5L597.1 398.5 M19.9 432.5L620.5 432.5 M19.9 24.5L19.9 432.5 M43.3 75.5L43.3 398.5 M597.1 75.5L597.1 398.5 M620.5 24.5L620.5 432.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Settings  ›  Registration                                                 </text>
+<text class="tx" x="55.00" y="75.50" textLength="171.60" lengthAdjust="spacingAndGlyphs"> Account registration </text>
+<text class="tx" x="47.20" y="109.50" textLength="444.60" lengthAdjust="spacingAndGlyphs">   Auto-registration                              [ ON  ●</text>
+<text class="tx" x="515.20" y="109.50" textLength="78.00" lengthAdjust="spacingAndGlyphs">  ]       </text>
+<text class="tx" x="47.20" y="143.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   ON   People who register can sign in straight away, once           </text>
+<text class="tx" x="47.20" y="160.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">        they've confirmed their email address.                        </text>
+<text class="tx" x="47.20" y="194.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   OFF  People who register must be approved by an administrator      </text>
+<text class="tx" x="47.20" y="211.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">        before they can use the member portal. They'll see an         </text>
+<text class="tx" x="47.20" y="228.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">        "awaiting approval" message when they sign in.                </text>
+<text class="tx" x="47.20" y="262.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   ⚠ You have 4 registrations waiting for approval.                   </text>
+<text class="tx" x="47.20" y="279.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">     [ Review them ▸ ]                                    → I3        </text>
+<text class="tx" x="47.20" y="313.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   Notify these addresses of new registrations                        </text>
+<text class="tx" x="47.20" y="330.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   [ secretary@khpc.ie, membership@khpc.ie________________ ]          </text>
+<text class="tx" x="47.20" y="364.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   Your member portal address                                         </text>
+<text class="tx" x="47.20" y="381.50" textLength="382.20" lengthAdjust="spacingAndGlyphs">   itsplainsailing.com/account/khpc            [ </text>
+<text class="tx" x="429.40" y="381.50">📋</text>
+<text class="tx" x="445.00" y="381.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> Copy ]            </text>
+<text class="tx" x="23.80" y="415.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">                                                        [ Save changes ]    </text>
+</svg>

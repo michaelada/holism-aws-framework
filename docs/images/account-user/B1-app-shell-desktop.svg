@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="491" viewBox="0 0 640.40 491.00" role="img" aria-label="B1-app-shell-desktop">
+<title>B1-app-shell-desktop</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="491.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 75.5L620.5 75.5 M43.3 398.5L136.9 398.5 M19.9 466.5L620.5 466.5 M19.9 24.5L19.9 466.5 M168.1 75.5L168.1 466.5 M620.5 24.5L620.5 466.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="312.00" lengthAdjust="spacingAndGlyphs"> [logo] Kildare Hunt Pony Club ▾        </text>
+<text class="tx" x="335.80" y="41.50">🔍</text>
+<text class="tx" x="406.00" y="41.50">🔔</text>
+<text class="tx" x="421.60" y="41.50" textLength="39.00" lengthAdjust="spacingAndGlyphs"> 3   </text>
+<text class="tx" x="460.60" y="41.50">🛒</text>
+<text class="tx" x="476.20" y="41.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> 4   [MA ▾]       </text>
+<text class="tx" x="101.80" y="58.50" textLength="374.40" lengthAdjust="spacingAndGlyphs"> org switcher (A7)                              </text>
+<text class="tx" x="484.00" y="58.50" textLength="132.60" lengthAdjust="spacingAndGlyphs"> profile menu    </text>
+<text class="tx" x="39.40" y="109.50">🏠</text>
+<text class="tx" x="55.00" y="109.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Home         </text>
+<text class="tx" x="23.80" y="143.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">  MY ACTIVITY     </text>
+<text class="tx" x="172.00" y="143.50" textLength="444.60" lengthAdjust="spacingAndGlyphs">                     page content                        </text>
+<text class="tx" x="39.40" y="160.50">🎫</text>
+<text class="tx" x="55.00" y="160.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Entries &amp;    </text>
+<text class="tx" x="23.80" y="177.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">     Bookings     </text>
+<text class="tx" x="172.00" y="177.50" textLength="444.60" lengthAdjust="spacingAndGlyphs">                     max-width 1280                      </text>
+<text class="tx" x="39.40" y="194.50">👤</text>
+<text class="tx" x="55.00" y="194.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Memberships  </text>
+<text class="tx" x="39.40" y="211.50">📋</text>
+<text class="tx" x="55.00" y="211.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Registrations</text>
+<text class="tx" x="39.40" y="228.50">📦</text>
+<text class="tx" x="55.00" y="228.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Orders       </text>
+<text class="tx" x="23.80" y="245.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">  🎟  Tickets      </text>
+<text class="tx" x="23.80" y="279.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">  BROWSE          </text>
+<text class="tx" x="39.40" y="296.50">📅</text>
+<text class="tx" x="55.00" y="296.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Events       </text>
+<text class="tx" x="39.40" y="313.50">👥</text>
+<text class="tx" x="55.00" y="313.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Memberships  </text>
+<text class="tx" x="39.40" y="330.50">📝</text>
+<text class="tx" x="55.00" y="330.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Registrations</text>
+<text class="tx" x="23.80" y="347.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">  🛍  Merchandise  </text>
+<text class="tx" x="23.80" y="364.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">  🗓  Calendar     </text>
+<text class="tx" x="39.40" y="415.50">💳</text>
+<text class="tx" x="55.00" y="415.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Payments     </text>
+<text class="tx" x="23.80" y="432.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">  ⚙️  Settings    </text>
+</svg>

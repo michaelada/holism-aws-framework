@@ -1,0 +1,14 @@
+┌──────────────────────────────────────────────┐
+│                    ✓                          │
+│         Check your email                      │
+│                                               │
+│   We've sent a confirmation link to           │
+│   michael.adams@example.com                   │
+│                                               │
+│   Click the link to activate your account     │
+│   and sign in to Kildare Hunt Pony Club.      │
+│                                               │
+│   Didn't get it?  [ Resend ]  (60s)           │
+│                                               │
+│           [ Back to sign in ]                 │
+└──────────────────────────────────────────────┘

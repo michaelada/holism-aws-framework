@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="440" viewBox="0 0 640.40 440.00" role="img" aria-label="C3-booking-detail">
+<title>C3-booking-detail</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="440.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M43.3 109.5L51.1 109.5 M129.1 109.5L597.1 109.5 M43.3 262.5L597.1 262.5 M43.3 296.5L51.1 296.5 M168.1 296.5L597.1 296.5 M43.3 347.5L597.1 347.5 M19.9 415.5L620.5 415.5 M19.9 24.5L19.9 415.5 M43.3 109.5L43.3 262.5 M43.3 296.5L43.3 347.5 M597.1 109.5L597.1 262.5 M597.1 296.5L597.1 347.5 M620.5 24.5L620.5 415.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ‹ My Bookings              Court 1 — Sat 14 Mar, 10:00–11:00              </text>
+<text class="tx" x="39.40" y="75.50">✅</text>
+<text class="tx" x="55.00" y="75.50" textLength="561.60" lengthAdjust="spacingAndGlyphs"> Confirmed                                                              </text>
+<text class="tx" x="55.00" y="109.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Booking </text>
+<text class="tx" x="47.20" y="126.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Calendar     Court 1 (all-weather)                                  </text>
+<text class="tx" x="47.20" y="143.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Date         Saturday 14 March 2026                                 </text>
+<text class="tx" x="47.20" y="160.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Time         10:00 – 11:00  (1 hour)                                </text>
+<text class="tx" x="47.20" y="177.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Booked by    Michael Adams                                          </text>
+<text class="tx" x="47.20" y="194.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Booked on    02 Feb 2026, 19:16                                     </text>
+<text class="tx" x="47.20" y="211.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Ref          BKG-2026-00088                                         </text>
+<text class="tx" x="47.20" y="228.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Fee          €12.00 + €0.28 handling  ·  Card ✓                     </text>
+<text class="tx" x="47.20" y="245.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                        [ View payment ▸ ]            </text>
+<text class="tx" x="55.00" y="296.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Your answers </text>
+<text class="tx" x="47.20" y="313.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Number of players       4                                           </text>
+<text class="tx" x="47.20" y="330.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Guest names             J. Byrne, M. O'Neill, K. Ryan               </text>
+<text class="tx" x="23.80" y="381.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ⓘ Bookings can be cancelled up to 24 hours before the start time.         </text>
+<text class="tx" x="23.80" y="398.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">                          [ Add to calendar ]  [ Cancel booking ]           </text>
+</svg>

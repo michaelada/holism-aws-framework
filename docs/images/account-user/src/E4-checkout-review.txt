@@ -1,0 +1,35 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  Checkout                                        ①──②──③                  │
+│                                                 Review Pay Done            │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ┌─ Paying by card now (3 items) ──────────────────────────────────────┐  │
+│  │  Spring Hunter Trials — Class 2, Sarah Adams            €45.00      │  │
+│  │  Court 1 — Sat 14 Mar 10:00–11:00                       €12.00      │  │
+│  │  Club Polo Shirt (Navy, M) × 2                          €50.00      │  │
+│  │  ────────────────────────────────────────────────────────────────   │  │
+│  │  Subtotal                                              €107.00      │  │
+│  │  Card handling fee (on €62.00)                           €1.18      │  │
+│  │    €0.25 + 1.5% · applies to 2 of 3 items       [ what's this? ]    │  │
+│  │  Tax on handling fee (23%)                               €0.27      │  │
+│  │  ════════════════════════════════════════════════════════════════   │  │
+│  │  To pay now                                            €108.45      │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Paying offline (1 item) ───────────────────────────────────────────┐  │
+│  │  Family Membership 2026 — Michael Adams                 €180.00     │  │
+│  │  ────────────────────────────────────────────────────────────────   │  │
+│  │  To pay the club directly                               €180.00     │  │
+│  │                                                                      │  │
+│  │  ⓘ How to pay: cheque payable to "Kildare Hunt Pony Club", posted   │  │
+│  │    to the Secretary, or bank transfer to IE00 XXXX…                 │  │
+│  │    Your membership is confirmed once the club records your payment. │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Contact details for this order ────────────────────────────────────┐  │
+│  │  Michael Adams · michael.adams@example.com · 086 123 4567  [ Edit ] │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ☐ I accept the terms and conditions for these items *   [ read ]         │
+│                                                                            │
+│                    Order total €288.45     [ ‹ Back ]  [ Pay €108.45 ▸ ]  │
+└───────────────────────────────────────────────────────────────────────────┘

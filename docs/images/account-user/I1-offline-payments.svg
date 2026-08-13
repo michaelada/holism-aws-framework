@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="525" viewBox="0 0 632.60 525.00" role="img" aria-label="I1-offline-payments">
+<title>I1-offline-payments</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="525.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 160.5L597.1 160.5 M43.3 194.5L597.1 194.5 M43.3 279.5L597.1 279.5 M43.3 330.5L597.1 330.5 M43.3 398.5L51.1 398.5 M136.9 398.5L581.5 398.5 M43.3 415.5L597.1 415.5 M43.3 483.5L597.1 483.5 M19.9 500.5L612.7 500.5 M19.9 24.5L19.9 500.5 M43.3 160.5L43.3 330.5 M43.3 415.5L43.3 483.5 M74.5 177.5L74.5 330.5 M74.5 432.5L74.5 466.5 M160.3 177.5L160.3 330.5 M160.3 432.5L160.3 466.5 M292.9 177.5L292.9 330.5 M425.5 177.5L425.5 330.5 M526.9 177.5L526.9 245.5 M526.9 279.5L526.9 296.5 M597.1 160.5L597.1 330.5 M597.1 415.5L597.1 483.5 M612.7 24.5L612.7 500.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Payments  ›  Offline Payments                                            </text>
+<text class="tx" x="23.80" y="75.50" textLength="23.40" lengthAdjust="spacingAndGlyphs">  [</text>
+<text class="tx" x="47.20" y="75.50">🔍</text>
+<text class="tx" x="62.80" y="75.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Search payer, reference…]                                            </text>
+<text class="tx" x="23.80" y="92.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  ( • Awaiting payment 14 )  ( Received 132 )  ( All 146 )                 </text>
+<text class="tx" x="23.80" y="109.50" textLength="70.20" lengthAdjust="spacingAndGlyphs">  [ From </text>
+<text class="tx" x="94.00" y="109.50">📅</text>
+<text class="tx" x="109.60" y="109.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> ] [ To </text>
+<text class="tx" x="172.00" y="109.50">📅</text>
+<text class="tx" x="187.60" y="109.50" textLength="421.20" lengthAdjust="spacingAndGlyphs"> ]  [ Type: All ▾ ]                        [⬇ Export] </text>
+<text class="tx" x="23.80" y="143.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Awaiting payment · €2,340.00 outstanding                                 </text>
+<text class="tx" x="47.20" y="177.50" textLength="23.40" lengthAdjust="spacingAndGlyphs"> ☐ </text>
+<text class="tx" x="78.40" y="177.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Date     </text>
+<text class="tx" x="164.20" y="177.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Reference      </text>
+<text class="tx" x="296.80" y="177.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Payer          </text>
+<text class="tx" x="429.40" y="177.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> For        </text>
+<text class="tx" x="530.80" y="177.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> Amount </text>
+<text class="tx" x="47.20" y="211.50" textLength="23.40" lengthAdjust="spacingAndGlyphs"> ☐ </text>
+<text class="tx" x="78.40" y="211.50" textLength="78.00" lengthAdjust="spacingAndGlyphs">02 Feb 26 </text>
+<text class="tx" x="164.20" y="211.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2026-00913 </text>
+<text class="tx" x="296.80" y="211.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Michael Adams  </text>
+<text class="tx" x="429.40" y="211.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Membership </text>
+<text class="tx" x="530.80" y="211.50" textLength="62.40" lengthAdjust="spacingAndGlyphs">€180.00 </text>
+<text class="tx" x="429.40" y="228.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> (1 of 4    </text>
+<text class="tx" x="429.40" y="245.50" textLength="93.60" lengthAdjust="spacingAndGlyphs">  items)    </text>
+<text class="tx" x="429.40" y="262.50" textLength="163.80" lengthAdjust="spacingAndGlyphs"> [ Mark received ]   </text>
+<text class="tx" x="47.20" y="296.50" textLength="23.40" lengthAdjust="spacingAndGlyphs"> ☐ </text>
+<text class="tx" x="78.40" y="296.50" textLength="78.00" lengthAdjust="spacingAndGlyphs">30 Jan 26 </text>
+<text class="tx" x="164.20" y="296.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2026-00902 </text>
+<text class="tx" x="296.80" y="296.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Aoife Byrne    </text>
+<text class="tx" x="429.40" y="296.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Entry ×2   </text>
+<text class="tx" x="530.80" y="296.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> €90.00 </text>
+<text class="tx" x="429.40" y="313.50" textLength="163.80" lengthAdjust="spacingAndGlyphs"> [ Mark received ]   </text>
+<text class="tx" x="23.80" y="364.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  2 selected    [ Mark selected as received ]                              </text>
+<text class="tx" x="55.00" y="398.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Received </text>
+<text class="tx" x="78.40" y="432.50" textLength="78.00" lengthAdjust="spacingAndGlyphs">03 Dec 25 </text>
+<text class="tx" x="164.20" y="432.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2025-04102 </text>
+<text class="tx" x="296.80" y="432.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Michael Adams  </text>
+<text class="tx" x="429.40" y="432.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Membership </text>
+<text class="tx" x="530.80" y="432.50" textLength="62.40" lengthAdjust="spacingAndGlyphs">€180.00 </text>
+<text class="tx" x="172.00" y="449.50">✅</text>
+<text class="tx" x="187.60" y="449.50" textLength="405.60" lengthAdjust="spacingAndGlyphs"> Received 04 Dec 2025, 11:20 by Jane Murphy         </text>
+<text class="tx" x="164.20" y="466.50" textLength="429.00" lengthAdjust="spacingAndGlyphs">                                    [ Undo ]           </text>
+</svg>

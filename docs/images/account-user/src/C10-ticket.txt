@@ -1,0 +1,42 @@
+Mobile (the primary case — this is a screen shown at a gate)
+┌────────────────────────────┐
+│  ‹  Ticket                 │
+├────────────────────────────┤
+│ ┌────────────────────────┐ │
+│ │      [CLUB LOGO]       │ │ ← config: includeLogo,
+│ │                        │ │   backgroundColor
+│ │  KILDARE HUNT PONY CLUB│ │ ← config: headerText
+│ │  Spring Hunter Trials  │ │
+│ │                        │ │
+│ │  ┌──────────────────┐  │ │
+│ │  │ ▓▓▒▒▓▓▒▒▓▓▒▒▓▓▒▒ │  │ │
+│ │  │ ▒▒▓▓▒▒▓▓▒▒▓▓▒▒▓▓ │  │ │ ← QR, scanned into
+│ │  │ ▓▓▒▒▓▓▒▒▓▓▒▒▓▓▒▒ │  │ │   ticket_scan_history
+│ │  │ ▒▒▓▓▒▒▓▓▒▒▓▓▒▒▓▓ │  │ │
+│ │  └──────────────────┘  │ │
+│ │     TKT-2026-01184     │ │
+│ │                        │ │
+│ │  ──────────────────────│ │
+│ │  Entrant   Sarah Adams │ │
+│ │  Class     2 — 90cm    │ │
+│ │  Date      Sat 14 Mar  │ │
+│ │            2026        │ │
+│ │  Gates     09:00       │ │
+│ │  Venue     Punchestown │ │
+│ │                        │ │
+│ │  ✅ Valid              │ │
+│ │  ──────────────────────│ │
+│ │  Please have this ready│ │ ← config: instructions
+│ │  at the gate. One entry│ │
+│ │  per ticket.           │ │
+│ │                        │ │
+│ │  Kildare Hunt Pony Club│ │ ← config: footerText
+│ │  045 123 456           │ │
+│ └────────────────────────┘ │
+│                            │
+│ 🔆 Screen brightness raised │
+│ 📥 Saved on this device    │
+│                            │
+│ [ ⬇ PDF ]  [ 🍎 Wallet ]   │
+│ [ Add to calendar ]        │
+└────────────────────────────┘

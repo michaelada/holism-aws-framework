@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="644" viewBox="0 0 640.40 644.00" role="img" aria-label="D6-membership-application-renewal">
+<title>D6-membership-application-renewal</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="644.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M43.3 126.5L51.1 126.5 M168.1 126.5L503.5 126.5 M43.3 211.5L597.1 211.5 M43.3 245.5L51.1 245.5 M269.5 245.5L503.5 245.5 M43.3 330.5L597.1 330.5 M43.3 364.5L51.1 364.5 M261.7 364.5L597.1 364.5 M43.3 466.5L597.1 466.5 M43.3 500.5L51.1 500.5 M97.9 500.5L597.1 500.5 M43.3 568.5L597.1 568.5 M19.9 619.5L620.5 619.5 M19.9 24.5L19.9 619.5 M43.3 126.5L43.3 211.5 M43.3 245.5L43.3 330.5 M43.3 364.5L43.3 466.5 M43.3 500.5L43.3 568.5 M597.1 126.5L597.1 211.5 M597.1 245.5L597.1 330.5 M597.1 364.5L597.1 466.5 M597.1 500.5L597.1 568.5 M620.5 24.5L620.5 619.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ‹ Back              Renew Family Membership 2026                          </text>
+<text class="tx" x="39.40" y="75.50">✅</text>
+<text class="tx" x="55.00" y="75.50" textLength="561.60" lengthAdjust="spacingAndGlyphs"> We've filled this in from your 2025 membership.                        </text>
+<text class="tx" x="23.80" y="92.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">     Check everything is still correct, then add it to your cart.           </text>
+<text class="tx" x="55.00" y="126.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Your details </text>
+<text class="tx" x="507.40" y="126.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> [ Edit ]  </text>
+<text class="tx" x="47.20" y="143.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Name              Michael Adams                                     </text>
+<text class="tx" x="47.20" y="160.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Email             michael.adams@example.com                         </text>
+<text class="tx" x="47.20" y="177.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Mobile            086 123 4567                                      </text>
+<text class="tx" x="47.20" y="194.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Address           12 The Green, Naas, Co. Kildare                   </text>
+<text class="tx" x="55.00" y="245.50" textLength="210.60" lengthAdjust="spacingAndGlyphs"> People on this membership </text>
+<text class="tx" x="507.40" y="245.50" textLength="85.80" lengthAdjust="spacingAndGlyphs">  [ Edit ] </text>
+<text class="tx" x="47.20" y="262.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Michael Adams   Primary                                             </text>
+<text class="tx" x="47.20" y="279.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Sarah Adams     Junior · b. 12 Apr 2011  · now 14                   </text>
+<text class="tx" x="47.20" y="296.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Tom Adams       Junior · b. 03 Sep 2014  · now 11                   </text>
+<text class="tx" x="47.20" y="313.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                              [ + Add a person ]      </text>
+<text class="tx" x="55.00" y="364.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Needs your attention (2) </text>
+<text class="tx" x="47.20" y="381.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ⚠ Emergency contact — please confirm this is still correct          </text>
+<text class="tx" x="47.20" y="398.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">     [ 086 765 4321________________________ ]                         </text>
+<text class="tx" x="47.20" y="432.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ⚠ Photo consent — this is a new question for 2026 *                 </text>
+<text class="tx" x="47.20" y="449.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">     ( ) Yes, I consent    ( ) No                                     </text>
+<text class="tx" x="55.00" y="500.50" textLength="39.00" lengthAdjust="spacingAndGlyphs"> Fee </text>
+<text class="tx" x="47.20" y="517.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Family Membership 2026                                  €190.00     </text>
+<text class="tx" x="47.20" y="534.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Early renewal discount                                   −€10.00    </text>
+<text class="tx" x="47.20" y="551.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Total                                                    €180.00    </text>
+<text class="tx" x="23.80" y="602.50" textLength="31.20" lengthAdjust="spacingAndGlyphs">  [ </text>
+<text class="tx" x="55.00" y="602.50">🏦</text>
+<text class="tx" x="70.60" y="602.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Add to cart — Pay Offline ]   [ </text>
+<text class="tx" x="328.00" y="602.50">💳</text>
+<text class="tx" x="343.60" y="602.50" textLength="273.00" lengthAdjust="spacingAndGlyphs"> Add to cart — Pay By Card ]       </text>
+</svg>

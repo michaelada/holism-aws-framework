@@ -370,7 +370,8 @@ This guide provides solutions to common issues you may encounter while using Its
 - Card declined
 
 **Possible Causes**:
-- Stripe not configured
+- The organisation has not completed Stripe Connect onboarding
+- The platform's Stripe keys are missing from the environment
 - Invalid card details
 - Insufficient funds
 - Payment method not enabled
@@ -378,13 +379,20 @@ This guide provides solutions to common issues you may encounter while using Its
 
 **Solutions**:
 
-1. **Verify Stripe Configuration** (Admin Only)
+1. **Verify Stripe Connect onboarding** (Org Admin)
    ```
    - Settings → Payment Settings
-   - Check Stripe API keys
-   - Verify test/live mode
-   - Test with Stripe test cards
+   - Check the Stripe Connect panel reports charges as enabled
+   - "Details submitted" is not enough — a club can stop at Stripe's last
+     screen and still be unable to take money
+   - Work through any outstanding requirements Stripe lists there
    ```
+
+   There are no per-organisation Stripe API keys to check. The platform holds
+   the only keys, in the environment (`STRIPE_SECRET_KEY`,
+   `STRIPE_WEBHOOK_SECRET`, `VITE_STRIPE_PUBLISHABLE_KEY`); the organisation
+   holds only its connected account id. Test versus live mode is therefore a
+   platform-wide property of those keys.
 
 2. **Check Card Details**
    ```

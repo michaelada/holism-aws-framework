@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="648" height="491" viewBox="0 0 648.20 491.00" role="img" aria-label="E6-E7-confirmation">
+<title>E6-E7-confirmation</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="648.20" height="491.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 41.5L285.1 41.5 M370.9 41.5L628.3 41.5 M394.3 228.5L604.9 228.5 M394.3 364.5L604.9 364.5 M19.9 381.5L285.1 381.5 M370.9 466.5L628.3 466.5 M19.9 41.5L19.9 381.5 M285.1 41.5L285.1 381.5 M370.9 41.5L370.9 466.5 M394.3 228.5L394.3 364.5 M604.9 228.5L604.9 364.5 M628.3 41.5L628.3 466.5"/>
+<text class="tx" x="16.00" y="24.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">Card                                        Offline</text>
+<text class="tx" x="133.00" y="58.50">✅</text>
+<text class="tx" x="484.00" y="58.50">✅</text>
+<text class="tx" x="23.80" y="75.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">        Payment complete         </text>
+<text class="tx" x="374.80" y="75.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">         Order confirmed        </text>
+<text class="tx" x="23.80" y="109.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">  €108.45 paid to Kildare Hunt   </text>
+<text class="tx" x="374.80" y="109.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">  €180.00 to pay the club       </text>
+<text class="tx" x="23.80" y="126.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">  Pony Club                      </text>
+<text class="tx" x="374.80" y="126.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">  directly                      </text>
+<text class="tx" x="23.80" y="143.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">  Ref PAY-2026-00913             </text>
+<text class="tx" x="374.80" y="143.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">  Ref PAY-2026-00914            </text>
+<text class="tx" x="39.40" y="177.50">✅</text>
+<text class="tx" x="55.00" y="177.50" textLength="226.20" lengthAdjust="spacingAndGlyphs"> Class 2 entry — Sarah Adams </text>
+<text class="tx" x="390.40" y="177.50">⏳</text>
+<text class="tx" x="406.00" y="177.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> Family Membership 2026     </text>
+<text class="tx" x="39.40" y="194.50">✅</text>
+<text class="tx" x="55.00" y="194.50" textLength="226.20" lengthAdjust="spacingAndGlyphs"> Court 1, Sat 14 Mar         </text>
+<text class="tx" x="374.80" y="194.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">     — awaiting payment         </text>
+<text class="tx" x="39.40" y="211.50">✅</text>
+<text class="tx" x="55.00" y="211.50" textLength="226.20" lengthAdjust="spacingAndGlyphs"> Club Polo Shirt × 2         </text>
+<text class="tx" x="39.40" y="245.50">⏳</text>
+<text class="tx" x="55.00" y="245.50" textLength="226.20" lengthAdjust="spacingAndGlyphs"> Family Membership 2026      </text>
+<text class="tx" x="398.20" y="245.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> How to pay               </text>
+<text class="tx" x="23.80" y="262.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">     €180.00 — pay the club      </text>
+<text class="tx" x="398.20" y="262.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Cheque payable to        </text>
+<text class="tx" x="23.80" y="279.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">     directly     [ How? ]       </text>
+<text class="tx" x="398.20" y="279.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> "Kildare Hunt Pony Club" </text>
+<text class="tx" x="398.20" y="296.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> posted to the Secretary, </text>
+<text class="tx" x="23.80" y="313.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">  A confirmation email is on     </text>
+<text class="tx" x="398.20" y="313.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> or bank transfer to      </text>
+<text class="tx" x="23.80" y="330.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">  its way to michael.adams@…     </text>
+<text class="tx" x="398.20" y="330.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> IE00 XXXX XXXX XXXX      </text>
+<text class="tx" x="398.20" y="347.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> quoting PAY-2026-00914   </text>
+<text class="tx" x="23.80" y="364.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">  [ View payment ]  [ Done ]     </text>
+<text class="tx" x="374.80" y="398.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">  Your membership starts once   </text>
+<text class="tx" x="374.80" y="415.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">  the club records payment.     </text>
+<text class="tx" x="374.80" y="449.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">  [ View order ]   [ Done ]     </text>
+</svg>

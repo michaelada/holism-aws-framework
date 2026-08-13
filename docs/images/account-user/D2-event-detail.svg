@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="678" viewBox="0 0 632.60 678.00" role="img" aria-label="D2-event-detail">
+<title>D2-event-detail</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="678.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M43.3 58.5L597.1 58.5 M43.3 92.5L597.1 92.5 M43.3 177.5L51.1 177.5 M199.3 177.5L597.1 177.5 M43.3 228.5L597.1 228.5 M43.3 279.5L597.1 279.5 M43.3 364.5L597.1 364.5 M43.3 449.5L597.1 449.5 M43.3 534.5L597.1 534.5 M43.3 602.5L597.1 602.5 M19.9 653.5L612.7 653.5 M19.9 24.5L19.9 653.5 M43.3 58.5L43.3 92.5 M43.3 177.5L43.3 228.5 M43.3 279.5L43.3 602.5 M597.1 58.5L597.1 92.5 M597.1 177.5L597.1 228.5 M597.1 279.5L597.1 602.5 M612.7 24.5L612.7 653.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  ‹ Events                                                                 </text>
+<text class="tx" x="47.20" y="75.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                        [  hero image  ]                              </text>
+<text class="tx" x="23.80" y="109.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Spring Hunter Trials                                                     </text>
+<text class="tx" x="39.40" y="126.50">📅</text>
+<text class="tx" x="55.00" y="126.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Sat 14 Mar 2026, 10:00 – 17:00   </text>
+<text class="tx" x="320.20" y="126.50">📍</text>
+<text class="tx" x="335.80" y="126.50" textLength="273.00" lengthAdjust="spacingAndGlyphs"> Punchestown, Co. Kildare          </text>
+<text class="tx" x="39.40" y="143.50">🟢</text>
+<text class="tx" x="55.00" y="143.50" textLength="553.80" lengthAdjust="spacingAndGlyphs"> Entries close Sat 07 Mar 2026, 23:59  ·  38 of 60 places taken        </text>
+<text class="tx" x="55.00" y="177.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> About this event </text>
+<text class="tx" x="47.20" y="194.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Our annual hunter trials across four classes. Course walk from      </text>
+<text class="tx" x="47.20" y="211.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  09:00. Refreshments available all day…                       [more] </text>
+<text class="tx" x="23.80" y="262.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Classes                                                                  </text>
+<text class="tx" x="47.20" y="296.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Class 1 — 70cm                                              €30.00   </text>
+<text class="tx" x="47.20" y="313.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> For riders aged 8–12. Maximum 20 entries.                            </text>
+<text class="tx" x="55.00" y="330.50">🟢</text>
+<text class="tx" x="70.60" y="330.50" textLength="522.60" lengthAdjust="spacingAndGlyphs"> 12 of 20 places left                                              </text>
+<text class="tx" x="55.00" y="347.50">💳</text>
+<text class="tx" x="70.60" y="347.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Card  ·  </text>
+<text class="tx" x="148.60" y="347.50">🏦</text>
+<text class="tx" x="164.20" y="347.50" textLength="429.00" lengthAdjust="spacingAndGlyphs"> Offline                              [ Enter ▸ ]      </text>
+<text class="tx" x="47.20" y="381.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Class 2 — 90cm                                              €45.00   </text>
+<text class="tx" x="47.20" y="398.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Open class.                                                          </text>
+<text class="tx" x="55.00" y="415.50">✅</text>
+<text class="tx" x="70.60" y="415.50" textLength="522.60" lengthAdjust="spacingAndGlyphs"> Sarah Adams is entered   ⓘ You can enter another person           </text>
+<text class="tx" x="55.00" y="432.50">💳</text>
+<text class="tx" x="70.60" y="432.50" textLength="522.60" lengthAdjust="spacingAndGlyphs"> Card only                                        [ Enter ▸ ]      </text>
+<text class="tx" x="47.20" y="466.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Class 3 — 1.00m                                             €45.00   </text>
+<text class="tx" x="55.00" y="483.50">🔴</text>
+<text class="tx" x="70.60" y="483.50" textLength="522.60" lengthAdjust="spacingAndGlyphs"> Full — 20 of 20 places taken                                      </text>
+<text class="tx" x="47.20" y="500.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                                    [ Enter ]  ✖      </text>
+<text class="tx" x="47.20" y="517.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                       (disabled)                     </text>
+<text class="tx" x="47.20" y="551.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Class 4 — 1.10m                                             €50.00   </text>
+<text class="tx" x="55.00" y="568.50">⚪</text>
+<text class="tx" x="70.60" y="568.50" textLength="522.60" lengthAdjust="spacingAndGlyphs"> Entries for this class open 01 Mar 2026                           </text>
+<text class="tx" x="47.20" y="585.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                                    [ Enter ]  ✖      </text>
+<text class="tx" x="23.80" y="636.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  ⓘ Class 3 is full. Places may become available if an entry is withdrawn. </text>
+</svg>

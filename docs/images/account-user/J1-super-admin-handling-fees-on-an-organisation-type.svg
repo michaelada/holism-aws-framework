@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="763" viewBox="0 0 640.40 763.00" role="img" aria-label="J1-super-admin-handling-fees-on-an-organisation-type">
+<title>J1-super-admin-handling-fees-on-an-organisation-type</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="763.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M43.3 75.5L51.1 75.5 M129.1 75.5L597.1 75.5 M43.3 126.5L597.1 126.5 M43.3 160.5L51.1 160.5 M168.1 160.5L597.1 160.5 M43.3 194.5L597.1 194.5 M43.3 228.5L51.1 228.5 M214.9 228.5L597.1 228.5 M66.7 296.5L581.5 296.5 M66.7 466.5L581.5 466.5 M66.7 483.5L581.5 483.5 M66.7 636.5L581.5 636.5 M43.3 687.5L597.1 687.5 M19.9 738.5L620.5 738.5 M19.9 24.5L19.9 738.5 M43.3 75.5L43.3 126.5 M43.3 160.5L43.3 194.5 M43.3 228.5L43.3 687.5 M66.7 296.5L66.7 466.5 M66.7 483.5L66.7 636.5 M581.5 296.5L581.5 432.5 M581.5 483.5L581.5 602.5 M597.1 75.5L597.1 126.5 M597.1 160.5L597.1 194.5 M597.1 228.5L597.1 687.5 M620.5 24.5L620.5 738.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Organisation Types  ›  Create                                             </text>
+<text class="tx" x="55.00" y="75.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Details </text>
+<text class="tx" x="47.20" y="92.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Name *  [ pony-club ]     Display name *  [ Pony Club ]             </text>
+<text class="tx" x="47.20" y="109.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Currency * [ EUR ▾ ]      Default locale * [ en-GB ▾ ]              </text>
+<text class="tx" x="55.00" y="160.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Capabilities </text>
+<text class="tx" x="47.20" y="177.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ☑ event-management   ☑ memberships   ☑ event-ticketing   …          </text>
+<text class="tx" x="55.00" y="228.50" textLength="156.00" lengthAdjust="spacingAndGlyphs"> Card handling fees </text>
+<text class="tx" x="47.20" y="245.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Every organisation of this type charges these handling fees on      </text>
+<text class="tx" x="47.20" y="262.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  card payments. Defaults are pre-filled — change them if needed.     </text>
+<text class="tx" x="70.60" y="313.50" textLength="507.00" lengthAdjust="spacingAndGlyphs"> Pay By Card (Stripe)                                            </text>
+<text class="tx" x="70.60" y="347.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">  Fixed fee        Percentage fee      Tax on fee                </text>
+<text class="tx" x="70.60" y="364.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">  € [ 0.25    ]    [ 1.500 ] %         [ 23.000 ] %              </text>
+<text class="tx" x="70.60" y="381.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">                                       0 = no tax                </text>
+<text class="tx" x="70.60" y="415.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">  Example: a €62.00 card charge attracts                         </text>
+<text class="tx" x="70.60" y="432.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">           €0.25 + €0.93 = €1.18, +23% tax €0.27 = €1.45         </text>
+<text class="tx" x="70.60" y="449.50" textLength="522.60" lengthAdjust="spacingAndGlyphs">                                              [ Reset to default ] </text>
+<text class="tx" x="70.60" y="500.50" textLength="507.00" lengthAdjust="spacingAndGlyphs"> Pay By Card (Helix-Pay)                                         </text>
+<text class="tx" x="70.60" y="534.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">  Fixed fee        Percentage fee      Tax on fee                </text>
+<text class="tx" x="70.60" y="551.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">  € [ 0.20    ]    [ 1.750 ] %         [ 23.000 ] %              </text>
+<text class="tx" x="70.60" y="585.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">  Example: a €62.00 card charge attracts                         </text>
+<text class="tx" x="70.60" y="602.50" textLength="507.00" lengthAdjust="spacingAndGlyphs">           €0.20 + €1.09 = €1.29, +23% tax €0.30 = €1.59         </text>
+<text class="tx" x="70.60" y="619.50" textLength="522.60" lengthAdjust="spacingAndGlyphs">                                              [ Reset to default ] </text>
+<text class="tx" x="47.20" y="670.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ⓘ Pay Offline never carries a handling fee.                         </text>
+<text class="tx" x="23.80" y="721.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">                                          [ Cancel ]  [ Create type ]       </text>
+</svg>

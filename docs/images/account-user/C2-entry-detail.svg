@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="559" viewBox="0 0 640.40 559.00" role="img" aria-label="C2-entry-detail">
+<title>C2-entry-detail</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="559.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M43.3 109.5L51.1 109.5 M113.5 109.5L308.5 109.5 M324.1 109.5L331.9 109.5 M394.3 109.5L597.1 109.5 M43.3 194.5L308.5 194.5 M324.1 228.5L597.1 228.5 M43.3 262.5L51.1 262.5 M168.1 262.5L597.1 262.5 M43.3 381.5L597.1 381.5 M43.3 415.5L51.1 415.5 M160.3 415.5L597.1 415.5 M43.3 483.5L597.1 483.5 M19.9 534.5L620.5 534.5 M19.9 24.5L19.9 534.5 M43.3 109.5L43.3 194.5 M43.3 262.5L43.3 381.5 M43.3 415.5L43.3 483.5 M308.5 109.5L308.5 194.5 M324.1 109.5L324.1 228.5 M597.1 109.5L597.1 228.5 M597.1 262.5L597.1 381.5 M597.1 415.5L597.1 483.5 M620.5 24.5L620.5 534.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ‹ My Entries          Spring Hunter Trials — Class 2 (90cm)               </text>
+<text class="tx" x="39.40" y="75.50">✅</text>
+<text class="tx" x="55.00" y="75.50" textLength="561.60" lengthAdjust="spacingAndGlyphs"> Confirmed                                                              </text>
+<text class="tx" x="55.00" y="109.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> Event </text>
+<text class="tx" x="335.80" y="109.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> Entry </text>
+<text class="tx" x="47.20" y="126.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Spring Hunter Trials            </text>
+<text class="tx" x="328.00" y="126.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Entrant   Sarah Adams            </text>
+<text class="tx" x="47.20" y="143.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Sat 14 Mar 2026, 10:00          </text>
+<text class="tx" x="328.00" y="143.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Entered   02 Feb 2026, 19:14     </text>
+<text class="tx" x="47.20" y="160.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Punchestown, Co. Kildare        </text>
+<text class="tx" x="328.00" y="160.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Ref       ENT-2026-00417         </text>
+<text class="tx" x="47.20" y="177.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> [ View event ▸ ]                </text>
+<text class="tx" x="328.00" y="177.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Fee       €45.00                 </text>
+<text class="tx" x="328.00" y="194.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Payment   Card ✓ 02 Feb 2026     </text>
+<text class="tx" x="328.00" y="211.50" textLength="265.20" lengthAdjust="spacingAndGlyphs">           [ View payment ▸ ]     </text>
+<text class="tx" x="55.00" y="262.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Your answers </text>
+<text class="tx" x="47.20" y="279.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Horse name              Ballyroan Star                              </text>
+<text class="tx" x="47.20" y="296.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Horse age               8                                           </text>
+<text class="tx" x="47.20" y="313.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Rider date of birth     12/04/2011                                  </text>
+<text class="tx" x="47.20" y="330.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Previous class won      Class 1 — 70cm                              </text>
+<text class="tx" x="47.20" y="347.50" textLength="202.80" lengthAdjust="spacingAndGlyphs">  Vaccination cert        </text>
+<text class="tx" x="250.00" y="347.50">📎</text>
+<text class="tx" x="265.60" y="347.50" textLength="327.60" lengthAdjust="spacingAndGlyphs"> vaccination-cert.pdf   [ Download ]      </text>
+<text class="tx" x="47.20" y="364.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Emergency contact       086 123 4567                                </text>
+<text class="tx" x="55.00" y="415.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> Your ticket </text>
+<text class="tx" x="47.20" y="432.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">   🎟  Ticket issued 02 Feb 2026 · valid Sat 14 Mar 2026               </text>
+<text class="tx" x="47.20" y="449.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">       Show this at the gate. It works without a signal.              </text>
+<text class="tx" x="47.20" y="466.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                        [ View ticket ▸ ]   → C10     </text>
+<text class="tx" x="23.80" y="517.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  [ ⬇ Download confirmation ]                                               </text>
+</svg>

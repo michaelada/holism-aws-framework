@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="321" viewBox="0 0 632.60 321.00" role="img" aria-label="C8-my-orders-merchandise">
+<title>C8-my-orders-merchandise</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="321.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 109.5L597.1 109.5 M105.7 194.5L526.9 194.5 M129.1 211.5L175.9 211.5 M191.5 211.5L238.3 211.5 M253.9 211.5L300.7 211.5 M105.7 245.5L526.9 245.5 M43.3 279.5L597.1 279.5 M19.9 296.5L612.7 296.5 M19.9 24.5L19.9 296.5 M43.3 109.5L43.3 279.5 M105.7 194.5L105.7 245.5 M526.9 194.5L526.9 245.5 M597.1 109.5L597.1 279.5 M612.7 24.5L612.7 296.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  My Orders                                                                </text>
+<text class="tx" x="23.80" y="75.50" textLength="23.40" lengthAdjust="spacingAndGlyphs">  [</text>
+<text class="tx" x="47.20" y="75.50">🔍</text>
+<text class="tx" x="62.80" y="75.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Search…]   [ Status: All ▾ ]                                         </text>
+<text class="tx" x="47.20" y="126.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> [img] Club Polo Shirt                            ORD-2026-00311      </text>
+<text class="tx" x="47.20" y="143.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">       Navy · Medium · ×2                         Ordered 02 Feb 2026 </text>
+<text class="tx" x="47.20" y="160.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">       €50.00 · Card ✓                                                </text>
+<text class="tx" x="47.20" y="177.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">       Delivery: Collect from clubhouse                               </text>
+<text class="tx" x="109.60" y="211.50" textLength="15.60" lengthAdjust="spacingAndGlyphs"> ●</text>
+<text class="tx" x="179.80" y="211.50" textLength="7.80" lengthAdjust="spacingAndGlyphs">●</text>
+<text class="tx" x="242.20" y="211.50" textLength="7.80" lengthAdjust="spacingAndGlyphs">○</text>
+<text class="tx" x="304.60" y="211.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">○                           </text>
+<text class="tx" x="109.60" y="228.50" textLength="413.40" lengthAdjust="spacingAndGlyphs"> Placed  Paid   Ready   Collected                    </text>
+<text class="tx" x="47.20" y="262.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                                    [ View ▸ ]        </text>
+</svg>

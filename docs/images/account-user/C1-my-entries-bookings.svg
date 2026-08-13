@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="559" viewBox="0 0 632.60 559.00" role="img" aria-label="C1-my-entries-bookings">
+<title>C1-my-entries-bookings</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="559.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 160.5L597.1 160.5 M43.3 194.5L597.1 194.5 M43.3 245.5L597.1 245.5 M43.3 296.5L597.1 296.5 M43.3 347.5L597.1 347.5 M19.9 381.5L612.7 381.5 M19.9 432.5L246.1 432.5 M19.9 534.5L246.1 534.5 M19.9 24.5L19.9 381.5 M19.9 432.5L19.9 534.5 M43.3 160.5L43.3 347.5 M230.5 177.5L230.5 347.5 M246.1 432.5L246.1 534.5 M339.7 177.5L339.7 347.5 M433.3 177.5L433.3 347.5 M495.7 177.5L495.7 347.5 M597.1 160.5L597.1 194.5 M597.1 228.5L597.1 296.5 M597.1 330.5L597.1 347.5 M612.7 24.5L612.7 109.5 M612.7 143.5L612.7 381.5"/>
+<path class="ln dbl" fill="none" d="M43.3 92.5L144.7 92.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  My Entries &amp; Bookings                                                    </text>
+<text class="tx" x="23.80" y="75.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  [ Entries (7) ] [ Bookings (3) ]        ← tabs; a tab hides if its       </text>
+<text class="tx" x="148.60" y="92.50" textLength="460.20" lengthAdjust="spacingAndGlyphs">                             capability is off             </text>
+<text class="tx" x="23.80" y="126.50" textLength="23.40" lengthAdjust="spacingAndGlyphs">  [</text>
+<text class="tx" x="47.20" y="126.50">🔍</text>
+<text class="tx" x="62.80" y="126.50" textLength="288.60" lengthAdjust="spacingAndGlyphs"> Search…]  [ Status: All ▾ ]  [ From </text>
+<text class="tx" x="351.40" y="126.50">📅</text>
+<text class="tx" x="367.00" y="126.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> ] [ To </text>
+<text class="tx" x="429.40" y="126.50">📅</text>
+<text class="tx" x="445.00" y="126.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> ]      [⬇ Export] </text>
+<text class="tx" x="47.20" y="177.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Event / Activity      </text>
+<text class="tx" x="234.40" y="177.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> Entrant     </text>
+<text class="tx" x="343.60" y="177.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> Date      </text>
+<text class="tx" x="437.20" y="177.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> Fee   </text>
+<text class="tx" x="499.60" y="177.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Status     </text>
+<text class="tx" x="47.20" y="211.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Spring Hunter Trials  </text>
+<text class="tx" x="234.40" y="211.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> Sarah Adams </text>
+<text class="tx" x="343.60" y="211.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 14 Mar 26 </text>
+<text class="tx" x="437.20" y="211.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> €45.00</text>
+<text class="tx" x="507.40" y="211.50">✅</text>
+<text class="tx" x="523.00" y="211.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Confirmed</text>
+<text class="tx" x="47.20" y="228.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Class 2 — 90cm        </text>
+<text class="tx" x="47.20" y="262.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Spring Hunter Trials  </text>
+<text class="tx" x="234.40" y="262.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> Tom Adams   </text>
+<text class="tx" x="343.60" y="262.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 14 Mar 26 </text>
+<text class="tx" x="437.20" y="262.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> €45.00</text>
+<text class="tx" x="507.40" y="262.50">⏳</text>
+<text class="tx" x="523.00" y="262.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Awaiting</text>
+<text class="tx" x="47.20" y="279.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Class 1 — 70cm        </text>
+<text class="tx" x="499.60" y="279.50" textLength="93.60" lengthAdjust="spacingAndGlyphs">   payment  </text>
+<text class="tx" x="47.20" y="313.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Winter League Rd 3    </text>
+<text class="tx" x="234.40" y="313.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> Sarah Adams </text>
+<text class="tx" x="343.60" y="313.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 08 Dec 25 </text>
+<text class="tx" x="437.20" y="313.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> €30.00</text>
+<text class="tx" x="507.40" y="313.50">⚫</text>
+<text class="tx" x="523.00" y="313.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Completed</text>
+<text class="tx" x="47.20" y="330.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> Class 2 — 90cm        </text>
+<text class="tx" x="23.80" y="364.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">                                                       Rows 10 ▾  ‹ 1 2 ›  </text>
+<text class="tx" x="16.00" y="415.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">Mobile — each row becomes a card</text>
+<text class="tx" x="23.80" y="449.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> Spring Hunter Trials       </text>
+<text class="tx" x="23.80" y="466.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> Class 2 — 90cm             </text>
+<text class="tx" x="23.80" y="483.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> Sarah Adams                </text>
+<text class="tx" x="23.80" y="500.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> 14 Mar 2026 · €45.00       </text>
+<text class="tx" x="31.60" y="517.50">✅</text>
+<text class="tx" x="47.20" y="517.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> Confirmed          [ ▸ ]</text>
+</svg>

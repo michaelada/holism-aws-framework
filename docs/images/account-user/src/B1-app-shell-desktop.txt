@@ -1,0 +1,27 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│ [logo] Kildare Hunt Pony Club ▾        🔍       🔔 3   🛒 4   [MA ▾]      │
+│         └ org switcher (A7)                              └ profile menu   │
+├──────────────────┬────────────────────────────────────────────────────────┤
+│                  │                                                         │
+│  🏠 Home         │                                                         │
+│                  │                                                         │
+│  MY ACTIVITY     │                     page content                        │
+│  🎫 Entries &    │                                                         │
+│     Bookings     │                     max-width 1280                      │
+│  👤 Memberships  │                                                         │
+│  📋 Registrations│                                                         │
+│  📦 Orders       │                                                         │
+│  🎟  Tickets     │                                                         │
+│                  │                                                         │
+│  BROWSE          │                                                         │
+│  📅 Events       │                                                         │
+│  👥 Memberships  │                                                         │
+│  📝 Registrations│                                                         │
+│  🛍  Merchandise │                                                         │
+│  🗓  Calendar    │                                                         │
+│                  │                                                         │
+│  ─────────────   │                                                         │
+│  💳 Payments     │                                                         │
+│  ⚙️  Settings    │                                                         │
+│                  │                                                         │
+└──────────────────┴────────────────────────────────────────────────────────┘

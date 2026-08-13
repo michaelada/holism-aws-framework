@@ -1,0 +1,25 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  Settings  ›  Registration                                                 │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ┌─ Account registration ──────────────────────────────────────────────┐  │
+│  │                                                                      │  │
+│  │   Auto-registration                              [ ON  ●───  ]      │  │
+│  │                                                                      │  │
+│  │   ON   People who register can sign in straight away, once           │  │
+│  │        they've confirmed their email address.                        │  │
+│  │                                                                      │  │
+│  │   OFF  People who register must be approved by an administrator      │  │
+│  │        before they can use the member portal. They'll see an         │  │
+│  │        "awaiting approval" message when they sign in.                │  │
+│  │                                                                      │  │
+│  │   ⚠ You have 4 registrations waiting for approval.                   │  │
+│  │     [ Review them ▸ ]                                    → I3        │  │
+│  │                                                                      │  │
+│  │   Notify these addresses of new registrations                        │  │
+│  │   [ secretary@khpc.ie, membership@khpc.ie________________ ]          │  │
+│  │                                                                      │  │
+│  │   Your member portal address                                         │  │
+│  │   itsplainsailing.com/account/khpc            [ 📋 Copy ]            │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                        [ Save changes ]    │
+└───────────────────────────────────────────────────────────────────────────┘

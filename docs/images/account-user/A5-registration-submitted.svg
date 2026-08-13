@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="414" height="270" viewBox="0 0 414.20 270.00" role="img" aria-label="A5-registration-submitted">
+<title>A5-registration-submitted</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="414.20" height="270.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L394.3 24.5 M19.9 245.5L394.3 245.5 M19.9 24.5L19.9 245.5 M394.3 24.5L394.3 245.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">                    ✓                          </text>
+<text class="tx" x="23.80" y="58.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">         Check your email                      </text>
+<text class="tx" x="23.80" y="92.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">   We've sent a confirmation link to           </text>
+<text class="tx" x="23.80" y="109.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">   michael.adams@example.com                   </text>
+<text class="tx" x="23.80" y="143.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">   Click the link to activate your account     </text>
+<text class="tx" x="23.80" y="160.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">   and sign in to Kildare Hunt Pony Club.      </text>
+<text class="tx" x="23.80" y="194.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">   Didn't get it?  [ Resend ]  (60s)           </text>
+<text class="tx" x="23.80" y="228.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">           [ Back to sign in ]                 </text>
+</svg>

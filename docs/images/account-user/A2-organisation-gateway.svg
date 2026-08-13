@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="601" height="559" viewBox="0 0 601.40 559.00" role="img" aria-label="A2-organisation-gateway">
+<title>A2-organisation-gateway</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="601.40" height="559.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L581.5 24.5 M19.9 58.5L581.5 58.5 M207.1 92.5L316.3 92.5 M207.1 126.5L316.3 126.5 M90.1 211.5L472.3 211.5 M90.1 313.5L472.3 313.5 M51.1 347.5L58.9 347.5 M152.5 347.5L526.9 347.5 M51.1 398.5L207.1 398.5 M222.7 398.5L378.7 398.5 M394.3 398.5L542.5 398.5 M51.1 483.5L207.1 483.5 M222.7 483.5L378.7 483.5 M394.3 483.5L542.5 483.5 M19.9 534.5L581.5 534.5 M19.9 24.5L19.9 534.5 M51.1 398.5L51.1 483.5 M90.1 211.5L90.1 313.5 M207.1 92.5L207.1 126.5 M207.1 398.5L207.1 483.5 M222.7 398.5L222.7 483.5 M316.3 92.5L316.3 126.5 M378.7 398.5L378.7 483.5 M394.3 398.5L394.3 483.5 M472.3 211.5L472.3 313.5 M542.5 398.5L542.5 483.5 M581.5 24.5L581.5 534.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">  ‹ All organisations                                                  </text>
+<text class="tx" x="211.00" y="109.50" textLength="101.40" lengthAdjust="spacingAndGlyphs">   [LOGO]    </text>
+<text class="tx" x="320.20" y="109.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">      ← settings.branding.logoUrl</text>
+<text class="tx" x="23.80" y="160.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">                  Kildare Hunt Pony Club                               </text>
+<text class="tx" x="23.80" y="177.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">              Member and entry portal · itsplainsailing.com/khpc       </text>
+<text class="tx" x="94.00" y="228.50" textLength="374.40" lengthAdjust="spacingAndGlyphs">            [  Sign in  ]                       </text>
+<text class="tx" x="476.20" y="228.50" textLength="101.40" lengthAdjust="spacingAndGlyphs">  ← primary  </text>
+<text class="tx" x="476.20" y="245.50" textLength="101.40" lengthAdjust="spacingAndGlyphs">     colour  </text>
+<text class="tx" x="94.00" y="262.50" textLength="374.40" lengthAdjust="spacingAndGlyphs">      New here?  [ Create an account ]          </text>
+<text class="tx" x="94.00" y="296.50" textLength="374.40" lengthAdjust="spacingAndGlyphs">      [ Forgotten your password? ]              </text>
+<text class="tx" x="62.80" y="347.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> What's on </text>
+<text class="tx" x="23.80" y="364.50" textLength="553.80" lengthAdjust="spacingAndGlyphs">   (public preview — only shown if the org publishes publicly)         </text>
+<text class="tx" x="55.00" y="415.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> Spring Hunter     </text>
+<text class="tx" x="226.60" y="415.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> Summer Camp       </text>
+<text class="tx" x="398.20" y="415.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> Family           </text>
+<text class="tx" x="55.00" y="432.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> Trials            </text>
+<text class="tx" x="226.60" y="432.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> 12–16 Aug         </text>
+<text class="tx" x="398.20" y="432.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> Membership 2026  </text>
+<text class="tx" x="55.00" y="449.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> 14 Mar · Entries  </text>
+<text class="tx" x="226.60" y="449.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> Entries open      </text>
+<text class="tx" x="398.20" y="449.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> €180 · Join ▸    </text>
+<text class="tx" x="55.00" y="466.50" textLength="148.20" lengthAdjust="spacingAndGlyphs"> close 07 Mar      </text>
+<text class="tx" x="23.80" y="517.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">                          [ </text>
+<text class="tx" x="242.20" y="517.50">🌐</text>
+<text class="tx" x="257.80" y="517.50" textLength="319.80" lengthAdjust="spacingAndGlyphs"> English ▾ ]                             </text>
+</svg>

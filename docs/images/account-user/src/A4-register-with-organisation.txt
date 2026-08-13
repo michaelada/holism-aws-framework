@@ -1,0 +1,29 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│  ‹ Back                                        [LOGO] Kildare Hunt PC │
+├──────────────────────────────────────────────────────────────────────┤
+│  Create your account                                                  │
+│                                                                       │
+│  ⓘ You already have an ItsPlainSailing account?                       │
+│    [ Sign in instead ] — we'll just connect you to this club.         │
+│                                                                       │
+│  ┌─ Your details ──────────────────────────────────────────────┐     │
+│  │  First name *          Last name *                           │     │
+│  │  [________________]    [________________]                    │     │
+│  │                                                              │     │
+│  │  Email address *                                             │     │
+│  │  [__________________________________________]                │     │
+│  │  This is the address you'll sign in with                     │     │
+│  │                                                              │     │
+│  │  Mobile number                                               │     │
+│  │  [__________________________________________]                │     │
+│  │                                                              │     │
+│  │  Password *              Confirm password *                  │     │
+│  │  [________________] 👁   [________________] 👁                │     │
+│  │  ▰▰▰▰▱ Strong                                                │     │
+│  └──────────────────────────────────────────────────────────────┘     │
+│                                                                       │
+│  ☐ I agree to the club's terms and conditions *  [read]              │
+│  ☐ Send me news and updates from this club                            │
+│                                                                       │
+│                              [ Cancel ]  [ Create account ]           │
+└──────────────────────────────────────────────────────────────────────┘

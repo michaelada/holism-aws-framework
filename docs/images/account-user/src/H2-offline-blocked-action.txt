@@ -1,0 +1,12 @@
+┌──────────────────────────────────────────────────┐
+│  📵  You need to be online for this          ✕   │
+├──────────────────────────────────────────────────┤
+│  Entering an event needs a connection so we can   │
+│  check places are still available and take        │
+│  payment.                                         │
+│                                                   │
+│  We'll keep this page — try again when you're     │
+│  back online.                                     │
+│                                                   │
+│                [ OK ]   [ Retry connection ]      │
+└──────────────────────────────────────────────────┘

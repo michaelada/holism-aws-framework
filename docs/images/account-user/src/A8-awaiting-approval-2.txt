@@ -1,0 +1,11 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│                            ✖                                          │
+│                  Registration not approved                            │
+│                                                                       │
+│   Kildare Hunt Pony Club wasn't able to approve your registration.    │
+│                                                                       │
+│   Please contact the club directly if you think this is a mistake.    │
+│   secretary@khpc.ie  ·  045 123 456                                   │
+│                                                                       │
+│              [ Go to my organisations ]   [ Sign out ]                │
+└──────────────────────────────────────────────────────────────────────┘

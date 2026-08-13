@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="678" viewBox="0 0 640.40 678.00" role="img" aria-label="B3-home-my-dashboard">
+<title>B3-home-my-dashboard</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="678.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 75.5L620.5 75.5 M43.3 143.5L253.9 143.5 M277.3 143.5L480.1 143.5 M43.3 347.5L253.9 347.5 M277.3 347.5L480.1 347.5 M43.3 381.5L253.9 381.5 M277.3 381.5L480.1 381.5 M43.3 500.5L253.9 500.5 M277.3 500.5L480.1 500.5 M121.3 534.5L581.5 534.5 M43.3 551.5L168.1 551.5 M183.7 551.5L308.5 551.5 M324.1 551.5L448.9 551.5 M464.5 551.5L581.5 551.5 M43.3 636.5L168.1 636.5 M183.7 636.5L308.5 636.5 M324.1 636.5L448.9 636.5 M464.5 636.5L581.5 636.5 M19.9 653.5L620.5 653.5 M19.9 24.5L19.9 653.5 M43.3 143.5L43.3 347.5 M43.3 381.5L43.3 500.5 M43.3 551.5L43.3 636.5 M168.1 551.5L168.1 636.5 M183.7 551.5L183.7 636.5 M253.9 143.5L253.9 347.5 M253.9 381.5L253.9 500.5 M277.3 143.5L277.3 347.5 M277.3 381.5L277.3 500.5 M308.5 551.5L308.5 636.5 M324.1 551.5L324.1 636.5 M448.9 551.5L448.9 636.5 M464.5 551.5L464.5 585.5 M464.5 619.5L464.5 636.5 M480.1 143.5L480.1 347.5 M480.1 381.5L480.1 500.5 M581.5 551.5L581.5 585.5 M581.5 619.5L581.5 636.5 M620.5 24.5L620.5 585.5 M620.5 619.5L620.5 653.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Welcome back, Michael                                                     </text>
+<text class="tx" x="23.80" y="58.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Kildare Hunt Pony Club                                                    </text>
+<text class="tx" x="23.80" y="109.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ⚠ Your Family Membership expires in 12 days (25 Feb 2026)   [ Renew ▸ ]   </text>
+<text class="tx" x="55.00" y="160.50">🎫</text>
+<text class="tx" x="70.60" y="160.50" textLength="179.40" lengthAdjust="spacingAndGlyphs">  Coming up            </text>
+<text class="tx" x="289.00" y="160.50">👤</text>
+<text class="tx" x="304.60" y="160.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Membership          </text>
+<text class="tx" x="47.20" y="194.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Spring Hunter Trials     </text>
+<text class="tx" x="281.20" y="194.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> Family Membership 2025  </text>
+<text class="tx" x="47.20" y="211.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Sat 14 Mar · 10:00       </text>
+<text class="tx" x="281.20" y="211.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> Active · to 25 Feb 2026 </text>
+<text class="tx" x="47.20" y="228.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Class 2 — Sarah Adams    </text>
+<text class="tx" x="281.20" y="228.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> Member no. KHPC-0412    </text>
+<text class="tx" x="47.20" y="245.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> 🎟 Ticket ready           </text>
+<text class="tx" x="47.20" y="279.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Court 1 booking          </text>
+<text class="tx" x="281.20" y="279.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> 3 members on this       </text>
+<text class="tx" x="47.20" y="296.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> Sat 14 Mar · 10:00–11:00 </text>
+<text class="tx" x="281.20" y="296.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> membership              </text>
+<text class="tx" x="47.20" y="330.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> [ See all (5) ▸ ]        </text>
+<text class="tx" x="281.20" y="330.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> [ View ▸ ]  [ Renew ▸ ] </text>
+<text class="tx" x="55.00" y="398.50">🛒</text>
+<text class="tx" x="70.60" y="398.50" textLength="179.40" lengthAdjust="spacingAndGlyphs">  Your cart            </text>
+<text class="tx" x="289.00" y="398.50">💳</text>
+<text class="tx" x="304.60" y="398.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Recent payments     </text>
+<text class="tx" x="47.20" y="432.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> 4 items · €288.45        </text>
+<text class="tx" x="281.20" y="432.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> 12 Jan  €45.00  Card ✓  </text>
+<text class="tx" x="47.20" y="449.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> incl. €1.45 handling     </text>
+<text class="tx" x="281.20" y="449.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> 03 Dec  €180.00 Offline </text>
+<text class="tx" x="351.40" y="466.50">⏳</text>
+<text class="tx" x="367.00" y="466.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> awaiting     </text>
+<text class="tx" x="47.20" y="483.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> [ Go to cart ▸ ]         </text>
+<text class="tx" x="281.20" y="483.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> [ All payments ▸ ]      </text>
+<text class="tx" x="23.80" y="534.50" textLength="93.60" lengthAdjust="spacingAndGlyphs">  What's on </text>
+<text class="tx" x="47.20" y="568.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Summer Camp   </text>
+<text class="tx" x="187.60" y="568.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Club Polo     </text>
+<text class="tx" x="328.00" y="568.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Court booking </text>
+<text class="tx" x="468.40" y="568.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Junior       </text>
+<text class="tx" x="47.20" y="585.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> 12–16 Aug     </text>
+<text class="tx" x="187.60" y="585.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> €25.00        </text>
+<text class="tx" x="328.00" y="585.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Book a court  </text>
+<text class="tx" x="468.40" y="585.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Registration </text>
+<text class="tx" x="47.20" y="602.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Entries open  </text>
+<text class="tx" x="187.60" y="602.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> 🛍             </text>
+<text class="tx" x="328.00" y="602.50" textLength="101.40" lengthAdjust="spacingAndGlyphs"> 🗓           </text>
+<text class="tx" x="452.80" y="602.50" textLength="46.80" lengthAdjust="spacingAndGlyphs"> 2026 </text>
+<text class="tx" x="499.60" y="602.50">📝</text>
+<text class="tx" x="47.20" y="619.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> [ Enter ▸ ]   </text>
+<text class="tx" x="187.60" y="619.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> [ View ▸ ]    </text>
+<text class="tx" x="328.00" y="619.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> [ Book ▸ ]    </text>
+<text class="tx" x="468.40" y="619.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> [ Apply ▸ ]  </text>
+</svg>

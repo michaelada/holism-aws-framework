@@ -1,0 +1,37 @@
+Stripe — embedded Payment Element (recommended)
+┌──────────────────────────────────────────────────┐
+│  ‹ Back to review        ①──②──③                 │
+│                              Pay                  │
+│                                                   │
+│         Paying €108.45 to                         │
+│         Kildare Hunt Pony Club                    │
+│                                                   │
+│  ┌────────────────────────────────────────────┐  │
+│  │  [ Stripe Payment Element ]                │  │
+│  │                                            │  │
+│  │  Card number                               │  │
+│  │  [ 4242 4242 4242 4242 ]                   │  │
+│  │  Expiry        CVC                         │  │
+│  │  [ 04 / 27 ]   [ 123 ]                     │  │
+│  │  Country                                   │  │
+│  │  [ Ireland                             ▾]  │  │
+│  │                                            │  │
+│  │  🍎 Apple Pay   ▶ Google Pay               │  │
+│  └────────────────────────────────────────────┘  │
+│                                                   │
+│  🔒 Payments are processed securely by Stripe.    │
+│     We never see your card details.               │
+│                                                   │
+│         [        Pay €108.45        ]             │
+└──────────────────────────────────────────────────┘
+
+Helix-Pay — hosted redirect
+┌──────────────────────────────────────────────────┐
+│                    ⟳                              │
+│         Taking you to Helix-Pay…                  │
+│                                                   │
+│    You'll come straight back once you've paid.    │
+│    Don't close this window.                       │
+│                                                   │
+│         [ Cancel and return to cart ]             │
+└──────────────────────────────────────────────────┘

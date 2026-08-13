@@ -1,0 +1,45 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  Settings                                                                  │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ┌─ Your details ──────────────────────────────────────────────────────┐  │
+│  │  First name *              Last name *                               │  │
+│  │  [ Michael____________]    [ Adams_______________]                   │  │
+│  │                                                                      │  │
+│  │  Mobile number                                                       │  │
+│  │  [ 086 123 4567________________________________]                     │  │
+│  │                                                                      │  │
+│  │  Email address *                                                     │  │
+│  │  [ michael.adams@example.com___________________]                     │  │
+│  │  ⓘ Changing this changes the address you sign in with. We'll send a  │  │
+│  │    confirmation link to the new address first.                       │  │
+│  │                                                                      │  │
+│  │                                        [ Cancel ]  [ Save changes ]  │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Password ──────────────────────────────────────────────────────────┐  │
+│  │  Last changed 14 August 2025                                         │  │
+│  │  [ Change password ▸ ]     → Keycloak account console (P2)           │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Your organisations ────────────────────────────────────────────────┐  │
+│  │  ★ Kildare Hunt Pony Club       Member since 2019      Default       │  │
+│  │    Ballinasloe & Districts TC   Member since 2023   [ Make default ] │  │
+│  │    Westport Sailing Club        Member since 2021   [ Make default ] │  │
+│  │                                              [ + Join another ▸ ]    │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ Preferences ───────────────────────────────────────────────────────┐  │
+│  │  Language        [ English (UK)                                  ▾]  │  │
+│  │  Email me about  ☑ My entries, bookings and orders                   │  │
+│  │                  ☑ Membership renewal reminders                      │  │
+│  │                  ☐ Club news and offers                              │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─ This app ──────────────────────────────────────────────────────────┐  │
+│  │  Offline data     Last synced 2 minutes ago    [ Sync now ]          │  │
+│  │                   Payments, memberships and entries are saved on     │  │
+│  │                   this device so you can view them offline.          │  │
+│  │                   [ Clear saved data ]                               │  │
+│  │  Install          [ Install app on this device ]        → H3         │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────────┘

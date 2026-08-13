@@ -1,0 +1,38 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  Your cart · Kildare Hunt Pony Club                              4 items   │
+├───────────────────────────────────────────────────────────────────────────┤
+│ ┌───────────────────────────────────────────────────┐ ┌─────────────────┐ │
+│ │ Details                    Fee        Payment      │ │ Order summary   │ │
+│ ├───────────────────────────────────────────────────┤ │                 │ │
+│ │ 🎫 Event entry                                     │ │ Pay offline     │ │
+│ │    Spring Hunter Trials                            │ │   1 item        │ │
+│ │    Class 2 — 90cm                                  │ │      €180.00    │ │
+│ │    Sarah Adams                                     │ │                 │ │
+│ │                        €45.00    💳 Card    [ ✕ ] │ │ Pay by card     │ │
+│ │                                  [ Change ]        │ │   3 items       │ │
+│ ├───────────────────────────────────────────────────┤ │      €107.00    │ │
+│ │ 👤 Membership                                      │ │ Card handling   │ │
+│ │    Family Membership 2026                          │ │   fee  €1.45    │ │
+│ │    Michael Adams                                   │ │      ─────────  │ │
+│ │                       €180.00    🏦 Offline [ ✕ ] │ │ Charged to      │ │
+│ │                                  [ Change ]        │ │  your card now  │ │
+│ ├───────────────────────────────────────────────────┤ │      €108.45    │ │
+│ │ 🗓 Court booking                                   │ │                 │ │
+│ │    Court 1 (all-weather)                           │ │ ═════════════   │ │
+│ │    Sat 14 Mar 2026, 10:00–11:00                    │ │ Order total     │ │
+│ │    Michael Adams                                   │ │      €288.45    │ │
+│ │              €12.00      💳 Card    [ ✕ ]         │ │                 │ │
+│ │       (plus handling fee) [ Change ]               │ │ ⓘ €180.00 will  │ │
+│ ├───────────────────────────────────────────────────┤ │ be paid offline │ │
+│ │ 🛍 Merchandise                                     │ │ — the club will │ │
+│ │    Club Polo Shirt (Navy, M) × 2                   │ │ tell you how.   │ │
+│ │    Collect from clubhouse                          │ │                 │ │
+│ │    Michael Adams                                   │ │ [ Checkout ▸ ]  │ │
+│ │              €50.00      💳 Card    [ ✕ ]         │ │                 │ │
+│ │       (plus handling fee) [ Change ]               │ │ [ Keep shopping]│ │
+│ └───────────────────────────────────────────────────┘ └─────────────────┘ │
+│                                                                            │
+│  Discount code  [________________]  [ Apply ]                              │
+│                                                                            │
+│  ⚠ Class 2 closes for entries in 3 days — check out before 07 Mar.        │
+└───────────────────────────────────────────────────────────────────────────┘

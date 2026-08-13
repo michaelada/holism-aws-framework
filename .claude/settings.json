@@ -1,9 +1,29 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(python3 -c ' *)",
-      "Bash(sed -n '780,820p' packages/backend/src/routes/membership.routes.ts)",
-      "Bash(sed -n '188,205p' packages/orgadmin-events/src/pages/EventDetailsPage.tsx)"
+    "additionalDirectories": [
+      "/Users/michaeladams/Work/Esker/Development/AI/Holism/.claude/modules"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prompt=\"$(jq -r '.prompt // empty' | perl -0777 -pe 's{<(ide_opened_file|ide_selection|system-reminder|command-[a-z]+|local-command-stdout)\\b.*?</\\1>}{}gs; s/\\A\\s+//; s/\\s+\\z//;')\"; [ -n \"$prompt\" ] && printf '\\n\\n## %s — Prompt\\n\\n%s\\n' \"$(date '+%F %T')\" \"$prompt\" >> \"${CLAUDE_PROJECT_DIR:-.}/.claude/sessions.md\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tp=\"$(jq -r '.transcript_path // empty')\"; [ -f \"$tp\" ] || exit 0; for i in $(seq 1 30); do n=\"$(tail -1 \"$tp\" | jq -r 'select(.type==\"assistant\") | ([.message.content[]?|select(.type==\"text\")]|length) // 0' 2>/dev/null)\"; { [ -n \"$n\" ] && [ \"$n\" -gt 0 ] 2>/dev/null; } && break; sleep 0.1; done; resp=\"$(jq -rRn '[inputs|fromjson?] as $all | def isPrompt: .type==\"user\" and ((.message.content|type)==\"string\" or ((.message.content|type)==\"array\" and ((any(.message.content[]?;.type==\"tool_result\"))|not))); (([range(0;($all|length))|select($all[.]|isPrompt)]|last)//-1) as $s | [$all[($s+1):][]|select(.type==\"assistant\")|.message.content[]?|select(.type==\"text\")|.text]|join(\"\\n\\n\")' \"$tp\" 2>/dev/null)\" && [ -n \"$resp\" ] && printf '\\n### Assistant\\n\\n%s\\n\\n---\\n' \"$resp\" >> \"${CLAUDE_PROJECT_DIR:-.}/.claude/sessions.md\""
+          }
+        ]
+      }
     ]
   }
 }

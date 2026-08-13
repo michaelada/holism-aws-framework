@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="438" height="661" viewBox="0 0 437.60 661.00" role="img" aria-label="E5-card-payment">
+<title>E5-card-payment</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="437.60" height="661.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 41.5L417.7 41.5 M238.3 58.5L246.1 58.5 M261.7 58.5L269.5 58.5 M43.3 160.5L394.3 160.5 M43.3 347.5L394.3 347.5 M19.9 449.5L417.7 449.5 M19.9 500.5L417.7 500.5 M19.9 636.5L417.7 636.5 M19.9 41.5L19.9 449.5 M19.9 500.5L19.9 636.5 M43.3 160.5L43.3 347.5 M394.3 160.5L394.3 347.5 M417.7 41.5L417.7 449.5 M417.7 500.5L417.7 636.5"/>
+<text class="tx" x="16.00" y="24.50" textLength="366.60" lengthAdjust="spacingAndGlyphs">Stripe — embedded Payment Element (recommended)</text>
+<text class="tx" x="23.80" y="58.50" textLength="210.60" lengthAdjust="spacingAndGlyphs">  ‹ Back to review        ①</text>
+<text class="tx" x="250.00" y="58.50" textLength="7.80" lengthAdjust="spacingAndGlyphs">②</text>
+<text class="tx" x="273.40" y="58.50" textLength="140.40" lengthAdjust="spacingAndGlyphs">③                 </text>
+<text class="tx" x="23.80" y="75.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">                              Pay                 </text>
+<text class="tx" x="23.80" y="109.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">         Paying €108.45 to                        </text>
+<text class="tx" x="23.80" y="126.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">         Kildare Hunt Pony Club                   </text>
+<text class="tx" x="47.20" y="177.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  [ Stripe Payment Element ]                </text>
+<text class="tx" x="47.20" y="211.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  Card number                               </text>
+<text class="tx" x="47.20" y="228.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  [ 4242 4242 4242 4242 ]                   </text>
+<text class="tx" x="47.20" y="245.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  Expiry        CVC                         </text>
+<text class="tx" x="47.20" y="262.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  [ 04 / 27 ]   [ 123 ]                     </text>
+<text class="tx" x="47.20" y="279.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  Country                                   </text>
+<text class="tx" x="47.20" y="296.50" textLength="343.20" lengthAdjust="spacingAndGlyphs">  [ Ireland                             ▾]  </text>
+<text class="tx" x="62.80" y="330.50">🍎</text>
+<text class="tx" x="78.40" y="330.50" textLength="312.00" lengthAdjust="spacingAndGlyphs"> Apple Pay   ▶ Google Pay               </text>
+<text class="tx" x="39.40" y="381.50">🔒</text>
+<text class="tx" x="55.00" y="381.50" textLength="358.80" lengthAdjust="spacingAndGlyphs"> Payments are processed securely by Stripe.   </text>
+<text class="tx" x="23.80" y="398.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">     We never see your card details.              </text>
+<text class="tx" x="23.80" y="432.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">         [        Pay €108.45        ]            </text>
+<text class="tx" x="16.00" y="483.50" textLength="210.60" lengthAdjust="spacingAndGlyphs">Helix-Pay — hosted redirect</text>
+<text class="tx" x="23.80" y="517.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">                    ⟳                             </text>
+<text class="tx" x="23.80" y="534.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">         Taking you to Helix-Pay…                 </text>
+<text class="tx" x="23.80" y="568.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">    You'll come straight back once you've paid.   </text>
+<text class="tx" x="23.80" y="585.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">    Don't close this window.                      </text>
+<text class="tx" x="23.80" y="619.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">         [ Cancel and return to cart ]            </text>
+</svg>

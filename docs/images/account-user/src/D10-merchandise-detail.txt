@@ -1,0 +1,34 @@
+┌───────────────────────────────────────────────────────────────────────────┐
+│  ‹ Merchandise                                                             │
+│  ┌────────────────────────┐  Club Polo Shirt                              │
+│  │                        │  €25.00                                        │
+│  │      [ main image ]    │                                                │
+│  │                        │  Embroidered club crest, moisture-wicking      │
+│  │                        │  fabric. Unisex fit.                           │
+│  │                        │                                                │
+│  ├────────────────────────┤  Colour *                                      │
+│  │ [▪][▪][▪][▪]  ‹ ›      │  ( Navy ) ( White ) ( Red )                    │
+│  └────────────────────────┘                                                │
+│                              Size *                                        │
+│                              ( S ) ( M ) ( L ) ( XL — out of stock ✖ )     │
+│                                                                            │
+│                              Quantity                                      │
+│                              [ − ]  2  [ + ]     max 5 per order           │
+│                                                                            │
+│                              Delivery *                                    │
+│                              (•) Collect from clubhouse       Free         │
+│                              ( ) Post — Republic of Ireland   €6.50        │
+│                              ( ) Post — rest of world        €14.00        │
+│                                                                            │
+│                              ┌──────────────────────────────────────────┐  │
+│                              │ 2 × Club Polo (Navy, M)        €50.00    │  │
+│                              │ Delivery                        €0.00    │  │
+│                              │ ──────────────────────────────────────── │  │
+│                              │ Total                          €50.00    │  │
+│                              │ ⓘ plus card handling fee at checkout     │  │
+│                              └──────────────────────────────────────────┘  │
+│                                                                            │
+│                              [ 🏦 Pay Offline ] [ 💳 Pay By Card ]         │
+│                                                                            │
+│  ⓘ This item asks a few questions — you'll fill them in next.  → D0        │
+└───────────────────────────────────────────────────────────────────────────┘

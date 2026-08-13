@@ -1,0 +1,9 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│  ⚠  Changing these fees affects 14 organisations                     │
+│                                                                       │
+│     Kildare Hunt Pony Club, Naas Pony Club, Athy Pony Club and 11    │
+│     others will charge the new fees on card payments from the moment  │
+│     you save. Payments already taken are unaffected.                  │
+│                                                                       │
+│     [ Cancel ]                            [ Save and apply to 14 ]    │
+└──────────────────────────────────────────────────────────────────────┘

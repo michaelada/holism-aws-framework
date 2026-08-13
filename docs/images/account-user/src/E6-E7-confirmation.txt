@@ -1,0 +1,27 @@
+Card                                        Offline
+┌────────────────────────────────┐          ┌────────────────────────────────┐
+│              ✅                 │          │              ✅                 │
+│        Payment complete         │          │         Order confirmed        │
+│                                 │          │                                │
+│  €108.45 paid to Kildare Hunt   │          │  €180.00 to pay the club       │
+│  Pony Club                      │          │  directly                      │
+│  Ref PAY-2026-00913             │          │  Ref PAY-2026-00914            │
+│                                 │          │                                │
+│  ✅ Class 2 entry — Sarah Adams │          │  ⏳ Family Membership 2026     │
+│  ✅ Court 1, Sat 14 Mar         │          │     — awaiting payment         │
+│  ✅ Club Polo Shirt × 2         │          │                                │
+│                                 │          │  ┌──────────────────────────┐  │
+│  ⏳ Family Membership 2026      │          │  │ How to pay               │  │
+│     €180.00 — pay the club      │          │  │ Cheque payable to        │  │
+│     directly     [ How? ]       │          │  │ "Kildare Hunt Pony Club" │  │
+│                                 │          │  │ posted to the Secretary, │  │
+│  A confirmation email is on     │          │  │ or bank transfer to      │  │
+│  its way to michael.adams@…     │          │  │ IE00 XXXX XXXX XXXX      │  │
+│                                 │          │  │ quoting PAY-2026-00914   │  │
+│  [ View payment ]  [ Done ]     │          │  └──────────────────────────┘  │
+└────────────────────────────────┘          │                                │
+                                             │  Your membership starts once   │
+                                             │  the club records payment.     │
+                                             │                                │
+                                             │  [ View order ]   [ Done ]     │
+                                             └────────────────────────────────┘

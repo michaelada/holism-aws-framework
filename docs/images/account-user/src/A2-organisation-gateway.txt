@@ -1,0 +1,31 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│  ‹ All organisations                                                  │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│                        ┌────────────┐                                 │
+│                        │   [LOGO]   │      ← settings.branding.logoUrl│
+│                        └────────────┘                                 │
+│                                                                       │
+│                  Kildare Hunt Pony Club                               │
+│              Member and entry portal · itsplainsailing.com/khpc       │
+│                                                                       │
+│        ┌────────────────────────────────────────────────┐            │
+│        │            [  Sign in  ]                       │  ← primary  │
+│        │                                                │     colour  │
+│        │      New here?  [ Create an account ]          │            │
+│        │                                                │            │
+│        │      [ Forgotten your password? ]              │            │
+│        └────────────────────────────────────────────────┘            │
+│                                                                       │
+│   ── What's on ─────────────────────────────────────────────────      │
+│   (public preview — only shown if the org publishes publicly)         │
+│                                                                       │
+│   ┌───────────────────┐ ┌───────────────────┐ ┌──────────────────┐   │
+│   │ Spring Hunter     │ │ Summer Camp       │ │ Family           │   │
+│   │ Trials            │ │ 12–16 Aug         │ │ Membership 2026  │   │
+│   │ 14 Mar · Entries  │ │ Entries open      │ │ €180 · Join ▸    │   │
+│   │ close 07 Mar      │ │                   │ │                  │   │
+│   └───────────────────┘ └───────────────────┘ └──────────────────┘   │
+│                                                                       │
+│                          [ 🌐 English ▾ ]                             │
+└──────────────────────────────────────────────────────────────────────┘

@@ -1,0 +1,19 @@
+┌──────────────────────────────────────────────────────────────────────┐
+│                          [LOGO]                                       │
+│                                                                       │
+│              You're not connected to this club yet                    │
+│                                                                       │
+│   You're signed in as michael.adams@example.com, but you're not       │
+│   a registered user of Kildare Hunt Pony Club.                        │
+│                                                                       │
+│              [  Request access to this club  ]      → A4              │
+│                                                                       │
+│   ── Or go to one of your organisations ────────────────────────      │
+│                                                                       │
+│   ┌──────────────────────────────┐ ┌───────────────────────────┐     │
+│   │ [logo] Ballinasloe & Districts│ │ [logo] Westport Sailing   │     │
+│   │        Tennis Club        [▸] │ │        Club           [▸] │     │
+│   └──────────────────────────────┘ └───────────────────────────┘     │
+│                                                                       │
+│                        [ Sign out ]                                   │
+└──────────────────────────────────────────────────────────────────────┘

@@ -1,0 +1,19 @@
+Mark received                                Undo
+┌──────────────────────────────────┐        ┌──────────────────────────────────┐
+│  Mark payment as received     ✕  │        │  Undo — mark as not received  ✕  │
+├──────────────────────────────────┤        ├──────────────────────────────────┤
+│  PAY-2026-00913 · Michael Adams  │        │  PAY-2025-04102 · Michael Adams  │
+│  €180.00 · Family Membership 2026│        │  €180.00                         │
+│                                   │        │                                  │
+│  Date received                    │        │  Marked received on 04 Dec 2025  │
+│  [ 📅 07/02/2026 ]                │        │  by Jane Murphy.                 │
+│                                   │        │                                  │
+│  Note (optional)                  │        │  This will set the membership    │
+│  [ Cheque no. 004312___________ ] │        │  back to "awaiting payment" and  │
+│                                   │        │  notify the member.              │
+│  This confirms the membership     │        │                                  │
+│  and emails the member.           │        │  Reason (optional)               │
+│                                   │        │  [ Marked in error____________ ] │
+│  [ Cancel ]  [ Mark received ]    │        │                                  │
+└──────────────────────────────────┘        │  [ Cancel ]  [ Undo ]            │
+                                             └──────────────────────────────────┘

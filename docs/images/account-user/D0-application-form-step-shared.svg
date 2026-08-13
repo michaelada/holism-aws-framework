@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="757" height="950" viewBox="0 0 757.40 950.00" role="img" aria-label="D0-application-form-step-shared">
+<title>D0-application-form-step-shared</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="757.40" height="950.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M43.3 92.5L597.1 92.5 M74.5 109.5L129.1 109.5 M144.7 109.5L199.3 109.5 M43.3 143.5L597.1 143.5 M43.3 177.5L51.1 177.5 M191.5 177.5L597.1 177.5 M66.7 466.5L433.3 466.5 M66.7 517.5L433.3 517.5 M43.3 568.5L597.1 568.5 M43.3 602.5L51.1 602.5 M230.5 602.5L597.1 602.5 M66.7 619.5L573.7 619.5 M66.7 670.5L573.7 670.5 M43.3 704.5L597.1 704.5 M43.3 738.5L51.1 738.5 M97.9 738.5L597.1 738.5 M66.7 789.5L550.3 789.5 M43.3 840.5L597.1 840.5 M19.9 925.5L620.5 925.5 M19.9 24.5L19.9 925.5 M43.3 92.5L43.3 143.5 M43.3 177.5L43.3 568.5 M43.3 602.5L43.3 704.5 M43.3 738.5L43.3 840.5 M66.7 466.5L66.7 517.5 M66.7 619.5L66.7 670.5 M433.3 466.5L433.3 517.5 M573.7 619.5L573.7 670.5 M597.1 92.5L597.1 143.5 M597.1 177.5L597.1 568.5 M597.1 602.5L597.1 704.5 M597.1 738.5L597.1 840.5 M620.5 24.5L620.5 636.5 M620.5 670.5L620.5 925.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ‹ Back                                                                    </text>
+<text class="tx" x="23.80" y="75.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Enter Spring Hunter Trials — Class 2 (90cm)                               </text>
+<text class="tx" x="47.20" y="109.50" textLength="23.40" lengthAdjust="spacingAndGlyphs">  ①</text>
+<text class="tx" x="133.00" y="109.50" textLength="7.80" lengthAdjust="spacingAndGlyphs">②</text>
+<text class="tx" x="203.20" y="109.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">③                                                 </text>
+<text class="tx" x="47.20" y="126.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Details  Extras   Confirm                ← only when the form uses  </text>
+<text class="tx" x="624.40" y="143.50" textLength="117.00" lengthAdjust="spacingAndGlyphs">   wizard steps</text>
+<text class="tx" x="55.00" y="177.50" textLength="132.60" lengthAdjust="spacingAndGlyphs"> Entrant details </text>
+<text class="tx" x="47.20" y="194.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Who is this entry for? *                                            </text>
+<text class="tx" x="47.20" y="211.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ( ) Michael Adams (me)                                              </text>
+<text class="tx" x="47.20" y="228.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  (•) Sarah Adams        ← people on the user's membership            </text>
+<text class="tx" x="47.20" y="245.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ( ) Tom Adams                                                       </text>
+<text class="tx" x="47.20" y="262.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ( ) Someone else…                                                   </text>
+<text class="tx" x="47.20" y="296.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Horse name *                                                        </text>
+<text class="tx" x="47.20" y="313.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  [____________________________________________]                      </text>
+<text class="tx" x="47.20" y="347.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Horse age *                    Rider date of birth *                </text>
+<text class="tx" x="47.20" y="364.50" textLength="265.20" lengthAdjust="spacingAndGlyphs">  [________]                     [</text>
+<text class="tx" x="312.40" y="364.50">📅</text>
+<text class="tx" x="328.00" y="364.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> 12/04/2011]                      </text>
+<text class="tx" x="47.20" y="398.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Previous class won                                                  </text>
+<text class="tx" x="47.20" y="415.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  [ Class 1 — 70cm                                   ▾]               </text>
+<text class="tx" x="47.20" y="449.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Vaccination certificate *                                           </text>
+<text class="tx" x="86.20" y="483.50">📎</text>
+<text class="tx" x="101.80" y="483.50" textLength="327.60" lengthAdjust="spacingAndGlyphs"> Drag a file here or [ Choose file ]      </text>
+<text class="tx" x="70.60" y="500.50" textLength="358.80" lengthAdjust="spacingAndGlyphs">     PDF or image, max 10 MB                  </text>
+<text class="tx" x="47.20" y="551.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ⚠ Vaccination certificate is required                               </text>
+<text class="tx" x="55.00" y="602.50" textLength="171.60" lengthAdjust="spacingAndGlyphs"> Terms and conditions </text>
+<text class="tx" x="70.60" y="636.50" textLength="499.20" lengthAdjust="spacingAndGlyphs"> All entrants must hold current membership and produce a valid  </text>
+<text class="tx" x="70.60" y="653.50" textLength="499.20" lengthAdjust="spacingAndGlyphs"> vaccination certificate on the day…                        ⌄   </text>
+<text class="tx" x="47.20" y="687.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ☐ I have read and accept the terms and conditions *                 </text>
+<text class="tx" x="55.00" y="738.50" textLength="39.00" lengthAdjust="spacingAndGlyphs"> Fee </text>
+<text class="tx" x="47.20" y="755.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Entry fee                                                €45.00     </text>
+<text class="tx" x="47.20" y="772.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Early-bird discount (applied automatically)              −€5.00     </text>
+<text class="tx" x="47.20" y="806.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Total                                                    €40.00     </text>
+<text class="tx" x="47.20" y="823.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  ⓘ A card handling fee will be added at checkout.                    </text>
+<text class="tx" x="23.80" y="874.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  How would you like to pay?                                                </text>
+<text class="tx" x="23.80" y="891.50" textLength="31.20" lengthAdjust="spacingAndGlyphs">  [ </text>
+<text class="tx" x="55.00" y="891.50">🏦</text>
+<text class="tx" x="70.60" y="891.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Add to cart — Pay Offline ]   [ </text>
+<text class="tx" x="328.00" y="891.50">💳</text>
+<text class="tx" x="343.60" y="891.50" textLength="273.00" lengthAdjust="spacingAndGlyphs"> Add to cart — Pay By Card ]       </text>
+</svg>

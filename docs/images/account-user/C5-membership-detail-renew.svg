@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="576" viewBox="0 0 640.40 576.00" role="img" aria-label="C5-membership-detail-renew">
+<title>C5-membership-detail-renew</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="576.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M43.3 109.5L51.1 109.5 M152.5 109.5L316.3 109.5 M331.9 109.5L339.7 109.5 M417.7 109.5L597.1 109.5 M43.3 194.5L316.3 194.5 M331.9 194.5L597.1 194.5 M43.3 228.5L51.1 228.5 M269.5 228.5L597.1 228.5 M43.3 296.5L597.1 296.5 M43.3 330.5L51.1 330.5 M168.1 330.5L597.1 330.5 M43.3 415.5L597.1 415.5 M43.3 449.5L597.1 449.5 M43.3 534.5L597.1 534.5 M19.9 551.5L620.5 551.5 M19.9 24.5L19.9 551.5 M43.3 109.5L43.3 194.5 M43.3 228.5L43.3 296.5 M43.3 330.5L43.3 415.5 M43.3 449.5L43.3 534.5 M316.3 109.5L316.3 194.5 M331.9 109.5L331.9 194.5 M597.1 109.5L597.1 194.5 M597.1 228.5L597.1 296.5 M597.1 330.5L597.1 415.5 M597.1 449.5L597.1 534.5 M620.5 24.5L620.5 551.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ‹ My Memberships           Family Membership 2025                         </text>
+<text class="tx" x="39.40" y="75.50">✅</text>
+<text class="tx" x="55.00" y="75.50" textLength="561.60" lengthAdjust="spacingAndGlyphs"> Active · expires in 12 days                                            </text>
+<text class="tx" x="55.00" y="109.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Membership </text>
+<text class="tx" x="343.60" y="109.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Payment </text>
+<text class="tx" x="47.20" y="126.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Type      Family Membership      </text>
+<text class="tx" x="335.80" y="126.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Fee      €180.00                </text>
+<text class="tx" x="47.20" y="143.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Number    KHPC-0412              </text>
+<text class="tx" x="335.80" y="143.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Method   Pay Offline            </text>
+<text class="tx" x="47.20" y="160.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Valid     26 Feb 25 – 25 Feb 26  </text>
+<text class="tx" x="335.80" y="160.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> Status   ✓ Received 03 Dec 25   </text>
+<text class="tx" x="47.20" y="177.50" textLength="265.20" lengthAdjust="spacingAndGlyphs"> Joined    18 Mar 2019            </text>
+<text class="tx" x="335.80" y="177.50" textLength="257.40" lengthAdjust="spacingAndGlyphs">          [ View payment ▸ ]     </text>
+<text class="tx" x="55.00" y="228.50" textLength="210.60" lengthAdjust="spacingAndGlyphs"> People on this membership </text>
+<text class="tx" x="47.20" y="245.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Michael Adams    Primary   michael.adams@example.com   086 123 4567 </text>
+<text class="tx" x="47.20" y="262.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Sarah Adams      Junior    b. 12 Apr 2011                           </text>
+<text class="tx" x="47.20" y="279.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Tom Adams        Junior    b. 03 Sep 2014                           </text>
+<text class="tx" x="55.00" y="330.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Your answers </text>
+<text class="tx" x="47.20" y="347.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Address                 12 The Green, Naas, Co. Kildare             </text>
+<text class="tx" x="47.20" y="364.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Emergency contact       086 765 4321                                </text>
+<text class="tx" x="47.20" y="381.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Photo consent           Yes                                         </text>
+<text class="tx" x="47.20" y="398.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Horse owned             Ballyroan Star                              </text>
+<text class="tx" x="62.80" y="466.50">⏰</text>
+<text class="tx" x="78.40" y="466.50" textLength="514.80" lengthAdjust="spacingAndGlyphs"> Renew for 2026                                                   </text>
+<text class="tx" x="47.20" y="483.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  Family Membership 2026 · €190.00 · valid to 25 Feb 2027             </text>
+<text class="tx" x="47.20" y="500.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">  We'll pre-fill your details — you can change anything before paying.</text>
+<text class="tx" x="47.20" y="517.50" textLength="546.00" lengthAdjust="spacingAndGlyphs">                                            [ Renew membership ▸ ]    </text>
+</svg>

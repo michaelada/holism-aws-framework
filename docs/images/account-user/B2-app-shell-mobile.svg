@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="338" viewBox="0 0 500.00 338.00" role="img" aria-label="B2-app-shell-mobile">
+<title>B2-app-shell-mobile</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="500.00" height="338.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L246.1 24.5 M19.9 58.5L246.1 58.5 M19.9 109.5L246.1 109.5 M19.9 262.5L246.1 262.5 M19.9 313.5L246.1 313.5 M19.9 24.5L19.9 313.5 M246.1 58.5L246.1 262.5 M253.9 279.5L253.9 296.5"/>
+<text class="tx" x="31.60" y="41.50">☰</text>
+<text class="tx" x="47.20" y="41.50" textLength="179.40" lengthAdjust="spacingAndGlyphs">  [logo] Kildare Hunt  </text>
+<text class="tx" x="226.60" y="41.50">🛒</text>
+<text class="tx" x="242.20" y="41.50" textLength="7.80" lengthAdjust="spacingAndGlyphs">4</text>
+<text class="tx" x="257.80" y="41.50" textLength="226.20" lengthAdjust="spacingAndGlyphs">   ← tap logo/name = switcher</text>
+<text class="tx" x="23.80" y="75.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> ⚠ You're offline — showing </text>
+<text class="tx" x="250.00" y="75.50" textLength="202.80" lengthAdjust="spacingAndGlyphs">   ← H1, only when offline</text>
+<text class="tx" x="23.80" y="92.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">   saved information        </text>
+<text class="tx" x="23.80" y="160.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">      page content          </text>
+<text class="tx" x="23.80" y="177.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">      (single column)       </text>
+<text class="tx" x="39.40" y="279.50">🏠</text>
+<text class="tx" x="94.00" y="279.50">🔍</text>
+<text class="tx" x="148.60" y="279.50">🎫</text>
+<text class="tx" x="195.40" y="279.50">🛒</text>
+<text class="tx" x="234.40" y="279.50">👤</text>
+<text class="tx" x="23.80" y="296.50" textLength="226.20" lengthAdjust="spacingAndGlyphs"> Home  Browse  Mine  Cart  Me</text>
+</svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="445" height="389" viewBox="0 0 445.40 389.00" role="img" aria-label="E3-change-payment-method">
+<title>E3-change-payment-method</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="445.40" height="389.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L425.5 24.5 M19.9 58.5L425.5 58.5 M97.9 160.5L378.7 160.5 M97.9 279.5L378.7 279.5 M19.9 364.5L425.5 364.5 M19.9 24.5L19.9 364.5 M425.5 24.5L425.5 364.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">  How would you like to pay for this?         ✕    </text>
+<text class="tx" x="23.80" y="75.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">  Court 1 — Sat 14 Mar, 10:00–11:00       €12.00   </text>
+<text class="tx" x="23.80" y="109.50" textLength="46.80" lengthAdjust="spacingAndGlyphs">  ( ) </text>
+<text class="tx" x="70.60" y="109.50">🏦</text>
+<text class="tx" x="86.20" y="109.50" textLength="335.40" lengthAdjust="spacingAndGlyphs"> Pay Offline                               </text>
+<text class="tx" x="23.80" y="126.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         Pay the club directly. Instructions       </text>
+<text class="tx" x="23.80" y="143.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         will be in your confirmation email.       </text>
+<text class="tx" x="23.80" y="177.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         Your order total becomes    €288.23       </text>
+<text class="tx" x="23.80" y="194.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         Charged to your card now     €96.23       </text>
+<text class="tx" x="23.80" y="228.50" textLength="46.80" lengthAdjust="spacingAndGlyphs">  (•) </text>
+<text class="tx" x="70.60" y="228.50">💳</text>
+<text class="tx" x="86.20" y="228.50" textLength="335.40" lengthAdjust="spacingAndGlyphs"> Pay By Card                               </text>
+<text class="tx" x="23.80" y="245.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         Paid securely now by card. A handling     </text>
+<text class="tx" x="23.80" y="262.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         fee applies to this item.                 </text>
+<text class="tx" x="23.80" y="296.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         Your order total becomes    €288.45       </text>
+<text class="tx" x="23.80" y="313.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">         Charged to your card now    €108.45       </text>
+<text class="tx" x="23.80" y="347.50" textLength="397.80" lengthAdjust="spacingAndGlyphs">                        [ Cancel ]  [ Save ]       </text>
+</svg>

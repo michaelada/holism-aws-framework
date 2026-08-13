@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="372" viewBox="0 0 632.60 372.00" role="img" aria-label="F1-my-payments">
+<title>F1-my-payments</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="372.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 126.5L597.1 126.5 M43.3 160.5L597.1 160.5 M43.3 211.5L597.1 211.5 M43.3 245.5L597.1 245.5 M43.3 279.5L597.1 279.5 M43.3 313.5L597.1 313.5 M19.9 347.5L612.7 347.5 M19.9 24.5L19.9 347.5 M43.3 126.5L43.3 313.5 M136.9 143.5L136.9 313.5 M269.5 143.5L269.5 313.5 M331.9 143.5L331.9 313.5 M417.7 143.5L417.7 313.5 M495.7 143.5L495.7 313.5 M597.1 126.5L597.1 313.5 M612.7 24.5L612.7 347.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  My Payments                                                              </text>
+<text class="tx" x="23.80" y="75.50" textLength="23.40" lengthAdjust="spacingAndGlyphs">  [</text>
+<text class="tx" x="47.20" y="75.50">🔍</text>
+<text class="tx" x="62.80" y="75.50" textLength="546.00" lengthAdjust="spacingAndGlyphs"> Search reference, item, name…]                                       </text>
+<text class="tx" x="23.80" y="92.50" textLength="351.00" lengthAdjust="spacingAndGlyphs">  [ Method: All ▾ ] [ Status: All ▾ ] [ From </text>
+<text class="tx" x="374.80" y="92.50">📅</text>
+<text class="tx" x="390.40" y="92.50" textLength="62.40" lengthAdjust="spacingAndGlyphs"> ] [ To </text>
+<text class="tx" x="452.80" y="92.50">📅</text>
+<text class="tx" x="468.40" y="92.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> ]     [⬇ Export] </text>
+<text class="tx" x="47.20" y="143.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> Date ▾    </text>
+<text class="tx" x="140.80" y="143.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> Reference      </text>
+<text class="tx" x="273.40" y="143.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> Items </text>
+<text class="tx" x="335.80" y="143.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Method   </text>
+<text class="tx" x="421.60" y="143.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Amount  </text>
+<text class="tx" x="499.60" y="143.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> Status     </text>
+<text class="tx" x="47.20" y="177.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 02 Feb 26 </text>
+<text class="tx" x="140.80" y="177.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2026-00913 </text>
+<text class="tx" x="273.40" y="177.50" textLength="54.60" lengthAdjust="spacingAndGlyphs">   4   </text>
+<text class="tx" x="335.80" y="177.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Card +   </text>
+<text class="tx" x="421.60" y="177.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> €288.45 </text>
+<text class="tx" x="507.40" y="177.50">⏳</text>
+<text class="tx" x="523.00" y="177.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Part    </text>
+<text class="tx" x="335.80" y="194.50" textLength="78.00" lengthAdjust="spacingAndGlyphs"> Offline  </text>
+<text class="tx" x="499.60" y="194.50" textLength="93.60" lengthAdjust="spacingAndGlyphs">   received </text>
+<text class="tx" x="47.20" y="228.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 04 Jan 26 </text>
+<text class="tx" x="140.80" y="228.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2026-00755 </text>
+<text class="tx" x="273.40" y="228.50" textLength="54.60" lengthAdjust="spacingAndGlyphs">   1   </text>
+<text class="tx" x="343.60" y="228.50">💳</text>
+<text class="tx" x="359.20" y="228.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> Card  </text>
+<text class="tx" x="421.60" y="228.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> €120.00 </text>
+<text class="tx" x="507.40" y="228.50">✅</text>
+<text class="tx" x="523.00" y="228.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Paid    </text>
+<text class="tx" x="47.20" y="262.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 03 Dec 25 </text>
+<text class="tx" x="140.80" y="262.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2025-04102 </text>
+<text class="tx" x="273.40" y="262.50" textLength="54.60" lengthAdjust="spacingAndGlyphs">   1   </text>
+<text class="tx" x="343.60" y="262.50">🏦</text>
+<text class="tx" x="359.20" y="262.50" textLength="54.60" lengthAdjust="spacingAndGlyphs">Offline</text>
+<text class="tx" x="421.60" y="262.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> €180.00 </text>
+<text class="tx" x="507.40" y="262.50">✅</text>
+<text class="tx" x="523.00" y="262.50" textLength="70.20" lengthAdjust="spacingAndGlyphs"> Received</text>
+<text class="tx" x="47.20" y="296.50" textLength="85.80" lengthAdjust="spacingAndGlyphs"> 12 Nov 25 </text>
+<text class="tx" x="140.80" y="296.50" textLength="124.80" lengthAdjust="spacingAndGlyphs"> PAY-2025-03980 </text>
+<text class="tx" x="273.40" y="296.50" textLength="54.60" lengthAdjust="spacingAndGlyphs">   2   </text>
+<text class="tx" x="343.60" y="296.50">💳</text>
+<text class="tx" x="359.20" y="296.50" textLength="54.60" lengthAdjust="spacingAndGlyphs"> Card  </text>
+<text class="tx" x="421.60" y="296.50" textLength="70.20" lengthAdjust="spacingAndGlyphs">  €75.00 </text>
+<text class="tx" x="499.60" y="296.50" textLength="93.60" lengthAdjust="spacingAndGlyphs"> ↩ Refunded </text>
+<text class="tx" x="23.80" y="330.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">                                                       Rows 25 ▾  ‹ 1 2 ›  </text>
+</svg>

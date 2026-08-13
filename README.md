@@ -68,6 +68,8 @@ npm run dev:backend
 
 ```bash
 npm run dev:frontend
+npm run dev:orgadmin    # org admin    → http://localhost:5175
+npm run dev:admin       # super admin  → http://localhost:5174
 ```
 
 ### Running Tests

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="601" height="491" viewBox="0 0 601.40 491.00" role="img" aria-label="A7-organisation-switcher">
+<title>A7-organisation-switcher</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="601.40" height="491.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 41.5L277.3 41.5 M370.9 41.5L581.5 41.5 M19.9 75.5L277.3 75.5 M370.9 75.5L581.5 75.5 M19.9 126.5L277.3 126.5 M386.5 126.5L565.9 126.5 M19.9 194.5L277.3 194.5 M386.5 211.5L565.9 211.5 M386.5 228.5L565.9 228.5 M19.9 262.5L277.3 262.5 M19.9 313.5L277.3 313.5 M386.5 313.5L565.9 313.5 M386.5 330.5L565.9 330.5 M386.5 415.5L565.9 415.5 M370.9 466.5L581.5 466.5 M19.9 41.5L19.9 313.5 M277.3 41.5L277.3 126.5 M277.3 160.5L277.3 313.5 M370.9 41.5L370.9 466.5 M386.5 126.5L386.5 211.5 M386.5 228.5L386.5 313.5 M386.5 330.5L386.5 415.5 M565.9 126.5L565.9 211.5 M565.9 228.5L565.9 313.5 M565.9 330.5L565.9 415.5 M581.5 41.5L581.5 466.5"/>
+<text class="tx" x="16.00" y="24.50" textLength="499.20" lengthAdjust="spacingAndGlyphs">Desktop — header popover                    Mobile — full screen</text>
+<text class="tx" x="23.80" y="58.50" textLength="249.60" lengthAdjust="spacingAndGlyphs"> Switch organisation            </text>
+<text class="tx" x="374.80" y="58.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> ‹  Switch organisation   </text>
+<text class="tx" x="23.80" y="92.50" textLength="249.60" lengthAdjust="spacingAndGlyphs"> ● [logo] Kildare Hunt Pony Club</text>
+<text class="tx" x="382.60" y="92.50">🔍</text>
+<text class="tx" x="398.20" y="92.50" textLength="179.40" lengthAdjust="spacingAndGlyphs"> [Search…]             </text>
+<text class="tx" x="23.80" y="109.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">         Current · Member       </text>
+<text class="tx" x="23.80" y="143.50" textLength="257.40" lengthAdjust="spacingAndGlyphs"> ○ [logo] Ballinasloe &amp; Districts</text>
+<text class="tx" x="390.40" y="143.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">● [logo]              </text>
+<text class="tx" x="23.80" y="160.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">         Tennis Club            </text>
+<text class="tx" x="390.40" y="160.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Kildare Hunt Pony   </text>
+<text class="tx" x="94.00" y="177.50">🛒</text>
+<text class="tx" x="109.60" y="177.50" textLength="163.80" lengthAdjust="spacingAndGlyphs"> 2 items in cart     </text>
+<text class="tx" x="390.40" y="177.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Club                </text>
+<text class="tx" x="390.40" y="194.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Current · Member    </text>
+<text class="tx" x="23.80" y="211.50" textLength="249.60" lengthAdjust="spacingAndGlyphs"> ○ [logo] Westport Sailing Club </text>
+<text class="tx" x="23.80" y="228.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">         Membership expires in  </text>
+<text class="tx" x="23.80" y="245.50" textLength="249.60" lengthAdjust="spacingAndGlyphs">         12 days ⚠              </text>
+<text class="tx" x="390.40" y="245.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">○ [logo]              </text>
+<text class="tx" x="390.40" y="262.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Ballinasloe &amp; Dist. </text>
+<text class="tx" x="23.80" y="279.50" textLength="249.60" lengthAdjust="spacingAndGlyphs"> ☆ Set default organisation   ▸ </text>
+<text class="tx" x="390.40" y="279.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Tennis Club         </text>
+<text class="tx" x="23.80" y="296.50" textLength="249.60" lengthAdjust="spacingAndGlyphs"> + Join another organisation  ▸ </text>
+<text class="tx" x="406.00" y="296.50">🛒</text>
+<text class="tx" x="421.60" y="296.50" textLength="140.40" lengthAdjust="spacingAndGlyphs"> 2 items in cart  </text>
+<text class="tx" x="390.40" y="347.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">○ [logo]              </text>
+<text class="tx" x="390.40" y="364.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Westport Sailing    </text>
+<text class="tx" x="390.40" y="381.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Club                </text>
+<text class="tx" x="390.40" y="398.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Expires in 12d ⚠    </text>
+<text class="tx" x="374.80" y="432.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> ☆ Set default          ▸ </text>
+<text class="tx" x="374.80" y="449.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> + Join another org     ▸ </text>
+</svg>

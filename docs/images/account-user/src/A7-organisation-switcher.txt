@@ -1,0 +1,27 @@
+Desktop — header popover                    Mobile — full screen
+┌────────────────────────────────┐          ┌──────────────────────────┐
+│ Switch organisation             │          │ ‹  Switch organisation   │
+├────────────────────────────────┤          ├──────────────────────────┤
+│ ● [logo] Kildare Hunt Pony Club│          │ 🔍 [Search…]             │
+│         Current · Member        │          │                          │
+├────────────────────────────────┤          │ ┌──────────────────────┐ │
+│ ○ [logo] Ballinasloe & Districts│          │ │● [logo]              │ │
+│         Tennis Club             │          │ │  Kildare Hunt Pony   │ │
+│         🛒 2 items in cart      │          │ │  Club                │ │
+├────────────────────────────────┤          │ │  Current · Member    │ │
+│ ○ [logo] Westport Sailing Club  │          │ └──────────────────────┘ │
+│         Membership expires in   │          │ ┌──────────────────────┐ │
+│         12 days ⚠               │          │ │○ [logo]              │ │
+├────────────────────────────────┤          │ │  Ballinasloe & Dist. │ │
+│ ☆ Set default organisation   ▸ │          │ │  Tennis Club         │ │
+│ + Join another organisation  ▸ │          │ │  🛒 2 items in cart  │ │
+└────────────────────────────────┘          │ └──────────────────────┘ │
+                                             │ ┌──────────────────────┐ │
+                                             │ │○ [logo]              │ │
+                                             │ │  Westport Sailing    │ │
+                                             │ │  Club                │ │
+                                             │ │  Expires in 12d ⚠    │ │
+                                             │ └──────────────────────┘ │
+                                             │ ☆ Set default          ▸ │
+                                             │ + Join another org     ▸ │
+                                             └──────────────────────────┘

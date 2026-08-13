@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="633" height="355" viewBox="0 0 632.60 355.00" role="img" aria-label="D11-calendars-list">
+<title>D11-calendars-list</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="632.60" height="355.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L612.7 24.5 M19.9 58.5L612.7 58.5 M43.3 109.5L269.5 109.5 M292.9 109.5L519.1 109.5 M43.3 211.5L269.5 211.5 M292.9 211.5L519.1 211.5 M43.3 228.5L269.5 228.5 M292.9 228.5L519.1 228.5 M43.3 313.5L269.5 313.5 M292.9 313.5L519.1 313.5 M19.9 330.5L612.7 330.5 M19.9 24.5L19.9 330.5 M43.3 109.5L43.3 211.5 M43.3 228.5L43.3 313.5 M269.5 109.5L269.5 211.5 M269.5 228.5L269.5 313.5 M292.9 109.5L292.9 211.5 M292.9 228.5L292.9 313.5 M519.1 109.5L519.1 143.5 M519.1 177.5L519.1 211.5 M519.1 228.5L519.1 245.5 M519.1 279.5L519.1 313.5 M612.7 24.5L612.7 143.5 M612.7 177.5L612.7 245.5 M612.7 279.5L612.7 330.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Calendar                                                                 </text>
+<text class="tx" x="23.80" y="75.50" textLength="585.00" lengthAdjust="spacingAndGlyphs">  Choose what you'd like to book                                           </text>
+<text class="tx" x="47.20" y="126.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> [img] Court 1              </text>
+<text class="tx" x="296.80" y="126.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> [img] Court 2              </text>
+<text class="tx" x="47.20" y="143.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">       All-weather          </text>
+<text class="tx" x="296.80" y="143.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">       All-weather          </text>
+<text class="tx" x="47.20" y="160.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">  🗓 6 slots free today      </text>
+<text class="tx" x="296.80" y="160.50" textLength="202.80" lengthAdjust="spacingAndGlyphs">  🗓 2 slots free today    </text>
+<text class="tx" x="47.20" y="177.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">  €12.00 / hour             </text>
+<text class="tx" x="296.80" y="177.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">  €12.00 / hour             </text>
+<text class="tx" x="47.20" y="194.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">              [ Book ▸ ]    </text>
+<text class="tx" x="296.80" y="194.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">              [ Book ▸ ]    </text>
+<text class="tx" x="47.20" y="245.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> [img] Clubhouse Room       </text>
+<text class="tx" x="296.80" y="245.50" textLength="218.40" lengthAdjust="spacingAndGlyphs"> [img] Floodlit Court 3     </text>
+<text class="tx" x="47.20" y="262.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">  🗓 Fully booked today      </text>
+<text class="tx" x="296.80" y="262.50" textLength="202.80" lengthAdjust="spacingAndGlyphs">  🗓 8 slots free today    </text>
+<text class="tx" x="47.20" y="279.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">  €40.00 / hour             </text>
+<text class="tx" x="296.80" y="279.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">  €15.00 / hour             </text>
+<text class="tx" x="47.20" y="296.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">              [ Book ▸ ]    </text>
+<text class="tx" x="296.80" y="296.50" textLength="218.40" lengthAdjust="spacingAndGlyphs">              [ Book ▸ ]    </text>
+</svg>
