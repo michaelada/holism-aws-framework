@@ -15,7 +15,8 @@
     "packages/orgadmin-merchandise",
     "packages/orgadmin-calendar",
     "packages/orgadmin-registrations",
-    "packages/orgadmin-ticketing"
+    "packages/orgadmin-ticketing",
+    "packages/account-shell"
   ],
   "scripts": {
     "install:all": "npm install",
@@ -23,6 +24,7 @@
     "dev:frontend": "npm run dev --workspace=packages/frontend",
     "dev:admin": "npm run dev --workspace=packages/admin",
     "dev:orgadmin": "npm run dev --workspace=packages/orgadmin-shell",
+    "dev:account": "npm run dev --workspace=packages/account-shell",
     "dev:orgadmin-core": "npm run dev --workspace=packages/orgadmin-core",
     "dev:orgadmin-events": "npm run dev --workspace=packages/orgadmin-events",
     "dev:orgadmin-memberships": "npm run dev --workspace=packages/orgadmin-memberships",
@@ -35,6 +37,7 @@
     "build:components": "npm run build --workspace=packages/components",
     "build:admin": "npm run build --workspace=packages/admin",
     "build:orgadmin": "npm run build --workspace=packages/orgadmin-shell",
+    "build:account": "npm run build --workspace=packages/account-shell",
     "build:orgadmin-core": "npm run build --workspace=packages/orgadmin-core",
     "build:orgadmin-events": "npm run build --workspace=packages/orgadmin-events",
     "build:orgadmin-memberships": "npm run build --workspace=packages/orgadmin-memberships",
@@ -42,7 +45,7 @@
     "build:orgadmin-calendar": "npm run build --workspace=packages/orgadmin-calendar",
     "build:orgadmin-registrations": "npm run build --workspace=packages/orgadmin-registrations",
     "build:orgadmin-ticketing": "npm run build --workspace=packages/orgadmin-ticketing",
-    "build:all": "npm run build:components && npm run build:backend && npm run build:frontend && npm run build:admin && npm run build:orgadmin && npm run build:orgadmin-core && npm run build:orgadmin-events && npm run build:orgadmin-memberships && npm run build:orgadmin-merchandise && npm run build:orgadmin-calendar && npm run build:orgadmin-registrations && npm run build:orgadmin-ticketing",
+    "build:all": "npm run build:components && npm run build:backend && npm run build:frontend && npm run build:admin && npm run build:orgadmin && npm run build:orgadmin-core && npm run build:orgadmin-events && npm run build:orgadmin-memberships && npm run build:orgadmin-merchandise && npm run build:orgadmin-calendar && npm run build:orgadmin-registrations && npm run build:orgadmin-ticketing && npm run build:account",
     "test": "jest && npm run test --workspaces",
     "test:root": "jest",
     "test:backend": "npm run test --workspace=packages/backend",
@@ -50,6 +53,7 @@
     "test:components": "npm run test --workspace=packages/components",
     "test:admin": "npm run test --workspace=packages/admin",
     "test:orgadmin": "npm run test --workspace=packages/orgadmin-shell",
+    "test:account": "npm run test --workspace=packages/account-shell",
     "test:orgadmin-core": "npm run test --workspace=packages/orgadmin-core",
     "test:orgadmin-events": "npm run test --workspace=packages/orgadmin-events",
     "test:orgadmin-memberships": "npm run test --workspace=packages/orgadmin-memberships",

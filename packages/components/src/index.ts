@@ -25,8 +25,11 @@ export * from './components/OrgDataTable';
 export * from './components/OrgPaymentWidget';
 export * from './components/OrgDatePicker';
 export * from './components/OrgFileUpload';
+export * from './components/EventDateTile/EventDateTile';
+export * from './components/RichText/RichText';
 export * from './components/discount';
 
-
-
-
+// Shared locale-aware formatting (CLAUDE.md §1.5)
+export * from './utils/formatting';
+export * from './utils/ticketGeneration';
+export * from './utils/applicationField';

@@ -13,6 +13,10 @@ import type {
   UpdateOrganizationUserDto,
   CreateOrganizationAdminRoleDto,
   UpdateOrganizationAdminRoleDto,
+  OrganizationTypePaymentFee,
+  CardPaymentMethodDefault,
+  PaymentFeeRates,
+  UrlCodeAvailability,
 } from '../types/organization.types';
 import type { PaymentMethod } from '../types/payment-method.types';
 
@@ -103,6 +107,22 @@ export const updateOrganization = async (
   return response.data;
 };
 
+/**
+ * Whether a URL code may be used, for the inline check on the organisation form.
+ *
+ * `excludeId` stops an organisation's own code counting as a collision when it
+ * is being edited.
+ */
+export const checkUrlCodeAvailability = async (
+  code: string,
+  excludeId?: string
+): Promise<UrlCodeAvailability> => {
+  const response = await apiClient.get('/api/admin/organizations/url-code-available', {
+    params: excludeId ? { code, excludeId } : { code },
+  });
+  return response.data;
+};
+
 export const deleteOrganization = async (id: string): Promise<void> => {
   await apiClient.delete(`/api/admin/organizations/${id}`);
 };
@@ -114,6 +134,36 @@ export const updateOrganizationCapabilities = async (
   const response = await apiClient.put(`/api/admin/organizations/${id}/capabilities`, {
     enabledCapabilities: capabilities,
   });
+  return response.data;
+};
+
+/**
+ * Card handling fees for an organisation type, plus how many organisations
+ * inherit them — the admin form warns before a change is applied.
+ */
+export const getOrganizationTypePaymentFees = async (
+  organizationTypeId: string
+): Promise<{ fees: OrganizationTypePaymentFee[]; organisationCount: number }> => {
+  const response = await apiClient.get(
+    `/api/admin/organization-types/${organizationTypeId}/payment-fees`
+  );
+  return response.data;
+};
+
+export const setOrganizationTypePaymentFees = async (
+  organizationTypeId: string,
+  fees: Array<{ paymentMethodId: string } & PaymentFeeRates>
+): Promise<OrganizationTypePaymentFee[]> => {
+  const response = await apiClient.put(
+    `/api/admin/organization-types/${organizationTypeId}/payment-fees`,
+    { fees }
+  );
+  return response.data.fees;
+};
+
+/** Platform starting values, used to pre-fill the create form. */
+export const getCardPaymentMethodDefaults = async (): Promise<CardPaymentMethodDefault[]> => {
+  const response = await apiClient.get('/api/admin/organization-types/payment-fees/defaults');
   return response.data;
 };
 

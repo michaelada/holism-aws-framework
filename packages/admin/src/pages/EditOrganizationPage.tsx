@@ -21,6 +21,7 @@ import {
   getCapabilities,
   getPaymentMethods,
   updateOrganization,
+  checkUrlCodeAvailability,
 } from '../services/organizationApi';
 import type {
   Organization,
@@ -45,21 +46,13 @@ const LANGUAGES = [
   { code: 'pt-PT', label: 'Portuguese (Portugal)' },
 ];
 
-const CURRENCIES = [
-  { code: 'GBP', label: 'British Pound (£)' },
-  { code: 'USD', label: 'US Dollar ($)' },
-  { code: 'EUR', label: 'Euro (€)' },
-  { code: 'AUD', label: 'Australian Dollar (A$)' },
-  { code: 'CAD', label: 'Canadian Dollar (C$)' },
-  { code: 'NZD', label: 'New Zealand Dollar (NZ$)' },
-];
-
 export const EditOrganizationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
 
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [urlCodeError, setUrlCodeError] = useState<string | null>(null);
   const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -73,8 +66,8 @@ export const EditOrganizationPage: React.FC = () => {
     contactName: '',
     contactEmail: '',
     contactMobile: '',
+    urlCode: '',
     status: 'active',
-    currency: 'GBP',
     language: 'en-GB',
     enabledCapabilities: [],
     enabledPaymentMethods: [],
@@ -122,8 +115,8 @@ export const EditOrganizationPage: React.FC = () => {
         contactName: orgData.contactName || '',
         contactEmail: orgData.contactEmail || '',
         contactMobile: orgData.contactMobile || '',
+        urlCode: orgData.urlCode || '',
         status: orgData.status,
-        currency: orgData.currency || 'GBP',
         language: orgData.language || 'en-GB',
         enabledCapabilities: orgData.enabledCapabilities,
         enabledPaymentMethods: selectedPaymentMethodNames,
@@ -147,6 +140,11 @@ export const EditOrganizationPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
+
+    if (urlCodeError) {
+      showError(`Member portal code: ${urlCodeError}`);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -181,6 +179,34 @@ export const EditOrganizationPage: React.FC = () => {
       },
     }));
   };
+
+  // Validate the code as it is typed, excluding this organisation so its own
+  // code does not read as a collision. Debounced — this fires per keystroke.
+  useEffect(() => {
+    const code = formData.urlCode?.trim();
+    if (!code || code === organization?.urlCode) {
+      setUrlCodeError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await checkUrlCodeAvailability(code, id);
+        if (!cancelled) {
+          setUrlCodeError(result.available ? null : result.reason ?? 'Unavailable');
+        }
+      } catch {
+        // A failed check must not block the form; the backend validates on save.
+        if (!cancelled) setUrlCodeError(null);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [formData.urlCode, organization?.urlCode, id]);
 
   if (loading) {
     return (
@@ -237,6 +263,21 @@ export const EditOrganizationPage: React.FC = () => {
                 disabled
                 fullWidth
                 helperText="Organisation type cannot be changed"
+              />
+
+              <TextField
+                label="Member portal code"
+                value={formData.urlCode ?? ''}
+                onChange={(e) => handleChange('urlCode', e.target.value)}
+                placeholder="e.g., khpc"
+                error={Boolean(urlCodeError)}
+                fullWidth
+                helperText={
+                  urlCodeError ||
+                  (formData.urlCode !== organization?.urlCode
+                    ? 'Changing this breaks any link members already have to the portal'
+                    : `Members sign in at /account/${formData.urlCode || ''}`)
+                }
               />
 
               <TextField
@@ -358,20 +399,18 @@ export const EditOrganizationPage: React.FC = () => {
                 </Select>
               </FormControl>
 
-              <FormControl fullWidth>
-                <InputLabel>Currency</InputLabel>
-                <Select
-                  value={formData.currency}
-                  label="Currency"
-                  onChange={(e) => handleChange('currency', e.target.value)}
-                >
-                  {CURRENCIES.map((curr) => (
-                    <MenuItem key={curr.code} value={curr.code}>
-                      {curr.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {/*
+                Currency is inherited from the organisation type and shown
+                read-only: the type's fixed card handling fee is a cash amount
+                in that currency, so the two cannot diverge (G12).
+              */}
+              <TextField
+                fullWidth
+                label="Currency"
+                value={organization?.currency ?? ''}
+                InputProps={{ readOnly: true }}
+                helperText="Set by this organisation's type"
+              />
 
               <Box>
                 <Typography variant="h6" gutterBottom>

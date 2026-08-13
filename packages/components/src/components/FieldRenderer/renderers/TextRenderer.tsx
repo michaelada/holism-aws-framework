@@ -14,7 +14,13 @@ export interface TextRendererProps {
 }
 
 /**
- * TextRenderer for text, text_area, email, and url datatypes
+ * TextRenderer for text, text_area, email, url and phone datatypes.
+ *
+ * The `type` is what a phone keypad and an email keyboard hang off on a
+ * handset, and what the browser autofills against. It is not the validation —
+ * `type="email"` is enforced only by native form submission, which this form
+ * does not use; that lives in `ValidationService` and runs on blur and before
+ * submit.
  */
 export function TextRenderer({
   fieldDefinition,
@@ -28,6 +34,7 @@ export function TextRenderer({
   const isTextArea = fieldDefinition.datatype === 'text_area';
   const isEmail = fieldDefinition.datatype === 'email';
   const isUrl = fieldDefinition.datatype === 'url';
+  const isPhone = fieldDefinition.datatype === 'phone';
 
   return (
     <TextField
@@ -42,7 +49,9 @@ export function TextRenderer({
       required={required}
       multiline={isTextArea}
       rows={isTextArea ? 4 : undefined}
-      type={isEmail ? 'email' : isUrl ? 'url' : 'text'}
+      type={isEmail ? 'email' : isUrl ? 'url' : isPhone ? 'tel' : 'text'}
+      autoComplete={isEmail ? 'email' : isPhone ? 'tel' : undefined}
+      inputProps={isPhone ? { inputMode: 'tel' } : undefined}
       placeholder={fieldDefinition.datatypeProperties?.placeholder}
     />
   );

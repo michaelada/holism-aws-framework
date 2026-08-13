@@ -57,6 +57,7 @@ export function DocumentUploadRenderer({
   onBlur,
 }: DocumentUploadRendererProps): JSX.Element {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputId = React.useId();
   const [isDragging, setIsDragging] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -257,7 +258,12 @@ export function DocumentUploadRenderer({
 
   return (
     <Box>
-      <Typography variant="body2" gutterBottom>
+      {/*
+        A real `<label>` bound to the file input, not free-standing text: the
+        field's name is otherwise visible but not its accessible name, so a
+        screen reader announces an unlabelled file input.
+      */}
+      <Typography component="label" htmlFor={inputId} variant="body2" gutterBottom display="block">
         {fieldDefinition.displayName}
         {required && <span style={{ color: 'error.main' }}> *</span>}
       </Typography>
@@ -270,6 +276,7 @@ export function DocumentUploadRenderer({
 
       <input
         ref={fileInputRef}
+        id={inputId}
         type="file"
         multiple
         accept={acceptedTypes}

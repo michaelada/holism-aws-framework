@@ -12,10 +12,18 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getCapabilities, createOrganizationType } from '../services/organizationApi';
+import {
+  getCapabilities,
+  createOrganizationType,
+  getCardPaymentMethodDefaults,
+  setOrganizationTypePaymentFees,
+} from '../services/organizationApi';
 import type { Capability, CreateOrganizationTypeDto } from '../types/organization.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
+import { PaymentFeeEditor } from '../components/PaymentFeeEditor';
+import type { PaymentFeeEditorMethod } from '../components/PaymentFeeEditor';
+import type { CardPaymentMethodDefault } from '../types/organization.types';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CNY'];
 const LANGUAGES = [
@@ -45,6 +53,8 @@ export const CreateOrganizationTypePage: React.FC = () => {
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentFees, setPaymentFees] = useState<PaymentFeeEditorMethod[]>([]);
+  const [feeDefaults, setFeeDefaults] = useState<CardPaymentMethodDefault[]>([]);
   
   const [formData, setFormData] = useState<CreateOrganizationTypeDto>({
     name: '',
@@ -76,6 +86,28 @@ export const CreateOrganizationTypePage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      try {
+        // Guarded: a response of an unexpected shape should leave the fee
+        // editor empty, not break the page it sits on.
+        const defaults = (await getCardPaymentMethodDefaults()) ?? [];
+        setFeeDefaults(defaults);
+        setPaymentFees(
+          defaults.map((d) => ({
+            paymentMethodId: d.paymentMethodId,
+            displayName: d.displayName,
+            fixedFee: d.fixedFee,
+            percentageFee: d.percentageFee,
+            taxPercentage: d.taxPercentage,
+          }))
+        );
+      } catch (error) {
+        console.error('Error loading default handling fees:', error);
+      }
+    })();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -93,7 +125,30 @@ export const CreateOrganizationTypePage: React.FC = () => {
         delete submitData.initialMembershipNumber;
       }
       
-      await createOrganizationType(submitData);
+      const created = await createOrganizationType(submitData);
+
+      // The type has to exist before fees can hang off it, so this is a second
+      // call rather than part of the create payload. A failure here leaves the
+      // type on the platform defaults, which is a safe place to land.
+      if (paymentFees.length > 0) {
+        try {
+          await setOrganizationTypePaymentFees(
+            created.id,
+            paymentFees.map((f) => ({
+              paymentMethodId: f.paymentMethodId,
+              fixedFee: Number(f.fixedFee) || 0,
+              percentageFee: Number(f.percentageFee) || 0,
+              taxPercentage: Number(f.taxPercentage) || 0,
+            }))
+          );
+        } catch (feeError) {
+          showError(
+            'Organisation type created, but the handling fees could not be saved. Please set them from the edit page.'
+          );
+          console.error('Error saving handling fees:', feeError);
+        }
+      }
+
       showSuccess('Organisation type created successfully');
       navigate('/organization-types');
     } catch (error: any) {
@@ -251,6 +306,21 @@ export const CreateOrganizationTypePage: React.FC = () => {
                   />
                 </>
               )}
+
+              <PaymentFeeEditor
+
+                methods={paymentFees}
+
+                currency={formData.currency}
+
+                defaults={feeDefaults}
+
+                onChange={setPaymentFees}
+
+                disabled={submitting}
+
+              />
+
 
               <Box>
                 <Typography variant="h6" gutterBottom>

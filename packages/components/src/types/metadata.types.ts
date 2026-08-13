@@ -15,6 +15,19 @@ export enum FieldDatatype {
   BOOLEAN = 'boolean',
   EMAIL = 'email',
   URL = 'url',
+  /**
+   * Application-form fields only. Rendered by `TextRenderer` as `type="tel"`,
+   * but a distinct datatype so that "this is a phone number" is enforced —
+   * mapping it to plain text made a phone field accept a sentence.
+   */
+  PHONE = 'phone',
+  /**
+   * Application-form fields only — the metadata repository has no upload type,
+   * but `FieldRenderer` has rendered `document_upload` since file and image
+   * fields were added to the form builder. Named here so callers can reach it
+   * without a cast.
+   */
+  DOCUMENT_UPLOAD = 'document_upload',
 }
 
 export enum ValidationType {

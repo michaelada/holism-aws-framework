@@ -37,6 +37,8 @@ export interface Organization {
   keycloakGroupId: string;
   name: string;
   displayName: string;
+  /** Short code addressing this organisation in the account-user application. */
+  urlCode: string;
   domain?: string;
   contactName?: string;
   contactEmail?: string;
@@ -116,6 +118,8 @@ export interface CreateOrganizationDto {
   organizationTypeId: string;
   name: string;
   displayName: string;
+  /** Optional — the backend derives one from the name when omitted. */
+  urlCode?: string;
   domain?: string;
   contactName?: string;
   contactEmail?: string;
@@ -130,6 +134,7 @@ export interface CreateOrganizationDto {
 export interface UpdateOrganizationDto {
   name?: string;
   displayName?: string;
+  urlCode?: string;
   domain?: string;
   contactName?: string;
   contactEmail?: string;
@@ -167,4 +172,39 @@ export interface UpdateOrganizationAdminRoleDto {
   displayName?: string;
   description?: string;
   capabilityPermissions?: Record<string, 'admin' | 'write' | 'read'>;
+}
+
+/**
+ * Card handling fees on an organisation type.
+ *
+ * Every organisation of the type inherits these; there is no per-organisation
+ * override. See G5 in docs/ACCOUNT_USER_APP_WIREFRAMES.md.
+ */
+export interface PaymentFeeRates {
+  /** Flat amount per card payment, in the organisation type's currency. */
+  fixedFee: number;
+  /** Percentage of the amount charged to the card. 1.5 means 1.5%. */
+  percentageFee: number;
+  /** Percentage applied to the handling fee. 0 means no tax element. */
+  taxPercentage: number;
+}
+
+export interface OrganizationTypePaymentFee extends PaymentFeeRates {
+  id: string | null;
+  organizationTypeId: string;
+  paymentMethodId: string;
+  paymentMethodName: string;
+  paymentMethodDisplayName: string;
+  currency: string;
+}
+
+export interface CardPaymentMethodDefault extends PaymentFeeRates {
+  paymentMethodId: string;
+  name: string;
+  displayName: string;
+}
+
+export interface UrlCodeAvailability {
+  available: boolean;
+  reason?: string;
 }

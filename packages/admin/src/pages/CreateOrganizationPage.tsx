@@ -21,6 +21,7 @@ import {
   getCapabilities,
   createOrganization,
   getPaymentMethods,
+  checkUrlCodeAvailability,
 } from '../services/organizationApi';
 import type {
   OrganizationType,
@@ -42,15 +43,6 @@ const LANGUAGES = [
   { code: 'pt-PT', label: 'Portuguese (Portugal)' },
 ];
 
-const CURRENCIES = [
-  { code: 'GBP', label: 'British Pound (£)' },
-  { code: 'USD', label: 'US Dollar ($)' },
-  { code: 'EUR', label: 'Euro (€)' },
-  { code: 'AUD', label: 'Australian Dollar (A$)' },
-  { code: 'CAD', label: 'Canadian Dollar (C$)' },
-  { code: 'NZD', label: 'New Zealand Dollar (NZ$)' },
-];
-
 export const CreateOrganizationPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -61,6 +53,7 @@ export const CreateOrganizationPage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [urlCodeError, setUrlCodeError] = useState<string | null>(null);
 
   const preselectedTypeId = searchParams.get('typeId');
 
@@ -72,7 +65,8 @@ export const CreateOrganizationPage: React.FC = () => {
     contactName: '',
     contactEmail: '',
     contactMobile: '',
-    currency: 'GBP',
+    urlCode: '',
+    // No currency here — it is inherited from the organisation type (G12).
     language: 'en-GB',
     enabledCapabilities: [],
     enabledPaymentMethods: ['pay-offline'], // Default to pay-offline
@@ -137,6 +131,11 @@ export const CreateOrganizationPage: React.FC = () => {
       return;
     }
 
+    if (urlCodeError) {
+      showError(`Member portal code: ${urlCodeError}`);
+      return;
+    }
+
     try {
       setSubmitting(true);
       await createOrganization(formData);
@@ -186,6 +185,35 @@ export const CreateOrganizationPage: React.FC = () => {
   };
 
   const selectedType = organizationTypes.find((t) => t.id === formData.organizationTypeId);
+
+  // Check the code as it is typed. Debounced because this fires per keystroke,
+  // and skipped when empty since the backend will derive one.
+  useEffect(() => {
+    const code = formData.urlCode?.trim();
+    if (!code) {
+      setUrlCodeError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await checkUrlCodeAvailability(code);
+        if (!cancelled) {
+          setUrlCodeError(result.available ? null : result.reason ?? 'Unavailable');
+        }
+      } catch {
+        // A failed check must not block the form — the backend validates on
+        // save regardless.
+        if (!cancelled) setUrlCodeError(null);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [formData.urlCode]);
 
   if (loading) {
     return (
@@ -249,7 +277,24 @@ export const CreateOrganizationPage: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Member portal code"
+                  value={formData.urlCode ?? ''}
+                  onChange={(e) => handleChange('urlCode', e.target.value)}
+                  placeholder="e.g., khpc"
+                  error={Boolean(urlCodeError)}
+                  helperText={
+                    urlCodeError ||
+                    (formData.urlCode
+                      ? `Members will sign in at /account/${formData.urlCode}`
+                      : 'Optional — we will derive one from the display name')
+                  }
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Domain"
@@ -376,20 +421,24 @@ export const CreateOrganizationPage: React.FC = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Currency</InputLabel>
-                  <Select
-                    value={formData.currency}
-                    label="Currency"
-                    onChange={(e) => handleChange('currency', e.target.value)}
-                  >
-                    {CURRENCIES.map((curr) => (
-                      <MenuItem key={curr.code} value={curr.code}>
-                        {curr.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                {/*
+                  Currency is inherited from the organisation type, not chosen
+                  here. The type's fixed card handling fee is a cash amount in
+                  that currency, so the two cannot diverge — see G12 in
+                  docs/ACCOUNT_USER_APP_WIREFRAMES.md.
+                */}
+                <TextField
+                  fullWidth
+                  label="Currency"
+                  value={selectedType?.currency ?? ''}
+                  InputProps={{ readOnly: true }}
+                  disabled={!selectedType}
+                  helperText={
+                    selectedType
+                      ? `Set by the ${selectedType.displayName} organisation type`
+                      : 'Select an organisation type first'
+                  }
+                />
               </Grid>
 
               {selectedType && (

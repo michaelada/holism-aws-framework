@@ -79,6 +79,7 @@ const mockCreatedOrganization = {
   keycloakGroupId: 'group-1',
   name: 'test-org',
   displayName: 'Test Organization',
+  urlCode: 'test-organization',
   status: 'active' as const,
   currency: 'EUR',
   language: 'en',

@@ -72,6 +72,7 @@ export function FieldRenderer({
     case 'text_area':
     case 'email':
     case 'url':
+    case 'phone':
       return <TextRenderer {...commonProps} />;
 
     case 'date':

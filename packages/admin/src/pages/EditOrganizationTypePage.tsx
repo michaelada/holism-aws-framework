@@ -16,10 +16,16 @@ import {
   getCapabilities,
   getOrganizationTypeById,
   updateOrganizationType,
+  getOrganizationTypePaymentFees,
+  setOrganizationTypePaymentFees,
+  getCardPaymentMethodDefaults,
 } from '../services/organizationApi';
 import type { Capability, UpdateOrganizationTypeDto } from '../types/organization.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
+import { PaymentFeeEditor } from '../components/PaymentFeeEditor';
+import type { PaymentFeeEditorMethod } from '../components/PaymentFeeEditor';
+import type { CardPaymentMethodDefault } from '../types/organization.types';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CNY'];
 const LANGUAGES = [
@@ -50,6 +56,9 @@ export const EditOrganizationTypePage: React.FC = () => {
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentFees, setPaymentFees] = useState<PaymentFeeEditorMethod[]>([]);
+  const [feeDefaults, setFeeDefaults] = useState<CardPaymentMethodDefault[]>([]);
+  const [organisationCount, setOrganisationCount] = useState(0);
   
   const [formData, setFormData] = useState<UpdateOrganizationTypeDto & { name?: string }>({
     name: '',
@@ -100,6 +109,37 @@ export const EditOrganizationTypePage: React.FC = () => {
     }
   };
 
+  // Handling fees are loaded separately from the type itself: they belong to a
+  // different table and a failure here should not stop the page rendering.
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      try {
+        const [feeResponse, defaults] = await Promise.all([
+          getOrganizationTypePaymentFees(id),
+          getCardPaymentMethodDefaults(),
+        ]);
+        // Guarded: a response of an unexpected shape should leave the fee
+        // editor empty, not break the page it sits on.
+        const fees = feeResponse?.fees ?? [];
+        const count = feeResponse?.organisationCount ?? 0;
+        setPaymentFees(
+          fees.map((f) => ({
+            paymentMethodId: f.paymentMethodId,
+            displayName: f.paymentMethodDisplayName,
+            fixedFee: f.fixedFee,
+            percentageFee: f.percentageFee,
+            taxPercentage: f.taxPercentage,
+          }))
+        );
+        setOrganisationCount(count);
+        setFeeDefaults(defaults ?? []);
+      } catch (error) {
+        console.error('Error loading handling fees:', error);
+      }
+    })();
+  }, [id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -119,6 +159,19 @@ export const EditOrganizationTypePage: React.FC = () => {
       }
       
       await updateOrganizationType(id, submitData);
+
+      if (paymentFees.length > 0) {
+        await setOrganizationTypePaymentFees(
+          id,
+          paymentFees.map((f) => ({
+            paymentMethodId: f.paymentMethodId,
+            fixedFee: Number(f.fixedFee) || 0,
+            percentageFee: Number(f.percentageFee) || 0,
+            taxPercentage: Number(f.taxPercentage) || 0,
+          }))
+        );
+      }
+
       showSuccess('Organisation type updated successfully');
       navigate('/organization-types');
     } catch (error: any) {
@@ -274,6 +327,23 @@ export const EditOrganizationTypePage: React.FC = () => {
                   />
                 </>
               )}
+
+              <PaymentFeeEditor
+
+                methods={paymentFees}
+
+                currency={formData.currency || 'EUR'}
+
+                defaults={feeDefaults}
+
+                organisationCount={organisationCount}
+
+                onChange={setPaymentFees}
+
+                disabled={submitting}
+
+              />
+
 
               <Box>
                 <Typography variant="h6" gutterBottom>

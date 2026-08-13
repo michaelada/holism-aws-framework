@@ -38,13 +38,22 @@ export function SelectRenderer({
   const displayMode = fieldDefinition.datatypeProperties?.displayMode || 'dropdown';
   const options = fieldDefinition.datatypeProperties?.options || [];
 
+  /*
+   * MUI does not link an `InputLabel` to its `Select` on its own — that is what
+   * `labelId`/`labelledBy` are for. Without the link the control has a visible
+   * label and no accessible name at all: a screen reader announces an unnamed
+   * combo box, and `getByLabelText` cannot find it.
+   */
+  const labelId = `${React.useId()}-label`;
+
   if (displayMode === 'radio') {
     return (
       <FormControl component="fieldset" error={!!error} disabled={disabled} fullWidth>
-        <FormLabel component="legend" required={required}>
+        <FormLabel component="legend" id={labelId} required={required}>
           {fieldDefinition.displayName}
         </FormLabel>
         <RadioGroup
+          aria-labelledby={labelId}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -68,10 +77,11 @@ export function SelectRenderer({
   // Default to dropdown
   return (
     <FormControl fullWidth error={!!error} disabled={disabled}>
-      <InputLabel required={required}>
+      <InputLabel id={labelId} required={required}>
         {fieldDefinition.displayName}
       </InputLabel>
       <Select
+        labelId={labelId}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
