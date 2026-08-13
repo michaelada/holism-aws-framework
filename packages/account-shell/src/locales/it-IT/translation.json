@@ -57,6 +57,7 @@
   "register": {
     "title": "Iscriviti a {{organisation}}",
     "body": "Questo collega il tuo account ItsPlainSailing a {{organisation}}. Non acquista un tesseramento: potrai richiederlo una volta collegato.",
+    "notAMembership": "Questo non acquista un'iscrizione. Se il club offre iscrizioni, potrai richiederne una separatamente dopo esserti collegato.",
     "submit": "Collegami a questo club",
     "submitting": "Collegamento in corso…",
     "failed": "Non è stato possibile collegarti a questo club.",

@@ -63,18 +63,22 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     respondWith('active');
   });
 
-  /**
-   * The copy no longer states outright that connecting is not buying a
-   * membership; it says what connecting does instead. Worth revisiting — a
-   * member who reads this as "joined and paid" only finds out otherwise when
-   * they cannot enter anything.
-   */
   it('says what connecting actually does', async () => {
     render();
 
     expect(
       await screen.findByText(/connects your ItsPlainSailing account/i)
     ).toBeInTheDocument();
+  });
+
+  /**
+   * Members otherwise believe they have joined and paid, and only discover
+   * otherwise when they cannot enter anything.
+   */
+  it('is clear that connecting is not the same as buying a membership', async () => {
+    render();
+
+    expect(await screen.findByText(/does not buy a membership/i)).toBeInTheDocument();
   });
 
   it('connects the member to the club', async () => {

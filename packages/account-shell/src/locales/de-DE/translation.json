@@ -57,6 +57,7 @@
   "register": {
     "title": "{{organisation}} beitreten",
     "body": "Damit wird Ihr ItsPlainSailing-Konto mit {{organisation}} verknüpft. Eine Mitgliedschaft wird dadurch nicht erworben — diese können Sie beantragen, sobald die Verknüpfung besteht.",
+    "notAMembership": "Damit wird keine Mitgliedschaft gekauft. Wenn der Verein Mitgliedschaften anbietet, beantragen Sie diese nach der Verbindung separat.",
     "submit": "Mit diesem Verein verknüpfen",
     "submitting": "Wird verknüpft…",
     "failed": "Die Verknüpfung mit diesem Verein war nicht möglich.",

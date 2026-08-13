@@ -57,6 +57,7 @@
   "register": {
     "title": "Unirse a {{organisation}}",
     "body": "Esto vincula su cuenta de ItsPlainSailing con {{organisation}}. No compra una membresía: podrá solicitarla una vez vinculado.",
+    "notAMembership": "Esto no compra una membresía. Si el club ofrece membresías, la solicitarás por separado una vez conectado.",
     "submit": "Vincularme a este club",
     "submitting": "Vinculando…",
     "failed": "No hemos podido vincularle a este club.",

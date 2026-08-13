@@ -116,9 +116,18 @@ export const RegisterWithOrganisationPage: React.FC = () => {
         <Typography variant="h1" gutterBottom>
           {t('register.title', { organisation: name })}
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 3 }}>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
           {t('register.body', { organisation: name })}
         </Typography>
+
+        {/*
+          Said plainly, and on its own line rather than buried in the paragraph
+          above: a member who reads connecting as having joined and paid finds
+          out otherwise at the gate, which is the worst possible moment.
+        */}
+        <Alert severity="info" sx={{ mb: 3 }}>
+          {t('register.notAMembership')}
+        </Alert>
 
         {failed && (
           <Alert severity="error" sx={{ mb: 2 }}>

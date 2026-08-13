@@ -57,6 +57,7 @@
   "register": {
     "title": "Rejoindre {{organisation}}",
     "body": "Cela relie votre compte ItsPlainSailing à {{organisation}}. Cela n'achète pas d'adhésion — vous pourrez en demander une une fois relié.",
+    "notAMembership": "Cela n'achète pas d'adhésion. Si le club propose des adhésions, vous en ferez la demande séparément une fois connecté.",
     "submit": "Rejoindre ce club",
     "submitting": "Connexion en cours…",
     "failed": "Nous n'avons pas pu vous relier à ce club.",

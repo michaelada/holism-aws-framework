@@ -57,6 +57,7 @@
   "register": {
     "title": "Aderir a {{organisation}}",
     "body": "Isto liga a sua conta ItsPlainSailing a {{organisation}}. Não compra uma filiação — poderá solicitá-la assim que estiver ligado.",
+    "notAMembership": "Isto não compra uma adesão. Se o clube oferecer adesões, poderá candidatar-se separadamente depois de estar ligado.",
     "submit": "Ligar-me a este clube",
     "submitting": "A ligar…",
     "failed": "Não foi possível ligá-lo a este clube.",

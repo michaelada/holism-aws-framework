@@ -57,6 +57,7 @@
   "register": {
     "title": "Join {{organisation}}",
     "body": "This connects your ItsPlainSailing account to {{organisation}} so you can login and access their online events etc.",
+    "notAMembership": "This does not buy a membership. If the club offers memberships, you apply for one separately once you are connected.",
     "submit": "Connect to this organisation/ club",
     "submitting": "Connecting…",
     "failed": "We could not connect you to this club.",
