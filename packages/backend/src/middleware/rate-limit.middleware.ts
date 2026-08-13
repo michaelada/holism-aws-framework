@@ -23,6 +23,9 @@ class MemoryStore implements RateLimitStore {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, 60000);
+
+    // Housekeeping should not hold the process open on its own.
+    this.cleanupInterval.unref?.();
   }
 
   async increment(key: string): Promise<number> {
@@ -164,11 +167,36 @@ export function rateLimit(config: RateLimitConfig = {}) {
 }
 
 /**
+ * Read a limit from the environment, falling back to the shipped default.
+ *
+ * Rate limits belong to the deployment, not to the code: what protects a
+ * production host throttles a laptop running the whole test suite through one
+ * process, where every request comes from the same address and the counters are
+ * shared by every file in the run. Naming them here means an environment can
+ * say so — `.env.test` raises the API limit — without any of this having to
+ * know it is under test.
+ */
+const limitFromEnv = (name: string, fallback: number): number => {
+  const raw = process.env[name];
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    logger.warn(`Ignoring invalid ${name}="${raw}"; using ${fallback}`);
+    return fallback;
+  }
+
+  return parsed;
+};
+
+/**
  * Strict rate limit for authentication endpoints
  */
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per 15 minutes
+  max: limitFromEnv('RATE_LIMIT_AUTH_MAX', 5), // 5 requests per 15 minutes
   message: 'Too many authentication attempts, please try again later',
   skipSuccessfulRequests: true // Only count failed attempts
 });
@@ -178,7 +206,7 @@ export const authRateLimit = rateLimit({
  */
 export const apiRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  max: limitFromEnv('RATE_LIMIT_API_MAX', 100), // 100 requests per minute
   message: 'Too many requests, please try again later'
 });
 
@@ -187,7 +215,7 @@ export const apiRateLimit = rateLimit({
  */
 export const uploadRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 uploads per minute
+  max: limitFromEnv('RATE_LIMIT_UPLOAD_MAX', 10), // 10 uploads per minute
   message: 'Too many file uploads, please try again later'
 });
 
@@ -196,7 +224,7 @@ export const uploadRateLimit = rateLimit({
  */
 export const expensiveOperationRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // 5 requests per minute
+  max: limitFromEnv('RATE_LIMIT_EXPENSIVE_MAX', 5), // 5 requests per minute
   message: 'Too many export requests, please try again later'
 });
 
