@@ -34,7 +34,8 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "paid": "Paid",
-      "refunded": "Refunded"
+      "refunded": "Refunded",
+      "status": "Status"
     },
     "validation": {
       "required": "This field is required",
@@ -68,7 +69,8 @@
       "entries": "entries",
       "activity": "activity",
       "activities": "activities",
-      "configured": "configured"
+      "configured": "configured",
+      "email": "Email"
     },
     "accessibility": {
       "openDrawer": "Open navigation menu",
@@ -204,7 +206,9 @@
       "addActivity": "Add Activity",
       "noActivities": "Add at least one activity to complete your event setup",
       "validation": {
-        "atLeastOne": "At least one activity is required"
+        "atLeastOne": "At least one activity is required",
+        "allFieldsRequired": "All activities must have a name and description",
+        "applicationFormRequired": "Every activity must have an application form selected"
       },
       "activity": {
         "untitled": "Untitled Activity",
@@ -1692,10 +1696,35 @@
       "reasonRequired": "Refund reason is required",
       "confirmButton": "Confirm Refund",
       "processing": "Processing..."
+    },
+    "offline": {
+      "menu": "Offline payments",
+      "title": "Offline payments",
+      "subtitle": "Cheques and transfers members have committed to. Nothing they bought exists until you record the money as received.",
+      "tabOutstanding": "Outstanding",
+      "tabSettled": "Recorded",
+      "noneOutstanding": "Nothing is waiting on an offline payment.",
+      "noneSettled": "You have not recorded any offline payments yet.",
+      "loadError": "We could not load offline payments.",
+      "placedOn": "Ordered {{date}}",
+      "awaiting": "Awaiting payment",
+      "receivedOn": "Received {{date}}",
+      "alsoPaidByCard": "{{amount}} of this order was already paid by card.",
+      "markReceived": "Mark received",
+      "recording": "Recording…",
+      "recorded": "Recorded. {{name}} now has everything they paid for.",
+      "recordedWithFailures": "Recorded, but {{failed}} item(s) could not be created for {{name}}. Check the payment before telling them it is done.",
+      "recordFailed": "We could not record that payment.",
+      "undo": "Undo",
+      "undone": "{{name}}’s payment is back to awaiting settlement.",
+      "undoFailed": "We could not undo that receipt."
     }
   },
   "settings": {
     "title": "Settings",
+    "pageTitle": "Organisation Settings",
+    "pageSubtitle": "Manage your organisation's configuration and preferences",
+    "tabsAriaLabel": "settings tabs",
     "organisationDetails": {
       "title": "Organisation Details",
       "subtitle": "Manage your organisation's basic information and contact details",
@@ -1747,27 +1776,10 @@
       "title": "Payment Settings",
       "subtitle": "Configure payment processing and accepted payment methods",
       "sections": {
-        "stripeConfig": "Stripe Configuration",
-        "paymentConfig": "Payment Configuration",
         "offlinePayments": "Offline Payments",
         "helixPay": "Card Payments (Helix-Pay)"
       },
       "fields": {
-        "stripeEnabled": "Enable Stripe Payments",
-        "stripePublishableKey": "Stripe Publishable Key",
-        "stripePublishableKeyPlaceholder": "pk_live_...",
-        "stripePublishableKeyHelper": "Your Stripe publishable key (starts with pk_)",
-        "stripeSecretKey": "Stripe Secret Key",
-        "stripeSecretKeyPlaceholder": "sk_live_...",
-        "stripeSecretKeyHelper": "Your Stripe secret key (starts with sk_)",
-        "stripeWebhookSecret": "Stripe Webhook Secret",
-        "stripeWebhookSecretPlaceholder": "whsec_...",
-        "stripeWebhookSecretHelper": "Your Stripe webhook signing secret (optional)",
-        "defaultCurrency": "Default Currency",
-        "handlingFeePercentage": "Handling Fee (%)",
-        "handlingFeePercentageHelper": "Percentage fee added to card payments",
-        "handlingFeeFixed": "Fixed Handling Fee",
-        "handlingFeeFixedHelper": "Fixed fee added to card payments",
         "chequePaymentsEnabled": "Enable Cheque/Offline Payments",
         "chequePaymentInstructions": "Cheque Payment Instructions",
         "chequePaymentInstructionsPlaceholder": "Please make cheques payable to...",
@@ -1778,7 +1790,6 @@
         "helixPayApiKeyHelper": "Your API key from Helix-Pay, used to process card payments"
       },
       "validation": {
-        "stripeKeysRequired": "Stripe publishable key and secret key are required when Stripe is enabled",
         "helixPayApiKeyRequired": "A Helix-Pay API key is required when Helix-Pay is enabled"
       },
       "messages": {
@@ -1801,6 +1812,7 @@
         "uploading": "Uploading...",
         "removeLogo": "Remove",
         "logoHelper": "Recommended: PNG or SVG, max 2MB",
+        "colourPicker": "{{colour}} picker",
         "primaryColour": "Primary Colour",
         "secondaryColour": "Secondary Colour",
         "accentColour": "Accent Colour",
@@ -1812,7 +1824,40 @@
         "organisationName": "Organisation Name",
         "primaryButton": "Primary Button",
         "secondaryButton": "Secondary Button",
-        "accentButton": "Accent Button"
+        "accentButton": "Accent Button",
+        "accountUserCaption": "How this looks to a signed-in member",
+        "headingSample": "Welcome back",
+        "bodySample": "Your club’s colours are applied across the member app.",
+        "outlinedButton": "Outlined",
+        "textButton": "Text link",
+        "chipPrimary": "Primary",
+        "chipSecondary": "Secondary",
+        "chipAccent": "Accent",
+        "chipDefault": "Default",
+        "formHeading": "Forms and controls",
+        "fieldLabel": "Full name",
+        "fieldValue": "Ada Adams",
+        "selectLabel": "Membership type",
+        "selectOption": "Full member",
+        "checkboxLabel": "Email me updates",
+        "switchLabel": "Auto-renew",
+        "radioOne": "Card",
+        "radioTwo": "Offline",
+        "tableHeading": "Tables",
+        "tableItem": "Item",
+        "tableStatus": "Status",
+        "tableAmount": "Amount",
+        "tableRowOne": "Spring Show entry",
+        "tableRowTwo": "Club hoodie",
+        "statusPaid": "Paid",
+        "statusPending": "Pending",
+        "listHeading": "Lists",
+        "listItemOne": "Minimus Training",
+        "listItemOneDetail": "Saturday, 16 August",
+        "listItemTwo": "Summer Camp",
+        "listItemTwoDetail": "Places remaining: 4",
+        "listBadge": "Entered",
+        "calloutText": "Accent colour is used for highlights and warnings."
       },
       "validation": {
         "invalidFileType": "Please select an image file",
@@ -1868,6 +1913,56 @@
       "saveChanges": "Save Changes",
       "saving": "Saving...",
       "cancel": "Cancel"
+    },
+    "registration": {
+      "title": "Registration",
+      "description": "Control how members join this organisation and who is told when they do.",
+      "autoRegistration": {
+        "label": "Approve registrations automatically",
+        "onHint": "Members can sign in as soon as they have verified their email address.",
+        "offHint": "An administrator must approve each registration before the member can sign in. Until then they see an awaiting-approval screen."
+      },
+      "notifications": {
+        "title": "Notification emails",
+        "description": "These addresses are told whenever someone registers.",
+        "addLabel": "Email address",
+        "add": "Add",
+        "none": "No addresses added.",
+        "approvalWithoutRecipients": "Registrations need approval but nobody is being notified. Requests will wait in the queue unseen and members will be left unable to sign in."
+      },
+      "validation": {
+        "invalidEmail": "Enter a valid email address.",
+        "duplicateEmail": "That address has already been added."
+      },
+      "messages": {
+        "loadFailed": "Could not load the registration settings.",
+        "saveFailed": "Could not save the registration settings.",
+        "saved": "Registration settings saved."
+      }
+    },
+    "stripeConnect": {
+      "title": "Stripe payouts",
+      "description": "Connect your Stripe account so card payments reach your club. Members cannot pay by card until this is complete.",
+      "platformNotConfigured": "Card payments are not available on this platform yet. Please contact support.",
+      "status": {
+        "ready": "Ready to take payments",
+        "incomplete": "Not finished",
+        "notStarted": "Not connected"
+      },
+      "readyBody": "Your club can take card payments. Money reaches your Stripe account directly; the platform's handling fee is taken from each payment.",
+      "incompleteBody": "Stripe still needs something from you before your club can take card payments. Continue where you left off.",
+      "notStartedBody": "You have not connected a Stripe account yet. Members cannot pay your club by card until you do.",
+      "outstanding": "Stripe is still waiting for:",
+      "accountId": "Stripe account: {{accountId}}",
+      "actions": {
+        "start": "Connect with Stripe",
+        "continue": "Continue with Stripe",
+        "refresh": "Refresh status"
+      },
+      "messages": {
+        "loadFailed": "Could not load your Stripe connection.",
+        "startFailed": "Could not start Stripe onboarding."
+      }
     }
   },
   "reporting": {
@@ -2240,8 +2335,8 @@
       "requiresCodeHelper": "Users must enter the discount code to activate",
       "membershipTypes": "Membership Types",
       "membershipTypesHelper": "Restrict to specific membership types (optional)",
-      "userGroups": "User Groups",
-      "userGroupsHelper": "Restrict to specific user groups (optional)",
+      "userGroups": "User groups",
+      "userGroupsHelper": "Restrict this discount to members of the selected groups",
       "minimumPurchase": "Minimum Purchase Amount",
       "minimumPurchaseHelper": "Minimum cart total required to use this discount",
       "maximumDiscount": "Maximum Discount Amount",
@@ -2476,5 +2571,144 @@
     "feeHelper": "The amount to charge for this type",
     "handlingFeeIncluded": "Handling fee included",
     "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
+  },
+  "users": {
+    "title": "User Management",
+    "tabs": {
+      "admins": "Admin Users",
+      "accounts": "Account Users"
+    },
+    "search": "Search users by name or email…",
+    "noRoles": "No roles assigned",
+    "fields": {
+      "name": "Name",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "emailAddress": "Email Address",
+      "phone": "Phone",
+      "phoneNumber": "Phone Number",
+      "status": "Status",
+      "lastLogin": "Last Login",
+      "roles": "Roles",
+      "actions": "Actions",
+      "created": "Created"
+    },
+    "loading": {
+      "admins": "Loading admin users…",
+      "accounts": "Loading account users…",
+      "details": "Loading user details…"
+    },
+    "admins": {
+      "invite": "Invite Admin User",
+      "inviteSuccess": "Admin user invitation sent successfully. Redirecting…",
+      "emailHelper": "The invitation will be sent to this email address"
+    },
+    "accounts": {
+      "create": "Create Account User",
+      "createSuccess": "Account user created successfully. Redirecting…",
+      "phoneHelper": "Optional — can be used for notifications and contact"
+    },
+    "details": {
+      "information": "User Information",
+      "roleAssignment": "Role Assignment",
+      "currentStatus": "Current Status",
+      "deactivate": "Deactivate",
+      "deactivateUser": "Deactivate User",
+      "deleteUser": "Delete User",
+      "notFound": "User not found",
+      "cannotChangeOwn": "You cannot change your own roles or status.",
+      "resendSuccess": "Invitation email resent successfully.",
+      "saveChanges": "Save Changes",
+      "adminDetails": "Admin User Details",
+      "accountDetails": "Account User Details"
+    },
+    "groups": {
+      "title": "User Groups",
+      "subtitle": "Group account users so discounts can be restricted to them",
+      "create": "New group",
+      "createTitle": "Create user group",
+      "editTitle": "Edit user group",
+      "deleteTitle": "Delete user group",
+      "deleteConfirm": "Delete “{{name}}”? Members will be removed from the group, but their accounts are not affected.",
+      "deletedButReferenced": "Group deleted. {{count}} discount(s) still list it in their eligibility rules — please review them.",
+      "manageMembers": "Members",
+      "membersTitle": "Members of {{name}}",
+      "addMembers": "Add account users",
+      "removeMember": "Remove from group",
+      "noMembers": "Nobody is in this group yet.",
+      "empty": {
+        "title": "No user groups yet",
+        "description": "Create a group to restrict a discount to particular members."
+      },
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "members": "Members",
+        "actions": "Actions"
+      },
+      "errors": {
+        "loadFailed": "Could not load user groups",
+        "saveFailed": "Could not save the group",
+        "deleteFailed": "Could not delete the group",
+        "loadMembersFailed": "Could not load the group's members",
+        "addMemberFailed": "Could not add those members",
+        "removeMemberFailed": "Could not remove that member"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Send Invitation",
+      "sendingInvitation": "Sending Invitation…",
+      "createUser": "Create User",
+      "creatingUser": "Creating User…",
+      "resendInvite": "Resend Invite",
+      "sending": "Sending…"
+    },
+    "registrations": {
+      "title": "Registrations",
+      "subtitle": "People who have asked to join this organisation.",
+      "tabsAriaLabel": "Registration status",
+      "tabs": {
+        "pending": "Awaiting approval",
+        "active": "Approved",
+        "rejected": "Not approved"
+      },
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "registered": "Registered",
+        "actions": "Actions",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Approved",
+        "pending": "Awaiting approval",
+        "rejected": "Not approved"
+      },
+      "empty": {
+        "pending": "No registrations are waiting for approval.",
+        "active": "No approved registrations yet.",
+        "rejected": "No registrations have been refused."
+      },
+      "actions": {
+        "approve": "Approve",
+        "reject": "Refuse"
+      },
+      "confirm": {
+        "approveTitle": "Approve this registration?",
+        "rejectTitle": "Refuse this registration?",
+        "approveBody": "{{name}} will be able to sign in and see this organisation.",
+        "rejectBody": "{{name}} will not be able to sign in. They are not told why.",
+        "noteLabel": "Note (optional)",
+        "noteHint": "Recorded for your club only. The member never sees it."
+      },
+      "messages": {
+        "loadFailed": "Could not load the registrations.",
+        "decisionFailed": "Could not record that decision.",
+        "approved": "{{name}} has been approved.",
+        "rejected": "{{name}} has been refused."
+      }
+    }
   }
 }

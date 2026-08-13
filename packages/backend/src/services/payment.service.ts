@@ -1,6 +1,8 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import ExcelJS from 'exceljs';
+import { fulfilmentService, FulfilmentOutcome } from './fulfilment.service';
+import { NotFoundError, ValidationError } from '../middleware/errors';
 
 /**
  * Payment interface matching database schema
@@ -364,6 +366,139 @@ export class PaymentService {
       logger.error('Error exporting payments:', error);
       throw error;
     }
+  }
+
+  /**
+   * Record that money paid outside the system has arrived (I2).
+   *
+   * **This is the step that finishes an offline order.** A member who chooses
+   * to pay by cheque or transfer checks out into `awaiting_offline`, and
+   * fulfilment deliberately defers everything except an event entry: a
+   * membership is an entitlement that runs for a year, and granting one before
+   * the money arrives gives it away. Those lines sit unfulfilled until this
+   * runs — so without it, a paid cheque produces no membership, no order and no
+   * booking, and the member's own screen reads "the club has still to record
+   * this as received" forever.
+   *
+   * Fulfilment is therefore triggered here rather than left to a later job, and
+   * its outcome is returned so the screen can say what the money actually
+   * produced.
+   *
+   * **Idempotent.** Marking an already-received payment changes nothing and
+   * re-runs fulfilment, which is itself safe — it only looks at lines with no
+   * `fulfilled_at`. A double click, or two administrators at once, cannot
+   * create two memberships.
+   */
+  async markOfflinePaymentReceived(
+    organisationId: string,
+    paymentId: string,
+    receivedBy: string
+  ): Promise<{ payment: Payment; fulfilment: FulfilmentOutcome }> {
+    const existing = await db.query(
+      `SELECT id, payment_status, offline_received_at
+       FROM payments
+       WHERE id = $1 AND organisation_id = $2`,
+      [paymentId, organisationId]
+    );
+
+    const row = existing.rows[0];
+    if (!row) {
+      throw new NotFoundError('Payment not found');
+    }
+
+    /*
+     * Only an offline payment can be received. A card payment's money arrives
+     * through the provider and its status is the webhook's to set — marking one
+     * received by hand would overwrite what Stripe said with a guess.
+     */
+    if (row.payment_status !== 'awaiting_offline' && !row.offline_received_at) {
+      throw new ValidationError('That payment is not awaiting an offline settlement');
+    }
+
+    await db.query(
+      `UPDATE payments
+       SET payment_status = 'paid',
+           offline_received_at = COALESCE(offline_received_at, NOW()),
+           offline_received_by = COALESCE(offline_received_by, $3),
+           payment_date = COALESCE(payment_date, NOW()),
+           updated_at = NOW()
+       WHERE id = $1 AND organisation_id = $2`,
+      [paymentId, organisationId, receivedBy]
+    );
+
+    /*
+     * Now that it is paid, everything that was waiting can be created. A
+     * failure here does not undo the money: the payment stays received and the
+     * failing line carries its reason, exactly as a card payment's would.
+     */
+    const fulfilment = await fulfilmentService.fulfilPayment(paymentId);
+
+    logger.info('Offline payment recorded as received', {
+      paymentId,
+      receivedBy,
+      fulfilled: fulfilment.fulfilled,
+      failed: fulfilment.failed,
+    });
+
+    const payment = await this.getPaymentById(paymentId);
+    return { payment: payment!, fulfilment };
+  }
+
+  /**
+   * Undo a mistaken "received" (I2).
+   *
+   * **Refused once anything has been fulfilled**, and that restriction is the
+   * substance of this method rather than an omission. Marking a payment
+   * received creates memberships, orders, bookings and registrations; quietly
+   * flipping the status back would leave every one of them in place, granted
+   * against money the club never had, with nothing to say so.
+   *
+   * So an undo is available only while the mark produced nothing — which is the
+   * case an administrator actually needs it for: the wrong row clicked, caught
+   * immediately, before or despite fulfilment. Once records exist, the honest
+   * routes are a refund or cancelling the thing itself, and the error says so.
+   */
+  async undoOfflinePaymentReceived(
+    organisationId: string,
+    paymentId: string
+  ): Promise<Payment> {
+    const existing = await db.query(
+      `SELECT p.id, p.payment_status, p.offline_received_at,
+              (SELECT COUNT(*) FROM payment_transactions pt
+                WHERE pt.payment_id = p.id AND pt.fulfilled_at IS NOT NULL) AS fulfilled_lines
+       FROM payments p
+       WHERE p.id = $1 AND p.organisation_id = $2`,
+      [paymentId, organisationId]
+    );
+
+    const row = existing.rows[0];
+    if (!row) {
+      throw new NotFoundError('Payment not found');
+    }
+    if (!row.offline_received_at) {
+      throw new ValidationError('That payment has not been recorded as received');
+    }
+    if (Number(row.fulfilled_lines) > 0) {
+      throw new ValidationError(
+        'This payment has already produced memberships, bookings or orders. ' +
+          'Refund it or cancel those individually instead of undoing the receipt.'
+      );
+    }
+
+    await db.query(
+      `UPDATE payments
+       SET payment_status = 'awaiting_offline',
+           offline_received_at = NULL,
+           offline_received_by = NULL,
+           payment_date = NULL,
+           updated_at = NOW()
+       WHERE id = $1 AND organisation_id = $2`,
+      [paymentId, organisationId]
+    );
+
+    logger.info('Offline payment receipt undone', { paymentId });
+
+    return (await this.getPaymentById(paymentId))!;
   }
 
   /**

@@ -19,7 +19,8 @@
       "confirm": "Conferma",
       "view": "Visualizza",
       "download": "Scarica",
-      "upload": "Carica"
+      "upload": "Carica",
+      "add": "Aggiungi"
     },
     "status": {
       "active": "Attivo",
@@ -31,7 +32,8 @@
       "archived": "Archiviato",
       "cancelled": "Annullato",
       "approved": "Approvato",
-      "rejected": "Rifiutato"
+      "rejected": "Rifiutato",
+      "status": "Stato"
     },
     "validation": {
       "required": "Questo campo è obbligatorio",
@@ -65,7 +67,8 @@
       "entries": "iscrizioni",
       "activity": "attività",
       "activities": "attività",
-      "configured": "configurato"
+      "configured": "configurato",
+      "email": "Email"
     },
     "accessibility": {
       "openDrawer": "Apri menu di navigazione",
@@ -194,7 +197,9 @@
       "addActivity": "Aggiungi attività",
       "noActivities": "Aggiungi almeno un'attività per completare la configurazione del tuo evento",
       "validation": {
-        "atLeastOne": "È richiesta almeno un'attività"
+        "atLeastOne": "È richiesta almeno un'attività",
+        "allFieldsRequired": "Tutte le attività devono avere un nome e una descrizione",
+        "applicationFormRequired": "Ogni attività deve avere un modulo di candidatura selezionato"
       },
       "activity": {
         "untitled": "Attività senza titolo",
@@ -259,6 +264,10 @@
       "formSubmission": "Dati invio modulo",
       "loadingSubmission": "Caricamento dati invio...",
       "uploadedFiles": "File caricati"
+    },
+    "deleteDialog": {
+      "title": "Elimina evento",
+      "message": "Vuoi davvero eliminare «{{eventName}}»? L'evento verrà nascosto dall'elenco, ma tutti i dati saranno conservati."
     }
   },
   "memberships": {
@@ -284,6 +293,208 @@
       "all": "Tutti",
       "single": "Singolo",
       "group": "Gruppo"
+    },
+    "editMembershipType": "Modifica tipo di iscrizione",
+    "searchMembersPlaceholder": "Cerca per nome o numero di iscrizione...",
+    "noMatchingTypes": "Nessun tipo di iscrizione corrisponde ai filtri",
+    "noMembersFound": "Nessun iscritto trovato",
+    "loadingTypes": "Caricamento dei tipi di iscrizione...",
+    "loadingMembers": "Caricamento degli iscritti...",
+    "loadingMember": "Caricamento dell'iscritto...",
+    "loadingType": "Caricamento del tipo di iscrizione...",
+    "failedToLoad": "Impossibile caricare il tipo di iscrizione",
+    "failedToLoadMembers": "Impossibile caricare gli iscritti",
+    "failedToSave": "Impossibile salvare il tipo di iscrizione",
+    "failedToDelete": "Impossibile eliminare il tipo di iscrizione",
+    "failedToUpdate": "Impossibile aggiornare lo stato di elaborazione",
+    "failedToExport": "Impossibile esportare gli iscritti",
+    "typeNotFound": "Tipo di iscrizione non trovato",
+    "memberNotFound": "Iscritto non trovato",
+    "tooltips": {
+      "viewDetails": "Visualizza dettagli",
+      "edit": "Modifica",
+      "delete": "Elimina"
+    },
+    "filters": {
+      "status": "Stato",
+      "type": "Tipo",
+      "customFilter": "Filtro personalizzato",
+      "createFilter": "Crea filtro",
+      "none": "Nessuno"
+    },
+    "memberStatus": {
+      "active": "Attivo",
+      "pending": "In attesa",
+      "elapsed": "Scaduto"
+    },
+    "paymentStatus": {
+      "paid": "Pagato",
+      "pending": "In attesa",
+      "notSpecified": "Non specificato"
+    },
+    "create": {
+      "single": {
+        "title": "Crea tipo di iscrizione individuale",
+        "editTitle": "Modifica tipo di iscrizione individuale"
+      },
+      "group": {
+        "title": "Crea tipo di iscrizione di gruppo",
+        "editTitle": "Modifica tipo di iscrizione di gruppo"
+      }
+    },
+    "sections": {
+      "basicInfo": "Informazioni di base",
+      "groupConfig": "Configurazione del gruppo",
+      "personConfig": "Configurazione delle persone",
+      "fieldConfig": "Configurazione dei campi",
+      "duration": "Durata dell'iscrizione",
+      "applicationSettings": "Impostazioni della domanda",
+      "paymentSettings": "Impostazioni di pagamento",
+      "termsAndConditions": "Termini e condizioni",
+      "membershipInfo": "Informazioni sull'iscrizione",
+      "statusManagement": "Gestione dello stato"
+    },
+    "fields": {
+      "name": "Nome",
+      "nameHelper": "Nome visualizzato per questo tipo di iscrizione (ad es. «Iscrizione adulti»)",
+      "description": "Descrizione",
+      "descriptionHelper": "Descrizione dettagliata mostrata agli iscritti al momento della scelta dell'iscrizione",
+      "membershipForm": "Modulo di iscrizione",
+      "membershipStatus": "Stato dell'iscrizione",
+      "isRollingMembership": "Iscrizione a rinnovo continuo",
+      "rollingMembershipHelper": "Le iscrizioni a rinnovo continuo sono valide per un determinato numero di mesi dalla data di pagamento. Le iscrizioni a periodo fisso hanno una data di scadenza precisa.",
+      "validUntil": "Valida fino al",
+      "validUntilHelper": "Data di scadenza per le iscrizioni a periodo fisso",
+      "numberOfMonths": "Numero di mesi",
+      "numberOfMonthsHelper": "Durata in mesi per le iscrizioni a rinnovo continuo",
+      "automaticallyApprove": "Approva automaticamente le domande",
+      "automaticallyApproveHelper": "Se attivo, le nuove domande vengono contrassegnate automaticamente come «Attive». Se disattivo, le domande richiedono un'approvazione manuale e partono come «In attesa».",
+      "memberLabels": "Etichette degli iscritti",
+      "memberLabelsHelper": "Etichette assegnate automaticamente agli iscritti con questo tipo di iscrizione",
+      "supportedPaymentMethods": "Metodi di pagamento supportati",
+      "useTermsAndConditions": "Usa termini e condizioni",
+      "useTermsAndConditionsHelper": "Se attivo, i richiedenti devono accettare i termini e le condizioni prima dell'invio",
+      "termsAndConditionsContent": "Testo dei termini e condizioni",
+      "maxPeople": "Numero massimo di persone",
+      "maxPeopleHelper": "Numero massimo di persone ammesse in una domanda di gruppo",
+      "minPeople": "Numero minimo di persone",
+      "minPeopleHelper": "Numero minimo di persone richieste in una domanda di gruppo",
+      "personConfigHelper": "Configura titoli ed etichette facoltativi per ogni posto nel gruppo",
+      "fieldConfigHelper": "Stabilisci se ogni campo del modulo è comune a tutto il gruppo oppure specifico per ciascuna persona",
+      "membershipNumber": "Numero di iscrizione",
+      "membershipType": "Tipo di iscrizione",
+      "dateLastRenewed": "Data ultimo rinnovo",
+      "validUntilDate": "Valida fino al",
+      "status": "Stato",
+      "processed": "Elaborato",
+      "addLabel": "Aggiungi etichetta",
+      "title": "Titolo",
+      "titleOptional": "Titolo (facoltativo)",
+      "titlePlaceholder": "ad es. «Genitore/Tutore uno», «Figlio 1»",
+      "labelsOptional": "Etichette (facoltative)",
+      "fieldName": "Nome del campo",
+      "fieldType": "Tipo",
+      "required": "Obbligatorio",
+      "configuration": "Configurazione",
+      "yes": "Sì",
+      "no": "No"
+    },
+    "personConfig": {
+      "person": "Persona {{number}}",
+      "setMaxPeople": "Imposta il numero massimo di persone per configurare i posti",
+      "selectForm": "Seleziona un modulo di iscrizione per configurare la condivisione dei campi"
+    },
+    "fieldConfig": {
+      "commonToAll": "Comune a tutti",
+      "uniqueForEach": "Specifico per ciascuno"
+    },
+    "duration": {
+      "rolling": "Iscrizione a rinnovo continuo",
+      "fixedPeriod": "Iscrizione a periodo fisso",
+      "type": "Tipo",
+      "duration": "Durata",
+      "months": "{{count}} mesi",
+      "notSet": "Non impostata"
+    },
+    "approval": {
+      "yes": "Sì (approvazione automatica ad Attivo)",
+      "no": "No (approvazione manuale richiesta)"
+    },
+    "labels": {
+      "noLabels": "Nessuna etichetta configurata",
+      "noLabelsAssigned": "Nessuna etichetta assegnata"
+    },
+    "details": {
+      "backToTypes": "Torna ai tipi di iscrizione",
+      "backToMembers": "Torna agli iscritti"
+    },
+    "delete": {
+      "title": "Elimina tipo di iscrizione",
+      "message": "Vuoi davvero eliminare «{{name}}»? Questa azione non può essere annullata."
+    },
+    "validation": {
+      "nameRequired": "Il nome del tipo di iscrizione è obbligatorio",
+      "descriptionRequired": "La descrizione è obbligatoria",
+      "formRequired": "Il modulo di iscrizione è obbligatorio",
+      "validUntilRequired": "La data di scadenza è obbligatoria per le iscrizioni a periodo fisso",
+      "numberOfMonthsRequired": "Il numero di mesi è obbligatorio per le iscrizioni a rinnovo continuo",
+      "paymentMethodRequired": "È obbligatorio almeno un metodo di pagamento",
+      "termsRequired": "Il testo dei termini e condizioni è obbligatorio quando sono attivi",
+      "maxPeopleMin": "Il numero massimo di persone deve essere almeno 2 per le iscrizioni di gruppo",
+      "minPeopleMin": "Il numero minimo di persone deve essere almeno 2 per le iscrizioni di gruppo",
+      "minMaxMismatch": "Il numero minimo di persone non può superare il massimo"
+    },
+    "actions": {
+      "saveChanges": "Salva modifiche",
+      "saveAndPublish": "Salva e pubblica",
+      "exportToExcel": "Esporta in Excel",
+      "markProcessed": "Segna come elaborato",
+      "markUnprocessed": "Segna come non elaborato",
+      "addLabels": "Aggiungi etichette",
+      "removeLabels": "Rimuovi etichette",
+      "execute": "Esegui",
+      "add": "Aggiungi",
+      "addMember": "Aggiungi iscritto"
+    },
+    "typeSelector": {
+      "title": "Seleziona il tipo di iscrizione"
+    },
+    "batch": {
+      "markProcessed": {
+        "title": "Segna come elaborati",
+        "message": "Segnare {{count}} iscritto/i selezionato/i come elaborati?"
+      },
+      "markUnprocessed": {
+        "title": "Segna come non elaborati",
+        "message": "Segnare {{count}} iscritto/i selezionato/i come non elaborati?"
+      },
+      "addLabels": {
+        "title": "Aggiungi etichette",
+        "message": "Aggiungere etichette a {{count}} iscritto/i selezionato/i?",
+        "labelsToAdd": "Etichette da aggiungere"
+      },
+      "removeLabels": {
+        "title": "Rimuovi etichette",
+        "message": "Rimuovere le etichette da {{count}} iscritto/i selezionato/i?",
+        "labelsToRemove": "Etichette da rimuovere"
+      },
+      "processing": "Elaborazione in corso..."
+    },
+    "customFilter": {
+      "title": "Crea filtro personalizzato",
+      "filterName": "Nome del filtro",
+      "filterNameHelper": "Assegna a questo filtro un nome descrittivo",
+      "memberStatus": "Stato dell'iscritto",
+      "dateLastRenewedFilters": "Filtri per data ultimo rinnovo",
+      "validUntilFilters": "Filtri per data di scadenza",
+      "beforeDate": "Prima del",
+      "afterDate": "Dopo il",
+      "memberLabels": "Etichette degli iscritti",
+      "saveFilter": "Salva filtro"
+    },
+    "paymentMethods": {
+      "payOffline": "Pagamento offline",
+      "stripe": "Pagamento con carta (Stripe)"
     }
   },
   "calendar": {
@@ -728,6 +939,11 @@
       "title": "I dati di invio del modulo verrebbero visualizzati qui in base ai campi del modulo di domanda. Ciò include tutti i campi personalizzati definiti nel modulo di registrazione.",
       "uploadedFiles": "File caricati",
       "downloadFile": "Scarica {{filename}}"
+    },
+    "discounts": {
+      "selectorHelperText": "Associa gli sconti a questo tipo di iscrizione",
+      "selectLabel": "Seleziona sconti",
+      "selectHelperText": "Scegli gli sconti applicabili a questo tipo di iscrizione"
     }
   },
   "merchandise": {
@@ -1442,6 +1658,28 @@
       "reasonRequired": "Il motivo del rimborso è obbligatorio",
       "confirmButton": "Conferma rimborso",
       "processing": "Elaborazione..."
+    },
+    "offline": {
+      "menu": "Pagamenti offline",
+      "title": "Pagamenti offline",
+      "subtitle": "Assegni e bonifici che i soci si sono impegnati a versare. Nulla di ciò che hanno acquistato esiste finché non registri l’incasso.",
+      "tabOutstanding": "In sospeso",
+      "tabSettled": "Registrati",
+      "noneOutstanding": "Non c’è nulla in attesa di un pagamento offline.",
+      "noneSettled": "Non hai ancora registrato pagamenti offline.",
+      "loadError": "Non siamo riusciti a caricare i pagamenti offline.",
+      "placedOn": "Ordinato il {{date}}",
+      "awaiting": "In attesa di pagamento",
+      "receivedOn": "Incassato il {{date}}",
+      "alsoPaidByCard": "{{amount}} di questo ordine è già stato pagato con carta.",
+      "markReceived": "Segna come incassato",
+      "recording": "Registrazione…",
+      "recorded": "Registrato. {{name}} ora ha tutto ciò che ha pagato.",
+      "recordedWithFailures": "Registrato, ma {{failed}} articolo/i non sono stati creati per {{name}}. Controlla prima di confermare.",
+      "recordFailed": "Non siamo riusciti a registrare quel pagamento.",
+      "undo": "Annulla",
+      "undone": "Il pagamento di {{name}} è di nuovo in sospeso.",
+      "undoFailed": "Non siamo riusciti ad annullare la registrazione."
     }
   },
   "reporting": {
@@ -1580,6 +1818,9 @@
   },
   "settings": {
     "title": "Impostazioni",
+    "pageTitle": "Impostazioni organizzazione",
+    "pageSubtitle": "Gestisci la configurazione e le preferenze della tua organizzazione",
+    "tabsAriaLabel": "schede impostazioni",
     "organisationDetails": {
       "title": "Dettagli organizzazione",
       "subtitle": "Gestisci le informazioni di base e i dettagli di contatto della tua organizzazione",
@@ -1631,27 +1872,10 @@
       "title": "Impostazioni pagamento",
       "subtitle": "Configura l'elaborazione dei pagamenti e i metodi di pagamento accettati",
       "sections": {
-        "stripeConfig": "Configurazione Stripe",
-        "paymentConfig": "Configurazione pagamento",
         "offlinePayments": "Pagamenti offline",
         "helixPay": "Pagamenti con carta (Helix-Pay)"
       },
       "fields": {
-        "stripeEnabled": "Abilita pagamenti Stripe",
-        "stripePublishableKey": "Chiave pubblicabile Stripe",
-        "stripePublishableKeyPlaceholder": "pk_live_...",
-        "stripePublishableKeyHelper": "La tua chiave pubblicabile Stripe (inizia con pk_)",
-        "stripeSecretKey": "Chiave segreta Stripe",
-        "stripeSecretKeyPlaceholder": "sk_live_...",
-        "stripeSecretKeyHelper": "La tua chiave segreta Stripe (inizia con sk_)",
-        "stripeWebhookSecret": "Segreto webhook Stripe",
-        "stripeWebhookSecretPlaceholder": "whsec_...",
-        "stripeWebhookSecretHelper": "Il tuo segreto di firma webhook Stripe (opzionale)",
-        "defaultCurrency": "Valuta predefinita",
-        "handlingFeePercentage": "Commissione di gestione (%)",
-        "handlingFeePercentageHelper": "Commissione percentuale aggiunta ai pagamenti con carta",
-        "handlingFeeFixed": "Commissione di gestione fissa",
-        "handlingFeeFixedHelper": "Commissione fissa aggiunta ai pagamenti con carta",
         "chequePaymentsEnabled": "Abilita pagamenti con assegno/offline",
         "chequePaymentInstructions": "Istruzioni pagamento assegno",
         "chequePaymentInstructionsPlaceholder": "Si prega di intestare gli assegni a...",
@@ -1662,7 +1886,6 @@
         "helixPayApiKeyHelper": "La tua chiave API Helix-Pay, utilizzata per elaborare i pagamenti con carta"
       },
       "validation": {
-        "stripeKeysRequired": "La chiave pubblicabile e la chiave segreta Stripe sono obbligatorie quando Stripe è abilitato",
         "helixPayApiKeyRequired": "È richiesta una chiave API Helix-Pay quando Helix-Pay è abilitato"
       },
       "messages": {
@@ -1685,6 +1908,7 @@
         "uploading": "Caricamento...",
         "removeLogo": "Rimuovi",
         "logoHelper": "Consigliato: PNG o SVG, max 2MB",
+        "colourPicker": "Selettore {{colour}}",
         "primaryColour": "Colore primario",
         "secondaryColour": "Colore secondario",
         "accentColour": "Colore accento",
@@ -1696,7 +1920,40 @@
         "organisationName": "Nome organizzazione",
         "primaryButton": "Pulsante primario",
         "secondaryButton": "Pulsante secondario",
-        "accentButton": "Pulsante accento"
+        "accentButton": "Pulsante accento",
+        "accountUserCaption": "Come appare a un membro che ha effettuato l’accesso",
+        "headingSample": "Bentornato",
+        "bodySample": "I colori del tuo club sono applicati in tutta l’app per i membri.",
+        "outlinedButton": "Contornato",
+        "textButton": "Link testuale",
+        "chipPrimary": "Primario",
+        "chipSecondary": "Secondario",
+        "chipAccent": "Accento",
+        "chipDefault": "Predefinito",
+        "formHeading": "Moduli e controlli",
+        "fieldLabel": "Nome completo",
+        "fieldValue": "Ada Adams",
+        "selectLabel": "Tipo di iscrizione",
+        "selectOption": "Membro effettivo",
+        "checkboxLabel": "Inviami aggiornamenti",
+        "switchLabel": "Rinnovo automatico",
+        "radioOne": "Carta",
+        "radioTwo": "Offline",
+        "tableHeading": "Tabelle",
+        "tableItem": "Voce",
+        "tableStatus": "Stato",
+        "tableAmount": "Importo",
+        "tableRowOne": "Iscrizione allo Spring Show",
+        "tableRowTwo": "Felpa del club",
+        "statusPaid": "Pagato",
+        "statusPending": "In sospeso",
+        "listHeading": "Elenchi",
+        "listItemOne": "Allenamento Minimus",
+        "listItemOneDetail": "Sabato 16 agosto",
+        "listItemTwo": "Camp estivo",
+        "listItemTwoDetail": "Posti rimanenti: 4",
+        "listBadge": "Iscritto",
+        "calloutText": "Il colore di accento è usato per evidenziazioni e avvisi."
       },
       "validation": {
         "invalidFileType": "Seleziona un file immagine",
@@ -1752,6 +2009,56 @@
       "saveChanges": "Salva modifiche",
       "saving": "Salvataggio...",
       "cancel": "Annulla"
+    },
+    "registration": {
+      "title": "Registrazione",
+      "description": "Controlla come i membri entrano in questa organizzazione e chi viene avvisato.",
+      "autoRegistration": {
+        "label": "Approva automaticamente le registrazioni",
+        "onHint": "I membri possono accedere non appena hanno verificato il proprio indirizzo e-mail.",
+        "offHint": "Un amministratore deve approvare ogni registrazione prima che il membro possa accedere. Fino ad allora vedrà una schermata di attesa."
+      },
+      "notifications": {
+        "title": "E-mail di notifica",
+        "description": "Questi indirizzi vengono avvisati ogni volta che qualcuno si registra.",
+        "addLabel": "Indirizzo e-mail",
+        "add": "Aggiungi",
+        "none": "Nessun indirizzo aggiunto.",
+        "approvalWithoutRecipients": "Le registrazioni richiedono approvazione ma nessuno viene avvisato. Le richieste resteranno in coda inosservate e i membri non potranno accedere."
+      },
+      "validation": {
+        "invalidEmail": "Inserisci un indirizzo e-mail valido.",
+        "duplicateEmail": "Questo indirizzo è già stato aggiunto."
+      },
+      "messages": {
+        "loadFailed": "Non è stato possibile caricare le impostazioni di registrazione.",
+        "saveFailed": "Non è stato possibile salvare le impostazioni di registrazione.",
+        "saved": "Impostazioni di registrazione salvate."
+      }
+    },
+    "stripeConnect": {
+      "title": "Pagamenti Stripe",
+      "description": "Collega il tuo account Stripe affinché i pagamenti con carta arrivino al tuo club. I membri non potranno pagare con carta finché non avrai completato questa operazione.",
+      "platformNotConfigured": "I pagamenti con carta non sono ancora disponibili su questa piattaforma. Contatta l'assistenza.",
+      "status": {
+        "ready": "Pronto a incassare",
+        "incomplete": "Non completato",
+        "notStarted": "Non collegato"
+      },
+      "readyBody": "Il tuo club può incassare pagamenti con carta. Il denaro arriva direttamente sul tuo account Stripe; le spese di gestione della piattaforma vengono trattenute da ogni pagamento.",
+      "incompleteBody": "Stripe ha ancora bisogno di qualcosa da te prima che il club possa incassare pagamenti con carta. Riprendi da dove eri rimasto.",
+      "notStartedBody": "Non hai ancora collegato un account Stripe. Finché non lo farai, i membri non potranno pagare il club con carta.",
+      "outstanding": "Stripe è ancora in attesa di:",
+      "accountId": "Account Stripe: {{accountId}}",
+      "actions": {
+        "start": "Collega Stripe",
+        "continue": "Continua con Stripe",
+        "refresh": "Aggiorna stato"
+      },
+      "messages": {
+        "loadFailed": "Non è stato possibile caricare il collegamento a Stripe.",
+        "startFailed": "Non è stato possibile avviare la configurazione di Stripe."
+      }
     }
   },
   "navigation": {
@@ -1971,5 +2278,160 @@
     "feeHelper": "The amount to charge for this type",
     "handlingFeeIncluded": "Handling fee included",
     "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
+  },
+  "users": {
+    "title": "Gestione utenti",
+    "tabs": {
+      "admins": "Amministratori",
+      "accounts": "Utenti account"
+    },
+    "search": "Cerca utenti per nome o email…",
+    "noRoles": "Nessun ruolo assegnato",
+    "fields": {
+      "name": "Nome",
+      "firstName": "Nome",
+      "lastName": "Cognome",
+      "email": "Email",
+      "emailAddress": "Indirizzo email",
+      "phone": "Telefono",
+      "phoneNumber": "Numero di telefono",
+      "status": "Stato",
+      "lastLogin": "Ultimo accesso",
+      "roles": "Ruoli",
+      "actions": "Azioni",
+      "created": "Creato"
+    },
+    "loading": {
+      "admins": "Caricamento amministratori…",
+      "accounts": "Caricamento utenti account…",
+      "details": "Caricamento dettagli utente…"
+    },
+    "admins": {
+      "invite": "Invita amministratore",
+      "inviteSuccess": "Invito inviato correttamente. Reindirizzamento…",
+      "emailHelper": "L'invito sarà inviato a questo indirizzo email"
+    },
+    "accounts": {
+      "create": "Crea utente account",
+      "createSuccess": "Utente account creato correttamente. Reindirizzamento…",
+      "phoneHelper": "Facoltativo — utilizzabile per notifiche e contatti"
+    },
+    "details": {
+      "information": "Informazioni utente",
+      "roleAssignment": "Assegnazione ruoli",
+      "currentStatus": "Stato attuale",
+      "deactivate": "Disattiva",
+      "deactivateUser": "Disattiva utente",
+      "deleteUser": "Elimina utente",
+      "notFound": "Utente non trovato",
+      "cannotChangeOwn": "Non puoi modificare i tuoi ruoli o il tuo stato.",
+      "resendSuccess": "Email di invito inviata nuovamente.",
+      "saveChanges": "Salva modifiche",
+      "adminDetails": "Dettagli amministratore",
+      "accountDetails": "Dettagli utente account"
+    },
+    "groups": {
+      "title": "Gruppi di utenti",
+      "subtitle": "Raggruppa gli utenti per riservare loro degli sconti",
+      "create": "Nuovo gruppo",
+      "createTitle": "Crea gruppo di utenti",
+      "editTitle": "Modifica gruppo di utenti",
+      "deleteTitle": "Elimina gruppo di utenti",
+      "deleteConfirm": "Eliminare «{{name}}»? I membri usciranno dal gruppo, ma i loro account non saranno modificati.",
+      "deletedButReferenced": "Gruppo eliminato. {{count}} sconto/i lo indicano ancora — si prega di verificarli.",
+      "manageMembers": "Membri",
+      "membersTitle": "Membri di {{name}}",
+      "addMembers": "Aggiungi utenti",
+      "removeMember": "Rimuovi dal gruppo",
+      "noMembers": "Questo gruppo non ha ancora membri.",
+      "empty": {
+        "title": "Nessun gruppo di utenti",
+        "description": "Crea un gruppo per riservare uno sconto a determinati membri."
+      },
+      "fields": {
+        "name": "Nome",
+        "description": "Descrizione",
+        "members": "Membri",
+        "actions": "Azioni"
+      },
+      "errors": {
+        "loadFailed": "Impossibile caricare i gruppi",
+        "saveFailed": "Impossibile salvare il gruppo",
+        "deleteFailed": "Impossibile eliminare il gruppo",
+        "loadMembersFailed": "Impossibile caricare i membri",
+        "addMemberFailed": "Impossibile aggiungere quei membri",
+        "removeMemberFailed": "Impossibile rimuovere quel membro"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Invia invito",
+      "sendingInvitation": "Invio invito…",
+      "createUser": "Crea utente",
+      "creatingUser": "Creazione utente…",
+      "resendInvite": "Invia di nuovo l'invito",
+      "sending": "Invio…"
+    },
+    "registrations": {
+      "title": "Registrazioni",
+      "subtitle": "Persone che hanno chiesto di entrare in questa organizzazione.",
+      "tabsAriaLabel": "Stato della registrazione",
+      "tabs": {
+        "pending": "In attesa di approvazione",
+        "active": "Approvate",
+        "rejected": "Non approvate"
+      },
+      "columns": {
+        "name": "Nome",
+        "email": "E-mail",
+        "phone": "Telefono",
+        "registered": "Registrato il",
+        "actions": "Azioni",
+        "status": "Stato"
+      },
+      "status": {
+        "active": "Approvata",
+        "pending": "In attesa di approvazione",
+        "rejected": "Non approvata"
+      },
+      "empty": {
+        "pending": "Nessuna registrazione in attesa di approvazione.",
+        "active": "Ancora nessuna registrazione approvata.",
+        "rejected": "Nessuna registrazione è stata rifiutata."
+      },
+      "actions": {
+        "approve": "Approva",
+        "reject": "Rifiuta"
+      },
+      "confirm": {
+        "approveTitle": "Approvare questa registrazione?",
+        "rejectTitle": "Rifiutare questa registrazione?",
+        "approveBody": "{{name}} potrà accedere e vedere questa organizzazione.",
+        "rejectBody": "{{name}} non potrà accedere. Non gli viene comunicato il motivo.",
+        "noteLabel": "Nota (facoltativa)",
+        "noteHint": "Registrata solo per il tuo club. Il membro non la vede mai."
+      },
+      "messages": {
+        "loadFailed": "Non è stato possibile caricare le registrazioni.",
+        "decisionFailed": "Non è stato possibile salvare la decisione.",
+        "approved": "{{name}} è stato approvato.",
+        "rejected": "{{name}} è stato rifiutato."
+      }
+    }
+  },
+  "discounts": {
+    "eligibility": {
+      "title": "Criteri di idoneità",
+      "description": "Definisci chi può usare questo sconto e a quali condizioni",
+      "requiresCode": "Richiede inserimento del codice",
+      "requiresCodeHelper": "Gli utenti devono inserire il codice per attivarlo",
+      "membershipTypes": "Tipi di iscrizione",
+      "membershipTypesHelper": "Limita a determinati tipi di iscrizione (facoltativo)",
+      "userGroups": "Gruppi di utenti",
+      "userGroupsHelper": "Riserva questo sconto ai membri dei gruppi selezionati",
+      "minimumPurchase": "Importo minimo d'acquisto",
+      "minimumPurchaseHelper": "Totale del carrello necessario per usare questo sconto",
+      "maximumDiscount": "Sconto massimo",
+      "maximumDiscountHelper": "Limita lo sconto massimo applicabile"
+    }
   }
 }

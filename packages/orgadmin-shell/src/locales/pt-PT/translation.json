@@ -19,7 +19,8 @@
       "confirm": "Confirmar",
       "view": "Ver",
       "download": "Transferir",
-      "upload": "Carregar"
+      "upload": "Carregar",
+      "add": "Adicionar"
     },
     "status": {
       "active": "Ativo",
@@ -31,7 +32,8 @@
       "archived": "Arquivado",
       "cancelled": "Cancelado",
       "approved": "Aprovado",
-      "rejected": "Rejeitado"
+      "rejected": "Rejeitado",
+      "status": "Estado"
     },
     "validation": {
       "required": "Este campo é obrigatório",
@@ -65,7 +67,8 @@
       "entries": "inscrições",
       "activity": "atividade",
       "activities": "atividades",
-      "configured": "configurado"
+      "configured": "configurado",
+      "email": "Email"
     },
     "accessibility": {
       "openDrawer": "Abrir menu de navegação",
@@ -194,7 +197,9 @@
       "addActivity": "Adicionar atividade",
       "noActivities": "Adicione pelo menos uma atividade para completar a configuração do seu evento",
       "validation": {
-        "atLeastOne": "É necessária pelo menos uma atividade"
+        "atLeastOne": "É necessária pelo menos uma atividade",
+        "allFieldsRequired": "Todas as atividades devem ter um nome e uma descrição",
+        "applicationFormRequired": "Cada atividade deve ter um formulário de candidatura selecionado"
       },
       "activity": {
         "untitled": "Atividade sem título",
@@ -259,6 +264,10 @@
       "formSubmission": "Dados de submissão do formulário",
       "loadingSubmission": "A carregar dados de submissão...",
       "uploadedFiles": "Ficheiros carregados"
+    },
+    "deleteDialog": {
+      "title": "Eliminar evento",
+      "message": "Tem a certeza de que pretende eliminar «{{eventName}}»? Esta ação oculta o evento da lista, mas preserva todos os dados."
     }
   },
   "memberships": {
@@ -284,6 +293,208 @@
       "all": "Todos",
       "single": "Individual",
       "group": "Grupo"
+    },
+    "editMembershipType": "Editar tipo de adesão",
+    "searchMembersPlaceholder": "Procurar por nome ou número de sócio...",
+    "noMatchingTypes": "Nenhum tipo de adesão corresponde aos seus filtros",
+    "noMembersFound": "Nenhum sócio encontrado",
+    "loadingTypes": "A carregar os tipos de adesão...",
+    "loadingMembers": "A carregar os sócios...",
+    "loadingMember": "A carregar o sócio...",
+    "loadingType": "A carregar o tipo de adesão...",
+    "failedToLoad": "Não foi possível carregar o tipo de adesão",
+    "failedToLoadMembers": "Não foi possível carregar os sócios",
+    "failedToSave": "Não foi possível guardar o tipo de adesão",
+    "failedToDelete": "Não foi possível eliminar o tipo de adesão",
+    "failedToUpdate": "Não foi possível atualizar o estado de processamento",
+    "failedToExport": "Não foi possível exportar os sócios",
+    "typeNotFound": "Tipo de adesão não encontrado",
+    "memberNotFound": "Sócio não encontrado",
+    "tooltips": {
+      "viewDetails": "Ver detalhes",
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "filters": {
+      "status": "Estado",
+      "type": "Tipo",
+      "customFilter": "Filtro personalizado",
+      "createFilter": "Criar filtro",
+      "none": "Nenhum"
+    },
+    "memberStatus": {
+      "active": "Ativo",
+      "pending": "Pendente",
+      "elapsed": "Expirado"
+    },
+    "paymentStatus": {
+      "paid": "Pago",
+      "pending": "Pendente",
+      "notSpecified": "Não especificado"
+    },
+    "create": {
+      "single": {
+        "title": "Criar tipo de adesão individual",
+        "editTitle": "Editar tipo de adesão individual"
+      },
+      "group": {
+        "title": "Criar tipo de adesão de grupo",
+        "editTitle": "Editar tipo de adesão de grupo"
+      }
+    },
+    "sections": {
+      "basicInfo": "Informações básicas",
+      "groupConfig": "Configuração do grupo",
+      "personConfig": "Configuração das pessoas",
+      "fieldConfig": "Configuração dos campos",
+      "duration": "Duração da adesão",
+      "applicationSettings": "Definições da candidatura",
+      "paymentSettings": "Definições de pagamento",
+      "termsAndConditions": "Termos e condições",
+      "membershipInfo": "Informações da adesão",
+      "statusManagement": "Gestão do estado"
+    },
+    "fields": {
+      "name": "Nome",
+      "nameHelper": "Nome apresentado para este tipo de adesão (por exemplo, «Adesão de adulto»)",
+      "description": "Descrição",
+      "descriptionHelper": "Descrição detalhada apresentada aos sócios ao escolherem a adesão",
+      "membershipForm": "Formulário de adesão",
+      "membershipStatus": "Estado da adesão",
+      "isRollingMembership": "Adesão contínua",
+      "rollingMembershipHelper": "As adesões contínuas são válidas por um número definido de meses a contar da data de pagamento. As adesões de período fixo têm uma data de fim específica.",
+      "validUntil": "Válida até",
+      "validUntilHelper": "Data de fim para adesões de período fixo",
+      "numberOfMonths": "Número de meses",
+      "numberOfMonthsHelper": "Duração em meses das adesões contínuas",
+      "automaticallyApprove": "Aprovar automaticamente as candidaturas",
+      "automaticallyApproveHelper": "Se ativado, as novas candidaturas são marcadas automaticamente como «Ativas». Caso contrário, exigem aprovação manual e começam como «Pendentes».",
+      "memberLabels": "Etiquetas dos sócios",
+      "memberLabelsHelper": "Etiquetas atribuídas automaticamente aos sócios com este tipo de adesão",
+      "supportedPaymentMethods": "Métodos de pagamento suportados",
+      "useTermsAndConditions": "Utilizar termos e condições",
+      "useTermsAndConditionsHelper": "Se ativado, os candidatos têm de aceitar os termos e condições antes de submeter",
+      "termsAndConditionsContent": "Texto dos termos e condições",
+      "maxPeople": "Número máximo de pessoas",
+      "maxPeopleHelper": "Número máximo de pessoas permitido numa candidatura de grupo",
+      "minPeople": "Número mínimo de pessoas",
+      "minPeopleHelper": "Número mínimo de pessoas exigido numa candidatura de grupo",
+      "personConfigHelper": "Configure títulos e etiquetas opcionais para cada lugar do grupo",
+      "fieldConfigHelper": "Defina se cada campo do formulário é comum a todo o grupo ou específico de cada pessoa",
+      "membershipNumber": "Número de sócio",
+      "membershipType": "Tipo de adesão",
+      "dateLastRenewed": "Data da última renovação",
+      "validUntilDate": "Válida até",
+      "status": "Estado",
+      "processed": "Processado",
+      "addLabel": "Adicionar etiqueta",
+      "title": "Título",
+      "titleOptional": "Título (opcional)",
+      "titlePlaceholder": "por exemplo, «Pai/Encarregado de educação um», «Criança 1»",
+      "labelsOptional": "Etiquetas (opcionais)",
+      "fieldName": "Nome do campo",
+      "fieldType": "Tipo",
+      "required": "Obrigatório",
+      "configuration": "Configuração",
+      "yes": "Sim",
+      "no": "Não"
+    },
+    "personConfig": {
+      "person": "Pessoa {{number}}",
+      "setMaxPeople": "Defina o número máximo de pessoas para configurar os lugares",
+      "selectForm": "Selecione um formulário de adesão para configurar a partilha de campos"
+    },
+    "fieldConfig": {
+      "commonToAll": "Comum a todos",
+      "uniqueForEach": "Específico de cada um"
+    },
+    "duration": {
+      "rolling": "Adesão contínua",
+      "fixedPeriod": "Adesão de período fixo",
+      "type": "Tipo",
+      "duration": "Duração",
+      "months": "{{count}} meses",
+      "notSet": "Não definida"
+    },
+    "approval": {
+      "yes": "Sim (aprovar automaticamente como Ativa)",
+      "no": "Não (aprovação manual necessária)"
+    },
+    "labels": {
+      "noLabels": "Nenhuma etiqueta configurada",
+      "noLabelsAssigned": "Nenhuma etiqueta atribuída"
+    },
+    "details": {
+      "backToTypes": "Voltar aos tipos de adesão",
+      "backToMembers": "Voltar aos sócios"
+    },
+    "delete": {
+      "title": "Eliminar tipo de adesão",
+      "message": "Tem a certeza de que pretende eliminar «{{name}}»? Esta ação não pode ser anulada."
+    },
+    "validation": {
+      "nameRequired": "O nome do tipo de adesão é obrigatório",
+      "descriptionRequired": "A descrição é obrigatória",
+      "formRequired": "O formulário de adesão é obrigatório",
+      "validUntilRequired": "A data «Válida até» é obrigatória nas adesões de período fixo",
+      "numberOfMonthsRequired": "O número de meses é obrigatório nas adesões contínuas",
+      "paymentMethodRequired": "É obrigatório pelo menos um método de pagamento",
+      "termsRequired": "O texto dos termos e condições é obrigatório quando estão ativados",
+      "maxPeopleMin": "O número máximo de pessoas tem de ser pelo menos 2 nas adesões de grupo",
+      "minPeopleMin": "O número mínimo de pessoas tem de ser pelo menos 2 nas adesões de grupo",
+      "minMaxMismatch": "O número mínimo de pessoas não pode exceder o máximo"
+    },
+    "actions": {
+      "saveChanges": "Guardar alterações",
+      "saveAndPublish": "Guardar e publicar",
+      "exportToExcel": "Exportar para Excel",
+      "markProcessed": "Marcar como processado",
+      "markUnprocessed": "Marcar como não processado",
+      "addLabels": "Adicionar etiquetas",
+      "removeLabels": "Remover etiquetas",
+      "execute": "Executar",
+      "add": "Adicionar",
+      "addMember": "Adicionar sócio"
+    },
+    "typeSelector": {
+      "title": "Selecionar tipo de adesão"
+    },
+    "batch": {
+      "markProcessed": {
+        "title": "Marcar como processados",
+        "message": "Marcar {{count}} sócio(s) selecionado(s) como processados?"
+      },
+      "markUnprocessed": {
+        "title": "Marcar como não processados",
+        "message": "Marcar {{count}} sócio(s) selecionado(s) como não processados?"
+      },
+      "addLabels": {
+        "title": "Adicionar etiquetas",
+        "message": "Adicionar etiquetas a {{count}} sócio(s) selecionado(s)?",
+        "labelsToAdd": "Etiquetas a adicionar"
+      },
+      "removeLabels": {
+        "title": "Remover etiquetas",
+        "message": "Remover etiquetas de {{count}} sócio(s) selecionado(s)?",
+        "labelsToRemove": "Etiquetas a remover"
+      },
+      "processing": "A processar..."
+    },
+    "customFilter": {
+      "title": "Criar filtro personalizado",
+      "filterName": "Nome do filtro",
+      "filterNameHelper": "Dê a este filtro um nome descritivo",
+      "memberStatus": "Estado do sócio",
+      "dateLastRenewedFilters": "Filtros de data da última renovação",
+      "validUntilFilters": "Filtros de «Válida até»",
+      "beforeDate": "Antes de",
+      "afterDate": "Depois de",
+      "memberLabels": "Etiquetas dos sócios",
+      "saveFilter": "Guardar filtro"
+    },
+    "paymentMethods": {
+      "payOffline": "Pagar offline",
+      "stripe": "Pagamento com cartão (Stripe)"
     }
   },
   "calendar": {
@@ -728,6 +939,11 @@
       "title": "Os dados de envio do formulário seriam exibidos aqui com base nos campos do formulário de candidatura. Isto inclui todos os campos personalizados definidos no formulário de registo.",
       "uploadedFiles": "Ficheiros carregados",
       "downloadFile": "Transferir {{filename}}"
+    },
+    "discounts": {
+      "selectorHelperText": "Associar descontos a este tipo de inscrição",
+      "selectLabel": "Selecionar descontos",
+      "selectHelperText": "Escolha os descontos aplicáveis a este tipo de inscrição"
     }
   },
   "merchandise": {
@@ -1442,6 +1658,28 @@
       "reasonRequired": "O motivo do reembolso é obrigatório",
       "confirmButton": "Confirmar reembolso",
       "processing": "A processar..."
+    },
+    "offline": {
+      "menu": "Pagamentos offline",
+      "title": "Pagamentos offline",
+      "subtitle": "Cheques e transferências que os sócios se comprometeram a pagar. Nada do que compraram existe até registar a receção do dinheiro.",
+      "tabOutstanding": "Pendentes",
+      "tabSettled": "Registados",
+      "noneOutstanding": "Não há nada à espera de um pagamento offline.",
+      "noneSettled": "Ainda não registou pagamentos offline.",
+      "loadError": "Não foi possível carregar os pagamentos offline.",
+      "placedOn": "Encomendado a {{date}}",
+      "awaiting": "A aguardar pagamento",
+      "receivedOn": "Recebido a {{date}}",
+      "alsoPaidByCard": "{{amount}} desta encomenda já foi pago com cartão.",
+      "markReceived": "Marcar como recebido",
+      "recording": "A registar…",
+      "recorded": "Registado. {{name}} já tem tudo o que pagou.",
+      "recordedWithFailures": "Registado, mas não foi possível criar {{failed}} artigo(s) para {{name}}. Verifique antes de confirmar.",
+      "recordFailed": "Não foi possível registar esse pagamento.",
+      "undo": "Anular",
+      "undone": "O pagamento de {{name}} voltou a estar pendente.",
+      "undoFailed": "Não foi possível anular esse registo."
     }
   },
   "reporting": {
@@ -1580,6 +1818,9 @@
   },
   "settings": {
     "title": "Definições",
+    "pageTitle": "Definições da organização",
+    "pageSubtitle": "Faça a gestão da configuração e das preferências da sua organização",
+    "tabsAriaLabel": "separadores de definições",
     "organisationDetails": {
       "title": "Detalhes da organização",
       "subtitle": "Gerir as informações básicas e detalhes de contacto da sua organização",
@@ -1631,27 +1872,10 @@
       "title": "Definições de pagamento",
       "subtitle": "Configurar o processamento de pagamentos e métodos de pagamento aceites",
       "sections": {
-        "stripeConfig": "Configuração Stripe",
-        "paymentConfig": "Configuração de pagamento",
         "offlinePayments": "Pagamentos offline",
         "helixPay": "Pagamentos com cartão (Helix-Pay)"
       },
       "fields": {
-        "stripeEnabled": "Ativar pagamentos Stripe",
-        "stripePublishableKey": "Chave publicável Stripe",
-        "stripePublishableKeyPlaceholder": "pk_live_...",
-        "stripePublishableKeyHelper": "A sua chave publicável Stripe (começa com pk_)",
-        "stripeSecretKey": "Chave secreta Stripe",
-        "stripeSecretKeyPlaceholder": "sk_live_...",
-        "stripeSecretKeyHelper": "A sua chave secreta Stripe (começa com sk_)",
-        "stripeWebhookSecret": "Segredo webhook Stripe",
-        "stripeWebhookSecretPlaceholder": "whsec_...",
-        "stripeWebhookSecretHelper": "O seu segredo de assinatura webhook Stripe (opcional)",
-        "defaultCurrency": "Moeda predefinida",
-        "handlingFeePercentage": "Taxa de processamento (%)",
-        "handlingFeePercentageHelper": "Taxa percentual adicionada aos pagamentos com cartão",
-        "handlingFeeFixed": "Taxa de processamento fixa",
-        "handlingFeeFixedHelper": "Taxa fixa adicionada aos pagamentos com cartão",
         "chequePaymentsEnabled": "Ativar pagamentos por cheque/offline",
         "chequePaymentInstructions": "Instruções de pagamento por cheque",
         "chequePaymentInstructionsPlaceholder": "Por favor, faça os cheques à ordem de...",
@@ -1662,7 +1886,6 @@
         "helixPayApiKeyHelper": "A sua chave API Helix-Pay, utilizada para processar pagamentos com cartão"
       },
       "validation": {
-        "stripeKeysRequired": "A chave publicável e a chave secreta Stripe são obrigatórias quando o Stripe está ativado",
         "helixPayApiKeyRequired": "É necessária uma chave API Helix-Pay quando o Helix-Pay está ativado"
       },
       "messages": {
@@ -1685,6 +1908,7 @@
         "uploading": "A carregar...",
         "removeLogo": "Remover",
         "logoHelper": "Recomendado: PNG ou SVG, máx. 2MB",
+        "colourPicker": "Seletor de {{colour}}",
         "primaryColour": "Cor primária",
         "secondaryColour": "Cor secundária",
         "accentColour": "Cor de destaque",
@@ -1696,7 +1920,40 @@
         "organisationName": "Nome da organização",
         "primaryButton": "Botão primário",
         "secondaryButton": "Botão secundário",
-        "accentButton": "Botão de destaque"
+        "accentButton": "Botão de destaque",
+        "accountUserCaption": "Como aparece a um membro com sessão iniciada",
+        "headingSample": "Bem-vindo de volta",
+        "bodySample": "As cores do seu clube são aplicadas em toda a aplicação dos membros.",
+        "outlinedButton": "Contornado",
+        "textButton": "Ligação de texto",
+        "chipPrimary": "Primária",
+        "chipSecondary": "Secundária",
+        "chipAccent": "Destaque",
+        "chipDefault": "Predefinido",
+        "formHeading": "Formulários e controlos",
+        "fieldLabel": "Nome completo",
+        "fieldValue": "Ada Adams",
+        "selectLabel": "Tipo de adesão",
+        "selectOption": "Membro efetivo",
+        "checkboxLabel": "Enviar-me novidades",
+        "switchLabel": "Renovação automática",
+        "radioOne": "Cartão",
+        "radioTwo": "Offline",
+        "tableHeading": "Tabelas",
+        "tableItem": "Item",
+        "tableStatus": "Estado",
+        "tableAmount": "Montante",
+        "tableRowOne": "Inscrição no Spring Show",
+        "tableRowTwo": "Camisola do clube",
+        "statusPaid": "Pago",
+        "statusPending": "Pendente",
+        "listHeading": "Listas",
+        "listItemOne": "Treino Minimus",
+        "listItemOneDetail": "Sábado, 16 de agosto",
+        "listItemTwo": "Campo de verão",
+        "listItemTwoDetail": "Lugares restantes: 4",
+        "listBadge": "Inscrito",
+        "calloutText": "A cor de destaque é usada para realces e avisos."
       },
       "validation": {
         "invalidFileType": "Por favor, selecione um ficheiro de imagem",
@@ -1752,6 +2009,56 @@
       "saveChanges": "Guardar alterações",
       "saving": "A guardar...",
       "cancel": "Cancelar"
+    },
+    "registration": {
+      "title": "Registo",
+      "description": "Controle como os membros aderem a esta organização e quem é avisado.",
+      "autoRegistration": {
+        "label": "Aprovar os registos automaticamente",
+        "onHint": "Os membros podem iniciar sessão assim que verificarem o seu endereço de e-mail.",
+        "offHint": "Um administrador tem de aprovar cada registo antes de o membro poder iniciar sessão. Até lá verá um ecrã de espera."
+      },
+      "notifications": {
+        "title": "E-mails de notificação",
+        "description": "Estes endereços são avisados sempre que alguém se regista.",
+        "addLabel": "Endereço de e-mail",
+        "add": "Adicionar",
+        "none": "Sem endereços adicionados.",
+        "approvalWithoutRecipients": "Os registos precisam de aprovação mas ninguém está a ser avisado. Os pedidos ficarão na fila sem serem vistos e os membros não conseguirão iniciar sessão."
+      },
+      "validation": {
+        "invalidEmail": "Introduza um endereço de e-mail válido.",
+        "duplicateEmail": "Esse endereço já foi adicionado."
+      },
+      "messages": {
+        "loadFailed": "Não foi possível carregar as definições de registo.",
+        "saveFailed": "Não foi possível guardar as definições de registo.",
+        "saved": "Definições de registo guardadas."
+      }
+    },
+    "stripeConnect": {
+      "title": "Pagamentos Stripe",
+      "description": "Ligue a sua conta Stripe para que os pagamentos com cartão cheguem ao seu clube. Os membros não podem pagar com cartão até concluir este passo.",
+      "platformNotConfigured": "Os pagamentos com cartão ainda não estão disponíveis nesta plataforma. Contacte o suporte.",
+      "status": {
+        "ready": "Pronto para receber",
+        "incomplete": "Não concluído",
+        "notStarted": "Não ligado"
+      },
+      "readyBody": "O seu clube pode receber pagamentos com cartão. O dinheiro chega diretamente à sua conta Stripe; a taxa de processamento da plataforma é retirada de cada pagamento.",
+      "incompleteBody": "A Stripe ainda precisa de algo da sua parte antes de o clube poder receber pagamentos com cartão. Continue de onde parou.",
+      "notStartedBody": "Ainda não ligou uma conta Stripe. Até o fazer, os membros não poderão pagar ao seu clube com cartão.",
+      "outstanding": "A Stripe ainda aguarda:",
+      "accountId": "Conta Stripe: {{accountId}}",
+      "actions": {
+        "start": "Ligar à Stripe",
+        "continue": "Continuar com a Stripe",
+        "refresh": "Atualizar estado"
+      },
+      "messages": {
+        "loadFailed": "Não foi possível carregar a sua ligação à Stripe.",
+        "startFailed": "Não foi possível iniciar a configuração da Stripe."
+      }
     }
   },
   "navigation": {
@@ -1971,5 +2278,160 @@
     "feeHelper": "The amount to charge for this type",
     "handlingFeeIncluded": "Handling fee included",
     "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
+  },
+  "users": {
+    "title": "Gestão de utilizadores",
+    "tabs": {
+      "admins": "Administradores",
+      "accounts": "Utilizadores de conta"
+    },
+    "search": "Procurar utilizadores por nome ou email…",
+    "noRoles": "Sem funções atribuídas",
+    "fields": {
+      "name": "Nome",
+      "firstName": "Primeiro nome",
+      "lastName": "Apelido",
+      "email": "Email",
+      "emailAddress": "Endereço de email",
+      "phone": "Telefone",
+      "phoneNumber": "Número de telefone",
+      "status": "Estado",
+      "lastLogin": "Último acesso",
+      "roles": "Funções",
+      "actions": "Ações",
+      "created": "Criado"
+    },
+    "loading": {
+      "admins": "A carregar administradores…",
+      "accounts": "A carregar utilizadores de conta…",
+      "details": "A carregar detalhes do utilizador…"
+    },
+    "admins": {
+      "invite": "Convidar administrador",
+      "inviteSuccess": "Convite enviado com sucesso. A redirecionar…",
+      "emailHelper": "O convite será enviado para este endereço de email"
+    },
+    "accounts": {
+      "create": "Criar utilizador de conta",
+      "createSuccess": "Utilizador de conta criado com sucesso. A redirecionar…",
+      "phoneHelper": "Opcional — pode ser usado para notificações e contacto"
+    },
+    "details": {
+      "information": "Informação do utilizador",
+      "roleAssignment": "Atribuição de funções",
+      "currentStatus": "Estado atual",
+      "deactivate": "Desativar",
+      "deactivateUser": "Desativar utilizador",
+      "deleteUser": "Eliminar utilizador",
+      "notFound": "Utilizador não encontrado",
+      "cannotChangeOwn": "Não pode alterar as suas próprias funções ou estado.",
+      "resendSuccess": "Email de convite reenviado.",
+      "saveChanges": "Guardar alterações",
+      "adminDetails": "Detalhes do administrador",
+      "accountDetails": "Detalhes do utilizador de conta"
+    },
+    "groups": {
+      "title": "Grupos de utilizadores",
+      "subtitle": "Agrupe utilizadores para lhes reservar descontos",
+      "create": "Novo grupo",
+      "createTitle": "Criar grupo de utilizadores",
+      "editTitle": "Editar grupo de utilizadores",
+      "deleteTitle": "Eliminar grupo de utilizadores",
+      "deleteConfirm": "Eliminar “{{name}}”? Os membros sairão do grupo, mas as suas contas não são afetadas.",
+      "deletedButReferenced": "Grupo eliminado. {{count}} desconto(s) ainda o referem — por favor reveja.",
+      "manageMembers": "Membros",
+      "membersTitle": "Membros de {{name}}",
+      "addMembers": "Adicionar utilizadores",
+      "removeMember": "Remover do grupo",
+      "noMembers": "Este grupo ainda não tem membros.",
+      "empty": {
+        "title": "Ainda sem grupos de utilizadores",
+        "description": "Crie um grupo para reservar um desconto a determinados membros."
+      },
+      "fields": {
+        "name": "Nome",
+        "description": "Descrição",
+        "members": "Membros",
+        "actions": "Ações"
+      },
+      "errors": {
+        "loadFailed": "Não foi possível carregar os grupos",
+        "saveFailed": "Não foi possível guardar o grupo",
+        "deleteFailed": "Não foi possível eliminar o grupo",
+        "loadMembersFailed": "Não foi possível carregar os membros",
+        "addMemberFailed": "Não foi possível adicionar esses membros",
+        "removeMemberFailed": "Não foi possível remover esse membro"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Enviar convite",
+      "sendingInvitation": "A enviar convite…",
+      "createUser": "Criar utilizador",
+      "creatingUser": "A criar utilizador…",
+      "resendInvite": "Reenviar convite",
+      "sending": "A enviar…"
+    },
+    "registrations": {
+      "title": "Registos",
+      "subtitle": "Pessoas que pediram para aderir a esta organização.",
+      "tabsAriaLabel": "Estado do registo",
+      "tabs": {
+        "pending": "A aguardar aprovação",
+        "active": "Aprovados",
+        "rejected": "Não aprovados"
+      },
+      "columns": {
+        "name": "Nome",
+        "email": "E-mail",
+        "phone": "Telefone",
+        "registered": "Registado em",
+        "actions": "Ações",
+        "status": "Estado"
+      },
+      "status": {
+        "active": "Aprovado",
+        "pending": "A aguardar aprovação",
+        "rejected": "Não aprovado"
+      },
+      "empty": {
+        "pending": "Não há registos a aguardar aprovação.",
+        "active": "Ainda não há registos aprovados.",
+        "rejected": "Nenhum registo foi recusado."
+      },
+      "actions": {
+        "approve": "Aprovar",
+        "reject": "Recusar"
+      },
+      "confirm": {
+        "approveTitle": "Aprovar este registo?",
+        "rejectTitle": "Recusar este registo?",
+        "approveBody": "{{name}} poderá iniciar sessão e ver esta organização.",
+        "rejectBody": "{{name}} não conseguirá iniciar sessão. O motivo não lhe é comunicado.",
+        "noteLabel": "Nota (opcional)",
+        "noteHint": "Guardada apenas para o seu clube. O membro nunca a vê."
+      },
+      "messages": {
+        "loadFailed": "Não foi possível carregar os registos.",
+        "decisionFailed": "Não foi possível guardar a decisão.",
+        "approved": "{{name}} foi aprovado.",
+        "rejected": "{{name}} foi recusado."
+      }
+    }
+  },
+  "discounts": {
+    "eligibility": {
+      "title": "Critérios de elegibilidade",
+      "description": "Defina quem pode usar este desconto e em que condições",
+      "requiresCode": "Exige introdução de código",
+      "requiresCodeHelper": "Os utilizadores têm de introduzir o código para o ativar",
+      "membershipTypes": "Tipos de adesão",
+      "membershipTypesHelper": "Limitar a determinados tipos de adesão (opcional)",
+      "userGroups": "Grupos de utilizadores",
+      "userGroupsHelper": "Limitar este desconto aos membros dos grupos selecionados",
+      "minimumPurchase": "Valor mínimo de compra",
+      "minimumPurchaseHelper": "Total do carrinho necessário para usar este desconto",
+      "maximumDiscount": "Desconto máximo",
+      "maximumDiscountHelper": "Limita o desconto máximo aplicável"
+    }
   }
 }

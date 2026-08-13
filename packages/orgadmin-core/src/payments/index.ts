@@ -36,11 +36,28 @@ export const paymentsModule: ModuleRegistration = {
       path: 'payments/lodgements',
       component: lazy(() => import('./pages/LodgementsPage')),
     },
+    {
+      path: 'payments/offline',
+      component: lazy(() => import('./pages/OfflinePaymentsPage')),
+    },
   ],
   menuItem: {
     label: 'modules.payments.name',
     path: '/payments',
     icon: PaymentIcon,
+    /*
+     * Offline settlements get their own entry rather than a filter on the list.
+     * They are a **task** — money to chase and record — not a view of history,
+     * and until one is recorded the member has nothing they paid for. A filter
+     * two clicks into a table is not where that belongs.
+     */
+    subMenuItems: [
+      {
+        label: 'payments.offline.menu',
+        path: '/payments/offline',
+        icon: PaymentIcon,
+      },
+    ],
   },
 };
 
@@ -48,3 +65,4 @@ export const paymentsModule: ModuleRegistration = {
 export { default as PaymentsListPage } from './pages/PaymentsListPage';
 export { default as PaymentDetailsPage } from './pages/PaymentDetailsPage';
 export { default as LodgementsPage } from './pages/LodgementsPage';
+export { default as OfflinePaymentsPage } from './pages/OfflinePaymentsPage';

@@ -34,7 +34,8 @@
       "approved": "Approuvé",
       "rejected": "Rejeté",
       "paid": "Payé",
-      "refunded": "Remboursé"
+      "refunded": "Remboursé",
+      "status": "Statut"
     },
     "validation": {
       "required": "Ce champ est obligatoire",
@@ -68,7 +69,8 @@
       "entries": "inscriptions",
       "activity": "activité",
       "activities": "activités",
-      "configured": "configuré"
+      "configured": "configuré",
+      "email": "E-mail"
     },
     "accessibility": {
       "openDrawer": "Ouvrir le menu de navigation",
@@ -197,7 +199,9 @@
       "addActivity": "Ajouter une activité",
       "noActivities": "Ajoutez au moins une activité pour terminer la configuration de votre événement",
       "validation": {
-        "atLeastOne": "Au moins une activité est requise"
+        "atLeastOne": "Au moins une activité est requise",
+        "allFieldsRequired": "Toutes les activités doivent avoir un nom et une description",
+        "applicationFormRequired": "Chaque activité doit avoir un formulaire de candidature sélectionné"
       },
       "activity": {
         "untitled": "Activité sans titre",
@@ -263,6 +267,10 @@
       "formSubmission": "Données de soumission du formulaire",
       "loadingSubmission": "Chargement des données de soumission...",
       "uploadedFiles": "Fichiers téléversés"
+    },
+    "deleteDialog": {
+      "title": "Supprimer l'événement",
+      "message": "Voulez-vous vraiment supprimer « {{eventName}} » ? Cette action masquera l'événement de la liste mais conservera toutes les données."
     }
   },
   "memberships": {
@@ -503,6 +511,9 @@
     "paymentMethods": {
       "payOffline": "Payer hors ligne",
       "stripe": "Paiement par carte (Stripe)"
+    },
+    "typeSelector": {
+      "title": "Sélectionner le type d'adhésion"
     }
   },
   "calendar": {
@@ -947,6 +958,11 @@
       "title": "Les données de soumission du formulaire seraient affichées ici en fonction des champs du formulaire de candidature. Cela inclut tous les champs personnalisés définis dans le formulaire d'inscription.",
       "uploadedFiles": "Fichiers téléchargés",
       "downloadFile": "Télécharger {{filename}}"
+    },
+    "discounts": {
+      "selectorHelperText": "Associer des remises à ce type d'inscription",
+      "selectLabel": "Sélectionner des remises",
+      "selectHelperText": "Choisissez les remises applicables à ce type d'inscription"
     }
   },
   "merchandise": {
@@ -1661,6 +1677,9 @@
   },
   "settings": {
     "title": "Paramètres",
+    "pageTitle": "Paramètres de l'organisation",
+    "pageSubtitle": "Gérez la configuration et les préférences de votre organisation",
+    "tabsAriaLabel": "onglets des paramètres",
     "organisationDetails": {
       "title": "Détails de l'organisation",
       "subtitle": "Gérez les informations de base et les coordonnées de votre organisation",
@@ -1712,27 +1731,10 @@
       "title": "Paramètres de paiement",
       "subtitle": "Configurez le traitement des paiements et les méthodes de paiement acceptées",
       "sections": {
-        "stripeConfig": "Configuration Stripe",
-        "paymentConfig": "Configuration des paiements",
         "offlinePayments": "Paiements hors ligne",
         "helixPay": "Paiements par carte (Helix-Pay)"
       },
       "fields": {
-        "stripeEnabled": "Activer les paiements Stripe",
-        "stripePublishableKey": "Clé publique Stripe",
-        "stripePublishableKeyPlaceholder": "pk_live_...",
-        "stripePublishableKeyHelper": "Votre clé publique Stripe (commence par pk_)",
-        "stripeSecretKey": "Clé secrète Stripe",
-        "stripeSecretKeyPlaceholder": "sk_live_...",
-        "stripeSecretKeyHelper": "Votre clé secrète Stripe (commence par sk_)",
-        "stripeWebhookSecret": "Secret webhook Stripe",
-        "stripeWebhookSecretPlaceholder": "whsec_...",
-        "stripeWebhookSecretHelper": "Votre secret de signature webhook Stripe (facultatif)",
-        "defaultCurrency": "Devise par défaut",
-        "handlingFeePercentage": "Frais de traitement (%)",
-        "handlingFeePercentageHelper": "Frais en pourcentage ajoutés aux paiements par carte",
-        "handlingFeeFixed": "Frais de traitement fixes",
-        "handlingFeeFixedHelper": "Frais fixes ajoutés aux paiements par carte",
         "chequePaymentsEnabled": "Activer les paiements par chèque/hors ligne",
         "chequePaymentInstructions": "Instructions de paiement par chèque",
         "chequePaymentInstructionsPlaceholder": "Veuillez libeller les chèques à l'ordre de...",
@@ -1743,7 +1745,6 @@
         "helixPayApiKeyHelper": "Votre clé API Helix-Pay, utilisée pour traiter les paiements par carte"
       },
       "validation": {
-        "stripeKeysRequired": "La clé publique et la clé secrète Stripe sont requises lorsque Stripe est activé",
         "helixPayApiKeyRequired": "Une clé API Helix-Pay est requise lorsque Helix-Pay est activé"
       },
       "messages": {
@@ -1766,6 +1767,7 @@
         "uploading": "Téléchargement...",
         "removeLogo": "Supprimer",
         "logoHelper": "Recommandé : PNG ou SVG, max 2 Mo",
+        "colourPicker": "Sélecteur {{colour}}",
         "primaryColour": "Couleur principale",
         "secondaryColour": "Couleur secondaire",
         "accentColour": "Couleur d'accentuation",
@@ -1777,7 +1779,40 @@
         "organisationName": "Nom de l'organisation",
         "primaryButton": "Bouton principal",
         "secondaryButton": "Bouton secondaire",
-        "accentButton": "Bouton d'accentuation"
+        "accentButton": "Bouton d'accentuation",
+        "accountUserCaption": "Ce que voit un membre connecté",
+        "headingSample": "Bon retour",
+        "bodySample": "Les couleurs de votre club s’appliquent à toute l’application membre.",
+        "outlinedButton": "Contour",
+        "textButton": "Lien texte",
+        "chipPrimary": "Principal",
+        "chipSecondary": "Secondaire",
+        "chipAccent": "Accent",
+        "chipDefault": "Par défaut",
+        "formHeading": "Formulaires et contrôles",
+        "fieldLabel": "Nom complet",
+        "fieldValue": "Ada Adams",
+        "selectLabel": "Type d’adhésion",
+        "selectOption": "Membre à part entière",
+        "checkboxLabel": "M’envoyer les actualités",
+        "switchLabel": "Renouvellement automatique",
+        "radioOne": "Carte",
+        "radioTwo": "Hors ligne",
+        "tableHeading": "Tableaux",
+        "tableItem": "Article",
+        "tableStatus": "Statut",
+        "tableAmount": "Montant",
+        "tableRowOne": "Inscription au Concours de Printemps",
+        "tableRowTwo": "Sweat du club",
+        "statusPaid": "Payé",
+        "statusPending": "En attente",
+        "listHeading": "Listes",
+        "listItemOne": "Entraînement Minimus",
+        "listItemOneDetail": "Samedi 16 août",
+        "listItemTwo": "Camp d’été",
+        "listItemTwoDetail": "Places restantes : 4",
+        "listBadge": "Inscrit",
+        "calloutText": "La couleur d’accent sert aux mises en avant et aux avertissements."
       },
       "validation": {
         "invalidFileType": "Veuillez sélectionner un fichier image",
@@ -1833,6 +1868,56 @@
       "saveChanges": "Enregistrer les modifications",
       "saving": "Enregistrement...",
       "cancel": "Annuler"
+    },
+    "registration": {
+      "title": "Inscription",
+      "description": "Contrôlez comment les membres rejoignent cette organisation et qui en est informé.",
+      "autoRegistration": {
+        "label": "Approuver les inscriptions automatiquement",
+        "onHint": "Les membres peuvent se connecter dès qu'ils ont vérifié leur adresse e-mail.",
+        "offHint": "Un administrateur doit approuver chaque inscription avant que le membre puisse se connecter. En attendant, celui-ci voit un écran d'attente d'approbation."
+      },
+      "notifications": {
+        "title": "E-mails de notification",
+        "description": "Ces adresses sont informées à chaque nouvelle inscription.",
+        "addLabel": "Adresse e-mail",
+        "add": "Ajouter",
+        "none": "Aucune adresse ajoutée.",
+        "approvalWithoutRecipients": "Les inscriptions nécessitent une approbation mais personne n'est notifié. Les demandes resteront en attente sans être vues et les membres ne pourront pas se connecter."
+      },
+      "validation": {
+        "invalidEmail": "Saisissez une adresse e-mail valide.",
+        "duplicateEmail": "Cette adresse a déjà été ajoutée."
+      },
+      "messages": {
+        "loadFailed": "Impossible de charger les paramètres d'inscription.",
+        "saveFailed": "Impossible d'enregistrer les paramètres d'inscription.",
+        "saved": "Paramètres d'inscription enregistrés."
+      }
+    },
+    "stripeConnect": {
+      "title": "Versements Stripe",
+      "description": "Connectez votre compte Stripe pour que les paiements par carte parviennent à votre club. Les membres ne peuvent pas payer par carte tant que ce n'est pas terminé.",
+      "platformNotConfigured": "Les paiements par carte ne sont pas encore disponibles sur cette plateforme. Veuillez contacter l'assistance.",
+      "status": {
+        "ready": "Prêt à encaisser",
+        "incomplete": "Non terminé",
+        "notStarted": "Non connecté"
+      },
+      "readyBody": "Votre club peut encaisser des paiements par carte. L'argent parvient directement à votre compte Stripe ; les frais de traitement de la plateforme sont prélevés sur chaque paiement.",
+      "incompleteBody": "Stripe attend encore quelque chose de votre part avant que votre club puisse encaisser des paiements par carte. Reprenez là où vous vous êtes arrêté.",
+      "notStartedBody": "Vous n'avez pas encore connecté de compte Stripe. Les membres ne pourront pas payer votre club par carte tant que ce ne sera pas fait.",
+      "outstanding": "Stripe attend encore :",
+      "accountId": "Compte Stripe : {{accountId}}",
+      "actions": {
+        "start": "Se connecter à Stripe",
+        "continue": "Continuer avec Stripe",
+        "refresh": "Actualiser le statut"
+      },
+      "messages": {
+        "loadFailed": "Impossible de charger votre connexion Stripe.",
+        "startFailed": "Impossible de démarrer l'inscription Stripe."
+      }
     }
   },
   "reporting": {
@@ -2186,5 +2271,184 @@
     "feeHelper": "The amount to charge for this type",
     "handlingFeeIncluded": "Handling fee included",
     "handlingFeeIncludedHelper": "When enabled, the card processing fee is absorbed into the price. When disabled, the processing fee is added on top at checkout."
+  },
+  "users": {
+    "title": "Gestion des utilisateurs",
+    "tabs": {
+      "admins": "Administrateurs",
+      "accounts": "Utilisateurs de compte"
+    },
+    "search": "Rechercher un utilisateur par nom ou e-mail…",
+    "noRoles": "Aucun rôle attribué",
+    "fields": {
+      "name": "Nom",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "E-mail",
+      "emailAddress": "Adresse e-mail",
+      "phone": "Téléphone",
+      "phoneNumber": "Numéro de téléphone",
+      "status": "Statut",
+      "lastLogin": "Dernière connexion",
+      "roles": "Rôles",
+      "actions": "Actions",
+      "created": "Créé"
+    },
+    "loading": {
+      "admins": "Chargement des administrateurs…",
+      "accounts": "Chargement des utilisateurs…",
+      "details": "Chargement des détails…"
+    },
+    "admins": {
+      "invite": "Inviter un administrateur",
+      "inviteSuccess": "Invitation envoyée avec succès. Redirection…",
+      "emailHelper": "L'invitation sera envoyée à cette adresse e-mail"
+    },
+    "accounts": {
+      "create": "Créer un utilisateur de compte",
+      "createSuccess": "Utilisateur créé avec succès. Redirection…",
+      "phoneHelper": "Facultatif — utilisable pour les notifications et le contact"
+    },
+    "details": {
+      "information": "Informations sur l'utilisateur",
+      "roleAssignment": "Attribution des rôles",
+      "currentStatus": "Statut actuel",
+      "deactivate": "Désactiver",
+      "deactivateUser": "Désactiver l'utilisateur",
+      "deleteUser": "Supprimer l'utilisateur",
+      "notFound": "Utilisateur introuvable",
+      "cannotChangeOwn": "Vous ne pouvez pas modifier vos propres rôles ni votre statut.",
+      "resendSuccess": "E-mail d'invitation renvoyé.",
+      "saveChanges": "Enregistrer les modifications",
+      "adminDetails": "Détails de l'administrateur",
+      "accountDetails": "Détails de l'utilisateur de compte"
+    },
+    "groups": {
+      "title": "Groupes d'utilisateurs",
+      "subtitle": "Regroupez les utilisateurs pour leur réserver des remises",
+      "create": "Nouveau groupe",
+      "createTitle": "Créer un groupe d'utilisateurs",
+      "editTitle": "Modifier le groupe d'utilisateurs",
+      "deleteTitle": "Supprimer le groupe",
+      "deleteConfirm": "Supprimer « {{name}} » ? Les membres quitteront le groupe, mais leurs comptes ne sont pas affectés.",
+      "deletedButReferenced": "Groupe supprimé. {{count}} remise(s) y font encore référence — veuillez les vérifier.",
+      "manageMembers": "Membres",
+      "membersTitle": "Membres de {{name}}",
+      "addMembers": "Ajouter des utilisateurs",
+      "removeMember": "Retirer du groupe",
+      "noMembers": "Ce groupe n'a encore aucun membre.",
+      "empty": {
+        "title": "Aucun groupe d'utilisateurs",
+        "description": "Créez un groupe pour réserver une remise à certains membres."
+      },
+      "fields": {
+        "name": "Nom",
+        "description": "Description",
+        "members": "Membres",
+        "actions": "Actions"
+      },
+      "errors": {
+        "loadFailed": "Impossible de charger les groupes",
+        "saveFailed": "Impossible d'enregistrer le groupe",
+        "deleteFailed": "Impossible de supprimer le groupe",
+        "loadMembersFailed": "Impossible de charger les membres",
+        "addMemberFailed": "Impossible d'ajouter ces membres",
+        "removeMemberFailed": "Impossible de retirer ce membre"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Envoyer l'invitation",
+      "sendingInvitation": "Envoi de l'invitation…",
+      "createUser": "Créer l'utilisateur",
+      "creatingUser": "Création de l'utilisateur…",
+      "resendInvite": "Renvoyer l'invitation",
+      "sending": "Envoi…"
+    },
+    "registrations": {
+      "title": "Inscriptions",
+      "subtitle": "Personnes ayant demandé à rejoindre cette organisation.",
+      "tabsAriaLabel": "Statut de l'inscription",
+      "tabs": {
+        "pending": "En attente d'approbation",
+        "active": "Approuvées",
+        "rejected": "Non approuvées"
+      },
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone",
+        "registered": "Inscrit le",
+        "actions": "Actions",
+        "status": "Statut"
+      },
+      "status": {
+        "active": "Approuvée",
+        "pending": "En attente d'approbation",
+        "rejected": "Non approuvée"
+      },
+      "empty": {
+        "pending": "Aucune inscription en attente d'approbation.",
+        "active": "Aucune inscription approuvée pour le moment.",
+        "rejected": "Aucune inscription refusée."
+      },
+      "actions": {
+        "approve": "Approuver",
+        "reject": "Refuser"
+      },
+      "confirm": {
+        "approveTitle": "Approuver cette inscription ?",
+        "rejectTitle": "Refuser cette inscription ?",
+        "approveBody": "{{name}} pourra se connecter et accéder à cette organisation.",
+        "rejectBody": "{{name}} ne pourra pas se connecter. Aucune raison ne lui est communiquée.",
+        "noteLabel": "Note (facultative)",
+        "noteHint": "Enregistrée pour votre club uniquement. Le membre ne la voit jamais."
+      },
+      "messages": {
+        "loadFailed": "Impossible de charger les inscriptions.",
+        "decisionFailed": "Impossible d'enregistrer cette décision.",
+        "approved": "{{name}} a été approuvé.",
+        "rejected": "{{name}} a été refusé."
+      }
+    }
+  },
+  "discounts": {
+    "eligibility": {
+      "title": "Critères d'éligibilité",
+      "description": "Définissez qui peut utiliser cette remise et à quelles conditions",
+      "requiresCode": "Saisie d'un code requise",
+      "requiresCodeHelper": "Les utilisateurs doivent saisir le code pour l'activer",
+      "membershipTypes": "Types d'adhésion",
+      "membershipTypesHelper": "Limiter à certains types d'adhésion (facultatif)",
+      "userGroups": "Groupes d'utilisateurs",
+      "userGroupsHelper": "Réserver cette remise aux membres des groupes sélectionnés",
+      "minimumPurchase": "Montant minimum d'achat",
+      "minimumPurchaseHelper": "Total du panier requis pour utiliser cette remise",
+      "maximumDiscount": "Remise maximale",
+      "maximumDiscountHelper": "Plafonne la remise pouvant être appliquée"
+    }
+  },
+  "payments": {
+    "offline": {
+      "menu": "Paiements hors ligne",
+      "title": "Paiements hors ligne",
+      "subtitle": "Chèques et virements que des membres se sont engagés à payer. Rien de ce qu’ils ont acheté n’existe tant que vous n’avez pas enregistré la réception.",
+      "tabOutstanding": "En attente",
+      "tabSettled": "Enregistrés",
+      "noneOutstanding": "Rien n’attend un paiement hors ligne.",
+      "noneSettled": "Vous n’avez encore enregistré aucun paiement hors ligne.",
+      "loadError": "Nous n’avons pas pu charger les paiements hors ligne.",
+      "placedOn": "Commandé le {{date}}",
+      "awaiting": "Paiement attendu",
+      "receivedOn": "Reçu le {{date}}",
+      "alsoPaidByCard": "{{amount}} de cette commande a déjà été payé par carte.",
+      "markReceived": "Marquer comme reçu",
+      "recording": "Enregistrement…",
+      "recorded": "Enregistré. {{name}} dispose maintenant de tout ce qu’il a payé.",
+      "recordedWithFailures": "Enregistré, mais {{failed}} élément(s) n’ont pas pu être créés pour {{name}}. Vérifiez avant de confirmer.",
+      "recordFailed": "Nous n’avons pas pu enregistrer ce paiement.",
+      "undo": "Annuler",
+      "undone": "Le paiement de {{name}} est de nouveau en attente.",
+      "undoFailed": "Nous n’avons pas pu annuler cet enregistrement."
+    }
   }
 }
