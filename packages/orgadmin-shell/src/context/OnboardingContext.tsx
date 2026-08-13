@@ -1,21 +1,32 @@
 import { createContext, useContext } from 'react';
 
 /**
- * Module identifiers for the onboarding system
- * Represents the distinct functional areas of the application
+ * Module identifiers for the onboarding system.
+ * Represents the distinct functional areas of the application.
+ *
+ * A value, not only a type, because the backend keeps its own copy of this list
+ * to validate `modulesVisited` against, and a type cannot be compared with it at
+ * runtime. A module missing from the backend's copy makes "Don't show this
+ * again" fail silently — the save is refused with a 400, the optimistic update
+ * is reverted, and the dialog returns on the user's next visit. A test in
+ * `__tests__/context/OnboardingProvider.module-parity.test.ts` holds the two
+ * lists together; see `docs/ONBOARDING_DISMISSAL_IGNORED.md`.
  */
-export type ModuleId = 
-  | 'dashboard' 
-  | 'users' 
-  | 'forms' 
-  | 'events' 
-  | 'memberships' 
-  | 'registrations'
-  | 'calendar' 
-  | 'payments'
-  | 'merchandise'
-  | 'ticketing'
-  | 'settings';
+export const MODULE_IDS = [
+  'dashboard',
+  'users',
+  'forms',
+  'events',
+  'memberships',
+  'registrations',
+  'calendar',
+  'payments',
+  'merchandise',
+  'ticketing',
+  'settings',
+] as const;
+
+export type ModuleId = (typeof MODULE_IDS)[number];
 
 /**
  * User preferences for onboarding dialogs
@@ -38,8 +49,15 @@ export interface OnboardingContextValue {
   welcomeDialogOpen: boolean;
   /** Whether a module introduction dialog is currently open */
   moduleIntroDialogOpen: boolean;
-  /** The module whose introduction dialog is currently shown (if any) */
+  /** The module the user is on, used as the context for the help drawer */
   currentModule: ModuleId | null;
+  /**
+   * The module the open introduction dialog belongs to, which is not always
+   * `currentModule` — navigating on while an introduction is open moves the
+   * help context but leaves the dialog, and its dismissal, with the module it
+   * was opened for.
+   */
+  introModule: ModuleId | null;
   /** Whether the help drawer is currently open */
   helpDrawerOpen: boolean;
   /** Current page ID for contextual help */

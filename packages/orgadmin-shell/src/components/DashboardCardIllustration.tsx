@@ -133,9 +133,25 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
 
   const handleClick = () => navigate(card.path);
 
+  /*
+   * The card is a clickable div, so without this it cannot be reached or
+   * activated from the keyboard at all — it needs the role, a tab stop, and
+   * the two keys a button responds to.
+   */
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <Card
+      role="button"
+      tabIndex={0}
+      aria-label={t(card.title)}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       sx={{
         height: '100%',
         cursor: 'pointer',
@@ -182,8 +198,14 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
 
       {/* Content */}
       <Box sx={{ px: '1.25rem', pt: '1rem', pb: '1.25rem' }}>
+        {/*
+          Rendered as an h5, not the h6 the variant implies: the page title
+          above is an h4, and a screen reader announcing a jump from h4 to h6
+          reports a level as missing. The styling is unchanged.
+        */}
         <Typography
           variant="h6"
+          component="h5"
           sx={{ fontWeight: 600, color: 'text.primary', mb: '0.4rem', fontSize: '1.05rem' }}
         >
           {t(card.title)}

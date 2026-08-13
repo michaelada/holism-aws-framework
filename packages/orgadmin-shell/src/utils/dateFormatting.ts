@@ -32,7 +32,14 @@ const MAX_CACHE_SIZE = 1000;
  */
 export function getDateFnsLocale(locale: string): Locale {
   try {
-    const dateFnsLocale = localeMap[locale as SupportedLocale];
+    /*
+     * `hasOwnProperty`, not a bare lookup: a locale of "__proto__" or
+     * "constructor" reaches Object's own properties and comes back truthy,
+     * so date-fns is handed something that is not a locale at all.
+     */
+    const dateFnsLocale = Object.prototype.hasOwnProperty.call(localeMap, locale)
+      ? localeMap[locale as SupportedLocale]
+      : undefined;
     if (!dateFnsLocale) {
       console.warn(`Unsupported locale for date formatting: ${locale}, falling back to en-GB`);
       return enGB;

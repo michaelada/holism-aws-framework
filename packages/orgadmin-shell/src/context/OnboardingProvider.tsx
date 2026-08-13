@@ -33,6 +33,13 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const [moduleIntroDialogOpen, setModuleIntroDialogOpen] = useState(false);
   const moduleIntroDialogOpenRef = useRef(false);
   const [currentModule, setCurrentModule] = useState<ModuleId | null>(null);
+  /*
+   * The module an open introduction belongs to, which is not always the module
+   * the user is on: navigating on quickly moves `currentModule`, and dismissing
+   * would then record the module the user landed on as visited while the one
+   * they were actually introduced to comes back next login.
+   */
+  const [introModule, setIntroModule] = useState<ModuleId | null>(null);
   const [helpDrawerOpen, setHelpDrawerOpen] = useState(false);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
   
@@ -40,6 +47,13 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   // This prevents stale closures when the callback is used in useEffect deps
   const loadingRef = useRef(true);
   const welcomeDialogOpenRef = useRef(false);
+  /*
+   * Whether the welcome flow is over — either it was dismissed for good, or the
+   * user has now closed it this session. Module introductions wait on this
+   * rather than on the dialog's open flag, because the dialog is opened by an
+   * effect and a navigation can reach `checkModuleVisit` first.
+   */
+  const welcomeSettledRef = useRef(false);
   const preferencesRef = useRef<OnboardingPreferences>(DEFAULT_PREFERENCES);
   
   // Cache state to prevent repeated API calls
@@ -61,6 +75,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   loadingRef.current = loading;
   welcomeDialogOpenRef.current = welcomeDialogOpen;
   preferencesRef.current = preferences;
+  // During render, not in an effect: a child's effect runs before the parent's,
+  // so a page that checks its module on mount would otherwise be told the
+  // welcome flow was still unresolved and have its introduction suppressed.
+  if (!loading && preferences.welcomeDismissed) {
+    welcomeSettledRef.current = true;
+  }
 
   /**
    * Load user preferences from backend on mount
@@ -149,6 +169,9 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
    */
   const dismissWelcomeDialog = useCallback(async (dontShowAgain: boolean) => {
     console.log('[OnboardingProvider] dismissWelcomeDialog called', { dontShowAgain });
+    // Closing it settles the welcome flow whether or not it was ticked, so
+    // module introductions are free to show for the rest of the session.
+    welcomeSettledRef.current = true;
     setWelcomeDialogOpen(false);
 
     if (dontShowAgain && getToken) {
@@ -286,6 +309,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     if (
       loadingRef.current ||
       welcomeDialogOpenRef.current ||
+      !welcomeSettledRef.current ||
       preferencesRef.current.modulesVisited.includes(moduleId) ||
       modulesShownThisSessionRef.current.has(moduleId) ||
       moduleIntroDialogOpenRef.current
@@ -296,7 +320,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     // Mark as shown this session so it won't show again until next login
     modulesShownThisSessionRef.current.add(moduleId);
 
-    // Show module introduction
+    // Show module introduction, remembering which module it is for
+    setIntroModule(moduleId);
     moduleIntroDialogOpenRef.current = true;
     setModuleIntroDialogOpen(true);
   }, []);
@@ -325,14 +350,20 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     const handleKeyDown = (event: KeyboardEvent) => {
       // Check for Shift+? (which is Shift+/ on most keyboards)
       if (event.shiftKey && event.key === '?') {
-        // Don't trigger if user is typing in an input field
-        const target = event.target as HTMLElement;
-        const isInputField = 
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable ||
-          target.closest('[contenteditable="true"]');
-        
+        /*
+         * Don't trigger if user is typing in an input field. The target is not
+         * always an element — a keydown with nothing focused arrives with the
+         * document or the window as its target, and calling `closest` on those
+         * throws, which would kill the shortcut instead of just declining it.
+         */
+        const target = event.target instanceof Element ? (event.target as HTMLElement) : null;
+        const isInputField =
+          target !== null &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable ||
+            target.closest('[contenteditable="true"]') !== null);
+
         if (isInputField) {
           return; // Allow normal typing in input fields
         }
@@ -354,6 +385,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     welcomeDialogOpen,
     moduleIntroDialogOpen,
     currentModule,
+    introModule,
     helpDrawerOpen,
     currentPageId,
     preferences,
@@ -375,11 +407,11 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
         open={welcomeDialogOpen} 
         onClose={dismissWelcomeDialog} 
       />
-      {moduleIntroDialogOpen && currentModule && (
+      {moduleIntroDialogOpen && introModule && (
         <ModuleIntroductionDialog
           open={moduleIntroDialogOpen}
-          moduleId={currentModule}
-          onClose={(dontShowAgain) => dismissModuleIntro(currentModule, dontShowAgain)}
+          moduleId={introModule}
+          onClose={(dontShowAgain) => dismissModuleIntro(introModule, dontShowAgain)}
         />
       )}
       {/* Only render HelpDrawer when we have module and page context */}

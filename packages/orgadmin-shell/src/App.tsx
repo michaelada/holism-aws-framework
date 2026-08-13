@@ -222,11 +222,19 @@ const App: React.FC = () => {
 
   // Initialize i18n with the organization's locale - MUST complete before rendering LocaleProvider
   useEffect(() => {
+    /*
+     * Once authentication has settled, a visitor who is not signed in has no
+     * organisation and never will. Waiting for one would hold them on the
+     * loading screen instead of the redirect, so fall back to the default
+     * locale as soon as we know there is nothing to wait for.
+     */
+    const localeToUse = organizationLocale ?? (loading ? null : 'en-GB');
+
     const initI18n = async () => {
       try {
         // Initialize i18n with the organization's locale
-        console.log('Initializing i18n with locale:', organizationLocale);
-        await initializeI18n(organizationLocale);
+        console.log('Initializing i18n with locale:', localeToUse);
+        await initializeI18n(localeToUse);
         setI18nReady(true);
         setI18nInitialized(true);
       } catch (error) {
@@ -237,11 +245,11 @@ const App: React.FC = () => {
       }
     };
     
-    // Only initialize once when we have the organization locale
-    if (organizationLocale && !i18nInitialized) {
+    // Only initialize once when we have a locale to initialise with
+    if (localeToUse && !i18nInitialized) {
       initI18n();
     }
-  }, [organizationLocale, i18nInitialized]);
+  }, [organizationLocale, i18nInitialized, loading]);
 
   // Filter modules based on user's capabilities
   const availableModules = useMemo(() => {
