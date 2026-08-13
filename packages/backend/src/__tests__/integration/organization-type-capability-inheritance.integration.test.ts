@@ -101,6 +101,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
       const orgName = `test-org-capability-inheritance-${Date.now()}`;
       const orgResult = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -111,7 +114,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, enabled_capabilities
       `, [
         testOrgTypeId,
@@ -164,6 +167,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
       const orgName = `test-org-capability-inheritance-${Date.now()}`;
       const orgResult = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -174,7 +180,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, enabled_capabilities
       `, [
         testOrgTypeId,
@@ -227,6 +233,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
       const orgName = `test-org-capability-inheritance-${Date.now()}`;
       const orgResult = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -237,7 +246,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, enabled_capabilities
       `, [
         testOrgTypeId,
@@ -299,6 +308,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
       const orgName = `test-org-capability-inheritance-${Date.now()}`;
       const orgResult = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -309,7 +321,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, enabled_capabilities
       `, [
         testOrgTypeId,
@@ -364,6 +376,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
       const orgName = `test-org-capability-inheritance-${Date.now()}`;
       const orgResult = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -374,7 +389,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, organization_type_id
       `, [
         testOrgTypeId,
@@ -428,6 +443,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
 
       const org1Result = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -438,7 +456,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, enabled_capabilities
       `, [
         testOrgTypeId,
@@ -452,6 +470,9 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
 
       const org2Result = await pool.query(`
         INSERT INTO organizations (
+          url_code,
+          currency,
+          language,
           organization_type_id,
           keycloak_group_id,
           name,
@@ -462,7 +483,7 @@ describe('Organization Type Capability Inheritance - Integration Test', () => {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        VALUES (substr(md5(random()::text), 1, 12), 'GBP', 'en', $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, enabled_capabilities
       `, [
         testOrgTypeId,

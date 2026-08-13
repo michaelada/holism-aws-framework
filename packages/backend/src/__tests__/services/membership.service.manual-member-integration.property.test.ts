@@ -27,18 +27,56 @@ describe('Property 20: Manual Member Integration', () => {
   let testMembershipTypeId: string;
   let testFormId: string;
   let testUserId: string;
+  let testOrganisationTypeId: string;
   let createdMemberIds: string[] = [];
+
+  beforeAll(async () => {
+    // The pool is shared but not self-initialising: without this every query
+    // fails with "Database pool not initialized".
+    await db.initialize();
+  });
+
+  afterAll(async () => {
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
+  });
 
   beforeEach(async () => {
     formSubmissionService = new FormSubmissionService();
     membershipService = new MembershipService(formSubmissionService);
 
-    // Create test organization
-    const orgResult = await db.query(
-      `INSERT INTO organizations (short_name, display_name, status)
-       VALUES ($1, $2, $3)
+    /*
+     * An organisation needs a type, and `organizations` has grown a set of
+     * NOT NULL columns since this fixture was written — `url_code`, `currency`,
+     * `keycloak_group_id`, `name` — while `short_name` no longer exists.
+     * The numbering configuration matters too: member creation reads it from
+     * the type to allocate the membership number.
+     */
+    const orgTypeResult = await db.query(
+      `INSERT INTO organization_types
+         (name, display_name, currency, language, default_locale,
+          membership_numbering, membership_number_uniqueness,
+          initial_membership_number)
+       VALUES ($1, $2, 'GBP', 'en', 'en-GB', 'internal', 'organization', 1000000)
        RETURNING id`,
-      ['TEST', 'Test Organization', 'active']
+      [`test-type-manual-member-${Date.now()}`, 'Test Type']
+    );
+    testOrganisationTypeId = orgTypeResult.rows[0].id;
+
+    const orgResult = await db.query(
+      `INSERT INTO organizations
+         (organization_type_id, keycloak_group_id, url_code, name, display_name, currency, language, status)
+       VALUES ($1, $2, substr(md5(random()::text), 1, 12), $3, $4, 'GBP', 'en', 'active')
+       RETURNING id`,
+      [
+        testOrganisationTypeId,
+        `test-group-manual-${Date.now()}`,
+        `test-org-manual-${Date.now()}`,
+        'Test Organization',
+      ]
     );
     testOrganisationId = orgResult.rows[0].id;
 
@@ -72,12 +110,23 @@ describe('Property 20: Manual Member Integration', () => {
     );
     testMembershipTypeId = typeResult.rows[0].id;
 
-    // Create test user
+    /*
+     * The submission's `user_id` is an `organization_users` row — the person's
+     * membership of this club — not a row in `users`, which carries the
+     * Keycloak identity across all of them.
+     */
     const userResult = await db.query(
-      `INSERT INTO users (email, first_name, last_name)
-       VALUES ($1, $2, $3)
+      `INSERT INTO organization_users
+         (organization_id, keycloak_user_id, email, first_name, last_name, user_type, status)
+       VALUES ($1, $2, $3, $4, $5, 'account-user', 'active')
        RETURNING id`,
-      ['test@example.com', 'Test', 'User']
+      [
+        testOrganisationId,
+        `kc-manual-${Date.now()}`,
+        `test-${Date.now()}@example.com`,
+        'Test',
+        'User',
+      ]
     );
     testUserId = userResult.rows[0].id;
   });
@@ -93,8 +142,13 @@ describe('Property 20: Manual Member Integration', () => {
     }
 
     // Clean up test data
+    if (testOrganisationId) {
+      await db.query('DELETE FROM form_submissions WHERE organisation_id = $1', [
+        testOrganisationId,
+      ]);
+    }
     if (testUserId) {
-      await db.query('DELETE FROM users WHERE id = $1', [testUserId]);
+      await db.query('DELETE FROM organization_users WHERE id = $1', [testUserId]);
     }
     if (testMembershipTypeId) {
       await db.query('DELETE FROM membership_types WHERE id = $1', [testMembershipTypeId]);
@@ -103,7 +157,16 @@ describe('Property 20: Manual Member Integration', () => {
       await db.query('DELETE FROM application_forms WHERE id = $1', [testFormId]);
     }
     if (testOrganisationId) {
+      await db.query('DELETE FROM membership_number_sequences WHERE organization_id = $1', [
+        testOrganisationId,
+      ]);
       await db.query('DELETE FROM organizations WHERE id = $1', [testOrganisationId]);
+    }
+    if (testOrganisationTypeId) {
+      await db.query('DELETE FROM membership_number_sequences WHERE organization_type_id = $1', [
+        testOrganisationTypeId,
+      ]);
+      await db.query('DELETE FROM organization_types WHERE id = $1', [testOrganisationTypeId]);
     }
   });
 
@@ -117,8 +180,8 @@ describe('Property 20: Manual Member Integration', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          firstName: fc.string({ minLength: 1, maxLength: 50 }),
-          lastName: fc.string({ minLength: 1, maxLength: 50 }),
+          firstName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
+          lastName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
         }),
         async ({ firstName, lastName }) => {
           // Create form submission
@@ -132,7 +195,9 @@ describe('Property 20: Manual Member Integration', () => {
               testOrganisationId,
               testUserId,
               'membership_application',
-              'manual-creation',
+              // `context_id` is a uuid — for a membership application it is the
+              // membership type being applied for.
+              testMembershipTypeId,
               JSON.stringify({ firstName, lastName }),
               'approved',
             ]
@@ -157,8 +222,10 @@ describe('Property 20: Manual Member Integration', () => {
           const foundMember = members.find(m => m.id === createdMember.id);
 
           expect(foundMember).toBeDefined();
-          expect(foundMember?.firstName).toBe(firstName);
-          expect(foundMember?.lastName).toBe(lastName);
+          // The service trims names on the way in, deliberately: a member
+          // called " Sam" should not sort or search differently from "Sam".
+          expect(foundMember?.firstName).toBe(firstName.trim());
+          expect(foundMember?.lastName).toBe(lastName.trim());
           expect(foundMember?.organisationId).toBe(testOrganisationId);
 
           // Clean up form submission
@@ -179,8 +246,8 @@ describe('Property 20: Manual Member Integration', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          firstName: fc.string({ minLength: 1, maxLength: 50 }),
-          lastName: fc.string({ minLength: 1, maxLength: 50 }),
+          firstName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
+          lastName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
         }),
         async ({ firstName, lastName }) => {
           // Create form submission
@@ -194,7 +261,9 @@ describe('Property 20: Manual Member Integration', () => {
               testOrganisationId,
               testUserId,
               'membership_application',
-              'manual-creation',
+              // `context_id` is a uuid — for a membership application it is the
+              // membership type being applied for.
+              testMembershipTypeId,
               JSON.stringify({ firstName, lastName }),
               'approved',
             ]
@@ -219,8 +288,9 @@ describe('Property 20: Manual Member Integration', () => {
 
           expect(retrievedMember).not.toBeNull();
           expect(retrievedMember?.id).toBe(createdMember.id);
-          expect(retrievedMember?.firstName).toBe(firstName);
-          expect(retrievedMember?.lastName).toBe(lastName);
+          // Trimmed on the way in, as above.
+          expect(retrievedMember?.firstName).toBe(firstName.trim());
+          expect(retrievedMember?.lastName).toBe(lastName.trim());
           expect(retrievedMember?.membershipNumber).toBe(createdMember.membershipNumber);
 
           // Clean up form submission
@@ -241,8 +311,8 @@ describe('Property 20: Manual Member Integration', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          firstName: fc.string({ minLength: 1, maxLength: 50 }),
-          lastName: fc.string({ minLength: 1, maxLength: 50 }),
+          firstName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
+          lastName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
         }),
         async ({ firstName, lastName }) => {
           // Create form submission
@@ -256,7 +326,9 @@ describe('Property 20: Manual Member Integration', () => {
               testOrganisationId,
               testUserId,
               'membership_application',
-              'manual-creation',
+              // `context_id` is a uuid — for a membership application it is the
+              // membership type being applied for.
+              testMembershipTypeId,
               JSON.stringify({ firstName, lastName }),
               'approved',
             ]
@@ -279,7 +351,15 @@ describe('Property 20: Manual Member Integration', () => {
           // Verify all required fields are present
           expect(createdMember.id).toBeDefined();
           expect(createdMember.membershipNumber).toBeDefined();
-          expect(createdMember.membershipNumber).toMatch(/^TEST-\d{4}-\d{5}$/);
+          /*
+           * Numbers come from the organisation type's sequence now, not from a
+           * `PREFIX-YEAR-NNNNN` template: the type says whether numbering is
+           * internal, whether it is unique per organisation or per type, and
+           * where it starts. So what holds is that a number was allocated from
+           * that sequence, at or above the configured starting point.
+           */
+          expect(createdMember.membershipNumber).toMatch(/^\d+$/);
+          expect(Number(createdMember.membershipNumber)).toBeGreaterThanOrEqual(1000000);
           expect(createdMember.status).toBeDefined();
           expect(['active', 'pending']).toContain(createdMember.status);
           expect(createdMember.validUntil).toBeDefined();
@@ -309,8 +389,8 @@ describe('Property 20: Manual Member Integration', () => {
       fc.asyncProperty(
         fc.array(
           fc.record({
-            firstName: fc.string({ minLength: 1, maxLength: 50 }),
-            lastName: fc.string({ minLength: 1, maxLength: 50 }),
+            firstName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
+            lastName: fc.string({ minLength: 1, maxLength: 50 }).filter(n => n.trim() !== ''),
           }),
           { minLength: 1, maxLength: 5 }
         ),
@@ -330,7 +410,7 @@ describe('Property 20: Manual Member Integration', () => {
                 testOrganisationId,
                 testUserId,
                 'membership_application',
-                'manual-creation',
+                testMembershipTypeId,
                 JSON.stringify({ firstName, lastName }),
                 'approved',
               ]
@@ -406,7 +486,7 @@ describe('Property 20: Manual Member Integration', () => {
                 testOrganisationId,
                 testUserId,
                 'membership_application',
-                'manual-creation',
+                testMembershipTypeId,
                 JSON.stringify({ firstName: `First${i}`, lastName: `Last${i}` }),
                 'approved',
               ]

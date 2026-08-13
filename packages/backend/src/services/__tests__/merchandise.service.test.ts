@@ -39,9 +39,41 @@ jest.mock('exceljs', () => {
   };
 });
 
+
 describe('MerchandiseService', () => {
   let service: MerchandiseService;
   const mockDb = db as jest.Mocked<typeof db>;
+
+  /**
+   * Answer by what is being asked for, not by call order.
+   *
+   * Loading a merchandise type also loads its option types and delivery rules,
+   * so a positional queue of mocked results silently hands the option-value
+   * lookup somebody else's rows — and the price comes out NaN.
+   */
+  const respondByQuery = (rows: {
+    type?: any[];
+    optionTypes?: any[];
+    optionValues?: any[];
+    deliveryRules?: any[];
+  }) => {
+    mockDb.query.mockImplementation(((sql: string) => {
+      const text = String(sql);
+      if (text.includes('FROM merchandise_types')) {
+        return Promise.resolve({ rows: rows.type ?? [] });
+      }
+      if (text.includes('FROM merchandise_option_types')) {
+        return Promise.resolve({ rows: rows.optionTypes ?? [] });
+      }
+      if (text.includes('FROM merchandise_option_values')) {
+        return Promise.resolve({ rows: rows.optionValues ?? [] });
+      }
+      if (text.includes('FROM delivery_rules')) {
+        return Promise.resolve({ rows: rows.deliveryRules ?? [] });
+      }
+      return Promise.resolve({ rows: [] });
+    }) as any);
+  };
 
   beforeEach(() => {
     service = new MerchandiseService();
@@ -307,9 +339,7 @@ describe('MerchandiseService', () => {
         { price: '20.00' },
       ];
 
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [mockType] } as any)
-        .mockResolvedValueOnce({ rows: mockOptionValues } as any);
+      respondByQuery({ type: [mockType], optionValues: mockOptionValues });
 
       const result = await service.calculatePrice('1', { size: 'option-1' }, 2);
 
@@ -350,9 +380,7 @@ describe('MerchandiseService', () => {
         { price: '20.00' },
       ];
 
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [mockType] } as any)
-        .mockResolvedValueOnce({ rows: mockOptionValues } as any);
+      respondByQuery({ type: [mockType], optionValues: mockOptionValues });
 
       const result = await service.calculatePrice('1', { size: 'option-1' }, 2);
 
@@ -398,10 +426,11 @@ describe('MerchandiseService', () => {
         { min_quantity: 6, max_quantity: null, delivery_fee: '10.00', order: 2 },
       ];
 
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [mockType] } as any)
-        .mockResolvedValueOnce({ rows: mockOptionValues } as any)
-        .mockResolvedValueOnce({ rows: mockDeliveryRules } as any);
+      respondByQuery({
+        type: [mockType],
+        optionValues: mockOptionValues,
+        deliveryRules: mockDeliveryRules,
+      });
 
       const result = await service.calculatePrice('1', { size: 'option-1' }, 7);
 

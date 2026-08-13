@@ -14,7 +14,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { WelcomeDialog } from '../../components/WelcomeDialog';
-import { HelpDrawer } from '../../components/HelpDrawer';
 import axios from 'axios';
 
 // Mock axios
@@ -99,14 +98,22 @@ const translations: Record<string, Record<string, string>> = {
 // Mock i18n instance
 let currentLanguage = 'en-GB';
 
+/*
+ * i18next re-renders every component that called `useTranslation` when the
+ * language changes, and the onboarding dialogs are wrapped in `React.memo` —
+ * their props do not change, so that notification is the only thing that makes
+ * them show the new language. The mock has to notify too, or the test measures
+ * the memo rather than the translation.
+ */
+const languageListeners = new Set<() => void>();
+
 const mockI18n = {
   get language() {
     return currentLanguage;
   },
   changeLanguage: vi.fn(async (lng: string) => {
     currentLanguage = lng;
-    // Trigger re-render by updating the mock
-    mockT.mockClear();
+    languageListeners.forEach((notify) => notify());
   }),
 };
 
@@ -130,7 +137,29 @@ const mockT = vi.fn((key: string, options?: any) => {
 });
 
 vi.mock('../../hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: mockT, i18n: mockI18n }),
+  useTranslation: () => {
+    React.useSyncExternalStore(
+      (notify: () => void) => {
+        languageListeners.add(notify);
+        return () => languageListeners.delete(notify);
+      },
+      () => currentLanguage
+    );
+    return { t: mockT, i18n: mockI18n };
+  },
+}));
+
+/*
+ * Help content is markdown files resolved by the loader, in the reader's
+ * language, falling back to en-GB — the fixtures above stand in for the files.
+ */
+vi.mock('../../locales/helpLoader', () => ({
+  getHelpContent: (locale: string, moduleId: string, pageId: string) =>
+    translations[locale]?.[`${moduleId}.${pageId}`] ??
+    translations[locale]?.[`${moduleId}.overview`] ??
+    translations['en-GB']?.[`${moduleId}.${pageId}`] ??
+    translations['en-GB']?.[`${moduleId}.overview`] ??
+    null,
 }));
 
 // Test component that provides language switching controls
@@ -140,14 +169,18 @@ const TestLanguageApp: React.FC = () => {
     helpDrawerOpen, 
     toggleHelpDrawer,
     setCurrentPageId,
+    setCurrentModule,
   } = useOnboarding();
   
   const [currentModule] = React.useState<'dashboard' | 'users'>('dashboard');
   const [pageId] = React.useState<string>('overview');
   
+  // The provider renders the drawer from its own context, so tell it where the
+  // user is rather than rendering a second one.
   React.useEffect(() => {
     setCurrentPageId(pageId);
-  }, [pageId, setCurrentPageId]);
+    setCurrentModule(currentModule);
+  }, [pageId, currentModule, setCurrentPageId, setCurrentModule]);
   
   return (
     <>
@@ -213,14 +246,6 @@ const TestLanguageApp: React.FC = () => {
           {helpDrawerOpen ? 'help-open' : 'help-closed'}
         </div>
       </div>
-      
-      {/* Help Drawer */}
-      <HelpDrawer
-        open={helpDrawerOpen}
-        onClose={toggleHelpDrawer}
-        pageId={pageId}
-        moduleId={currentModule}
-      />
     </>
   );
 };
@@ -488,24 +513,17 @@ describe('Language Switching - Integration Test', () => {
 
     // Create a test component for forms module
     const TestFormsHelpComponent: React.FC = () => {
-      const { helpDrawerOpen, toggleHelpDrawer, setCurrentPageId } = useOnboarding();
+      const { toggleHelpDrawer, setCurrentPageId, setCurrentModule } = useOnboarding();
       
       React.useEffect(() => {
         setCurrentPageId('overview');
-      }, [setCurrentPageId]);
+        setCurrentModule('forms');
+      }, [setCurrentPageId, setCurrentModule]);
       
       return (
-        <>
-          <button data-testid="open-help" onClick={toggleHelpDrawer}>
-            Help
-          </button>
-          <HelpDrawer
-            open={helpDrawerOpen}
-            onClose={toggleHelpDrawer}
-            pageId="overview"
-            moduleId="forms"
-          />
-        </>
+        <button data-testid="open-help" onClick={toggleHelpDrawer}>
+          Help
+        </button>
       );
     };
 

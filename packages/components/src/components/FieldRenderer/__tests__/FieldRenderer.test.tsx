@@ -7,8 +7,18 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { FieldRenderer } from '../FieldRenderer';
 import { FieldDatatype, type FieldDefinition } from '../../../types';
+
+/**
+ * Date, time and datetime fields render MUI pickers, which read their adapter
+ * from a `LocalizationProvider` the host app supplies — without one they refuse
+ * to render at all.
+ */
+const renderWithPickers = (ui: React.ReactElement) =>
+  render(<LocalizationProvider dateAdapter={AdapterDateFns}>{ui}</LocalizationProvider>);
 
 describe('FieldRenderer', () => {
   describe('TextRenderer', () => {
@@ -186,7 +196,7 @@ describe('FieldRenderer', () => {
         validationRules: [],
       };
 
-      const { container } = render(
+      const { container } = renderWithPickers(
         <FieldRenderer fieldDefinition={fieldDef} value={null} onChange={() => {}} />
       );
 
@@ -204,7 +214,7 @@ describe('FieldRenderer', () => {
         validationRules: [],
       };
 
-      const { container } = render(
+      const { container } = renderWithPickers(
         <FieldRenderer fieldDefinition={fieldDef} value={null} onChange={() => {}} />
       );
 
@@ -222,7 +232,7 @@ describe('FieldRenderer', () => {
         validationRules: [],
       };
 
-      const { container } = render(
+      const { container } = renderWithPickers(
         <FieldRenderer fieldDefinition={fieldDef} value={null} onChange={() => {}} />
       );
 

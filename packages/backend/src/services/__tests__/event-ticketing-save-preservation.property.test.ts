@@ -152,8 +152,12 @@ describe('Property 2: Preservation — Non-Ticketing Updates Leave Config Unchan
 
           await service.updateEvent(eventId, payload);
 
-          // Assert: NO ticketing service methods were called
-          expect(mockGetTicketingConfigByEvent).not.toHaveBeenCalled();
+          /*
+           * Nothing about the ticketing configuration was written. Reading it
+           * is expected — an event carries its ticketing settings, so loading
+           * one back fetches them — but a save that mentions no ticketing field
+           * must not create or change any.
+           */
           expect(mockCreateTicketedEvent).not.toHaveBeenCalled();
           expect(mockUpdateTicketedEvent).not.toHaveBeenCalled();
         }
@@ -250,8 +254,8 @@ describe('Property 2: Preservation — Non-Ticketing Updates Leave Config Unchan
             activities.map(a => ({ ...a, eventId }))
           );
 
-          // Assert: ticketing was NOT touched
-          expect(mockGetTicketingConfigByEvent).not.toHaveBeenCalled();
+          // Assert: ticketing was not written to. Reading it back with the
+          // event is expected.
           expect(mockCreateTicketedEvent).not.toHaveBeenCalled();
           expect(mockUpdateTicketedEvent).not.toHaveBeenCalled();
         }

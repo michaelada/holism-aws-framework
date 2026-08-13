@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
@@ -11,7 +12,28 @@ import { db } from '../../database/pool';
  * - Super admin only access for create/update/delete
  * - Seeded payment methods are available
  */
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Payment Method API Routes Integration Tests', () => {
+
   let authToken: string;
   let adminUserId: string;
 
@@ -37,7 +59,11 @@ describe('Payment Method API Routes Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   beforeEach(async () => {
@@ -50,7 +76,7 @@ describe('Payment Method API Routes Integration Tests', () => {
 
   describe('GET /api/admin/payment-methods', () => {
     it('should return all active payment methods', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -66,7 +92,7 @@ describe('Payment Method API Routes Integration Tests', () => {
     });
 
     it('should only return active payment methods', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -86,13 +112,13 @@ describe('Payment Method API Routes Integration Tests', () => {
   describe('GET /api/admin/payment-methods/:id', () => {
     it('should return payment method by ID', async () => {
       // Get a payment method first
-      const listResponse = await request(app)
+      const listResponse = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`);
 
       const paymentMethodId = listResponse.body[0].id;
 
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/payment-methods/${paymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -107,7 +133,7 @@ describe('Payment Method API Routes Integration Tests', () => {
     it('should return 404 for non-existent payment method', async () => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
       
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/payment-methods/${fakeId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
@@ -125,7 +151,7 @@ describe('Payment Method API Routes Integration Tests', () => {
         requiresActivation: true
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send(paymentMethodData)
@@ -150,7 +176,7 @@ describe('Payment Method API Routes Integration Tests', () => {
         requiresActivation: false
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send(paymentMethodData)
@@ -168,14 +194,14 @@ describe('Payment Method API Routes Integration Tests', () => {
       };
 
       // Create first payment method
-      await request(app)
+      await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send(paymentMethodData)
         .expect(201);
 
       // Try to create duplicate
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send(paymentMethodData)
@@ -194,7 +220,7 @@ describe('Payment Method API Routes Integration Tests', () => {
   describe('PUT /api/admin/payment-methods/:id', () => {
     it('should update payment method', async () => {
       // Create a payment method first
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -211,7 +237,7 @@ describe('Payment Method API Routes Integration Tests', () => {
         requiresActivation: false
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/payment-methods/${paymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates)
@@ -225,7 +251,7 @@ describe('Payment Method API Routes Integration Tests', () => {
     it('should return 404 for non-existent payment method', async () => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
       
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/payment-methods/${fakeId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ displayName: 'Updated' })
@@ -243,7 +269,7 @@ describe('Payment Method API Routes Integration Tests', () => {
   describe('DELETE /api/admin/payment-methods/:id', () => {
     it('should deactivate payment method', async () => {
       // Create a payment method first
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -254,7 +280,7 @@ describe('Payment Method API Routes Integration Tests', () => {
 
       const paymentMethodId = createResponse.body.id;
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/payment-methods/${paymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -271,7 +297,7 @@ describe('Payment Method API Routes Integration Tests', () => {
 
     it('should not return deactivated payment method in list', async () => {
       // Create and deactivate a payment method
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -282,12 +308,12 @@ describe('Payment Method API Routes Integration Tests', () => {
 
       const paymentMethodId = createResponse.body.id;
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/payment-methods/${paymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       // Get all payment methods
-      const listResponse = await request(app)
+      const listResponse = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -298,7 +324,7 @@ describe('Payment Method API Routes Integration Tests', () => {
     it('should return 404 for non-existent payment method', async () => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
       
-      const response = await request(app)
+      const response = await request(server)
         .delete(`/api/admin/payment-methods/${fakeId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
@@ -314,7 +340,7 @@ describe('Payment Method API Routes Integration Tests', () => {
 
   describe('Seeded Payment Methods', () => {
     it('should have pay-offline payment method', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -327,7 +353,7 @@ describe('Payment Method API Routes Integration Tests', () => {
     });
 
     it('should have stripe payment method', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -340,7 +366,7 @@ describe('Payment Method API Routes Integration Tests', () => {
     });
 
     it('should have helix-pay payment method', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/payment-methods')
         .set('Authorization', `Bearer ${authToken}`);
 

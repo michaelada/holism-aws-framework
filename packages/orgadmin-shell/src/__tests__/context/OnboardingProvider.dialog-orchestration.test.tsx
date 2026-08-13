@@ -108,7 +108,9 @@ describe('OnboardingProvider - Dialog Orchestration Unit Tests', () => {
 
       // Assert: Welcome dialog is open, module intro is NOT
       expect(getByTestId('module-open').textContent).toBe('closed');
-      expect(getByTestId('current-module').textContent).toBe('none');
+      // The module is still recorded — it is the help context for the page the
+      // user is on, and only the introduction is being held back.
+      expect(getByTestId('current-module').textContent).toBe('dashboard');
     });
 
     it('should prevent module intro from opening while welcome dialog is open', async () => {
@@ -346,7 +348,7 @@ describe('OnboardingProvider - Dialog Orchestration Unit Tests', () => {
 
       // Dismiss first module intro
       await act(async () => {
-        await contextRef?.dismissModuleIntro('forms');
+        await contextRef?.dismissModuleIntro('forms', false);
       });
 
       await waitFor(() => {
@@ -641,9 +643,11 @@ describe('OnboardingProvider - Dialog Orchestration Unit Tests', () => {
       // Give it a moment
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Assert: Should still show first module, not second
+      // Assert: Should still show the first module's introduction. The help
+      // context has moved on with the user to memberships, but the dialog on
+      // screen — and the module a dismissal records — is still events.
       expect(getByTestId('module-open').textContent).toBe('open');
-      expect(getByTestId('current-module').textContent).toBe('events');
+      expect(getByTestId('current-module').textContent).toBe('memberships');
     });
 
     it('should handle welcome dialog dismissal without "dont show again" correctly', async () => {

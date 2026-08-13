@@ -168,7 +168,7 @@ describe('App Integration Tests', () => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
     });
 
-    it('should show access denied screen when user is not org admin', () => {
+    it('should show access denied screen when user is not org admin', async () => {
       const mockLogout = vi.fn();
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
         loading: false,
@@ -183,13 +183,13 @@ describe('App Integration Tests', () => {
 
       render(<App />);
 
-      expect(screen.getByText('Access Denied')).toBeInTheDocument();
+      expect(await screen.findByText('Access Denied')).toBeInTheDocument();
       expect(
         screen.getByText(/You do not have permission to access the Organisation Admin Portal/)
       ).toBeInTheDocument();
     });
 
-    it('should show redirecting message when not authenticated', () => {
+    it('should show redirecting message when not authenticated', async () => {
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
         loading: false,
         error: null,
@@ -203,7 +203,7 @@ describe('App Integration Tests', () => {
 
       render(<App />);
 
-      expect(screen.getByText('Redirecting to login...')).toBeInTheDocument();
+      expect(await screen.findByText('Redirecting to login...')).toBeInTheDocument();
     });
   });
 
@@ -306,7 +306,7 @@ describe('App Integration Tests', () => {
   });
 
   describe('Authentication Redirect Flows', () => {
-    it('should handle logout action from access denied screen', () => {
+    it('should handle logout action from access denied screen', async () => {
       const mockLogout = vi.fn();
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
         loading: false,
@@ -321,13 +321,14 @@ describe('App Integration Tests', () => {
 
       render(<App />);
 
+      await screen.findByText('Access Denied');
       const logoutButton = screen.getByRole('button', { name: /logout/i });
       logoutButton.click();
 
       expect(mockLogout).toHaveBeenCalledTimes(1);
     });
 
-    it('should show redirecting message when user is null', () => {
+    it('should show redirecting message when user is null', async () => {
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
         loading: false,
         error: null,
@@ -341,10 +342,15 @@ describe('App Integration Tests', () => {
 
       render(<App />);
 
-      expect(screen.getByText('Redirecting to login...')).toBeInTheDocument();
+      expect(await screen.findByText('Redirecting to login...')).toBeInTheDocument();
     });
 
-    it('should show redirecting message when organisation is null', () => {
+    /**
+     * An authenticated user with no organisation yet is mid-fetch, not
+     * unauthenticated — a failed fetch sets `error` and shows the error screen
+     * instead. So this waits, rather than sending the user back to login.
+     */
+    it('should keep showing the loading screen when organisation is null', async () => {
       vi.mocked(useAuthModule.useAuth).mockReturnValue({
         loading: false,
         error: null,
@@ -358,7 +364,7 @@ describe('App Integration Tests', () => {
 
       render(<App />);
 
-      expect(screen.getByText('Redirecting to login...')).toBeInTheDocument();
+      expect(await screen.findByText('Loading ItsPlainSailing...')).toBeInTheDocument();
     });
   });
 });

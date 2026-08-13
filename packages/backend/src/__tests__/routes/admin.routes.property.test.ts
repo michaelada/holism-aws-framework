@@ -1,5 +1,6 @@
 import * as fc from 'fast-check';
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
@@ -18,7 +19,28 @@ import { db } from '../../database/pool';
  * Note: These tests run with DISABLE_AUTH=true (development mode) to avoid
  * complex JWT token mocking. The actual authorization logic is tested in unit tests.
  */
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Admin API Routes - Property-Based Tests', () => {
+
   beforeAll(async () => {
     await db.initialize();
     // Enable auth bypass for property tests
@@ -26,7 +48,11 @@ describe('Admin API Routes - Property-Based Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   describe('Property 18: Admin Endpoint Authorization', () => {
@@ -45,7 +71,7 @@ describe('Admin API Routes - Property-Based Tests', () => {
 
       await fc.assert(
         fc.asyncProperty(adminEndpoints, async (endpoint) => {
-          const response = await request(app)
+          const response = await request(server)
             .get(endpoint)
             .set('Authorization', 'Bearer mock-token');
 
@@ -78,11 +104,11 @@ describe('Admin API Routes - Property-Based Tests', () => {
           let response;
 
           if (endpoint.method === 'get') {
-            response = await request(app)
+            response = await request(server)
               .get(endpoint.path)
               .set('Authorization', 'Bearer mock-token');
           } else {
-            response = await request(app)
+            response = await request(server)
               .post(endpoint.path)
               .set('Authorization', 'Bearer mock-token')
               .send({ name: 'test', displayName: 'Test' });
@@ -112,7 +138,7 @@ describe('Admin API Routes - Property-Based Tests', () => {
 
       await fc.assert(
         fc.asyncProperty(adminPaths, async (path) => {
-          const response = await request(app)
+          const response = await request(server)
             .get(path)
             .set('Authorization', 'Bearer mock-token');
 
@@ -138,7 +164,7 @@ describe('Admin API Routes - Property-Based Tests', () => {
 
       await fc.assert(
         fc.asyncProperty(validTenantData, async (data) => {
-          const response = await request(app)
+          const response = await request(server)
             .post('/api/admin/tenants')
             .set('Authorization', 'Bearer mock-token')
             .send(data);
@@ -165,7 +191,7 @@ describe('Admin API Routes - Property-Based Tests', () => {
 
       await fc.assert(
         fc.asyncProperty(invalidData, async (data) => {
-          const response = await request(app)
+          const response = await request(server)
             .post('/api/admin/tenants')
             .set('Authorization', 'Bearer mock-token')
             .send(data);

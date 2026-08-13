@@ -73,6 +73,7 @@ jest.mock('../../middleware/capability.middleware', () => ({
 }));
 
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { discountService } from '../../services/discount.service';
 import { discountValidatorService } from '../../services/discount-validator.service';
@@ -83,7 +84,28 @@ jest.mock('../../services/discount.service');
 jest.mock('../../services/discount-validator.service');
 jest.mock('../../services/discount-calculator.service');
 
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -107,7 +129,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
 
       (discountService.create as jest.Mock).mockResolvedValue(mockDiscount);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -135,7 +157,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     });
 
     it('should return 400 when module type is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -154,7 +176,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
         new Error('Discount value must be between 0 and 100 for percentage discounts')
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -171,7 +193,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     });
 
     it('should return 401 when not authenticated', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .send({
           organisationId: 'test-org-123',
@@ -202,7 +224,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
 
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -225,7 +247,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/nonexistent?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -234,7 +256,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     });
 
     it('should return 400 when organisation ID is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1')
         .set('Authorization', 'Bearer valid-token');
 
@@ -265,7 +287,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(existingDiscount);
       (discountService.update as jest.Mock).mockResolvedValue(updatedDiscount);
 
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/orgadmin/discounts/discount-1')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -281,7 +303,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/orgadmin/discounts/nonexistent')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -294,7 +316,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     });
 
     it('should return 400 when organisation ID is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/orgadmin/discounts/discount-1')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -326,7 +348,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountService.delete as jest.Mock).mockResolvedValue(true);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -337,7 +359,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/nonexistent?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -384,7 +406,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
         total: 2
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts')
         .set('Authorization', 'Bearer valid-token');
 
@@ -417,7 +439,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
         total: 1
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts?moduleType=events')
         .set('Authorization', 'Bearer valid-token');
 
@@ -432,7 +454,7 @@ describe('Discount Routes - CRUD Operations (Task 9.2)', () => {
         total: 100
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts?page=2&pageSize=25')
         .set('Authorization', 'Bearer valid-token');
 
@@ -451,7 +473,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
     it('should apply discount to target successfully', async () => {
       (discountService.applyToTarget as jest.Mock).mockResolvedValue(undefined);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/discount-1/apply')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -471,7 +493,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
     });
 
     it('should return 400 when target type is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/discount-1/apply')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -483,7 +505,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
     });
 
     it('should return 400 when target ID is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/discount-1/apply')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -499,7 +521,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
         new Error('Cannot apply inactive discount')
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/discount-1/apply')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -516,7 +538,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
     it('should remove discount from target successfully', async () => {
       (discountService.removeFromTarget as jest.Mock).mockResolvedValue(true);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1/apply/event/event-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -531,7 +553,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
     it('should return 404 when discount application not found', async () => {
       (discountService.removeFromTarget as jest.Mock).mockResolvedValue(false);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1/apply/event/event-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -575,7 +597,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
 
       (discountService.getForTarget as jest.Mock).mockResolvedValue(mockDiscounts);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/target/event/event-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -587,7 +609,7 @@ describe('Discount Routes - Application Operations (Task 10.2)', () => {
     it('should return empty array when no discounts applied', async () => {
       (discountService.getForTarget as jest.Mock).mockResolvedValue([]);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/target/event/event-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -627,7 +649,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountValidatorService.validateDiscount as jest.Mock).mockResolvedValue(mockValidationResult);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -674,7 +696,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountValidatorService.validateDiscount as jest.Mock).mockResolvedValue(mockValidationResult);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -692,7 +714,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     });
 
     it('should return 400 when required fields are missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -707,7 +729,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -743,7 +765,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
 
       (discountValidatorService.validateCode as jest.Mock).mockResolvedValue(mockDiscount);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate-code')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -759,7 +781,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     it('should return 404 when code not found', async () => {
       (discountValidatorService.validateCode as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate-code')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -772,7 +794,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     });
 
     it('should return 400 when code is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate-code')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -784,7 +806,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     });
 
     it('should return 400 when organisation ID is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/validate-code')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -829,7 +851,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountCalculatorService.calculateItemDiscount as jest.Mock).mockReturnValue(mockCalculationResult);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -882,7 +904,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountCalculatorService.calculateQuantityDiscount as jest.Mock).mockReturnValue(mockCalculationResult);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -898,7 +920,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     });
 
     it('should return 400 when required fields are missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -913,7 +935,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -973,7 +995,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscounts[0]);
       (discountCalculatorService.calculateCartDiscounts as jest.Mock).mockReturnValue(mockCartResult);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate-cart')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -991,7 +1013,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
     });
 
     it('should return 400 when required fields are missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate-cart')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -1015,7 +1037,7 @@ describe('Discount Routes - Validation Operations (Task 11.2)', () => {
 
       (discountCalculatorService.calculateCartDiscounts as jest.Mock).mockReturnValue(mockCartResult);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts/calculate-cart')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -1038,7 +1060,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
 
   describe('GET /api/orgadmin/discounts/:id/usage - Get Usage History', () => {
     it('should return usage history with pagination', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/usage?page=1&pageSize=10')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1049,7 +1071,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
     });
 
     it('should return empty array when no usage history', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/usage')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1059,7 +1081,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
     });
 
     it('should handle pagination parameters', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/usage?page=2&pageSize=25')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1091,7 +1113,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
 
       (discountService.getUsageStats as jest.Mock).mockResolvedValue(mockStats);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/stats')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1114,7 +1136,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
 
       (discountService.getUsageStats as jest.Mock).mockResolvedValue(mockStats);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-2/stats')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1135,7 +1157,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
 
       (discountService.getUsageStats as jest.Mock).mockResolvedValue(mockStats);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-3/stats')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1149,7 +1171,7 @@ describe('Discount Routes - Usage Operations (Task 12.2)', () => {
         new Error('Database error')
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/stats')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1175,7 +1197,7 @@ describe('Discount Routes - Authentication and Authorization', () => {
       ];
 
       for (const endpoint of endpoints) {
-        const response = await request(app)[endpoint.method](endpoint.path);
+        const response = await request(server)[endpoint.method](endpoint.path);
         expect(response.status).toBe(401);
       }
     });
@@ -1187,7 +1209,7 @@ describe('Discount Routes - Authentication and Authorization', () => {
         new Error('Unexpected database error')
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1200,7 +1222,7 @@ describe('Discount Routes - Authentication and Authorization', () => {
         new Error('Database constraint violation')
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -1262,7 +1284,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
         total: 2
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts/memberships')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1296,7 +1318,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
         total: 1
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts/events')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1312,7 +1334,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
         total: 0
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts/calendar')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1327,7 +1349,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
         total: 50
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/organisations/test-org-123/discounts/memberships?page=2&pageSize=20')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1355,7 +1377,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
 
       (discountService.create as jest.Mock).mockResolvedValue(mockDiscount);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -1392,7 +1414,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
 
       (discountService.create as jest.Mock).mockResolvedValue(mockDiscount);
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/discounts')
         .set('Authorization', 'Bearer valid-token')
         .send({
@@ -1434,7 +1456,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
 
         (discountService.create as jest.Mock).mockResolvedValue(mockDiscount);
 
-        const response = await request(app)
+        const response = await request(server)
           .post('/api/orgadmin/discounts')
           .set('Authorization', 'Bearer valid-token')
           .send({
@@ -1474,7 +1496,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountService.getMembershipTypesUsingDiscount as jest.Mock).mockResolvedValue(mockMembershipTypeIds);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/membership-types?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1503,7 +1525,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountService.getMembershipTypesUsingDiscount as jest.Mock).mockResolvedValue([]);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/membership-types?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1515,7 +1537,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/nonexistent/membership-types?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1524,7 +1546,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
     });
 
     it('should return 400 when organisation ID is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/membership-types')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1551,7 +1573,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountService.getMembershipTypesUsingDiscount as jest.Mock).mockResolvedValue([]);
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/membership-types?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1581,7 +1603,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
         new Error('Database error')
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/orgadmin/discounts/discount-1/membership-types?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1610,7 +1632,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountService.forceDelete as jest.Mock).mockResolvedValue(undefined);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1/force?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1621,7 +1643,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
     it('should return 404 when discount not found', async () => {
       (discountService.getById as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/nonexistent/force?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1630,7 +1652,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
     });
 
     it('should return 400 when organisation ID is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1/force')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1664,7 +1686,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
         discountId: 'discount-1'
       });
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 
@@ -1694,7 +1716,7 @@ describe('Discount Routes - Module Type Filtering and Membership Types (Task 7.6
       (discountService.getById as jest.Mock).mockResolvedValue(mockDiscount);
       (discountService.delete as jest.Mock).mockResolvedValue(true);
 
-      const response = await request(app)
+      const response = await request(server)
         .delete('/api/orgadmin/discounts/discount-1?organisationId=test-org-123')
         .set('Authorization', 'Bearer valid-token');
 

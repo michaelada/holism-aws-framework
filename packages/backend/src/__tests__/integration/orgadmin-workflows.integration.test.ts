@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
@@ -60,10 +61,34 @@ jest.mock('../../services/keycloak-admin.factory', () => {
  * 
  * Validates: Requirements 3.5.2
  */
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('OrgAdmin Workflows Integration Tests', () => {
+
   let authToken: string;
   let adminUserId: string;
   let testOrganisationId: string;
+  let testOrganisationTypeId: string;
+  let adminOrganisationUserId: string;
+  let adminRoleId: string;
 
   beforeAll(async () => {
     await db.initialize();
@@ -73,36 +98,144 @@ describe('OrgAdmin Workflows Integration Tests', () => {
     authToken = 'mock-token';
     adminUserId = 'dev-user-123';
 
-    // Create a test organisation
-    const orgResult = await db.query(
-      `INSERT INTO organisations (name, display_name, status, created_at, updated_at)
-       VALUES ($1, $2, $3, NOW(), NOW())
+    /*
+     * The table is `organizations`, not `organisations`. This insert used the
+     * British spelling and so failed with "relation does not exist" before any
+     * test in the file ran.
+     *
+     * It also omitted four NOT NULL columns — organization_type_id,
+     * keycloak_group_id, currency and url_code — so correcting the name alone
+     * was not enough. An organisation type is created first because the
+     * foreign key requires one.
+     */
+    const typeResult = await db.query(
+      `INSERT INTO organization_types
+         (name, display_name, currency, language, default_locale,
+          membership_numbering, membership_number_uniqueness,
+          initial_membership_number, created_at, updated_at)
+       -- The two columns are constrained: numbering is 'internal' | 'external'
+       -- and uniqueness is 'organization' | 'organization_type' (American
+       -- spelling, unlike most of the schema).
+       VALUES ($1, $2, 'EUR', 'en', 'en-GB', 'internal', 'organization', 1, NOW(), NOW())
        RETURNING id`,
-      ['test_org', 'Test Organisation', 'active']
+      [`test_type_${Date.now()}`, 'Test Organisation Type']
+    );
+    testOrganisationTypeId = typeResult.rows[0].id;
+
+    /*
+     * The organisation has to enable the capabilities these workflows use:
+     * `loadOrganisationCapabilities` reads `enabled_capabilities` from the row
+     * and `requireCapability` refuses with 403 when the one a route asks for is
+     * not among them.
+     */
+    const orgResult = await db.query(
+      `INSERT INTO organizations
+         (organization_type_id, keycloak_group_id, name, display_name,
+          currency, url_code, status, enabled_capabilities, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, 'EUR', $5, 'active',
+               '["event-management", "memberships", "forms", "payments"]', NOW(), NOW())
+       RETURNING id`,
+      [
+        testOrganisationTypeId,
+        `test-group-${Date.now()}`,
+        // Unique per run: `organizations.name` is unique, and a run that dies
+        // before its teardown would otherwise block every run after it.
+        `test_org_${Date.now()}`,
+        'Test Organisation',
+        `testorg${Date.now()}`,
+      ]
     );
     testOrganisationId = orgResult.rows[0].id;
 
-    // Create a mock admin user
-    try {
-      await db.query(
-        `INSERT INTO users (id, keycloak_user_id, username, email, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
-         ON CONFLICT (keycloak_user_id) DO NOTHING`,
-        [adminUserId, 'dev-user', 'dev@example.com']
-      );
-    } catch (error) {
-      // Ignore if user already exists
-    }
+    /*
+     * `DISABLE_AUTH` hands every request the mock development user, but that
+     * only settles who is calling. Authorisation still reads the database: the
+     * caller must have an active `org-admin` row in `organization_users` for
+     * this organisation, or every org-admin route answers 403. That row is what
+     * ties the mock identity to the fixture organisation.
+     */
+    await db.query(
+      `INSERT INTO users (id, keycloak_user_id, username, email, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
+       ON CONFLICT (keycloak_user_id) DO NOTHING`,
+      [adminUserId, `dev-user-${Date.now()}`, `dev-${Date.now()}@example.com`]
+    );
+
+    const orgUserResult = await db.query(
+      `INSERT INTO organization_users
+         (organization_id, keycloak_user_id, email, first_name, last_name, user_type, status)
+       VALUES ($1, $2, $3, 'Dev', 'Admin', 'org-admin', 'active')
+       RETURNING id`,
+      [testOrganisationId, adminUserId, `dev-${Date.now()}@example.com`]
+    );
+    adminOrganisationUserId = orgUserResult.rows[0].id;
+
+    /*
+     * And a role: `requireOrgAdmin` asks for an `admin` or
+     * `full-administrator` role on that membership, separately from the
+     * capability check — being an org admin says the person may act for the
+     * club, the role says how far.
+     */
+    const roleResult = await db.query(
+      `INSERT INTO organization_admin_roles
+         (organization_id, name, display_name, description, capability_permissions, is_system_role)
+       VALUES ($1, 'admin', 'Administrator', 'Full access for tests', '{}', true)
+       RETURNING id`,
+      [testOrganisationId]
+    );
+    adminRoleId = roleResult.rows[0].id;
+
+    await db.query(
+      `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id)
+       VALUES ($1, $2)`,
+      [adminOrganisationUserId, adminRoleId]
+    );
   });
 
   afterAll(async () => {
     // Clean up test organisation
-    await db.query('DELETE FROM organisations WHERE id = $1', [testOrganisationId]);
-    await db.close();
+    if (adminOrganisationUserId) {
+      // By the member, not by the event: `beforeEach` may already have removed
+      // the events, leaving entries this subquery could no longer find.
+      await db.query('DELETE FROM event_entries WHERE user_id = $1', [adminOrganisationUserId]);
+      await db.query('DELETE FROM events WHERE organisation_id = $1', [testOrganisationId]);
+      await db.query('DELETE FROM form_submissions WHERE organisation_id = $1', [
+        testOrganisationId,
+      ]);
+      await db.query('DELETE FROM members WHERE organisation_id = $1', [testOrganisationId]);
+      await db.query('DELETE FROM organization_user_roles WHERE organization_user_id = $1', [
+        adminOrganisationUserId,
+      ]);
+      await db.query('DELETE FROM organization_users WHERE id = $1', [adminOrganisationUserId]);
+    }
+    if (adminRoleId) {
+      await db.query('DELETE FROM organization_admin_roles WHERE id = $1', [adminRoleId]);
+    }
+    await db.query('DELETE FROM users WHERE keycloak_user_id = $1', [adminUserId]);
+    await db.query('DELETE FROM organizations WHERE id = $1', [testOrganisationId]);
+    await db.query('DELETE FROM organization_types WHERE id = $1', [testOrganisationTypeId]);
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   beforeEach(async () => {
-    // Clean up test data before each test
+    /*
+     * Clean up test data before each test, deepest first: entries reference an
+     * activity and a member, submissions reference a form, and Postgres will
+     * not let a parent go while a child still points at it.
+     */
+    await db.query(
+      `DELETE FROM event_entries
+        WHERE event_id IN (SELECT id FROM events WHERE organisation_id = $1)`,
+      [testOrganisationId]
+    );
+    await db.query('DELETE FROM members WHERE organisation_id = $1', [testOrganisationId]);
+    await db.query('DELETE FROM form_submissions WHERE organisation_id = $1', [
+      testOrganisationId,
+    ]);
     await db.query('DELETE FROM events WHERE organisation_id = $1', [testOrganisationId]);
     await db.query('DELETE FROM membership_types WHERE organisation_id = $1', [testOrganisationId]);
     await db.query('DELETE FROM payments WHERE organisation_id = $1', [testOrganisationId]);
@@ -134,8 +267,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         ],
       };
 
-      const formResponse = await request(app)
-        .post('/api/application-forms')
+      const formResponse = await request(server)
+        .post('/api/orgadmin/application-forms')
         .set('Authorization', `Bearer ${authToken}`)
         .send(formData)
         .expect(201);
@@ -161,8 +294,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         status: 'published',
       };
 
-      const eventResponse = await request(app)
-        .post('/api/events')
+      const eventResponse = await request(server)
+        .post('/api/orgadmin/events')
         .set('Authorization', `Bearer ${authToken}`)
         .send(eventData)
         .expect(201);
@@ -189,8 +322,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         chequePaymentInstructions: 'Make cheque payable to Sailing Club',
       };
 
-      const activityResponse = await request(app)
-        .post(`/api/events/${eventId}/activities`)
+      const activityResponse = await request(server)
+        .post(`/api/orgadmin/events/${eventId}/activities`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(activityData)
         .expect(201);
@@ -199,39 +332,35 @@ describe('OrgAdmin Workflows Integration Tests', () => {
       expect(activityId).toBeDefined();
 
       // Step 4: Retrieve event with activities
-      const getEventResponse = await request(app)
-        .get(`/api/events/${eventId}`)
+      const getEventResponse = await request(server)
+        .get(`/api/orgadmin/events/${eventId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(getEventResponse.body.id).toBe(eventId);
       expect(getEventResponse.body.name).toBe(eventData.name);
 
-      // Step 5: Create event entry (simulating user registration)
-      const entryData = {
-        eventId,
-        eventActivityId: activityId,
-        userId: adminUserId,
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@example.com',
-        formSubmissionId: null,
-        quantity: 1,
-        paymentStatus: 'pending',
-      };
-
-      const entryResponse = await request(app)
-        .post(`/api/events/${eventId}/entries`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .send(entryData)
-        .expect(201);
-
-      const entryId = entryResponse.body.id;
+      /*
+       * Step 5: An entry, as a member entering would leave it.
+       *
+       * There is no org-admin endpoint that creates one: entries come from the
+       * member's own checkout, through fulfilment. What the club does with them
+       * is read them, which is the next step.
+       */
+      const entryResult = await db.query(
+        `INSERT INTO event_entries
+           (event_id, event_activity_id, user_id, first_name, last_name, email,
+            quantity, payment_status, entry_date)
+         VALUES ($1, $2, $3, 'John', 'Doe', 'john.doe@example.com', 1, 'pending', NOW())
+         RETURNING id`,
+        [eventId, activityId, adminOrganisationUserId]
+      );
+      const entryId = entryResult.rows[0].id;
       expect(entryId).toBeDefined();
 
       // Step 6: List entries for event
-      const entriesResponse = await request(app)
-        .get(`/api/events/${eventId}/entries`)
+      const entriesResponse = await request(server)
+        .get(`/api/orgadmin/events/${eventId}/entries`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -244,15 +373,15 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         status: 'published',
       };
 
-      await request(app)
-        .put(`/api/events/${eventId}`)
+      await request(server)
+        .put(`/api/orgadmin/events/${eventId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateData)
         .expect(200);
 
       // Step 8: Delete event (cleanup)
-      await request(app)
-        .delete(`/api/events/${eventId}`)
+      await request(server)
+        .delete(`/api/orgadmin/events/${eventId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
     });
@@ -283,8 +412,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         ],
       };
 
-      const formResponse = await request(app)
-        .post('/api/application-forms')
+      const formResponse = await request(server)
+        .post('/api/orgadmin/application-forms')
         .set('Authorization', `Bearer ${authToken}`)
         .send(formData)
         .expect(201);
@@ -308,8 +437,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         membershipTypeCategory: 'single',
       };
 
-      const membershipTypeResponse = await request(app)
-        .post('/api/memberships/types')
+      const membershipTypeResponse = await request(server)
+        .post('/api/orgadmin/membership-types')
         .set('Authorization', `Bearer ${authToken}`)
         .send(membershipTypeData)
         .expect(201);
@@ -317,15 +446,36 @@ describe('OrgAdmin Workflows Integration Tests', () => {
       const membershipTypeId = membershipTypeResponse.body.id;
       expect(membershipTypeId).toBeDefined();
 
-      // Step 3: Create member (simulating application)
+      /*
+       * Step 3: Create member (simulating application).
+       *
+       * A member is created *from* a submitted form — the service refuses
+       * without one, because the application is the record of what the member
+       * agreed to. And `userId` is the person's membership row for this club,
+       * not their Keycloak subject.
+       */
+      const submissionResult = await db.query(
+        `INSERT INTO form_submissions
+           (form_id, organisation_id, user_id, submission_type, context_id, submission_data, status)
+         VALUES ($1, $2, $3, 'membership_application', $4, $5, 'approved')
+         RETURNING id`,
+        [
+          formId,
+          testOrganisationId,
+          adminOrganisationUserId,
+          membershipTypeId,
+          JSON.stringify({ full_name: 'Jane Smith', date_of_birth: '1990-01-01' }),
+        ]
+      );
+
       const memberData = {
         organisationId: testOrganisationId,
         membershipTypeId,
-        userId: adminUserId,
+        userId: adminOrganisationUserId,
         membershipNumber: 'MEM-2024-001',
         firstName: 'Jane',
         lastName: 'Smith',
-        formSubmissionId: null,
+        formSubmissionId: submissionResult.rows[0].id,
         dateLastRenewed: new Date().toISOString(),
         status: 'active',
         validUntil: '2024-12-31',
@@ -335,8 +485,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         paymentMethod: 'card',
       };
 
-      const memberResponse = await request(app)
-        .post('/api/memberships/members')
+      const memberResponse = await request(server)
+        .post('/api/orgadmin/members')
         .set('Authorization', `Bearer ${authToken}`)
         .send(memberData)
         .expect(201);
@@ -345,8 +495,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
       expect(memberId).toBeDefined();
 
       // Step 4: Retrieve member details
-      const getMemberResponse = await request(app)
-        .get(`/api/memberships/members/${memberId}`)
+      const getMemberResponse = await request(server)
+        .get(`/api/orgadmin/members/${memberId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -360,112 +510,103 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         status: 'active',
       };
 
-      await request(app)
-        .put(`/api/memberships/members/${memberId}`)
+      await request(server)
+        // A member is updated with PATCH: the club changes a status or a
+        // label, it does not replace the person.
+        .patch(`/api/orgadmin/members/${memberId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateMemberData)
         .expect(200);
 
       // Step 6: List members with filters
-      const membersResponse = await request(app)
-        .get(`/api/memberships/members?status=active`)
+      const membersResponse = await request(server)
+        .get(`/api/orgadmin/members?status=active`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(Array.isArray(membersResponse.body)).toBe(true);
 
       // Step 7: Mark member as processed
-      await request(app)
-        .patch(`/api/memberships/members/${memberId}`)
+      await request(server)
+        .patch(`/api/orgadmin/members/${memberId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ processed: true })
         .expect(200);
 
       // Step 8: Delete membership type (cleanup)
-      await request(app)
-        .delete(`/api/memberships/types/${membershipTypeId}`)
+      await request(server)
+        .delete(`/api/orgadmin/membership-types/${membershipTypeId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
     });
   });
 
   describe('Payment and Refund Workflow', () => {
-    it('should complete full payment lifecycle: create payment -> view details -> request refund', async () => {
-      // Step 1: Create payment record
-      const paymentData = {
-        organisationId: testOrganisationId,
-        userId: adminUserId,
-        amount: 50.00,
-        currency: 'EUR',
-        paymentMethod: 'card',
-        paymentStatus: 'paid',
-        paymentType: 'event_entry',
-        contextId: 'event-123',
-        stripePaymentIntentId: 'pi_test_123',
-        metadata: {
-          eventName: 'Annual Competition',
-          activityName: 'Under 18 Category',
-        },
-      };
+    /**
+     * A club does not create payments — members do, by paying. The org-admin
+     * API therefore offers no way to make one, and this workflow starts where
+     * an administrator's actually does: a payment that has already arrived,
+     * which they look up and then refund.
+     */
+    it('should complete a payment lifecycle: look one up -> list it -> refund it', async () => {
+      // A payment as checkout would have left it.
+      const paymentResult = await db.query(
+        `INSERT INTO payments
+           (organisation_id, user_id, payment_type, context_id, amount, currency,
+            payment_method, payment_status, payment_date, metadata)
+         VALUES ($1, $2, 'event_entry', $3, 50.00, 'EUR', 'card', 'paid', NOW(), $4)
+         RETURNING id`,
+        [
+          testOrganisationId,
+          adminOrganisationUserId,
+          testOrganisationId,
+          JSON.stringify({
+            eventName: 'Annual Competition',
+            activityName: 'Under 18 Category',
+          }),
+        ]
+      );
+      const paymentId = paymentResult.rows[0].id;
 
-      const paymentResponse = await request(app)
-        .post('/api/payments')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send(paymentData)
-        .expect(201);
-
-      const paymentId = paymentResponse.body.id;
-      expect(paymentId).toBeDefined();
-      expect(paymentResponse.body.amount).toBe(paymentData.amount);
-
-      // Step 2: Retrieve payment details
-      const getPaymentResponse = await request(app)
-        .get(`/api/payments/${paymentId}`)
+      // Step 1: Retrieve payment details
+      const getPaymentResponse = await request(server)
+        .get(`/api/orgadmin/payments/${paymentId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(getPaymentResponse.body.id).toBe(paymentId);
       expect(getPaymentResponse.body.paymentStatus).toBe('paid');
 
-      // Step 3: List payments with filters
-      const paymentsResponse = await request(app)
-        .get(`/api/payments?status=paid&type=event_entry`)
+      // Step 2: The organisation's payment list includes it
+      const paymentsResponse = await request(server)
+        .get(`/api/orgadmin/organisations/${testOrganisationId}/payments`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(Array.isArray(paymentsResponse.body)).toBe(true);
+      expect(paymentsResponse.body.some((p: { id: string }) => p.id === paymentId)).toBe(true);
 
-      // Step 4: Request refund
-      const refundData = {
-        paymentId,
-        amount: 50.00,
-        reason: 'Event cancelled',
-      };
-
-      const refundResponse = await request(app)
-        .post('/api/payments/refunds')
+      // Step 3: Request a refund
+      const refundResponse = await request(server)
+        .post(`/api/orgadmin/payments/${paymentId}/refund`)
         .set('Authorization', `Bearer ${authToken}`)
-        .send(refundData)
+        .send({
+          organisationId: testOrganisationId,
+          refundAmount: 50.0,
+          refundReason: 'Event cancelled',
+          requestedBy: adminOrganisationUserId,
+        })
         .expect(201);
 
-      const refundId = refundResponse.body.id;
-      expect(refundId).toBeDefined();
+      expect(refundResponse.body.id).toBeDefined();
 
-      // Step 5: Verify payment status updated to refunded
-      const updatedPaymentResponse = await request(app)
-        .get(`/api/payments/${paymentId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
+      // Step 4: The refund is recorded against the payment
+      const refunds = await db.query('SELECT * FROM refunds WHERE payment_id = $1', [paymentId]);
+      expect(refunds.rows.length).toBe(1);
+      expect(Number(refunds.rows[0].refund_amount)).toBe(50);
 
-      expect(updatedPaymentResponse.body.paymentStatus).toBe('refunded');
-
-      // Step 6: List refunds
-      const refundsResponse = await request(app)
-        .get('/api/payments/refunds')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(Array.isArray(refundsResponse.body)).toBe(true);
+      await db.query('DELETE FROM refunds WHERE payment_id = $1', [paymentId]);
+      await db.query('DELETE FROM payments WHERE id = $1', [paymentId]);
     });
   });
 
@@ -479,8 +620,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         fields: [],
       };
 
-      const formResponse = await request(app)
-        .post('/api/application-forms')
+      const formResponse = await request(server)
+        .post('/api/orgadmin/application-forms')
         .set('Authorization', `Bearer ${authToken}`)
         .send(formData)
         .expect(201);
@@ -525,31 +666,64 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         },
       ];
 
-      for (const field of fields) {
-        await request(app)
-          .post(`/api/application-forms/${formId}/fields`)
+      /*
+       * A form does not own its fields — it references definitions from the
+       * organisation's field library, so each one is created first and then
+       * placed on the form. That indirection is the point of the builder: the
+       * same "Email address" field can appear on every form.
+       */
+      for (const [index, field] of fields.entries()) {
+        const definition = await request(server)
+          .post('/api/orgadmin/application-fields')
           .set('Authorization', `Bearer ${authToken}`)
-          .send(field)
+          .send({
+            organisationId: testOrganisationId,
+            name: field.name,
+            label: field.label,
+            datatype: field.datatype,
+          })
+          .expect(201);
+
+        await request(server)
+          .post(`/api/orgadmin/application-forms/${formId}/fields`)
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({
+            fieldId: definition.body.id,
+            order: index + 1,
+            required: field.required,
+          })
           .expect(201);
       }
 
-      // Step 3: Retrieve form with fields
-      const getFormResponse = await request(app)
-        .get(`/api/application-forms/${formId}`)
+      /*
+       * Step 3: Retrieve the form with its fields.
+       *
+       * `/application-forms/:id` returns the form alone; the fields it
+       * references come back from `/with-fields`, which is the call the builder
+       * makes when it opens one.
+       */
+      const getFormResponse = await request(server)
+        .get(`/api/orgadmin/application-forms/${formId}/with-fields`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(getFormResponse.body.id).toBe(formId);
       expect(getFormResponse.body.fields).toBeDefined();
+      expect(getFormResponse.body.fields).toHaveLength(fields.length);
 
       // Step 4: Submit form (create submission)
+      /*
+       * `userId` is the person's membership row, `contextId` is the thing being
+       * applied for (a uuid, not a label), and the answers are
+       * `submissionData` — the shape the service reads.
+       */
       const submissionData = {
         formId,
         organisationId: testOrganisationId,
-        userId: adminUserId,
+        userId: adminOrganisationUserId,
         submissionType: 'event_entry',
-        contextId: 'event-456',
-        formData: {
+        contextId: testOrganisationId,
+        submissionData: {
           participant_name: 'Alice Johnson',
           email: 'alice@example.com',
           age_category: 'Under 18',
@@ -557,8 +731,8 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         },
       };
 
-      const submissionResponse = await request(app)
-        .post('/api/form-submissions')
+      const submissionResponse = await request(server)
+        .post('/api/orgadmin/form-submissions')
         .set('Authorization', `Bearer ${authToken}`)
         .send(submissionData)
         .expect(201);
@@ -567,17 +741,21 @@ describe('OrgAdmin Workflows Integration Tests', () => {
       expect(submissionId).toBeDefined();
 
       // Step 5: Retrieve submission
-      const getSubmissionResponse = await request(app)
-        .get(`/api/form-submissions/${submissionId}`)
+      const getSubmissionResponse = await request(server)
+        .get(`/api/orgadmin/form-submissions/${submissionId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(getSubmissionResponse.body.id).toBe(submissionId);
-      expect(getSubmissionResponse.body.formData.participant_name).toBe('Alice Johnson');
+      expect(getSubmissionResponse.body.submissionData.participant_name).toBe('Alice Johnson');
 
       // Step 6: List submissions for form
-      const submissionsResponse = await request(app)
-        .get(`/api/form-submissions?formId=${formId}`)
+      const submissionsResponse = await request(server)
+        // Submissions are listed per organisation, filtered by form — a club
+        // reads its own post-bag, not a global one.
+        .get(
+          `/api/orgadmin/organisations/${testOrganisationId}/form-submissions?formId=${formId}`
+        )
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -590,15 +768,15 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         description: 'Updated comprehensive event registration form',
       };
 
-      await request(app)
-        .put(`/api/application-forms/${formId}`)
+      await request(server)
+        .put(`/api/orgadmin/application-forms/${formId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateFormData)
         .expect(200);
 
       // Step 8: Delete form (cleanup)
-      await request(app)
-        .delete(`/api/application-forms/${formId}`)
+      await request(server)
+        .delete(`/api/orgadmin/application-forms/${formId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
     });

@@ -6,7 +6,16 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import * as fc from 'fast-check';
-import { render, waitFor } from '@testing-library/react';
+import { render as renderBare, waitFor } from '@testing-library/react';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+
+/**
+ * Properties here generate fields of every datatype, including the date ones,
+ * whose pickers read their adapter from a `LocalizationProvider`.
+ */
+const render = (ui: React.ReactElement) =>
+  renderBare(<LocalizationProvider dateAdapter={AdapterDateFns}>{ui}</LocalizationProvider>);
 import { MetadataForm } from '../MetadataForm';
 import { FieldDatatype, type ObjectDefinition, type FieldDefinition } from '../../../types';
 import * as metadataHooks from '../../../hooks/useMetadata';

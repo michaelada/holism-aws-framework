@@ -6,8 +6,18 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { render, screen } from '@testing-library/react';
+import { render as renderBare, screen } from '@testing-library/react';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { FieldRenderer } from '../FieldRenderer';
+
+/**
+ * Any property here can draw a date, time or datetime field, and those render
+ * MUI pickers — which read their adapter from a `LocalizationProvider` the host
+ * app supplies and refuse to render without one.
+ */
+const render = (ui: React.ReactElement) =>
+  renderBare(<LocalizationProvider dateAdapter={AdapterDateFns}>{ui}</LocalizationProvider>);
 import { FieldDatatype, type FieldDefinition } from '../../../types';
 
 // Arbitraries for generating test data

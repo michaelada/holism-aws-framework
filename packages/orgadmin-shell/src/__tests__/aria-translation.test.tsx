@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { LocaleProvider } from '../context/LocaleContext';
 import { Layout } from '../components/Layout';
@@ -21,6 +21,31 @@ vi.mock('@aws-web-framework/orgadmin-core', () => ({
     },
   }),
 }));
+
+// The layout reads onboarding state for the help button; these tests are about
+// the labels on its chrome, so the context is stubbed rather than provided.
+vi.mock('../context/OnboardingContext', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../context/OnboardingContext');
+  return {
+    ...actual,
+    useOnboarding: () => ({
+      welcomeDialogOpen: false,
+      moduleIntroDialogOpen: false,
+      currentModule: null,
+      introModule: null,
+      helpDrawerOpen: false,
+      currentPageId: null,
+      preferences: { welcomeDismissed: true, modulesVisited: [] },
+      loading: false,
+      dismissWelcomeDialog: vi.fn(),
+      dismissModuleIntro: vi.fn(),
+      toggleHelpDrawer: vi.fn(),
+      checkModuleVisit: vi.fn(),
+      setCurrentPageId: vi.fn(),
+      setCurrentModule: vi.fn(),
+    }),
+  };
+});
 
 describe('ARIA Label Translation', () => {
   beforeEach(async () => {

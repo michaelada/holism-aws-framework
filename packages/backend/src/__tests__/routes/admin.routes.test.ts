@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
@@ -66,7 +67,28 @@ jest.mock('../../services/keycloak-admin.factory', () => {
  * 
  * Note: These tests use mocked Keycloak Admin Client to avoid external dependencies
  */
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Admin API Routes Integration Tests', () => {
+
   let authToken: string;
   let adminUserId: string;
 
@@ -93,7 +115,11 @@ describe('Admin API Routes Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   beforeEach(async () => {
@@ -112,7 +138,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should allow access with valid admin token', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -129,7 +155,7 @@ describe('Admin API Routes Integration Tests', () => {
         domain: 'test1.example.com',
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send(tenantData)
@@ -154,17 +180,17 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should list all tenants', async () => {
       // Create test tenants
-      await request(app)
+      await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_tenant_2', displayName: 'Test Tenant 2' });
 
-      await request(app)
+      await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_tenant_3', displayName: 'Test Tenant 3' });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -175,14 +201,14 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should get tenant by ID', async () => {
       // Create test tenant
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_tenant_4', displayName: 'Test Tenant 4' });
 
       const tenantId = createResponse.body.id;
 
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -193,7 +219,7 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should update a tenant', async () => {
       // Create test tenant
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_tenant_5', displayName: 'Test Tenant 5' });
@@ -205,7 +231,7 @@ describe('Admin API Routes Integration Tests', () => {
         domain: 'updated.example.com',
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates)
@@ -224,14 +250,14 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should delete a tenant', async () => {
       // Create test tenant
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_tenant_6', displayName: 'Test Tenant 6' });
 
       const tenantId = createResponse.body.id;
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -251,7 +277,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should return 400 for missing required fields', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_tenant_7' }) // Missing displayName
@@ -266,7 +292,7 @@ describe('Admin API Routes Integration Tests', () => {
 
     beforeEach(async () => {
       // Create a test tenant for user tests
-      const tenantResponse = await request(app)
+      const tenantResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_user_tenant', displayName: 'Test User Tenant' });
@@ -285,7 +311,7 @@ describe('Admin API Routes Integration Tests', () => {
         tenantId: testTenantId,
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send(userData)
@@ -306,7 +332,7 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should list all users', async () => {
       // Create test users
-      await request(app)
+      await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -316,7 +342,7 @@ describe('Admin API Routes Integration Tests', () => {
           lastName: 'User 2',
         });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -326,7 +352,7 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should filter users by tenant', async () => {
       // Create user with tenant
-      await request(app)
+      await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -337,7 +363,7 @@ describe('Admin API Routes Integration Tests', () => {
           tenantId: testTenantId,
         });
 
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/users?tenantId=${testTenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -346,7 +372,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should get user by ID', async () => {
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -358,7 +384,7 @@ describe('Admin API Routes Integration Tests', () => {
 
       const userId = createResponse.body.id;
 
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -368,7 +394,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should update a user', async () => {
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -386,7 +412,7 @@ describe('Admin API Routes Integration Tests', () => {
         email: 'updated5@example.com',
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates)
@@ -404,7 +430,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should delete a user', async () => {
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -416,7 +442,7 @@ describe('Admin API Routes Integration Tests', () => {
 
       const userId = createResponse.body.id;
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -430,7 +456,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should reset user password', async () => {
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -442,7 +468,7 @@ describe('Admin API Routes Integration Tests', () => {
 
       const userId = createResponse.body.id;
 
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/users/${userId}/reset-password`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ password: 'NewPassword123!', temporary: true })
@@ -459,7 +485,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should return 400 for missing required fields', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ username: 'test_user_8' }) // Missing required fields
@@ -478,7 +504,7 @@ describe('Admin API Routes Integration Tests', () => {
         permissions: ['read', 'write'],
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send(roleData)
@@ -502,12 +528,12 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should list all roles', async () => {
       // Create test roles
-      await request(app)
+      await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_role_2', displayName: 'Test Role 2' });
 
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -516,14 +542,14 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should delete a role', async () => {
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_role_3', displayName: 'Test Role 3' });
 
       const roleId = createResponse.body.id;
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/roles/${roleId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -537,7 +563,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should return 400 for missing required fields', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_role_4' }) // Missing displayName
@@ -553,7 +579,7 @@ describe('Admin API Routes Integration Tests', () => {
 
     beforeEach(async () => {
       // Create test user
-      const userResponse = await request(app)
+      const userResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -565,7 +591,7 @@ describe('Admin API Routes Integration Tests', () => {
       testUserId = userResponse.body.id;
 
       // Create test role
-      const roleResponse = await request(app)
+      const roleResponse = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_assign_role', displayName: 'Test Assign Role' });
@@ -573,7 +599,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should assign role to user', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/users/${testUserId}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ roleName: testRoleName })
@@ -591,13 +617,13 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should remove role from user', async () => {
       // First assign the role
-      await request(app)
+      await request(server)
         .post(`/api/admin/users/${testUserId}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ roleName: testRoleName });
 
       // Then remove it
-      const response = await request(app)
+      const response = await request(server)
         .delete(`/api/admin/users/${testUserId}/roles/${testRoleName}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -613,7 +639,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should return 400 when role name is missing', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/users/${testUserId}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({}) // Missing roleName
@@ -626,7 +652,7 @@ describe('Admin API Routes Integration Tests', () => {
   describe('Audit Logging', () => {
     it('should log all admin actions', async () => {
       // Create tenant
-      const tenantResponse = await request(app)
+      const tenantResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'test_audit_tenant', displayName: 'Test Audit Tenant' });
@@ -634,13 +660,13 @@ describe('Admin API Routes Integration Tests', () => {
       const tenantId = tenantResponse.body.id;
 
       // Update tenant
-      await request(app)
+      await request(server)
         .put(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ displayName: 'Updated Audit Tenant' });
 
       // Delete tenant
-      await request(app)
+      await request(server)
         .delete(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -664,7 +690,7 @@ describe('Admin API Routes Integration Tests', () => {
     });
 
     it('should include IP address in audit logs', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')

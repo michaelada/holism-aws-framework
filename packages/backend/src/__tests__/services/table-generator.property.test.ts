@@ -43,7 +43,11 @@ describe('Table Generator Property Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   // Helper to generate field datatype arbitrary

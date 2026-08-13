@@ -99,10 +99,15 @@ describe('Fast-check Setup Verification (Backend)', () => {
       fc.asyncProperty(
         fc.anything(),
         async (value) => {
-          // Property: Async identity returns the same value
+          // Property: Async identity returns the same value.
+          //
+          // `Object.is`, not `===`: `fc.anything()` produces NaN sooner or
+          // later, and `NaN === NaN` is false — so this asserted something no
+          // identity function can satisfy, and failed whenever the generator
+          // happened to reach it.
           const asyncIdentity = async (v: any) => v;
           const result = await asyncIdentity(value);
-          return result === value;
+          return Object.is(result, value);
         }
       ),
       { numRuns: 100 }

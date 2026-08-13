@@ -206,13 +206,13 @@ describe('Document Management Capability Consolidation - Integration Tests', () 
 
       // Create test organizations with various capability combinations
       const orgResult = await pool.query(`
-        INSERT INTO organizations (name, display_name, organization_type_id, status, keycloak_group_id, language, currency, enabled_capabilities, created_at)
+        INSERT INTO organizations (url_code, name, display_name, organization_type_id, status, keycloak_group_id, language, currency, enabled_capabilities, created_at)
         VALUES 
-          ('Test Org 1 - Membership Only', 'Test Org 1', $1, 'active', 'test-group-1', 'en', 'GBP', '["membership-document-management", "events"]', NOW()),
-          ('Test Org 2 - Event Only', 'Test Org 2', $1, 'active', 'test-group-2', 'en', 'GBP', '["event-document-management", "memberships"]', NOW()),
-          ('Test Org 3 - Registration Only', 'Test Org 3', $1, 'active', 'test-group-3', 'en', 'GBP', '["registration-document-management", "calendar"]', NOW()),
-          ('Test Org 4 - All Three', 'Test Org 4', $1, 'active', 'test-group-4', 'en', 'GBP', '["membership-document-management", "event-document-management", "registration-document-management", "forms"]', NOW()),
-          ('Test Org 5 - None', 'Test Org 5', $1, 'active', 'test-group-5', 'en', 'GBP', '["events", "memberships"]', NOW())
+          (substr(md5(random()::text), 1, 12), 'Test Org 1 - Membership Only', 'Test Org 1', $1, 'active', 'test-group-1', 'en', 'GBP', '["membership-document-management", "events"]', NOW()),
+          (substr(md5(random()::text), 1, 12), 'Test Org 2 - Event Only', 'Test Org 2', $1, 'active', 'test-group-2', 'en', 'GBP', '["event-document-management", "memberships"]', NOW()),
+          (substr(md5(random()::text), 1, 12), 'Test Org 3 - Registration Only', 'Test Org 3', $1, 'active', 'test-group-3', 'en', 'GBP', '["registration-document-management", "calendar"]', NOW()),
+          (substr(md5(random()::text), 1, 12), 'Test Org 4 - All Three', 'Test Org 4', $1, 'active', 'test-group-4', 'en', 'GBP', '["membership-document-management", "event-document-management", "registration-document-management", "forms"]', NOW()),
+          (substr(md5(random()::text), 1, 12), 'Test Org 5 - None', 'Test Org 5', $1, 'active', 'test-group-5', 'en', 'GBP', '["events", "memberships"]', NOW())
         RETURNING id;
       `, [testOrgTypeId]);
 
@@ -521,10 +521,10 @@ describe('Document Management Capability Consolidation - Integration Tests', () 
 
       // Create test organizations
       const orgResult = await pool.query(`
-        INSERT INTO organizations (name, display_name, organization_type_id, status, keycloak_group_id, language, currency, enabled_capabilities, created_at)
+        INSERT INTO organizations (url_code, name, display_name, organization_type_id, status, keycloak_group_id, language, currency, enabled_capabilities, created_at)
         VALUES 
-          ('Rollback Org 1', 'Rollback Org 1', $1, 'active', 'test-rollback-1', 'en', 'GBP', '["membership-document-management", "events"]', NOW()),
-          ('Rollback Org 2', 'Rollback Org 2', $1, 'active', 'test-rollback-2', 'en', 'GBP', '["event-document-management", "memberships"]', NOW())
+          (substr(md5(random()::text), 1, 12), 'Rollback Org 1', 'Rollback Org 1', $1, 'active', 'test-rollback-1', 'en', 'GBP', '["membership-document-management", "events"]', NOW()),
+          (substr(md5(random()::text), 1, 12), 'Rollback Org 2', 'Rollback Org 2', $1, 'active', 'test-rollback-2', 'en', 'GBP', '["event-document-management", "memberships"]', NOW())
         RETURNING id;
       `, [testOrgTypeId]);
 
@@ -710,9 +710,9 @@ describe('Document Management Capability Consolidation - Integration Tests', () 
 
       // Create test organizations
       const orgResult = await pool.query(`
-        INSERT INTO organizations (name, display_name, organization_type_id, status, keycloak_group_id, language, currency, enabled_capabilities, created_at)
+        INSERT INTO organizations (url_code, name, display_name, organization_type_id, status, keycloak_group_id, language, currency, enabled_capabilities, created_at)
         VALUES 
-          ('Cycle Test Org', 'Cycle Test Org', $1, 'active', 'test-cycle-1', 'en', 'GBP', '["membership-document-management", "events", "forms"]', NOW())
+          (substr(md5(random()::text), 1, 12), 'Cycle Test Org', 'Cycle Test Org', $1, 'active', 'test-cycle-1', 'en', 'GBP', '["membership-document-management", "events", "forms"]', NOW())
         RETURNING id;
       `, [testOrgTypeId]);
 

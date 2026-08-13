@@ -378,7 +378,7 @@ describe('First Login Flow - Integration Test', () => {
     // Assert - error should be logged
     await waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to save welcome dialog preference:',
+        '[OnboardingProvider] Failed to save welcome dialog preference:',
         expect.any(Error)
       );
     });

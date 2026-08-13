@@ -488,7 +488,9 @@ describe('OnboardingProvider - Unit Tests', () => {
 
       // Act - dismiss module intro
       await act(async () => {
-        await contextRef?.dismissModuleIntro('dashboard');
+        // `true` is the user ticking "Don't show this again" — the only thing
+        // that records a module as visited.
+        await contextRef?.dismissModuleIntro('dashboard', true);
       });
 
       // Assert - dialog should close and preference saved
@@ -506,7 +508,10 @@ describe('OnboardingProvider - Unit Tests', () => {
 
       await waitFor(() => {
         expect(contextRef?.preferences.modulesVisited).toContain('dashboard');
-        expect(contextRef?.currentModule).toBeNull();
+        // `currentModule` is the help context for the page the user is on, so
+        // it survives the dismissal — the help button still has to know which
+        // module to open on.
+        expect(contextRef?.currentModule).toBe('dashboard');
       });
     });
 
@@ -548,7 +553,7 @@ describe('OnboardingProvider - Unit Tests', () => {
 
       // Act - dismiss another module
       await act(async () => {
-        await contextRef?.dismissModuleIntro('users');
+        await contextRef?.dismissModuleIntro('users', true);
       });
 
       // Assert - should merge with existing modules

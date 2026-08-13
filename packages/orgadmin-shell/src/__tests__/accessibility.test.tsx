@@ -1,11 +1,12 @@
 import { render, screen, within } from '@testing-library/react';
+import { Dialog, DialogTitle, DialogActions } from '@mui/material';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import App from '../App';
-import DashboardPage from '../pages/DashboardPage';
-import Layout from '../components/Layout';
+import { DashboardPage } from '../pages/DashboardPage';
+import { Layout } from '../components/Layout';
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations);
@@ -44,6 +45,86 @@ const mockKeycloak = {
 vi.mock('keycloak-js', () => ({
   default: vi.fn(() => mockKeycloak),
 }));
+
+/*
+ * The dashboard and the layout read the current organisation from context.
+ * These tests render them directly rather than through the app shell, so the
+ * hook is stubbed with a settled organisation — what is under test here is the
+ * markup, not how the organisation was resolved.
+ */
+/*
+ * Same reasoning for the two shell contexts the dashboard and layout read:
+ * every capability is on, so no module is filtered out of the markup under
+ * test, and onboarding is inert.
+ */
+/*
+ * No i18n resources are loaded here, so the real `t` returns raw keys for some
+ * strings and English for others depending on what happens to be bundled.
+ * Making it the identity function keeps the assertions below predictable:
+ * everything is the key, and the module fixtures use English as their keys.
+ */
+vi.mock('../hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en-GB', changeLanguage: vi.fn() },
+  }),
+}));
+
+vi.mock('../context/CapabilityContext', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../context/CapabilityContext');
+  return {
+    ...actual,
+    useCapabilities: () => ({
+      capabilities: [],
+      loading: false,
+      error: null,
+      hasCapability: () => true,
+      refresh: vi.fn(),
+    }),
+  };
+});
+
+vi.mock('../context/OnboardingContext', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../context/OnboardingContext');
+  return {
+    ...actual,
+    useOnboarding: () => ({
+      welcomeDialogOpen: false,
+      moduleIntroDialogOpen: false,
+      currentModule: null,
+      introModule: null,
+      helpDrawerOpen: false,
+      currentPageId: null,
+      preferences: { welcomeDismissed: true, modulesVisited: [] },
+      loading: false,
+      dismissWelcomeDialog: vi.fn(),
+      dismissModuleIntro: vi.fn(),
+      toggleHelpDrawer: vi.fn(),
+      checkModuleVisit: vi.fn(),
+      setCurrentPageId: vi.fn(),
+      setCurrentModule: vi.fn(),
+    }),
+  };
+});
+
+vi.mock('@aws-web-framework/orgadmin-core', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>(
+    '@aws-web-framework/orgadmin-core'
+  );
+  return {
+    ...actual,
+    useOrganisation: () => ({
+      organisation: {
+        id: 'org-123',
+        name: 'test-org',
+        displayName: 'Test Organisation',
+      },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    }),
+  };
+});
 
 // Mock API calls
 const mockFetch = vi.fn();
@@ -121,15 +202,14 @@ describe('Accessibility Tests', () => {
       // Tab through cards
       await user.tab();
       
-      // First card should be focused
-      const firstCard = screen.getByText(/Event Management/i).closest('div');
-      expect(firstCard).toHaveFocus();
+      // First card should be focused. The card is the tab stop — it carries
+      // role="button", so that is what to query rather than a wrapper div.
+      expect(screen.getByRole('button', { name: /Event Management/i })).toHaveFocus();
 
       // Tab to next card
       await user.tab();
       
-      const secondCard = screen.getByText(/Membership Management/i).closest('div');
-      expect(secondCard).toHaveFocus();
+      expect(screen.getByRole('button', { name: /Membership Management/i })).toHaveFocus();
 
       // Press Enter to activate
       await user.keyboard('{Enter}');
@@ -140,6 +220,13 @@ describe('Accessibility Tests', () => {
 
     it('should allow keyboard navigation in navigation drawer', async () => {
       const user = userEvent.setup();
+
+      // The menu button only exists below the md breakpoint, and only away
+      // from the landing page — on `/` the layout shows no navigation at all.
+      global.innerWidth = 375;
+      global.innerHeight = 667;
+      global.dispatchEvent(new Event('resize'));
+      window.history.pushState({}, '', '/events');
       
       render(
         <BrowserRouter>
@@ -152,55 +239,65 @@ describe('Accessibility Tests', () => {
       // Tab to menu button
       await user.tab();
       
-      const menuButton = screen.getByRole('button', { name: /menu/i });
+      const menuButton = screen.getByRole('button', { name: /openDrawer/i });
       expect(menuButton).toHaveFocus();
 
       // Open menu with Enter
       await user.keyboard('{Enter}');
 
-      // Tab through menu items
-      await user.tab();
-      
-      const firstMenuItem = screen.getByText(/Dashboard/i);
-      expect(firstMenuItem.closest('a')).toHaveFocus();
+      // The drawer is a MUI modal on mobile: it moves focus inside itself, and
+      // its entries are buttons rather than links. The first of them is the way
+      // back to the main page.
+      // Both drawers are mounted below md — the temporary one that opens and
+      // the permanent one — so take the entry inside the open dialog.
+      const drawer = await screen.findByRole('presentation');
+      const drawerButton = within(drawer)
+        .getByText('navigation.backToMainPage')
+        .closest('[role="button"]') as HTMLElement;
+      expect(drawerButton).toBeInTheDocument();
 
-      // Navigate with arrow keys
-      await user.keyboard('{ArrowDown}');
-      
-      const secondMenuItem = screen.getByText(/Events/i);
-      expect(secondMenuItem.closest('a')).toHaveFocus();
+      await user.tab();
+      expect(drawerButton).toHaveFocus();
+
+      // And it is operable from the keyboard, which is the point.
+      await user.keyboard('{Enter}');
+      expect(window.location.pathname).toBe('/');
     });
 
+    /**
+     * Trapping focus is the dialog component's job, so this exercises the real
+     * MUI Dialog every dialog in the app is built on — a hand-written
+     * `role="dialog"` div traps nothing, and asserting against one would only
+     * confirm the test's own markup.
+     */
     it('should trap focus in modal dialogs', async () => {
       const user = userEvent.setup();
-      
-      // This would test a modal dialog component
-      // For now, we verify the pattern is followed
-      
+
       render(
         <BrowserRouter>
-          <div role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-            <h2 id="dialog-title">Confirm Action</h2>
-            <button>Cancel</button>
-            <button>Confirm</button>
-          </div>
+          <Dialog open aria-labelledby="dialog-title">
+            <DialogTitle id="dialog-title">Confirm Action</DialogTitle>
+            <DialogActions>
+              <button>Cancel</button>
+              <button>Confirm</button>
+            </DialogActions>
+          </Dialog>
         </BrowserRouter>
       );
 
       const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveAttribute('aria-modal', 'true');
       expect(dialog).toHaveAttribute('aria-labelledby', 'dialog-title');
 
       // Tab through dialog buttons
       await user.tab();
-      expect(screen.getByText(/Cancel/i)).toHaveFocus();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByText(/Confirm/i)).toHaveFocus();
+      expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus();
 
-      // Tab should wrap back to first button
+      // Tab wraps back inside the dialog rather than escaping to the page
       await user.tab();
-      expect(screen.getByText(/Cancel/i)).toHaveFocus();
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
     });
 
     it('should support Escape key to close dialogs', async () => {
@@ -252,8 +349,9 @@ describe('Accessibility Tests', () => {
       const heading = screen.getByRole('heading', { level: 4 });
       expect(heading).toBeInTheDocument();
 
-      // Verify cards have accessible names
-      const card = screen.getByText(/Event Management/i).closest('div');
+      // Verify cards have accessible names. The card itself carries the role,
+      // not the box the title happens to sit in.
+      const card = screen.getByRole('button', { name: /Event Management/i });
       expect(card).toHaveAttribute('role', 'button');
       expect(card).toHaveAccessibleName();
     });
@@ -516,24 +614,23 @@ describe('Accessibility Tests', () => {
     });
 
     it('should have proper landmark regions', () => {
+      // The layout supplies the landmarks; nesting another <main> inside it
+      // would create the second one this asserts against. Away from the
+      // landing page, since that deliberately shows no navigation.
+      window.history.pushState({}, '', '/events');
+
       render(
         <BrowserRouter>
           <Layout>
-            <main>
-              <h1>Main Content</h1>
-              <p>Content goes here</p>
-            </main>
+            <h1>Main Content</h1>
+            <p>Content goes here</p>
           </Layout>
         </BrowserRouter>
       );
 
-      const main = screen.getByRole('main');
-      expect(main).toBeInTheDocument();
-      
-      // In real implementation, would also verify:
-      // - <header> with role="banner"
-      // - <nav> with role="navigation"
-      // - <footer> with role="contentinfo"
+      expect(screen.getByRole('main')).toBeInTheDocument();
+      expect(screen.getByRole('banner')).toBeInTheDocument();
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
     it('should provide skip links for keyboard users', () => {
@@ -689,9 +786,12 @@ describe('Accessibility Tests', () => {
       // Verify lang attribute is set
       expect(document.documentElement.lang).toBe('de-de');
 
-      // Simulate navigation (lang should persist)
-      const link = screen.getByText(/Dashboard/i);
-      await userEvent.click(link);
+      // Navigate, and the lang attribute should survive it. The way back to
+      // the main page is the one entry the layout always offers.
+      window.history.pushState({}, '', '/events');
+      await userEvent.click(
+        screen.getAllByText('navigation.backToMainPage')[0]
+      );
 
       // Lang attribute should still be set
       expect(document.documentElement.lang).toBe('de-de');

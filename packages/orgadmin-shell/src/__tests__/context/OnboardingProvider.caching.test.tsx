@@ -267,7 +267,7 @@ describe('OnboardingProvider - Preference Caching', () => {
 
     // Act - Dismiss module intro
     await act(async () => {
-      await contextRef?.dismissModuleIntro('users');
+      await contextRef?.dismissModuleIntro('users', true);
     });
 
     // Wait for PUT to complete
@@ -432,15 +432,15 @@ describe('OnboardingProvider - Preference Caching', () => {
 
     // Act - Multiple module dismissals
     await act(async () => {
-      await contextRef?.dismissModuleIntro('dashboard');
+      await contextRef?.dismissModuleIntro('dashboard', true);
     });
 
     await act(async () => {
-      await contextRef?.dismissModuleIntro('users');
+      await contextRef?.dismissModuleIntro('users', true);
     });
 
     await act(async () => {
-      await contextRef?.dismissModuleIntro('forms');
+      await contextRef?.dismissModuleIntro('forms', true);
     });
 
     // Wait for all PUTs to complete

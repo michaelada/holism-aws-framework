@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import express from 'express';
 import organizationTypeRoutes from '../../routes/organization-type.routes';
 import { organizationTypeService } from '../../services/organization-type.service';
@@ -17,7 +18,28 @@ const app = express();
 app.use(express.json());
 app.use('/api/admin/organization-types', organizationTypeRoutes);
 
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('POST /api/admin/organization-types', () => {
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -41,7 +63,7 @@ describe('POST /api/admin/organization-types', () => {
 
     (organizationTypeService.createOrganizationType as jest.Mock).mockResolvedValue(mockOrgType);
 
-    const response = await request(app)
+    const response = await request(server)
       .post('/api/admin/organization-types')
       .send({
         name: 'test-org-type',
@@ -89,7 +111,7 @@ describe('POST /api/admin/organization-types', () => {
 
     (organizationTypeService.createOrganizationType as jest.Mock).mockResolvedValue(mockOrgType);
 
-    const response = await request(app)
+    const response = await request(server)
       .post('/api/admin/organization-types')
       .send({
         name: 'test-org-type',
@@ -114,7 +136,7 @@ describe('POST /api/admin/organization-types', () => {
       new Error('Membership number uniqueness can only be set for internal numbering mode')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .post('/api/admin/organization-types')
       .send({
         name: 'test-org-type',
@@ -136,7 +158,7 @@ describe('POST /api/admin/organization-types', () => {
       new Error('Initial membership number must be a positive integer')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .post('/api/admin/organization-types')
       .send({
         name: 'test-org-type',
@@ -178,7 +200,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
 
     (organizationTypeService.updateOrganizationType as jest.Mock).mockResolvedValue(mockOrgType);
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/test-id')
       .send({
         displayName: 'Updated Org Type',
@@ -223,7 +245,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
 
     (organizationTypeService.updateOrganizationType as jest.Mock).mockResolvedValue(mockOrgType);
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/test-id')
       .send({
         membershipNumbering: 'external'
@@ -244,7 +266,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
       new Error('Membership number uniqueness can only be set for internal numbering mode')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/test-id')
       .send({
         membershipNumbering: 'external',
@@ -261,7 +283,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
       new Error('Initial membership number must be a positive integer')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/test-id')
       .send({
         membershipNumbering: 'internal',
@@ -278,7 +300,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
       new Error('Cannot change membership numbering mode when members already exist for this organization type')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/test-id')
       .send({
         membershipNumbering: 'external'
@@ -294,7 +316,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
       new Error('Cannot change to organization type-level uniqueness: duplicate membership numbers exist across organizations (12345, 67890)')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/test-id')
       .send({
         membershipNumberUniqueness: 'organization_type'
@@ -310,7 +332,7 @@ describe('PUT /api/admin/organization-types/:id', () => {
       new Error('Organization type not found')
     );
 
-    const response = await request(app)
+    const response = await request(server)
       .put('/api/admin/organization-types/non-existent-id')
       .send({
         displayName: 'Updated Name'

@@ -12,32 +12,72 @@
  */
 
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
+
+/*
+ * One listener for the whole file: `request(server)` starts a server on a fresh
+ * ephemeral port per call, and that churn ends in ports being reused while the
+ * last connection's packets are still in flight — the client then reads bytes
+ * that are not a response at all.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Membership Routes - Authorization Integration Tests', () => {
   let testOrganizationId: string;
+  let testOrgTypeId: string;
   let testMembershipTypeId: string;
   let testFormId: string;
   let testFormSubmissionId: string;
   let adminUserId: string;
+  let devUserId: string;
   let viewerUserId: string;
 
   beforeAll(async () => {
     await db.initialize();
 
-    // Create test organization
-    const orgResult = await db.query(
-      `INSERT INTO organizations (name, display_name, status, currency, language, enabled_capabilities)
+    // Every organisation belongs to a type, and the column is NOT NULL.
+    const orgTypeResult = await db.query(
+      `INSERT INTO organization_types (name, display_name, currency, language, default_locale, default_capabilities)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      ['test-org-auth', 'Test Organization Auth', 'active', 'USD', 'en', ['memberships']]
+      [`test-org-type-auth-${Date.now()}`, 'Test Org Type Auth', 'USD', 'en', 'en-GB', '[]']
+    );
+    testOrgTypeId = orgTypeResult.rows[0].id;
+
+    // Create test organization
+    const orgResult = await db.query(
+      `INSERT INTO organizations (url_code, organization_type_id, keycloak_group_id, name, display_name, status, currency, language, enabled_capabilities)
+       VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
+      // enabled_capabilities is jsonb: a JS array reaches Postgres as an
+      // array literal, which is not valid JSON.
+      [
+        testOrgTypeId,
+        `test-group-auth-${Date.now()}`,
+        'test-org-auth',
+        'Test Organization Auth',
+        'active',
+        'USD',
+        'en',
+        JSON.stringify(['memberships']),
+      ]
     );
     testOrganizationId = orgResult.rows[0].id;
 
     // Create test form
     const formResult = await db.query(
-      `INSERT INTO application_forms (organization_id, name, description, status)
+      `INSERT INTO application_forms (organisation_id, name, description, status)
        VALUES ($1, $2, $3, $4)
        RETURNING id`,
       [testOrganizationId, 'Test Form', 'Test form for authorization', 'active']
@@ -46,21 +86,12 @@ describe('Membership Routes - Authorization Integration Tests', () => {
 
     // Create test membership type
     const typeResult = await db.query(
-      `INSERT INTO membership_types (organization_id, name, description, membership_form_id, automatically_approve)
+      `INSERT INTO membership_types (organisation_id, name, description, membership_form_id, automatically_approve)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
       [testOrganizationId, 'Test Membership', 'Test membership type', testFormId, true]
     );
     testMembershipTypeId = typeResult.rows[0].id;
-
-    // Create test form submission
-    const submissionResult = await db.query(
-      `INSERT INTO form_submissions (form_id, organization_id, user_id, submission_type, context_id, submission_data, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id`,
-      [testFormId, testOrganizationId, 'test-user-id', 'membership_application', 'test-context', '{}', 'approved']
-    );
-    testFormSubmissionId = submissionResult.rows[0].id;
 
     // Create test users
     const adminUserResult = await db.query(
@@ -78,6 +109,27 @@ describe('Membership Routes - Authorization Integration Tests', () => {
       [testOrganizationId, 'viewer-keycloak-id', 'viewer@test.com', 'Viewer', 'User', 'org-admin', 'active']
     );
     viewerUserId = viewerUserResult.rows[0].id;
+
+    /*
+     * The submission comes after the users: `user_id` references
+     * `organization_users`, and `context_id` is the membership type applied
+     * for — both uuids, where this fixture used to pass labels.
+     */
+    const submissionResult = await db.query(
+      `INSERT INTO form_submissions (form_id, organisation_id, user_id, submission_type, context_id, submission_data, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [
+        testFormId,
+        testOrganizationId,
+        adminUserId,
+        'membership_application',
+        testMembershipTypeId,
+        '{}',
+        'approved',
+      ]
+    );
+    testFormSubmissionId = submissionResult.rows[0].id;
 
     // Create admin role
     const adminRoleResult = await db.query(
@@ -99,37 +151,68 @@ describe('Membership Routes - Authorization Integration Tests', () => {
 
     // Assign admin role to admin user
     await db.query(
-      `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id, assigned_by)
-       VALUES ($1, $2, $3)`,
-      [adminUserId, adminRoleId, 'system']
+      `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id)
+       VALUES ($1, $2)`,
+      [adminUserId, adminRoleId]
     );
 
     // Assign viewer role to viewer user
     await db.query(
-      `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id, assigned_by)
-       VALUES ($1, $2, $3)`,
-      [viewerUserId, viewerRoleId, 'system']
+      `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id)
+       VALUES ($1, $2)`,
+      [viewerUserId, viewerRoleId]
+    );
+
+    /*
+     * With `DISABLE_AUTH=true` every request arrives as the development user,
+     * whoever the test meant to be calling. Authorisation still reads the
+     * database, so that user needs its own org-admin row and an `admin` role
+     * here — otherwise these endpoints answer 403 for reasons that have nothing
+     * to do with what each test is checking. (Which user is which is beyond
+     * what this suite can express; the middleware's own tests cover that.)
+     */
+    const devUserResult = await db.query(
+      `INSERT INTO organization_users
+         (organization_id, keycloak_user_id, email, first_name, last_name, user_type, status)
+       VALUES ($1, 'dev-user-123', $2, 'Dev', 'User', 'org-admin', 'active')
+       RETURNING id`,
+      [testOrganizationId, `dev-${Date.now()}@test.com`]
+    );
+    devUserId = devUserResult.rows[0].id;
+
+    await db.query(
+      `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id)
+       VALUES ($1, $2)`,
+      [devUserId, adminRoleId]
     );
   });
 
   afterAll(async () => {
     // Clean up test data
-    await db.query('DELETE FROM organization_user_roles WHERE organization_user_id IN ($1, $2)', [adminUserId, viewerUserId]);
+    await db.query(
+      'DELETE FROM organization_user_roles WHERE organization_user_id IN ($1, $2, $3)',
+      [adminUserId, viewerUserId, devUserId]
+    );
     await db.query('DELETE FROM organization_admin_roles WHERE organization_id = $1', [testOrganizationId]);
+    await db.query('DELETE FROM members WHERE organisation_id = $1', [testOrganizationId]);
+    await db.query('DELETE FROM form_submissions WHERE organisation_id = $1', [testOrganizationId]);
     await db.query('DELETE FROM organization_users WHERE organization_id = $1', [testOrganizationId]);
-    await db.query('DELETE FROM form_submissions WHERE organization_id = $1', [testOrganizationId]);
-    await db.query('DELETE FROM membership_types WHERE organization_id = $1', [testOrganizationId]);
-    await db.query('DELETE FROM application_forms WHERE organization_id = $1', [testOrganizationId]);
+    await db.query('DELETE FROM membership_types WHERE organisation_id = $1', [testOrganizationId]);
+    await db.query('DELETE FROM application_forms WHERE organisation_id = $1', [testOrganizationId]);
     await db.query('DELETE FROM organizations WHERE id = $1', [testOrganizationId]);
 
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   describe('POST /api/orgadmin/members', () => {
     const createMemberData = {
       organisationId: '',
       membershipTypeId: '',
-      userId: 'test-user-id',
+      userId: adminUserId,
       firstName: 'John',
       lastName: 'Doe',
       formSubmissionId: '',
@@ -140,6 +223,9 @@ describe('Membership Routes - Authorization Integration Tests', () => {
       createMemberData.organisationId = testOrganizationId;
       createMemberData.membershipTypeId = testMembershipTypeId;
       createMemberData.formSubmissionId = testFormSubmissionId;
+      // Assigned here, not in the literal above: the fixtures do not exist yet
+      // when that object is built.
+      createMemberData.userId = adminUserId;
     });
 
     it('should allow admin user to create members', async () => {
@@ -147,7 +233,7 @@ describe('Membership Routes - Authorization Integration Tests', () => {
       // This test verifies the endpoint exists and accepts requests
       // The middleware unit tests verify the authorization logic
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/members')
         .send(createMemberData);
 
@@ -162,7 +248,7 @@ describe('Membership Routes - Authorization Integration Tests', () => {
         // Missing required fields
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/members')
         .send(invalidData);
 
@@ -173,10 +259,19 @@ describe('Membership Routes - Authorization Integration Tests', () => {
     it('should verify organization has memberships capability', async () => {
       // Create organization without memberships capability
       const orgWithoutCapResult = await db.query(
-        `INSERT INTO organizations (name, display_name, status, currency, language, enabled_capabilities)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO organizations (url_code, organization_type_id, keycloak_group_id, name, display_name, status, currency, language, enabled_capabilities)
+         VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
-        ['test-org-no-cap', 'Test Org No Cap', 'active', 'USD', 'en', []]
+        [
+          testOrgTypeId,
+          `test-group-no-cap-${Date.now()}`,
+          `test-org-no-cap-${Date.now()}`,
+          'Test Org No Cap',
+          'active',
+          'USD',
+          'en',
+          JSON.stringify([]),
+        ]
       );
       const orgWithoutCapId = orgWithoutCapResult.rows[0].id;
 
@@ -185,7 +280,7 @@ describe('Membership Routes - Authorization Integration Tests', () => {
         organisationId: orgWithoutCapId,
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/members')
         .send(dataWithoutCap);
 
@@ -206,14 +301,14 @@ describe('Membership Routes - Authorization Integration Tests', () => {
       const createMemberData = {
         organisationId: testOrganizationId,
         membershipTypeId: testMembershipTypeId,
-        userId: 'test-user-id',
+        userId: adminUserId,
         firstName: 'Jane',
         lastName: 'Smith',
         formSubmissionId: testFormSubmissionId,
         status: 'active' as const,
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/members')
         .send(createMemberData);
 
@@ -229,14 +324,14 @@ describe('Membership Routes - Authorization Integration Tests', () => {
       const createMemberData = {
         organisationId: testOrganizationId,
         membershipTypeId: testMembershipTypeId,
-        userId: 'test-user-id',
+        userId: adminUserId,
         firstName: 'Bob',
         lastName: 'Johnson',
         formSubmissionId: testFormSubmissionId,
         status: 'active' as const,
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/members')
         .send(createMemberData);
 
@@ -251,14 +346,14 @@ describe('Membership Routes - Authorization Integration Tests', () => {
       const createMemberData = {
         organisationId: testOrganizationId,
         membershipTypeId: testMembershipTypeId,
-        userId: 'test-user-id',
+        userId: adminUserId,
         firstName: 'Alice',
         lastName: 'Williams',
         formSubmissionId: testFormSubmissionId,
         status: 'active' as const,
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post('/api/orgadmin/members')
         .send(createMemberData);
 

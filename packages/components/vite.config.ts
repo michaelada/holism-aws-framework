@@ -33,6 +33,16 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    /*
+     * The pickers and their LocalizationProvider must come from one build: left
+     * externalised, the provider is loaded as ESM and the pickers as CJS, and
+     * the pickers then report the context as missing.
+     */
+    server: {
+      deps: {
+        inline: ['@mui/x-date-pickers'],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

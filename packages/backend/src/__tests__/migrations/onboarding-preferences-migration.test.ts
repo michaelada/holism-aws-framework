@@ -1,12 +1,21 @@
 /**
  * Migration Tests for Onboarding Preferences
- * 
+ *
  * Tests that the migration properly creates:
  * - user_onboarding_preferences table
  * - Required columns with correct types
  * - Indexes for efficient lookups
  * - Foreign key constraints
- * 
+ *
+ * **This describes migration 023 as it was written, not the table as it is
+ * today.** The `user_id` foreign key to `organization_users` asserted below was
+ * a mistake — every writer passes the Keycloak subject, not an
+ * `organization_users.id` — and it is removed by
+ * `1709000000019_onboarding-preferences-keycloak-user-id.js`. For the current
+ * shape, and for tests that run the real migration SQL rather than a copy of
+ * the DDL, see `onboarding-preferences-keycloak-user-id.test.ts` and
+ * `docs/ONBOARDING_DISMISSAL_IGNORED.md`.
+ *
  * Requirements: 4.1, 9.5
  */
 
@@ -18,18 +27,44 @@ import path from 'path';
 const testEnvPath = path.resolve(__dirname, '../../../.env.test');
 config({ path: testEnvPath });
 
+/** Schema these migration fixtures live in, so `public` is never disturbed. */
+const MIGRATION_TEST_SCHEMA = 'migration_test';
+
 describe('Onboarding Preferences Migration Tests', () => {
   let pool: Pool;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Create a connection pool for testing
+    /*
+     * A scratch schema, not `public`.
+     *
+     * This suite proves a migration behaves by dropping the table and building
+     * it in its pre-migration shape. Done in `public`, that deletes the table
+     * every other suite in the run depends on — the tests share one database,
+     * and jest runs them in a single worker, so whatever comes afterwards finds
+     * the schema gone. Confining the pool's search_path here keeps both the
+     * creates and the drops inside a schema nobody else reads.
+     */
     pool = new Pool({
       host: process.env.DATABASE_HOST || 'localhost',
       port: parseInt(process.env.DATABASE_PORT || '5432'),
       database: process.env.DATABASE_NAME || 'aws_framework_test',
       user: process.env.DATABASE_USER || 'postgres',
       password: process.env.DATABASE_PASSWORD || 'postgres',
+      options: `-c search_path=${MIGRATION_TEST_SCHEMA}`,
     });
+
+    // The schema itself has to exist before anything resolves against it, and
+    // creating it is independent of the search_path.
+    const bootstrap = new Pool({
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432'),
+      database: process.env.DATABASE_NAME || 'aws_framework_test',
+      user: process.env.DATABASE_USER || 'postgres',
+      password: process.env.DATABASE_PASSWORD || 'postgres',
+    });
+    await bootstrap.query(`CREATE SCHEMA IF NOT EXISTS ${MIGRATION_TEST_SCHEMA}`);
+    await bootstrap.end();
   });
 
   afterAll(async () => {
@@ -63,7 +98,9 @@ describe('Onboarding Preferences Migration Tests', () => {
       await pool.query(`
         CREATE TABLE user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -75,7 +112,7 @@ describe('Onboarding Preferences Migration Tests', () => {
       const tableResult = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
+          WHERE table_schema = '${MIGRATION_TEST_SCHEMA}' 
           AND table_name = 'user_onboarding_preferences'
         );
       `);
@@ -88,7 +125,9 @@ describe('Onboarding Preferences Migration Tests', () => {
       await pool.query(`
         CREATE TABLE user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -100,7 +139,8 @@ describe('Onboarding Preferences Migration Tests', () => {
       const columnsResult = await pool.query(`
         SELECT column_name, data_type, is_nullable, column_default
         FROM information_schema.columns
-        WHERE table_name = 'user_onboarding_preferences'
+        WHERE table_schema = '${MIGRATION_TEST_SCHEMA}'
+        AND table_name = 'user_onboarding_preferences'
         ORDER BY ordinal_position;
       `);
 
@@ -148,7 +188,9 @@ describe('Onboarding Preferences Migration Tests', () => {
       await pool.query(`
         CREATE TABLE user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -160,19 +202,24 @@ describe('Onboarding Preferences Migration Tests', () => {
       const constraintResult = await pool.query(`
         SELECT constraint_name, constraint_type
         FROM information_schema.table_constraints
-        WHERE table_name = 'user_onboarding_preferences'
+        WHERE table_schema = '${MIGRATION_TEST_SCHEMA}'
+        AND table_name = 'user_onboarding_preferences'
         AND constraint_type = 'UNIQUE';
       `);
 
       expect(constraintResult.rows.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('should have foreign key constraint to organization_users', async () => {
+    // Superseded: migration 1709000000019 drops this constraint, because the
+    // id being stored is a Keycloak subject and never matched organization_users.
+    it('should have foreign key constraint to organization_users (as originally written)', async () => {
       // Create the table
       await pool.query(`
         CREATE TABLE user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -194,8 +241,10 @@ describe('Onboarding Preferences Migration Tests', () => {
           AND tc.table_schema = kcu.table_schema
         JOIN information_schema.constraint_column_usage AS ccu
           ON ccu.constraint_name = tc.constraint_name
-          AND ccu.table_schema = tc.table_schema
+          -- Not matched on schema: the referencing table is in the scratch
+          -- schema and the table it points at is in public.
         WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = '${MIGRATION_TEST_SCHEMA}'
           AND tc.table_name = 'user_onboarding_preferences';
       `);
 
@@ -223,7 +272,9 @@ describe('Onboarding Preferences Migration Tests', () => {
       await pool.query(`
         CREATE TABLE user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -241,7 +292,8 @@ describe('Onboarding Preferences Migration Tests', () => {
       const indexResult = await pool.query(`
         SELECT indexname, indexdef
         FROM pg_indexes
-        WHERE tablename = 'user_onboarding_preferences'
+        WHERE schemaname = '${MIGRATION_TEST_SCHEMA}'
+        AND tablename = 'user_onboarding_preferences'
         AND indexname = 'idx_user_onboarding_preferences_user_id';
       `);
 
@@ -254,7 +306,9 @@ describe('Onboarding Preferences Migration Tests', () => {
       await pool.query(`
         CREATE TABLE user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -272,7 +326,8 @@ describe('Onboarding Preferences Migration Tests', () => {
       const indexResult = await pool.query(`
         SELECT indexname, indexdef
         FROM pg_indexes
-        WHERE tablename = 'user_onboarding_preferences'
+        WHERE schemaname = '${MIGRATION_TEST_SCHEMA}'
+        AND tablename = 'user_onboarding_preferences'
         AND indexname = 'idx_user_onboarding_preferences_last_updated';
       `);
 
@@ -287,7 +342,9 @@ describe('Onboarding Preferences Migration Tests', () => {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS user_onboarding_preferences (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL UNIQUE REFERENCES organization_users(id) ON DELETE CASCADE,
+          -- Schema-qualified: the fixture table lives in the scratch schema, the
+          -- table it points at is the real one.
+          user_id UUID NOT NULL UNIQUE REFERENCES public.organization_users(id) ON DELETE CASCADE,
           welcome_dismissed BOOLEAN NOT NULL DEFAULT false,
           modules_visited JSONB NOT NULL DEFAULT '[]',
           last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -301,7 +358,7 @@ describe('Onboarding Preferences Migration Tests', () => {
       const beforeResult = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
+          WHERE table_schema = '${MIGRATION_TEST_SCHEMA}' 
           AND table_name = 'user_onboarding_preferences'
         );
       `);
@@ -314,7 +371,7 @@ describe('Onboarding Preferences Migration Tests', () => {
       const afterResult = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
+          WHERE table_schema = '${MIGRATION_TEST_SCHEMA}' 
           AND table_name = 'user_onboarding_preferences'
         );
       `);
@@ -336,7 +393,8 @@ describe('Onboarding Preferences Migration Tests', () => {
       const beforeResult = await pool.query(`
         SELECT indexname 
         FROM pg_indexes 
-        WHERE tablename = 'user_onboarding_preferences';
+        WHERE schemaname = '${MIGRATION_TEST_SCHEMA}'
+        AND tablename = 'user_onboarding_preferences';
       `);
       expect(beforeResult.rows.length).toBeGreaterThanOrEqual(2);
 
@@ -347,7 +405,8 @@ describe('Onboarding Preferences Migration Tests', () => {
       const afterResult = await pool.query(`
         SELECT indexname 
         FROM pg_indexes 
-        WHERE tablename = 'user_onboarding_preferences';
+        WHERE schemaname = '${MIGRATION_TEST_SCHEMA}'
+        AND tablename = 'user_onboarding_preferences';
       `);
       expect(afterResult.rows).toHaveLength(0);
     });

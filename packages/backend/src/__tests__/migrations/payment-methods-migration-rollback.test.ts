@@ -21,22 +21,48 @@ config({ path: testEnvPath });
 describe.skip('Payment Methods Migration Rollback Tests', () => {
   let pool: Pool;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Create a connection pool for testing
+    /*
+     * A scratch schema, not `public`.
+     *
+     * This suite proves a migration behaves by dropping the table and building
+     * it in its pre-migration shape. Done in `public`, that deletes the table
+     * every other suite in the run depends on — the tests share one database,
+     * and jest runs them in a single worker, so whatever comes afterwards finds
+     * the schema gone. Confining the pool's search_path here keeps both the
+     * creates and the drops inside a schema nobody else reads.
+     */
     pool = new Pool({
       host: process.env.DATABASE_HOST || 'localhost',
       port: parseInt(process.env.DATABASE_PORT || '5432'),
       database: process.env.DATABASE_NAME || 'aws_framework_test',
       user: process.env.DATABASE_USER || 'postgres',
       password: process.env.DATABASE_PASSWORD || 'postgres',
+      options: `-c search_path=${MIGRATION_TEST_SCHEMA}`,
     });
+
+    // The schema itself has to exist before anything resolves against it, and
+    // creating it is independent of the search_path.
+    const bootstrap = new Pool({
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432'),
+      database: process.env.DATABASE_NAME || 'aws_framework_test',
+      user: process.env.DATABASE_USER || 'postgres',
+      password: process.env.DATABASE_PASSWORD || 'postgres',
+    });
+    await bootstrap.query(`CREATE SCHEMA IF NOT EXISTS ${MIGRATION_TEST_SCHEMA}`);
+    await bootstrap.end();
   });
 
   afterAll(async () => {
     await pool.end();
   });
 
-  describe('Down Migration - Table Cleanup', () => {
+  /** Schema these migration fixtures live in, so `public` is never disturbed. */
+const MIGRATION_TEST_SCHEMA = 'migration_test';
+
+describe('Down Migration - Table Cleanup', () => {
     it('should drop org_payment_method_data table', async () => {
       // First, verify the table exists
       const beforeResult = await pool.query(`

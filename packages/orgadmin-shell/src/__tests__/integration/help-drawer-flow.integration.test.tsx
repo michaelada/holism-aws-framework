@@ -15,7 +15,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { HelpButton } from '../../components/HelpButton';
-import { HelpDrawer } from '../../components/HelpDrawer';
 import axios from 'axios';
 
 // Mock axios
@@ -41,6 +40,17 @@ const translations: Record<string, string> = {
   'forms.overview': '# Forms Module Help\n\nCreate custom forms for data collection.',
   'noContentAvailable': 'Help content is not yet available for this page.',
 };
+
+/*
+ * Help content is markdown files, not translation keys, so the loader is what
+ * the drawer reads. It resolves page → module overview → null; the fixtures
+ * above stand in for the markdown files, and the chain is mirrored here so the
+ * fallback this flow exercises is the same one the real loader performs.
+ */
+vi.mock('../../locales/helpLoader', () => ({
+  getHelpContent: (_locale: string, moduleId: string, pageId: string) =>
+    translations[`${moduleId}.${pageId}`] ?? translations[`${moduleId}.overview`] ?? null,
+}));
 
 const mockT = vi.fn((key: string, options?: any) => {
   // Handle language fallback
@@ -71,6 +81,7 @@ const TestHelpApp: React.FC = () => {
     toggleHelpDrawer,
     currentPageId,
     setCurrentPageId,
+    setCurrentModule: setHelpModule,
     checkModuleVisit,
   } = useOnboarding();
   
@@ -78,9 +89,15 @@ const TestHelpApp: React.FC = () => {
   const [currentModule, setCurrentModule] = React.useState<'dashboard' | 'users' | 'forms'>('dashboard');
   const [pageId, setPageId] = React.useState<string>('overview');
   
+  /*
+   * The provider owns the drawer and renders it from its own module/page
+   * context, so navigation here has to tell it where the user is — rendering a
+   * second HelpDrawer would put two of them on the page.
+   */
   React.useEffect(() => {
     setCurrentPageId(pageId);
-  }, [pageId, setCurrentPageId]);
+    setHelpModule(currentModule);
+  }, [pageId, currentModule, setCurrentPageId, setHelpModule]);
   
   return (
     <>
@@ -141,14 +158,6 @@ const TestHelpApp: React.FC = () => {
           Create User
         </button>
       </div>
-      
-      {/* Help Drawer */}
-      <HelpDrawer
-        open={helpDrawerOpen}
-        onClose={toggleHelpDrawer}
-        pageId={pageId}
-        moduleId={currentModule}
-      />
     </>
   );
 };

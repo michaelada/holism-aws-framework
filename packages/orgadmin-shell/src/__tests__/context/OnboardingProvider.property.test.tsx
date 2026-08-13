@@ -394,7 +394,7 @@ describe('Property 3: Dismissed Dialogs Remain Dismissed', () => {
           }, { timeout: 2000 });
 
           // Dismiss it
-          await moduleContextRef?.dismissModuleIntro(moduleId);
+          await moduleContextRef?.dismissModuleIntro(moduleId, true);
 
           // Property: API should be called with module in visited list
           await waitFor(() => {

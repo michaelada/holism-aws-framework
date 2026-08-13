@@ -10,7 +10,9 @@ describe('DocumentUploadRenderer', () => {
     shortName: 'document',
     displayName: 'Upload Document',
     datatype: 'document_upload',
-    helpText: 'Upload your documents here',
+    // The field model calls this `description`; it is what the renderer shows
+    // beneath the control.
+    description: 'Upload your documents here',
     mandatory: false,
     validationRules: {},
   };

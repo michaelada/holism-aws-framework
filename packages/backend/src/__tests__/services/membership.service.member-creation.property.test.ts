@@ -12,9 +12,16 @@ import { MembershipService, CreateMemberDto } from '../../services/membership.se
 import { db } from '../../database/pool';
 
 // Mock the database
+import { createMockClient } from '../../test-helpers/mock-db-client';
+
 jest.mock('../../database/pool', () => ({
   db: {
     query: jest.fn(),
+    // Transactional work on this path (discount.service) takes a pooled
+    // client. Without this the service gets `undefined` and fails later with
+    // "reading 'release'", which looks like a service bug rather than a gap
+    // in the mock.
+    getClient: jest.fn(),
   },
 }));
 
@@ -34,6 +41,108 @@ jest.mock('../../services/form-submission.service', () => ({
   })),
 }));
 
+
+/**
+ * What the database holds for one property run.
+ *
+ * The suite used to queue results positionally — one `mockResolvedValueOnce`
+ * per query, in the order the service happened to issue them. Member creation
+ * has since grown two more lookups (the organisation's type, and that type's
+ * numbering configuration) and allocates the membership number through
+ * `membership_number_sequences` on a pooled client, so those queues handed each
+ * query somebody else's rows: the type lookup answered with a form submission,
+ * the sequence read came back empty, and every property failed on
+ * "Cannot read properties of undefined (reading 'next_number')" — a mismatch in
+ * the mock, reported as if the service were broken.
+ *
+ * Answering by what is being asked for is stable against that: a property
+ * declares the rows it cares about and the rest of the path is satisfied with
+ * defaults.
+ */
+interface DbState {
+  /** The row `getMembershipTypeById` finds — `null` for "no such type". */
+  membershipType: Record<string, any> | null;
+  /** The row the INSERT returns, i.e. the member as created. */
+  member: Record<string, any> | null;
+  /** The organisation's type, and how that type numbers its members. */
+  organizationTypeId: string;
+  membershipNumbering: string;
+  membershipNumberUniqueness: string;
+  initialMembershipNumber: number;
+  /** Whether the organisation itself exists. */
+  organisationExists: boolean;
+  /** Next number the sequence would hand out. */
+  nextNumber: number;
+}
+
+const dbState: DbState = {
+  membershipType: null,
+  member: null,
+  organizationTypeId: '00000000-0000-4000-8000-0000000000ff',
+  membershipNumbering: 'internal',
+  membershipNumberUniqueness: 'organization',
+  initialMembershipNumber: 1000000,
+  organisationExists: true,
+  nextNumber: 1000000,
+};
+
+const result = (rows: Record<string, any>[], command = 'SELECT') => ({
+  rows,
+  command,
+  rowCount: rows.length,
+  oid: 0,
+  fields: [],
+});
+
+/** Answer a query by what it asks for rather than by when it arrives. */
+const answer = (sql: unknown) => {
+  const text = String(sql);
+
+  if (text.includes('FROM membership_types')) {
+    return Promise.resolve(result(dbState.membershipType ? [dbState.membershipType] : []));
+  }
+  if (text.includes('FROM organizations')) {
+    return Promise.resolve(
+      result(
+        dbState.organisationExists
+          ? [{ organization_type_id: dbState.organizationTypeId }]
+          : []
+      )
+    );
+  }
+  if (text.includes('FROM organization_types')) {
+    return Promise.resolve(
+      result([
+        {
+          membership_numbering: dbState.membershipNumbering,
+          membership_number_uniqueness: dbState.membershipNumberUniqueness,
+          initial_membership_number: dbState.initialMembershipNumber,
+        },
+      ])
+    );
+  }
+  // The generator inserts the sequence row if absent, then reads it FOR UPDATE.
+  if (text.includes('membership_number_sequences')) {
+    return Promise.resolve(
+      text.includes('SELECT') ? result([{ next_number: dbState.nextNumber }]) : result([])
+    );
+  }
+  if (text.includes('INSERT INTO members')) {
+    return Promise.resolve(result(dbState.member ? [dbState.member] : [], 'INSERT'));
+  }
+  // Duplicate checks, counts, discounts, and the transaction statements.
+  return Promise.resolve(result([]));
+};
+
+/**
+ * Declare what this property's database holds. Anything not named keeps the
+ * default from `dbState`, which is reset before each property run.
+ */
+const given = (state: Partial<DbState>) => {
+  Object.assign(dbState, state);
+};
+
+
 describe('Membership Service - Member Creation Property-Based Tests', () => {
   let service: MembershipService;
   let mockFormSubmissionService: any;
@@ -41,10 +150,46 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    /*
+     * Both the pool and a pooled client answer by query shape. The number
+     * generator does its work on a client inside a transaction, so a client
+     * that only resolves empty results would leave it without a sequence row.
+     */
+    const client = createMockClient();
+    client.query.mockImplementation(answer);
+    (mockDb.getClient as unknown as jest.Mock).mockResolvedValue(client);
+    mockDb.query.mockImplementation(answer as any);
+
+    // Defaults for a property that does not say otherwise.
+    Object.assign(dbState, {
+      membershipType: null,
+      member: null,
+      organizationTypeId: '00000000-0000-4000-8000-0000000000ff',
+      membershipNumbering: 'internal',
+      membershipNumberUniqueness: 'organization',
+      initialMembershipNumber: 1000000,
+      organisationExists: true,
+      nextNumber: 1000000,
+    });
     
-    // Create a fresh mock for form submission service
+    /*
+     * Form-submission validation moved out of `membership.service` into
+     * `FormSubmissionService`. This suite still mocks it as one of the
+     * `db.query` calls (see the mock sequences below), so the real dependency
+     * returned `undefined` and every property failed with "Form submission not
+     * found" before reaching the behaviour under test.
+     *
+     * A default is set here rather than in each property. The cases that need a
+     * missing submission override it with `mockResolvedValueOnce(null)`, which
+     * takes precedence.
+     */
     mockFormSubmissionService = {
-      getSubmissionById: jest.fn(),
+      getSubmissionById: jest.fn().mockResolvedValue({
+        id: '00000000-0000-1000-8000-000000000000',
+        formId: 'form-1',
+        data: {},
+      }),
     };
     
     // Create service with mocked form submission service
@@ -101,16 +246,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
             // Expected status based on automaticallyApprove flag
             const expectedStatus = data.automaticallyApprove ? 'active' : 'pending';
 
-            // Mock organization for membership number generation
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: 'TEST',
-            };
 
-            // Mock member count for sequence generation
-            const mockMemberCount = {
-              count: '0',
-            };
 
             // Mock the created member record
             const mockCreatedMember = {
@@ -133,59 +269,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
             };
 
             // Setup mock responses in order
-            mockDb.query
-              .mockResolvedValueOnce({
-                // getMembershipTypeById query
-                rows: [mockMembershipType],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // getSubmissionById query (form submission validation)
-                rows: [{
-                  id: data.formSubmissionId,
-                  form_id: 'form-1',
-                  organisation_id: data.organisationId,
-                  user_id: data.userId,
-                  submission_type: 'membership_application',
-                  context_id: 'manual-creation',
-                  submission_data: {},
-                  status: 'approved',
-                  submitted_at: new Date(),
-                  created_at: new Date(),
-                  updated_at: new Date(),
-                }],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // getOrganization query for membership number
-                rows: [mockOrganization],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // getMemberCount query for sequence
-                rows: [mockMemberCount],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // INSERT member query
-                rows: [mockCreatedMember],
-                command: 'INSERT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act: Create member
             const createdMember = await service.createMember(memberData);
@@ -241,8 +328,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: baseData.automaticallyApprove,
             };
 
-            const mockOrganization = { id: memberData.organisationId, short_name: 'ORG' };
-            const mockMemberCount = { count: '5' };
 
             const mockCreatedMember = {
               id: fc.sample(fc.uuid(), 1)[0],
@@ -263,30 +348,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({
-                rows: [{
-                  id: formSubmissionId,
-                  form_id: 'form-1',
-                  organisation_id: memberData.organisationId,
-                  user_id: memberData.userId,
-                  submission_type: 'membership_application',
-                  context_id: 'manual-creation',
-                  submission_data: {},
-                  status: 'approved',
-                  submitted_at: new Date(),
-                  created_at: new Date(),
-                  updated_at: new Date(),
-                }],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act
             const createdMember = await service.createMember(memberData);
@@ -355,8 +420,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 automaticallyApprove: data.automaticallyApprove,
               };
 
-              const mockOrganization = { id: data.organisationId, short_name: 'TST' };
-              const mockMemberCount = { count: String(i) };
 
               const mockCreatedMember = {
                 id: fc.sample(fc.uuid(), 1)[0],
@@ -377,30 +440,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 updated_at: new Date(),
               };
 
-              mockDb.query
-                .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({
-                  rows: [{
-                    id: data.formSubmissionId,
-                    form_id: 'form-1',
-                    organisation_id: data.organisationId,
-                    user_id: data.userId,
-                    submission_type: 'membership_application',
-                    context_id: 'manual-creation',
-                    submission_data: {},
-                    status: 'approved',
-                    submitted_at: new Date(),
-                    created_at: new Date(),
-                    updated_at: new Date(),
-                  }],
-                  command: 'SELECT',
-                  rowCount: 1,
-                  oid: 0,
-                  fields: [],
-                })
-                .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+              given({
+                membershipType: mockMembershipType,
+                member: mockCreatedMember,
+              });
 
               // Act
               const createdMember = await service.createMember(memberData);
@@ -460,10 +503,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: true,
             };
 
-            const mockOrganization = {
-              id: organisationId,
-              short_name: orgPrefix,
-            };
 
             // Act: Create multiple members
             for (let i = 0; i < memberCount; i++) {
@@ -476,8 +515,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 formSubmissionId: fc.sample(fc.uuid(), 1)[0],
               };
 
-              // Mock member count for sequence generation (simulates existing members)
-              const mockMemberCount = { count: String(i) };
 
               // Generate expected membership number
               const sequence = String(i + 1).padStart(5, '0');
@@ -502,11 +539,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 updated_at: new Date(),
               };
 
-              mockDb.query
-                .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+              given({
+                membershipType: mockMembershipType,
+                member: mockCreatedMember,
+              });
 
               const createdMember = await service.createMember(memberData);
               membershipNumbers.add(createdMember.membershipNumber);
@@ -561,14 +597,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: data.automaticallyApprove,
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = {
-              count: String(data.sequenceNumber - 1),
-            };
 
             const mockCreatedMember = {
               id: fc.sample(fc.uuid(), 1)[0],
@@ -589,11 +618,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act
             const createdMember = await service.createMember({
@@ -651,10 +679,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: true,
             };
 
-            const mockOrganization = {
-              id: organisationId,
-              short_name: orgPrefix,
-            };
 
             // Act: Create multiple members sequentially
             for (let i = 0; i < memberCount; i++) {
@@ -667,8 +691,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 formSubmissionId: fc.sample(fc.uuid(), 1)[0],
               };
 
-              // Mock member count (simulates existing members + previously created in this test)
-              const mockMemberCount = { count: String(startingSequence + i) };
 
               // Generate expected membership number
               const sequence = String(startingSequence + i + 1).padStart(5, '0');
@@ -693,11 +715,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 updated_at: new Date(),
               };
 
-              mockDb.query
-                .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+              given({
+                membershipType: mockMembershipType,
+                member: mockCreatedMember,
+              });
 
               const createdMember = await service.createMember(memberData);
               membershipNumbers.push(createdMember.membershipNumber);
@@ -754,14 +775,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: data.automaticallyApprove,
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = {
-              count: String(data.sequenceNumber - 1),
-            };
 
             const mockCreatedMember = {
               id: fc.sample(fc.uuid(), 1)[0],
@@ -782,11 +796,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act
             const createdMember = await service.createMember({
@@ -852,12 +865,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: data.automaticallyApprove,
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = { count: '0' };
 
             const expectedMembershipNumber = `${data.orgPrefix}-${currentYear}-00001`;
 
@@ -880,11 +888,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act
             const createdMember = await service.createMember({
@@ -940,12 +947,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: data.automaticallyApprove,
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = { count: '0' };
 
             const expectedMembershipNumber = `${data.orgPrefix}-${currentYear}-00001`;
 
@@ -968,11 +970,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act
             const createdMember = await service.createMember({
@@ -1043,12 +1044,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: true, // Key property for this test
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = { count: '0' };
 
             const mockCreatedMember = {
               id: fc.sample(fc.uuid(), 1)[0],
@@ -1069,11 +1065,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act: Create member
             const createdMember = await service.createMember(memberData);
@@ -1124,12 +1119,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: false, // Key property for this test
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = { count: '0' };
 
             const mockCreatedMember = {
               id: fc.sample(fc.uuid(), 1)[0],
@@ -1150,11 +1140,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act: Create member
             const createdMember = await service.createMember(memberData);
@@ -1211,12 +1200,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: data.automaticallyApprove, // The key property
             };
 
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            const mockMemberCount = { count: '0' };
 
             // Expected status based on automaticallyApprove flag
             const expectedStatus = data.automaticallyApprove ? 'active' : 'pending';
@@ -1240,11 +1224,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updated_at: new Date(),
             };
 
-            mockDb.query
-              .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-              .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Act: Create member
             const createdMember = await service.createMember(memberData);
@@ -1317,8 +1300,6 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 automaticallyApprove: data.automaticallyApprove,
               };
 
-              const mockOrganization = { id: data.organisationId, short_name: data.orgPrefix };
-              const mockMemberCount = { count: String(i) };
 
               const mockCreatedMember = {
                 id: fc.sample(fc.uuid(), 1)[0],
@@ -1339,11 +1320,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 updated_at: new Date(),
               };
 
-              mockDb.query
-                .mockResolvedValueOnce({ rows: [mockMembershipType], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockOrganization], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockMemberCount], command: 'SELECT', rowCount: 1, oid: 0, fields: [] })
-                .mockResolvedValueOnce({ rows: [mockCreatedMember], command: 'INSERT', rowCount: 1, oid: 0, fields: [] });
+              given({
+                membershipType: mockMembershipType,
+                member: mockCreatedMember,
+              });
 
               // Act
               const createdMember = await service.createMember(memberData);
@@ -1409,13 +1389,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
             };
 
             // Arrange: Mock that membership type does NOT exist (empty result)
-            mockDb.query.mockResolvedValueOnce({
-              rows: [], // No membership type found
-              command: 'SELECT',
-              rowCount: 0,
-              oid: 0,
-              fields: [],
-            });
+            given({ membershipType: null });
 
             // Act & Assert: Property - Should throw error for non-existent membership type
             await expect(service.createMember(memberData)).rejects.toThrow('Membership type not found');
@@ -1466,14 +1440,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               automaticallyApprove: true,
             };
 
-            mockDb.query.mockResolvedValueOnce({
-              // getMembershipTypeById query - membership type exists
-              rows: [mockMembershipType],
-              command: 'SELECT',
-              rowCount: 1,
-              oid: 0,
-              fields: [],
-            });
+            given({ membershipType: mockMembershipType });
 
             // Mock form submission does NOT exist
             mockFormSubmissionService.getSubmissionById.mockResolvedValueOnce(null);
@@ -1517,13 +1484,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
             };
 
             // Arrange: Mock that membership type does NOT exist
-            mockDb.query.mockResolvedValueOnce({
-              rows: [], // No membership type found
-              command: 'SELECT',
-              rowCount: 0,
-              oid: 0,
-              fields: [],
-            });
+            given({ membershipType: null });
 
             // Act & Assert: Should throw error for membership type
             await expect(service.createMember(memberData)).rejects.toThrow('Membership type not found');
@@ -1596,16 +1557,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
               updatedAt: new Date(),
             };
 
-            // Mock organization for membership number generation
-            const mockOrganization = {
-              id: data.organisationId,
-              short_name: data.orgPrefix,
-            };
 
-            // Mock member count for sequence generation
-            const mockMemberCount = {
-              count: '0',
-            };
 
             // Mock the created member record
             const mockCreatedMember = {
@@ -1628,39 +1580,10 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
             };
 
             // Setup mock responses in order
-            mockDb.query
-              .mockResolvedValueOnce({
-                // getMembershipTypeById query - membership type exists
-                rows: [mockMembershipType],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // getOrganization query for membership number
-                rows: [mockOrganization],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // getMemberCount query for sequence
-                rows: [mockMemberCount],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              })
-              .mockResolvedValueOnce({
-                // INSERT member query
-                rows: [mockCreatedMember],
-                command: 'INSERT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              });
+            given({
+              membershipType: mockMembershipType,
+              member: mockCreatedMember,
+            });
 
             // Mock form submission service
             mockFormSubmissionService.getSubmissionById.mockResolvedValueOnce(mockFormSubmission);
@@ -1723,13 +1646,7 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                 automaticallyApprove: true,
               };
 
-              mockDb.query.mockResolvedValueOnce({
-                rows: [mockMembershipType],
-                command: 'SELECT',
-                rowCount: 1,
-                oid: 0,
-                fields: [],
-              });
+              given({ membershipType: mockMembershipType });
 
               // If membership type exists, mock form submission based on existence flag
               if (data.formSubmissionExists) {
@@ -1749,23 +1666,9 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
 
                 mockFormSubmissionService.getSubmissionById.mockResolvedValueOnce(mockFormSubmission);
 
-                mockDb.query
-                  .mockResolvedValueOnce({
-                    rows: [{ id: data.organisationId, short_name: data.orgPrefix }],
-                    command: 'SELECT',
-                    rowCount: 1,
-                    oid: 0,
-                    fields: [],
-                  })
-                  .mockResolvedValueOnce({
-                    rows: [{ count: '0' }],
-                    command: 'SELECT',
-                    rowCount: 1,
-                    oid: 0,
-                    fields: [],
-                  })
-                  .mockResolvedValueOnce({
-                    rows: [{
+                given({
+                  membershipType: { id: data.organisationId, short_name: data.orgPrefix },
+                  member: {
                       id: fc.sample(fc.uuid(), 1)[0],
                       organisation_id: data.organisationId,
                       membership_type_id: data.membershipTypeId,
@@ -1782,25 +1685,15 @@ describe('Membership Service - Member Creation Property-Based Tests', () => {
                       payment_status: 'pending',
                       created_at: new Date(),
                       updated_at: new Date(),
-                    }],
-                    command: 'INSERT',
-                    rowCount: 1,
-                    oid: 0,
-                    fields: [],
-                  });
+                    },
+                });
               } else {
                 // Form submission does not exist
                 mockFormSubmissionService.getSubmissionById.mockResolvedValueOnce(null);
               }
             } else {
               // Membership type does not exist
-              mockDb.query.mockResolvedValueOnce({
-                rows: [],
-                command: 'SELECT',
-                rowCount: 0,
-                oid: 0,
-                fields: [],
-              });
+              given({ membershipType: null });
             }
 
             // Act & Assert: Property - Validation behavior should be consistent

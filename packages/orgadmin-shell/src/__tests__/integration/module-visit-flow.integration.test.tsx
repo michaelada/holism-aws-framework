@@ -14,7 +14,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { ModuleIntroductionDialog } from '../../components/ModuleIntroductionDialog';
 import axios from 'axios';
 
 // Mock axios
@@ -37,6 +36,7 @@ const mockT = vi.fn((key: string) => {
     'modules.forms.title': 'Form Builder',
     'modules.forms.content': '# Forms\n\nCreate custom forms.',
     'actions.gotIt': 'Got it',
+    'welcome.dontShowAgain': "Don't show this again",
     'translation:common.actions.gotIt': 'Got it',
   };
   return translations[key] || key;
@@ -52,7 +52,6 @@ const TestModuleApp: React.FC = () => {
     moduleIntroDialogOpen, 
     currentModule,
     checkModuleVisit,
-    dismissModuleIntro 
   } = useOnboarding();
   
   return (
@@ -83,16 +82,24 @@ const TestModuleApp: React.FC = () => {
           Visit Forms
         </button>
       </div>
-      {/* Render the ModuleIntroductionDialog */}
-      {currentModule && (
-        <ModuleIntroductionDialog
-          open={moduleIntroDialogOpen}
-          moduleId={currentModule}
-          onClose={() => dismissModuleIntro(currentModule)}
-        />
-      )}
+      {/* The provider renders the dialog itself — a second one here would put
+          two on the page and dismiss only one of them. */}
     </>
   );
+};
+
+/**
+ * Dismiss the module introduction dialog.
+ *
+ * A module counts as visited only when the user ticks "Don't show this again" —
+ * clicking Got it on its own closes the dialog and lets it come back next time,
+ * which is what "Don't show this again" being ignored used to get wrong.
+ */
+const dismissIntro = (dontShowAgain: boolean) => {
+  if (dontShowAgain) {
+    fireEvent.click(screen.getByRole('checkbox'));
+  }
+  fireEvent.click(screen.getByRole('button', { name: /got it/i }));
 };
 
 describe('Module Visit Flow - Integration Test', () => {
@@ -176,8 +183,7 @@ describe('Module Visit Flow - Integration Test', () => {
     });
 
     // Act - dismiss the module intro
-    const gotItButton = screen.getByRole('button', { name: /got it/i });
-    fireEvent.click(gotItButton);
+    dismissIntro(true);
 
     // Assert - dialog should close
     await waitFor(() => {
@@ -198,6 +204,48 @@ describe('Module Visit Flow - Integration Test', () => {
         })
       );
     });
+  });
+
+  /**
+   * The other half of that rule, and the one a member notices: closing the
+   * dialog without ticking the box is not a decision to stop seeing it, so
+   * nothing is saved and the introduction is there again next login.
+   */
+  it('should not save anything when dismissed without "Don\'t show this again"', async () => {
+    // Arrange - user has not visited dashboard yet
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          welcomeDismissed: true,
+          modulesVisited: [],
+        },
+      },
+    });
+
+    render(
+      <OnboardingProvider>
+        <TestModuleApp />
+      </OnboardingProvider>
+    );
+
+    await waitFor(() => {
+      expect(mockedAxios.get).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByTestId('visit-dashboard'));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Act - close it without ticking the box
+    dismissIntro(false);
+
+    // Assert - the dialog closes, but the module is not recorded as visited
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(mockedAxios.put).not.toHaveBeenCalled();
   });
 
   it('should not show module intro on subsequent visits to the same module', async () => {
@@ -288,8 +336,7 @@ describe('Module Visit Flow - Integration Test', () => {
     expect(screen.getByTestId('current-module').textContent).toBe('users');
 
     // Act - dismiss users intro
-    const gotItButton = screen.getByRole('button', { name: /got it/i });
-    fireEvent.click(gotItButton);
+    dismissIntro(true);
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -344,8 +391,7 @@ describe('Module Visit Flow - Integration Test', () => {
     expect(screen.getByText('Form Builder')).toBeInTheDocument();
 
     // Act - dismiss the intro
-    const gotItButton = screen.getByRole('button', { name: /got it/i });
-    fireEvent.click(gotItButton);
+    dismissIntro(true);
 
     // Assert - dialog closes and preference saved
     await waitFor(() => {
@@ -430,7 +476,7 @@ describe('Module Visit Flow - Integration Test', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: /got it/i }));
+    dismissIntro(true);
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
@@ -440,7 +486,7 @@ describe('Module Visit Flow - Integration Test', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: /got it/i }));
+    dismissIntro(true);
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
@@ -450,7 +496,7 @@ describe('Module Visit Flow - Integration Test', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: /got it/i }));
+    dismissIntro(true);
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
@@ -501,8 +547,7 @@ describe('Module Visit Flow - Integration Test', () => {
     });
 
     // Act - dismiss the intro
-    const gotItButton = screen.getByRole('button', { name: /got it/i });
-    fireEvent.click(gotItButton);
+    dismissIntro(true);
 
     // Assert - dialog should still close despite save failure
     await waitFor(() => {
@@ -552,7 +597,7 @@ describe('Module Visit Flow - Integration Test', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: /got it/i }));
+    dismissIntro(true);
 
     await waitFor(() => {
       expect(mockedAxios.put).toHaveBeenCalled();
@@ -631,11 +676,15 @@ describe('Module Visit Flow - Integration Test', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
+    // The introduction belongs to the module that opened it, even though the
+    // user has since navigated on — dismissing it must record dashboard, not
+    // whichever module they happen to have landed on.
     expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
-    expect(screen.getByTestId('current-module').textContent).toBe('dashboard');
+    // Help context, on the other hand, follows the user.
+    expect(screen.getByTestId('current-module').textContent).toBe('forms');
 
     // Dismiss the dialog
-    fireEvent.click(screen.getByRole('button', { name: /got it/i }));
+    dismissIntro(true);
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

@@ -1,0 +1,556 @@
+import { AccountActivityService } from '../account-activity.service';
+import { db } from '../../database/pool';
+import { NotFoundError, ValidationError } from '../../middleware/errors';
+import { calendarService } from '../calendar.service';
+
+jest.mock('../../database/pool');
+jest.mock('../../config/logger');
+jest.mock('../calendar.service', () => ({
+  calendarService: { cancelBookingWithRefund: jest.fn() },
+}));
+
+const mockDb = db as jest.Mocked<typeof db>;
+
+const ORG = 'org-1';
+const MEMBER = 'ou-1';
+/** Fixed so nothing depends on the day the suite runs. */
+const TODAY = new Date('2026-06-15T09:00:00Z');
+
+const entryRow = (over: Record<string, any> = {}) => ({
+  id: 'entry-1',
+  event_id: 'event-1',
+  event_activity_id: 'activity-1',
+  quantity: 1,
+  payment_status: 'paid',
+  payment_method: 'card',
+  entry_date: new Date('2026-05-01'),
+  event_name: 'Summer Regatta',
+  start_date: '2026-07-01',
+  end_date: '2026-07-02',
+  activity_name: 'Junior Single Sculls',
+  fee: '25.00',
+  ...over,
+});
+
+const membershipRow = (over: Record<string, any> = {}) => ({
+  id: 'member-1',
+  membership_number: 'M-0001',
+  membership_type_id: 'mt-1',
+  status: 'active',
+  valid_until: '2026-12-31',
+  date_last_renewed: '2026-01-01',
+  payment_status: 'paid',
+  membership_type_name: 'Full Member',
+  ...over,
+});
+
+describe('AccountActivityService', () => {
+  let service: AccountActivityService;
+
+  beforeEach(() => {
+    mockDb.query.mockReset();
+    service = new AccountActivityService();
+  });
+
+  describe('listEntries', () => {
+    it('returns the member\'s entries with the event and activity named', async () => {
+      mockDb.query.mockResolvedValue({ rows: [entryRow()] } as any);
+
+      const entries = await service.listEntries(ORG, MEMBER, TODAY);
+
+      expect(entries[0]).toMatchObject({
+        id: 'entry-1',
+        eventName: 'Summer Regatta',
+        activityName: 'Junior Single Sculls',
+        fee: 25,
+      });
+    });
+
+    /**
+     * The security boundary. Entries carry no organisation of their own, so the
+     * join to `events` is what stops one club's entries appearing in another's.
+     */
+    it('scopes by both the member and the organisation', async () => {
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+      await service.listEntries(ORG, MEMBER, TODAY);
+
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('ee.user_id = $1');
+      expect(String(sql)).toContain('e.organisation_id = $2');
+      expect(params).toEqual([MEMBER, ORG]);
+    });
+
+    it('derives the status from the end of the event, not its start', async () => {
+      // A multi-day event is not complete on its opening day.
+      mockDb.query.mockResolvedValue({
+        rows: [entryRow({ start_date: '2026-06-14', end_date: '2026-06-20' })],
+      } as any);
+
+      const [entry] = await service.listEntries(ORG, MEMBER, TODAY);
+      expect(entry.status).toBe('confirmed');
+    });
+
+    it('marks an unpaid future entry as awaiting payment', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [entryRow({ payment_status: 'pending' })],
+      } as any);
+
+      const [entry] = await service.listEntries(ORG, MEMBER, TODAY);
+      expect(entry.status).toBe('awaiting-payment');
+    });
+
+    it('returns a fee as a number rather than the string pg gives back', async () => {
+      // decimal columns arrive as strings; leaving them would make the UI
+      // concatenate rather than add.
+      mockDb.query.mockResolvedValue({ rows: [entryRow({ fee: '12.50' })] } as any);
+
+      const [entry] = await service.listEntries(ORG, MEMBER, TODAY);
+      expect(entry.fee).toBe(12.5);
+    });
+
+    it('tolerates an activity with no fee', async () => {
+      mockDb.query.mockResolvedValue({ rows: [entryRow({ fee: null })] } as any);
+
+      const [entry] = await service.listEntries(ORG, MEMBER, TODAY);
+      expect(entry.fee).toBeNull();
+    });
+
+    it('returns an empty list rather than failing when there is nothing', async () => {
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+      await expect(service.listEntries(ORG, MEMBER, TODAY)).resolves.toEqual([]);
+    });
+  });
+
+  describe('getEntry', () => {
+    it('returns the detail C2 renders', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [
+          entryRow({
+            first_name: 'Sam',
+            last_name: 'Rivers',
+            email: 'sam@example.com',
+            form_submission_id: 'fs-1',
+            event_description: 'Annual regatta',
+            activity_description: 'Under 18',
+            add_confirmation_message: true,
+            confirmation_message: 'See you there',
+          }),
+        ],
+      } as any);
+
+      const entry = await service.getEntry(ORG, MEMBER, 'entry-1', TODAY);
+
+      expect(entry).toMatchObject({
+        firstName: 'Sam',
+        email: 'sam@example.com',
+        formSubmissionId: 'fs-1',
+        confirmationMessage: 'See you there',
+      });
+    });
+
+    it('withholds a confirmation message the club has not switched on', async () => {
+      // Otherwise an unfinished draft is shown to members.
+      mockDb.query.mockResolvedValue({
+        rows: [
+          entryRow({
+            add_confirmation_message: false,
+            confirmation_message: 'draft, do not send',
+          }),
+        ],
+      } as any);
+
+      const entry = await service.getEntry(ORG, MEMBER, 'entry-1', TODAY);
+      expect(entry.confirmationMessage).toBeNull();
+    });
+
+    it('reports another member\'s entry as simply not found', async () => {
+      // Distinguishing "not yours" from "does not exist" would confirm the id
+      // is real to someone probing for it.
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+
+      await expect(service.getEntry(ORG, MEMBER, 'someone-elses', TODAY)).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('scopes the lookup by entry, member and organisation together', async () => {
+      mockDb.query.mockResolvedValue({ rows: [entryRow()] } as any);
+      await service.getEntry(ORG, MEMBER, 'entry-1', TODAY);
+
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('ee.id = $1');
+      expect(String(sql)).toContain('ee.user_id = $2');
+      expect(String(sql)).toContain('e.organisation_id = $3');
+      expect(params).toEqual(['entry-1', MEMBER, ORG]);
+    });
+  });
+
+  describe('listBookings', () => {
+    const bookingRow = (over: Record<string, any> = {}) => ({
+      id: 'booking-1',
+      booking_reference: 'BK-001',
+      calendar_id: 'cal-1',
+      booking_date: '2026-07-01',
+      start_time: '09:00',
+      end_time: '10:00',
+      duration: 60,
+      places_booked: 2,
+      total_price: '30.00',
+      booking_status: 'confirmed',
+      payment_status: 'paid',
+      cancelled_at: null,
+      calendar_name: 'Court 1',
+      ...over,
+    });
+
+    it('returns bookings with their calendar named', async () => {
+      mockDb.query.mockResolvedValue({ rows: [bookingRow()] } as any);
+
+      const [booking] = await service.listBookings(ORG, MEMBER, TODAY);
+      expect(booking).toMatchObject({
+        bookingReference: 'BK-001',
+        calendarName: 'Court 1',
+        totalPrice: 30,
+        status: 'confirmed',
+      });
+    });
+
+    it('scopes through the calendar to the organisation', async () => {
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+      await service.listBookings(ORG, MEMBER, TODAY);
+
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('b.user_id = $1');
+      expect(String(sql)).toContain('c.organisation_id = $2');
+      expect(params).toEqual([MEMBER, ORG]);
+    });
+
+    it('shows a cancelled past booking as cancelled, not completed', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [bookingRow({ booking_status: 'cancelled', booking_date: '2026-01-01' })],
+      } as any);
+
+      const [booking] = await service.listBookings(ORG, MEMBER, TODAY);
+      expect(booking.status).toBe('cancelled');
+    });
+  });
+
+  describe('listMemberships', () => {
+    /** First call is the membership list, second the open types. */
+    const respond = (memberships: any[], openTypes: any[]) => {
+      mockDb.query
+        .mockResolvedValueOnce({ rows: memberships } as any)
+        .mockResolvedValueOnce({ rows: openTypes } as any);
+    };
+
+    it('returns memberships with their type named', async () => {
+      respond([membershipRow()], [{ id: 'mt-1' }]);
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+      expect(membership).toMatchObject({
+        membershipNumber: 'M-0001',
+        membershipTypeName: 'Full Member',
+        status: 'active',
+      });
+    });
+
+    it('scopes by member and organisation', async () => {
+      respond([membershipRow()], [{ id: 'mt-1' }]);
+      await service.listMemberships(ORG, MEMBER, TODAY);
+
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('m.user_id = $1');
+      expect(String(sql)).toContain('m.organisation_id = $2');
+      expect(params).toEqual([MEMBER, ORG]);
+    });
+
+    it('does not offer renewal while there is plenty of time left', async () => {
+      respond([membershipRow({ valid_until: '2026-12-31' })], [{ id: 'mt-1' }]);
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+      expect(membership.canRenew).toBe(false);
+      expect(membership.renewalNotOpen).toBe(false);
+    });
+
+    it('offers renewal inside the window when something is open to renew into', async () => {
+      respond([membershipRow({ valid_until: '2026-07-01' })], [{ id: 'mt-1' }]);
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+      expect(membership.canRenew).toBe(true);
+      expect(membership.daysRemaining).toBe(16);
+    });
+
+    /**
+     * The third condition of the C4 rule. Without it the screen shows a Renew
+     * button that leads to a page with nothing on it.
+     */
+    it('reports renewals as not yet open when no membership type is available', async () => {
+      respond([membershipRow({ valid_until: '2026-07-01' })], []);
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+      expect(membership.canRenew).toBe(false);
+      expect(membership.renewalNotOpen).toBe(true);
+    });
+
+    it('does not offer renewal for a cancelled membership', async () => {
+      respond(
+        [membershipRow({ status: 'cancelled', valid_until: '2026-07-01' })],
+        [{ id: 'mt-1' }]
+      );
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+      expect(membership.canRenew).toBe(false);
+      expect(membership.renewalNotOpen).toBe(false);
+    });
+
+    it('skips the membership-type lookup entirely when the member has none', async () => {
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      await expect(service.listMemberships(ORG, MEMBER, TODAY)).resolves.toEqual([]);
+      expect(mockDb.query).toHaveBeenCalledTimes(1);
+    });
+
+    it('only counts membership types that are active and not expired', async () => {
+      respond([membershipRow({ valid_until: '2026-07-01' })], [{ id: 'mt-1' }]);
+      await service.listMemberships(ORG, MEMBER, TODAY);
+
+      const [sql] = mockDb.query.mock.calls[1];
+      expect(String(sql)).toContain("membership_status = 'active'");
+      expect(String(sql)).toContain('valid_until IS NULL OR valid_until >=');
+    });
+  });
+  /**
+   * F1/F2 — receipts.
+   *
+   * The total is `card_amount + offline_amount`: one order can be part card and
+   * part cheque, and `payments.amount` is the decimal legacy column that
+   * predates the split. Reading it would understate a mixed order.
+   */
+  describe('listPayments', () => {
+    const paymentRow = (over: Record<string, any> = {}) => ({
+      id: 'pay-1',
+      payment_status: 'paid',
+      currency: 'EUR',
+      payment_method: 'card',
+      payment_date: new Date('2026-06-01'),
+      created_at: new Date('2026-06-01'),
+      card_amount: 5500,
+      offline_amount: 0,
+      handling_fee: 150,
+      offline_received_at: null,
+      lines: [
+        {
+          id: 'line-1',
+          itemType: 'merchandise',
+          description: 'Club polo — Large',
+          fee: 2750,
+          handlingFee: 75,
+          fulfilled: true,
+          fulfilmentError: null,
+        },
+      ],
+      ...over,
+    });
+
+    it('totals card and offline together', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [paymentRow({ card_amount: 3000, offline_amount: 2500 })],
+        rowCount: 1,
+      } as any);
+
+      const [payment] = await service.listPayments(ORG, MEMBER);
+
+      expect(payment).toMatchObject({ cardAmount: 3000, offlineAmount: 2500, total: 5500 });
+    });
+
+    it('carries the lines so a receipt reads as more than a figure', async () => {
+      mockDb.query.mockResolvedValue({ rows: [paymentRow()], rowCount: 1 } as any);
+
+      const [payment] = await service.listPayments(ORG, MEMBER);
+
+      expect(payment.lines).toEqual([
+        expect.objectContaining({ description: 'Club polo — Large', fee: 2750, fulfilled: true }),
+      ]);
+    });
+
+    /** Paid for and produced nothing — the member should hear it here. */
+    it('surfaces a line that failed to fulfil, with the reason', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [
+          paymentRow({
+            lines: [
+              {
+                id: 'line-1',
+                itemType: 'booking',
+                description: 'Tennis court 1',
+                fee: 1200,
+                handlingFee: 0,
+                fulfilled: false,
+                fulfilmentError: 'That slot is fully booked',
+              },
+            ],
+          }),
+        ],
+        rowCount: 1,
+      } as any);
+
+      const [payment] = await service.listPayments(ORG, MEMBER);
+
+      expect(payment.lines[0]).toMatchObject({
+        fulfilled: false,
+        fulfilmentError: 'That slot is fully booked',
+      });
+    });
+
+    it('survives a payment with no lines at all', async () => {
+      mockDb.query.mockResolvedValue({ rows: [paymentRow({ lines: null })], rowCount: 1 } as any);
+
+      expect((await service.listPayments(ORG, MEMBER))[0].lines).toEqual([]);
+    });
+
+    it('scopes to this member in this organisation', async () => {
+      mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+      await service.listPayments(ORG, MEMBER);
+
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('p.user_id = $1');
+      expect(String(sql)).toContain('p.organisation_id = $2');
+      expect(params).toEqual([MEMBER, ORG]);
+    });
+
+    it('says when the club recorded an offline payment as received', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [
+          paymentRow({
+            card_amount: 0,
+            offline_amount: 5500,
+            offline_received_at: new Date('2026-06-09'),
+          }),
+        ],
+        rowCount: 1,
+      } as any);
+
+      const [payment] = await service.listPayments(ORG, MEMBER);
+
+      expect(payment.offlineReceivedAt).toEqual(new Date('2026-06-09'));
+    });
+  });
+  /**
+   * The one thing a member may change: cancelling their own booking.
+   *
+   * The policy is re-read from the database rather than trusted from the list —
+   * `canCancel` there is a snapshot, and a member who left the page open until
+   * the notice lapsed must not slip through. **No money moves**: the refund
+   * stays an act of the club.
+   */
+  describe('cancelBooking', () => {
+    const mockCalendar = calendarService as jest.Mocked<typeof calendarService>;
+
+    const bookingRow = (over: Record<string, any> = {}) => ({
+      id: 'booking-1',
+      booking_status: 'confirmed',
+      payment_status: 'paid',
+      booking_date: '2026-07-05',
+      refund_processed: false,
+      allow_cancellations: true,
+      cancel_days_in_advance: 2,
+      refund_payment_automatically: false,
+      ...over,
+    });
+
+    beforeEach(() => {
+      mockCalendar.cancelBookingWithRefund.mockReset();
+      mockCalendar.cancelBookingWithRefund.mockResolvedValue({ id: 'booking-1' } as any);
+    });
+
+    it('cancels a booking well inside the notice period', async () => {
+      mockDb.query.mockResolvedValue({ rows: [bookingRow()], rowCount: 1 } as any);
+
+      const outcome = await service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY);
+
+      expect(outcome).toEqual({ refundExpected: false });
+      expect(mockCalendar.cancelBookingWithRefund).toHaveBeenCalledWith(
+        'booking-1',
+        MEMBER,
+        expect.any(String),
+        // `refund_processed` records that money has gone back. It has not.
+        false
+      );
+    });
+
+    it('scopes the lookup to this member and organisation', async () => {
+      mockDb.query.mockResolvedValue({ rows: [bookingRow()], rowCount: 1 } as any);
+
+      await service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY);
+
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('b.user_id = $2');
+      expect(String(sql)).toContain('c.organisation_id = $3');
+      expect(params).toEqual(['booking-1', MEMBER, ORG]);
+    });
+
+    /** Somebody else's booking and a nonexistent one are the same answer. */
+    it('reports a booking that is not this member’s as not found', async () => {
+      mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+      await expect(service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY)).rejects.toBeInstanceOf(
+        NotFoundError
+      );
+      expect(mockCalendar.cancelBookingWithRefund).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the club does not allow members to cancel', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [bookingRow({ allow_cancellations: false })],
+        rowCount: 1,
+      } as any);
+
+      await expect(service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY)).rejects.toThrow(
+        /does not allow/i
+      );
+      expect(mockCalendar.cancelBookingWithRefund).not.toHaveBeenCalled();
+    });
+
+    /** The snapshot problem: the page was open while the window closed. */
+    it('refuses when the notice period has lapsed since the list was drawn', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [bookingRow({ booking_date: '2026-06-16' })],
+        rowCount: 1,
+      } as any);
+
+      await expect(service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY)).rejects.toThrow(
+        /at least 2 days/i
+      );
+    });
+
+    it('refuses one already cancelled', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [bookingRow({ booking_status: 'cancelled' })],
+        rowCount: 1,
+      } as any);
+
+      await expect(service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY)).rejects.toBeInstanceOf(
+        ValidationError
+      );
+    });
+
+    it('reports that a refund is due when the club refunds automatically', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [bookingRow({ refund_payment_automatically: true })],
+        rowCount: 1,
+      } as any);
+
+      expect(await service.cancelBooking(ORG, MEMBER, 'booking-1', TODAY)).toEqual({
+        refundExpected: true,
+      });
+      // Still not marked as refunded — that is the club's act, not this one.
+      expect(mockCalendar.cancelBookingWithRefund).toHaveBeenCalledWith(
+        'booking-1',
+        MEMBER,
+        expect.any(String),
+        false
+      );
+    });
+  });
+});

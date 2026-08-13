@@ -1,21 +1,35 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from '../config/swagger';
 
+
 describe('API Documentation Endpoint', () => {
   let app: express.Application;
+  let server: Server;
 
-  beforeAll(() => {
+  /*
+   * One listener for the file: `request(app)` starts a server on a fresh
+   * ephemeral port per call, and that churn ends in ports being reused while
+   * the last connection's packets are still in flight — the client then reads
+   * bytes that are not a response at all.
+   */
+  beforeAll((done) => {
     app = express();
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
       customCss: '.swagger-ui .topbar { display: none }',
       customSiteTitle: 'AWS Web Framework API Documentation'
     }));
+    server = app.listen(0, done);
+  });
+
+  afterAll((done) => {
+    server.close(done);
   });
 
   it('should serve Swagger UI at /api-docs', async () => {
-    const response = await request(app).get('/api-docs/');
+    const response = await request(server).get('/api-docs/');
     
     // Swagger UI returns HTML
     expect(response.status).toBe(200);

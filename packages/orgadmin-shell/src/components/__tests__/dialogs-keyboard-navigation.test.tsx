@@ -279,7 +279,9 @@ describe('Dialog Components - Keyboard Navigation', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
       });
 
-      // Rapid keyboard interactions
+      // Rapid keyboard interactions. Two tabs: the first lands on the
+      // "don't show this again" checkbox, the second on Got it.
+      await user.tab();
       await user.tab();
       await user.keyboard('{Enter}');
 

@@ -1,11 +1,29 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../index';
 import { register } from '../config/metrics';
+
+
+/*
+ * One listener for the whole file: `request(server)` starts a server on a fresh
+ * ephemeral port per call, and that churn ends in ports being reused while the
+ * last connection's packets are still in flight — the client then reads bytes
+ * that are not a response at all.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
 
 describe('Metrics Endpoint', () => {
   describe('GET /metrics', () => {
     it('should return metrics in Prometheus format', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/metrics')
         .expect(200);
 
@@ -15,7 +33,7 @@ describe('Metrics Endpoint', () => {
     });
 
     it('should include default Node.js metrics', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/metrics')
         .expect(200);
 
@@ -26,7 +44,7 @@ describe('Metrics Endpoint', () => {
     });
 
     it('should include custom HTTP metrics', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/metrics')
         .expect(200);
 
@@ -36,7 +54,7 @@ describe('Metrics Endpoint', () => {
     });
 
     it('should include custom database metrics', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/metrics')
         .expect(200);
 
@@ -46,7 +64,7 @@ describe('Metrics Endpoint', () => {
     });
 
     it('should include business logic metrics', async () => {
-      const response = await request(app)
+      const response = await request(server)
         .get('/metrics')
         .expect(200);
 

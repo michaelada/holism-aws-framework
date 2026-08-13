@@ -21,20 +21,46 @@ import fc from 'fast-check';
 const testEnvPath = path.resolve(__dirname, '../../../.env.test');
 config({ path: testEnvPath });
 
+/** Schema these migration fixtures live in, so `public` is never disturbed. */
+const MIGRATION_TEST_SCHEMA = 'migration_test';
+
 describe('Feature: membership-discount-integration, Migration Tests', () => {
   let pool: Pool;
   const migrationPath = path.resolve(__dirname, '../../migrations/add-membership-type-discount-ids.sql');
   let migrationSQL: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Create a connection pool for testing
+    /*
+     * A scratch schema, not `public`.
+     *
+     * This suite proves a migration behaves by dropping the table and building
+     * it in its pre-migration shape. Done in `public`, that deletes the table
+     * every other suite in the run depends on — the tests share one database,
+     * and jest runs them in a single worker, so whatever comes afterwards finds
+     * the schema gone. Confining the pool's search_path here keeps both the
+     * creates and the drops inside a schema nobody else reads.
+     */
     pool = new Pool({
       host: process.env.DATABASE_HOST || 'localhost',
       port: parseInt(process.env.DATABASE_PORT || '5432'),
       database: process.env.DATABASE_NAME || 'aws_framework_test',
       user: process.env.DATABASE_USER || 'postgres',
       password: process.env.DATABASE_PASSWORD || 'postgres',
+      options: `-c search_path=${MIGRATION_TEST_SCHEMA}`,
     });
+
+    // The schema itself has to exist before anything resolves against it, and
+    // creating it is independent of the search_path.
+    const bootstrap = new Pool({
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432'),
+      database: process.env.DATABASE_NAME || 'aws_framework_test',
+      user: process.env.DATABASE_USER || 'postgres',
+      password: process.env.DATABASE_PASSWORD || 'postgres',
+    });
+    await bootstrap.query(`CREATE SCHEMA IF NOT EXISTS ${MIGRATION_TEST_SCHEMA}`);
+    await bootstrap.end();
 
     // Read migration file
     migrationSQL = fs.readFileSync(migrationPath, 'utf8');
@@ -105,7 +131,8 @@ describe('Feature: membership-discount-integration, Migration Tests', () => {
             const columnResult = await pool.query(`
               SELECT COUNT(*) as count
               FROM information_schema.columns
-              WHERE table_name = 'membership_types'
+              WHERE table_schema = '${MIGRATION_TEST_SCHEMA}'
+              AND table_name = 'membership_types'
               AND column_name = 'discount_ids';
             `);
             
@@ -115,7 +142,8 @@ describe('Feature: membership-discount-integration, Migration Tests', () => {
             const indexResult = await pool.query(`
               SELECT COUNT(*) as count
               FROM pg_indexes
-              WHERE tablename = 'membership_types'
+              WHERE schemaname = '${MIGRATION_TEST_SCHEMA}'
+              AND tablename = 'membership_types'
               AND indexname = 'idx_membership_types_discount_ids';
             `);
             
@@ -296,7 +324,8 @@ describe('Feature: membership-discount-integration, Migration Tests', () => {
       const columnResult = await pool.query(`
         SELECT column_name, data_type, column_default
         FROM information_schema.columns
-        WHERE table_name = 'membership_types'
+        WHERE table_schema = '${MIGRATION_TEST_SCHEMA}'
+        AND table_name = 'membership_types'
         AND column_name = 'discount_ids';
       `);
       
@@ -313,7 +342,8 @@ describe('Feature: membership-discount-integration, Migration Tests', () => {
       const indexResult = await pool.query(`
         SELECT indexname, indexdef
         FROM pg_indexes
-        WHERE tablename = 'membership_types'
+        WHERE schemaname = '${MIGRATION_TEST_SCHEMA}'
+        AND tablename = 'membership_types'
         AND indexname = 'idx_membership_types_discount_ids';
       `);
       

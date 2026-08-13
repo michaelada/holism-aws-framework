@@ -2,9 +2,31 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { Layout } from '../Layout';
-import { OrganisationProvider } from '../../context/OrganisationContext';
+// The app wraps in the shared provider from orgadmin-core, and that is the
+// context the page reads — the shell's own copy is a different one.
+import { OrganisationProvider } from '@aws-web-framework/orgadmin-core';
 import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { ModuleRegistration } from '../../types/module.types';
+import enGB from '../../locales/en-GB/translation.json';
+/*
+ * Resolve keys against the real en-GB strings, so the assertions below read as
+ * what an administrator sees rather than as dotted key paths.
+ */
+vi.mock('../../hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const value = key
+        .split('.')
+        .reduce<any>((node, part) => (node == null ? undefined : node[part]), enGB);
+      if (typeof value !== 'string') return key;
+      return value.replace(/{{(\w+)}}/g, (_match, name) =>
+        String(options?.[name] ?? `{{${name}}}`)
+      );
+    },
+    i18n: { language: 'en-GB', changeLanguage: vi.fn() },
+  }),
+}));
+
 import { Dashboard as DashboardIcon, Event as EventIcon } from '@mui/icons-material';
 
 // Mock organisation data
@@ -36,7 +58,9 @@ const mockModules: ModuleRegistration[] = [
       icon: EventIcon,
       path: '/events',
     },
-    routes: [],
+    // The drawer shows the current module's items, and the current module is
+    // matched on its registered routes.
+    routes: [{ path: 'events', element: null as never }],
     menuItem: {
       label: 'Events',
       path: '/events',
@@ -46,6 +70,12 @@ const mockModules: ModuleRegistration[] = [
 ];
 
 const renderLayout = (modules: ModuleRegistration[] = [], onLogout = vi.fn()) => {
+  /*
+   * Away from the landing page: on `/` the layout deliberately shows no
+   * navigation and no logout, because that page is the menu.
+   */
+  window.history.pushState({}, '', '/events');
+
   return render(
     <BrowserRouter>
       <OrganisationProvider organisation={mockOrganisation}>
@@ -76,12 +106,13 @@ describe('Layout Component', () => {
     expect(orgNames.length).toBeGreaterThan(0);
   });
 
-  it('should render navigation menu with Dashboard link', () => {
+  it('should render navigation menu with a link back to the main page', () => {
     renderLayout();
     
-    // Dashboard link should always be present (multiple times due to mobile/desktop drawers)
-    const dashboardLinks = screen.getAllByText('Dashboard');
-    expect(dashboardLinks.length).toBeGreaterThan(0);
+    // The way back to the main page is the entry the drawer always offers
+    // (twice over — the mobile and desktop drawers are both mounted).
+    const homeLinks = screen.getAllByText('Back to Main Page');
+    expect(homeLinks.length).toBeGreaterThan(0);
   });
 
   it('should render module menu items', () => {

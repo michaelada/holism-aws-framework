@@ -81,16 +81,16 @@ describe('MembershipNumberGenerator', () => {
 
     // Create test organizations
     const org1Result = await db.query(
-      `INSERT INTO organizations (name, organization_type_id, language, currency, keycloak_group_id, display_name)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO organizations (url_code, name, organization_type_id, language, currency, keycloak_group_id, display_name)
+       VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6)
        RETURNING id`,
       [`test-org-1-${Date.now()}`, testOrgTypeId, 'en', 'GBP', `test-org-1-${Date.now()}`, 'Test Org 1']
     );
     testOrgId1 = org1Result.rows[0].id;
 
     const org2Result = await db.query(
-      `INSERT INTO organizations (name, organization_type_id, language, currency, keycloak_group_id, display_name)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO organizations (url_code, name, organization_type_id, language, currency, keycloak_group_id, display_name)
+       VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6)
        RETURNING id`,
       [`test-org-2-${Date.now()}`, testOrgTypeId, 'en', 'GBP', `test-org-2-${Date.now()}`, 'Test Org 2']
     );
@@ -117,14 +117,22 @@ describe('MembershipNumberGenerator', () => {
       await db.query('DELETE FROM organizations WHERE id IN ($1, $2)', [testOrgId1, testOrgId2]);
       await db.query('DELETE FROM organization_types WHERE id = $1', [testOrgTypeId]);
       
-      // Drop the test table
-      await db.query('DROP TABLE IF EXISTS membership_number_sequences CASCADE');
+      /*
+       * The table is not this suite's to drop. `CREATE TABLE IF NOT EXISTS`
+       * above adopts the real one when it is already there — which it is, the
+       * migrations create it — so dropping it here takes it away from every
+       * suite that runs afterwards. Its own rows are removed above.
+       */
     } catch (error) {
       console.error('Cleanup error:', error);
     }
 
     try {
-      await db.close();
+      // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
     } catch (error) {
       console.error('Database close error:', error);
     }

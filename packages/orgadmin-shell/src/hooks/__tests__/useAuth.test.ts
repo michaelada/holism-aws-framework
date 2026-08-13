@@ -196,7 +196,7 @@ describe('useAuth', () => {
 
     it('should handle organisation fetch error', async () => {
       mockKeycloakInstance.init.mockResolvedValueOnce(true);
-      mockedAxios.get.mockRejectedValueOnce(new Error('Failed to load organisation'));
+      mockedAxios.get.mockRejectedValueOnce(new Error('The organisation service is unavailable'));
 
       const { result } = renderHook(() => useAuth(mockKeycloakConfig));
 
@@ -204,7 +204,9 @@ describe('useAuth', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.error).toBe('Failed to load organisation data');
+      // The underlying reason is surfaced rather than a generic wrapper — it is
+      // what the error screen shows the administrator.
+      expect(result.current.error).toBe('The organisation service is unavailable');
       expect(result.current.isOrgAdmin).toBe(false);
       expect(result.current.organisation).toBeNull();
     });

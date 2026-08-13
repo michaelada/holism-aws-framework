@@ -44,13 +44,35 @@ jest.mock('../../middleware/auth.middleware', () => ({
 }));
 
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { userPreferencesService } from '../../services/user-preferences.service';
 
 // Mock the service
 jest.mock('../../services/user-preferences.service');
 
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('GET /api/user-preferences/onboarding', () => {
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -68,7 +90,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -95,7 +117,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -119,7 +141,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -140,7 +162,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -153,7 +175,7 @@ describe('GET /api/user-preferences/onboarding', () => {
   describe('Authentication Failures (Requirement 9.3)', () => {
     it('should return 401 when no authorization header is provided', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding');
 
       // Assert
@@ -164,7 +186,7 @@ describe('GET /api/user-preferences/onboarding', () => {
 
     it('should return 401 when invalid token is provided', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer invalid-token');
 
@@ -175,7 +197,7 @@ describe('GET /api/user-preferences/onboarding', () => {
 
     it('should return 401 when authorization header format is invalid', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'InvalidFormat token');
 
@@ -194,7 +216,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -212,7 +234,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -228,7 +250,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -252,7 +274,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -281,7 +303,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act - Try to pass a different userId in query params (should be ignored)
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding?userId=other-user-456')
         .set('Authorization', 'Bearer valid-token');
 
@@ -310,7 +332,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -337,7 +359,7 @@ describe('GET /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token');
 
@@ -366,7 +388,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: true });
@@ -395,7 +417,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: ['dashboard', 'users'] });
@@ -421,7 +443,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ 
@@ -447,7 +469,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: allModules });
@@ -469,7 +491,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: [] });
@@ -483,7 +505,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
   describe('Authentication Failures (Requirement 9.3)', () => {
     it('should return 401 when no authorization header is provided', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .send({ welcomeDismissed: true });
 
@@ -495,7 +517,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 401 when invalid token is provided', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer invalid-token')
         .send({ welcomeDismissed: true });
@@ -509,7 +531,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
   describe('Validation Errors (Requirement 9.1)', () => {
     it('should return 400 when welcomeDismissed is not a boolean', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: 'true' });
@@ -523,7 +545,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 400 when modulesVisited is not an array', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: 'dashboard' });
@@ -537,7 +559,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 400 when modulesVisited contains invalid module IDs', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: ['dashboard', 'invalid-module', 'users'] });
@@ -552,7 +574,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 400 when no preferences are provided', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({});
@@ -566,7 +588,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 400 when modulesVisited contains only invalid module IDs', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: ['invalid1', 'invalid2'] });
@@ -579,7 +601,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 400 when welcomeDismissed is a number', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: 1 });
@@ -591,7 +613,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
 
     it('should return 400 when modulesVisited contains non-string values', async () => {
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: ['dashboard', 123, 'users'] });
@@ -611,7 +633,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: true });
@@ -630,7 +652,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: true });
@@ -655,7 +677,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: true });
@@ -681,7 +703,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act - Try to pass a different userId in the body (should be ignored)
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ 
@@ -716,7 +738,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: true });
@@ -742,7 +764,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ welcomeDismissed: true });
@@ -769,7 +791,7 @@ describe('PUT /api/user-preferences/onboarding', () => {
       );
 
       // Act
-      const response = await request(app)
+      const response = await request(server)
         .put('/api/user-preferences/onboarding')
         .set('Authorization', 'Bearer valid-token')
         .send({ modulesVisited: ['forms'] });

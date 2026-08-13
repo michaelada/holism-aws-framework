@@ -16,7 +16,11 @@ describe('Generic CRUD Service - Property Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   beforeEach(async () => {
@@ -328,10 +332,22 @@ describe('Generic CRUD Service - Property Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            values: fc.array(fc.string({ minLength: 1, maxLength: 20 }), {
-              minLength: 5,
-              maxLength: 10
-            })
+            /*
+             * Letters and digits only: Postgres sorts under its own collation,
+             * where punctuation and spaces order differently from JavaScript's
+             * code-unit sort, and the mismatch says nothing about the query
+             * being tested.
+             */
+            values: fc.array(
+              fc.stringOf(
+                fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789'.split('')),
+                { minLength: 1, maxLength: 20 }
+              ),
+              {
+                minLength: 5,
+                maxLength: 10
+              }
+            )
           }),
           async (testData) => {
             // Setup

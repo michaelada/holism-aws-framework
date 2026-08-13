@@ -12,13 +12,12 @@
 
 import * as fc from 'fast-check';
 import React from 'react';
-import { render, waitFor, screen } from '@testing-library/react';
+import { render, waitFor, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OnboardingProvider } from '../../context/OnboardingProvider';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { ModuleId } from '../../context/OnboardingContext';
-import { ModuleIntroductionDialog } from '../../components/ModuleIntroductionDialog';
 import axios from 'axios';
 
 // Mock axios
@@ -80,13 +79,6 @@ const TestComponent: React.FC<TestComponentProps> = ({ onMount }) => {
       <div data-testid="loading">{context.loading ? 'loading' : 'loaded'}</div>
       <div data-testid="welcome-open">{context.welcomeDialogOpen ? 'open' : 'closed'}</div>
       <div data-testid="module-open">{context.moduleIntroDialogOpen ? 'open' : 'closed'}</div>
-      {context.moduleIntroDialogOpen && context.currentModule && (
-        <ModuleIntroductionDialog
-          open={context.moduleIntroDialogOpen}
-          moduleId={context.currentModule}
-          onClose={() => context.dismissModuleIntro(context.currentModule!)}
-        />
-      )}
     </div>
   );
 };
@@ -116,6 +108,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
       fc.asyncProperty(
         fc.boolean(), // dontShowAgain checkbox state
         async (dontShowAgainChecked) => {
+          cleanup();
           vi.clearAllMocks();
 
           // Arrange: Mock preferences with welcome NOT dismissed
@@ -187,6 +180,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
       fc.asyncProperty(
         moduleIdArbitrary,
         async (moduleId) => {
+          cleanup();
           vi.clearAllMocks();
 
           // Arrange: Mock preferences with welcome dismissed and module not visited
@@ -263,6 +257,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
         fc.constantFrom<'welcome' | 'module'>('welcome', 'module'),
         moduleIdArbitrary,
         async (dialogType, moduleId) => {
+          cleanup();
           vi.clearAllMocks();
 
           // Arrange: Mock preferences based on dialog type
@@ -309,7 +304,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
           if (dialogType === 'welcome') {
             await contextRef?.dismissWelcomeDialog(false);
           } else {
-            await contextRef?.dismissModuleIntro(moduleId);
+            await contextRef?.dismissModuleIntro(moduleId, false);
           }
 
           // Assert: Dialog should close immediately
@@ -338,6 +333,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
         moduleIdArbitrary, // module to visit
         fc.boolean(), // dontShowAgain for welcome
         async (welcomeDismissed, modulesVisited, targetModule, dontShowAgain) => {
+          cleanup();
           vi.clearAllMocks();
 
           // Arrange: Mock preferences
@@ -402,7 +398,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
                 await user.click(gotItButton);
               } else {
                 // Fallback to programmatic dismissal
-                await contextRef.dismissModuleIntro(contextRef.currentModule);
+                await contextRef.dismissModuleIntro(contextRef.currentModule, false);
               }
             }
 
@@ -434,6 +430,7 @@ describe('Property 6: Universal Dialog Dismissibility', () => {
       fc.asyncProperty(
         fc.integer({ min: 2, max: 5 }), // number of rapid dismiss attempts
         async (dismissAttempts) => {
+          cleanup();
           vi.clearAllMocks();
 
           // Arrange: Mock preferences with welcome NOT dismissed

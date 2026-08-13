@@ -64,7 +64,10 @@ describe('OrgAdminUserService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe('admin1@example.com');
-      expect(result[0].roles).toEqual(['role-1']);
+      // `roles` carries the role names an administrator would recognise;
+      // the ids are alongside in `roleIds`.
+      expect(result[0].roles).toEqual(['Admin']);
+      expect(result[0].roleIds).toEqual(['role-1']);
       expect(mockDb.query).toHaveBeenCalledWith(
         expect.stringContaining('user_type = \'org-admin\''),
         ['org-1']

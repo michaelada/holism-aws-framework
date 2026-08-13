@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
@@ -11,7 +12,28 @@ import { db } from '../../database/pool';
  * - Super admin only access for create/update/delete
  * - Foreign key constraints
  */
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Organization Payment Method API Routes Integration Tests', () => {
+
   let authToken: string;
   let adminUserId: string;
   let testOrganizationId: string;
@@ -40,7 +62,11 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   beforeEach(async () => {
@@ -73,8 +99,8 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
 
     // Create test organization
     const orgResult = await db.query(
-      `INSERT INTO organizations (organization_type_id, name, display_name, status, keycloak_group_id, language, currency, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      `INSERT INTO organizations (url_code, organization_type_id, name, display_name, status, keycloak_group_id, language, currency, created_at, updated_at)
+       VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
        RETURNING id`,
       [testOrganizationTypeId, 'test_org_1', 'Test Organization 1', 'active', 'test-keycloak-group-1', 'en', 'GBP']
     );
@@ -99,7 +125,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         [testOrganizationId, testPaymentMethodId, 'inactive', '{}']
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -115,8 +141,8 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
     it('should return empty array for organization with no payment methods', async () => {
       // Create organization without payment methods
       const orgResult = await db.query(
-        `INSERT INTO organizations (organization_type_id, name, display_name, status, keycloak_group_id, language, currency, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        `INSERT INTO organizations (url_code, organization_type_id, name, display_name, status, keycloak_group_id, language, currency, created_at, updated_at)
+         VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
          RETURNING id`,
         [testOrganizationTypeId, 'test_org_empty', 'Test Organization Empty', 'active', 'test-keycloak-group-empty', 'en', 'GBP']
       );
@@ -128,7 +154,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         [emptyOrgId]
       );
 
-      const response = await request(app)
+      const response = await request(server)
         .get(`/api/admin/organizations/${emptyOrgId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -151,7 +177,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentData: { test: 'data' }
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
@@ -171,7 +197,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentMethodId: testPaymentMethodId
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
@@ -187,14 +213,14 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
       };
 
       // Create first association
-      await request(app)
+      await request(server)
         .post(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
         .expect(201);
 
       // Try to create duplicate
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
@@ -210,7 +236,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentMethodId: testPaymentMethodId
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/organizations/${fakeOrgId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
@@ -226,7 +252,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentMethodId: fakeMethodId
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .post(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
@@ -255,7 +281,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentData: { apiKey: 'test-key', merchantId: '12345' }
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/organizations/${testOrganizationId}/payment-methods/${testPaymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates)
@@ -277,7 +303,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         status: 'active'
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/organizations/${testOrganizationId}/payment-methods/${testPaymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates)
@@ -299,7 +325,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentData: { newKey: 'newValue' }
       };
 
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/organizations/${testOrganizationId}/payment-methods/${testPaymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates)
@@ -312,7 +338,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
     it('should return 404 for non-existent association', async () => {
       const fakeMethodId = '00000000-0000-0000-0000-000000000000';
       
-      const response = await request(app)
+      const response = await request(server)
         .put(`/api/admin/organizations/${testOrganizationId}/payment-methods/${fakeMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ status: 'active' })
@@ -336,7 +362,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         [testOrganizationId, testPaymentMethodId, 'inactive', '{}']
       );
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/organizations/${testOrganizationId}/payment-methods/${testPaymentMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -353,7 +379,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
     it('should return 404 for non-existent association', async () => {
       const fakeMethodId = '00000000-0000-0000-0000-000000000000';
       
-      const response = await request(app)
+      const response = await request(server)
         .delete(`/api/admin/organizations/${testOrganizationId}/payment-methods/${fakeMethodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
@@ -438,7 +464,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
         paymentData: complexPaymentData
       };
 
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(associationData)
@@ -447,7 +473,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
       expect(createResponse.body.paymentData).toEqual(complexPaymentData);
 
       // Retrieve and verify
-      const getResponse = await request(app)
+      const getResponse = await request(server)
         .get(`/api/admin/organizations/${testOrganizationId}/payment-methods`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);

@@ -11,7 +11,7 @@
  */
 
 import * as fc from 'fast-check';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HelpDrawer } from '../HelpDrawer';
 import { ModuleId } from '../../context/OnboardingContext';
@@ -24,6 +24,18 @@ const mockI18n = {
 
 vi.mock('../../hooks/useTranslation', () => ({
   useTranslation: () => ({ t: mockT, i18n: mockI18n }),
+}));
+
+/*
+ * Help content is markdown files loaded by `getHelpContent`, not translation
+ * keys. Each property below still expresses its content as a `<module>.<page>`
+ * answer from `mockT`, so the loader is pointed at the same answer rather than
+ * every property being rewritten — what is under test here is the markdown the
+ * drawer renders, whatever supplied it.
+ */
+vi.mock('../../locales/helpLoader', () => ({
+  getHelpContent: (_locale: string, moduleId: string, pageId: string) =>
+    mockT(`${moduleId}.${pageId}`) || null,
 }));
 
 /**
@@ -77,9 +89,14 @@ describe('Property 9: Markdown Rendering', () => {
           // Assert: Property - Heading should be rendered as proper HTML element
           // Note: MUI Drawer renders in a portal, we need to find all headings and check for our content
           // The drawer has an h2 title "Help", so we need to find headings that contain "Test Heading"
-          const allHeadings = Array.from(document.body.querySelectorAll(`h${level}`));
-          const headingElement = allHeadings.find(h => h.textContent?.includes('Test Heading'));
-          expect(headingElement).toBeTruthy();
+          // The markdown renderer is lazy-loaded, so nothing is in the DOM on
+          // the first tick — every assertion here has to wait for it.
+          const headingElement = await waitFor(() => {
+            const allHeadings = Array.from(document.body.querySelectorAll(`h${level}`));
+            const found = allHeadings.find(h => h.textContent?.includes('Test Heading'));
+            expect(found).toBeTruthy();
+            return found;
+          });
           expect(headingElement?.textContent).toContain('Test Heading');
 
           unmount();
@@ -123,9 +140,8 @@ describe('Property 9: Markdown Rendering', () => {
           );
 
           // Assert: Property - List should be rendered as ul with li elements
-          const ulElement = document.body.querySelector('ul');
-          expect(ulElement).toBeTruthy();
-          
+          await waitFor(() => expect(document.body.querySelector('ul')).toBeTruthy());
+
           const liElements = document.body.querySelectorAll('li');
           expect(liElements.length).toBe(3);
 
@@ -171,8 +187,11 @@ describe('Property 9: Markdown Rendering', () => {
           );
 
           // Assert: Property - Link should be rendered as anchor element
-          const linkElement = document.body.querySelector('a[href]');
-          expect(linkElement).toBeTruthy();
+          const linkElement = await waitFor(() => {
+            const found = document.body.querySelector('a[href]');
+            expect(found).toBeTruthy();
+            return found;
+          });
           expect(linkElement?.getAttribute('href')).toBe(url);
 
           unmount();
@@ -216,8 +235,11 @@ describe('Property 9: Markdown Rendering', () => {
           );
 
           // Assert: Property - Bold text should be rendered with strong element
-          const strongElement = document.body.querySelector('strong');
-          expect(strongElement).toBeTruthy();
+          const strongElement = await waitFor(() => {
+            const found = document.body.querySelector('strong');
+            expect(found).toBeTruthy();
+            return found;
+          });
           expect(strongElement?.textContent).toBe('bold text');
 
           unmount();
@@ -261,8 +283,11 @@ describe('Property 9: Markdown Rendering', () => {
           );
 
           // Assert: Property - Italic text should be rendered with em element
-          const emElement = document.body.querySelector('em');
-          expect(emElement).toBeTruthy();
+          const emElement = await waitFor(() => {
+            const found = document.body.querySelector('em');
+            expect(found).toBeTruthy();
+            return found;
+          });
           expect(emElement?.textContent).toBe('italic text');
 
           unmount();
@@ -307,7 +332,7 @@ describe('Property 9: Markdown Rendering', () => {
           );
 
           // Assert: Property - All elements should be rendered correctly
-          expect(document.body.querySelector('h1')).toBeTruthy();
+          await waitFor(() => expect(document.body.querySelector('h1')).toBeTruthy());
           expect(document.body.querySelector('strong')).toBeTruthy();
           expect(document.body.querySelector('em')).toBeTruthy();
           expect(document.body.querySelector('ul')).toBeTruthy();
@@ -355,6 +380,8 @@ describe('Property 9: Markdown Rendering', () => {
                 moduleId={moduleId}
               />
             );
+
+            await waitFor(() => expect(document.body.querySelector('h1')).toBeTruthy());
 
             // Collect results
             results.push({

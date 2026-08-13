@@ -86,14 +86,14 @@ describe('Checkpoint 13: Feature Modules Complete', () => {
 
   describe('Events Module Translations', () => {
     it('should have all required Events translations in all locales', () => {
+      // The keys the Events module actually ships; a rename here should fail
+      // this test rather than have it assert names nothing uses.
       const requiredKeys = [
         'title',
         'createEvent',
+        'editEvent',
         'eventDetails',
-        'eventName',
-        'eventDate',
-        'activities',
-        'entries'
+        'activities'
       ];
 
       SUPPORTED_LOCALES.forEach(locale => {
@@ -131,7 +131,7 @@ describe('Checkpoint 13: Feature Modules Complete', () => {
         'membershipTypes',
         'members',
         'createMembershipType',
-        'memberDetails'
+        'details'
       ];
 
       SUPPORTED_LOCALES.forEach(locale => {
@@ -150,7 +150,7 @@ describe('Checkpoint 13: Feature Modules Complete', () => {
       const requiredKeys = [
         'title',
         'registrationTypes',
-        'registrations',
+        'registrationDetails',
         'createRegistrationType'
       ];
 
@@ -210,8 +210,8 @@ describe('Checkpoint 13: Feature Modules Complete', () => {
       const requiredKeys = [
         'title',
         'dashboard',
-        'tickets',
-        'ticketDetails'
+        'overview',
+        'details'
       ];
 
       SUPPORTED_LOCALES.forEach(locale => {
@@ -308,12 +308,14 @@ describe('Checkpoint 13: Feature Modules Complete', () => {
         'ticketing'
       ];
       
+      // Menu labels come from `modules.<id>.name`; `navigation` holds the
+      // chrome around them (app name, logout, organisation).
       SUPPORTED_LOCALES.forEach(locale => {
         const translations = i18n.getResourceBundle(locale, 'translation');
         
         navItems.forEach(item => {
-          expect(translations.navigation?.[item]).toBeDefined();
-          expect(translations.navigation[item]).not.toBe('');
+          expect(translations.modules?.[item]?.name).toBeDefined();
+          expect(translations.modules[item].name).not.toBe('');
         });
       });
     });
@@ -336,10 +338,15 @@ describe('Checkpoint 13: Feature Modules Complete', () => {
 
   describe('Translation Quality', () => {
     it('should not have placeholder or untranslated text', () => {
+      /*
+       * Case-sensitive and whole-word: an unanchored /TODO/i matches inside
+       * ordinary translated words — Spanish and Portuguese "Todos", Italian
+       * "metodo" — and would condemn correct translations as placeholders.
+       */
       const placeholderPatterns = [
-        /TODO/i,
-        /TRANSLATE/i,
-        /FIXME/i,
+        /\bTODO\b/,
+        /\bTRANSLATE\b/,
+        /\bFIXME\b/,
         // Only match square brackets that look like untranslated keys, not PII placeholders
         /\[UNTRANSLATED\]/i,
         /\[MISSING\]/i,

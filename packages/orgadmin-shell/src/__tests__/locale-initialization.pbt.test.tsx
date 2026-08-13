@@ -24,6 +24,9 @@ vi.mock('../i18n/config', () => {
     DEFAULT_LOCALE: 'en-GB',
     default: {
       language: 'en-GB',
+      // The provider only switches language on an initialised i18n; without
+      // this the mock looks uninitialised and nothing is ever called.
+      isInitialized: true,
       changeLanguage: mockChangeLanguage,
     },
     initializeI18n: vi.fn(),
@@ -60,7 +63,8 @@ describe('Locale Initialization Property-Based Tests', () => {
         fc.asyncProperty(
           fc.constantFrom(...SUPPORTED_LOCALES),
           async (locale) => {
-            // Reset mock before each test
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
             
             // Render LocaleProvider with organization locale
@@ -100,7 +104,8 @@ describe('Locale Initialization Property-Based Tests', () => {
             displayName: fc.string({ minLength: 1, maxLength: 100 }),
           }),
           async (orgData) => {
-            // Reset mock
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
             
             // Render LocaleProvider without organization locale
@@ -132,7 +137,8 @@ describe('Locale Initialization Property-Based Tests', () => {
             (s) => !SUPPORTED_LOCALES.includes(s as any)
           ),
           async (invalidLocale) => {
-            // Reset mock
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
             
             // Render LocaleProvider with invalid locale
@@ -175,7 +181,8 @@ describe('Locale Initialization Property-Based Tests', () => {
           fc.constantFrom(...SUPPORTED_LOCALES),
           fc.integer({ min: 1, max: 10 }),
           async (locale, rerenderCount) => {
-            // Reset mock
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
             
             // Render LocaleProvider with a specific locale
@@ -219,7 +226,8 @@ describe('Locale Initialization Property-Based Tests', () => {
             status: fc.constantFrom('active', 'inactive', 'blocked'),
           }),
           async (locale, updates) => {
-            // Reset mock
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
             
             let organization: Organisation = {
@@ -307,7 +315,8 @@ describe('Locale Initialization Property-Based Tests', () => {
             // Skip if locales are the same
             fc.pre(locale1 !== locale2);
             
-            // Reset mock
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
 
             const TestComponent = () => {
@@ -356,7 +365,8 @@ describe('Locale Initialization Property-Based Tests', () => {
         fc.asyncProperty(
           fc.array(fc.constantFrom(...SUPPORTED_LOCALES), { minLength: 2, maxLength: 5 }),
           async (locales) => {
-            // Reset mock
+            // Reset between property runs: each renders into the same document.
+            cleanup();
             (i18n.changeLanguage as any).mockClear();
             
             const TestComponent = () => {

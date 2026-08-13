@@ -1,6 +1,7 @@
 import * as fc from 'fast-check';
 import request from 'supertest';
 import express, { Express } from 'express';
+import type { Server } from 'http';
 
 // Shared state for capability mocking
 let mockCapabilities: string[] = [];
@@ -29,12 +30,26 @@ import { metadataService } from '../../services/metadata.service';
 
 describe('Metadata Routes Property-Based Tests', () => {
   let app: Express;
+  let server: Server;
 
-  beforeAll(() => {
+  /*
+   * One listener for the whole file.
+   *
+   * `request(server)` starts an ephemeral server per call, and these properties
+   * make hundreds of calls — enough that, late in a long run, one occasionally
+   * fails with "socket hang up" as a server is torn down under the request.
+   * Listening once and pointing supertest at that server removes the churn.
+   */
+  beforeAll((done) => {
     // Setup Express app with routes once
     app = express();
     app.use(express.json());
     app.use('/api/metadata', metadataRoutes);
+    server = app.listen(0, done);
+  });
+
+  afterAll((done) => {
+    server.close(done);
   });
 
   beforeEach(() => {
@@ -74,7 +89,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to create field
-            const response = await request(app)
+            const response = await request(server)
               .post('/api/metadata/fields')
               .send(fieldData);
 
@@ -110,7 +125,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to create field
-            const response = await request(app)
+            const response = await request(server)
               .post('/api/metadata/fields')
               .send(fieldData);
 
@@ -157,7 +172,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to create field
-            const response = await request(app)
+            const response = await request(server)
               .post('/api/metadata/fields')
               .send(fieldData);
 
@@ -220,7 +235,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to create field
-            const response = await request(app)
+            const response = await request(server)
               .post('/api/metadata/fields')
               .send(fieldData);
 
@@ -270,7 +285,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to create field
-            const response = await request(app)
+            const response = await request(server)
               .post('/api/metadata/fields')
               .send(fieldData);
 
@@ -319,7 +334,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to update field
-            const response = await request(app)
+            const response = await request(server)
               .put(`/api/metadata/fields/${shortName}`)
               .send(fieldData);
 
@@ -368,7 +383,7 @@ describe('Metadata Routes Property-Based Tests', () => {
             };
 
             // Act: Attempt to update field
-            const response = await request(app)
+            const response = await request(server)
               .put(`/api/metadata/fields/${shortName}`)
               .send(fieldData);
 

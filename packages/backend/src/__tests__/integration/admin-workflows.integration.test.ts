@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
 
@@ -85,7 +86,28 @@ jest.mock('../../services/keycloak-admin.factory', () => {
  * 
  * Validates: Requirements 12.8
  */
+
+/*
+ * One listener for the whole file.
+ *
+ * `request(app)` starts a server on a fresh ephemeral port for every call. Over
+ * a run that makes thousands of them, ports get reused while the previous
+ * connection's packets are still in flight, and the client reads bytes that are
+ * not a response at all — "Parse Error: Expected HTTP/", a hang-up, or somebody
+ * else's reply. One listener per file removes that churn.
+ */
+let server: Server;
+
+beforeAll((done) => {
+  server = app.listen(0, done);
+});
+
+afterAll((done) => {
+  server.close(done);
+});
+
 describe('Admin Workflows Integration Tests', () => {
+
   let authToken: string;
   let adminUserId: string;
 
@@ -111,7 +133,11 @@ describe('Admin Workflows Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await db.close();
+    // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
   });
 
   beforeEach(async () => {
@@ -130,7 +156,7 @@ describe('Admin Workflows Integration Tests', () => {
         domain: 'workflow1.example.com',
       };
 
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send(createData)
@@ -153,7 +179,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 2: Retrieve tenant
-      const getResponse = await request(app)
+      const getResponse = await request(server)
         .get(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -168,7 +194,7 @@ describe('Admin Workflows Integration Tests', () => {
         status: 'active',
       };
 
-      const updateResponse = await request(app)
+      const updateResponse = await request(server)
         .put(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateData)
@@ -185,7 +211,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 4: List tenants (should include our tenant)
-      const listResponse = await request(app)
+      const listResponse = await request(server)
         .get('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -193,7 +219,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(Array.isArray(listResponse.body)).toBe(true);
 
       // Step 5: Delete tenant
-      await request(app)
+      await request(server)
         .delete(`/api/admin/tenants/${tenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -222,7 +248,7 @@ describe('Admin Workflows Integration Tests', () => {
 
     beforeEach(async () => {
       // Create a test tenant for user tests
-      const tenantResponse = await request(app)
+      const tenantResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'workflow_user_tenant', displayName: 'Workflow User Tenant' });
@@ -242,7 +268,7 @@ describe('Admin Workflows Integration Tests', () => {
         tenantId: testTenantId,
       };
 
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send(createData)
@@ -260,7 +286,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 2: Retrieve user
-      const getResponse = await request(app)
+      const getResponse = await request(server)
         .get(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -274,7 +300,7 @@ describe('Admin Workflows Integration Tests', () => {
         email: 'updated-workflow1@example.com',
       };
 
-      const updateResponse = await request(app)
+      const updateResponse = await request(server)
         .put(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateData)
@@ -290,7 +316,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 4: Reset password
-      const resetResponse = await request(app)
+      const resetResponse = await request(server)
         .post(`/api/admin/users/${userId}/reset-password`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ password: 'NewPassword456!', temporary: false })
@@ -306,7 +332,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 5: List users (should include our user)
-      const listResponse = await request(app)
+      const listResponse = await request(server)
         .get('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -314,7 +340,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(Array.isArray(listResponse.body)).toBe(true);
 
       // Step 6: Filter users by tenant
-      const filterResponse = await request(app)
+      const filterResponse = await request(server)
         .get(`/api/admin/users?tenantId=${testTenantId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -322,7 +348,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(Array.isArray(filterResponse.body)).toBe(true);
 
       // Step 7: Delete user
-      await request(app)
+      await request(server)
         .delete(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -352,7 +378,7 @@ describe('Admin Workflows Integration Tests', () => {
 
     beforeEach(async () => {
       // Create a test user for role assignment tests
-      const userResponse = await request(app)
+      const userResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -373,7 +399,7 @@ describe('Admin Workflows Integration Tests', () => {
         permissions: ['read', 'write', 'delete'],
       };
 
-      const createResponse = await request(app)
+      const createResponse = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send(createData)
@@ -392,7 +418,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 2: List roles (should include our role)
-      const listResponse = await request(app)
+      const listResponse = await request(server)
         .get('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -400,7 +426,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(Array.isArray(listResponse.body)).toBe(true);
 
       // Step 3: Assign role to user
-      const assignResponse = await request(app)
+      const assignResponse = await request(server)
         .post(`/api/admin/users/${testUserId}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ roleName })
@@ -416,7 +442,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 4: Remove role from user
-      const removeResponse = await request(app)
+      const removeResponse = await request(server)
         .delete(`/api/admin/users/${testUserId}/roles/${roleName}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -431,7 +457,7 @@ describe('Admin Workflows Integration Tests', () => {
       expect(auditLogs.rows.length).toBe(1);
 
       // Step 5: Delete role
-      await request(app)
+      await request(server)
         .delete(`/api/admin/roles/${roleId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(204);
@@ -460,7 +486,7 @@ describe('Admin Workflows Integration Tests', () => {
       // In production, authentication is enforced by the auth middleware
       
       // With valid token, should succeed
-      const response = await request(app)
+      const response = await request(server)
         .get('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -481,7 +507,7 @@ describe('Admin Workflows Integration Tests', () => {
   describe('Comprehensive Audit Logging Flow', () => {
     it('should log all administrative actions with complete metadata', async () => {
       // Create tenant
-      const tenantResponse = await request(app)
+      const tenantResponse = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')
@@ -490,7 +516,7 @@ describe('Admin Workflows Integration Tests', () => {
       const tenantId = tenantResponse.body.id;
 
       // Create user
-      const userResponse = await request(app)
+      const userResponse = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')
@@ -505,7 +531,7 @@ describe('Admin Workflows Integration Tests', () => {
       const userId = userResponse.body.id;
 
       // Create role
-      const roleResponse = await request(app)
+      const roleResponse = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')
@@ -514,14 +540,14 @@ describe('Admin Workflows Integration Tests', () => {
       const roleName = roleResponse.body.name;
 
       // Assign role
-      await request(app)
+      await request(server)
         .post(`/api/admin/users/${userId}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')
         .send({ roleName });
 
       // Reset password
-      await request(app)
+      await request(server)
         .post(`/api/admin/users/${userId}/reset-password`)
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')
@@ -556,12 +582,12 @@ describe('Admin Workflows Integration Tests', () => {
   describe('Complex Multi-Entity Flow', () => {
     it('should handle complex workflow with multiple entities', async () => {
       // Create multiple tenants
-      const tenant1Response = await request(app)
+      const tenant1Response = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'workflow_complex_tenant1', displayName: 'Complex Tenant 1' });
 
-      const tenant2Response = await request(app)
+      const tenant2Response = await request(server)
         .post('/api/admin/tenants')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'workflow_complex_tenant2', displayName: 'Complex Tenant 2' });
@@ -570,12 +596,12 @@ describe('Admin Workflows Integration Tests', () => {
       const tenant2Id = tenant2Response.body.id;
 
       // Create multiple roles
-      const role1Response = await request(app)
+      const role1Response = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'workflow_complex_role1', displayName: 'Complex Role 1' });
 
-      const role2Response = await request(app)
+      const role2Response = await request(server)
         .post('/api/admin/roles')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'workflow_complex_role2', displayName: 'Complex Role 2' });
@@ -584,7 +610,7 @@ describe('Admin Workflows Integration Tests', () => {
       const role2Name = role2Response.body.name;
 
       // Create users in different tenants
-      const user1Response = await request(app)
+      const user1Response = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -595,7 +621,7 @@ describe('Admin Workflows Integration Tests', () => {
           tenantId: tenant1Id,
         });
 
-      const user2Response = await request(app)
+      const user2Response = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -610,18 +636,18 @@ describe('Admin Workflows Integration Tests', () => {
       const user2Id = user2Response.body.id;
 
       // Assign different roles to users
-      await request(app)
+      await request(server)
         .post(`/api/admin/users/${user1Id}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ roleName: role1Name });
 
-      await request(app)
+      await request(server)
         .post(`/api/admin/users/${user2Id}/roles`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ roleName: role2Name });
 
       // Filter users by tenant
-      const tenant1UsersResponse = await request(app)
+      const tenant1UsersResponse = await request(server)
         .get(`/api/admin/users?tenantId=${tenant1Id}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -629,13 +655,13 @@ describe('Admin Workflows Integration Tests', () => {
       expect(Array.isArray(tenant1UsersResponse.body)).toBe(true);
 
       // Update users
-      await request(app)
+      await request(server)
         .put(`/api/admin/users/${user1Id}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ firstName: 'Updated Complex' });
 
       // Reset password for one user
-      await request(app)
+      await request(server)
         .post(`/api/admin/users/${user1Id}/reset-password`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ password: 'ComplexPassword123!', temporary: false });
@@ -650,27 +676,27 @@ describe('Admin Workflows Integration Tests', () => {
       expect(allAuditLogs.rows.length).toBeGreaterThanOrEqual(8);
 
       // Clean up
-      await request(app)
+      await request(server)
         .delete(`/api/admin/users/${user1Id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/users/${user2Id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/tenants/${tenant1Id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/tenants/${tenant2Id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/roles/${role1Response.body.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      await request(app)
+      await request(server)
         .delete(`/api/admin/roles/${role2Response.body.id}`)
         .set('Authorization', `Bearer ${authToken}`);
     });

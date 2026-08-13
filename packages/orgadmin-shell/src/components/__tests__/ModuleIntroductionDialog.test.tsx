@@ -311,10 +311,13 @@ describe('ModuleIntroductionDialog Component - Unit Tests', () => {
       );
 
       const button = screen.getByRole('button', { name: /got it/i });
-      
-      // Tab to focus the button
+
+      // The "don't show this again" checkbox comes first in tab order; the
+      // dialog is dismissible from the keyboard either way.
       await user.tab();
-      
+      expect(screen.getByRole('checkbox')).toHaveFocus();
+
+      await user.tab();
       expect(button).toHaveFocus();
     });
   });

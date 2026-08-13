@@ -247,9 +247,21 @@ describe('CalendarService', () => {
         status: 'closed',
       };
 
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [existingCalendar] } as any) // getCalendarById
-        .mockResolvedValueOnce({ rows: [updatedCalendar] } as any); // update
+      /*
+       * Answer by what is asked for: reading a calendar also loads its
+       * schedule rules, time slots and blocked periods, so a positional queue
+       * hands the UPDATE's result to one of those instead.
+       */
+      mockDb.query.mockImplementation(((sql: string) => {
+        const text = String(sql);
+        if (text.includes('UPDATE calendars')) {
+          return Promise.resolve({ rows: [updatedCalendar] });
+        }
+        if (text.includes('FROM calendars')) {
+          return Promise.resolve({ rows: [existingCalendar] });
+        }
+        return Promise.resolve({ rows: [] });
+      }) as any);
 
       const result = await service.updateCalendar('1', {
         name: 'Tennis Court 1 - Updated',
@@ -275,10 +287,16 @@ describe('CalendarService', () => {
 
       await service.deleteCalendar('1');
 
-      expect(mockDb.query).toHaveBeenCalledWith(
-        'DELETE FROM calendars WHERE id = $1',
-        ['1']
-      );
+      // Soft delete: the row is marked, not removed, because paid-for records
+      // reference it. `deleted = FALSE` in the WHERE makes a repeat call a
+      // no-op rather than silently re-stamping the timestamp.
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('UPDATE calendars');
+      expect(String(sql)).toContain('deleted = TRUE');
+      expect(String(sql)).toContain('deleted_at = NOW()');
+      expect(String(sql)).toContain('AND deleted = FALSE');
+      expect(String(sql)).not.toContain('DELETE FROM');
+      expect(params).toEqual(['1', null]);
     });
 
     it('should throw error when calendar not found', async () => {

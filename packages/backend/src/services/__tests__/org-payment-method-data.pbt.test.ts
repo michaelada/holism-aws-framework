@@ -49,8 +49,8 @@ describe('Organization Payment Method Data Service Property-Based Tests', () => 
     // Create test organization
     const orgName = `Test Org for PBT ${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const orgResult = await db.query(
-      `INSERT INTO organizations (name, organization_type_id, language, currency, keycloak_group_id, display_name)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO organizations (url_code, name, organization_type_id, language, currency, keycloak_group_id, display_name)
+       VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6)
        RETURNING id`,
       [orgName, orgTypeId, 'en', 'GBP', `test-pbt-org-${Date.now()}`, orgName]
     );
@@ -93,7 +93,11 @@ describe('Organization Payment Method Data Service Property-Based Tests', () => 
 
     // Close database connections
     try {
-      await db.close();
+      // Left open deliberately: the pool is a singleton shared by every suite in the
+      // run — jest uses one worker and a fresh module registry per file, not a fresh
+      // process — so closing it here pulls the connection out from under whatever
+      // runs next. `forceExit` in jest.config.js ends the process.
+      // await db.close();
     } catch (error) {
       console.error('Database close error:', error);
     }
@@ -221,6 +225,16 @@ describe('Organization Payment Method Data Service Property-Based Tests', () => 
         fc.asyncProperty(
           paymentDataArb,
           async (paymentData) => {
+            /*
+             * Start from nothing. The association is unique per organisation
+             * and method, and the clean-up at the end of this body only runs
+             * when the run reaches it — one failed assertion, or one earlier
+             * run of this file, and every iteration after it collides.
+             */
+            await orgPaymentMethodDataService
+              .deleteOrgPaymentMethod(testOrgId, testPaymentMethodId)
+              .catch(() => undefined);
+
             // Create association with payment data
             await orgPaymentMethodDataService.createOrgPaymentMethod({
               organizationId: testOrgId,
@@ -309,8 +323,8 @@ describe('Organization Payment Method Data Service Property-Based Tests', () => 
 
       // Create a new test organization for this property
       const newOrgResult = await db.query(
-        `INSERT INTO organizations (name, organization_type_id, language, currency, keycloak_group_id, display_name)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO organizations (url_code, name, organization_type_id, language, currency, keycloak_group_id, display_name)
+         VALUES (substr(md5(random()::text), 1, 12), $1, $2, $3, $4, $5, $6)
          RETURNING id`,
         [`Test Org Default PM ${Date.now()}`, orgTypeId, 'en', 'GBP', `test-pbt-default-${Date.now()}`, 'Test Org Default PM']
       );

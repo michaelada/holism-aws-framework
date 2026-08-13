@@ -1766,7 +1766,14 @@ describe('Discount Calculator - Property-Based Tests', () => {
               
               for (let i = 0; i < result.appliedDiscounts.length; i++) {
                 currentAmount -= result.appliedDiscounts[i].discountAmount;
-                if (currentAmount <= 0.01) {
+                /*
+                 * Exhausted means nothing left, not "nearly nothing". A penny
+                 * still standing is a penny the next discount may legitimately
+                 * take — the calculator caps each discount at what remains, so
+                 * treating 0.01 as zero here would fail the very behaviour this
+                 * property is asserting.
+                 */
+                if (currentAmount <= 0) {
                   zeroReachedAt = i;
                   break;
                 }
