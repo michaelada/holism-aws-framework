@@ -1,185 +1,62 @@
 # Account User Keycloak Theme
 
-Custom Keycloak theme for the Account User Portal (ItsPlainSailing).
+Keycloak login theme for the account-user application (`packages/account-shell`, "ItsPlainSailing").
 
-## Features
+## What it is matched to
 
-- ✨ Neumorphic design with soft 3D shadows
-- 🎨 Teal primary color (#009087)
-- 📱 Fully responsive design
-- ♿ Accessibility compliant
-- 🌍 Multi-language support ready
-- 🎭 Smooth animations and transitions
-- 🔒 Consistent with Account User UI
-- 🌊 Customized for members and account users
+The member crosses from the organisation gateway (screen A2) to this page mid-task and back a moment
+later, so the theme is deliberately **the account application's own design system**, not a separate
+look:
 
-## Login Page Customization
+| | Value | Source |
+|---|---|---|
+| Primary | `#1976d2` | `palette.primary.main` in `packages/account-shell/src/theme/index.ts` |
+| Body text | Roboto, `rgba(0,0,0,0.87)` | `typography.fontFamily` |
+| Headings | Sora, 600 | `typography.h1` / `h2` |
+| Card | white, 4px radius, MUI elevation-1 shadow, 600px max | `Paper` inside `Container maxWidth="sm"` — `OrganisationGatewayPage.tsx` |
+| Buttons | contained primary, **not** uppercase | `MuiButton.styleOverrides.textTransform: 'none'` |
+
+**These values are duplicated by necessity.** MUI's theme cannot reach a FreeMarker template, so they
+are transcribed in `login/resources/css/account.css`. If the app's theme changes, this file has to
+change with it; every value there is labelled with where it came from.
+
+**Per-organisation branding is not applied here.** The gateway is branded with each club's own
+`primaryColor`, but Keycloak has no idea which club the member came from — the authorization request
+carries no organisation. The theme therefore uses the platform default, which is also what most
+clubs use. Making this per-club needs the organisation passed into the auth request and read by the
+theme; it is not implemented.
+
+## Stylesheets
+
+`login/theme.properties` lists exactly one of:
+
+- `css/account.css` — **current**. Matches the account application, as above.
+- `css/neumorphic.css` — the previous treatment: grey `#e8e8e8` ground, embossed shadows, teal
+  `#009087`. That palette came from the **org-admin** design system, so it matched a different
+  application than the one the member was actually using. Kept as the documented alternative — see
+  [docs/KEYCLOAK_THEME_SWITCHING.md](../../../docs/KEYCLOAK_THEME_SWITCHING.md).
+
+## Copy
 
 - **Title**: "ItsPlainSailing"
-- **Heading**: "Member Login"
-- **Description**: "Welcome! Please enter your email and password to access your account."
+- **Login heading**: "Member Login" (`accountLoginHeading` in `messages_en.properties`)
+- **Login description**: shown on the login page only
 
-## Usage
+The heading comes from each page's own `header` section, and the description is opt-in via
+`displayDescription`. Both used to be hard-coded in `template.ftl`, which meant a member creating an
+account was told to "enter your email and password to access your account" above a registration form
+that had no password to enter yet.
 
-This theme should be assigned to the Account User client in Keycloak:
+Only `login.ftl` is overridden. Registration, forgotten password and the rest come from the parent
+`keycloak` theme and inherit this layout and CSS — which is why `account.css` styles **both** button
+vocabularies, `.btn-primary` (ours) and `.pf-c-button.pf-m-primary` (PatternFly's, used by the
+inherited pages).
 
-1. Go to Keycloak Admin Console
-2. Navigate to Clients → [account-user-client]
-3. Go to the "Settings" tab
-4. Scroll to "Login settings"
-5. Set "Login theme" to `account-user`
-6. Save
+## Applying it
 
-## Quick Start
+The theme is set on the **`account-app` client**, not the realm, so the other front ends keep their
+own. See [docs/ACCOUNT_APP_KEYCLOAK_SETUP.md](../../../docs/ACCOUNT_APP_KEYCLOAK_SETUP.md).
 
-### Option 1: Docker Volume Mount (Recommended for Development)
-
-1. Add to your `docker-compose.yml`:
-   ```yaml
-   services:
-     keycloak:
-       volumes:
-         - ./infrastructure/keycloak/themes:/opt/keycloak/themes
-   ```
-
-2. Restart Keycloak:
-   ```bash
-   docker-compose restart keycloak
-   ```
-
-3. Enable in Keycloak Admin Console:
-   - Go to Realm Settings → Themes
-   - Set Login Theme to `aws-framework`
-   - Save
-
-### Option 2: Use Setup Script
-
-```bash
-./scripts/setup-keycloak-theme.sh
-```
-
-## Structure
-
-```
-aws-framework/
-├── login/                          # Login theme
-│   ├── theme.properties           # Theme configuration
-│   ├── resources/
-│   │   ├── css/
-│   │   │   └── neumorphic.css    # Custom styles
-│   │   └── img/
-│   │       └── logo.png          # Custom logo (add your own)
-│   └── messages/
-│       └── messages_en.properties # English translations
-└── README.md                      # This file
-```
-
-## Customization
-
-### Change Colors
-
-Edit `login/resources/css/neumorphic.css`:
-
-```css
-:root {
-  --primary-main: #009087;    /* Your primary color */
-  --bg-default: #e8e8e8;      /* Your background color */
-  --text-primary: #090909;    /* Your text color */
-}
-```
-
-### Add Logo
-
-1. Place your logo at: `login/resources/img/logo.png`
-2. Recommended size: 200x60px
-3. The logo will automatically appear on the login page
-
-### Add Translations
-
-Create new message files:
-- `login/messages/messages_de.properties` (German)
-- `login/messages/messages_fr.properties` (French)
-- `login/messages/messages_es.properties` (Spanish)
-
-## Testing
-
-1. Clear browser cache
-2. Go to: `http://localhost:8080/realms/aws-framework/account`
-3. You should see the custom themed login page
-
-## Documentation
-
-For detailed documentation, see: [docs/KEYCLOAK_CUSTOM_THEME.md](../../../docs/KEYCLOAK_CUSTOM_THEME.md)
-
-## Design System
-
-### Colors
-
-| Color | Hex | Usage |
-|-------|-----|-------|
-| Primary | #009087 | Buttons, links, accents |
-| Primary Light | #00b3a8 | Hover states |
-| Primary Dark | #006d66 | Active states |
-| Background | #e8e8e8 | Main background |
-| Paper | #f5f5f5 | Card backgrounds |
-| Text Primary | #090909 | Main text |
-| Text Secondary | #666666 | Secondary text |
-
-### Typography
-
-- Font Family: Roboto, Helvetica, Arial, sans-serif
-- Base Size: 16px (1rem)
-- Button Size: 16px (1rem)
-- Heading Size: 24px (1.5rem)
-
-### Shadows
-
-Neumorphic shadows create a soft 3D effect:
-- Light shadow: #ffffff
-- Dark shadow: #c5c5c5
-- Elevation: 6px 6px 12px (light), -6px -6px 12px (dark)
-
-### Border Radius
-
-- Small: 0.5em (8px)
-- Large: 1em (16px)
-
-## Browser Support
-
-- Chrome/Edge: Latest 2 versions
-- Firefox: Latest 2 versions
-- Safari: Latest 2 versions
-- Mobile browsers: iOS Safari, Chrome Mobile
-
-## Troubleshooting
-
-### Theme not appearing?
-
-1. Check theme is selected in Realm Settings
-2. Clear browser cache
-3. Restart Keycloak container
-4. Check browser console for errors
-
-### CSS not loading?
-
-1. Verify file paths in `theme.properties`
-2. Check file permissions
-3. Restart Keycloak
-
-### Logo not showing?
-
-1. Verify logo file exists at `login/resources/img/logo.png`
-2. Check image format (PNG, JPG, SVG)
-3. Optimize image size (< 100KB)
-
-## Contributing
-
-When making changes:
-1. Test on multiple browsers
-2. Test responsive design
-3. Verify accessibility
-4. Update documentation
-
-## License
-
-Part of the AWS Framework project.
+Themes are mounted into the container by `docker-compose.yml`
+(`./infrastructure/keycloak/themes:/opt/keycloak/themes`) and Keycloak runs with `start-dev`, so
+edits appear on reload with no restart.

@@ -1,4 +1,14 @@
-<#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false>
+<#--
+  `displayDescription` exists because this layout is shared by every page
+  Keycloak renders, not just the login form — registration, forgotten password
+  and the rest come from the parent theme and nest into it too.
+
+  The heading and the standing "enter your email and password" line used to be
+  hard-coded here, so a member creating an account was told to sign in, above a
+  form with no password to enter yet. The heading now comes from each page's own
+  `header` section, and the description only appears where a page asks for it.
+-->
+<#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false displayDescription=false>
 <!DOCTYPE html>
 <html class="${properties.kcHtmlClass!}">
 
@@ -14,6 +24,19 @@
     </#if>
     <title>${msg("loginTitle",(realm.displayName!''))}</title>
     <link rel="icon" type="image/png" href="${url.resourcesPath}/img/favicon.png" />
+
+    <#--
+      The same two families the account application loads (Roboto for body text,
+      Sora for headings). Without them this page falls back to a system sans and
+      reads as a different product at exactly the wrong moment — the member has
+      just come from the organisation gateway and is about to type a password.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Sora:wght@300;400;500;600;700;800&display=swap"
+    />
     <#if properties.stylesCommon?has_content>
         <#list properties.stylesCommon?split(' ') as style>
             <link href="${url.resourcesCommonPath}/${style}" rel="stylesheet" />
@@ -49,8 +72,10 @@
     
     <div id="kc-content">
         <div id="kc-content-wrapper">
-            <h2 class="kc-account-login-heading">${msg("accountLoginHeading")}</h2>
-            <p class="kc-login-description">${msg("loginDescription")}</p>
+            <h2 class="kc-account-login-heading"><#nested "header"></h2>
+            <#if displayDescription>
+                <p class="kc-login-description">${msg("loginDescription")}</p>
+            </#if>
             <#if realm.internationalizationEnabled  && locale.supported?size gt 1>
                 <div class="${properties.kcLocaleMainClass!}" id="kc-locale">
                     <div id="kc-locale-wrapper" class="${properties.kcLocaleWrapperClass!}">

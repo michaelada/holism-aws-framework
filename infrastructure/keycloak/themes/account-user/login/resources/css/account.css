@@ -1,0 +1,516 @@
+/**
+ * Account-user login theme — matched to the account application's own screens.
+ *
+ * The member crosses from the organisation gateway (A2, `OrganisationGatewayPage`)
+ * to this page mid-task, and back again a moment later. A different visual
+ * language across that boundary reads as "have I ended up somewhere I should
+ * not be?" on the one screen where a person is about to type a password, so the
+ * values here are taken from the app's MUI theme rather than chosen afresh:
+ *
+ *   packages/account-shell/src/theme/index.ts   palette + typography
+ *   packages/account-shell/src/pages/OrganisationGatewayPage.tsx   the card
+ *
+ * **These are duplicated constants.** MUI's theme cannot reach a FreeMarker
+ * template, so the numbers below are transcribed. If the app's theme changes,
+ * this file has to change with it — that is the cost of the two being separate
+ * runtimes, and it is why every value is labelled with where it came from.
+ *
+ * Replaces the neumorphic treatment, which was copied from the org-admin design
+ * system and matched a different application. `neumorphic.css` is left in place
+ * as the documented alternative (docs/KEYCLOAK_THEME_SWITCHING.md); switch by
+ * changing `styles=` in theme.properties.
+ */
+
+:root {
+  /* MUI palette.primary.main — the account app's default, and KHPC's. */
+  --mui-primary: #1976d2;
+  --mui-primary-dark: #1565c0;
+  --mui-primary-hover-bg: rgba(25, 118, 210, 0.04);
+  --mui-primary-outline: rgba(25, 118, 210, 0.5);
+
+  /* MUI light-mode text and surfaces. */
+  --mui-text-primary: rgba(0, 0, 0, 0.87);
+  --mui-text-secondary: rgba(0, 0, 0, 0.6);
+  --mui-divider: rgba(0, 0, 0, 0.12);
+  --mui-input-border: rgba(0, 0, 0, 0.23);
+  --mui-background: #ffffff;
+  --mui-paper: #ffffff;
+
+  --mui-error: #d32f2f;
+  --mui-error-bg: #fdeded;
+  --mui-info: #0288d1;
+  --mui-info-bg: #e5f6fd;
+  --mui-success: #2e7d32;
+  --mui-success-bg: #edf7ed;
+  --mui-warning: #ed6c02;
+  --mui-warning-bg: #fff4e5;
+
+  /* shape.borderRadius = 4 */
+  --mui-radius: 4px;
+
+  /* Paper elevation 1, and the elevation 2 a contained button carries. */
+  --mui-shadow-1: 0px 2px 1px -1px rgba(0, 0, 0, 0.2),
+                  0px 1px 1px 0px rgba(0, 0, 0, 0.14),
+                  0px 1px 3px 0px rgba(0, 0, 0, 0.12);
+  --mui-shadow-2: 0px 3px 1px -2px rgba(0, 0, 0, 0.2),
+                  0px 2px 2px 0px rgba(0, 0, 0, 0.14),
+                  0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+
+  --font-body: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  --font-heading: 'Sora', 'Roboto', sans-serif;
+}
+
+/* ------------------------------------------------------------------ *
+ * Page
+ * ------------------------------------------------------------------ */
+
+/*
+ * The parent PatternFly theme paints a background image on the body and a
+ * coloured page behind it. Both are cleared: the app's own background is plain
+ * `background.default`, and a photographic backdrop here would be the most
+ * obvious possible sign of having left the application.
+ */
+html,
+body,
+.login-pf,
+.login-pf body,
+.login-pf-page {
+  background: var(--mui-background) !important;
+  background-image: none !important;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--mui-text-primary);
+  margin: 0;
+}
+
+/* Container maxWidth="sm" (600px) with the gateway's vertical rhythm. */
+.login-pf-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 32px 16px 48px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 900px) {
+  .login-pf-page {
+    padding-top: 64px;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Header — the logo and product name above the card
+ * ------------------------------------------------------------------ */
+
+#kc-header,
+#kc-header-wrapper {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  padding: 0;
+  margin: 0 auto;
+  background: none;
+  border: none;
+  color: var(--mui-text-primary);
+}
+
+.kc-logo-wrapper {
+  margin-bottom: 16px;
+}
+
+/* 72px, matching the gateway's organisation Avatar. */
+.kc-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+/*
+ * typography.h1 — Sora 2rem/600.
+ *
+ * `text-transform: none` is not redundant: the parent PatternFly theme
+ * uppercases this heading, which the app never does.
+ */
+#kc-header-wrapper h1,
+.login-pf-page #kc-header-wrapper h1 {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.235;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--mui-text-primary);
+  margin: 0 0 24px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Card — MUI Paper
+ * ------------------------------------------------------------------ */
+
+#kc-content {
+  width: 100%;
+  max-width: 600px;
+  background: var(--mui-paper);
+  border: none;
+  border-radius: var(--mui-radius);
+  box-shadow: var(--mui-shadow-1);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 900px) {
+  #kc-content {
+    padding: 32px;
+  }
+}
+
+#kc-content-wrapper {
+  padding: 0;
+  margin: 0;
+}
+
+/* typography.h2 — Sora 1.5rem/600. */
+.kc-account-login-heading {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.334;
+  color: var(--mui-text-primary);
+  text-align: center;
+  margin: 0 0 8px;
+}
+
+/* The gateway's supporting line: body1 in text.secondary. */
+.kc-login-description {
+  font-size: 1rem;
+  color: var(--mui-text-secondary);
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Form fields — MUI OutlinedInput
+ * ------------------------------------------------------------------ */
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+/*
+ * A stacked label rather than MUI's floating one. The floating label needs the
+ * notched fieldset MUI renders around the input, which this markup does not
+ * have; faking it in CSS alone produces a label that overlaps its own border at
+ * the wrong moments. A plain label in the same colour and weight reads as part
+ * of the same system without pretending to be the same component.
+ */
+.control-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--mui-text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-control,
+input[type='text'],
+input[type='email'],
+input[type='password'] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.4375em;
+  color: var(--mui-text-primary);
+  background: var(--mui-paper);
+  padding: 16.5px 14px;
+  border: 1px solid var(--mui-input-border);
+  border-radius: var(--mui-radius);
+  box-shadow: none;
+  transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-control:hover,
+input[type='text']:hover,
+input[type='email']:hover,
+input[type='password']:hover {
+  border-color: var(--mui-text-primary);
+}
+
+/* MUI thickens the border to 2px on focus rather than drawing an outline. */
+.form-control:focus,
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus {
+  border: 2px solid var(--mui-primary);
+  outline: none;
+  /* Keeps the field from shifting by the extra pixel of border. */
+  padding: 15.5px 13px;
+}
+
+.form-control[aria-invalid='true'] {
+  border-color: var(--mui-error);
+}
+
+/* FormHelperText, error variant. */
+#input-error,
+.kc-feedback-text {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--mui-error);
+  margin: 3px 14px 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Buttons — MUI Button, contained primary, size large
+ * ------------------------------------------------------------------ */
+
+#kc-form-buttons {
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
+/*
+ * Two button vocabularies reach this theme. Our own `login.ftl` uses the
+ * classic `.btn .btn-primary`; pages inherited from the parent theme — the
+ * registration form among them — use PatternFly's `.pf-c-button .pf-m-primary`.
+ * Styling only the first leaves the "Create Account" button a different blue
+ * from "Sign In", on two screens a member sees one after the other.
+ */
+.btn,
+.pf-c-button,
+input[type='submit'] {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  /* The app sets MuiButton.textTransform: 'none'. */
+  text-transform: none;
+  letter-spacing: 0.02857em;
+  border-radius: var(--mui-radius);
+  border: none;
+  cursor: pointer;
+  transition: background-color 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * The selectors are deliberately over-specific. PatternFly ships its own
+ * `.btn-primary` in the inherited `login.css` at a higher specificity, and a
+ * bare `.btn-primary` here loses to it — leaving a PatternFly-blue (#0066cc)
+ * button on an otherwise MUI-blue page, which is worse than not restyling at
+ * all because it looks like a mistake rather than a different product.
+ */
+.btn-primary,
+input[type='submit'].btn-primary,
+.login-pf-page .btn-primary,
+#kc-form-buttons #kc-login,
+input#kc-login.btn-primary,
+.pf-c-button.pf-m-primary,
+.login-pf-page .pf-c-button.pf-m-primary {
+  background: var(--mui-primary);
+  background-image: none;
+  color: #fff;
+  padding: 8px 22px;
+  box-shadow: var(--mui-shadow-2);
+  border: none;
+}
+
+.btn-primary:hover,
+input[type='submit'].btn-primary:hover,
+.login-pf-page .btn-primary:hover,
+#kc-form-buttons #kc-login:hover,
+input#kc-login.btn-primary:hover,
+.pf-c-button.pf-m-primary:hover,
+.login-pf-page .pf-c-button.pf-m-primary:hover {
+  background: var(--mui-primary-dark);
+  background-image: none;
+  box-shadow: var(--mui-shadow-2);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--mui-primary-dark);
+  outline-offset: 2px;
+}
+
+/* The gateway stacks full-width buttons; the login form has one. */
+.btn-block,
+.pf-m-block {
+  display: block;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ *
+ * Options row — remember me, forgot password
+ * ------------------------------------------------------------------ */
+
+#kc-form-options {
+  font-size: 0.875rem;
+  color: var(--mui-text-secondary);
+}
+
+#kc-form-options .checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--mui-text-primary);
+  margin: 0;
+  font-weight: 400;
+}
+
+#kc-form-options input[type='checkbox'] {
+  accent-color: var(--mui-primary);
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.login-pf-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+/* Links read as MUI text buttons: primary colour, no underline until hover. */
+a {
+  color: var(--mui-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ *
+ * Registration prompt
+ * ------------------------------------------------------------------ */
+
+/*
+ * Inside the card, separated by a divider — the gateway groups sign-in and
+ * "create an account" as one stack of choices rather than putting them in
+ * different containers.
+ */
+#kc-info,
+.login-pf-signup {
+  background: none;
+  border: none;
+  box-shadow: none;
+  margin: 24px 0 0;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--mui-divider);
+  text-align: center;
+}
+
+/*
+ * PatternFly gives this wrapper its own grey panel and padding, which reads as
+ * a second card bolted to the bottom of the first. The app puts sign-in and
+ * "create an account" in one stack, so the panel is cleared and only the
+ * divider above separates them.
+ */
+#kc-info-wrapper,
+.login-pf-page #kc-info-wrapper,
+#kc-registration,
+#kc-registration-container {
+  font-size: 0.875rem;
+  color: var(--mui-text-secondary);
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+}
+
+#kc-registration a {
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Alerts — MUI Alert
+ * ------------------------------------------------------------------ */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.875rem;
+  line-height: 1.43;
+  border: none;
+  border-radius: var(--mui-radius);
+  padding: 6px 16px;
+  margin: 0 0 16px;
+}
+
+.alert-error,
+.alert.pf-m-danger {
+  background: var(--mui-error-bg);
+  color: #5f2120;
+}
+
+.alert-warning,
+.alert.pf-m-warning {
+  background: var(--mui-warning-bg);
+  color: #663c00;
+}
+
+.alert-success,
+.alert.pf-m-success {
+  background: var(--mui-success-bg);
+  color: #1e4620;
+}
+
+.alert-info,
+.alert.pf-m-info {
+  background: var(--mui-info-bg);
+  color: #014361;
+}
+
+.alert .pf-c-alert__icon {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Locale picker
+ * ------------------------------------------------------------------ */
+
+#kc-locale {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 0.875rem;
+}
+
+#kc-locale ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  background: var(--mui-paper);
+  border-radius: var(--mui-radius);
+  box-shadow: var(--mui-shadow-2);
+  display: none;
+}
+
+#kc-locale:hover ul {
+  display: block;
+}
+
+#kc-locale li a {
+  display: block;
+  padding: 6px 16px;
+  color: var(--mui-text-primary);
+}
+
+#kc-locale li a:hover {
+  background: var(--mui-primary-hover-bg);
+  text-decoration: none;
+}

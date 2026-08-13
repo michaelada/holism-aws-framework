@@ -1,7 +1,8 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
+<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled?? displayDescription=true; section>
     <#if section = "header">
-        ${msg("loginAccountTitle")}
+        <#-- The theme's own wording, kept: "Member Login" rather than Keycloak's default. -->
+        ${msg("accountLoginHeading")}
     <#elseif section = "form">
     <div id="kc-form">
         <#if realm.password>
