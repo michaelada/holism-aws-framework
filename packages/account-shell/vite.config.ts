@@ -22,7 +22,12 @@ export default defineConfig({
       // or it will not control the pages it is meant to serve.
       base: '/account/',
       scope: '/account/',
-      includeAssets: ['icon.svg'],
+      includeAssets: [
+        'icon.svg',
+        'icon-maskable.svg',
+        'favicon.png',
+        'apple-touch-icon.png',
+      ],
 
       manifest: {
         name: 'Club account',
@@ -35,13 +40,25 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#1976d2',
+        /*
+         * PNG as well as SVG, and `any` kept apart from `maskable`.
+         *
+         * Android's install prompt wants a raster icon of at least 192 and does
+         * not reliably accept SVG; and one artwork cannot serve both purposes —
+         * a platform applying a mask crops to the central 80%, which would take
+         * the head and shoulders off the unmasked mark. `icon-maskable` is the
+         * same mark drawn into that safe zone.
+         */
         icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           {
-            src: 'icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
+            src: 'icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
 
@@ -53,7 +70,7 @@ export default defineConfig({
          * cache would outlive that clearing — a shared device would leak one
          * member's payment history to the next.
          */
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/account/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Club account">
+  <!--
+    The maskable variant of icon.svg, and a separate file because the two
+    cannot be the same artwork.
+
+    A platform applying a mask crops this to whatever shape it likes — a
+    circle, a squircle, a rounded square — and guarantees only the central
+    circle of 80% diameter. So the background runs edge to edge with no corner
+    radius of its own (the mask supplies one), and the mark is scaled into that
+    safe zone rather than sitting where it does in the unmasked icon, where it
+    would lose its head and shoulders to the crop.
+
+    The mark itself is still a placeholder: the app is branded per club at
+    runtime from the organisation's theme, and an installed icon cannot be, so
+    what belongs here is a designed ItsPlainSailing mark.
+  -->
+  <rect width="512" height="512" fill="#1976d2"/>
+  <g transform="translate(97.28 97.28) scale(0.62)">
+    <path d="M256 120c-60 0-108 48-108 108 0 60 48 108 108 108s108-48 108-108c0-60-48-108-108-108zm0 60a48 48 0 1 1 0 96 48 48 0 0 1 0-96z" fill="#ffffff"/>
+    <path d="M120 420c0-52 61-84 136-84s136 32 136 84z" fill="#ffffff"/>
+  </g>
+</svg>

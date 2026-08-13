@@ -112,6 +112,11 @@ offline.
 
 ## What this does not do yet
 
-- **The icon is a placeholder.** A designed PNG set (192, 512, maskable) should replace
-  `public/icon.svg` before release; an installed icon cannot be branded per club at runtime the way
-  the app's theme is.
+- **The icon artwork is a placeholder.** The *set* is now complete and correctly declared —
+  `icon-192.png`, `icon-512.png`, a separate `icon-maskable-512.png` whose mark sits inside the
+  central 80% a platform mask guarantees, `apple-touch-icon.png` for iOS (which ignores the
+  manifest), and `favicon.png` — but the mark itself is a plain placeholder awaiting a designed
+  ItsPlainSailing one. An installed icon cannot be branded per club at runtime the way the app's
+  theme is, so this is one mark for every club.
+
+  The PNGs are generated from the SVGs and committed; regenerate them if the artwork changes.
