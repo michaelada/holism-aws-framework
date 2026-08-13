@@ -1,0 +1,122 @@
+# Infrastructure, deployment and tooling
+
+Everything outside `packages/`. Per project rule §1.6, code changes that alter how the system is
+built, configured or run must be reflected here in the same pass.
+
+## Local development (`docker-compose.yml`)
+
+| Service | Port | Notes |
+|---|---|---|
+| `postgres` | 5432 | `aws_framework` / `framework_user`; healthchecked |
+| `keycloak` | 8080 | Realm `aws-framework` |
+| `backend` | 3000 | Built from `packages/backend/Dockerfile`; mounts `src` and `migrations` read-only |
+| `nginx` | 80, 443 | Reverse proxy; `host.docker.internal` mapped so it can reach host-run dev servers |
+| `prometheus` | 9090 | Scrapes the backend's `/metrics` |
+| `grafana` | 3001 → 3000 | Dashboards provisioned from `infrastructure/grafana/provisioning` |
+
+The **front ends are deliberately not containerised for development** — the compose file's frontend
+service is commented out because the monorepo aliases need the workspace on disk. Run them with
+`npm run dev:*` on the host.
+
+Running the backend locally means stopping the container first (`docker compose stop backend`);
+both bind `:3000`. `packages/backend/.env` is already pointed at the Dockerised Postgres
+(`127.0.0.1:5432`) and Keycloak (`localhost:8080`), and `ALLOWED_ORIGINS` already lists 5174/5175.
+
+`docker-compose.prod.yml` adds containerised `frontend`, `admin` and `orgadmin` services.
+
+## nginx (`infrastructure/nginx/`)
+
+`default.conf` (HTTP) and `default-ssl.conf` (TLS) route:
+
+| Location | Target |
+|---|---|
+| `/health` | health endpoint |
+| `/api/` | `backend` |
+| `/api/admin/` | `backend` (separate block — tighter rate limiting) |
+| `/auth/` | `keycloak` |
+| `/admin` | host `:5174` (super-admin dev server) |
+| `/` | host `:5173` |
+
+Custom `50x.html` and `429.html` error pages. Adding a front end or an API prefix means editing
+both conf files.
+
+## The account app is a PWA
+
+`packages/account-shell` builds a service worker and a manifest through `vite-plugin-pwa`
+(`generateSW`), scoped to `/account/`. Two consequences for deployment:
+
+- **The shell is precached, so a deploy must not be served from a cache that outlives it.** The
+  plugin is configured `registerType: 'autoUpdate'` with `cleanupOutdatedCaches`, which handles the
+  service worker's own caches — but an aggressive CDN or nginx `Cache-Control` on `sw.js` would pin
+  members to an old build. `sw.js` must not be cached at the edge.
+- **`public/icon.svg` is a placeholder.** A designed PNG set (192, 512, maskable) belongs there
+  before release ([docs/ACCOUNT_USER_APP_PHASE12_OFFLINE.md](../../docs/ACCOUNT_USER_APP_PHASE12_OFFLINE.md)).
+
+API responses are deliberately **not** in the service worker's cache — they are held per member by
+the app and cleared on sign-out, and a second copy would outlive that.
+
+## Other infrastructure
+
+- `infrastructure/init-db.sql` — initial database bootstrap.
+- `infrastructure/keycloak/` — realm setup notes (`KEYCLOAK_SETUP.md`) and custom themes.
+- **Keycloak clients are created by hand; there is no realm import.** `aws-framework-frontend`,
+  `aws-framework-admin`, `orgadmin-client` and `account-app` each have to be created in the
+  `aws-framework` realm before their app can sign anyone in — a missing one fails with "Client not
+  found" before any credentials are entered. Per-app guides: docs/ORGADMIN_KEYCLOAK_SETUP.md and
+  docs/ACCOUNT_APP_KEYCLOAK_SETUP.md. A fresh machine or CI environment needs all four.
+- **Every front-end client needs an `oidc-audience-mapper` adding `aws-framework-backend`.** The
+  backend verifies bearer tokens with `audience: KEYCLOAK_CLIENT_ID`, and a token minted for a
+  front-end client does not carry that audience on its own. Without the mapper, sign-in succeeds and
+  public endpoints work while **every authenticated call returns `UNAUTHORIZED / Invalid token`** —
+  a failure that looks like anything but a missing protocol mapper.
+- `infrastructure/prometheus/` — scrape config and `alerts/`.
+- `infrastructure/grafana/provisioning/` — datasources and dashboards.
+- `infrastructure/monitoring/README.md` — how the monitoring stack fits together.
+
+## Terraform (`terraform/`)
+
+```
+modules/     networking, compute, database, secrets, monitoring
+environments/ staging, production
+test/        validate.sh, syntax-check.sh, plan.sh, ci-test.sh, run-all-tests.sh, TEST_COVERAGE.md
+```
+
+Changes that add configuration (a new environment variable, secret, port or service) need the
+matching module and both environments updated. `terraform/test/run-all-tests.sh` validates before
+planning.
+
+## Scripts (`scripts/`)
+
+| Script | Purpose |
+|---|---|
+| `generate-test-data.ts` | Seed data (`npm run generate-test-data`) |
+| `verify-deployment.sh` | Post-deploy checks |
+| `setup-keycloak-theme.sh` | Install the custom Keycloak theme |
+| `test-nginx-config.sh` | Validate nginx configuration |
+| `add-*-translations.js`, `update-memberships-i18n.sh` | Bulk i18n key insertion across the six locale files |
+| `check-orgadmin-user.sql` | Diagnose org-admin access problems |
+
+## Repo-level tests (`__tests__/`)
+
+Jest, run by `npm run test:root`:
+- `project-structure.test.ts` — enforces the expected workspace layout.
+- `ci-cd-workflows.test.ts` — validates the CI/CD workflow definitions.
+
+Adding or renaming a package can therefore fail these tests; update them deliberately.
+
+## Documentation (`docs/`)
+
+One Markdown file per feature or fix, plus `*_WIREFRAMES.md` per UI module and a
+`docs/conversation/` archive of prior working sessions. Notable entry points: `DEPLOYMENT.md`,
+`CICD_PIPELINE.md`, `DOCKER_CONFIGURATION.md`, `FRONTEND_SETUP.md`, `SECURITY.md`,
+`EVENTS_MODULE_WIREFRAMES.md`, `MEMBERSHIPS_MODULE_WIREFRAMES.md`.
+
+## Where to look for what
+
+| Question | Start at |
+|---|---|
+| "How do I run the stack locally?" | `docker-compose.yml` + CLAUDE.md §3.5 |
+| "Why is this URL 404 in Docker but fine in dev?" | `infrastructure/nginx/default.conf` |
+| "Where do I add a new environment variable?" | `docker-compose*.yml`, `packages/backend/.env.example`, `terraform/modules/*`, both environments |
+| "How is the DB schema created from scratch?" | `infrastructure/init-db.sql` then `packages/backend/migrations/` |
+| "Where are alerts and dashboards defined?" | `infrastructure/prometheus/alerts`, `infrastructure/grafana/provisioning` |
