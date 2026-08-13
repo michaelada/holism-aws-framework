@@ -1,0 +1,309 @@
+/**
+ * Which slots on a calendar are actually bookable.
+ *
+ * **This is a deliberate second implementation.** The org-admin app computes
+ * availability in the browser (`orgadmin-calendar/src/utils/slotAvailabilityCalculator.ts`)
+ * because it draws a grid an administrator is looking at. A member's booking
+ * cannot be decided that way: the browser is not trustworthy, and the answer to
+ * "may I book 09:00 on Saturday" has to be the same one the cart enforces. So
+ * the rules live here too, in a pure function, and both are tested against the
+ * same cases.
+ *
+ * They must agree. The rules, in the order they apply:
+ *
+ *  1. **Generate** every slot a time-slot configuration produces — for each day
+ *     of the week it names, within its effective dates, on its recurrence, one
+ *     series per duration option stepping by that duration from the start time.
+ *  2. **Block** — remove slots inside a blocked period, whether a date range
+ *     (maintenance week) or a recurring time segment (closed before 08:00).
+ *  3. **Window** — a club takes bookings between `minDaysInAdvance` and
+ *     `maxDaysInAdvance` from today, and no further.
+ *  4. **Occupy** — subtract confirmed bookings. An *exact* booking (same start,
+ *     same duration) consumes a place; an *overlapping* one of a different
+ *     length takes the slot out entirely, because the resource is in use.
+ *  5. **Hold** — a live reservation does the same, including over slots it
+ *     merely overlaps.
+ *
+ * Times are minutes since midnight throughout: string comparison of "09:00"
+ * against "9:00" is the bug this avoids, and arithmetic on Date objects across
+ * a daylight-saving boundary is the one after that.
+ */
+
+export interface DurationOption {
+  duration: number;
+  price: number;
+  label?: string | null;
+}
+
+export interface SlotConfiguration {
+  daysOfWeek: number[];
+  startTime: string;
+  effectiveDateStart: string | null;
+  effectiveDateEnd: string | null;
+  recurrenceWeeks: number | null;
+  placesAvailable: number | null;
+  minPlacesRequired: number | null;
+  durationOptions: DurationOption[];
+}
+
+export interface BlockedPeriod {
+  blockType: string;
+  startDate: string | null;
+  endDate: string | null;
+  daysOfWeek: number[] | null;
+  startTime: string | null;
+  endTime: string | null;
+}
+
+export interface ExistingBooking {
+  bookingDate: string;
+  startTime: string;
+  duration: number;
+  placesBooked: number;
+  bookingStatus: string;
+}
+
+export interface ExistingReservation {
+  slotDate: string;
+  startTime: string;
+  duration: number;
+}
+
+export interface AvailableSlot {
+  /** `YYYY-MM-DD`, the club's local date. */
+  date: string;
+  /** `HH:MM`. */
+  startTime: string;
+  endTime: string;
+  /** Minutes. */
+  duration: number;
+  /** Minor units, from the duration option. */
+  price: number;
+  placesAvailable: number;
+  placesBooked: number;
+  placesRemaining: number;
+  available: boolean;
+  unavailableReason: 'full' | 'in-use' | 'held' | null;
+}
+
+const MINUTES_IN_DAY = 24 * 60;
+
+/** "09:30", "09:30:00" and Postgres `time` values all mean the same thing. */
+const toMinutes = (time: string): number => {
+  const [hours, minutes] = String(time).split(':').map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
+
+const toTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60) % 24;
+  return `${String(hours).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+};
+
+/** `YYYY-MM-DD` from anything the driver might hand back. */
+export const toDateKey = (value: unknown): string => {
+  if (value instanceof Date) {
+    // Local parts, not toISOString: a date-only value read as UTC and printed
+    // in a negative offset comes back a day early.
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(
+      value.getDate()
+    ).padStart(2, '0')}`;
+  }
+  return String(value ?? '').slice(0, 10);
+};
+
+const fromDateKey = (key: string): Date => {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
+
+/** The Sunday that starts this date's week, for recurrence arithmetic. */
+const weekStart = (date: Date): Date => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  return start;
+};
+
+const weeksBetween = (from: Date, to: Date): number =>
+  Math.round((to.getTime() - from.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+const isBlocked = (dateKey: string, startMinutes: number, periods: BlockedPeriod[]): boolean => {
+  const date = fromDateKey(dateKey);
+
+  return periods.some((period) => {
+    if (period.blockType === 'date_range') {
+      if (!period.startDate || !period.endDate) return false;
+      return dateKey >= toDateKey(period.startDate) && dateKey <= toDateKey(period.endDate);
+    }
+
+    if (period.blockType === 'time_segment') {
+      if (!period.daysOfWeek?.includes(date.getDay())) return false;
+      if (!period.startTime || !period.endTime) return false;
+
+      const blockStart = toMinutes(period.startTime);
+      const blockEnd = toMinutes(period.endTime);
+
+      // An end at or before the start wraps past midnight: 18:00 → 00:00 means
+      // "from six in the evening", not "no time at all".
+      return blockEnd <= blockStart
+        ? startMinutes >= blockStart || startMinutes < blockEnd
+        : startMinutes >= blockStart && startMinutes < blockEnd;
+    }
+
+    return false;
+  });
+};
+
+/**
+ * Every slot a member could book between two dates, with what is left of each.
+ *
+ * `from` and `to` are `YYYY-MM-DD` and inclusive. The booking window is applied
+ * relative to `today`, which is passed in rather than read from the clock so
+ * the result is testable against a fixed set of rows.
+ */
+export function calculateAvailableSlots(options: {
+  configurations: SlotConfiguration[];
+  blockedPeriods: BlockedPeriod[];
+  bookings: ExistingBooking[];
+  reservations: ExistingReservation[];
+  from: string;
+  to: string;
+  minDaysInAdvance: number;
+  maxDaysInAdvance: number;
+  today?: Date;
+}): AvailableSlot[] {
+  const {
+    configurations,
+    blockedPeriods,
+    bookings,
+    reservations,
+    from,
+    to,
+    minDaysInAdvance,
+    maxDaysInAdvance,
+  } = options;
+
+  const today = options.today ?? new Date();
+  const earliest = new Date(today);
+  earliest.setHours(0, 0, 0, 0);
+  earliest.setDate(earliest.getDate() + minDaysInAdvance);
+  const latest = new Date(today);
+  latest.setHours(23, 59, 59, 999);
+  latest.setDate(latest.getDate() + maxDaysInAdvance);
+
+  const confirmed = bookings
+    .filter((booking) => booking.bookingStatus === 'confirmed')
+    .map((booking) => ({
+      dateKey: toDateKey(booking.bookingDate),
+      start: toMinutes(booking.startTime),
+      end: toMinutes(booking.startTime) + booking.duration,
+      duration: booking.duration,
+      places: booking.placesBooked ?? 1,
+    }));
+
+  const held = reservations.map((reservation) => ({
+    dateKey: toDateKey(reservation.slotDate),
+    start: toMinutes(reservation.startTime),
+    end: toMinutes(reservation.startTime) + reservation.duration,
+  }));
+
+  const slots = new Map<string, AvailableSlot>();
+
+  for (const config of configurations) {
+    const durations =
+      config.durationOptions.length > 0
+        ? config.durationOptions
+        : // A configuration with no durations still offers something: an hour.
+          [{ duration: 60, price: 0 }];
+
+    const recurrence = config.recurrenceWeeks && config.recurrenceWeeks > 0 ? config.recurrenceWeeks : 1;
+    const effectiveStart = config.effectiveDateStart ? toDateKey(config.effectiveDateStart) : null;
+    const effectiveEnd = config.effectiveDateEnd ? toDateKey(config.effectiveDateEnd) : null;
+    const reference = weekStart(effectiveStart ? fromDateKey(effectiveStart) : fromDateKey(from));
+    const placesAvailable = config.placesAvailable && config.placesAvailable > 0 ? config.placesAvailable : 1;
+    const configStart = toMinutes(config.startTime);
+
+    for (
+      const day = fromDateKey(from);
+      toDateKey(day) <= to;
+      day.setDate(day.getDate() + 1)
+    ) {
+      const dateKey = toDateKey(day);
+
+      if (!config.daysOfWeek.includes(day.getDay())) continue;
+      if (effectiveStart && dateKey < effectiveStart) continue;
+      if (effectiveEnd && dateKey > effectiveEnd) continue;
+      if (recurrence > 1 && weeksBetween(reference, weekStart(day)) % recurrence !== 0) continue;
+
+      const withinWindow = day >= earliest && day <= latest;
+
+      for (const option of durations) {
+        for (
+          let start = configStart;
+          start + option.duration <= MINUTES_IN_DAY;
+          start += option.duration
+        ) {
+          if (isBlocked(dateKey, start, blockedPeriods)) continue;
+          // A day outside the club's booking window produces nothing at all,
+          // rather than a row the member can see and not have.
+          if (!withinWindow) continue;
+
+          const end = start + option.duration;
+          const key = `${dateKey}|${start}|${option.duration}`;
+          if (slots.has(key)) continue;
+
+          const exact = confirmed.filter(
+            (booking) =>
+              booking.dateKey === dateKey &&
+              booking.start === start &&
+              booking.duration === option.duration
+          );
+          const placesBooked = exact.reduce((total, booking) => total + booking.places, 0);
+          const placesRemaining = placesAvailable - placesBooked;
+
+          /*
+           * A booking of a different length across this time takes the slot
+           * out entirely: the court is in use, whatever the shape of the
+           * booking that is using it.
+           */
+          const inUse = confirmed.some(
+            (booking) =>
+              booking.dateKey === dateKey &&
+              booking.start < end &&
+              booking.end > start &&
+              !(booking.start === start && booking.duration === option.duration)
+          );
+
+          const onHold = held.some(
+            (reservation) =>
+              reservation.dateKey === dateKey &&
+              reservation.start < end &&
+              reservation.end > start
+          );
+
+          const reason = onHold ? 'held' : inUse ? 'in-use' : placesRemaining <= 0 ? 'full' : null;
+
+          slots.set(key, {
+            date: dateKey,
+            startTime: toTime(start),
+            endTime: toTime(end),
+            duration: option.duration,
+            price: option.price,
+            placesAvailable,
+            placesBooked,
+            placesRemaining: Math.max(0, placesRemaining),
+            available: reason === null,
+            unavailableReason: reason,
+          });
+        }
+      }
+    }
+  }
+
+  return [...slots.values()].sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      toMinutes(a.startTime) - toMinutes(b.startTime) ||
+      a.duration - b.duration
+  );
+}

@@ -299,7 +299,14 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await registrationService.deleteRegistrationType(id);
+      /*
+       * Optional: the delete records who withdrew the item when the middleware
+       * has resolved an organisation user, and NULL when it has not. Made
+       * optional rather than required so adding attribution cannot turn a
+       * working endpoint into a 400 — `events` demands it, these do not.
+       */
+      const organisationUserId = (req as any).organisationUserId as string | undefined;
+      await registrationService.deleteRegistrationType(id, organisationUserId);
       res.status(204).send();
     } catch (error) {
       logger.error('Error in DELETE /registration-types/:id:', error);
@@ -870,7 +877,11 @@ router.get(
           return res.status(403).json({ error: 'User is not a member of this organisation' });
         }
 
-        userId = orgUserResult.rows[0].id;
+        // Typed explicitly: the row is `any`, so without this the assignment
+        // leaves `userId` as `string | undefined` at the merge point and the
+        // call below does not compile, even though every path that reaches it
+        // has set the value.
+        userId = orgUserResult.rows[0].id as string;
       }
 
       const filters = await registrationService.getCustomFilters(organisationId, userId);

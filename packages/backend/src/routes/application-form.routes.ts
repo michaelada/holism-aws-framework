@@ -34,10 +34,13 @@ router.get(
     try {
       const { organisationId } = req.params;
       const forms = await applicationFormService.getApplicationFormsByOrganisation(organisationId);
-      res.json(forms);
+      // Returned, like the early exits above — with `noImplicitReturns` a
+      // handler where some paths return a value and others do not fails to
+      // compile, which took the whole suite down with it.
+      return res.json(forms);
     } catch (error) {
       logger.error('Error in GET /application-forms:', error);
-      res.status(500).json({ error: 'Failed to fetch application forms' });
+      return res.status(500).json({ error: 'Failed to fetch application forms' });
     }
   }
 );
@@ -76,10 +79,13 @@ router.get(
       
       const organisationId = orgResult.rows[0].organization_id;
       const forms = await applicationFormService.getApplicationFormsByOrganisation(organisationId);
-      res.json(forms);
+      // Returned, like the early exits above — with `noImplicitReturns` a
+      // handler where some paths return a value and others do not fails to
+      // compile, which took the whole suite down with it.
+      return res.json(forms);
     } catch (error) {
       logger.error('Error in GET /application-forms:', error);
-      res.status(500).json({ error: 'Failed to fetch application forms' });
+      return res.status(500).json({ error: 'Failed to fetch application forms' });
     }
   }
 );

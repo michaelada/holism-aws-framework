@@ -11,11 +11,82 @@ import { organizationTypeService } from './organization-type.service';
 import { KeycloakAdminService } from './keycloak-admin.service';
 import cacheService from './cache.service';
 import { orgPaymentMethodDataService } from './org-payment-method-data.service';
+import { ValidationError } from '../middleware/errors';
+import {
+  slugifyUrlCode,
+  validateUrlCode,
+  ensureUniqueUrlCode,
+} from '../utils/url-code';
 
 export class OrganizationService {
   private readonly CACHE_TTL = 300000; // 5 minutes
-  
+
   constructor(private kcAdmin: KeycloakAdminService) {}
+
+  /**
+   * Settle the URL code for an organisation.
+   *
+   * Supplied codes are validated and must be free — a collision is the
+   * caller's to resolve, because silently altering a code the super admin
+   * typed would put a different address in front of members than the one they
+   * were shown. Generated codes are made unique automatically, since nobody
+   * chose them.
+   */
+  private async resolveUrlCode(
+    requested: string | undefined,
+    fallbackSource: string,
+    excludeOrganisationId?: string
+  ): Promise<string> {
+    const taken = await this.getUsedUrlCodes(excludeOrganisationId);
+
+    if (requested !== undefined && requested !== null && requested !== '') {
+      const validation = validateUrlCode(requested);
+      if (!validation.valid) {
+        throw new ValidationError(validation.message!);
+      }
+      if (taken.has(requested)) {
+        throw new ValidationError(
+          `The URL code "${requested}" is already used by another organisation`
+        );
+      }
+      return requested;
+    }
+
+    return ensureUniqueUrlCode(slugifyUrlCode(fallbackSource), taken);
+  }
+
+  private async getUsedUrlCodes(excludeOrganisationId?: string): Promise<Set<string>> {
+    const result = excludeOrganisationId
+      ? await db.query(
+          'SELECT url_code FROM organizations WHERE id <> $1',
+          [excludeOrganisationId]
+        )
+      : await db.query('SELECT url_code FROM organizations');
+
+    return new Set(
+      result.rows
+        .map((row: any) => row.url_code)
+        .filter((code: string | null): code is string => Boolean(code))
+    );
+  }
+
+  /**
+   * Whether a URL code may be used, for the admin form's inline check.
+   */
+  async checkUrlCodeAvailability(
+    code: string,
+    excludeOrganisationId?: string
+  ): Promise<{ available: boolean; reason?: string }> {
+    const validation = validateUrlCode(code);
+    if (!validation.valid) {
+      return { available: false, reason: validation.message };
+    }
+
+    const taken = await this.getUsedUrlCodes(excludeOrganisationId);
+    return taken.has(code)
+      ? { available: false, reason: 'That URL code is already in use' }
+      : { available: true };
+  }
 
   /**
    * Convert database row to Organization object
@@ -27,6 +98,7 @@ export class OrganizationService {
       keycloakGroupId: row.keycloak_group_id,
       name: row.name,
       displayName: row.display_name,
+      urlCode: row.url_code,
       domain: row.domain,
       contactName: row.contact_name,
       contactEmail: row.contact_email,
@@ -212,6 +284,13 @@ export class OrganizationService {
         }
       }
 
+      // Settle the URL code before touching Keycloak — a rejected code should
+      // not leave an orphaned group behind.
+      const urlCode = await this.resolveUrlCode(
+        data.urlCode,
+        data.displayName || data.name
+      );
+
       // Create Keycloak group hierarchy
       await this.kcAdmin.ensureAuthenticated();
       const client = this.kcAdmin.getClient();
@@ -249,22 +328,27 @@ export class OrganizationService {
       // Insert into database
       const result = await db.query(
         `INSERT INTO organizations
-         (organization_type_id, keycloak_group_id, name, display_name, domain,
+         (organization_type_id, keycloak_group_id, name, display_name, url_code, domain,
           contact_name, contact_email, contact_mobile, status,
           currency, language, enabled_capabilities, settings, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          RETURNING *`,
         [
           data.organizationTypeId,
           orgGroup!.id,
           data.name,
           data.displayName,
+          urlCode,
           data.domain,
           data.contactName,
           data.contactEmail,
           data.contactMobile,
           data.status || 'active',
-          data.currency || orgType.currency,
+          // Always the organisation type's currency: the type's fixed handling
+          // fee is a cash amount in it, so the two cannot diverge. Any currency
+          // sent by the client is ignored rather than rejected, so existing
+          // callers keep working.
+          orgType.currency,
           data.language || orgType.language,
           JSON.stringify(data.enabledCapabilities),
           JSON.stringify(data.settings || {}),
@@ -293,7 +377,30 @@ export class OrganizationService {
         // Don't fail organization creation if payment method initialization fails
         // The organization is still created, but payment methods may need to be configured manually
       }
-      
+
+      /*
+       * Every organisation gets a "Full Administrator" role.
+       *
+       * Unlike the payment-method step above, a failure here is **not**
+       * swallowed. An organisation with no administrator role cannot have
+       * anyone granted access to it, so it is unusable — and an unusable
+       * organisation that reports itself as created successfully is worse than
+       * a visible failure, because it looks fine until someone tries to invite
+       * an administrator and cannot.
+       *
+       * The insert is idempotent, so a caller retrying after some other failure
+       * will not end up with duplicates.
+       */
+      /*
+       * Imported lazily to avoid a cycle: `organization-admin-role.service`
+       * already imports this module, and a static import both ways leaves one
+       * of them `undefined` at module-initialisation time depending on which
+       * loads first. The same pattern is used elsewhere in this codebase for
+       * the same reason.
+       */
+      const { organizationAdminRoleService } = await import('./organization-admin-role.service');
+      await organizationAdminRoleService.ensureFullAdministratorRole(createdOrg.id);
+
       return createdOrg;
     } catch (error) {
       logger.error('Error creating organization:', error);
@@ -351,6 +458,13 @@ export class OrganizationService {
           updates.push(`display_name = $${paramCount++}`);
           values.push(data.displayName);
         }
+        if (data.urlCode !== undefined) {
+          // Changing a code breaks every link members already have, but that is
+          // the super admin's call to make — it is validated, not prevented.
+          const urlCode = await this.resolveUrlCode(data.urlCode, data.urlCode, id);
+          updates.push(`url_code = $${paramCount++}`);
+          values.push(urlCode);
+        }
         if (data.domain !== undefined) {
           updates.push(`domain = $${paramCount++}`);
           values.push(data.domain);
@@ -371,10 +485,11 @@ export class OrganizationService {
           updates.push(`status = $${paramCount++}`);
           values.push(data.status);
         }
-        if (data.currency !== undefined) {
-          updates.push(`currency = $${paramCount++}`);
-          values.push(data.currency);
-        }
+        // data.currency is deliberately ignored. An organisation trades in its
+        // organisation type's currency, because the type's fixed handling fee
+        // is a cash amount in that currency (see G12 in
+        // docs/ACCOUNT_USER_APP_WIREFRAMES.md). The value is dropped rather
+        // than rejected so existing callers that still send it keep working.
         if (data.language !== undefined) {
           updates.push(`language = $${paramCount++}`);
           values.push(data.language);

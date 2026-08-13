@@ -5,6 +5,7 @@ const ses = new SESClient({ region: process.env.AWS_REGION || 'eu-west-1' });
 
 const FROM_EMAIL = process.env.SES_FROM_EMAIL || 'noreply@eskersoft.com';
 const ORGADMIN_URL = process.env.ORGADMIN_URL || 'http://localhost:5175/orgadmin';
+const ACCOUNT_URL = process.env.ACCOUNT_URL || 'http://localhost:5176/account';
 const LOGO_URL = 'https://itsplainsailing.com/admin/logos/ips-logo-sails-darker-text-transparent-128.png';
 
 interface InviteEmailParams {
@@ -169,4 +170,185 @@ You will be asked to set a new password on first login.`;
     });
     throw error;
   }
+}
+
+
+// ---------------------------------------------------------------------------
+// Account-user registration
+//
+// Sent when a member registers with an organisation, and when an administrator
+// decides on a registration that needed approval. See G6 in
+// docs/ACCOUNT_USER_APP_WIREFRAMES.md.
+//
+// Every one of these follows the same rule as the invitation emails above:
+// a delivery failure is logged and swallowed. A member must not be left
+// un-registered or un-approved because SES was unavailable — the state in the
+// database is the source of truth, and the email is a notification about it.
+// ---------------------------------------------------------------------------
+
+interface RegistrationEmailParams {
+  toEmail: string;
+  firstName: string;
+  organizationName: string;
+  /** The organisation's short code, so links land on the right portal. */
+  urlCode: string;
+}
+
+interface RegistrationNotificationParams {
+  toEmails: string[];
+  organizationName: string;
+  applicantName: string;
+  applicantEmail: string;
+  pendingCount: number;
+}
+
+function accountUrl(urlCode: string): string {
+  return `${ACCOUNT_URL}/${urlCode}`;
+}
+
+async function send(
+  toAddresses: string[],
+  subject: string,
+  htmlBody: string,
+  textBody: string,
+  description: string
+): Promise<void> {
+  if (toAddresses.length === 0) return;
+
+  try {
+    await ses.send(new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: { ToAddresses: toAddresses },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: {
+          Html: { Data: htmlBody, Charset: 'UTF-8' },
+          Text: { Data: textBody, Charset: 'UTF-8' },
+        },
+      },
+    }));
+    logger.info(`${description} sent`, { to: toAddresses });
+  } catch (error) {
+    logger.error(`Failed to send ${description}`, {
+      to: toAddresses,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/** A member registered and is active immediately (auto-registration on). */
+export async function sendRegistrationWelcomeEmail(
+  params: RegistrationEmailParams
+): Promise<void> {
+  const { toEmail, firstName, organizationName, urlCode } = params;
+  const url = accountUrl(urlCode);
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">You're now registered with <strong>${organizationName}</strong>.</p>
+    <p style="font-size: 15px;">You can sign in any time to see your memberships, entries and bookings, and to make new ones.</p>
+    ${buildButton('Go to the member portal', url)}
+    <p style="font-size: 12px; color: #64748B;">If you did not register with ${organizationName}, please let them know.</p>`;
+
+  await send(
+    [toEmail],
+    `You're registered with ${organizationName}`,
+    buildEmailShell(`Welcome to ${organizationName}`, body),
+    `Hi ${firstName},\n\nYou're now registered with ${organizationName}.\n\nSign in at: ${url}`,
+    'registration welcome email'
+  );
+}
+
+/** A member registered but an administrator has to approve them first. */
+export async function sendRegistrationPendingEmail(
+  params: RegistrationEmailParams
+): Promise<void> {
+  const { toEmail, firstName, organizationName, urlCode } = params;
+  const url = accountUrl(urlCode);
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">Thanks for registering with <strong>${organizationName}</strong>.</p>
+    <p style="font-size: 15px;">Your account is set up, but ${organizationName} reviews new registrations before granting access. We'll email you as soon as you're approved — there's nothing else you need to do.</p>
+    ${buildButton('Check your status', url)}`;
+
+  await send(
+    [toEmail],
+    `Your registration with ${organizationName} is being reviewed`,
+    buildEmailShell('Waiting for approval', body),
+    `Hi ${firstName},\n\nThanks for registering with ${organizationName}. A club administrator will review your registration and we'll email you once you're approved.\n\n${url}`,
+    'registration pending email'
+  );
+}
+
+/** An administrator approved a registration that was waiting. */
+export async function sendRegistrationApprovedEmail(
+  params: RegistrationEmailParams
+): Promise<void> {
+  const { toEmail, firstName, organizationName, urlCode } = params;
+  const url = accountUrl(urlCode);
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">Good news — <strong>${organizationName}</strong> has approved your registration.</p>
+    <p style="font-size: 15px;">You can now sign in and get started.</p>
+    ${buildButton('Sign in', url)}`;
+
+  await send(
+    [toEmail],
+    `You've been approved by ${organizationName}`,
+    buildEmailShell(`Welcome to ${organizationName}`, body),
+    `Hi ${firstName},\n\n${organizationName} has approved your registration. Sign in at: ${url}`,
+    'registration approved email'
+  );
+}
+
+/**
+ * An administrator declined a registration.
+ *
+ * Deliberately gives no reason. Whatever the administrator recorded is an
+ * internal note, and surfacing it invites arguments the platform cannot
+ * adjudicate — the member is pointed at the club instead.
+ */
+export async function sendRegistrationRejectedEmail(
+  params: RegistrationEmailParams & { contactEmail?: string }
+): Promise<void> {
+  const { toEmail, firstName, organizationName, contactEmail } = params;
+
+  const contactLine = contactEmail
+    ? `<p style="font-size: 15px;">If you think this is a mistake, please contact <a href="mailto:${contactEmail}">${contactEmail}</a>.</p>`
+    : `<p style="font-size: 15px;">If you think this is a mistake, please contact the club directly.</p>`;
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;"><strong>${organizationName}</strong> wasn't able to approve your registration.</p>
+    ${contactLine}`;
+
+  await send(
+    [toEmail],
+    `Your registration with ${organizationName}`,
+    buildEmailShell('Registration not approved', body),
+    `Hi ${firstName},\n\n${organizationName} wasn't able to approve your registration. If you think this is a mistake, please contact the club${contactEmail ? ` at ${contactEmail}` : ''}.`,
+    'registration rejected email'
+  );
+}
+
+/** Tell the organisation's nominated addresses that someone is waiting. */
+export async function sendNewRegistrationNotification(
+  params: RegistrationNotificationParams
+): Promise<void> {
+  const { toEmails, organizationName, applicantName, applicantEmail, pendingCount } = params;
+
+  const body = `
+    <p style="font-size: 15px;"><strong>${applicantName}</strong> (${applicantEmail}) has registered with <strong>${organizationName}</strong> and is waiting for approval.</p>
+    <p style="font-size: 15px;">${pendingCount} registration${pendingCount === 1 ? '' : 's'} currently waiting.</p>
+    ${buildButton('Review registrations', `${ORGADMIN_URL}/users/accounts/pending`)}`;
+
+  await send(
+    toEmails,
+    `New registration awaiting approval — ${organizationName}`,
+    buildEmailShell('A registration needs your approval', body),
+    `${applicantName} (${applicantEmail}) has registered with ${organizationName} and is waiting for approval. ${pendingCount} waiting in total.`,
+    'new registration notification'
+  );
 }

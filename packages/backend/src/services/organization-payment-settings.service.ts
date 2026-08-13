@@ -8,13 +8,22 @@ import { logger } from '../config/logger';
  * `paymentSettings` key, alongside the organisation's other settings
  * (address, contact details, etc.). This keeps payment configuration with
  * the rest of the organisation record without requiring a dedicated table.
+ *
+ * **No Stripe credentials live here.** Under Connect destination charges the
+ * platform's key comes from the environment and the organisation's only Stripe
+ * state is its connected account id in `settings.stripeConnect`. The
+ * `stripeEnabled` / `stripePublishableKey` / `stripeSecretKey` /
+ * `stripeWebhookSecret` fields that used to be in this contract belonged to the
+ * older direct-charge model, were never read by any payment code path, and were
+ * removed by migration 1709000000014.
+ *
+ * `acceptedPaymentMethods` went the same way. Which methods an organisation may
+ * offer is decided by the `payment_methods` rows the super admin enables for it
+ * and the fees configured on its organisation type — which is what checkout
+ * actually joins against. A second, self-declared list here answered the same
+ * question with no authority behind it, and nothing ever read it.
  */
 export interface PaymentSettings {
-  stripeEnabled: boolean;
-  stripePublishableKey: string;
-  stripeSecretKey: string;
-  stripeWebhookSecret: string;
-  acceptedPaymentMethods: string[];
   helixPayEnabled: boolean;
   helixPayApiKey: string;
   chequePaymentsEnabled: boolean;
@@ -22,11 +31,6 @@ export interface PaymentSettings {
 }
 
 const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
-  stripeEnabled: false,
-  stripePublishableKey: '',
-  stripeSecretKey: '',
-  stripeWebhookSecret: '',
-  acceptedPaymentMethods: ['card'],
   helixPayEnabled: false,
   helixPayApiKey: '',
   chequePaymentsEnabled: false,
@@ -43,15 +47,6 @@ function sanitizePaymentSettings(data: any): Partial<PaymentSettings> {
     return out;
   }
 
-  if (typeof data.stripeEnabled === 'boolean') out.stripeEnabled = data.stripeEnabled;
-  if (typeof data.stripePublishableKey === 'string') out.stripePublishableKey = data.stripePublishableKey;
-  if (typeof data.stripeSecretKey === 'string') out.stripeSecretKey = data.stripeSecretKey;
-  if (typeof data.stripeWebhookSecret === 'string') out.stripeWebhookSecret = data.stripeWebhookSecret;
-  if (Array.isArray(data.acceptedPaymentMethods)) {
-    out.acceptedPaymentMethods = data.acceptedPaymentMethods.filter(
-      (m: unknown): m is string => typeof m === 'string'
-    );
-  }
   if (typeof data.helixPayEnabled === 'boolean') out.helixPayEnabled = data.helixPayEnabled;
   if (typeof data.helixPayApiKey === 'string') out.helixPayApiKey = data.helixPayApiKey;
   if (typeof data.chequePaymentsEnabled === 'boolean') out.chequePaymentsEnabled = data.chequePaymentsEnabled;

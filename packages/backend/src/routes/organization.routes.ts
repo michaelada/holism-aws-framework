@@ -37,6 +37,52 @@ router.get('/', authenticateToken(), async (req: Request, res: Response) => {
 
 /**
  * @swagger
+ * /api/admin/organizations/url-code-available:
+ *   get:
+ *     summary: Whether a URL code may be used
+ *     description: >
+ *       Backs the inline check on the organisation form. Declared before /:id
+ *       so "url-code-available" is not captured as an organisation id.
+ *     tags: [Organizations]
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: excludeId
+ *         description: Organisation being edited, so its own code does not count as taken
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Availability and, when unavailable, the reason
+ */
+router.get(
+  '/url-code-available',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const code = String(req.query.code ?? '');
+      const excludeId = req.query.excludeId
+        ? String(req.query.excludeId)
+        : undefined;
+
+      const result = await organizationService.checkUrlCodeAvailability(
+        code,
+        excludeId
+      );
+      return res.json(result);
+    } catch (error) {
+      logger.error('Error in GET /organizations/url-code-available:', error);
+      return res.status(500).json({ error: 'Failed to check URL code' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/admin/organizations/{id}:
  *   get:
  *     summary: Get organization by ID

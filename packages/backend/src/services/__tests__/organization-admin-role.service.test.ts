@@ -1,4 +1,7 @@
-import { organizationAdminRoleService } from '../organization-admin-role.service';
+import {
+  organizationAdminRoleService,
+  FULL_ADMINISTRATOR_ROLE,
+} from '../organization-admin-role.service';
 import { organizationService } from '../organization.service';
 import { db } from '../../database/pool';
 import { logger } from '../../config/logger';
@@ -398,6 +401,126 @@ describe('OrganizationAdminRoleService', () => {
       await expect(
         organizationAdminRoleService.createDefaultRoles('nonexistent')
       ).rejects.toThrow('Organization not found');
+    });
+  });
+
+  describe('ensureFullAdministratorRole', () => {
+    const capabilityRows = {
+      rows: [{ name: 'event-management' }, { name: 'memberships' }, { name: 'merchandise' }],
+      rowCount: 3,
+    };
+
+    beforeEach(() => {
+      mockDb.query.mockReset();
+      mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+    });
+
+    it('creates the role with the expected name', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      const insert = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO organization_admin_roles')
+      );
+      expect(insert?.[1]).toEqual(
+        expect.arrayContaining([
+          'org-1',
+          FULL_ADMINISTRATOR_ROLE.name,
+          FULL_ADMINISTRATOR_ROLE.displayName,
+        ])
+      );
+    });
+
+    /**
+     * The substance of the method. Access needs the organisation to have the
+     * capability *and* the role to permit it, so granting admin on a capability
+     * the organisation lacks costs nothing — but it means the role stays
+     * genuinely full when a capability is enabled later, rather than quietly
+     * being unable to reach the new feature.
+     */
+    it('grants admin on every active capability, not just the enabled ones', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      const insert = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO organization_admin_roles')
+      );
+      const permissions = JSON.parse(insert![1]![4] as string);
+      expect(permissions).toEqual({
+        'event-management': 'admin',
+        memberships: 'admin',
+        merchandise: 'admin',
+      });
+    });
+
+    it('reads capabilities from the capability list rather than the organisation', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      expect(String(mockDb.query.mock.calls[0][0])).toContain('FROM capabilities');
+    });
+
+    it('ignores inactive capabilities', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      expect(String(mockDb.query.mock.calls[0][0])).toContain('is_active = true');
+    });
+
+    /** A retried organisation creation must not leave two identical roles. */
+    it('is idempotent', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      const insert = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO organization_admin_roles')
+      );
+      expect(String(insert?.[0])).toContain('ON CONFLICT (organization_id, name) DO NOTHING');
+    });
+
+    it('does not overwrite a role an administrator has already edited', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      const insert = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO organization_admin_roles')
+      );
+      // DO NOTHING, not DO UPDATE — a club that has tightened its Full
+      // Administrator should not have that silently reset.
+      expect(String(insert?.[0])).not.toContain('DO UPDATE');
+    });
+
+    it('marks it as a system role', async () => {
+      mockDb.query.mockResolvedValueOnce(capabilityRows as any);
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      const insert = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO organization_admin_roles')
+      );
+      expect(String(insert?.[0])).toContain('true');
+    });
+
+    it('still creates the role when no capabilities are defined', async () => {
+      mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+      await organizationAdminRoleService.ensureFullAdministratorRole('org-1');
+
+      const insert = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO organization_admin_roles')
+      );
+      expect(JSON.parse(insert![1]![4] as string)).toEqual({});
+    });
+
+    it('propagates a failure rather than reporting success', async () => {
+      // An organisation with no administrator role is unusable, so this must
+      // not be swallowed.
+      mockDb.query.mockRejectedValue(new Error('connection refused'));
+
+      await expect(
+        organizationAdminRoleService.ensureFullAdministratorRole('org-1')
+      ).rejects.toThrow('connection refused');
     });
   });
 });

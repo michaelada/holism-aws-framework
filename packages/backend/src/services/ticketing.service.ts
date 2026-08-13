@@ -407,6 +407,107 @@ export class TicketingService {
   }
 
   /**
+   * Issue the ticket for a confirmed event entry.
+   *
+   * Called from fulfilment, at the moment an entry becomes real — a successful
+   * card payment, or an org admin recording an offline payment. That is the
+   * same transition that activates a membership, which is why it lives on the
+   * confirmation path rather than in a job that sweeps for unticketed entries:
+   * a member who has paid should not have to wait for a sweep, and a sweep has
+   * no way to tell "not issued yet" from "deliberately not issued".
+   *
+   * Returns null, rather than throwing, when the event is not ticketed. Most
+   * events are not, and an unticketed event is not an error — it is the normal
+   * case, and fulfilment must not fail because of it.
+   *
+   * **Never let this break fulfilment.** The caller treats a throw as
+   * non-fatal: the member has paid and their entry exists, so failing to
+   * produce a ticket is a problem to fix afterwards, not a reason to fail the
+   * payment they already made.
+   */
+  async issueTicketForEntry(eventEntryId: string): Promise<ElectronicTicket | null> {
+    const entry = await db.query(
+      `SELECT en.id, en.event_id, en.event_activity_id, en.user_id,
+              en.first_name, en.last_name, en.email,
+              e.start_date, e.end_date,
+              c.generate_electronic_tickets, c.ticket_validity_period
+       FROM event_entries en
+       JOIN events e ON e.id = en.event_id
+       LEFT JOIN event_ticketing_config c ON c.event_id = en.event_id
+       WHERE en.id = $1`,
+      [eventEntryId]
+    );
+
+    if (entry.rows.length === 0) {
+      throw new Error(`No event entry ${eventEntryId} to issue a ticket for`);
+    }
+
+    const row = entry.rows[0];
+
+    // No config row, or configured off: this event does not use tickets.
+    if (!row.generate_electronic_tickets) {
+      return null;
+    }
+
+    /*
+     * Validity window. `ticket_validity_period` is a number of days *after* the
+     * event starts; with none configured the ticket is valid until the end of
+     * the event's last day, which is what a gate actually needs.
+     *
+     * `valid_from` is the start of the event day rather than the moment of
+     * issue, so a ticket bought weeks early does not read as valid-since-March
+     * on the ticket face.
+     */
+    const validFrom = new Date(row.start_date);
+    const validUntil = new Date(row.end_date ?? row.start_date);
+    if (row.ticket_validity_period) {
+      validUntil.setDate(validUntil.getDate() + Number(row.ticket_validity_period));
+    }
+    validUntil.setHours(23, 59, 59, 999);
+
+    const customerName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
+
+    /*
+     * The reference number comes from a sequence, and the insert is idempotent
+     * on the entry. A replayed Stripe webhook re-runs fulfilment; without
+     * ON CONFLICT the member ends up holding two tickets that both scan valid.
+     */
+    const result = await db.query(
+      `INSERT INTO electronic_tickets
+         (ticket_reference, event_id, event_activity_id, event_entry_id, user_id,
+          customer_name, customer_email, valid_from, valid_until, status, ticket_data)
+       VALUES
+         ('TKT-' || to_char(NOW(), 'YYYY') || '-' ||
+            lpad(nextval('electronic_ticket_reference_seq')::text, 6, '0'),
+          $1, $2, $3, $4, $5, $6, $7, $8, 'issued', '{}'::jsonb)
+       ON CONFLICT (event_entry_id) DO NOTHING
+       RETURNING *`,
+      [
+        row.event_id,
+        row.event_activity_id,
+        eventEntryId,
+        row.user_id,
+        customerName,
+        row.email,
+        validFrom,
+        validUntil,
+      ]
+    );
+
+    // Conflict: a ticket already exists for this entry, which is success.
+    if (result.rows.length === 0) {
+      const existing = await db.query(
+        'SELECT * FROM electronic_tickets WHERE event_entry_id = $1',
+        [eventEntryId]
+      );
+      return existing.rows.length ? this.rowToTicket(existing.rows[0]) : null;
+    }
+
+    logger.info(`Issued ticket ${result.rows[0].ticket_reference} for entry ${eventEntryId}`);
+    return this.rowToTicket(result.rows[0]);
+  }
+
+  /**
    * Get ticket by ID
    */
   async getTicketById(ticketId: string): Promise<ElectronicTicket | null> {

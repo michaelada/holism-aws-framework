@@ -12,6 +12,24 @@ import { Discount, ValidationResult, ValidationError } from '../types/discount.t
  * - Validity period checking
  * - Comprehensive discount validation
  */
+/**
+ * Accept either spelling of the membership-type criterion.
+ *
+ * The type and this validator call it `membershipTypes`; the events discount
+ * form has always written `membershipTypeIds`. Nothing reconciled them, so a
+ * discount restricted to certain membership types read as having no restriction
+ * at all and applied to everyone.
+ *
+ * The form now writes the canonical key, but discounts saved before that still
+ * carry the old one — so both are read here rather than migrating the stored
+ * JSONB, which would have to guess at rows this code has never seen.
+ */
+function normaliseCriteria(criteria: any): any {
+  if (!criteria) return criteria;
+  const membershipTypes = criteria.membershipTypes ?? criteria.membershipTypeIds;
+  return membershipTypes ? { ...criteria, membershipTypes } : criteria;
+}
+
 export class DiscountValidatorService {
   /**
    * Look up discount by code within an organization
@@ -59,7 +77,7 @@ export class DiscountValidatorService {
       return { valid: true, errors: [] };
     }
 
-    const criteria = discount.eligibilityCriteria;
+    const criteria = normaliseCriteria(discount.eligibilityCriteria);
 
     // Check minimum purchase amount
     if (criteria.minimumPurchaseAmount && amount < criteria.minimumPurchaseAmount) {
@@ -74,8 +92,11 @@ export class DiscountValidatorService {
     if (criteria.membershipTypes && criteria.membershipTypes.length > 0) {
       try {
         const membershipResult = await db.query(
+          // `members`, not `memberships` — there is no such table, and this
+          // query previously always threw, so membership-based discount
+          // eligibility could never be satisfied. The columns match exactly.
           `SELECT membership_type_id
-          FROM memberships
+          FROM members
           WHERE user_id = $1 AND status = 'active'
           AND membership_type_id = ANY($2::uuid[])`,
           [userId, criteria.membershipTypes]
@@ -115,9 +136,16 @@ export class DiscountValidatorService {
           });
         }
       } catch (error) {
+        // Fails closed, matching the membership check above. This previously
+        // swallowed the error and granted eligibility, because the
+        // user_group_members table did not exist. It does now, so a failure
+        // here is a real fault — and a discount that silently applies to
+        // everyone when a query breaks is worse than one that refuses.
         logger.error('Error checking user group eligibility:', error);
-        // If tables don't exist yet, skip this check
-        logger.warn('User group check skipped - tables may not exist yet');
+        errors.push({
+          code: 'ELIGIBILITY_CHECK_FAILED',
+          message: 'Failed to verify user group eligibility',
+        });
       }
     }
 

@@ -227,6 +227,59 @@ export class FileUploadService {
   }
 
   /**
+   * Upload an organisation's branding logo.
+   *
+   * Separate from `uploadFile` because a logo is not a form submission. That
+   * method's S3 key is built from `formId`/`fieldId`, and its caller writes a
+   * `form_submission_files` row — neither of which means anything here, and the
+   * required-field check is exactly what made the branding tab's upload fail
+   * with "Missing required fields: organizationId, formId, fieldId".
+   *
+   * The key is stable per organisation but uniquified per upload, so replacing
+   * a logo cannot be served stale from a CDN or browser cache.
+   */
+  async uploadBrandingLogo(params: {
+    organizationId: string;
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number };
+  }): Promise<{ s3Key: string; fileName: string; fileSize: number; mimeType: string }> {
+    const { organizationId, file } = params;
+
+    // 'image' — a logo that is not an image is a mistake worth refusing early.
+    const validation = this.validateFile(file, 'image');
+    if (!validation.valid) {
+      throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const sanitizedFileName = path.basename(file.originalname);
+    const extension = path.extname(sanitizedFileName);
+    const unique = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+    const s3Key = `organisations/${organizationId}/branding/logo_${unique}${extension}`;
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        Metadata: {
+          organizationId,
+          purpose: 'branding-logo',
+          originalName: sanitizedFileName,
+        },
+      })
+    );
+
+    logger.info('Branding logo uploaded', { organizationId, s3Key, fileSize: file.size });
+
+    return {
+      s3Key,
+      fileName: sanitizedFileName,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+    };
+  }
+
+  /**
    * Get signed URL for file download
    * URL expires after 1 hour
    */

@@ -92,10 +92,12 @@ describe('EventService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Summer Camp');
-      expect(mockDb.query).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE organisation_id = $1'),
-        ['org-1']
-      );
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('e.organisation_id = $1');
+      // Soft-deleted events must not come back — the delete marks the row
+      // rather than removing it, so without this filter they would.
+      expect(String(sql)).toContain('e.deleted = FALSE');
+      expect(params).toEqual(['org-1']);
     });
   });
 
@@ -259,9 +261,18 @@ describe('EventService', () => {
         status: 'published',
       };
 
+      /*
+       * updateEvent issues five queries, in this order. The original sequence
+       * assumed two — a read then a write — so the service received the
+       * existing row where it expected the updated one and the assertion failed
+       * on a value the service never actually returned.
+       */
       mockDb.query
-        .mockResolvedValueOnce({ rows: [mockExisting] } as any) // getEventById
-        .mockResolvedValueOnce({ rows: [mockUpdated] } as any); // update
+        .mockResolvedValueOnce({ rows: [mockExisting] } as any) // 1. getEventById: the event
+        .mockResolvedValueOnce({ rows: [] } as any)             // 2. getEventById: its activities
+        .mockResolvedValueOnce({ rows: [] } as any)             // 3. getEventById: ticketing config
+        .mockResolvedValueOnce({ rows: [mockUpdated] } as any)  // 4. the UPDATE itself
+        .mockResolvedValueOnce({ rows: [] } as any);            // 5. activities, re-read after
 
       const result = await service.updateEvent('1', {
         name: 'Updated Camp',
@@ -282,21 +293,35 @@ describe('EventService', () => {
   });
 
   describe('deleteEvent', () => {
-    it('should delete event', async () => {
+    /**
+     * Deleting an event is a soft delete that records who did it — the row is
+     * marked rather than removed, so entries and payments that reference it are
+     * not orphaned. This test previously asserted a hard `DELETE`, which the
+     * service stopped doing.
+     */
+    it('should soft delete the event and record who deleted it', async () => {
       mockDb.query.mockResolvedValue({ rowCount: 1 } as any);
 
-      await service.deleteEvent('1');
+      await service.deleteEvent('1', 'admin-1');
 
-      expect(mockDb.query).toHaveBeenCalledWith(
-        'DELETE FROM events WHERE id = $1',
-        ['1']
-      );
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('UPDATE events SET deleted = TRUE');
+      expect(String(sql)).toContain('deleted_by = $2');
+      expect(params).toEqual(['1', 'admin-1']);
+    });
+
+    it('does not delete an event twice', async () => {
+      // The guard is `AND deleted = FALSE`, so a second attempt matches no row.
+      mockDb.query.mockResolvedValue({ rowCount: 1 } as any);
+      await service.deleteEvent('1', 'admin-1');
+
+      expect(String(mockDb.query.mock.calls[0][0])).toContain('deleted = FALSE');
     });
 
     it('should throw error when event not found', async () => {
       mockDb.query.mockResolvedValue({ rowCount: 0 } as any);
 
-      await expect(service.deleteEvent('999')).rejects.toThrow('Event not found');
+      await expect(service.deleteEvent('999', 'admin-1')).rejects.toThrow('Event not found');
     });
   });
 });
@@ -392,30 +417,20 @@ describe('EventActivityService', () => {
       expect(result.applicantsLimit).toBe(50);
     });
 
-    it('should throw error when payment method required but not provided', async () => {
-      const invalidActivity = {
-        eventId: 'event-1',
-        name: 'Test Activity',
-        fee: 10.0,
-      };
-
-      await expect(service.createActivity(invalidActivity)).rejects.toThrow(
-        'Payment method is required for paid activities'
-      );
-    });
-
-    it('should throw error when cheque payment allowed but no instructions', async () => {
-      const invalidActivity = {
-        eventId: 'event-1',
-        name: 'Test Activity',
-        fee: 10.0,
-        supportedPaymentMethods: ['pm-offline-1'],
-      };
-
-      await expect(service.createActivity(invalidActivity)).rejects.toThrow(
-        'Cheque payment instructions are required when cheque payment is allowed'
-      );
-    });
+    /*
+     * Two tests were removed here. They asserted that `createActivity` rejects
+     * a paid activity with no payment method, and a cheque-accepting activity
+     * with no instructions.
+     *
+     * The service no longer enforces either — the rules now live in the
+     * org-admin form (`EventActivityForm.tsx`, which has its own tests). The
+     * tests were removed rather than the service changed, because restoring
+     * backend validation is a behavioural decision, not a test repair.
+     *
+     * Worth knowing: nothing enforces these server-side any more, so an
+     * activity created through the API directly can be paid with no payment
+     * method. See docs/BACKEND_TEST_SUITE_REPAIR.md.
+     */
   });
 
   describe('updateActivity', () => {
@@ -445,9 +460,9 @@ describe('EventActivityService', () => {
         fee: '15.00',
       };
 
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [mockExisting] } as any)
-        .mockResolvedValueOnce({ rows: [mockUpdated] } as any);
+      // A single `UPDATE ... RETURNING` — there is no read first, so a
+      // read-then-write mock sequence hands the service the stale row.
+      mockDb.query.mockResolvedValueOnce({ rows: [mockUpdated] } as any);
 
       const result = await service.updateActivity('1', { fee: 15.0 });
 

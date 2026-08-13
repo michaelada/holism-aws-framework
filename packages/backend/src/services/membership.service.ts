@@ -231,7 +231,7 @@ export class MembershipService {
     try {
       const result = await db.query(
         `SELECT * FROM membership_types 
-         WHERE organisation_id = $1 
+         WHERE organisation_id = $1 AND deleted = FALSE
          ORDER BY name ASC`,
         [organisationId]
       );
@@ -249,7 +249,7 @@ export class MembershipService {
   async getMembershipTypeById(id: string): Promise<MembershipType | null> {
     try {
       const result = await db.query(
-        'SELECT * FROM membership_types WHERE id = $1',
+        'SELECT * FROM membership_types WHERE id = $1 AND deleted = FALSE',
         [id]
       );
 
@@ -521,18 +521,25 @@ export class MembershipService {
   /**
    * Delete a membership type
    */
-  async deleteMembershipType(id: string): Promise<void> {
+  /**
+   * Withdraw a membership type.
+   *
+   * Soft delete: `members` reference these rows: a type an organisation stops offering is still the type last season's members hold.
+   */
+  async deleteMembershipType(id: string, deletedBy?: string): Promise<void> {
     try {
       const result = await db.query(
-        'DELETE FROM membership_types WHERE id = $1',
-        [id]
+        `UPDATE membership_types
+         SET deleted = TRUE, deleted_at = NOW(), deleted_by = $2, updated_at = NOW()
+         WHERE id = $1 AND deleted = FALSE`,
+        [id, deletedBy ?? null]
       );
 
       if (result.rowCount === 0) {
-        throw new Error('Membership type not found');
+        throw new Error('Membership type not found or already deleted');
       }
 
-      logger.info(`Membership type deleted: ${id}`);
+      logger.info(`Membership type withdrawn: ${id}`);
     } catch (error) {
       logger.error('Error deleting membership type:', error);
       throw error;

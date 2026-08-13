@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { userPreferencesService } from '../services/user-preferences.service';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.middleware';
+import { ONBOARDING_MODULE_IDS, isOnboardingModuleId } from '../utils/onboarding-modules';
 import { logger } from '../config/logger';
 
 const router = Router();
@@ -96,8 +97,7 @@ router.put('/onboarding', async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    // Valid module IDs as per design document
-    const validModuleIds = ['dashboard', 'users', 'forms', 'events', 'memberships', 'calendar', 'payments'];
+    const validModuleIds = ONBOARDING_MODULE_IDS;
 
     if (modulesVisited !== undefined) {
       if (!Array.isArray(modulesVisited)) {
@@ -112,7 +112,7 @@ router.put('/onboarding', async (req: AuthenticatedRequest, res: Response): Prom
       }
 
       // Validate all module IDs
-      const invalidModules = modulesVisited.filter(id => !validModuleIds.includes(id));
+      const invalidModules = modulesVisited.filter(id => !isOnboardingModuleId(id));
       if (invalidModules.length > 0) {
         logger.warn('Invalid module IDs provided', { userId, invalidModules });
         res.status(400).json({

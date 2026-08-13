@@ -8,6 +8,8 @@ import { capabilityService } from '../capability.service';
 import { db } from '../../database/pool';
 
 // Mock dependencies
+import { createMockClient } from '../../test-helpers/mock-db-client';
+
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 jest.mock('../capability.service');
@@ -15,11 +17,28 @@ jest.mock('../capability.service');
 describe('OrganizationTypeService Locale Edge Cases', () => {
   let service: OrganizationTypeService;
   const mockDb = db as jest.Mocked<typeof db>;
+  let mockClient: ReturnType<typeof createMockClient>;
   const mockCapabilityService = capabilityService as jest.Mocked<typeof capabilityService>;
 
   beforeEach(() => {
     service = new OrganizationTypeService();
     jest.clearAllMocks();
+    /*
+     * The service does its writes in a transaction via `db.getClient()`. Under
+     * the automock that returns `undefined`, so the failure surfaced as
+     * "Cannot read properties of undefined (reading 'release')" — which reads
+     * as a service bug, and masked the validation error each of these tests is
+     * actually asserting.
+     */
+    mockClient = createMockClient();
+    const client = mockClient;
+    // The create path runs INSERT ... RETURNING inside the transaction and
+    // reads `rows[0].id` back, so an empty result set is not enough.
+    client.query.mockResolvedValue({
+      rows: [{ id: 'type-1', default_locale: 'en-GB' }],
+      rowCount: 1,
+    });
+    (mockDb.getClient as unknown as jest.Mock).mockResolvedValue(client);
   });
 
   describe('Default locale is en-GB when not specified', () => {
@@ -54,7 +73,10 @@ describe('OrganizationTypeService Locale Edge Cases', () => {
       });
 
       expect(result.defaultLocale).toBe('en-GB');
-      expect(mockDb.query).toHaveBeenCalledWith(
+      // The INSERT runs on the transactional client, not on `db.query` — this
+      // assertion previously watched the wrong mock and so could never see the
+      // locale it was checking for.
+      expect(mockClient.query).toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining(['en-GB'])
       );

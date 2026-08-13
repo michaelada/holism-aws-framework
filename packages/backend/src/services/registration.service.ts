@@ -259,7 +259,7 @@ export class RegistrationService {
     try {
       const result = await db.query(
         `SELECT * FROM registration_types 
-         WHERE organisation_id = $1 
+         WHERE organisation_id = $1 AND deleted = FALSE
          ORDER BY name ASC`,
         [organisationId]
       );
@@ -277,7 +277,7 @@ export class RegistrationService {
   async getRegistrationTypeById(id: string): Promise<RegistrationType | null> {
     try {
       const result = await db.query(
-        'SELECT * FROM registration_types WHERE id = $1',
+        'SELECT * FROM registration_types WHERE id = $1 AND deleted = FALSE',
         [id]
       );
 
@@ -503,18 +503,25 @@ export class RegistrationService {
   /**
    * Delete a registration type
    */
-  async deleteRegistrationType(id: string): Promise<void> {
+  /**
+   * Withdraw a registration type.
+   *
+   * Soft delete: `registrations` reference these rows, so a withdrawn type must still name what somebody registered for.
+   */
+  async deleteRegistrationType(id: string, deletedBy?: string): Promise<void> {
     try {
       const result = await db.query(
-        'DELETE FROM registration_types WHERE id = $1',
-        [id]
+        `UPDATE registration_types
+         SET deleted = TRUE, deleted_at = NOW(), deleted_by = $2, updated_at = NOW()
+         WHERE id = $1 AND deleted = FALSE`,
+        [id, deletedBy ?? null]
       );
 
       if (result.rowCount === 0) {
-        throw new Error('Registration type not found');
+        throw new Error('Registration type not found or already deleted');
       }
 
-      logger.info(`Registration type deleted: ${id}`);
+      logger.info(`Registration type withdrawn: ${id}`);
     } catch (error) {
       logger.error('Error deleting registration type:', error);
       throw error;

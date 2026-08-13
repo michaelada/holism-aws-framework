@@ -15,7 +15,6 @@ import {
   sanitizeQuery,
   sanitizeParams,
   apiRateLimit,
-  xssSecurityHeaders,
   xssDetection
 } from './middleware';
 import metadataRoutes from './routes/metadata.routes';
@@ -44,7 +43,12 @@ import reportingRoutes from './routes/reporting.routes';
 import userManagementRoutes from './routes/user-management.routes';
 import orgadminAuthRoutes from './routes/orgadmin-auth.routes';
 import orgadminOrganisationRoutes from './routes/orgadmin-organisation.routes';
+import webhookRoutes from './routes/webhook.routes';
+import { allowedOrigins as allowedOriginList } from './utils/allowed-origins';
 import userPreferencesRoutes from './routes/user-preferences.routes';
+import userGroupRoutes from './routes/user-group.routes';
+import publicRoutes from './routes/public.routes';
+import accountRoutes from './routes/account.routes';
 import { swaggerSpec } from './config/swagger';
 import { register } from './config/metrics';
 
@@ -55,7 +59,9 @@ const app = express();
 const PORT = process.env.API_PORT || 3000;
 
 // CORS must be configured BEFORE helmet so preflight OPTIONS requests are handled correctly
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || ['http://localhost:3000'];
+// Single definition, shared with the redirect check in
+// utils/allowed-origins.ts — two copies of this list drift.
+const allowedOrigins = allowedOriginList();
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -100,9 +106,26 @@ app.use(helmet({
   crossOriginResourcePolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
 
-// XSS protection headers
+/*
+ * XSS-related response headers come from helmet() above:
+ * X-Content-Type-Options, X-Frame-Options, Referrer-Policy and X-XSS-Protection.
+ *
+ * `xssSecurityHeaders()` in middleware/xss-protection.middleware.ts is no longer
+ * applied here. It additionally set `Permissions-Policy`, which helmet does not,
+ * so that header is currently absent — see docs/BACKEND_TEST_SUITE_REPAIR.md.
+ */
 
 // Body parsing and cookie parsing
+/*
+ * Webhooks mount BEFORE the JSON parser, and this order is load-bearing.
+ *
+ * A provider signs the exact bytes it sent. `express.json()` parses and
+ * discards them, so a router mounted after it can only re-serialise the object
+ * — which produces different bytes and fails every signature check. The webhook
+ * router applies `express.raw()` itself.
+ */
+app.use('/api/webhooks', webhookRoutes);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
@@ -237,7 +260,16 @@ app.use('/api/orgadmin', paymentRoutes);
 app.use('/api/orgadmin', reportingRoutes);
 app.use('/api/orgadmin/files', fileUploadRoutes);
 app.use('/api/orgadmin/users', userManagementRoutes);
+app.use('/api/orgadmin', userGroupRoutes);
 app.use('/api/user-preferences', userPreferencesRoutes);
+
+// Account-user application. /api/public/* is deliberately unauthenticated —
+// it backs the organisation directory and sign-in gateway, which a member
+// reaches before they have a session. /api/account/* requires a token and
+// resolves the organisation from the URL rather than from the token, because
+// an account user may belong to several.
+app.use('/api/public', publicRoutes);
+app.use('/api/account', accountRoutes);
 
 // 404 handler
 app.use((_req, res) => {

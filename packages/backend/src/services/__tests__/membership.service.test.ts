@@ -451,17 +451,23 @@ describe('MembershipService', () => {
 
       await service.deleteMembershipType('1');
 
-      expect(mockDb.query).toHaveBeenCalledWith(
-        'DELETE FROM membership_types WHERE id = $1',
-        ['1']
-      );
+      // Soft delete: the row is marked, not removed, because paid-for records
+      // reference it. `deleted = FALSE` in the WHERE makes a repeat call a
+      // no-op rather than silently re-stamping the timestamp.
+      const [sql, params] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('UPDATE membership_types');
+      expect(String(sql)).toContain('deleted = TRUE');
+      expect(String(sql)).toContain('deleted_at = NOW()');
+      expect(String(sql)).toContain('AND deleted = FALSE');
+      expect(String(sql)).not.toContain('DELETE FROM');
+      expect(params).toEqual(['1', null]);
     });
 
     it('should throw error when membership type not found', async () => {
       mockDb.query.mockResolvedValue({ rowCount: 0 } as any);
 
       await expect(service.deleteMembershipType('999')).rejects.toThrow(
-        'Membership type not found'
+        /Membership type not found or already deleted/
       );
     });
   });

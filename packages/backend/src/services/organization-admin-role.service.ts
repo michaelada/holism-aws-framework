@@ -7,6 +7,17 @@ import {
 } from '../types/organization.types';
 import { organizationService } from './organization.service';
 
+/**
+ * The automatically provisioned role. `name` is the stable identifier — the
+ * display name is what an administrator sees and could in principle be
+ * translated later without breaking the lookup.
+ */
+export const FULL_ADMINISTRATOR_ROLE = {
+  name: 'full-administrator',
+  displayName: 'Full Administrator',
+  description: 'Full administrative access to every capability',
+} as const;
+
 export class OrganizationAdminRoleService {
   /**
    * Convert database row to OrganizationAdminRole object
@@ -265,6 +276,61 @@ export class OrganizationAdminRoleService {
   /**
    * Create default roles for an organization
    */
+  /**
+   * The role every organisation gets when it is created.
+   *
+   * "Full Administrator", with `admin` on **every capability that exists** —
+   * not merely the ones the organisation currently has enabled.
+   *
+   * That distinction is the substance of this method. Access requires *both*
+   * that the organisation has a capability enabled *and* that the user's role
+   * permits it, so granting `admin` on a capability the organisation does not
+   * have grants nothing today. What it does buy is that the role stays
+   * genuinely full: when a super admin later enables another capability for the
+   * organisation, its Full Administrator can use it immediately. Snapshotting
+   * the enabled set instead would leave the role quietly unable to reach new
+   * features — exactly the surprise its name promises against, and one that
+   * surfaces as "why can't the administrator see the shop?" months later.
+   *
+   * Idempotent: `ON CONFLICT DO NOTHING` against the unique
+   * `(organization_id, name)` key, so a retried organisation creation cannot
+   * produce two roles with the same name. It deliberately does **not** update
+   * an existing role — a club that has edited its Full Administrator's
+   * permissions should not have them silently reset.
+   */
+  async ensureFullAdministratorRole(organizationId: string): Promise<void> {
+    try {
+      const capabilities = await db.query(
+        `SELECT name FROM capabilities WHERE is_active = true ORDER BY name`
+      );
+
+      const permissions: Record<string, 'admin'> = {};
+      capabilities.rows.forEach((row: { name: string }) => {
+        permissions[row.name] = 'admin';
+      });
+
+      await db.query(
+        `INSERT INTO organization_admin_roles
+           (organization_id, name, display_name, description,
+            capability_permissions, is_system_role, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+         ON CONFLICT (organization_id, name) DO NOTHING`,
+        [
+          organizationId,
+          FULL_ADMINISTRATOR_ROLE.name,
+          FULL_ADMINISTRATOR_ROLE.displayName,
+          FULL_ADMINISTRATOR_ROLE.description,
+          JSON.stringify(permissions),
+        ]
+      );
+
+      logger.info('Full Administrator role ensured for organisation', { organizationId });
+    } catch (error) {
+      logger.error('Error creating the Full Administrator role:', error);
+      throw error;
+    }
+  }
+
   async createDefaultRoles(organizationId: string): Promise<void> {
     try {
       const org = await organizationService.getOrganizationById(organizationId);

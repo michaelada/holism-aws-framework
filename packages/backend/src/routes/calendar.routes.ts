@@ -287,7 +287,14 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await calendarService.deleteCalendar(id);
+      /*
+       * Optional: the delete records who withdrew the item when the middleware
+       * has resolved an organisation user, and NULL when it has not. Made
+       * optional rather than required so adding attribution cannot turn a
+       * working endpoint into a 400 — `events` demands it, these do not.
+       */
+      const organisationUserId = (req as any).organisationUserId as string | undefined;
+      await calendarService.deleteCalendar(id, organisationUserId);
       res.status(204).send();
     } catch (error) {
       logger.error('Error in DELETE /calendars/:id:', error);

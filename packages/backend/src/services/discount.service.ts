@@ -705,6 +705,7 @@ export class DiscountService {
       const result = await db.query(
         `SELECT id FROM membership_types
          WHERE organisation_id = $1
+         AND deleted = FALSE
          AND discount_ids @> $2::jsonb`,
         [organisationId, JSON.stringify([discountId])]
       );
@@ -724,6 +725,7 @@ export class DiscountService {
       const result = await db.query(
         `SELECT id FROM registration_types
          WHERE organisation_id = $1
+         AND deleted = FALSE
          AND discount_ids @> $2::jsonb`,
         [organisationId, JSON.stringify([discountId])]
       );

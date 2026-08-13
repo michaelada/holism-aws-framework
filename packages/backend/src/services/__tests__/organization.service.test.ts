@@ -6,6 +6,7 @@ import { orgPaymentMethodDataService } from '../org-payment-method-data.service'
 import cacheService from '../cache.service';
 import { db } from '../../database/pool';
 import { logger } from '../../config/logger';
+import { OrganizationType } from '../../types/organization.types';
 
 // Mock dependencies
 jest.mock('../../database/pool');
@@ -152,7 +153,7 @@ describe('OrganizationService', () => {
   });
 
   describe('createOrganization', () => {
-    const mockOrgType = {
+    const mockOrgType: OrganizationType = {
       id: 'type-1',
       name: 'swimming-club',
       displayName: 'Swimming Club',
@@ -160,6 +161,11 @@ describe('OrganizationService', () => {
       language: 'en',
       defaultCapabilities: ['event-management', 'memberships', 'registrations'],
       defaultLocale: 'en-GB',
+      // Added by the membership-numbering migration; the mock had not kept up,
+      // which stopped this whole suite from compiling.
+      membershipNumbering: 'internal',
+      membershipNumberUniqueness: 'organization',
+      initialMembershipNumber: 1,
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -311,6 +317,9 @@ describe('OrganizationService', () => {
         displayName: 'Swimming Club',
         defaultCapabilities: ['event-management', 'memberships'],
         defaultLocale: 'en-GB',
+        membershipNumbering: 'internal' as const,
+        membershipNumberUniqueness: 'organization' as const,
+        initialMembershipNumber: 1,
         status: 'active',
         currency: 'USD',
         language: 'en',
@@ -524,6 +533,9 @@ describe('OrganizationService', () => {
         displayName: 'Swimming Club',
         defaultCapabilities: ['event-management', 'memberships', 'registrations'],
         defaultLocale: 'en-GB',
+        membershipNumbering: 'internal' as const,
+        membershipNumberUniqueness: 'organization' as const,
+        initialMembershipNumber: 1,
         status: 'active',
         currency: 'USD',
         language: 'en',
@@ -553,6 +565,9 @@ describe('OrganizationService', () => {
       language: 'en',
       defaultCapabilities: ['event-management'],
       defaultLocale: 'en-GB',
+      membershipNumbering: 'internal' as const,
+      membershipNumberUniqueness: 'organization' as const,
+      initialMembershipNumber: 1,
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date()

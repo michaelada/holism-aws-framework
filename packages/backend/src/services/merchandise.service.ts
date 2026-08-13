@@ -1,7 +1,6 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import ExcelJS from 'exceljs';
-import { merchandiseOptionService } from './merchandise-option.service';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
@@ -409,7 +408,7 @@ export class MerchandiseService {
     try {
       const result = await db.query(
         `SELECT * FROM merchandise_types 
-         WHERE organisation_id = $1 
+         WHERE organisation_id = $1 AND deleted = FALSE
          ORDER BY created_at DESC`,
         [organisationId]
       );
@@ -433,7 +432,7 @@ export class MerchandiseService {
   async getMerchandiseTypeById(id: string): Promise<MerchandiseType | null> {
     try {
       const result = await db.query(
-        'SELECT * FROM merchandise_types WHERE id = $1',
+        'SELECT * FROM merchandise_types WHERE id = $1 AND deleted = FALSE',
         [id]
       );
 
@@ -711,32 +710,35 @@ export class MerchandiseService {
   /**
    * Delete a merchandise type
    */
-  async deleteMerchandiseType(id: string): Promise<void> {
+  /**
+   * Withdraw a merchandise type.
+   *
+   * Soft delete: `merchandise_orders` reference these rows, so removing one
+   * either fails on a foreign key or takes the order history with it — an
+   * organisation that stops selling a jersey still needs last season's orders
+   * to say what was bought.
+   *
+   * **The option types, option values and delivery rules are no longer
+   * destroyed.** They were hard-deleted here, which made the previous
+   * behaviour unrecoverable in a way the word "delete" did not convey: the
+   * sizes and colours a garment was sold in vanished, and any order referring
+   * to them lost its meaning. Withdrawing the parent hides the whole thing from
+   * the catalogue, which is what the action is for; the children stay with it.
+   */
+  async deleteMerchandiseType(id: string, deletedBy?: string): Promise<void> {
     try {
-      // Clean up option values and types first
-      const otResult = await db.query(
-        'SELECT id FROM merchandise_option_types WHERE merchandise_type_id = $1',
-        [id]
-      );
-      if (otResult.rows.length > 0) {
-        const otIds = otResult.rows.map((r: any) => r.id);
-        await db.query('DELETE FROM merchandise_option_values WHERE option_type_id = ANY($1)', [otIds]);
-        await db.query('DELETE FROM merchandise_option_types WHERE merchandise_type_id = $1', [id]);
-      }
-
-      // Clean up delivery rules
-      await db.query('DELETE FROM delivery_rules WHERE merchandise_type_id = $1', [id]);
-
       const result = await db.query(
-        'DELETE FROM merchandise_types WHERE id = $1',
-        [id]
+        `UPDATE merchandise_types
+         SET deleted = TRUE, deleted_at = NOW(), deleted_by = $2, updated_at = NOW()
+         WHERE id = $1 AND deleted = FALSE`,
+        [id, deletedBy ?? null]
       );
 
       if (result.rowCount === 0) {
-        throw new Error('Merchandise type not found');
+        throw new Error('Merchandise type not found or already deleted');
       }
 
-      logger.info(`Merchandise type deleted: ${id}`);
+      logger.info(`Merchandise type withdrawn: ${id}`);
     } catch (error) {
       logger.error('Error deleting merchandise type:', error);
       throw error;

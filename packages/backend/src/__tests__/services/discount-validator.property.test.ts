@@ -222,9 +222,11 @@ describe('Discount Validator - Property-Based Tests', () => {
               );
             }
 
-            // Property: Database was queried with correct parameters
+            // Property: Database was queried with correct parameters.
+            // `members`, not `memberships` — this assertion previously encoded
+            // the bug, expecting a table that does not exist.
             expect(mockDb.query).toHaveBeenCalledWith(
-              expect.stringContaining('FROM memberships'),
+              expect.stringContaining('FROM members'),
               [userId, requiredMembershipTypes]
             );
           }

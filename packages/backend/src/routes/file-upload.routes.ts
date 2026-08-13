@@ -137,6 +137,87 @@ router.post(
 
 /**
  * @swagger
+ * /api/orgadmin/files/branding-logo:
+ *   post:
+ *     summary: Upload the organisation's branding logo
+ *     description: >
+ *       Distinct from `/upload`, which is for form-field files and requires a
+ *       formId and fieldId. Returns the stored `s3Key` — which is what branding
+ *       settings persist — together with a signed `url` for immediate preview.
+ *       The bucket blocks public access, so there is no permanent public URL to
+ *       hand back; readers sign the key on demand.
+ *     tags: [File Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file, organizationId]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               organizationId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Logo uploaded
+ *       400:
+ *         description: No file, or the file is not a valid image
+ */
+router.post(
+  '/branding-logo',
+  authenticateToken(),
+  upload.single('file'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { organizationId } = req.body;
+      const file = req.file;
+
+      if (!file) {
+        res.status(400).json({ error: 'No file provided' });
+        return;
+      }
+
+      if (!organizationId) {
+        res.status(400).json({ error: 'Missing required field: organizationId' });
+        return;
+      }
+
+      const result = await fileUploadService.uploadBrandingLogo({
+        organizationId,
+        file: {
+          buffer: file.buffer,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+        },
+      });
+
+      /*
+       * No `form_submission_files` row is written: a logo is not a form
+       * submission, and that table's form_id / field_id are NOT NULL for good
+       * reason. The key lives in the organisation's branding settings instead.
+       */
+      const url = await fileUploadService.getFileUrl(result.s3Key);
+
+      res.json({ success: true, ...result, url });
+    } catch (error: any) {
+      logger.error('Error in POST /files/branding-logo:', error);
+      const isValidation = String(error?.message || '').includes('File validation failed');
+      res.status(isValidation ? 400 : 500).json({
+        error: isValidation ? error.message : 'Failed to upload logo',
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/orgadmin/files/{fileId}:
  *   get:
  *     summary: Get signed URL for file download

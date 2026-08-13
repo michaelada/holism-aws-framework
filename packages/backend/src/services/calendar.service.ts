@@ -406,7 +406,7 @@ export class CalendarService {
     try {
       const result = await db.query(
         `SELECT * FROM calendars 
-         WHERE organisation_id = $1 
+         WHERE organisation_id = $1 AND deleted = FALSE
          ORDER BY name ASC`,
         [organisationId]
       );
@@ -424,7 +424,7 @@ export class CalendarService {
   async getCalendarById(id: string): Promise<Calendar | null> {
     try {
       const result = await db.query(
-        'SELECT * FROM calendars WHERE id = $1',
+        'SELECT * FROM calendars WHERE id = $1 AND deleted = FALSE',
         [id]
       );
 
@@ -712,18 +712,25 @@ export class CalendarService {
   /**
    * Delete a calendar
    */
-  async deleteCalendar(id: string): Promise<void> {
+  /**
+   * Withdraw a calendar.
+   *
+   * Soft delete: `bookings` reference these rows; removing a calendar would take its booking history — and the refund trail attached to it — with it.
+   */
+  async deleteCalendar(id: string, deletedBy?: string): Promise<void> {
     try {
       const result = await db.query(
-        'DELETE FROM calendars WHERE id = $1',
-        [id]
+        `UPDATE calendars
+         SET deleted = TRUE, deleted_at = NOW(), deleted_by = $2, updated_at = NOW()
+         WHERE id = $1 AND deleted = FALSE`,
+        [id, deletedBy ?? null]
       );
 
       if (result.rowCount === 0) {
-        throw new Error('Calendar not found');
+        throw new Error('Calendar not found or already deleted');
       }
 
-      logger.info(`Calendar deleted: ${id}`);
+      logger.info(`Calendar withdrawn: ${id}`);
     } catch (error) {
       logger.error('Error deleting calendar:', error);
       throw error;

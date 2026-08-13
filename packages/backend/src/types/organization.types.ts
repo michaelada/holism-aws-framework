@@ -99,6 +99,8 @@ export interface Organization {
   keycloakGroupId: string;
   name: string;
   displayName: string;
+  /** Short URL-friendly code addressing this organisation in the account app. */
+  urlCode: string;
   domain?: string;
   contactName?: string;
   contactEmail?: string;
@@ -129,12 +131,19 @@ export interface CreateOrganizationDto {
   organizationTypeId: string;
   name: string;
   displayName: string;
+  /** Optional — derived from the name when omitted. */
+  urlCode?: string;
   domain?: string;
   contactName?: string;
   contactEmail?: string;
   contactMobile?: string;
   status?: OrganizationStatus;
   enabledCapabilities: string[];
+  /**
+   * Ignored — an organisation always trades in its organisation type's
+   * currency, because the type's fixed handling fee is a cash amount in it.
+   * Retained so existing callers do not break at compile time.
+   */
   currency?: string;
   language?: string;
   settings?: Record<string, any>;
@@ -144,6 +153,7 @@ export interface CreateOrganizationDto {
 export interface UpdateOrganizationDto {
   name?: string;
   displayName?: string;
+  urlCode?: string;
   domain?: string;
   contactName?: string;
   contactEmail?: string;
