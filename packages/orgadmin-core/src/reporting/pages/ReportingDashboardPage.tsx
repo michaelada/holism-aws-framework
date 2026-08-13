@@ -18,6 +18,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Menu,
   MenuItem,
 } from '@mui/material';
 import {
@@ -28,7 +29,8 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useApiGet } from '../../hooks/useApi';
+import { useApi, useApiGet } from '../../hooks/useApi';
+import { exportReport, ReportType } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
@@ -172,10 +174,38 @@ const ReportingDashboardPage: React.FC = () => {
     execute();
   }, [execute, recentDays, organisation?.id]);
 
-  // Handle export
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log('Export report for last', recentDays, 'days');
+  /*
+   * The dashboard summarises three reports and is not one itself, so there is
+   * no "the dashboard report" to download. The button offers the three, over
+   * the window the dashboard is currently showing.
+   */
+  const { execute: runExport } = useApi<Blob>();
+  const [exportMenu, setExportMenu] = useState<HTMLElement | null>(null);
+  const [exporting, setExporting] = useState<ReportType | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const windowStart = () => {
+    const from = new Date();
+    from.setDate(from.getDate() - recentDays);
+    return from.toISOString().split('T')[0];
+  };
+
+  const handleExport = async (reportType: ReportType) => {
+    setExportMenu(null);
+    if (!organisation?.id) return;
+
+    setExporting(reportType);
+    setExportError(null);
+    try {
+      await exportReport(runExport, organisation.id, reportType, {
+        startDate: windowStart(),
+        endDate: new Date().toISOString().split('T')[0],
+      });
+    } catch {
+      setExportError(t('reporting.exportFailed'));
+    } finally {
+      setExporting(null);
+    }
   };
 
   return (
@@ -192,11 +222,22 @@ const ReportingDashboardPage: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ExportIcon />}
-          onClick={handleExport}
-          disabled={loading || !data}
+          onClick={(event) => setExportMenu(event.currentTarget)}
+          disabled={loading || exporting !== null || !data}
         >
-          {t('reporting.dashboard.exportReport')}
+          {exporting ? t('reporting.exporting') : t('reporting.dashboard.exportReport')}
         </Button>
+        <Menu
+          anchorEl={exportMenu}
+          open={Boolean(exportMenu)}
+          onClose={() => setExportMenu(null)}
+        >
+          {(['events', 'members', 'revenue'] as ReportType[]).map((reportType) => (
+            <MenuItem key={reportType} onClick={() => handleExport(reportType)}>
+              {t(`reporting.${reportType}.title`)}
+            </MenuItem>
+          ))}
+        </Menu>
       </Box>
 
       {/* Recent activity window selector */}
@@ -229,6 +270,12 @@ const ReportingDashboardPage: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
+        </Alert>
+      )}
+
+      {exportError && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setExportError(null)}>
+          {exportError}
         </Alert>
       )}
 

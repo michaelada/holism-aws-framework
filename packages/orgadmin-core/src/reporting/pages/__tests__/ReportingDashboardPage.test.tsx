@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ReportingDashboardPage from '../ReportingDashboardPage';
 import * as useApiModule from '../../../hooks/useApi';
@@ -42,8 +42,31 @@ describe('ReportingDashboardPage', () => {
   };
 ;
 
+  /*
+   * The page holds two API hooks: `useApiGet` for the metrics it displays, and
+   * a plain `useApi` for the export, which asks for a workbook rather than
+   * JSON. Auto-mocking the module leaves the second returning undefined.
+   */
+  const mockExportExecute = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockExportExecute.mockResolvedValue(new Blob(['workbook']));
+    vi.mocked(useApiModule.useApi).mockReturnValue({
+      data: null,
+      error: null,
+      loading: false,
+      execute: mockExportExecute,
+      reset: vi.fn(),
+    } as any);
+
+    global.URL.createObjectURL = vi.fn(() => 'blob:report');
+    global.URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Report data fetching', () => {
@@ -192,6 +215,52 @@ describe('ReportingDashboardPage', () => {
       render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
 
       expect(screen.getAllByText('Export Report')[0]).toBeInTheDocument();
+    });
+
+    /**
+     * The dashboard summarises three reports and is not one itself, so there
+     * is nothing called "the dashboard report" to download. The button offers
+     * the three that do exist.
+     */
+    it('should offer the three reports rather than exporting an unnamed one', async () => {
+      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
+
+      fireEvent.click(screen.getAllByText('Export Report')[0]);
+
+      const menu = await screen.findByRole('menu');
+      expect(within(menu).getByText('Events Report')).toBeInTheDocument();
+      expect(within(menu).getByText('Members Report')).toBeInTheDocument();
+      expect(within(menu).getByText('Revenue Report')).toBeInTheDocument();
+    });
+
+    it('should download the chosen report over the window on screen', async () => {
+      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
+
+      fireEvent.click(screen.getAllByText('Export Report')[0]);
+      fireEvent.click(within(await screen.findByRole('menu')).getByText('Members Report'));
+
+      await waitFor(() =>
+        expect(mockExportExecute).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: '/api/orgadmin/organisations/org-1/reports/export',
+            responseType: 'blob',
+            params: expect.objectContaining({ reportType: 'members' }),
+          })
+        )
+      );
+    });
+
+    it('should say so when the export fails', async () => {
+      mockExportExecute.mockRejectedValue(new Error('Failed to export report'));
+
+      render(<ReportingDashboardPage />, { wrapper: RouterWrapper });
+
+      fireEvent.click(screen.getAllByText('Export Report')[0]);
+      fireEvent.click(within(await screen.findByRole('menu')).getByText('Events Report'));
+
+      expect(
+        await screen.findByText('We could not produce that report. Please try again.')
+      ).toBeInTheDocument();
     });
 
     it('should disable export button when loading', () => {

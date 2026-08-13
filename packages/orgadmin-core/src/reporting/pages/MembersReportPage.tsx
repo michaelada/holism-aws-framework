@@ -30,7 +30,8 @@ import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useApiGet } from '../../hooks/useApi';
+import { useApi, useApiGet } from '../../hooks/useApi';
+import { exportReport } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
@@ -91,9 +92,28 @@ const MembersReportPage: React.FC = () => {
   );
 
   // Handle export
-  const handleExport = () => {
-    // TODO: Implement CSV export functionality
-    console.log('Export members report for date range:', startDate, 'to', endDate);
+  /*
+   * The workbook is the server's to build — it has the same queries this page
+   * reads, and rows the page never fetched. A failure is shown rather than
+   * logged: an export that does nothing looks identical to one that is still
+   * running.
+   */
+  const { execute: runExport } = useApi<Blob>();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    if (!organisation?.id) return;
+
+    setExporting(true);
+    setExportError(null);
+    try {
+      await exportReport(runExport, organisation.id, 'members', { startDate, endDate });
+    } catch {
+      setExportError(t('reporting.exportFailed'));
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -119,9 +139,9 @@ const MembersReportPage: React.FC = () => {
           variant="contained"
           startIcon={<ExportIcon />}
           onClick={handleExport}
-          disabled={loading || !data}
+          disabled={loading || exporting || !data}
         >
-          {t('reporting.members.exportToCSV')}
+          {exporting ? t('reporting.exporting') : t('reporting.exportToExcel')}
         </Button>
       </Box>
 
@@ -156,6 +176,12 @@ const MembersReportPage: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
+        </Alert>
+      )}
+
+      {exportError && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setExportError(null)}>
+          {exportError}
         </Alert>
       )}
 

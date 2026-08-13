@@ -1920,6 +1920,9 @@
     }
   },
   "reporting": {
+    "exportToExcel": "Exportar a Excel",
+    "exporting": "Preparando…",
+    "exportFailed": "No hemos podido generar ese informe. Inténtalo de nuevo.",
     "title": "Informes y análisis",
     "subtitle": "Métricas y tendencias de alto nivel para su organización",
     "dashboard": {
@@ -1953,7 +1956,6 @@
       "title": "Informe de eventos",
       "subtitle": "Análisis de asistencia e ingresos de eventos",
       "backToReports": "Volver a informes",
-      "exportToCSV": "Exportar a CSV",
       "filters": "Filtros",
       "eventDetails": "Detalles del evento",
       "summary": {
@@ -1976,7 +1978,6 @@
       "title": "Informe de miembros",
       "subtitle": "Análisis de crecimiento y retención de membresías",
       "backToReports": "Volver a informes",
-      "exportToCSV": "Exportar a CSV",
       "filters": "Filtros",
       "membershipTypeBreakdown": "Desglose por tipo de membresía",
       "summary": {
@@ -2008,7 +2009,6 @@
       "title": "Informe de ingresos",
       "subtitle": "Desglose de ingresos por fuente y tendencias",
       "backToReports": "Volver a informes",
-      "exportToCSV": "Exportar a CSV",
       "dateRange": "Rango de fechas",
       "revenueBySource": "Ingresos por fuente",
       "monthlyBreakdown": "Desglose mensual",

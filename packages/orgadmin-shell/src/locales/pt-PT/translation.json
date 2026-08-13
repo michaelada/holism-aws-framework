@@ -1683,6 +1683,9 @@
     }
   },
   "reporting": {
+    "exportToExcel": "Exportar para Excel",
+    "exporting": "A preparar…",
+    "exportFailed": "Não foi possível gerar esse relatório. Tente novamente.",
     "title": "Relatórios e análises",
     "subtitle": "Métricas e tendências de alto nível para a sua organização",
     "dashboard": {
@@ -1716,7 +1719,6 @@
       "title": "Relatório de eventos",
       "subtitle": "Análise de participação e receitas de eventos",
       "backToReports": "Voltar aos relatórios",
-      "exportToCSV": "Exportar para CSV",
       "filters": "Filtros",
       "eventDetails": "Detalhes do evento",
       "summary": {
@@ -1739,7 +1741,6 @@
       "title": "Relatório de membros",
       "subtitle": "Análise de crescimento e retenção de adesões",
       "backToReports": "Voltar aos relatórios",
-      "exportToCSV": "Exportar para CSV",
       "filters": "Filtros",
       "membershipTypeBreakdown": "Discriminação por tipo de adesão",
       "summary": {
@@ -1771,7 +1772,6 @@
       "title": "Relatório de receitas",
       "subtitle": "Discriminação de receitas por fonte e tendências",
       "backToReports": "Voltar aos relatórios",
-      "exportToCSV": "Exportar para CSV",
       "dateRange": "Intervalo de datas",
       "revenueBySource": "Receitas por fonte",
       "monthlyBreakdown": "Discriminação mensal",

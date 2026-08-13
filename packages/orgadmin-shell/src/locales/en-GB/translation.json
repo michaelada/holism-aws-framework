@@ -1966,6 +1966,9 @@
     }
   },
   "reporting": {
+    "exportToExcel": "Export to Excel",
+    "exporting": "Preparing…",
+    "exportFailed": "We could not produce that report. Please try again.",
     "title": "Reports & Analytics",
     "subtitle": "High-level metrics and trends for your organisation",
     "dashboard": {
@@ -1999,7 +2002,6 @@
       "title": "Events Report",
       "subtitle": "Event attendance and revenue analysis",
       "backToReports": "Back to Reports",
-      "exportToCSV": "Export to CSV",
       "filters": "Filters",
       "eventDetails": "Event Details",
       "summary": {
@@ -2022,7 +2024,6 @@
       "title": "Members Report",
       "subtitle": "Membership growth and retention analysis",
       "backToReports": "Back to Reports",
-      "exportToCSV": "Export to CSV",
       "filters": "Filters",
       "membershipTypeBreakdown": "Membership Type Breakdown",
       "summary": {
@@ -2054,7 +2055,6 @@
       "title": "Revenue Report",
       "subtitle": "Revenue breakdown by source and trends",
       "backToReports": "Back to Reports",
-      "exportToCSV": "Export to CSV",
       "dateRange": "Date Range",
       "revenueBySource": "Revenue by Source",
       "monthlyBreakdown": "Monthly Breakdown",

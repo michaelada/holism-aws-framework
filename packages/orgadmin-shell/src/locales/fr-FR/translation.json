@@ -1921,6 +1921,9 @@
     }
   },
   "reporting": {
+    "exportToExcel": "Exporter vers Excel",
+    "exporting": "Préparation…",
+    "exportFailed": "Nous n'avons pas pu produire ce rapport. Veuillez réessayer.",
     "title": "Rapports et analyses",
     "subtitle": "Métriques et tendances de haut niveau pour votre organisation",
     "dashboard": {
@@ -1954,7 +1957,6 @@
       "title": "Rapport des événements",
       "subtitle": "Analyse de la participation et des revenus des événements",
       "backToReports": "Retour aux rapports",
-      "exportToCSV": "Exporter en CSV",
       "filters": "Filtres",
       "eventDetails": "Détails de l'événement",
       "summary": {
@@ -1977,7 +1979,6 @@
       "title": "Rapport des membres",
       "subtitle": "Analyse de la croissance et de la rétention des adhésions",
       "backToReports": "Retour aux rapports",
-      "exportToCSV": "Exporter en CSV",
       "filters": "Filtres",
       "membershipTypeBreakdown": "Répartition par type d'adhésion",
       "summary": {
@@ -2009,7 +2010,6 @@
       "title": "Rapport des revenus",
       "subtitle": "Répartition des revenus par source et tendances",
       "backToReports": "Retour aux rapports",
-      "exportToCSV": "Exporter en CSV",
       "dateRange": "Plage de dates",
       "revenueBySource": "Revenus par source",
       "monthlyBreakdown": "Répartition mensuelle",

@@ -1683,6 +1683,9 @@
     }
   },
   "reporting": {
+    "exportToExcel": "Nach Excel exportieren",
+    "exporting": "Wird vorbereitet…",
+    "exportFailed": "Der Bericht konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
     "title": "Berichte und Analysen",
     "subtitle": "Übergeordnete Metriken und Trends für Ihre Organisation",
     "dashboard": {
@@ -1716,7 +1719,6 @@
       "title": "Veranstaltungsbericht",
       "subtitle": "Analyse der Teilnahme und Einnahmen von Veranstaltungen",
       "backToReports": "Zurück zu Berichten",
-      "exportToCSV": "Als CSV exportieren",
       "filters": "Filter",
       "eventDetails": "Veranstaltungsdetails",
       "summary": {
@@ -1739,7 +1741,6 @@
       "title": "Mitgliederbericht",
       "subtitle": "Analyse des Mitgliederwachstums und der Bindung",
       "backToReports": "Zurück zu Berichten",
-      "exportToCSV": "Als CSV exportieren",
       "filters": "Filter",
       "membershipTypeBreakdown": "Aufschlüsselung nach Mitgliedschaftstyp",
       "summary": {
@@ -1771,7 +1772,6 @@
       "title": "Einnahmenbericht",
       "subtitle": "Aufschlüsselung der Einnahmen nach Quelle und Trends",
       "backToReports": "Zurück zu Berichten",
-      "exportToCSV": "Als CSV exportieren",
       "dateRange": "Datumsbereich",
       "revenueBySource": "Einnahmen nach Quelle",
       "monthlyBreakdown": "Monatliche Aufschlüsselung",

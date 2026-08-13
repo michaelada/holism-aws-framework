@@ -35,19 +35,25 @@ today). Summary totals — event count, total entries, total revenue — are **d
 with `useMemo` from the returned rows, not returned by the API. If a headline figure disagrees with
 a row-level total, the reduction in the page is where to look.
 
-## Known gap — export is not implemented
+## Export
 
-Every report page renders an export button, but all four handlers are stubs:
+Every report page downloads a **formatted Excel workbook built by the server** — the
+`/reports/export` endpoint, which had existed unused while all four buttons logged to the console.
+`reporting/exportReport.ts` makes the request (`responseType: 'blob'`, no retry) and saves the
+file; the pages supply the filters they are showing and display a failure rather than swallowing
+it.
 
-```ts
-// TODO: Implement CSV export functionality
-console.log('Export events report for date range:', startDate, 'to', endDate);
-```
+The dashboard summarises the three reports and is not one itself, so its button opens a **menu of
+the three** rather than exporting something unnamed; the endpoint takes `events | members |
+revenue` and refuses anything else with a 400.
 
-That applies to `ReportingDashboardPage`, `EventsReportPage`, `MembersReportPage` and
-`RevenueReportPage`. The backend `/reports/export` endpoint exists and is unused by the UI, so
-wiring export up is front-end work. Note the payments module has its own working export at
-`/api/orgadmin/payments/export` — a different endpoint.
+The label is one shared `reporting.exportToExcel`, not the old per-report `exportToCSV` — the
+system produces workbooks, and the old key said otherwise. See
+docs/REPORTING_EXPORT.md.
+
+Note the payments module has its own export at `/api/orgadmin/payments/export` — a different
+endpoint, and an odd implementation: `PaymentsListPage` calls it, discards the response, and builds
+a CSV client-side from the rows on screen.
 
 ## Tests
 
@@ -58,14 +64,17 @@ the current pages: they use
 the English a user sees. The older suites asserted a response shape the API no longer returns —
 `{ sources, monthlyBreakdown, summary }` rather than a flat row array.
 
-`ReportingDashboardPage.test.tsx` and `reporting-i18n.test.tsx` are **still failing** for the same
-reasons and have not yet been migrated.
+`ReportingDashboardPage.test.tsx` and `reporting-i18n.test.tsx` have since been migrated too, and
+the whole module passes. Each page suite mocks **two** API hooks: `useApiGet` for the report on
+display and `useApi` for the export, which asks for a workbook rather than JSON — auto-mocking the
+module leaves the second returning `undefined`, which surfaces as "Cannot destructure property
+'execute'".
 
 ## Where to look for what
 
 | Question | Start at |
 |---|---|
-| "Why does the export button do nothing?" | The TODO stubs above |
+| "Where does the exported file come from?" | `reporting/exportReport.ts` → backend `/reports/export` |
 | "Where do report figures come from?" | Backend `reporting.service.ts` |
 | "Why do totals differ from the rows?" | The client-side `useMemo` reductions in each page |
 | "What date range is used by default?" | The `useState` initialisers — last three months |

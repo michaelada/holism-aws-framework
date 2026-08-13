@@ -1683,6 +1683,9 @@
     }
   },
   "reporting": {
+    "exportToExcel": "Esporta in Excel",
+    "exporting": "Preparazione…",
+    "exportFailed": "Non è stato possibile generare il report. Riprova.",
     "title": "Report e analisi",
     "subtitle": "Metriche e tendenze di alto livello per la tua organizzazione",
     "dashboard": {
@@ -1716,7 +1719,6 @@
       "title": "Report eventi",
       "subtitle": "Analisi della partecipazione e delle entrate degli eventi",
       "backToReports": "Torna ai report",
-      "exportToCSV": "Esporta in CSV",
       "filters": "Filtri",
       "eventDetails": "Dettagli evento",
       "summary": {
@@ -1739,7 +1741,6 @@
       "title": "Report membri",
       "subtitle": "Analisi della crescita e della retention delle iscrizioni",
       "backToReports": "Torna ai report",
-      "exportToCSV": "Esporta in CSV",
       "filters": "Filtri",
       "membershipTypeBreakdown": "Suddivisione per tipo di iscrizione",
       "summary": {
@@ -1771,7 +1772,6 @@
       "title": "Report entrate",
       "subtitle": "Suddivisione delle entrate per fonte e tendenze",
       "backToReports": "Torna ai report",
-      "exportToCSV": "Esporta in CSV",
       "dateRange": "Intervallo di date",
       "revenueBySource": "Entrate per fonte",
       "monthlyBreakdown": "Suddivisione mensile",

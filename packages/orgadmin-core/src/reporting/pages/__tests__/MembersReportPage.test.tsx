@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import MembersReportPage from '../MembersReportPage';
 import * as useApiModule from '../../../hooks/useApi';
 import { renderWithProviders } from '../../../test/renderWithProviders';
@@ -60,8 +60,31 @@ describe('MembersReportPage', () => {
     } as any);
   };
 
+  /*
+   * The page holds two API hooks: `useApiGet` for the report it displays, and
+   * a plain `useApi` for the export, which asks for a workbook rather than
+   * JSON. Auto-mocking the module leaves the second returning undefined.
+   */
+  const mockExportExecute = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockExportExecute.mockResolvedValue(new Blob(['workbook']));
+    vi.mocked(useApiModule.useApi).mockReturnValue({
+      data: null,
+      error: null,
+      loading: false,
+      execute: mockExportExecute,
+      reset: vi.fn(),
+    } as any);
+
+    global.URL.createObjectURL = vi.fn(() => 'blob:report');
+    global.URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Report data fetching', () => {
@@ -235,13 +258,18 @@ describe('MembersReportPage', () => {
   });
 
   describe('Export functionality', () => {
+    const clickExport = () =>
+      fireEvent.click(
+        screen.getByText(resolveTranslation('reporting.exportToExcel')).closest('button')!
+      );
+
     it('should render the export button', () => {
       mockApi({ data: MEMBERSHIP_TYPE_ROWS });
 
       renderWithProviders(<MembersReportPage />);
 
       expect(
-        screen.getByText(resolveTranslation('reporting.members.exportToCSV'))
+        screen.getByText(resolveTranslation('reporting.exportToExcel'))
       ).toBeInTheDocument();
     });
 
@@ -251,8 +279,42 @@ describe('MembersReportPage', () => {
       renderWithProviders(<MembersReportPage />);
 
       expect(
-        screen.getByText(resolveTranslation('reporting.members.exportToCSV')).closest('button')
+        screen.getByText(resolveTranslation('reporting.exportToExcel')).closest('button')
       ).toBeDisabled();
+    });
+
+    /**
+     * The point of the whole exercise: the button downloads the workbook the
+     * server builds, over the range the page is showing, rather than logging
+     * to the console as it used to.
+     */
+    it('should download the report for the filters on screen', async () => {
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
+
+      renderWithProviders(<MembersReportPage />);
+      clickExport();
+
+      await waitFor(() =>
+        expect(mockExportExecute).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: '/api/orgadmin/organisations/org-1/reports/export',
+            responseType: 'blob',
+            params: expect.objectContaining({ reportType: 'members' }),
+          })
+        )
+      );
+    });
+
+    it('should say so when the export fails', async () => {
+      mockExportExecute.mockRejectedValue(new Error('Failed to export report'));
+      mockApi({ data: MEMBERSHIP_TYPE_ROWS });
+
+      renderWithProviders(<MembersReportPage />);
+      clickExport();
+
+      expect(
+        await screen.findByText(resolveTranslation('reporting.exportFailed'))
+      ).toBeInTheDocument();
     });
   });
 

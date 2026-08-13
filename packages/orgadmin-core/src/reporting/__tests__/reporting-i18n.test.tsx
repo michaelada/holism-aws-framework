@@ -33,6 +33,14 @@ vi.mock('../../hooks/useApi', () => ({
     loading: false,
     execute: vi.fn(),
   }),
+  // The export asks for a workbook through a plain `useApi`, separately from
+  // the report the page displays.
+  useApi: () => ({
+    data: null,
+    error: null,
+    loading: false,
+    execute: vi.fn(),
+  }),
 }));
 
 // Initialize i18n for testing
@@ -43,6 +51,9 @@ i18n.init({
     'en-GB': {
       translation: {
         reporting: {
+          exportToExcel: 'Export to Excel',
+          exporting: 'Preparing…',
+          exportFailed: 'We could not produce that report. Please try again.',
           dashboard: {
             title: 'Reports & Analytics',
             subtitle: 'High-level metrics and trends for your organisation',
@@ -57,21 +68,18 @@ i18n.init({
             title: 'Events Report',
             subtitle: 'Event attendance and revenue analysis',
             backToReports: 'Back to Reports',
-            exportToCSV: 'Export to CSV',
             filters: 'Filters',
           },
           members: {
             title: 'Members Report',
             subtitle: 'Membership growth and retention analysis',
             backToReports: 'Back to Reports',
-            exportToCSV: 'Export to CSV',
             filters: 'Filters',
           },
           revenue: {
             title: 'Revenue Report',
             subtitle: 'Revenue breakdown by source and trends',
             backToReports: 'Back to Reports',
-            exportToCSV: 'Export to CSV',
             dateRange: 'Date Range',
           },
           filters: {
@@ -132,7 +140,7 @@ describe('Reporting Module i18n', () => {
     it('displays translated export button', () => {
       renderWithProviders(<EventsReportPage />);
       
-      expect(screen.getByText('Export to CSV')).toBeInTheDocument();
+      expect(screen.getByText('Export to Excel')).toBeInTheDocument();
     });
 
     it('displays translated filters section', () => {
@@ -159,7 +167,7 @@ describe('Reporting Module i18n', () => {
     it('displays translated export button', () => {
       renderWithProviders(<MembersReportPage />);
       
-      expect(screen.getByText('Export to CSV')).toBeInTheDocument();
+      expect(screen.getByText('Export to Excel')).toBeInTheDocument();
     });
   });
 
@@ -180,7 +188,7 @@ describe('Reporting Module i18n', () => {
     it('displays translated export button', () => {
       renderWithProviders(<RevenueReportPage />);
       
-      expect(screen.getByText('Export to CSV')).toBeInTheDocument();
+      expect(screen.getByText('Export to Excel')).toBeInTheDocument();
     });
 
     it('displays translated date range section', () => {

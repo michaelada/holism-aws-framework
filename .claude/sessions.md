@@ -3463,3 +3463,96 @@ My recommendation: commit first, then decide on the copy (cheap), and treat the 
 ## 2026-08-13 14:23:43 — Prompt
 
 Ok can u do them in that order
+
+### Assistant
+
+Starting with the commits. Let me see exactly what's there before I split it:
+
+The working tree isn't only this session's work. Before I commit anything:
+
+Branching first, since we're on `main`:
+
+Committing this session's work first, in feature-sized batches:
+
+Now the product defects found while repairing the suites:
+
+Now the test-suite repair — the largest batch of this session's work:
+
+Five commits for this session. Now the earlier work — grouped by area, describing what changed:
+
+Working tree clean. Verifying the history builds and tests green from the branch tip:
+
+Commits done. Now the registration copy:
+
+Now restoring the test that asserted this, which I'd weakened when the copy went missing:
+
+Now the icons. Let me see what the manifest declares versus what exists:
+
+Let me check the rendered output actually looks right rather than assuming:
+
+Both render correctly — the maskable variant keeps the mark inside the safe zone. Updating the manifest:
+
+All three done. Working tree clean, 15 commits on **`work/august-batch`** (branched off `main` — I didn't commit to the default branch).
+
+## 1. Commits
+
+585 files across 15 commits, split by what they do rather than when they were written:
+
+- Five for this session — offline payment settlement, the product defects the tests exposed, the configurable rate limits, the suite repair, the module summaries.
+- Eight for your earlier work — the account-app schema, the account API, the org-admin services behind it, the account app itself, the org-admin packages, shared components and admin, the Keycloak theme, and the docs.
+- Two for today's remaining items.
+
+For your earlier commits I described what changed and left the intent alone, since it isn't mine to narrate — worth a skim before this goes anywhere, and easy to reword with `git rebase -i`.
+
+## 2. Registration copy
+
+Restored, as its own line rather than a clause buried in the paragraph:
+
+> This does not buy a membership. If the club offers memberships, you apply for one separately once you are connected.
+
+In all six locales, with the test that holds the page to it. The component's own comment already claimed the copy was careful about this — now it is again.
+
+## 3. PWA icons
+
+This turned out to be more than missing artwork. The manifest pointed every size at one SVG marked `any maskable`, which was broken three ways: Android's install prompt wants a raster icon of at least 192 and doesn't reliably take SVG; one artwork can't be both purposes, because a mask keeps only the central 80% and that mark ran to the edges — installed on Android it would have lost its head and shoulders; and iOS ignores the manifest entirely, reading `apple-touch-icon`, which didn't exist. Nor did `favicon.png`, which `index.html` has always referenced.
+
+So there's now a proper set: a separate full-bleed `icon-maskable.svg` with the mark inside the safe zone, PNGs at 192/512/maskable-512, a 180 Apple touch icon and a favicon, with `any` and `maskable` declared separately. I rendered and checked both variants rather than assuming — the maskable one crops correctly.
+
+**The mark itself is still placeholder.** I fixed the plumbing, not the design; a designed ItsPlainSailing mark dropped into the two SVGs and re-rendered is all that's left. The doc records that, and how to regenerate.
+
+Nothing is pushed.
+
+---
+
+
+## 2026-08-13 15:02:40 — Prompt
+
+What’s left
+
+### Assistant
+
+Nothing outstanding from what you asked for. What remains falls into three groups.
+
+**Yours to decide**
+
+- **Nothing is pushed.** 15 commits sit on `work/august-batch` locally; `origin` is the GitHub repo. Whether that becomes a PR, gets rebased into a different shape, or stays local is your call. The eight commits covering your Aug 4–12 work describe *what* changed rather than why — worth a skim before it goes anywhere.
+- **The icon mark.** Plumbing is done and correct; the artwork is a plain placeholder. Drop a designed mark into the two SVGs, re-render, done.
+
+**Known gaps in the product, not from this session**
+
+- **Reports export nothing.** All four reporting pages have `// TODO: Implement CSV export` — the export buttons are live and do nothing when clicked. `core-reporting.md` even documents it as the answer to "why does the export button do nothing?". That's the most user-visible loose end I can see in the repo.
+- **Offline payments has never been clicked through.** It's covered by 32 tests but has only ever run against them, never a live stack. Settling one real cheque against the dev database would be worth doing before it ships.
+
+**Housekeeping**
+
+- The Docker container has an empty `aws_framework_test` database from my first attempt, before I realised the tests use the local Postgres on the same port. Nothing reads it; say the word and I'll drop it.
+- C3 (booking detail) and C7 (registration detail) remain deliberately unbuilt, per your earlier call.
+
+If you want my pick: the reporting exports. It's a button that lies to the user today, the four pages already have the data on screen, and it's self-contained.
+
+---
+
+
+## 2026-08-13 15:05:31 — Prompt
+
+Do the reporting
