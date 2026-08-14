@@ -25,9 +25,9 @@ describe('AuditLogService', () => {
     const logData: LogAdminActionDto = {
       userId: 'user-123',
       action: 'create',
-      resource: 'tenant',
-      resourceId: 'tenant-456',
-      changes: { name: 'New Tenant', displayName: 'New Tenant Display' },
+      resource: 'organisation',
+      resourceId: 'organisation-456',
+      changes: { name: 'New Organisation', displayName: 'New Organisation Display' },
       ipAddress: '192.168.1.100',
     };
 
@@ -158,7 +158,7 @@ describe('AuditLogService', () => {
     });
 
     it('should log different resource types', async () => {
-      const resources = ['tenant', 'user', 'role'];
+      const resources = ['organisation', 'user', 'role'];
 
       for (const resource of resources) {
         const logData: LogAdminActionDto = {
@@ -386,9 +386,9 @@ describe('AuditLogService', () => {
         id: 'audit-log-789',
         user_id: 'db-user-456',
         action: 'create',
-        resource: 'tenant',
-        resource_id: 'tenant-456',
-        changes: { name: 'New Tenant' },
+        resource: 'organisation',
+        resource_id: 'organisation-456',
+        changes: { name: 'New Organisation' },
         ip_address: '192.168.1.100',
         timestamp: new Date(),
       };
@@ -401,9 +401,9 @@ describe('AuditLogService', () => {
       const result = await auditLogService.logAdminActionFromRequest(
         mockRequest,
         'create',
-        'tenant',
-        'tenant-456',
-        { name: 'New Tenant' }
+        'organisation',
+        'organisation-456',
+        { name: 'New Organisation' }
       );
 
       expect(mockDb.query).toHaveBeenCalledWith(
@@ -416,9 +416,9 @@ describe('AuditLogService', () => {
         [
           'db-user-456',
           'create',
-          'tenant',
-          'tenant-456',
-          JSON.stringify({ name: 'New Tenant' }),
+          'organisation',
+          'organisation-456',
+          JSON.stringify({ name: 'New Organisation' }),
           '192.168.1.100',
         ]
       );
@@ -426,8 +426,8 @@ describe('AuditLogService', () => {
       expect(result).toMatchObject({
         userId: 'db-user-456',
         action: 'create',
-        resource: 'tenant',
-        resourceId: 'tenant-456',
+        resource: 'organisation',
+        resourceId: 'organisation-456',
         ipAddress: '192.168.1.100',
       });
     });
@@ -539,7 +539,7 @@ describe('AuditLogService', () => {
       } as any;
 
       await expect(
-        auditLogService.logAdminActionFromRequest(mockRequest, 'create', 'tenant')
+        auditLogService.logAdminActionFromRequest(mockRequest, 'create', 'organisation')
       ).rejects.toThrow('User ID not found in request');
     });
   });

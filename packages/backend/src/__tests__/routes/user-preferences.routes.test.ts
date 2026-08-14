@@ -29,7 +29,9 @@ jest.mock('../../middleware/auth.middleware', () => ({
           email: 'test@example.com',
           username: 'testuser',
           roles: ['user'],
-          groups: []
+          groups: [],
+          firstName: '',
+          lastName: '',
         };
       }
       next();

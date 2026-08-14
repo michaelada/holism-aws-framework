@@ -607,7 +607,9 @@
       "scheduleRuleStartDate": "Data di inizio",
       "scheduleRuleEndDate": "Data di fine",
       "scheduleRuleTimeOfDay": "Ora del giorno",
-      "scheduleRuleReason": "Motivo"
+      "scheduleRuleReason": "Motivo",
+      "displayIcon": "Icona",
+      "noIcon": "Nessuna icona"
     },
     "actions": {
       "exportToExcel": "Esporta in Excel"
@@ -676,6 +678,28 @@
         "loadFailed": "Impossibile caricare i dati del calendario. Riprova.",
         "timeout": "Richiesta scaduta. Riprova."
       }
+    },
+    "icons": {
+      "tennis": "Tennis",
+      "basketball": "Pallacanestro",
+      "football": "Calcio",
+      "golf": "Golf",
+      "cricket": "Cricket",
+      "athletics": "Atletica",
+      "pool": "Nuoto",
+      "sailing": "Vela",
+      "equestrian": "Equitazione",
+      "hiking": "Escursionismo",
+      "park": "Terreni",
+      "clubhouse": "Sede del club",
+      "meetingRoom": "Sala riunioni",
+      "restaurant": "Ristorazione",
+      "gym": "Palestra",
+      "calendar": "Calendario",
+      "group": "Gruppo",
+      "lesson": "Lezione",
+      "event": "Evento",
+      "place": "Sede"
     }
   },
   "registrations": {
@@ -1900,6 +1924,7 @@
       "sections": {
         "logo": "Logo",
         "themeColours": "Colori del tema",
+        "naming": "Denominazione",
         "preview": "Anteprima"
       },
       "fields": {
@@ -1914,7 +1939,11 @@
         "accentColour": "Colore accento",
         "backgroundColour": "Colore sfondo",
         "textColour": "Colore testo",
-        "resetColours": "Ripristina colori predefiniti"
+        "resetColours": "Ripristina colori predefiniti",
+        "bookingsLabel": "Nome del menu Prenotazioni",
+        "bookingsLabelHelp": "Come i membri vedono questa sezione nella loro app. Lasciare vuoto per usare il valore predefinito.",
+        "bookingsLabelPlaceholder": "Prenotazioni",
+        "bookingsLabelExample": "Ad esempio: Prenotazione campo, Prenotazione maneggio, Sessioni in piscina"
       },
       "preview": {
         "organisationName": "Nome organizzazione",

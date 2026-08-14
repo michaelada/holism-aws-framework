@@ -26,7 +26,27 @@ import { cartService } from './cart.service';
 /** How much of each list a dashboard card can usefully show. */
 const COMING_UP_LIMIT = 3;
 const RECENT_PAYMENTS_LIMIT = 3;
+/**
+ * One row's worth each.
+ *
+ * Bookings are counted separately because the home screen gives them their own
+ * row: sharing a budget of four across every kind meant a club with events, a
+ * shop and calendars showed exactly **one** calendar, whatever it had, and the
+ * bookings row looked broken next to a bookings page listing three.
+ */
 const WHATS_ON_LIMIT = 4;
+const BOOKINGS_LIMIT = 4;
+const SHOP_LIMIT = 4;
+
+/**
+ * How close an unopened event has to be before it is worth teasing.
+ *
+ * Shorter than the client's `OPENING_SOON_DAYS` (14), which decides how a
+ * window is *phrased* once an event is on screen. This decides whether it
+ * belongs there at all, and a home screen advertising something a fortnight
+ * away crowds out what a member can act on today.
+ */
+const OPENING_WITHIN_DAYS = 3;
 
 export interface DashboardComingUp {
   kind: 'entry' | 'booking';
@@ -46,19 +66,57 @@ export interface DashboardWhatsOn {
   detail: string | null;
   /** Minor units; null when the thing has no single price. */
   fee: number | null;
+  /**
+   * When it happens, and where its entry window sits. Events only — nothing
+   * else in this list has a date or a window, and the fields stay null rather
+   * than absent so the teaser can read them without narrowing the kind first.
+   *
+   * The window and the capacity are handed over raw rather than as a decided
+   * status, because the client already owns those rules: `entryWindowFor` and
+   * `capacityFor` phrase them for the browse page, and a second opinion
+   * computed here would eventually disagree with the first.
+   */
+  startDate: string | null;
+  endDate: string | null;
+  entriesOpenDate: string | null;
+  entriesClosingDate: string | null;
+  entriesLimit: number | null;
+  placesRemaining: number | null;
+  /**
+   * Calendars only: the club's chosen icon and colour for this one.
+   *
+   * A club's bookable things are not interchangeable — a court, an arena and a
+   * clubhouse read very differently — and the home screen groups them into one
+   * row, where colour and an icon are what tell them apart at a glance.
+   */
+  icon: string | null;
+  colour: string | null;
+  /** Merchandise only: the first product image, for a thumbnail. */
+  imageUrl: string | null;
 }
 
 export interface AccountDashboard {
   /** Absent when the club has no memberships, or the member holds none. */
-  membership: {
+  /**
+   * Every active membership this login holds here, not just one.
+   *
+   * A parent holds their children's, and a card about only the soonest to
+   * expire left the rest invisible until they thought to open C4. `null` still
+   * means the club has no memberships at all, which is different from holding
+   * none — the screen renders no section in the first case and can say so in
+   * the second.
+   */
+  memberships: Array<{
     id: string;
     name: string;
+    /** Who it is for — a parent's card must say which child it is about. */
+    memberName: string;
     membershipNumber: string;
     validUntil: string;
     daysRemaining: number | null;
     canRenew: boolean;
     renewalNotOpen: boolean;
-  } | null;
+  }> | null;
   comingUp: DashboardComingUp[] | null;
   cart: { itemCount: number; total: number; handlingFee: number; currency: string } | null;
   recentPayments: Array<{
@@ -70,6 +128,19 @@ export interface AccountDashboard {
   }> | null;
   whatsOn: DashboardWhatsOn[];
 }
+
+/** What a teaser without a date or an entry window fills those fields with. */
+const NO_SCHEDULE = {
+  startDate: null,
+  endDate: null,
+  entriesOpenDate: null,
+  entriesClosingDate: null,
+  entriesLimit: null,
+  placesRemaining: null,
+  icon: null,
+  colour: null,
+  imageUrl: null,
+} as const;
 
 export class AccountDashboardService {
   async build(
@@ -107,7 +178,7 @@ export class AccountDashboardService {
     ]);
 
     return {
-      membership: this.pickMembership(memberships),
+      memberships: this.activeMemberships(memberships),
       comingUp: this.pickComingUp(entries, bookings, today),
       cart:
         cart && cart.items.length > 0
@@ -133,33 +204,40 @@ export class AccountDashboardService {
   }
 
   /**
-   * The membership the card is about.
+   * Every active membership this login holds, as its own card.
    *
-   * The one expiring soonest, because that is the one with something to do
-   * about it. A member holding several sees the one whose renewal is due; the
-   * rest are a click away on C4.
+   * A single card about the soonest to expire was the wrong shape once parents
+   * turned out to hold their children's: it told them something was expiring
+   * without showing the other three, which were only reachable by thinking to
+   * open C4. Elapsed and pending ones stay out — this section is about what is
+   * currently held.
+   *
+   * Which makes *whose* each one is essential rather than decorative: a row of
+   * cards naming only the type would be four cards reading "Junior Member".
    */
-  private pickMembership(
+  private activeMemberships(
     memberships: Awaited<ReturnType<typeof accountActivityService.listMemberships>> | null
-  ): AccountDashboard['membership'] {
-    if (!memberships || memberships.length === 0) return null;
+  ): AccountDashboard['memberships'] {
+    // The club has no memberships at all — a different thing from holding none.
+    if (!memberships) return null;
 
-    const active = memberships.filter((membership) => membership.status === 'active');
-    if (active.length === 0) return null;
-
-    const soonest = [...active].sort((a, b) =>
-      String(a.validUntil).localeCompare(String(b.validUntil))
-    )[0];
-
-    return {
-      id: soonest.id,
-      name: soonest.membershipTypeName,
-      membershipNumber: soonest.membershipNumber,
-      validUntil: soonest.validUntil,
-      daysRemaining: soonest.daysRemaining,
-      canRenew: soonest.canRenew,
-      renewalNotOpen: soonest.renewalNotOpen,
-    };
+    /*
+     * Soonest to expire first, so anything needing renewal is the first card
+     * read rather than buried behind memberships with months left.
+     */
+    return memberships
+      .filter((membership) => membership.status === 'active')
+      .sort((a, b) => String(a.validUntil).localeCompare(String(b.validUntil)))
+      .map((membership) => ({
+        id: membership.id,
+        name: membership.membershipTypeName,
+        memberName: membership.memberName,
+        membershipNumber: membership.membershipNumber,
+        validUntil: membership.validUntil,
+        daysRemaining: membership.daysRemaining,
+        canRenew: membership.canRenew,
+        renewalNotOpen: membership.renewalNotOpen,
+      }));
   }
 
   /**
@@ -216,10 +294,14 @@ export class AccountDashboardService {
   /**
    * A few things the club is offering, across whatever it has enabled.
    *
-   * Only what can actually be acted on: an unavailable row here would be a
-   * promotion for something the member cannot have. The catalogues themselves
-   * still return unavailable rows with reasons — that is right on a listing
-   * page, and wrong on a teaser.
+   * For everything except events, only what can actually be acted on: an
+   * out-of-stock shirt here would be a promotion for something the member
+   * cannot have.
+   *
+   * **Events are different**, because their unavailability is itself the news —
+   * entries opening on Friday, closing yesterday, or a camp that filled up are
+   * all things a member wants to know, and each card carries a status chip
+   * saying which. See `teasableEvent` below.
    */
   private async buildWhatsOn(
     organisationId: string,
@@ -242,14 +324,55 @@ export class AccountDashboardService {
           : [],
       ]);
 
-      for (const event of events.filter((candidate) => candidate.available)) {
+      /*
+       * Events are the exception to the "only what can be acted on" rule below.
+       *
+       * A club's home screen is also how a member finds out that entries open
+       * on Friday, that they closed yesterday, or that the camp filled up — and
+       * an events list that silently omits all three reads as a club with
+       * nothing on. The status chip on each card says which it is, so nothing
+       * here is mistakable for an invitation.
+       *
+       * Not-yet-open events are still filtered by *how far off* they are: an
+       * event opening in a fortnight is not news, and would push out something
+       * closing this week.
+       */
+      const teasableEvent = (event: (typeof events)[number]): boolean => {
+        if (event.available) return true;
+
+        switch (event.unavailableReason) {
+          case 'entries-closed':
+          case 'event-full':
+            return true;
+          case 'entries-not-open':
+            return withinDays(event.entriesOpenDate, today, OPENING_WITHIN_DAYS);
+          default:
+            // 'already-entered' and anything later added: the member has no
+            // reason to be shown it.
+            return false;
+        }
+      };
+
+      for (const event of events.filter(teasableEvent)) {
         items.push({
           kind: 'event',
           id: event.id,
           title: event.name,
-          detail: event.startDate ?? null,
+          // The date now has a field of its own; `detail` goes back to being a
+          // description, and the card no longer prints the same date twice.
+          detail: null,
           // An event's price lives on its activities, and they differ.
           fee: null,
+          startDate: event.startDate ?? null,
+          endDate: event.endDate ?? null,
+          entriesOpenDate: event.entriesOpenDate ?? null,
+          entriesClosingDate: event.entriesClosingDate ?? null,
+          entriesLimit: event.entriesLimit ?? null,
+          placesRemaining: event.placesRemaining ?? null,
+          // An event's mark is its date tile; the icon is for calendars.
+          icon: null,
+          colour: null,
+          imageUrl: null,
         });
       }
 
@@ -260,6 +383,14 @@ export class AccountDashboardService {
           title: item.name,
           detail: item.description,
           fee: item.fromPrice,
+          ...NO_SCHEDULE,
+          /*
+           * The first image only: a teaser is a thumbnail, not a gallery.
+           * Guarded, because this whole block sits inside one try/catch — a row
+           * missing its images array would otherwise take out the entire
+           * what's-on section rather than just its own picture.
+           */
+          imageUrl: item.images?.[0] ?? null,
         });
       }
 
@@ -271,6 +402,10 @@ export class AccountDashboardService {
           detail: calendar.description,
           // Price depends on the slot chosen.
           fee: null,
+          ...NO_SCHEDULE,
+          icon: calendar.displayIcon ?? null,
+          colour: calendar.displayColour ?? null,
+          imageUrl: null,
         });
       }
 
@@ -281,6 +416,7 @@ export class AccountDashboardService {
           title: type.name,
           detail: type.entityName,
           fee: type.fee,
+          ...NO_SCHEDULE,
         });
       }
     } catch (error) {
@@ -290,27 +426,60 @@ export class AccountDashboardService {
     }
 
     /*
-     * One of each kind first, then whatever else fits. A club with forty
-     * shirts and one event should not show four shirts and hide the event.
+     * Each row on the home screen gets its own budget, because each is shown
+     * on its own: bookings and the shop have their own headings, and taking
+     * their places from one shared four left a club showing a single calendar
+     * out of three with nothing on screen to say that was a limit rather than
+     * all it had.
+     */
+    const bookings = items.filter((item) => item.kind === 'calendar');
+    const shop = items.filter((item) => item.kind === 'merchandise');
+    const rest = items.filter(
+      (item) => item.kind !== 'calendar' && item.kind !== 'merchandise'
+    );
+
+    /*
+     * One of each remaining kind first, then whatever else fits — so a club
+     * with a dozen registration types and one event still shows the event.
      */
     const seen = new Set<string>();
     const spread: DashboardWhatsOn[] = [];
-    for (const item of items) {
+    for (const item of rest) {
       if (!seen.has(item.kind)) {
         seen.add(item.kind);
         spread.push(item);
       }
     }
-    for (const item of items) {
+    for (const item of rest) {
       if (spread.length >= WHATS_ON_LIMIT) break;
       if (!spread.includes(item)) spread.push(item);
     }
 
-    return spread.slice(0, WHATS_ON_LIMIT);
+    return [
+      ...spread.slice(0, WHATS_ON_LIMIT),
+      ...bookings.slice(0, BOOKINGS_LIMIT),
+      ...shop.slice(0, SHOP_LIMIT),
+    ];
   }
 }
 
 /** `YYYY-MM-DD` from whatever the driver returned, for comparing days. */
+/** Whether `date` falls within `days` of `from`, counting whole days. */
+const withinDays = (date: string | null, from: Date, days: number): boolean => {
+  if (!date) return false;
+
+  const target = new Date(date);
+  if (Number.isNaN(target.getTime())) return false;
+
+  const startOfFrom = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const wholeDays = Math.round(
+    (startOfTarget.getTime() - startOfFrom.getTime()) / 86_400_000
+  );
+
+  return wholeDays >= 0 && wholeDays <= days;
+};
+
 const toDateKey = (value: string | Date): string => {
   if (value instanceof Date) {
     return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(

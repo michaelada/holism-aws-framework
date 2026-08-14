@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import axios from 'axios';
 import { AdminApiService, ApiError, NetworkError } from '../adminApi';
 import type {
-  CreateTenantDto,
-  UpdateTenantDto,
   CreateUserDto,
   UpdateUserDto,
   ResetPasswordDto,
@@ -107,7 +105,7 @@ describe('AdminApiService', () => {
         return Promise.reject(error).catch(errorHandler);
       });
 
-      await expect(adminApi.getTenants()).rejects.toThrow(ApiError);
+      await expect(adminApi.getUsers()).rejects.toThrow(ApiError);
       expect(mockOnUnauthorized).toHaveBeenCalled();
     });
 
@@ -132,7 +130,7 @@ describe('AdminApiService', () => {
       });
 
       try {
-        await adminApi.getTenants();
+        await adminApi.getUsers();
         expect.fail('Should have thrown an error');
       } catch (e) {
         expect(e).toBeInstanceOf(ApiError);
@@ -156,7 +154,7 @@ describe('AdminApiService', () => {
         return Promise.reject(error).catch(errorHandler);
       });
 
-      await expect(adminApi.getTenants()).rejects.toThrow(NetworkError);
+      await expect(adminApi.getUsers()).rejects.toThrow(NetworkError);
     });
 
     it('should handle generic errors', async () => {
@@ -168,117 +166,7 @@ describe('AdminApiService', () => {
         return Promise.reject(error).catch(errorHandler);
       });
 
-      await expect(adminApi.getTenants()).rejects.toThrow('Something went wrong');
-    });
-  });
-
-  describe('Tenant API Methods', () => {
-    it('should create tenant', async () => {
-      const createData: CreateTenantDto = {
-        name: 'test-tenant',
-        displayName: 'Test Tenant',
-        domain: 'test.com',
-      };
-
-      const mockResponse = {
-        data: {
-          id: '123',
-          keycloakGroupId: 'kc-123',
-          ...createData,
-          status: 'active',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-      };
-
-      mockAxiosInstance.post.mockResolvedValue(mockResponse);
-
-      const result = await adminApi.createTenant(createData);
-
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/admin/tenants', createData);
-      expect(result).toEqual(mockResponse.data);
-    });
-
-    it('should get all tenants', async () => {
-      const mockResponse = {
-        data: [
-          {
-            id: '123',
-            keycloakGroupId: 'kc-123',
-            name: 'tenant1',
-            displayName: 'Tenant 1',
-            urlCode: 'tenant-1',
-            status: 'active',
-            memberCount: 5,
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-          },
-        ],
-      };
-
-      mockAxiosInstance.get.mockResolvedValue(mockResponse);
-
-      const result = await adminApi.getTenants();
-
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/admin/tenants');
-      expect(result).toEqual(mockResponse.data);
-    });
-
-    it('should get tenant by id', async () => {
-      const mockResponse = {
-        data: {
-          id: '123',
-          keycloakGroupId: 'kc-123',
-          name: 'tenant1',
-          displayName: 'Tenant 1',
-          urlCode: 'tenant-1',
-          status: 'active',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-      };
-
-      mockAxiosInstance.get.mockResolvedValue(mockResponse);
-
-      const result = await adminApi.getTenantById('123');
-
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/admin/tenants/123');
-      expect(result).toEqual(mockResponse.data);
-    });
-
-    it('should update tenant', async () => {
-      const updateData: UpdateTenantDto = {
-        displayName: 'Updated Tenant',
-        status: 'inactive',
-      };
-
-      const mockResponse = {
-        data: {
-          id: '123',
-          keycloakGroupId: 'kc-123',
-          name: 'tenant1',
-          displayName: 'Updated Tenant',
-          urlCode: 'updated-tenant',
-          status: 'inactive',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-02T00:00:00Z',
-        },
-      };
-
-      mockAxiosInstance.put.mockResolvedValue(mockResponse);
-
-      const result = await adminApi.updateTenant('123', updateData);
-
-      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/api/admin/tenants/123', updateData);
-      expect(result).toEqual(mockResponse.data);
-    });
-
-    it('should delete tenant', async () => {
-      mockAxiosInstance.delete.mockResolvedValue({ data: null });
-
-      await adminApi.deleteTenant('123');
-
-      expect(mockAxiosInstance.delete).toHaveBeenCalledWith('/api/admin/tenants/123');
+      await expect(adminApi.getUsers()).rejects.toThrow('Something went wrong');
     });
   });
 
@@ -291,7 +179,7 @@ describe('AdminApiService', () => {
         lastName: 'User',
         password: 'password123',
         temporaryPassword: true,
-        tenantId: 'tenant-123',
+        organizationId: 'organisation-123',
         roles: ['user'],
       };
 
@@ -306,7 +194,7 @@ describe('AdminApiService', () => {
           enabled: true,
           emailVerified: false,
           roles: ['user'],
-          tenants: ['tenant-123'],
+          organizations: ['organisation-123'],
           createdAt: '2024-01-01T00:00:00Z',
         },
       };
@@ -322,7 +210,7 @@ describe('AdminApiService', () => {
     it('should get users with filters', async () => {
       const filters = {
         search: 'test',
-        tenantId: 'tenant-123',
+        organizationId: 'organisation-123',
         limit: 10,
         offset: 0,
       };
@@ -339,7 +227,7 @@ describe('AdminApiService', () => {
             enabled: true,
             emailVerified: false,
             roles: ['user'],
-            tenants: ['tenant-123'],
+            organizations: ['organisation-123'],
             createdAt: '2024-01-01T00:00:00Z',
           },
         ],
@@ -367,7 +255,7 @@ describe('AdminApiService', () => {
           enabled: true,
           emailVerified: false,
           roles: ['user'],
-          tenants: ['tenant-123'],
+          organizations: ['organisation-123'],
           createdAt: '2024-01-01T00:00:00Z',
         },
       };
@@ -397,7 +285,7 @@ describe('AdminApiService', () => {
           enabled: false,
           emailVerified: false,
           roles: ['user'],
-          tenants: ['tenant-123'],
+          organizations: ['organisation-123'],
           createdAt: '2024-01-01T00:00:00Z',
         },
       };

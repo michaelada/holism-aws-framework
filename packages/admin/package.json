@@ -1,7 +1,7 @@
 {
   "name": "@aws-web-framework/admin",
   "version": "1.0.0",
-  "description": "Admin frontend application for AWS Web Application Framework",
+  "description": "Platform admin application for Its Plain Sailing",
   "type": "module",
   "scripts": {
     "dev": "vite",

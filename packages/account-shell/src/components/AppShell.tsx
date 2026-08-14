@@ -59,6 +59,7 @@ const NAV_ICONS: Record<NavIcon, React.ElementType> = {
   payments: ReceiptLongIcon,
   profile: PersonIcon,
 };
+import { useBookingsLabel } from '../hooks/useBookingsLabel';
 import { useAuthContext } from '../context/AuthContext';
 import { visibleSections } from './navigation';
 import OfflineBanner from './OfflineBanner';
@@ -97,6 +98,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
    */
   const logoUrl = publicDetail?.branding?.logoUrl || undefined;
   const { logout } = useAuthContext();
+  const bookingsLabel = useBookingsLabel();
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -142,7 +144,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   <ListItemIcon sx={{ minWidth: 40 }}>
                     <Icon fontSize="small" aria-hidden />
                   </ListItemIcon>
-                  <ListItemText primary={t(`nav.${item.labelKey}`)} />
+                  <ListItemText
+                    primary={
+                      // The bookings entry takes the club's own word for it.
+                      item.labelKey === 'calendar' ? bookingsLabel : t(`nav.${item.labelKey}`)
+                    }
+                  />
                 </ListItemButton>
               );
             })}

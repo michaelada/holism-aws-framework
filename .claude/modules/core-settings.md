@@ -53,6 +53,15 @@ through `/api/orgadmin/files/branding-logo` (see below; **not** `/files/upload`)
 (`<input type="color">`, accessible name from `settings.branding.fields.colourPicker`) and a text
 field. Colours are validated server-side as `#rgb`/`#rrggbb`.
 
+**Naming** — a *Bookings menu name* field appears only when the organisation has
+`calendar-bookings`. It sets `branding.bookingsLabel`, what the member app calls the bookings area:
+"Bookings" is what the software does, while a club's members know it as the court, the arena or the
+pool. Empty is stored rather than the default word, so an untouched club keeps following the
+translated default in every language; the custom label is not translated, being a name the club
+chose. Capped at 40 characters, which is a nav rail's worth. Hidden without the capability, because
+renaming a menu the club does not have is a setting that cannot be checked. See
+`docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md`.
+
 ## Email Templates tab
 
 Loads every template type into a `Record<name, EmailTemplate>` and edits one at a time. The backend

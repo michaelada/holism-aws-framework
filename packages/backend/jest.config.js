@@ -1,7 +1,10 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
+  // `scripts` as well as `src`: the demo seed's date arithmetic decides whether
+  // the fixture still reaches its intended states a year from now, which is
+  // precisely the thing that cannot be checked by running the seed today.
+  roots: ['<rootDir>/src', '<rootDir>/scripts'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   collectCoverageFrom: [
     'src/**/*.ts',

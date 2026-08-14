@@ -39,7 +39,7 @@ If coverage falls below 80% for any package, the workflow fails and blocks mergi
    - Backend image with tags: `main`, `staging-{sha}`
    - Frontend image with tags: `main`, `staging-{sha}`
 3. **Deploy Job**: Deploy to staging AWS environment
-   - Initialize Terraform
+   - Initialize OpenTofu
    - Apply infrastructure changes
    - Deploy to EC2 instances via SSH
 4. **Smoke Tests Job**: Verify deployment
@@ -180,7 +180,7 @@ Each workflow run shows:
 
 ### Staging Deployment Fails
 - Verify AWS credentials are correct
-- Check Terraform state in S3
+- Check OpenTofu state in S3
 - Review EC2 instance logs
 - Verify Docker images were pushed
 
@@ -210,13 +210,13 @@ Edit the `node-version` in each workflow:
     node-version: '20.x'  # Update this
 ```
 
-### Updating Terraform Version
-Edit the `terraform_version` in deployment workflows:
+### Updating OpenTofu Version
+Edit the `tofu_version` in deployment workflows:
 ```yaml
-- name: Install Terraform
-  uses: hashicorp/setup-terraform@v3
+- name: Install OpenTofu
+  uses: opentofu/setup-opentofu@v1
   with:
-    terraform_version: 1.5.0  # Update this
+    tofu_version: 1.8.0  # Update this
 ```
 
 ### Adding New Tests

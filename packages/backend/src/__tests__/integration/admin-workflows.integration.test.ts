@@ -78,7 +78,7 @@ jest.mock('../../services/keycloak-admin.factory', () => {
  * Integration tests for complete admin workflows
  * 
  * These tests verify end-to-end user flows:
- * - Tenant creation, update, deletion flow
+ * - Organisation creation, update, deletion flow
  * - User creation, update, deletion, password reset flow
  * - Role creation, assignment, deletion flow
  * - Authentication and authorization
@@ -140,120 +140,53 @@ describe('Admin Workflows Integration Tests', () => {
       // await db.close();
   });
 
+  const seedOrganisation = async (name: string, displayName: string): Promise<string> => {
+    const typeResult = await db.query(
+      `INSERT INTO organization_types (
+         id, name, display_name, currency, language, default_locale,
+         membership_numbering, membership_number_uniqueness, initial_membership_number,
+         created_at, updated_at
+       )
+       VALUES (gen_random_uuid(), $1, $2, 'GBP', 'en', 'en-GB', 'internal', 'organization', 1, NOW(), NOW())
+       RETURNING id`,
+      [`${name}_type`, `${displayName} Type`]
+    );
+
+    const organisationResult = await db.query(
+      `INSERT INTO organizations (
+         id, organization_type_id, keycloak_group_id, name, display_name,
+         url_code, currency, created_at, updated_at
+       )
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'GBP', NOW(), NOW())
+       RETURNING id`,
+      [
+        typeResult.rows[0].id,
+        `kc-group-${name.replace(/_/g, '-')}`,
+        name,
+        displayName,
+        name.replace(/_/g, '-'),
+      ]
+    );
+
+    return organisationResult.rows[0].id;
+  };
+
   beforeEach(async () => {
     // Clean up test data before each test
     await db.query('DELETE FROM users WHERE username LIKE $1', ['workflow_%']);
-    await db.query('DELETE FROM tenants WHERE name LIKE $1', ['workflow_%']);
+    await db.query('DELETE FROM organizations WHERE name LIKE $1', ['workflow_%']);
+    await db.query('DELETE FROM organization_types WHERE name LIKE $1', ['workflow_%']);
     await db.query('DELETE FROM roles WHERE name LIKE $1', ['workflow_%']);
   });
 
-  describe('Complete Tenant Lifecycle Flow', () => {
-    it('should complete full tenant lifecycle: create -> update -> delete', async () => {
-      // Step 1: Create tenant
-      const createData = {
-        name: 'workflow_tenant_1',
-        displayName: 'Workflow Tenant 1',
-        domain: 'workflow1.example.com',
-      };
-
-      const createResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send(createData)
-        .expect(201);
-
-      expect(createResponse.body).toMatchObject({
-        name: createData.name,
-        displayName: createData.displayName,
-        domain: createData.domain,
-      });
-      
-      const tenantId = createResponse.body.id;
-      expect(tenantId).toBeDefined();
-
-      // Verify creation audit log
-      let auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['tenant', tenantId, 'create']
-      );
-      expect(auditLogs.rows.length).toBe(1);
-
-      // Step 2: Retrieve tenant
-      const getResponse = await request(server)
-        .get(`/api/admin/tenants/${tenantId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(getResponse.body.id).toBe(tenantId);
-      expect(getResponse.body.name).toBe(createData.name);
-
-      // Step 3: Update tenant
-      const updateData = {
-        displayName: 'Updated Workflow Tenant 1',
-        domain: 'updated-workflow1.example.com',
-        status: 'active',
-      };
-
-      const updateResponse = await request(server)
-        .put(`/api/admin/tenants/${tenantId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .send(updateData)
-        .expect(200);
-
-      expect(updateResponse.body.displayName).toBe(updateData.displayName);
-      expect(updateResponse.body.domain).toBe(updateData.domain);
-
-      // Verify update audit log
-      auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['tenant', tenantId, 'update']
-      );
-      expect(auditLogs.rows.length).toBe(1);
-
-      // Step 4: List tenants (should include our tenant)
-      const listResponse = await request(server)
-        .get('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(Array.isArray(listResponse.body)).toBe(true);
-
-      // Step 5: Delete tenant
-      await request(server)
-        .delete(`/api/admin/tenants/${tenantId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(204);
-
-      // Verify deletion audit log
-      auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['tenant', tenantId, 'delete']
-      );
-      expect(auditLogs.rows.length).toBe(1);
-
-      // Verify all audit logs for this tenant
-      const allAuditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 ORDER BY timestamp',
-        ['tenant', tenantId]
-      );
-      expect(allAuditLogs.rows.length).toBe(3);
-      expect(allAuditLogs.rows[0].action).toBe('create');
-      expect(allAuditLogs.rows[1].action).toBe('update');
-      expect(allAuditLogs.rows[2].action).toBe('delete');
-    });
-  });
-
   describe('Complete User Lifecycle Flow', () => {
-    let testTenantId: string;
+    let testOrganisationId: string;
 
     beforeEach(async () => {
-      // Create a test tenant for user tests
-      const tenantResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'workflow_user_tenant', displayName: 'Workflow User Tenant' });
-      
-      testTenantId = tenantResponse.body.id;
+      testOrganisationId = await seedOrganisation(
+        'workflow_user_organisation',
+        'Workflow User Organisation'
+      );
     });
 
     it('should complete full user lifecycle: create -> update -> password reset -> delete', async () => {
@@ -265,7 +198,7 @@ describe('Admin Workflows Integration Tests', () => {
         lastName: 'User One',
         password: 'InitialPassword123!',
         temporaryPassword: true,
-        tenantId: testTenantId,
+        organizationId: testOrganisationId,
       };
 
       const createResponse = await request(server)
@@ -339,9 +272,9 @@ describe('Admin Workflows Integration Tests', () => {
 
       expect(Array.isArray(listResponse.body)).toBe(true);
 
-      // Step 6: Filter users by tenant
+      // Step 6: Filter users by organisation
       const filterResponse = await request(server)
-        .get(`/api/admin/users?tenantId=${testTenantId}`)
+        .get(`/api/admin/users?organizationId=${testOrganisationId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -487,7 +420,7 @@ describe('Admin Workflows Integration Tests', () => {
       
       // With valid token, should succeed
       const response = await request(server)
-        .get('/api/admin/tenants')
+        .get('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -506,14 +439,10 @@ describe('Admin Workflows Integration Tests', () => {
 
   describe('Comprehensive Audit Logging Flow', () => {
     it('should log all administrative actions with complete metadata', async () => {
-      // Create tenant
-      const tenantResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('X-Forwarded-For', '192.168.1.100')
-        .send({ name: 'workflow_audit_tenant', displayName: 'Workflow Audit Tenant' });
-
-      const tenantId = tenantResponse.body.id;
+      const organizationId = await seedOrganisation(
+        'workflow_audit_organisation',
+        'Workflow Audit Organisation'
+      );
 
       // Create user
       const userResponse = await request(server)
@@ -525,7 +454,7 @@ describe('Admin Workflows Integration Tests', () => {
           email: 'audit@example.com',
           firstName: 'Audit',
           lastName: 'User',
-          tenantId,
+          organizationId,
         });
 
       const userId = userResponse.body.id;
@@ -581,19 +510,15 @@ describe('Admin Workflows Integration Tests', () => {
 
   describe('Complex Multi-Entity Flow', () => {
     it('should handle complex workflow with multiple entities', async () => {
-      // Create multiple tenants
-      const tenant1Response = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'workflow_complex_tenant1', displayName: 'Complex Tenant 1' });
-
-      const tenant2Response = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'workflow_complex_tenant2', displayName: 'Complex Tenant 2' });
-
-      const tenant1Id = tenant1Response.body.id;
-      const tenant2Id = tenant2Response.body.id;
+      // Create multiple organizations
+      const organisation1Id = await seedOrganisation(
+        'workflow_complex_organisation1',
+        'Complex Organisation 1'
+      );
+      const organisation2Id = await seedOrganisation(
+        'workflow_complex_organisation2',
+        'Complex Organisation 2'
+      );
 
       // Create multiple roles
       const role1Response = await request(server)
@@ -609,7 +534,7 @@ describe('Admin Workflows Integration Tests', () => {
       const role1Name = role1Response.body.name;
       const role2Name = role2Response.body.name;
 
-      // Create users in different tenants
+      // Create users in different organizations
       const user1Response = await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
@@ -618,7 +543,7 @@ describe('Admin Workflows Integration Tests', () => {
           email: 'complex1@example.com',
           firstName: 'Complex',
           lastName: 'User 1',
-          tenantId: tenant1Id,
+          organizationId: organisation1Id,
         });
 
       const user2Response = await request(server)
@@ -629,7 +554,7 @@ describe('Admin Workflows Integration Tests', () => {
           email: 'complex2@example.com',
           firstName: 'Complex',
           lastName: 'User 2',
-          tenantId: tenant2Id,
+          organizationId: organisation2Id,
         });
 
       const user1Id = user1Response.body.id;
@@ -646,13 +571,13 @@ describe('Admin Workflows Integration Tests', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({ roleName: role2Name });
 
-      // Filter users by tenant
-      const tenant1UsersResponse = await request(server)
-        .get(`/api/admin/users?tenantId=${tenant1Id}`)
+      // Filter users by organisation
+      const organisation1UsersResponse = await request(server)
+        .get(`/api/admin/users?organizationId=${organisation1Id}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(tenant1UsersResponse.body)).toBe(true);
+      expect(Array.isArray(organisation1UsersResponse.body)).toBe(true);
 
       // Update users
       await request(server)
@@ -669,11 +594,12 @@ describe('Admin Workflows Integration Tests', () => {
       // Verify audit logs for all operations
       const allAuditLogs = await db.query(
         'SELECT * FROM admin_audit_log WHERE resource_id IN ($1, $2, $3, $4) ORDER BY timestamp',
-        [tenant1Id, tenant2Id, user1Id, user2Id]
+        [organisation1Id, organisation2Id, user1Id, user2Id]
       );
 
-      // Should have logs for: 2 tenant creates, 2 user creates, 2 role assigns, 1 user update, 1 password reset
-      expect(allAuditLogs.rows.length).toBeGreaterThanOrEqual(8);
+      // Should have logs for: 2 user creates, 2 role assigns, 1 user update, 1 password reset.
+      // The organisations are seeded straight into the database, so they add no audit rows.
+      expect(allAuditLogs.rows.length).toBeGreaterThanOrEqual(6);
 
       // Clean up
       await request(server)
@@ -682,14 +608,6 @@ describe('Admin Workflows Integration Tests', () => {
 
       await request(server)
         .delete(`/api/admin/users/${user2Id}`)
-        .set('Authorization', `Bearer ${authToken}`);
-
-      await request(server)
-        .delete(`/api/admin/tenants/${tenant1Id}`)
-        .set('Authorization', `Bearer ${authToken}`);
-
-      await request(server)
-        .delete(`/api/admin/tenants/${tenant2Id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       await request(server)

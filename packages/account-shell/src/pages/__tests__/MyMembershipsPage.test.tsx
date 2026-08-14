@@ -45,6 +45,7 @@ const membership = (over: Partial<AccountMembershipRecord> = {}): AccountMembers
   membershipNumber: 'M-0001',
   membershipTypeId: 'mt-1',
   membershipTypeName: 'Full Member',
+  memberName: 'Niamh Walsh',
   status: 'active',
   validUntil: '2026-12-31',
   dateLastRenewed: '2026-01-01',
@@ -60,6 +61,47 @@ const render = () =>
     route: '/khpc/memberships',
     path: '/:orgCode/memberships',
   });
+
+describe('MyMembershipsPage (C4) — whose membership it is', () => {
+  beforeEach(() => {
+    mockExecute.mockReset();
+    mockNavigate.mockReset();
+    contextValue = makeOrganisationContext();
+  });
+
+  it('leads each card with the member, not the membership type', async () => {
+    mockExecute.mockResolvedValue([membership({ memberName: 'Conor McGrath' })]);
+    render();
+
+    // Whose it is, is what a parent is looking for; what kind, is the detail.
+    const name = await screen.findByText('Conor McGrath');
+    expect(name.tagName).toBe('H6');
+    expect(screen.getByText('Full Member')).toBeInTheDocument();
+  });
+
+  it('distinguishes a parent’s several memberships of the same type', async () => {
+    mockExecute.mockResolvedValue([
+      membership({ id: 'm1', membershipNumber: 'M-0001', memberName: 'Conor McGrath' }),
+      membership({ id: 'm2', membershipNumber: 'M-0002', memberName: 'Éabha McGrath' }),
+      membership({ id: 'm3', membershipNumber: 'M-0003', memberName: 'Rónán McGrath' }),
+    ]);
+    render();
+
+    // Without the names these are three identical "Full Member" cards.
+    expect(await screen.findByText('Conor McGrath')).toBeInTheDocument();
+    expect(screen.getByText('Éabha McGrath')).toBeInTheDocument();
+    expect(screen.getByText('Rónán McGrath')).toBeInTheDocument();
+  });
+
+  it('falls back to the type when no member name is recorded', async () => {
+    mockExecute.mockResolvedValue([membership({ memberName: '' })]);
+    render();
+
+    // A card headed by nothing would be worse than one headed by the type.
+    const heading = await screen.findByText('Full Member');
+    expect(heading.tagName).toBe('H6');
+  });
+});
 
 describe('MyMembershipsPage (C4)', () => {
   beforeEach(() => {

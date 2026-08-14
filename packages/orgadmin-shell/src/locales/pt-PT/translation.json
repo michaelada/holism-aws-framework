@@ -607,7 +607,9 @@
       "scheduleRuleStartDate": "Data de início",
       "scheduleRuleEndDate": "Data de fim",
       "scheduleRuleTimeOfDay": "Hora do dia",
-      "scheduleRuleReason": "Motivo"
+      "scheduleRuleReason": "Motivo",
+      "displayIcon": "Ícone",
+      "noIcon": "Sem ícone"
     },
     "actions": {
       "exportToExcel": "Exportar para Excel"
@@ -676,6 +678,28 @@
         "loadFailed": "Falha ao carregar os dados do calendário. Tente novamente.",
         "timeout": "O pedido expirou. Tente novamente."
       }
+    },
+    "icons": {
+      "tennis": "Ténis",
+      "basketball": "Basquetebol",
+      "football": "Futebol",
+      "golf": "Golfe",
+      "cricket": "Críquete",
+      "athletics": "Atletismo",
+      "pool": "Natação",
+      "sailing": "Vela",
+      "equestrian": "Equitação",
+      "hiking": "Caminhada",
+      "park": "Terrenos",
+      "clubhouse": "Sede do clube",
+      "meetingRoom": "Sala de reuniões",
+      "restaurant": "Restauração",
+      "gym": "Ginásio",
+      "calendar": "Calendário",
+      "group": "Grupo",
+      "lesson": "Aula",
+      "event": "Evento",
+      "place": "Local"
     }
   },
   "registrations": {
@@ -1900,6 +1924,7 @@
       "sections": {
         "logo": "Logótipo",
         "themeColours": "Cores do tema",
+        "naming": "Designação",
         "preview": "Pré-visualização"
       },
       "fields": {
@@ -1914,7 +1939,11 @@
         "accentColour": "Cor de destaque",
         "backgroundColour": "Cor de fundo",
         "textColour": "Cor do texto",
-        "resetColours": "Repor cores predefinidas"
+        "resetColours": "Repor cores predefinidas",
+        "bookingsLabel": "Nome do menu de Reservas",
+        "bookingsLabelHelp": "O que os membros veem como nome desta área na aplicação. Deixe em branco para usar a predefinição.",
+        "bookingsLabelPlaceholder": "Reservas",
+        "bookingsLabelExample": "Por exemplo: Reserva de campo, Reserva de picadeiro, Sessões de piscina"
       },
       "preview": {
         "organisationName": "Nome da organização",

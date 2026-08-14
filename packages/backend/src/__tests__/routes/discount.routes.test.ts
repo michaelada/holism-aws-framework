@@ -34,6 +34,8 @@ jest.mock('../../middleware/auth.middleware', () => ({
           username: 'testuser',
           roles: ['org-admin'],
           groups: [],
+          firstName: '',
+          lastName: '',
           organisationId: 'test-org-123'
         };
         next();

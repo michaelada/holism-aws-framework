@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Box,
+  Typography,
   Button,
   IconButton,
   Dialog,
@@ -45,9 +46,12 @@ export function RoleList({
 
   const handleDeleteConfirm = () => {
     if (roleToDelete) {
-      onDeleteClick(roleToDelete.id);
+      // Close first, act second: the dialog unmounts before the parent's
+      // delete handler can reload the list out from under it.
+      const id = roleToDelete.id;
       setDeleteDialogOpen(false);
       setRoleToDelete(null);
+      onDeleteClick(id);
     }
   };
 
@@ -60,7 +64,7 @@ export function RoleList({
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Box>
-          <h2>Roles</h2>
+          <Typography variant="h2" component="h2">Roles</Typography>
         </Box>
         <Button
           variant="contained"
@@ -106,7 +110,7 @@ export function RoleList({
                       size="small"
                       color="error"
                       onClick={() => handleDeleteClick(role)}
-                      title="Delete role"
+                      aria-label={`Delete role ${role.displayName ?? role.name}`}
                     >
                       <DeleteIcon />
                     </IconButton>

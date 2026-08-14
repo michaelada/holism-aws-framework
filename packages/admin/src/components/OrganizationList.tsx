@@ -53,8 +53,6 @@ export function OrganizationList({
         return 'success';
       case 'inactive':
         return 'default';
-      case 'blocked':
-        return 'error';
       default:
         return 'default';
     }

@@ -69,7 +69,7 @@ describe('RoleList', () => {
   it('should show delete confirmation dialog', async () => {
     render(<RoleList {...defaultProps} />);
 
-    const deleteButtons = screen.getAllByTitle('Delete role');
+    const deleteButtons = screen.getAllByRole('button', { name: /^Delete role / });
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe('RoleList', () => {
     const onDeleteClick = vi.fn();
     render(<RoleList {...defaultProps} onDeleteClick={onDeleteClick} />);
 
-    const deleteButtons = screen.getAllByTitle('Delete role');
+    const deleteButtons = screen.getAllByRole('button', { name: /^Delete role / });
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe('RoleList', () => {
   it('should close dialog when cancel is clicked', async () => {
     render(<RoleList {...defaultProps} />);
 
-    const deleteButtons = screen.getAllByTitle('Delete role');
+    const deleteButtons = screen.getAllByRole('button', { name: /^Delete role / });
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {

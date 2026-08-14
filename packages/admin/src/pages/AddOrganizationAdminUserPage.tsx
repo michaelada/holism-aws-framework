@@ -4,7 +4,7 @@
  * Dedicated page for adding administrator users to an organization
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -46,6 +46,7 @@ export const AddOrganizationAdminUserPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<CreateOrganizationAdminUserDto>({
@@ -108,22 +109,53 @@ export const AddOrganizationAdminUserPage: React.FC = () => {
 
       // Create user
       const newUser = await createOrganizationAdminUser(id, formData);
-      
-      // Assign roles to new user
+
+      // Assign roles to the new user.
+      //
+      // Deliberately `allSettled`, not `all`. The user already exists at this
+      // point, so a rejected role assignment must not be reported as "failed to
+      // create administrator user" — that message sent operators back to retry,
+      // where they hit a duplicate-email error and concluded nothing had worked,
+      // while a role-less administrator sat in Keycloak.
+      let failedRoles: string[] = [];
       if (selectedRoleIds.length > 0) {
-        await Promise.all(
-          selectedRoleIds.map(roleId => assignRoleToUser(id, newUser.id, roleId))
+        const outcomes = await Promise.allSettled(
+          selectedRoleIds.map((roleId) => assignRoleToUser(id, newUser.id, roleId))
+        );
+        failedRoles = outcomes
+          .map((outcome, index) =>
+            outcome.status === 'rejected'
+              ? roles.find((r) => r.id === selectedRoleIds[index])?.displayName ??
+                selectedRoleIds[index]
+              : null
+          )
+          .filter((name): name is string => name !== null);
+      }
+
+      if (failedRoles.length === 0) {
+        showSuccess(`${formData.email} added as an administrator`);
+      } else {
+        showError(
+          `${formData.email} was created, but ${failedRoles.length} role${
+            failedRoles.length === 1 ? '' : 's'
+          } could not be assigned: ${failedRoles.join(', ')}. Assign ${
+            failedRoles.length === 1 ? 'it' : 'them'
+          } from the organisation's Users tab.`
         );
       }
 
-      showSuccess('Administrator user added successfully');
-      
       // Redirect back to organization details
       navigate(`/organizations/${id}`);
     } catch (error: any) {
       console.error('Failed to create user:', error);
-      setError(error.response?.data?.message || 'Failed to create administrator user');
-      showError('Failed to create administrator user');
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'The administrator could not be created. Check the email address is not already in use.';
+      setError(message);
+      showError(message);
+      // Focus the alert so a screen-reader user learns the form was rejected.
+      window.requestAnimationFrame(() => errorRef.current?.focus());
     } finally {
       setSubmitting(false);
     }
@@ -186,7 +218,14 @@ export const AddOrganizationAdminUserPage: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert
+          severity="error"
+          role="alert"
+          ref={errorRef}
+          tabIndex={-1}
+          sx={{ mb: 3 }}
+          onClose={() => setError(null)}
+        >
           {error}
         </Alert>
       )}

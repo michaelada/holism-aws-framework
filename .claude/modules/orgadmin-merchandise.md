@@ -4,6 +4,13 @@ Sells branded goods: product types with options and stock, order management, del
 merchandise discounts.
 
 - **Capability:** `merchandise`. Discount pages gate on `merchandise-discounts`.
+- **Discounts attach to products** through `merchandise_types.discount_ids`, like every other
+  sellable thing. The column and its service reads/writes were added in
+  `1709000000024`; before that the page's `DiscountSelector` existed but its selection was
+  discarded on save, so merchandise discounts could be created and never applied.
+- **Demo data:** the seed gives **only Kildare Hunt** a shop — 8 products covering all three
+  delivery models, tracked and untracked stock, sold-out, hidden and inactive states, each with a
+  generated SVG data-URI image. See `docs/EVENTS_DEMO_SEED.md`.
 - **Tests:** Vitest — `npm run test:orgadmin-merchandise` (~5 test files; the thinnest coverage of
   the capability modules, so new work here should add tests generously).
 

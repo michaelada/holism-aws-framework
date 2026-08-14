@@ -1,12 +1,12 @@
 # AWS Configuration
 aws_region   = "eu-west-1"
-project_name = "aws-web-framework"
+project_name = "its-plain-sailing"
 
 # Network Configuration
 vpc_cidr = "10.0.0.0/16"
 
 # Database Configuration
-database_name        = "appdb"
+database_name        = "ipsdb"
 db_master_username   = "dbadmin"
 db_instance_class    = "db.t3.small"
 db_allocated_storage = 50
@@ -19,7 +19,7 @@ asg_desired_capacity = 1
 
 # Monitoring Configuration
 monitoring_instance_type = "t3.small"
-alarm_email_addresses    = ["devops@example.com"]
+alarm_email_addresses    = ["michael.adams@eskersoft.com"]
 
 # SSL Configuration (optional)
 ssl_certificate_arn = ""

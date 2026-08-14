@@ -583,6 +583,10 @@ this organisation (arriving from A6).
 - If the email already exists in Keycloak, the response must not leak that fact: show a neutral
   "Check your email" screen and send a connect-this-club link instead.
 - Existing-user path (from A6) collapses this to a single "Connect to this club" confirmation.
+- The button sends **no request body**: the platform already knows who is pressing it, so identity —
+  email *and* name — comes from the verified token. A caller must not be able to register under
+  someone else's details, and a body-only read meant every request arrived nameless and was refused
+  as invalid, telling the member the club could not be joined.
 
 ---
 
@@ -688,9 +692,58 @@ the tab navigates directly instead of opening a sheet.
 **Notes**
 - Every card is capability-gated and hides entirely when it has nothing to show, so a
   memberships-only org sees a clean two-card dashboard rather than a grid of empty states.
+- **Memberships are a row of cards, one per active membership**, in the same shape as the what's-on
+  teasers and headed *Memberships*. A single card about the soonest to expire was the wrong shape
+  once parents turned out to hold their children's: it announced that something was expiring without
+  showing the other three, which were only reachable by thinking to open [C4](#c4--my-memberships).
+  Each card is named for the **member**, with the type as its subtitle. Absent entirely when the
+  member holds none — an empty heading is worse than no heading.
+- **Renewal lives on the card that needs it**, not in a banner over the page. With several
+  memberships a banner has to pick one to be about, and naming one child while three other cards sit
+  below says less than a button on the card concerned. The two states stay apart as they do on C4:
+  `canRenew` gets the button, and due-but-nothing-published gets a note instead of a button leading
+  nowhere. Cards are sorted soonest-to-expire, so anything due leads the row.
 - The renewal banner is driven by the same rule as C4: `valid_until - today ≤ 30 days` **and** a
   membership type exists for the following period. Without the second condition the button leads to
   a dead end.
+- **What's on** teasers lead with a compact `EventDateTile` for anything dated — the row is scanned
+  for *when*, and a date set as another line of prose makes every card read the same at a glance.
+  Undated kinds (shop, bookings, registrations) simply have no tile.
+- Beneath the name, an event teaser carries **one** status chip — *Open*, *Opening soon*,
+  *Closing soon*, *Closed* or *Entries full* — and the moment that state turns on. Deliberately
+  smaller than [D1](#d1--browse--whats-on)'s `EntryStatus`, which also weighs capacity ("12 of 50
+  places left") because a member choosing between events is judging their chances; here they are
+  glancing at a card whose job is to get them to the listing. The states come from the same
+  `entryWindowFor` rules, so the two screens cannot disagree about whether an event is open.
+
+  | State | What is shown beneath the chip |
+  |---|---|
+  | Opening soon | opens *and* closes — when can I enter, and how long will I have |
+  | Open | closes |
+  | Closing soon | closes |
+  | Closed | when entries closed |
+  | Entries full | the closing moment, if the window is still running |
+
+  **Times, not just dates.** A closing at 09:00 is a different thing to plan around than one at
+  23:59, and "closes 20 August" for a deadline that passes before breakfast is the kind of omission
+  a member only notices once they have missed it.
+
+  **Ordinal days** — "closes 22nd Sept 2026, 23:59". Shared with [D1](#d1--browse--whats-on)'s
+  event list via `formatOrdinalDateTime`, and applied only in languages that ordinal-suffix dates:
+  English and French. German already writes `1.`, and Spanish, Italian and Portuguese use a plain
+  numeral.
+- *Entries full* outranks the window, but only while the window is running. A closed event reads as
+  **Closed**, never "full" — which would be a detail about a door that is shut anyway.
+- **Events an entrant cannot act on are still teased**, unlike every other kind. Entries opening on
+  Friday, closing yesterday, or a camp that filled up are all things a member wants to know, and an
+  events list that silently omitted them would read as a club with nothing on. The chip says which,
+  so nothing is mistakable for an invitation. Two exclusions remain: an event the member has
+  **already entered**, and one that opens more than `OPENING_WITHIN_DAYS` (3) away — not news yet,
+  and it would push out something closing this week.
+- The **tab icon follows the club**: `useOrganisationFavicon` swaps the favicon to the uploaded logo
+  and restores the platform icon on the way out. The logo is proved to decode before it is applied,
+  because a browser that fails to decode an icon falls back to a blank glyph rather than to the
+  previous one — so an unverified swap would let a bad upload cost the club its icon entirely.
 
 ---
 
@@ -756,6 +809,17 @@ show Renew  ⟺  status = active
 
 If the first two hold but the third does not, show "Renewals for 2026 are not open yet" instead of a
 button that leads nowhere.
+
+**Notes**
+- **Each card is headed by the member's name**, with the membership type as a subtitle beneath it.
+  A membership belongs to a *person*, and the person signed in is not always that person: a parent
+  holds their children's memberships, and those children may have no login at all. Headed by the
+  type, a parent holding three sees three cards reading "Junior Member" that differ only by a
+  membership number they have no reason to recognise. The type still leads when no name is
+  recorded — a card headed by nothing would be worse.
+- The same applies to the membership card on [B3](#b3--home--my-dashboard), which is about the
+  membership expiring **soonest**. It names whom that membership is for, and adds "1 of 4
+  memberships" when there are others, so it does not read as the whole story.
 
 ---
 

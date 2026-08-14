@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { AdminApiService } from '../services/adminApi';
+import { API_BASE_URL } from '../services/apiBaseUrl';
 import { useAuth } from './AuthContext';
 
 interface ApiContextValue {
@@ -17,7 +18,7 @@ export function ApiProvider({ children }: ApiProviderProps) {
 
   const api = useMemo(() => {
     return new AdminApiService({
-      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+      baseURL: API_BASE_URL,
       getToken: () => keycloak?.token || null,
       onUnauthorized: () => {
         keycloak?.logout();

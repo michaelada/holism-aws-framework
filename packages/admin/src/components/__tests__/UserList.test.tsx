@@ -1,24 +1,37 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UserList } from '../UserList';
-import { User, Tenant } from '../../types/admin.types';
+import { User } from '../../types/admin.types';
+import type { Organization } from '../../types/organization.types';
 
 describe('UserList', () => {
-  const mockTenants: Tenant[] = [
+  const mockOrganisations: Organization[] = [
     {
-      id: 'tenant-1',
-      keycloakGroupId: 'kc-tenant-1',
-      name: 'tenant-one',
-      displayName: 'Tenant One',
+      id: 'organisation-1',
+      organizationTypeId: 'organisation-type-1',
+      keycloakGroupId: 'kc-organisation-1',
+      name: 'organisation-one',
+      displayName: 'Organisation One',
+      urlCode: 'organisation-one',
+      currency: 'GBP',
+      language: 'en-GB',
+      enabledCapabilities: [],
+      settings: {},
       status: 'active',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     },
     {
-      id: 'tenant-2',
-      keycloakGroupId: 'kc-tenant-2',
-      name: 'tenant-two',
-      displayName: 'Tenant Two',
+      id: 'organisation-2',
+      organizationTypeId: 'organisation-type-1',
+      keycloakGroupId: 'kc-organisation-2',
+      name: 'organisation-two',
+      displayName: 'Organisation Two',
+      urlCode: 'organisation-two',
+      currency: 'GBP',
+      language: 'en-GB',
+      enabledCapabilities: [],
+      settings: {},
       status: 'active',
       createdAt: '2024-01-02T00:00:00Z',
       updatedAt: '2024-01-02T00:00:00Z',
@@ -36,7 +49,8 @@ describe('UserList', () => {
       enabled: true,
       emailVerified: true,
       roles: ['admin', 'user'],
-      tenants: ['tenant-1'],
+      classifications: ['super-admin', 'org-admin'] as const,
+      organizations: ['organisation-1'],
       createdAt: '2024-01-01T00:00:00Z',
     },
     {
@@ -49,19 +63,20 @@ describe('UserList', () => {
       enabled: false,
       emailVerified: false,
       roles: ['user'],
-      tenants: ['tenant-2'],
+      classifications: ['account'] as const,
+      organizations: ['organisation-2'],
       createdAt: '2024-01-02T00:00:00Z',
     },
   ];
 
   const defaultProps = {
     users: mockUsers,
-    tenants: mockTenants,
+    organizations: mockOrganisations,
     loading: false,
     searchTerm: '',
-    selectedTenantId: '',
+    selectedOrganizationId: '',
     onSearchChange: vi.fn(),
-    onTenantFilterChange: vi.fn(),
+    onOrganizationFilterChange: vi.fn(),
     onCreateClick: vi.fn(),
     onEditClick: vi.fn(),
     onDeleteClick: vi.fn(),
@@ -106,7 +121,7 @@ describe('UserList', () => {
     const onEditClick = vi.fn();
     render(<UserList {...defaultProps} onEditClick={onEditClick} />);
 
-    const editButtons = screen.getAllByTitle('Edit user');
+    const editButtons = screen.getAllByRole('button', { name: /^Edit / });
     fireEvent.click(editButtons[0]);
 
     expect(onEditClick).toHaveBeenCalledWith(mockUsers[0]);
@@ -116,7 +131,7 @@ describe('UserList', () => {
     const onResetPasswordClick = vi.fn();
     render(<UserList {...defaultProps} onResetPasswordClick={onResetPasswordClick} />);
 
-    const resetButtons = screen.getAllByTitle('Reset password');
+    const resetButtons = screen.getAllByRole('button', { name: /^Reset password for / });
     fireEvent.click(resetButtons[0]);
 
     expect(onResetPasswordClick).toHaveBeenCalledWith(mockUsers[0]);
@@ -125,7 +140,7 @@ describe('UserList', () => {
   it('should show delete confirmation dialog', async () => {
     render(<UserList {...defaultProps} />);
 
-    const deleteButtons = screen.getAllByTitle('Delete user');
+    const deleteButtons = screen.getAllByRole('button', { name: /^Delete / });
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -138,7 +153,7 @@ describe('UserList', () => {
     const onDeleteClick = vi.fn();
     render(<UserList {...defaultProps} onDeleteClick={onDeleteClick} />);
 
-    const deleteButtons = screen.getAllByTitle('Delete user');
+    const deleteButtons = screen.getAllByRole('button', { name: /^Delete / });
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -154,7 +169,7 @@ describe('UserList', () => {
   it('should close dialog when cancel is clicked', async () => {
     render(<UserList {...defaultProps} />);
 
-    const deleteButtons = screen.getAllByTitle('Delete user');
+    const deleteButtons = screen.getAllByRole('button', { name: /^Delete / });
     fireEvent.click(deleteButtons[0]);
 
     await waitFor(() => {
@@ -169,11 +184,30 @@ describe('UserList', () => {
     });
   });
 
-  it('should display user roles as chips', () => {
+  it('should display user classifications as chips rather than raw roles', () => {
     render(<UserList {...defaultProps} />);
 
-    expect(screen.getByText('admin')).toBeInTheDocument();
-    expect(screen.getAllByText('user')).toHaveLength(2);
+    expect(screen.getByText('Account')).toBeInTheDocument();
+
+    // The underlying realm roles stay out of the table — they are the detail
+    // the categories exist to summarise.
+    expect(screen.queryByText('admin')).not.toBeInTheDocument();
+    expect(screen.queryByText('user')).not.toBeInTheDocument();
+  });
+
+  it('should show every classification a user holds', () => {
+    render(<UserList {...defaultProps} />);
+
+    // The first fixture is both a platform operator and an organisation admin.
+    expect(screen.getByText('Super Admin')).toBeInTheDocument();
+    expect(screen.getByText('Org-admin')).toBeInTheDocument();
+  });
+
+  it('should show a dash when a user has no classification', () => {
+    const unclassified = [{ ...mockUsers[0], classifications: [] }];
+    render(<UserList {...defaultProps} users={unclassified} />);
+
+    expect(screen.queryByText('Super Admin')).not.toBeInTheDocument();
   });
 
   it('should display user status', () => {
@@ -193,27 +227,27 @@ describe('UserList', () => {
     expect(onSearchChange).toHaveBeenCalledWith('john');
   });
 
-  it('should call onTenantFilterChange when tenant filter changes', () => {
-    const onTenantFilterChange = vi.fn();
-    render(<UserList {...defaultProps} onTenantFilterChange={onTenantFilterChange} />);
+  it('should call onOrganizationFilterChange when organisation filter changes', () => {
+    const onOrganizationFilterChange = vi.fn();
+    render(<UserList {...defaultProps} onOrganizationFilterChange={onOrganizationFilterChange} />);
 
-    const tenantFilter = screen.getByLabelText(/filter by tenant/i);
-    fireEvent.mouseDown(tenantFilter);
+    const organisationFilter = screen.getByLabelText(/filter by organisation/i);
+    fireEvent.mouseDown(organisationFilter);
 
-    const options = screen.getAllByText('Tenant One');
+    const options = screen.getAllByText('Organisation One');
     // Click the menu option (not the chip)
     const menuOption = options.find(el => el.closest('[role="option"]'));
     if (menuOption) {
       fireEvent.click(menuOption);
     }
 
-    expect(onTenantFilterChange).toHaveBeenCalledWith('tenant-1');
+    expect(onOrganizationFilterChange).toHaveBeenCalledWith('organisation-1');
   });
 
-  it('should display tenant names for users', () => {
+  it('should display organisation names for users', () => {
     render(<UserList {...defaultProps} />);
 
-    expect(screen.getByText('Tenant One')).toBeInTheDocument();
-    expect(screen.getByText('Tenant Two')).toBeInTheDocument();
+    expect(screen.getByText('Organisation One')).toBeInTheDocument();
+    expect(screen.getByText('Organisation Two')).toBeInTheDocument();
   });
 });

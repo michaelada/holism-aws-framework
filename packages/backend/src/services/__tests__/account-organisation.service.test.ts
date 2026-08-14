@@ -48,7 +48,7 @@ describe('AccountOrganisationService', () => {
         organisationType: 'Pony Club',
         city: undefined,
         country: undefined,
-        branding: { logoUrl: '', primaryColor: '#1976d2' },
+        branding: { logoUrl: '', primaryColor: '#1976d2', bookingsLabel: '' },
       });
       // The directory is unauthenticated — nothing internal may leak.
       expect(organisations[0]).not.toHaveProperty('id');
@@ -119,6 +119,7 @@ describe('AccountOrganisationService', () => {
       expect(organisations[0].branding).toEqual({
         logoUrl: 'https://x/logo.png',
         primaryColor: '#123456',
+        bookingsLabel: '',
       });
     });
   });

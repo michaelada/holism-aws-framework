@@ -138,8 +138,11 @@
     "comingUp": "Demnächst",
     "seeAll": "Alle ansehen",
     "membership": "Mitgliedschaft",
+    "memberships": "Mitgliedschaften",
     "membershipUntil": "Aktiv bis {{date}}",
     "membershipNumber": "Mitgliedsnr. {{number}}",
+    "membershipOneOf": "1 von {{count}} Mitgliedschaft",
+    "membershipOneOf_other": "1 von {{count}} Mitgliedschaften",
     "viewMemberships": "Mitgliedschaften ansehen",
     "cart": "Ihr Warenkorb",
     "cartSummary": "{{count}} Positionen · {{total}}",
@@ -148,6 +151,7 @@
     "recentPayments": "Letzte Zahlungen",
     "allPayments": "Alle Zahlungen",
     "whatsOn": "Aktuelles",
+    "shop": "Shop",
     "free": "Kostenlos",
     "nothingYet": "Hier ist noch nichts. Sobald der Verein etwas öffnet, erscheint es hier.",
     "kind": {
@@ -155,6 +159,13 @@
       "merchandise": "Shop",
       "calendar": "Buchung",
       "registration": "Registrierung"
+    },
+    "status": {
+      "open": "Offen",
+      "opening-soon": "Öffnet bald",
+      "closing-soon": "Schließt bald",
+      "closed": "Geschlossen",
+      "full": "Ausgebucht"
     }
   },
   "status": {
@@ -310,6 +321,9 @@
     "nothingThisWeek": "Diese Woche ist nichts verfügbar.",
     "free": "Kostenlos",
     "yourSlot": "Ihr Termin",
+    "yourSlot_other": "Ihre Termine",
+    "total": "Gesamt",
+    "removeSlot": "{{date}} um {{time}} entfernen",
     "minutes": "{{count}} Minuten",
     "placesLeft": "Noch {{count}} Plätze",
     "chooseSlot": "Wählen Sie einen Termin",

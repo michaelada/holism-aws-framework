@@ -51,6 +51,13 @@ export interface PublicOrganisation {
   branding: {
     logoUrl: string;
     primaryColor: string;
+    /**
+     * What this club calls its bookings area, when it has renamed it.
+     *
+     * Empty means the member app uses its own default. Sent even to signed-out
+     * visitors because the gateway and directory show the same navigation.
+     */
+    bookingsLabel: string;
   };
 }
 
@@ -82,6 +89,7 @@ function rowToPublicOrganisation(row: any): PublicOrganisation {
     branding: {
       logoUrl: branding.logoUrl || '',
       primaryColor: branding.primaryColor || DEFAULT_PRIMARY,
+      bookingsLabel: branding.bookingsLabel || '',
     },
   };
 }

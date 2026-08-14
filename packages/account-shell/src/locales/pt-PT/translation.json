@@ -138,8 +138,11 @@
     "comingUp": "A seguir",
     "seeAll": "Ver tudo",
     "membership": "Inscrição",
+    "memberships": "Inscrições",
     "membershipUntil": "Ativa até {{date}}",
     "membershipNumber": "N.º de sócio {{number}}",
+    "membershipOneOf": "1 de {{count}} inscrição",
+    "membershipOneOf_other": "1 de {{count}} inscrições",
     "viewMemberships": "Ver inscrições",
     "cart": "O seu cesto",
     "cartSummary": "{{count}} artigos · {{total}}",
@@ -148,6 +151,7 @@
     "recentPayments": "Pagamentos recentes",
     "allPayments": "Todos os pagamentos",
     "whatsOn": "Em destaque",
+    "shop": "Loja",
     "free": "Grátis",
     "nothingYet": "Ainda não há nada aqui. Quando o clube abrir algo, aparecerá aqui.",
     "kind": {
@@ -155,6 +159,13 @@
       "merchandise": "Loja",
       "calendar": "Reserva",
       "registration": "Registo"
+    },
+    "status": {
+      "open": "Aberto",
+      "opening-soon": "Abre em breve",
+      "closing-soon": "Fecha em breve",
+      "closed": "Encerrado",
+      "full": "Esgotado"
     }
   },
   "status": {
@@ -309,7 +320,10 @@
     "weekOf": "Semana de {{date}}",
     "nothingThisWeek": "Não há disponibilidade esta semana.",
     "free": "Grátis",
-    "yourSlot": "A sua marcação",
+    "yourSlot": "O seu horário",
+    "yourSlot_other": "Os seus horários",
+    "total": "Total",
+    "removeSlot": "Remover {{date}} às {{time}}",
     "minutes": "{{count}} minutos",
     "placesLeft": "Restam {{count}} lugares",
     "chooseSlot": "Escolha um horário",

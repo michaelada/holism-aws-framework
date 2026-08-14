@@ -120,7 +120,7 @@ describe('RolesPage', () => {
       expect(screen.getByText('admin')).toBeInTheDocument();
     });
 
-    const deleteButton = screen.getByTitle('Delete role');
+    const deleteButton = screen.getByRole('button', { name: /^Delete role / });
     fireEvent.click(deleteButton);
 
     await waitFor(() => {
@@ -209,7 +209,7 @@ describe('RolesPage', () => {
       expect(screen.getByText('admin')).toBeInTheDocument();
     });
 
-    const deleteButton = screen.getByTitle('Delete role');
+    const deleteButton = screen.getByRole('button', { name: /^Delete role / });
     fireEvent.click(deleteButton);
 
     await waitFor(() => {

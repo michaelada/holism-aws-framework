@@ -128,11 +128,29 @@ started rendering the same ticket a gate scans.
 it from a Postgres sequence. A change to one without the other produces references the client
 rejects as malformed; a test in `__tests__/ticketGeneration.test.ts` asserts they agree.
 
+## Formatting
+
+`utils/formatting.ts` — `formatCurrency`, `formatDisplayDate` / `formatDisplayDateTime`,
+`formatDateRange`, and the ordinal pair below. All fall back rather than throw: an unrecognised
+currency renders a plain figure, and a null or unparseable date renders an em dash, because
+"Invalid Date" in a table reads as a fault in the member's own record.
+
+**`formatOrdinalDate` / `formatOrdinalDateTime`** add the ordinal day — "22nd Sept 2026" — for dates
+read as a deadline rather than scanned in a column. The suffix table covers **English** (`st`/`nd`/
+`rd`/`th`, selected by `Intl.PluralRules` with `type: 'ordinal'`, which is what knows 21 takes `st`
+while 11 takes `th`) and **French** (`1er`, then nothing). German already writes `1.`, and Spanish,
+Italian and Portuguese use a plain numeral, so those come back exactly as `Intl` rendered them —
+inventing a suffix would be a wrong date in a language we do not speak.
+
+Built on `formatToParts`, rewriting only the `day` token, so each locale keeps its own order and
+separators and a two-digit hour is never suffixed as if it were a day.
+
 ## Where to look for what
 
 | Question | Start at |
 |---|---|
 | "How is a field of type X rendered?" | `components/FieldRenderer/renderers/` |
+| "Why is this date '22 Sept' here and '22nd Sept' there?" | `utils/formatting.ts` — ordinals are for deadlines, and only in English and French |
 | "Why does an application-form field render as a text box?" | `utils/applicationField.ts` — its datatype is unmapped, and the fallback is `TextRenderer` |
 | "How do I show a definition-driven form?" | `components/MetadataForm/MetadataForm.tsx` |
 | "Where does the discount picker live?" | `components/discount/DiscountSelector.tsx` |

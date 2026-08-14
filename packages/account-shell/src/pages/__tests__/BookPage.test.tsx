@@ -42,6 +42,7 @@ const calendar = (over: Partial<CatalogueCalendar> = {}): CatalogueCalendar => (
   name: 'Tennis court 1',
   description: 'All-weather',
   displayColour: '#336699',
+  displayIcon: 'tennis',
   minDaysInAdvance: 0,
   maxDaysInAdvance: 90,
   allowCancellations: false,
@@ -129,5 +130,16 @@ describe('BookPage', () => {
 
     expect(await screen.findByText(/could not load the calendars/i)).toBeInTheDocument();
     expect(screen.queryByText(/nothing to book/i)).not.toBeInTheDocument();
+  });
+
+  it('marks each calendar with its own icon rather than a colour bar', () => {
+    renderWithProviders(<BookPage />);
+
+    // A column of coloured bars asks the member to remember which colour means
+    // the arena; an icon says it outright.
+    return screen.findByText('Tennis court 1').then(() => {
+      const icon = document.querySelector('[data-testid="SportsTennisIcon"]');
+      expect(icon).toBeInTheDocument();
+    });
   });
 });

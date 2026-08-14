@@ -59,7 +59,7 @@ Grouped by area; each is a class or object exported from `src/services`.
 `organization-user.service`, `organization-admin-role.service`,
 `organization-payment-settings.service`, `organization-branding.service`,
 `account-organisation.service`, `account-registration.service`, `cart.service`, `user-group.service`,
-`organization-email-templates.service`, `org-payment-method-data.service`, `tenant.service`,
+`organization-email-templates.service`, `org-payment-method-data.service`,
 `org-admin-user.service`, `account-user.service`, `user.service`, `role.service`,
 `user-preferences.service`.
 
@@ -100,7 +100,7 @@ same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/A
 Raw SQL through `db` (`src/database/pool.ts`). Schema is defined solely by `migrations/`. Tables:
 
 ```
-tenants  organizations  organization_types  organization_users  organization_user_roles
+organizations  organization_types  organization_users  organization_user_roles
 organization_admin_roles  organization_audit_log  admin_audit_log  users  roles  capabilities
 events  event_activities  event_entries  event_ticketing_config  electronic_tickets
 ticket_scan_history  members  membership_types  member_filters
@@ -113,7 +113,8 @@ application_forms  application_form_fields  application_fields  field_definition
 form_submissions  form_submission_files
 object_definitions  object_fields
 payments  payment_methods  refunds  org_payment_method_data
-organization_type_payment_fees  carts  cart_items  payment_transactions
+organization_type_payment_fees  organization_payment_application_fees
+carts  cart_items  payment_transactions
 discounts  discount_applications  discount_usage  user_groups  user_group_members
 event_types  venues  slot_reservations  membership_number_sequences
 reports  user_onboarding_preferences
@@ -291,7 +292,16 @@ Things worth knowing before touching any of it:
 - **Exactly-once is an insert-first claim** on `processed_webhook_events` (unique on
   `provider, event_id`), released on failure so a retry can succeed. `confirmPayment` also locks the
   payment row `FOR UPDATE` and re-checks its status.
-- **The Connect application fee is configurable per organisation type**
+- **Organisation status gates org-admin access.** `active` or `inactive` only. Sign-in and every
+  capability- or role-gated request check `o.status = 'active'`, so deactivating an organisation
+  locks out its administrators immediately, not when their token expires. `DELETE` on an
+  organisation is retired and answers 409 — see `docs/ORGANISATION_STATUS_AND_DEACTIVATION.md`.
+- **The Connect application fee is configurable per organisation type** **and per organisation.** The type's value is
+  the default a new organisation is created with; from then on the organisation carries its own row
+  in `organization_payment_application_fees` and a later edit to the type does not reach it.
+  Resolution at checkout is organisation-first, falling back to the type. Only the *application*
+  fee works this way — the three handling-fee elements stay on `organization_type_payment_fees` and
+  are inherited live. See `docs/ORGANISATION_APPLICATION_FEE.md`.
   (`organization_type_payment_fees.application_fee_*`), and is **not** the same thing as the handling
   fee: the handling fee is added to what the member pays, the application fee splits the money
   already collected. Both columns are nullable and NULL means "take the handling fee" — a

@@ -1,32 +1,32 @@
-/* Global styles for Super Admin UI */
+/* Global styles for the Its Plain Sailing platform admin.
+ *
+ * This file used to carry a global `.MuiBackdrop-root` override keyed on
+ * `aria-hidden`, applying `opacity: 0 !important` and `pointer-events: none
+ * !important` to any backdrop MUI had not yet marked visible — plus a companion
+ * effect in App.tsx that deleted backdrop nodes from the DOM on mount.
+ *
+ * Both are gone. They sat directly on top of MUI's modal focus-trap machinery:
+ * a shift in `aria-hidden` timing from an assistive technology or an MUI
+ * upgrade would have left live dialogs without a backdrop and without focus
+ * containment, and the DOM mutation could remove a backdrop belonging to a
+ * dialog that was legitimately open.
+ *
+ * The orphaned backdrops they were suppressing came from confirmation dialogs
+ * invoking their callback *before* closing themselves; where that callback
+ * unmounted the list the dialog lived in, the modal never completed its exit.
+ * The three list components now close first and act second, which removes the
+ * cause rather than hiding the symptom.
+ */
 
-/* Fix for stuck MUI backdrops */
-/* This prevents orphaned backdrop elements from blocking the UI */
-.MuiBackdrop-root:not([aria-hidden="false"]) {
-  /* Hide backdrops that are not actively part of an open dialog */
-  pointer-events: none !important;
-  opacity: 0 !important;
-  transition: opacity 0.3s ease-out;
-}
-
-/* Ensure active backdrops work correctly */
-.MuiBackdrop-root[aria-hidden="false"] {
-  pointer-events: auto !important;
-  opacity: 1 !important;
-}
-
-/* Additional safety: Remove backdrops that have been orphaned for more than 1 second */
-@keyframes fadeOutOrphanedBackdrop {
-  from {
-    opacity: 0.5;
+/* Respect the operating-system preference. Transitions still resolve, so state
+   changes remain visible; they simply stop animating. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  to {
-    opacity: 0;
-    display: none;
-  }
-}
-
-/* Apply fade out to backdrops without a parent dialog */
-.MuiBackdrop-root:not(:has(~ [role="dialog"])):not([aria-hidden="false"]) {
-  animation: fadeOutOrphanedBackdrop 0.5s ease-out forwards;
 }

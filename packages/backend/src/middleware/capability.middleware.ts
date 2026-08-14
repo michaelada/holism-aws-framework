@@ -39,7 +39,7 @@ export function loadOrganisationCapabilities() {
 
       // Look up the user's organisation and capabilities from organization_users and organizations tables
       const userResult = await db.query(
-        `SELECT ou.id as user_id, ou.organization_id, o.enabled_capabilities
+        `SELECT ou.id as user_id, ou.organization_id, o.enabled_capabilities, o.status as org_status
          FROM organization_users ou
          INNER JOIN organizations o ON ou.organization_id = o.id
          WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin' AND ou.status = 'active'
@@ -52,6 +52,24 @@ export function loadOrganisationCapabilities() {
           error: {
             code: 'FORBIDDEN',
             message: 'User is not an organization administrator or account is not active'
+          }
+        });
+        return;
+      }
+
+      /*
+       * Checked on every request, not only at sign-in.
+       *
+       * Deactivating an organisation has to take effect immediately. Gating
+       * only the login route would leave every administrator already signed in
+       * working normally until their token expired — which, for the case this
+       * exists to serve, is precisely the window that matters.
+       */
+      if (userResult.rows[0].org_status !== 'active') {
+        res.status(403).json({
+          error: {
+            code: 'ORGANISATION_INACTIVE',
+            message: 'This organisation is inactive.'
           }
         });
         return;

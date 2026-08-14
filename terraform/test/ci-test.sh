@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 echo ""
 echo -e "${BLUE}=========================================="
-echo "Terraform CI/CD Test Runner"
+echo "OpenTofu CI/CD Test Runner"
 echo "==========================================${NC}"
 echo ""
 
@@ -20,15 +20,15 @@ echo ""
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$TEST_DIR"
 
-# Check if Terraform is installed
-TERRAFORM_AVAILABLE=false
-if command -v terraform &> /dev/null; then
-    TERRAFORM_AVAILABLE=true
-    echo -e "${GREEN}✓ Terraform detected:${NC} $(terraform version -json | grep -o '"terraform_version":"[^"]*"' | cut -d'"' -f4)"
+# Check if OpenTofu is installed
+TOFU_AVAILABLE=false
+if command -v tofu &> /dev/null; then
+    TOFU_AVAILABLE=true
+    echo -e "${GREEN}✓ OpenTofu detected:${NC} $(tofu version | head -1 | awk '{print $2}')"
 else
-    echo -e "${YELLOW}⚠ Terraform not detected${NC}"
+    echo -e "${YELLOW}⚠ OpenTofu not detected${NC}"
     echo "  Only syntax tests will be run."
-    echo "  Install Terraform to run full validation and plan tests."
+    echo "  Install OpenTofu to run full validation and plan tests."
 fi
 echo ""
 
@@ -37,7 +37,7 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
-# Always run syntax tests (no Terraform required)
+# Always run syntax tests (no OpenTofu required)
 echo -e "${BLUE}=========================================="
 echo "Running: Syntax and Structure Tests"
 echo "==========================================${NC}"
@@ -46,51 +46,51 @@ echo ""
 if bash syntax-check.sh; then
     echo ""
     echo -e "${GREEN}✓ Syntax Tests PASSED${NC}"
-    ((PASSED_TESTS++))
+    PASSED_TESTS=$((PASSED_TESTS + 1))
 else
     echo ""
     echo -e "${RED}✗ Syntax Tests FAILED${NC}"
-    ((FAILED_TESTS++))
+    FAILED_TESTS=$((FAILED_TESTS + 1))
 fi
-((TOTAL_TESTS++))
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-# Run Terraform tests if available
-if [ "$TERRAFORM_AVAILABLE" = true ]; then
+# Run OpenTofu tests if available
+if [ "$TOFU_AVAILABLE" = true ]; then
     # Run validate tests
     echo ""
     echo -e "${BLUE}=========================================="
-    echo "Running: Terraform Validate Tests"
+    echo "Running: OpenTofu Validate Tests"
     echo "==========================================${NC}"
     echo ""
     
     if bash validate.sh; then
         echo ""
         echo -e "${GREEN}✓ Validate Tests PASSED${NC}"
-        ((PASSED_TESTS++))
+        PASSED_TESTS=$((PASSED_TESTS + 1))
     else
         echo ""
         echo -e "${RED}✗ Validate Tests FAILED${NC}"
-        ((FAILED_TESTS++))
+        FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
     
     # Run plan tests
     echo ""
     echo -e "${BLUE}=========================================="
-    echo "Running: Terraform Plan Tests"
+    echo "Running: OpenTofu Plan Tests"
     echo "==========================================${NC}"
     echo ""
     
     if bash plan.sh; then
         echo ""
         echo -e "${GREEN}✓ Plan Tests PASSED${NC}"
-        ((PASSED_TESTS++))
+        PASSED_TESTS=$((PASSED_TESTS + 1))
     else
         echo ""
         echo -e "${RED}✗ Plan Tests FAILED${NC}"
-        ((FAILED_TESTS++))
+        FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 fi
 
 # Final summary
@@ -108,8 +108,8 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "✓ ALL TESTS PASSED"
     echo "==========================================${NC}"
     echo ""
-    if [ "$TERRAFORM_AVAILABLE" = true ]; then
-        echo "All Terraform configurations are valid and ready for deployment!"
+    if [ "$TOFU_AVAILABLE" = true ]; then
+        echo "All OpenTofu configurations are valid and ready for deployment!"
     else
         echo "Syntax tests passed. Install Terraform for full validation."
     fi

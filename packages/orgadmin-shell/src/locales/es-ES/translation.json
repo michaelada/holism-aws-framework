@@ -625,7 +625,9 @@
       "scheduleRuleStartDate": "Fecha de inicio",
       "scheduleRuleEndDate": "Fecha de fin",
       "scheduleRuleTimeOfDay": "Hora del día",
-      "scheduleRuleReason": "Motivo"
+      "scheduleRuleReason": "Motivo",
+      "displayIcon": "Icono",
+      "noIcon": "Sin icono"
     },
     "actions": {
       "exportToExcel": "Exportar a Excel"
@@ -694,6 +696,28 @@
         "loadFailed": "Error al cargar los datos del calendario. Inténtelo de nuevo.",
         "timeout": "La solicitud ha expirado. Inténtelo de nuevo."
       }
+    },
+    "icons": {
+      "tennis": "Tenis",
+      "basketball": "Baloncesto",
+      "football": "Fútbol",
+      "golf": "Golf",
+      "cricket": "Críquet",
+      "athletics": "Atletismo",
+      "pool": "Natación",
+      "sailing": "Vela",
+      "equestrian": "Equitación",
+      "hiking": "Senderismo",
+      "park": "Terrenos",
+      "clubhouse": "Sede social",
+      "meetingRoom": "Sala de reuniones",
+      "restaurant": "Restauración",
+      "gym": "Gimnasio",
+      "calendar": "Calendario",
+      "group": "Grupo",
+      "lesson": "Clase",
+      "event": "Evento",
+      "place": "Recinto"
     }
   },
   "registrations": {
@@ -1758,6 +1782,7 @@
       "sections": {
         "logo": "Logotipo",
         "themeColours": "Colores del tema",
+        "naming": "Denominación",
         "preview": "Vista previa"
       },
       "fields": {
@@ -1772,7 +1797,11 @@
         "accentColour": "Color de acento",
         "backgroundColour": "Color de fondo",
         "textColour": "Color del texto",
-        "resetColours": "Restablecer a colores predeterminados"
+        "resetColours": "Restablecer a colores predeterminados",
+        "bookingsLabel": "Nombre del menú de reservas",
+        "bookingsLabelHelp": "Cómo verán los miembros esta sección en su aplicación. Déjelo en blanco para usar el valor predeterminado.",
+        "bookingsLabelPlaceholder": "Reservas",
+        "bookingsLabelExample": "Por ejemplo: Reserva de pista, Reserva de picadero, Sesiones de piscina"
       },
       "preview": {
         "organisationName": "Nombre de la organización",

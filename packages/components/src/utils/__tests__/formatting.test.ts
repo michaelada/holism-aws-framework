@@ -4,6 +4,8 @@ import {
   formatDisplayDate,
   formatDisplayDateTime,
   formatDateRange,
+  formatOrdinalDate,
+  formatOrdinalDateTime,
 } from '../formatting';
 
 describe('formatCurrency', () => {
@@ -90,5 +92,73 @@ describe('formatDateRange', () => {
 
   it('shows a dash when there is no range at all', () => {
     expect(formatDateRange(null, null)).toBe('—');
+  });
+});
+
+describe('formatOrdinalDate', () => {
+  it('suffixes the day in English', () => {
+    expect(formatOrdinalDate('2026-09-01', 'en-GB')).toBe('1st Sept 2026');
+    expect(formatOrdinalDate('2026-09-02', 'en-GB')).toBe('2nd Sept 2026');
+    expect(formatOrdinalDate('2026-09-03', 'en-GB')).toBe('3rd Sept 2026');
+    expect(formatOrdinalDate('2026-09-04', 'en-GB')).toBe('4th Sept 2026');
+  });
+
+  it('gets the teens right', () => {
+    // The case a naive last-digit rule breaks on: 11th, not 11st.
+    expect(formatOrdinalDate('2026-09-11', 'en-GB')).toBe('11th Sept 2026');
+    expect(formatOrdinalDate('2026-09-12', 'en-GB')).toBe('12th Sept 2026');
+    expect(formatOrdinalDate('2026-09-13', 'en-GB')).toBe('13th Sept 2026');
+  });
+
+  it('gets the twenties and thirties right', () => {
+    expect(formatOrdinalDate('2026-09-21', 'en-GB')).toBe('21st Sept 2026');
+    expect(formatOrdinalDate('2026-09-22', 'en-GB')).toBe('22nd Sept 2026');
+    expect(formatOrdinalDate('2026-09-23', 'en-GB')).toBe('23rd Sept 2026');
+    expect(formatOrdinalDate('2026-08-31', 'en-GB')).toBe('31st Aug 2026');
+  });
+
+  it('uses "er" for the first of the month in French, and nothing after', () => {
+    expect(formatOrdinalDate('2026-09-01', 'fr-FR')).toContain('1er');
+    // "2 septembre", not "2e septembre".
+    expect(formatOrdinalDate('2026-09-02', 'fr-FR')).not.toContain('2e');
+  });
+
+  it('leaves languages that do not ordinal-suffix dates alone', () => {
+    // German already writes "1." and the others use a plain numeral. Inventing
+    // a suffix would be a wrong date in a language we do not speak.
+    for (const locale of ['de-DE', 'es-ES', 'it-IT', 'pt-PT']) {
+      expect(formatOrdinalDate('2026-09-22', locale)).toBe(
+        formatDisplayDate('2026-09-22', locale)
+      );
+    }
+  });
+
+  it('shows a dash for a missing or unparseable value', () => {
+    expect(formatOrdinalDate(null)).toBe('—');
+    expect(formatOrdinalDate('not a date')).toBe('—');
+  });
+});
+
+describe('formatOrdinalDateTime', () => {
+  it('keeps the time alongside the ordinal day', () => {
+    // Midday UTC, so the calendar day is the same in every timezone the suite
+    // might run in.
+    const formatted = formatOrdinalDateTime('2026-09-22T12:00:00Z', 'en-GB');
+
+    expect(formatted).toContain('22nd Sept 2026');
+    expect(formatted).toMatch(/\d{2}:\d{2}/);
+  });
+
+  it('suffixes the day and nothing else', () => {
+    // The hour is a two-digit number too, and a suffix appended by string
+    // matching rather than by part type would decorate it as well.
+    const formatted = formatOrdinalDateTime('2026-09-22T12:00:00Z', 'en-GB');
+    const suffixes = formatted.match(/\d(?:st|nd|rd|th)\b/g) ?? [];
+
+    expect(suffixes).toEqual(['2nd']);
+  });
+
+  it('shows a dash for a missing value', () => {
+    expect(formatOrdinalDateTime(null)).toBe('—');
   });
 });

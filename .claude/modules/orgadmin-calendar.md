@@ -4,6 +4,13 @@ Bookable resources (moorings, berths, rooms, courts) with schedules, time slots,
 and a booking workflow.
 
 - **Capability:** `calendar-bookings`. Discount pages gate on `calendar-discounts`.
+- **Display icon:** each calendar carries a `display_icon` from the shared curated set
+  (`components/CalendarIcon`), chosen beside its colour and drawn in that colour wherever the
+  calendar is offered. Falls back to a generic mark rather than rendering nothing. See
+  `docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md`.
+- **Demo data:** the seed gives **only Laois Hunt** bookings — 4 calendars covering exclusive and
+  shared places, a fortnightly pattern, a blocked week, a recurring gap, cancellation allowed and
+  refused, and a closed calendar. See `docs/EVENTS_DEMO_SEED.md`.
 - **Tests:** Vitest — `npm run test:orgadmin-calendar` (~3 test files; light coverage — add tests
   with new work).
 

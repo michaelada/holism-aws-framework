@@ -194,6 +194,8 @@ export interface CatalogueCalendar {
   name: string;
   description: string | null;
   displayColour: string | null;
+  /** A Material icon name the club chose; null falls back to a generic marker. */
+  displayIcon: string | null;
   /** The club's notice period, and how far ahead it will take a booking. */
   minDaysInAdvance: number;
   maxDaysInAdvance: number;
@@ -719,7 +721,7 @@ export class AccountCatalogueService {
   async listCalendars(organisationId: string): Promise<CatalogueCalendar[]> {
     try {
       const result = await db.query(
-        `SELECT c.id, c.name, c.description, c.display_colour, c.status,
+        `SELECT c.id, c.name, c.description, c.display_colour, c.display_icon, c.status,
                 c.min_days_in_advance, c.max_days_in_advance,
                 c.use_terms_and_conditions, c.terms_and_conditions,
                 c.supported_payment_methods, c.allow_cancellations,
@@ -733,10 +735,17 @@ export class AccountCatalogueService {
       );
 
       return result.rows.map((row) => {
-        // A calendar with no schedule can produce no slot, so it is not
-        // bookable however active the club has marked it.
+        /*
+         * A calendar with no schedule can produce no slot, so it is not
+         * bookable however open the club has marked it.
+         *
+         * `open`, not `active`: those are the only two values the column takes
+         * (`calendar.service` writes `open` by default and the type union is
+         * `open | closed`). Testing for `active` matched nothing, so every
+         * calendar came back unbookable.
+         */
         const reason: UnavailableReason | null =
-          row.status !== 'active' || Number(row.configuration_count) === 0
+          row.status !== 'open' || Number(row.configuration_count) === 0
             ? 'not-open-for-bookings'
             : null;
 
@@ -745,6 +754,7 @@ export class AccountCatalogueService {
           name: row.name,
           description: row.description ?? null,
           displayColour: row.display_colour ?? null,
+          displayIcon: row.display_icon ?? null,
           minDaysInAdvance: row.min_days_in_advance ?? 0,
           maxDaysInAdvance: row.max_days_in_advance ?? 90,
           allowCancellations: row.allow_cancellations ?? false,

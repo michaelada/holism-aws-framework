@@ -138,8 +138,11 @@
     "comingUp": "À venir",
     "seeAll": "Tout voir",
     "membership": "Adhésion",
+    "memberships": "Adhésions",
     "membershipUntil": "Active jusqu’au {{date}}",
     "membershipNumber": "N° de membre {{number}}",
+    "membershipOneOf": "1 sur {{count}} adhésion",
+    "membershipOneOf_other": "1 sur {{count}} adhésions",
     "viewMemberships": "Voir les adhésions",
     "cart": "Votre panier",
     "cartSummary": "{{count}} articles · {{total}}",
@@ -148,6 +151,7 @@
     "recentPayments": "Paiements récents",
     "allPayments": "Tous les paiements",
     "whatsOn": "À l’affiche",
+    "shop": "Boutique",
     "free": "Gratuit",
     "nothingYet": "Il n’y a encore rien ici. Dès que le club proposera quelque chose, cela apparaîtra ici.",
     "kind": {
@@ -155,6 +159,13 @@
       "merchandise": "Boutique",
       "calendar": "Réservation",
       "registration": "Enregistrement"
+    },
+    "status": {
+      "open": "Ouvert",
+      "opening-soon": "Ouvre bientôt",
+      "closing-soon": "Clôture bientôt",
+      "closed": "Clôturé",
+      "full": "Complet"
     }
   },
   "status": {
@@ -310,6 +321,9 @@
     "nothingThisWeek": "Rien n’est disponible cette semaine.",
     "free": "Gratuit",
     "yourSlot": "Votre créneau",
+    "yourSlot_other": "Vos créneaux",
+    "total": "Total",
+    "removeSlot": "Retirer le {{date}} à {{time}}",
     "minutes": "{{count}} minutes",
     "placesLeft": "{{count}} places restantes",
     "chooseSlot": "Choisissez un créneau",

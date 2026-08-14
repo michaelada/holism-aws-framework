@@ -8,7 +8,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "=========================================="
-echo "Terraform Syntax and Structure Tests"
+echo "OpenTofu Syntax and Structure Tests"
 echo "=========================================="
 echo ""
 
@@ -25,11 +25,11 @@ run_test() {
     
     if eval "$test_command" > /dev/null 2>&1; then
         echo -e "${GREEN}PASSED${NC}"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
         return 0
     else
         echo -e "${RED}FAILED${NC}"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
         return 1
     fi
 }
@@ -201,7 +201,7 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo -e "${GREEN}All tests passed!${NC}"
     echo ""
     echo "Note: These tests validate file structure and basic syntax."
-    echo "Run 'terraform validate' and 'terraform plan' for full validation."
+    echo "Run 'tofu validate' and 'tofu plan' for full validation."
     exit 0
 else
     echo -e "${RED}Some tests failed!${NC}"

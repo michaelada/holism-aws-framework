@@ -213,6 +213,36 @@ describe('CheckoutService', () => {
       );
     });
 
+    /**
+     * Resolution order, asserted on the query itself because the stub above
+     * answers with an already-resolved row.
+     *
+     * The organisation's own value must win. A CASE on the presence of the
+     * organisation's row rather than COALESCE on its values, because COALESCE
+     * cannot tell "this club deliberately takes the handling fee" from "this
+     * club has no row" — both are NULL and they mean opposite things.
+     */
+    it("resolves the application fee from the organisation before its type", async () => {
+      withConnectedAccount(ACCOUNT, { fixed: 25, percentage: 2 });
+      await service.startCheckout(ORG, MEMBER, 'EUR');
+
+      const resolution = mockDb.query.mock.calls
+        .map((call) => String(call[0]))
+        .find(
+          (sql) =>
+            sql.includes('application_fee_fixed') &&
+            sql.includes('payment_methods pm') &&
+            sql.includes('LIMIT 1')
+        );
+
+      expect(resolution).toBeDefined();
+      expect(resolution).toContain('organization_payment_application_fees');
+      expect(resolution).toContain('CASE WHEN oaf.id IS NOT NULL');
+      // The type is still reachable, as the fallback for a method added to a
+      // type after the organisation was created.
+      expect(resolution).toContain('organization_type_payment_fees');
+    });
+
     it('does not change what the member is charged when the split changes', async () => {
       // The application fee decides the platform/club split; the member's total
       // is settled by the cart and must be untouched by it.

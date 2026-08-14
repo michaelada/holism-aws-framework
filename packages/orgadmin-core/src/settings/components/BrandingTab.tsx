@@ -34,6 +34,14 @@ interface BrandingSettings {
    * the key is the durable reference and is what gets saved.
    */
   logoS3Key?: string;
+  /**
+   * What the member-facing app calls its bookings area.
+   *
+   * Empty means the default ("Bookings"). Only offered when the organisation
+   * has `calendar-bookings` — a club with no calendars renaming a menu it does
+   * not have is a setting that cannot be checked and will not be remembered.
+   */
+  bookingsLabel?: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -62,8 +70,11 @@ const BrandingTab: React.FC = () => {
   
   const [formData, setFormData] = useState<BrandingSettings>({
     logoUrl: '',
+    bookingsLabel: '',
     ...DEFAULT_COLORS,
   });
+
+  const hasBookings = (organisation?.enabledCapabilities ?? []).includes('calendar-bookings');
 
   useEffect(() => {
     loadBrandingSettings();
@@ -409,6 +420,34 @@ const BrandingTab: React.FC = () => {
             {t('settings.branding.fields.resetColours')}
           </Button>
         </Grid>
+
+        {hasBookings && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                {t('settings.branding.sections.naming')}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {t('settings.branding.fields.bookingsLabelHelp')}
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label={t('settings.branding.fields.bookingsLabel')}
+                value={formData.bookingsLabel ?? ''}
+                onChange={(e) => handleChange('bookingsLabel', e.target.value)}
+                inputProps={{ maxLength: 40 }}
+                // The default is shown as a placeholder rather than filled in,
+                // so an untouched club stores nothing and keeps following the
+                // translated default in every language.
+                placeholder={t('settings.branding.fields.bookingsLabelPlaceholder')}
+                helperText={t('settings.branding.fields.bookingsLabelExample')}
+              />
+            </Grid>
+          </>
+        )}
 
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>

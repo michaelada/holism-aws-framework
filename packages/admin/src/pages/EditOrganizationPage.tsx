@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   Box,
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
   MenuItem,
   IconButton,
   FormControl,
+  FormHelperText,
   InputLabel,
   Select,
 } from '@mui/material';
@@ -22,19 +24,47 @@ import {
   getPaymentMethods,
   updateOrganization,
   checkUrlCodeAvailability,
+  getOrganizationApplicationFees,
+  setOrganizationApplicationFees,
+  getOrganizationTypePaymentFees,
 } from '../services/organizationApi';
 import type {
   Organization,
   OrganizationType,
   Capability,
   UpdateOrganizationDto,
+  OrganisationApplicationFees,
+  PaymentFeeRates,
 } from '../types/organization.types';
 import type { PaymentMethod } from '../types/payment-method.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
 import { PaymentMethodSelector } from '../components/PaymentMethodSelector';
+import {
+  ApplicationFeeEditor,
+  ApplicationFeeDraft,
+  hasHalfSetApplicationFee,
+} from '../components/ApplicationFeeEditor';
 
-const STATUSES = ['active', 'inactive', 'blocked'];
+/**
+ * Two states, and the second one is a real closure.
+ *
+ * `blocked` used to sit here as a third option. Nothing in the platform ever
+ * treated it differently from `inactive` — every gate tested `status =
+ * 'active'` — so it was a severity the UI implied and the backend never
+ * implemented. See docs/ORGANISATION_STATUS_AND_DEACTIVATION.md.
+ */
+const STATUSES: Array<{ value: string; label: string; help: string }> = [
+  { value: 'active', label: 'Active', help: 'Members and administrators can sign in as normal.' },
+  {
+    value: 'inactive',
+    label: 'Inactive',
+    help:
+      'Closed to everyone. The club disappears from the public directory, its /account link stops ' +
+      'working, and its own administrators cannot sign in either. Nothing is deleted — set it back ' +
+      'to Active to restore access.',
+  },
+];
 
 const LANGUAGES = [
   { code: 'en-GB', label: 'English (UK)' },
@@ -56,6 +86,9 @@ export const EditOrganizationPage: React.FC = () => {
   const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [applicationFees, setApplicationFees] = useState<OrganisationApplicationFees | null>(null);
+  const [applicationFeeDraft, setApplicationFeeDraft] = useState<ApplicationFeeDraft[]>([]);
+  const [typeHandlingRates, setTypeHandlingRates] = useState<Record<string, PaymentFeeRates>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -102,6 +135,43 @@ export const EditOrganizationPage: React.FC = () => {
       setOrganizationTypes(typesData);
       setCapabilities(capsData);
       setPaymentMethods(paymentMethodsData);
+
+      /*
+       * The platform share is loaded separately and never blocks this page.
+       * It belongs to a different table and its own endpoint, and an
+       * organisation whose fees fail to load should still be editable — the
+       * section says so rather than the whole form failing.
+       */
+      try {
+        const fees = await getOrganizationApplicationFees(id);
+        setApplicationFees(fees);
+        setApplicationFeeDraft(
+          fees.fees.map((f) => ({
+            paymentMethodId: f.paymentMethodId,
+            applicationFeeFixed: f.applicationFeeFixed,
+            applicationFeePercentage: f.applicationFeePercentage,
+          }))
+        );
+
+        // The handling fee stays on the type; it is read here only so the
+        // worked example can say what "not set" would actually cost.
+        const typeFees = await getOrganizationTypePaymentFees(orgData.organizationTypeId);
+        setTypeHandlingRates(
+          Object.fromEntries(
+            (typeFees.fees ?? []).map((f) => [
+              f.paymentMethodId,
+              {
+                fixedFee: Number(f.fixedFee),
+                percentageFee: Number(f.percentageFee),
+                taxPercentage: Number(f.taxPercentage),
+              },
+            ])
+          )
+        );
+      } catch (feeError) {
+        console.error('Error loading application fees:', feeError);
+        setApplicationFees(null);
+      }
       
       // Extract payment method names from organization's payment methods
       const selectedPaymentMethodNames = orgData.paymentMethods
@@ -146,9 +216,53 @@ export const EditOrganizationPage: React.FC = () => {
       return;
     }
 
+    // Both-or-neither, enforced here as well as in the database. The failure it
+    // prevents is silent: "0% plus a fixed 50c" is a plausible-looking
+    // configuration that nobody meant, and the difference is revenue on every
+    // sale this organisation makes.
+    if (hasHalfSetApplicationFee(applicationFeeDraft)) {
+      showError(
+        'Set both the application fee amount and percentage, or clear both, for every payment method.'
+      );
+      return;
+    }
+
     try {
       setSubmitting(true);
       await updateOrganization(id, formData);
+
+      /*
+       * The platform share is a separate endpoint and a separate table, so it
+       * is saved separately. Sequential rather than concurrent: if the fee save
+       * fails the organisation update has already succeeded, and the message
+       * needs to say exactly that rather than implying nothing was saved.
+       */
+      if (applicationFees && applicationFeeDraft.length > 0) {
+        try {
+          await setOrganizationApplicationFees(
+            id,
+            applicationFeeDraft.map((d) => ({
+              paymentMethodId: d.paymentMethodId,
+              applicationFeeFixed:
+                d.applicationFeeFixed === '' || d.applicationFeeFixed === null
+                  ? null
+                  : Number(d.applicationFeeFixed),
+              applicationFeePercentage:
+                d.applicationFeePercentage === '' || d.applicationFeePercentage === null
+                  ? null
+                  : Number(d.applicationFeePercentage),
+            }))
+          );
+        } catch (feeError: any) {
+          showError(
+            feeError.response?.data?.error ||
+              'The organisation was saved, but its platform share could not be updated.'
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
       showSuccess('Organisation updated successfully');
       navigate('/organizations');
     } catch (error: any) {
@@ -370,19 +484,42 @@ export const EditOrganizationPage: React.FC = () => {
               />
 
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+                <InputLabel id="org-status-label">Status</InputLabel>
                 <Select
+                  labelId="org-status-label"
+                  name="status"
                   value={formData.status}
                   label="Status"
                   onChange={(e) => handleChange('status', e.target.value)}
                 >
                   {STATUSES.map((status) => (
-                    <MenuItem key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
                     </MenuItem>
                   ))}
                 </Select>
+                <FormHelperText>
+                  {STATUSES.find((option) => option.value === formData.status)?.help}
+                </FormHelperText>
               </FormControl>
+
+              {/*
+                Deactivating from this form is a normal save, so it does not get
+                the type-the-name confirmation the list's action has. The
+                warning is here instead, stating the blast radius before the
+                operator reaches the save button — this is the control that
+                replaced deleting an organisation.
+              */}
+              {formData.status === 'inactive' && organization?.status === 'active' && (
+                <Alert severity="warning">
+                  Saving this will close <strong>{organization.displayName}</strong> to everyone.
+                  Its {organization.accountUserCount ?? 0} member
+                  {(organization.accountUserCount ?? 0) === 1 ? '' : 's'} and{' '}
+                  {organization.adminUserCount ?? 0} administrator
+                  {(organization.adminUserCount ?? 0) === 1 ? '' : 's'} lose access immediately.
+                  Everything it holds is kept.
+                </Alert>
+              )}
 
               <FormControl fullWidth>
                 <InputLabel>Language</InputLabel>
@@ -439,6 +576,54 @@ export const EditOrganizationPage: React.FC = () => {
                   selectedPaymentMethods={formData.enabledPaymentMethods || []}
                   onChange={(selected) => handleChange('enabledPaymentMethods', selected)}
                 />
+              </Box>
+
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Platform share
+                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  What Its Plain Sailing keeps from each card payment this organisation takes. It
+                  does not change what the member pays — the handling fee does that, and it is set
+                  on the {orgType?.displayName ?? 'organisation'} organisation type.
+                </Typography>
+                {applicationFees ? (
+                  <ApplicationFeeEditor
+                    fees={applicationFees.fees}
+                    draft={applicationFeeDraft}
+                    currency={applicationFees.currency}
+                    organisationTypeName={applicationFees.organisationTypeName}
+                    organisationName={organization?.displayName ?? 'the organisation'}
+                    handlingRatesByMethod={typeHandlingRates}
+                    disabled={submitting}
+                    onChange={setApplicationFeeDraft}
+                    onResetToTypeDefault={(paymentMethodId) => {
+                      const fee = applicationFees.fees.find(
+                        (f) => f.paymentMethodId === paymentMethodId
+                      );
+                      if (!fee) return;
+                      // Copies into the draft rather than calling the reset
+                      // endpoint, so it lands with the rest of the form on save
+                      // and can be abandoned by cancelling.
+                      setApplicationFeeDraft((prev) =>
+                        prev.map((d) =>
+                          d.paymentMethodId === paymentMethodId
+                            ? {
+                                ...d,
+                                applicationFeeFixed: fee.typeDefaultFixed,
+                                applicationFeePercentage: fee.typeDefaultPercentage,
+                              }
+                            : d
+                        )
+                      );
+                    }}
+                  />
+                ) : (
+                  <Alert severity="warning">
+                    The platform share could not be loaded. Everything else on this page can still
+                    be saved; reload to try again.
+                  </Alert>
+                )}
               </Box>
 
               <Box display="flex" gap={2} justifyContent="flex-end">

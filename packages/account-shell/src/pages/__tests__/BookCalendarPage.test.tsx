@@ -191,6 +191,71 @@ describe('BookCalendarPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/cart`);
   });
 
+  it('lets a member pick several slots at once', async () => {
+    // A court is booked Tuesday *and* Thursday; one-at-a-time meant a return
+    // trip through the week grid and the basket for each.
+    respond([
+      slot({ startTime: '09:00', endTime: '10:00' }),
+      slot({ startTime: '10:00', endTime: '11:00' }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /09:00–10:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+
+    expect(screen.getByText('Your slots')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
+  });
+
+  it('deselects a slot that is tapped again', async () => {
+    renderWithProviders(<BookCalendarPage />);
+    const first = await screen.findByRole('button', { name: /09:00–10:00/ });
+
+    await userEvent.click(first);
+    expect(screen.getByText('Your slot')).toBeInTheDocument();
+
+    await userEvent.click(first);
+    expect(screen.queryByText('Your slot')).not.toBeInTheDocument();
+  });
+
+  it('adds one basket item per chosen slot', async () => {
+    respond([
+      slot({ startTime: '09:00', endTime: '10:00' }),
+      slot({ startTime: '10:00', endTime: '11:00', price: 1500 }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /09:00–10:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add to basket' }));
+
+    await waitFor(() => {
+      const posts = mockExecute.mock.calls.filter(
+        ([call]: any[]) => call?.method === 'POST' && call?.data?.itemType === 'booking'
+      );
+      expect(posts).toHaveLength(2);
+      expect(posts.map(([call]: any[]) => call.data.contextRef.startTime)).toEqual([
+        '09:00',
+        '10:00',
+      ]);
+    });
+  });
+
+  it('drops one slot from the summary without losing the rest', async () => {
+    respond([
+      slot({ startTime: '09:00', endTime: '10:00' }),
+      slot({ startTime: '10:00', endTime: '11:00' }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /09:00–10:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Remove .*09:00/ }));
+
+    expect(screen.getByText('Your slot')).toBeInTheDocument();
+    expect(screen.queryByText('Total')).not.toBeInTheDocument();
+  });
+
   it('moves a week at a time', async () => {
     renderWithProviders(<BookCalendarPage />);
     await screen.findByText('Tennis court 1');

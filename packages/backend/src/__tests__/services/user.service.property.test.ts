@@ -11,7 +11,7 @@ jest.mock('../../database/pool');
  * Feature: keycloak-admin-integration, Property 7: User Creation with Complete Profile
  * 
  * For any valid user creation request, the system should create the user in Keycloak
- * with all provided profile information, credentials, tenant association (if specified),
+ * with all provided profile information, credentials, organisation association (if specified),
  * and role assignments (if specified).
  * 
  * Validates: Requirements 3.1, 3.2, 3.3, 3.4
@@ -32,7 +32,7 @@ describe('Property 7: User Creation with Complete Profile', () => {
     emailVerified: fc.option(fc.boolean(), { nil: undefined }),
     phoneNumber: fc.option(fc.string({ minLength: 10, maxLength: 20 }), { nil: undefined }),
     department: fc.option(fc.string({ minLength: 1, maxLength: 50 }), { nil: undefined }),
-    tenantId: fc.option(fc.uuid(), { nil: undefined }),
+    organizationId: fc.option(fc.uuid(), { nil: undefined }),
     roles: fc.option(fc.array(fc.constantFrom('user', 'admin', 'manager'), { minLength: 0, maxLength: 3 }), { nil: undefined }),
   });
 
@@ -63,7 +63,7 @@ describe('Property 7: User Creation with Complete Profile', () => {
     } as any;
 
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     userService = new UserService(mockKcAdmin, mockDb);
@@ -87,8 +87,8 @@ describe('Property 7: User Creation with Complete Profile', () => {
           // Mock Keycloak user creation
           mockClient.users.create.mockResolvedValue({ id: mockUserId });
 
-          // Mock tenant lookup if tenantId provided
-          if (userData.tenantId) {
+          // Mock organisation lookup if organizationId provided
+          if (userData.organizationId) {
             const mockGroupId = `group-${Math.random().toString(36).substring(7)}`;
             mockDb.query.mockResolvedValueOnce({
               rows: [{ keycloak_group_id: mockGroupId }],
@@ -110,7 +110,7 @@ describe('Property 7: User Creation with Complete Profile', () => {
             rows: [{
               id: mockDbUserId,
               keycloak_user_id: mockUserId,
-              tenant_id: userData.tenantId || null,
+              organization_id: userData.organizationId || null,
               username: userData.username,
               email: userData.email,
               preferences: {},
@@ -139,10 +139,10 @@ describe('Property 7: User Creation with Complete Profile', () => {
             (userData.roles || []).map(name => ({ id: `role-${name}`, name, composite: false }))
           );
 
-          if (userData.tenantId) {
+          if (userData.organizationId) {
             const mockGroupId = `group-${Math.random().toString(36).substring(7)}`;
             mockClient.users.listGroups.mockResolvedValue([{ id: mockGroupId }]);
-            mockDb.query.mockResolvedValueOnce({ rows: [{ id: userData.tenantId }] } as any);
+            mockDb.query.mockResolvedValueOnce({ rows: [{ id: userData.organizationId }] } as any);
           } else {
             mockClient.users.listGroups.mockResolvedValue([]);
           }
@@ -178,8 +178,8 @@ describe('Property 7: User Creation with Complete Profile', () => {
             expect(mockClient.users.resetPassword).not.toHaveBeenCalled();
           }
 
-          // Property 3: User must be added to tenant group if specified
-          if (userData.tenantId) {
+          // Property 3: User must be added to organisation group if specified
+          if (userData.organizationId) {
             expect(mockClient.users.addToGroup).toHaveBeenCalledTimes(1);
           } else {
             expect(mockClient.users.addToGroup).not.toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe('Property 7: User Creation with Complete Profile', () => {
           // Property 5: Database record must be created with Keycloak user ID
           expect(mockDb.query).toHaveBeenCalledWith(
             expect.stringContaining('INSERT INTO users'),
-            [mockUserId, userData.tenantId || null, userData.username, userData.email, '{}']
+            [mockUserId, userData.organizationId || null, userData.username, userData.email, '{}']
           );
 
           // Property 6: Result must contain consistent data
@@ -224,8 +224,8 @@ describe('Property 7: User Creation with Complete Profile', () => {
           // Mock Keycloak user creation success
           mockClient.users.create.mockResolvedValue({ id: mockUserId });
 
-          // Mock tenant lookup if needed
-          if (userData.tenantId) {
+          // Mock organisation lookup if needed
+          if (userData.organizationId) {
             mockDb.query.mockResolvedValueOnce({
               rows: [{ keycloak_group_id: 'group-123' }],
             } as any);
@@ -257,26 +257,28 @@ describe('Property 7: User Creation with Complete Profile', () => {
 });
 
 /**
- * Feature: keycloak-admin-integration, Property 8: User List Filtering by Tenant
+ * Feature: keycloak-admin-integration, Property 8: User List Filtering by Organisation
  * 
- * For any user list request with a tenant filter, the returned users should only
- * include those who are members of the specified tenant's Keycloak group.
+ * For any user list request with a organisation filter, the returned users should only
+ * include those who are members of the specified organisation's Keycloak group.
  * 
  * Validates: Requirements 3.6
  */
-describe('Property 8: User List Filtering by Tenant', () => {
+describe('Property 8: User List Filtering by Organisation', () => {
   let userService: UserService;
   let mockKcAdmin: jest.Mocked<KeycloakAdminService>;
   let mockDb: jest.Mocked<typeof db>;
   let mockClient: any;
 
-  const userListArbitrary = fc.array(
+  // Unique by id: Keycloak cannot return the same user twice, and a list that
+  // does makes the membership count ambiguous rather than testing anything.
+  const userListArbitrary = fc.uniqueArray(
     fc.record({
       id: fc.uuid(),
       username: fc.string({ minLength: 3, maxLength: 50 }),
       email: fc.emailAddress(),
     }),
-    { minLength: 1, maxLength: 10 }
+    { minLength: 1, maxLength: 10, selector: (user) => user.id }
   );
 
   beforeEach(() => {
@@ -302,49 +304,57 @@ describe('Property 8: User List Filtering by Tenant', () => {
     } as any;
 
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     userService = new UserService(mockKcAdmin, mockDb);
   });
 
-  test('filters users by tenant group membership', async () => {
+  test('filters users by organisation group membership', async () => {
     await fc.assert(
       fc.asyncProperty(
         userListArbitrary,
         fc.uuid(),
         fc.array(fc.integer({ min: 0, max: 9 })),
-        async (users: any[], tenantId: string, memberIndices: number[]) => {
+        async (users: any[], organizationId: string, memberIndices: number[]) => {
           mockClient.users.find.mockClear();
           mockClient.groups.listMembers.mockClear();
           mockDb.query.mockClear();
 
           const mockGroupId = `group-${Math.random().toString(36).substring(7)}`;
 
-          // Determine which users are in the tenant
+          // Determine which users are in the organisation
           const uniqueIndices = [...new Set(memberIndices.map(i => i % users.length))];
           const memberIds = new Set(uniqueIndices.map(i => users[i].id));
 
           // Mock Keycloak users
           mockClient.users.find.mockResolvedValue(users);
 
-          // Mock tenant lookup
-          mockDb.query.mockResolvedValueOnce({
-            rows: [{ keycloak_group_id: mockGroupId }],
-          } as any);
-
           // Mock group members
           const groupMembers = uniqueIndices.map(i => ({ id: users[i].id }));
           mockClient.groups.listMembers.mockResolvedValue(groupMembers);
 
-          // Mock database and Keycloak lookups for each member
-          for (const user of users) {
-            if (memberIds.has(user.id)) {
-              mockDb.query.mockResolvedValueOnce({
+          const usersById = new Map(users.map(user => [user.id, user]));
+
+          /*
+           * Dispatched on the SQL rather than queued per user: enriching one
+           * person costs a variable number of queries, so a strict call order
+           * silently hands one user another user's row.
+           */
+          mockDb.query.mockImplementation(async (sql: string, params?: any[]) => {
+            if (sql.includes('SELECT keycloak_group_id FROM organizations')) {
+              return { rows: [{ keycloak_group_id: mockGroupId }] } as any;
+            }
+
+            if (sql.includes('FROM users WHERE keycloak_user_id')) {
+              const user = usersById.get(params?.[0]);
+              if (!user || !memberIds.has(user.id)) return { rows: [] } as any;
+
+              return {
                 rows: [{
                   id: `db-${user.id}`,
                   keycloak_user_id: user.id,
-                  tenant_id: tenantId,
+                  organization_id: organizationId,
                   username: user.username,
                   email: user.email,
                   preferences: {},
@@ -352,28 +362,33 @@ describe('Property 8: User List Filtering by Tenant', () => {
                   created_at: new Date(),
                   updated_at: new Date(),
                 }],
-              } as any);
-
-              mockClient.users.findOne.mockResolvedValueOnce({
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                enabled: true,
-              });
-
-              mockClient.users.listRealmRoleMappings.mockResolvedValueOnce([]);
-              mockClient.users.listGroups.mockResolvedValueOnce([{ id: mockGroupId }]);
-              mockDb.query.mockResolvedValueOnce({ rows: [{ id: tenantId }] } as any);
+              } as any;
             }
-          }
 
-          const filters: UserFilters = { tenantId };
+            if (sql.includes('FROM organizations o')) {
+              return { rows: [{ id: organizationId }] } as any;
+            }
+
+            return { rows: [] } as any;
+          });
+
+          mockClient.users.findOne.mockImplementation(async ({ id }: any) => {
+            const user = usersById.get(id);
+            return user
+              ? { id: user.id, username: user.username, email: user.email, enabled: true }
+              : null;
+          });
+
+          mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
+          mockClient.users.listGroups.mockResolvedValue([{ id: mockGroupId }]);
+
+          const filters: UserFilters = { organizationId };
           const result = await userService.getUsers(filters);
 
-          // Property 1: Only users in the tenant group should be returned
+          // Property 1: Only users in the organisation group should be returned
           expect(result.length).toBe(memberIds.size);
 
-          // Property 2: All returned users must be members of the tenant
+          // Property 2: All returned users must be members of the organisation
           for (const user of result) {
             expect(memberIds.has(user.keycloakUserId)).toBe(true);
           }
@@ -404,7 +419,7 @@ describe('Property 9: User Update Dual-Store Consistency', () => {
   const existingUserArbitrary = fc.record({
     id: fc.uuid(),
     keycloak_user_id: fc.uuid(),
-    tenant_id: fc.option(fc.uuid(), { nil: null }),
+    organization_id: fc.option(fc.uuid(), { nil: null }),
     username: fc.string({ minLength: 3, maxLength: 50 }),
     email: fc.emailAddress(),
     created_at: fc.date(),
@@ -440,7 +455,7 @@ describe('Property 9: User Update Dual-Store Consistency', () => {
     } as any;
 
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     userService = new UserService(mockKcAdmin, mockDb);
@@ -455,33 +470,31 @@ describe('Property 9: User Update Dual-Store Consistency', () => {
           mockClient.users.update.mockClear();
           mockDb.query.mockClear();
 
-          // Mock getUserById
-          mockDb.query.mockResolvedValueOnce({ rows: [existingUser] } as any);
-
-          mockClient.users.findOne.mockResolvedValueOnce({
-            id: existingUser.keycloak_user_id,
-            username: existingUser.username,
-            email: existingUser.email,
-            enabled: true,
-          });
-
-          mockClient.users.listRealmRoleMappings.mockResolvedValueOnce([]);
-
-          if (existingUser.tenant_id) {
-            mockClient.users.listGroups.mockResolvedValueOnce([{ id: 'group-1' }]);
-            mockDb.query.mockResolvedValueOnce({ rows: [{ id: existingUser.tenant_id }] } as any);
-          } else {
-            mockClient.users.listGroups.mockResolvedValueOnce([]);
-          }
-
-          // Mock update query
           const updatedUser = {
             ...existingUser,
             email: updates.email || existingUser.email,
           };
-          mockDb.query.mockResolvedValueOnce({ rows: [updatedUser] } as any);
 
-          mockClient.users.findOne.mockResolvedValueOnce({
+          /*
+           * Dispatched on the SQL rather than queued in order: an update reads
+           * the user, resolves their organisations and their type, then re-reads
+           * the row, and a strict call order breaks whenever any of those steps
+           * issues another query.
+           */
+          mockDb.query.mockImplementation(async (sql: string) => {
+            if (sql.includes('UPDATE users')) return { rows: [updatedUser] } as any;
+            if (sql.includes('FROM users WHERE id')) return { rows: [existingUser] } as any;
+            if (sql.includes('FROM organizations o')) {
+              return {
+                rows: existingUser.organization_id
+                  ? [{ id: existingUser.organization_id }]
+                  : [],
+              } as any;
+            }
+            return { rows: [] } as any;
+          });
+
+          mockClient.users.findOne.mockResolvedValue({
             id: existingUser.keycloak_user_id,
             username: existingUser.username,
             email: updates.email || existingUser.email,
@@ -490,14 +503,10 @@ describe('Property 9: User Update Dual-Store Consistency', () => {
             enabled: updates.enabled ?? true,
           });
 
-          mockClient.users.listRealmRoleMappings.mockResolvedValueOnce([]);
-
-          if (existingUser.tenant_id) {
-            mockClient.users.listGroups.mockResolvedValueOnce([{ id: 'group-1' }]);
-            mockDb.query.mockResolvedValueOnce({ rows: [{ id: existingUser.tenant_id }] } as any);
-          } else {
-            mockClient.users.listGroups.mockResolvedValueOnce([]);
-          }
+          mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
+          mockClient.users.listGroups.mockResolvedValue(
+            existingUser.organization_id ? [{ id: 'group-1' }] : []
+          );
 
           await userService.updateUser(existingUser.id, updates);
 
@@ -547,7 +556,7 @@ describe('Property 10: User Deletion Dual-Store Consistency', () => {
   const userArbitrary = fc.record({
     id: fc.uuid(),
     keycloak_user_id: fc.uuid(),
-    tenant_id: fc.option(fc.uuid(), { nil: null }),
+    organization_id: fc.option(fc.uuid(), { nil: null }),
     username: fc.string({ minLength: 3, maxLength: 50 }),
     email: fc.emailAddress(),
     created_at: fc.date(),
@@ -574,7 +583,7 @@ describe('Property 10: User Deletion Dual-Store Consistency', () => {
     } as any;
 
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     userService = new UserService(mockKcAdmin, mockDb);
@@ -616,8 +625,15 @@ describe('Property 10: User Deletion Dual-Store Consistency', () => {
           );
 
           // Property 3: Deletion must occur in correct order (Keycloak first, then database)
+          // Located by its SQL, not by call index: reading the user first costs
+          // a variable number of queries.
+          const deleteCallIndex = mockDb.query.mock.calls.findIndex(
+            ([sql]: any[]) => sql === 'DELETE FROM users WHERE id = $1'
+          );
+          expect(deleteCallIndex).toBeGreaterThanOrEqual(0);
+
           const delCallOrder = mockClient.users.del.mock.invocationCallOrder[0];
-          const dbDeleteCallOrder = mockDb.query.mock.invocationCallOrder[1]; // Second query call
+          const dbDeleteCallOrder = mockDb.query.mock.invocationCallOrder[deleteCallIndex];
           expect(delCallOrder).toBeLessThan(dbDeleteCallOrder);
         }
       ),
@@ -670,7 +686,7 @@ describe('Property 11: Password Reset with Temporary Flag', () => {
     } as any;
 
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     userService = new UserService(mockKcAdmin, mockDb);
@@ -764,7 +780,7 @@ describe('Property 12: User Roles Match Keycloak Mappings', () => {
     } as any;
 
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     userService = new UserService(mockKcAdmin, mockDb);

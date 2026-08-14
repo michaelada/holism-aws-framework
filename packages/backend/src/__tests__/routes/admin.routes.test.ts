@@ -60,7 +60,7 @@ jest.mock('../../services/keycloak-admin.factory', () => {
  * 
  * These tests verify:
  * - Authentication and authorization
- * - Tenant CRUD operations
+ * - Organisation CRUD operations
  * - User CRUD operations
  * - Role CRUD operations
  * - Audit logging
@@ -126,7 +126,8 @@ describe('Admin API Routes Integration Tests', () => {
     // Clean up test data before each test
     // Note: Skip audit log cleanup as it requires valid user UUIDs
     await db.query('DELETE FROM users WHERE username LIKE $1', ['test_%']);
-    await db.query('DELETE FROM tenants WHERE name LIKE $1', ['test_%']);
+    await db.query('DELETE FROM organizations WHERE name LIKE $1', ['test_%']);
+    await db.query('DELETE FROM organization_types WHERE name LIKE $1', ['test_%']);
     await db.query('DELETE FROM roles WHERE name LIKE $1', ['test_%']);
   });
 
@@ -139,165 +140,46 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should allow access with valid admin token', async () => {
       const response = await request(server)
-        .get('/api/admin/tenants')
+        .get('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-    });
-  });
-
-  describe('Tenant Management', () => {
-    it('should create a tenant', async () => {
-      const tenantData = {
-        name: 'test_tenant_1',
-        displayName: 'Test Tenant 1',
-        domain: 'test1.example.com',
-      };
-
-      const response = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send(tenantData)
-        .expect(201);
-
-      expect(response.body).toMatchObject({
-        name: tenantData.name,
-        displayName: tenantData.displayName,
-        domain: tenantData.domain,
-      });
-      expect(response.body.id).toBeDefined();
-      expect(response.body.keycloakGroupId).toBeDefined();
-
-      // Verify audit log was created
-      const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2',
-        ['tenant', response.body.id]
-      );
-      expect(auditLog.rows.length).toBe(1);
-      expect(auditLog.rows[0].action).toBe('create');
-    });
-
-    it('should list all tenants', async () => {
-      // Create test tenants
-      await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_tenant_2', displayName: 'Test Tenant 2' });
-
-      await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_tenant_3', displayName: 'Test Tenant 3' });
-
-      const response = await request(server)
-        .get('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(Array.isArray(response.body)).toBe(true);
-      // Just verify we get an array, don't check specific count due to mocking
-    });
-
-    it('should get tenant by ID', async () => {
-      // Create test tenant
-      const createResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_tenant_4', displayName: 'Test Tenant 4' });
-
-      const tenantId = createResponse.body.id;
-
-      const response = await request(server)
-        .get(`/api/admin/tenants/${tenantId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(response.body.id).toBe(tenantId);
-      expect(response.body.name).toBe('test_tenant_4');
-    });
-
-    it('should update a tenant', async () => {
-      // Create test tenant
-      const createResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_tenant_5', displayName: 'Test Tenant 5' });
-
-      const tenantId = createResponse.body.id;
-
-      const updates = {
-        displayName: 'Updated Test Tenant 5',
-        domain: 'updated.example.com',
-      };
-
-      const response = await request(server)
-        .put(`/api/admin/tenants/${tenantId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .send(updates)
-        .expect(200);
-
-      expect(response.body.displayName).toBe(updates.displayName);
-      expect(response.body.domain).toBe(updates.domain);
-
-      // Verify audit log
-      const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['tenant', tenantId, 'update']
-      );
-      expect(auditLog.rows.length).toBe(1);
-    });
-
-    it('should delete a tenant', async () => {
-      // Create test tenant
-      const createResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_tenant_6', displayName: 'Test Tenant 6' });
-
-      const tenantId = createResponse.body.id;
-
-      await request(server)
-        .delete(`/api/admin/tenants/${tenantId}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(204);
-
-      // Verify audit log (deletion verification skipped due to mocking complexity)
-      const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['tenant', tenantId, 'delete']
-      );
-      expect(auditLog.rows.length).toBe(1);
-    });
-
-    it('should return 404 for non-existent tenant', async () => {
-      // This test is skipped due to mocking complexity
-      // The service layer properly handles not found cases
-      expect(true).toBe(true);
-    });
-
-    it('should return 400 for missing required fields', async () => {
-      const response = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_tenant_7' }) // Missing displayName
-        .expect(400);
-
-      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 
   describe('User Management', () => {
-    let testTenantId: string;
+    let testOrganisationId: string;
 
     beforeEach(async () => {
-      // Create a test tenant for user tests
-      const tenantResponse = await request(server)
-        .post('/api/admin/tenants')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_user_tenant', displayName: 'Test User Tenant' });
-      
-      testTenantId = tenantResponse.body.id;
+      const typeResult = await db.query(
+        `INSERT INTO organization_types (
+           id, name, display_name, currency, language, default_locale,
+           membership_numbering, membership_number_uniqueness, initial_membership_number,
+           created_at, updated_at
+         )
+         VALUES (gen_random_uuid(), $1, $2, 'GBP', 'en', 'en-GB', 'internal', 'organization', 1, NOW(), NOW())
+         RETURNING id`,
+        ['test_user_organisation_type', 'Test User Organisation Type']
+      );
+
+      const organisationResult = await db.query(
+        `INSERT INTO organizations (
+           id, organization_type_id, keycloak_group_id, name, display_name,
+           url_code, currency, created_at, updated_at
+         )
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'GBP', NOW(), NOW())
+         RETURNING id`,
+        [
+          typeResult.rows[0].id,
+          'kc-group-test-user-organisation',
+          'test_user_organisation',
+          'Test User Organisation',
+          'test-user-organisation',
+        ]
+      );
+
+      testOrganisationId = organisationResult.rows[0].id;
     });
 
     it('should create a user', async () => {
@@ -308,7 +190,7 @@ describe('Admin API Routes Integration Tests', () => {
         lastName: 'User',
         password: 'TestPassword123!',
         temporaryPassword: true,
-        tenantId: testTenantId,
+        organizationId: testOrganisationId,
       };
 
       const response = await request(server)
@@ -350,8 +232,8 @@ describe('Admin API Routes Integration Tests', () => {
       expect(Array.isArray(response.body)).toBe(true);
     });
 
-    it('should filter users by tenant', async () => {
-      // Create user with tenant
+    it('should filter users by organisation', async () => {
+      // Create user with organisation
       await request(server)
         .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
@@ -360,11 +242,11 @@ describe('Admin API Routes Integration Tests', () => {
           email: 'test3@example.com',
           firstName: 'Test',
           lastName: 'User 3',
-          tenantId: testTenantId,
+          organizationId: testOrganisationId,
         });
 
       const response = await request(server)
-        .get(`/api/admin/users?tenantId=${testTenantId}`)
+        .get(`/api/admin/users?organizationId=${testOrganisationId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -651,29 +533,31 @@ describe('Admin API Routes Integration Tests', () => {
 
   describe('Audit Logging', () => {
     it('should log all admin actions', async () => {
-      // Create tenant
-      const tenantResponse = await request(server)
-        .post('/api/admin/tenants')
+      const createResponse = await request(server)
+        .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ name: 'test_audit_tenant', displayName: 'Test Audit Tenant' });
+        .send({
+          username: 'test_audit_user',
+          email: 'test_audit_user@example.com',
+          firstName: 'Test',
+          lastName: 'Audit',
+          password: 'TestPassword123!',
+        });
 
-      const tenantId = tenantResponse.body.id;
+      const userId = createResponse.body.id;
 
-      // Update tenant
       await request(server)
-        .put(`/api/admin/tenants/${tenantId}`)
+        .put(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ displayName: 'Updated Audit Tenant' });
+        .send({ email: 'updated_audit_user@example.com' });
 
-      // Delete tenant
       await request(server)
-        .delete(`/api/admin/tenants/${tenantId}`)
+        .delete(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      // Verify all actions were logged
       const auditLogs = await db.query(
         'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 ORDER BY timestamp',
-        ['tenant', tenantId]
+        ['user', userId]
       );
 
       expect(auditLogs.rows.length).toBe(3);
@@ -691,16 +575,20 @@ describe('Admin API Routes Integration Tests', () => {
 
     it('should include IP address in audit logs', async () => {
       const response = await request(server)
-        .post('/api/admin/tenants')
+        .post('/api/admin/users')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Forwarded-For', '192.168.1.100')
-        .send({ name: 'test_ip_tenant', displayName: 'Test IP Tenant' });
-
-      const tenantId = response.body.id;
+        .send({
+          username: 'test_ip_user',
+          email: 'test_ip_user@example.com',
+          firstName: 'Test',
+          lastName: 'Ip',
+          password: 'TestPassword123!',
+        });
 
       const auditLog = await db.query(
         'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2',
-        ['tenant', tenantId]
+        ['user', response.body.id]
       );
 
       expect(auditLog.rows[0].ip_address).toBeDefined();

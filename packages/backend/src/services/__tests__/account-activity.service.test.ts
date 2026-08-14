@@ -41,6 +41,8 @@ const membershipRow = (over: Record<string, any> = {}) => ({
   date_last_renewed: '2026-01-01',
   payment_status: 'paid',
   membership_type_name: 'Full Member',
+  first_name: 'Niamh',
+  last_name: 'Walsh',
   ...over,
 });
 
@@ -310,12 +312,47 @@ describe('AccountActivityService', () => {
       expect(mockDb.query).toHaveBeenCalledTimes(1);
     });
 
-    it('only counts membership types that are active and not expired', async () => {
+    it('names who the membership is for, not who holds it', async () => {
+      // A parent holds their children's: `user_id` is theirs, the name is the
+      // child's, and a screen headed by the type cannot tell them apart.
+      respond(
+        [membershipRow({ first_name: 'Conor', last_name: 'McGrath' })],
+        [{ id: 'mt-1' }]
+      );
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+
+      expect(membership.memberName).toBe('Conor McGrath');
+    });
+
+    it('does not leave a stray space when only one name is recorded', async () => {
+      respond([membershipRow({ first_name: 'Cher', last_name: null })], [{ id: 'mt-1' }]);
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+
+      expect(membership.memberName).toBe('Cher');
+    });
+
+    it('offers renewal when an open type exists to renew into', async () => {
+      // Regression: this query matched `membership_status = 'active'`, a value
+      // the column never takes, so no membership was ever renewable.
+      // Sixteen days out, inside the 30-day renewal window.
+      respond([membershipRow({ valid_until: '2026-07-01' })], [{ id: 'mt-1' }]);
+
+      const [membership] = await service.listMemberships(ORG, MEMBER, TODAY);
+
+      expect(membership.canRenew).toBe(true);
+      expect(membership.renewalNotOpen).toBe(false);
+    });
+
+    it('only counts membership types that are open and not expired', async () => {
       respond([membershipRow({ valid_until: '2026-07-01' })], [{ id: 'mt-1' }]);
       await service.listMemberships(ORG, MEMBER, TODAY);
 
       const [sql] = mockDb.query.mock.calls[1];
-      expect(String(sql)).toContain("membership_status = 'active'");
+      // `open`, not `active`: those are the only two values the column takes,
+      // and matching on `active` silently made every renewal impossible.
+      expect(String(sql)).toContain("membership_status = 'open'");
       expect(String(sql)).toContain('valid_until IS NULL OR valid_until >=');
     });
   });

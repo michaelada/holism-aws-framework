@@ -7,6 +7,7 @@ import {
   EXAMPLE_CHARGE,
   type PaymentFeeEditorMethod,
   exampleApplicationFee,
+  hasIncompleteRates,
 } from '../PaymentFeeEditor';
 
 const stripe: PaymentFeeEditorMethod = {
@@ -130,20 +131,47 @@ describe('PaymentFeeEditor', () => {
     ]);
   });
 
-  it('warns how many organisations a change affects', () => {
+  it('warns how many organisations a handling-fee change affects', () => {
     renderEditor({ organisationCount: 14 });
-    expect(screen.getByText(/14 organisations/)).toBeInTheDocument();
+    // The count now appears twice — once in this warning and once in the
+    // platform-share note below it — so the assertion is on the sentence that
+    // distinguishes them, not on the number alone.
     expect(screen.getByText(/Payments already taken are unaffected/)).toBeInTheDocument();
+    expect(screen.getAllByText(/14 organisations/).length).toBeGreaterThan(0);
   });
 
   it('uses the singular for one organisation', () => {
     renderEditor({ organisationCount: 1 });
-    expect(screen.getByText(/1 organisation$/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1 organisation$/).length).toBeGreaterThan(0);
   });
 
   it('shows no warning when no organisations exist yet', () => {
     renderEditor({ organisationCount: 0 });
     expect(screen.queryByText(/Changing these fees affects/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * The two blocks in this editor inherit by different rules, a few pixels
+   * apart: handling fees are live, so a change here re-prices every
+   * organisation of the type; the platform share is copy-on-create, so a change
+   * here reaches only organisations created afterwards. Leaving that implicit
+   * is how an operator discovers it the expensive way.
+   */
+  it('says the platform share is a default for new organisations only', () => {
+    renderEditor({ organisationCount: 14 });
+    // `<strong>new</strong>` splits the sentence across text nodes, so the
+    // assertion matches a contiguous fragment rather than the whole sentence.
+    expect(
+      screen.getByText(/organisations of this type start with/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/each carries its own platform share/i)
+    ).toBeInTheDocument();
+  });
+
+  it('omits the inheritance note when the type has no organisations yet', () => {
+    renderEditor({ organisationCount: 0 });
+    expect(screen.queryByText(/organisations of this type start with/i)).not.toBeInTheDocument();
   });
 
   it('restores a method to the platform default', () => {
@@ -161,17 +189,68 @@ describe('PaymentFeeEditor', () => {
       ],
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /reset to default/i }));
+    fireEvent.click(screen.getByRole('button', { name: /reset all .* rates/i }));
 
     expect(onChange).toHaveBeenCalledWith([
       expect.objectContaining({ fixedFee: 0.25, percentageFee: 1.5, taxPercentage: 0 }),
     ]);
   });
 
+  it('clears the platform share when resetting, not just the handling fee', () => {
+    // The reset used to restore the three handling-fee fields and silently
+    // leave a mistyped application fee in place, so "reset" did not mean reset.
+    const { onChange } = renderEditor({
+      methods: [
+        {
+          ...stripe,
+          fixedFee: 9,
+          percentageFee: 9,
+          taxPercentage: 9,
+          applicationFeeFixed: 4,
+          applicationFeePercentage: 7,
+        },
+      ],
+      defaults: [
+        {
+          paymentMethodId: 'pm-stripe',
+          name: 'stripe',
+          displayName: 'Pay By Card (Stripe)',
+          fixedFee: 0.25,
+          percentageFee: 1.5,
+          taxPercentage: 0,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /reset all .* rates/i }));
+
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({
+        fixedFee: 0.25,
+        percentageFee: 1.5,
+        taxPercentage: 0,
+        applicationFeeFixed: null,
+        applicationFeePercentage: null,
+      }),
+    ]);
+  });
+
   it('offers no reset when the platform has no default for the method', () => {
     renderEditor({ defaults: [] });
-    expect(screen.queryByRole('button', { name: /reset to default/i }))
+    expect(screen.queryByRole('button', { name: /reset all .* rates/i }))
       .not.toBeInTheDocument();
+  });
+
+  it('flags a cleared handling-fee field instead of letting it save as zero', () => {
+    // `Number('') || 0` on the save path meant a field cleared for retyping was
+    // written as a zero fee for every organisation of the type.
+    renderEditor({
+      methods: [{ ...stripe, fixedFee: '' as unknown as number }],
+    });
+
+    expect(screen.getByText(/Required — enter 0 for no fixed fee/i)).toBeInTheDocument();
+    expect(hasIncompleteRates([{ ...stripe, fixedFee: '' as unknown as number }])).toBe(true);
+    expect(hasIncompleteRates([stripe])).toBe(false);
   });
 
   it('explains itself when there are no card methods to configure', () => {

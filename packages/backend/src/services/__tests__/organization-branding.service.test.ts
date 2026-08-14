@@ -91,6 +91,33 @@ describe('OrganizationBrandingService', () => {
       expect(JSON.parse(params[0])).toEqual(result);
     });
 
+    it('stores a club’s own word for its bookings area', async () => {
+      const result = await service.updateBrandingSettings(ORG_ID, {
+        bookingsLabel: '  Court Booking  ',
+      });
+
+      // Trimmed, because it is rendered straight into a menu.
+      expect(result.bookingsLabel).toBe('Court Booking');
+    });
+
+    it('treats a cleared label as unset rather than as a blank menu', async () => {
+      const result = await service.updateBrandingSettings(ORG_ID, { bookingsLabel: '   ' });
+
+      expect(result.bookingsLabel).toBe('');
+    });
+
+    it('refuses a label too long for a navigation rail', async () => {
+      await expect(
+        service.updateBrandingSettings(ORG_ID, { bookingsLabel: 'x'.repeat(41) })
+      ).rejects.toThrow(/too long/i);
+    });
+
+    it('refuses a label that is not a string', async () => {
+      await expect(
+        service.updateBrandingSettings(ORG_ID, { bookingsLabel: 42 } as any)
+      ).rejects.toThrow(/must be a string/i);
+    });
+
     it('writes only the branding key so other settings survive', async () => {
       await service.updateBrandingSettings(ORG_ID, { primaryColor: '#000000' });
 

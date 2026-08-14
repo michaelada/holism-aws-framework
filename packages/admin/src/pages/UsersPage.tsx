@@ -9,10 +9,11 @@ import {
   CreateUserDto,
   UpdateUserDto,
   ResetPasswordDto,
-  Tenant,
   Role,
 } from '../types/admin.types';
 import { ApiError, NetworkError } from '../services/adminApi';
+import { getOrganizations } from '../services/organizationApi';
+import type { Organization } from '../types/organization.types';
 
 type ViewMode = 'list' | 'create' | 'edit';
 
@@ -22,21 +23,21 @@ export function UsersPage() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [users, setUsers] = useState<User[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userForPasswordReset, setUserForPasswordReset] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
       const filters = {
         search: searchTerm || undefined,
-        tenantId: selectedTenantId || undefined,
+        organizationId: selectedOrganizationId || undefined,
       };
       const data = await api.getUsers(filters);
       setUsers(data);
@@ -51,15 +52,16 @@ export function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [api, showError, searchTerm, selectedTenantId]);
+  }, [api, showError, searchTerm, selectedOrganizationId]);
 
-  const loadTenants = useCallback(async () => {
+  const loadOrganizations = useCallback(async () => {
     try {
-      const data = await api.getTenants();
-      setTenants(data);
+      const data = await getOrganizations();
+      setOrganizations(data);
     } catch (error) {
-      // Silently fail - tenants are optional for user management
-      console.error('Failed to load tenants:', error);
+      // Silently fail — the organisation filter is a convenience, and a user
+      // list that loads without it beats no user list at all.
+      console.error('Failed to load organisations:', error);
     }
   }, [api]);
 
@@ -75,16 +77,16 @@ export function UsersPage() {
 
   useEffect(() => {
     loadUsers();
-    loadTenants();
+    loadOrganizations();
     loadRoles();
-  }, [loadUsers, loadTenants, loadRoles]);
+  }, [loadUsers, loadOrganizations, loadRoles]);
 
   const handleSearchChange = (search: string) => {
     setSearchTerm(search);
   };
 
-  const handleTenantFilterChange = (tenantId: string) => {
-    setSelectedTenantId(tenantId);
+  const handleOrganizationFilterChange = (organizationId: string) => {
+    setSelectedOrganizationId(organizationId);
   };
 
   const handleCreateClick = () => {
@@ -197,12 +199,12 @@ export function UsersPage() {
       {viewMode === 'list' && (
         <UserList
           users={users}
-          tenants={tenants}
+          organizations={organizations}
           loading={loading}
           searchTerm={searchTerm}
-          selectedTenantId={selectedTenantId}
+          selectedOrganizationId={selectedOrganizationId}
           onSearchChange={handleSearchChange}
-          onTenantFilterChange={handleTenantFilterChange}
+          onOrganizationFilterChange={handleOrganizationFilterChange}
           onCreateClick={handleCreateClick}
           onEditClick={handleEditClick}
           onDeleteClick={handleDelete}
@@ -212,10 +214,12 @@ export function UsersPage() {
 
       {viewMode === 'create' && (
         <UserForm
-          tenants={tenants}
+          organizations={organizations}
           roles={roles}
           loading={submitting}
-          onSubmit={handleCreateSubmit}
+          // UserForm's onSubmit is the Create|Update union because one component
+          // serves both modes; in create mode it only ever emits the create half.
+          onSubmit={(data) => handleCreateSubmit(data as CreateUserDto)}
           onCancel={handleCancel}
         />
       )}
@@ -223,7 +227,7 @@ export function UsersPage() {
       {viewMode === 'edit' && (
         <UserForm
           user={selectedUser}
-          tenants={tenants}
+          organizations={organizations}
           roles={roles}
           loading={submitting}
           onSubmit={handleEditSubmit}

@@ -12,19 +12,19 @@ echo "Terraform Configuration Validation Tests"
 echo "=========================================="
 echo ""
 
-# Check if Terraform is installed
-if ! command -v terraform &> /dev/null; then
-    echo -e "${RED}ERROR: Terraform is not installed${NC}"
+# Check if OpenTofu is installed
+if ! command -v tofu &> /dev/null; then
+    echo -e "${RED}ERROR: OpenTofu is not installed${NC}"
     echo ""
-    echo "Please install Terraform to run these tests:"
-    echo "  macOS:   brew install terraform"
-    echo "  Linux:   https://www.terraform.io/downloads"
-    echo "  Windows: choco install terraform"
+    echo "Please install OpenTofu to run these tests:"
+    echo "  macOS:   brew install opentofu"
+    echo "  Linux:   https://opentofu.org/docs/intro/install/"
+    echo "  Windows: choco install opentofu"
     echo ""
     exit 1
 fi
 
-echo "Terraform version: $(terraform version -json | grep -o '"terraform_version":"[^"]*"' | cut -d'"' -f4)"
+echo "OpenTofu version: $(tofu version | head -1 | awk '{print $2}')"
 echo ""
 
 # Track test results
@@ -40,11 +40,11 @@ run_test() {
     
     if eval "$test_command" > /dev/null 2>&1; then
         echo -e "${GREEN}PASSED${NC}"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
         return 0
     else
         echo -e "${RED}FAILED${NC}"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
         return 1
     fi
 }
@@ -61,13 +61,13 @@ validate_module() {
     cd "$module_path"
     
     # Initialize Terraform
-    run_test "  Terraform init" "terraform init -backend=false"
+    run_test "  OpenTofu init" "tofu init -backend=false"
     
     # Validate configuration
-    run_test "  Terraform validate" "terraform validate"
+    run_test "  OpenTofu validate" "tofu validate"
     
     # Format check
-    run_test "  Terraform format check" "terraform fmt -check -recursive"
+    run_test "  OpenTofu format check" "tofu fmt -check -recursive"
     
     cd - > /dev/null
 }
@@ -84,13 +84,13 @@ validate_environment() {
     cd "$env_path"
     
     # Initialize Terraform (without backend to avoid state issues)
-    run_test "  Terraform init" "terraform init -backend=false"
+    run_test "  OpenTofu init" "tofu init -backend=false"
     
     # Validate configuration
-    run_test "  Terraform validate" "terraform validate"
+    run_test "  OpenTofu validate" "tofu validate"
     
     # Format check
-    run_test "  Terraform format check" "terraform fmt -check"
+    run_test "  OpenTofu format check" "tofu fmt -check"
     
     # Check for required variables
     run_test "  Check variables file exists" "test -f variables.tf"

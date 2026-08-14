@@ -26,7 +26,7 @@ describe('Property 21: Comprehensive Audit Logging', () => {
     'remove_role'
   );
   
-  const resourceArbitrary = fc.constantFrom('tenant', 'user', 'role');
+  const resourceArbitrary = fc.constantFrom('organisation', 'user', 'role');
   
   const resourceIdArbitrary = fc.option(fc.uuid(), { nil: undefined });
   
@@ -350,7 +350,7 @@ describe('Property 21: Comprehensive Audit Logging', () => {
   });
 
   test('handles all resource types consistently', async () => {
-    const allResources = ['tenant', 'user', 'role'];
+    const allResources = ['organisation', 'user', 'role'];
 
     await fc.assert(
       fc.asyncProperty(

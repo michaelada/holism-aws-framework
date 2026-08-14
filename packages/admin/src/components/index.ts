@@ -1,8 +1,6 @@
 export { Layout } from './Layout';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ProtectedRoute } from './ProtectedRoute';
-export { TenantList } from './TenantList';
-export { TenantForm } from './TenantForm';
 export { UserList } from './UserList';
 export { UserForm } from './UserForm';
 export { PasswordResetDialog } from './PasswordResetDialog';
@@ -12,3 +10,9 @@ export { RetryDialog } from './RetryDialog';
 export { OrganizationList } from './OrganizationList';
 export { PaymentMethodSelector } from './PaymentMethodSelector';
 export { PaymentFeeEditor } from './PaymentFeeEditor';
+export { AdminTable } from './AdminTable';
+export type { AdminTableColumn, AdminTableBulkAction } from './AdminTable';
+export { ConfirmDialog } from './ConfirmDialog';
+export { FormSection } from './FormSection';
+export { PageHeader } from './PageHeader';
+export { StatusChip } from './StatusChip';

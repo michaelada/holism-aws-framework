@@ -5,7 +5,7 @@ import EventBusyIcon from '@mui/icons-material/EventBusy';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 import GroupIcon from '@mui/icons-material/Group';
-import { formatDisplayDateTime } from '@aws-web-framework/components';
+import { formatOrdinalDateTime } from '@aws-web-framework/components';
 import { capacityFor, entryWindowFor } from '../utils/entryWindow';
 import { CatalogueActivity, CatalogueEvent } from '../types/account';
 
@@ -52,7 +52,7 @@ export const EntryStatus: React.FC<{
           color="default"
           variant="outlined"
           label={t('browse.entries.notOpen', {
-            date: formatDisplayDateTime(window.date, locale),
+            date: formatOrdinalDateTime(window.date, locale),
           })}
         />
       );
@@ -71,7 +71,7 @@ export const EntryStatus: React.FC<{
               ? t('browse.entries.openingToday')
               : t('browse.entries.openingSoon', {
                   count: window.days ?? 0,
-                  date: formatDisplayDateTime(window.date, locale),
+                  date: formatOrdinalDateTime(window.date, locale),
                 })
           }
         />
@@ -92,7 +92,7 @@ export const EntryStatus: React.FC<{
               ? t('browse.entries.closingToday')
               : t('browse.entries.closingSoon', {
                   count: window.days ?? 0,
-                  date: formatDisplayDateTime(window.date, locale),
+                  date: formatOrdinalDateTime(window.date, locale),
                 })
           }
         />
@@ -107,7 +107,7 @@ export const EntryStatus: React.FC<{
           icon={<EventBusyIcon />}
           color="default"
           label={t('browse.entries.closed', {
-            date: formatDisplayDateTime(window.date, locale),
+            date: formatOrdinalDateTime(window.date, locale),
           })}
         />
       );
@@ -124,7 +124,7 @@ export const EntryStatus: React.FC<{
             color="success"
             variant="outlined"
             label={t('browse.entries.open', {
-              date: formatDisplayDateTime(window.date, locale),
+              date: formatOrdinalDateTime(window.date, locale),
             })}
           />
         );
@@ -204,7 +204,7 @@ export const EntryStatus: React.FC<{
   if (windowNotYetOpen && event.entriesOpenDate) {
     details.push(
       t('browse.entries.opensDetail', {
-        date: formatDisplayDateTime(event.entriesOpenDate, locale),
+        date: formatOrdinalDateTime(event.entriesOpenDate, locale),
       })
     );
   }
@@ -212,7 +212,7 @@ export const EntryStatus: React.FC<{
   if (event.entriesClosingDate && window.state !== 'closed') {
     details.push(
       t('browse.entries.closesDetail', {
-        date: formatDisplayDateTime(event.entriesClosingDate, locale),
+        date: formatOrdinalDateTime(event.entriesClosingDate, locale),
       })
     );
   }

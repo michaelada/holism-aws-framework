@@ -1,5 +1,6 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
+import { organizationApplicationFeeService } from './organization-application-fee.service';
 import {
   Organization,
   CreateOrganizationDto,
@@ -376,6 +377,32 @@ export class OrganizationService {
         logger.error(`Error initializing payment methods for organization ${createdOrg.id}:`, paymentError);
         // Don't fail organization creation if payment method initialization fails
         // The organization is still created, but payment methods may need to be configured manually
+      }
+
+      /*
+       * Copy the type's Stripe Connect application fee onto the new
+       * organisation.
+       *
+       * This is the "copy" in copy-on-create: from here the organisation
+       * carries its own split and a later edit to the type will not reach it.
+       * Only the application fee is copied — the handling fee stays on the type
+       * and is read from there, because it decides what the member pays.
+       *
+       * Non-fatal for the same reason payment-method initialisation above is:
+       * an organisation with no row falls back to its type's value, which is
+       * the same arrangement this copy would have produced, so the failure mode
+       * is benign and does not justify discarding a created organisation.
+       */
+      try {
+        await organizationApplicationFeeService.copyFromType(
+          createdOrg.id,
+          data.organizationTypeId
+        );
+      } catch (feeError) {
+        logger.error(
+          `Error copying application fees for organization ${createdOrg.id}:`,
+          feeError
+        );
       }
 
       /*

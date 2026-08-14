@@ -607,7 +607,9 @@
       "scheduleRuleStartDate": "Startdatum",
       "scheduleRuleEndDate": "Enddatum",
       "scheduleRuleTimeOfDay": "Tageszeit",
-      "scheduleRuleReason": "Grund"
+      "scheduleRuleReason": "Grund",
+      "displayIcon": "Symbol",
+      "noIcon": "Kein Symbol"
     },
     "actions": {
       "exportToExcel": "Nach Excel exportieren"
@@ -676,6 +678,28 @@
         "loadFailed": "Kalenderdaten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
         "timeout": "Zeitüberschreitung der Anfrage. Bitte versuchen Sie es erneut."
       }
+    },
+    "icons": {
+      "tennis": "Tennis",
+      "basketball": "Basketball",
+      "football": "Fußball",
+      "golf": "Golf",
+      "cricket": "Cricket",
+      "athletics": "Leichtathletik",
+      "pool": "Schwimmen",
+      "sailing": "Segeln",
+      "equestrian": "Reitsport",
+      "hiking": "Wandern",
+      "park": "Gelände",
+      "clubhouse": "Clubhaus",
+      "meetingRoom": "Besprechungsraum",
+      "restaurant": "Gastronomie",
+      "gym": "Fitnessraum",
+      "calendar": "Kalender",
+      "group": "Gruppe",
+      "lesson": "Unterricht",
+      "event": "Veranstaltung",
+      "place": "Veranstaltungsort"
     }
   },
   "registrations": {
@@ -1900,6 +1924,7 @@
       "sections": {
         "logo": "Logo",
         "themeColours": "Themenfarben",
+        "naming": "Bezeichnung",
         "preview": "Vorschau"
       },
       "fields": {
@@ -1914,7 +1939,11 @@
         "accentColour": "Akzentfarbe",
         "backgroundColour": "Hintergrundfarbe",
         "textColour": "Textfarbe",
-        "resetColours": "Auf Standardfarben zurücksetzen"
+        "resetColours": "Auf Standardfarben zurücksetzen",
+        "bookingsLabel": "Name des Buchungsmenüs",
+        "bookingsLabelHelp": "Wie Mitglieder diesen Bereich in ihrer App sehen. Leer lassen für die Standardbezeichnung.",
+        "bookingsLabelPlaceholder": "Buchungen",
+        "bookingsLabelExample": "Zum Beispiel: Platzbuchung, Hallenbuchung, Schwimmzeiten"
       },
       "preview": {
         "organisationName": "Organisationsname",

@@ -64,7 +64,7 @@ describe('Admin API Routes - Property-Based Tests', () => {
      */
     it('should allow access to admin endpoints with admin role', async () => {
       const adminEndpoints = fc.constantFrom(
-        '/api/admin/tenants',
+        '/api/admin/organizations',
         '/api/admin/users',
         '/api/admin/roles'
       );
@@ -91,8 +91,8 @@ describe('Admin API Routes - Property-Based Tests', () => {
      */
     it('should handle various HTTP methods on admin endpoints', async () => {
       const endpointMethods = fc.constantFrom(
-        { method: 'get', path: '/api/admin/tenants' },
-        { method: 'post', path: '/api/admin/tenants' },
+        { method: 'get', path: '/api/admin/organizations' },
+        { method: 'post', path: '/api/admin/organizations' },
         { method: 'get', path: '/api/admin/users' },
         { method: 'post', path: '/api/admin/users' },
         { method: 'get', path: '/api/admin/roles' },
@@ -128,8 +128,8 @@ describe('Admin API Routes - Property-Based Tests', () => {
      */
     it('should consistently protect all admin endpoint paths', async () => {
       const adminPaths = fc.constantFrom(
-        '/api/admin/tenants',
-        '/api/admin/tenants/123',
+        '/api/admin/organizations',
+        '/api/admin/organizations/123',
         '/api/admin/users',
         '/api/admin/users/456',
         '/api/admin/roles',
@@ -156,16 +156,16 @@ describe('Admin API Routes - Property-Based Tests', () => {
      * process the request without authorization errors.
      */
     it('should process valid requests to admin endpoints', async () => {
-      const validTenantData = fc.record({
+      const validOrganisationData = fc.record({
         name: fc.stringMatching(/^[a-z][a-z0-9_]{2,19}$/),
         displayName: fc.string({ minLength: 1, maxLength: 50 }),
         domain: fc.option(fc.webUrl(), { nil: undefined }),
       });
 
       await fc.assert(
-        fc.asyncProperty(validTenantData, async (data) => {
+        fc.asyncProperty(validOrganisationData, async (data) => {
           const response = await request(server)
-            .post('/api/admin/tenants')
+            .post('/api/admin/organizations')
             .set('Authorization', 'Bearer mock-token')
             .send(data);
 
@@ -192,7 +192,7 @@ describe('Admin API Routes - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(invalidData, async (data) => {
           const response = await request(server)
-            .post('/api/admin/tenants')
+            .post('/api/admin/organizations')
             .set('Authorization', 'Bearer mock-token')
             .send(data);
 

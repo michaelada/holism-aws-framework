@@ -626,7 +626,9 @@
       "scheduleRuleStartDate": "Date de début",
       "scheduleRuleEndDate": "Date de fin",
       "scheduleRuleTimeOfDay": "Heure du jour",
-      "scheduleRuleReason": "Raison"
+      "scheduleRuleReason": "Raison",
+      "displayIcon": "Icône",
+      "noIcon": "Aucune icône"
     },
     "actions": {
       "exportToExcel": "Exporter vers Excel"
@@ -695,6 +697,28 @@
         "loadFailed": "Échec du chargement des données du calendrier. Veuillez réessayer.",
         "timeout": "La requête a expiré. Veuillez réessayer."
       }
+    },
+    "icons": {
+      "tennis": "Tennis",
+      "basketball": "Basket-ball",
+      "football": "Football",
+      "golf": "Golf",
+      "cricket": "Cricket",
+      "athletics": "Athlétisme",
+      "pool": "Natation",
+      "sailing": "Voile",
+      "equestrian": "Équitation",
+      "hiking": "Randonnée",
+      "park": "Terrains",
+      "clubhouse": "Club-house",
+      "meetingRoom": "Salle de réunion",
+      "restaurant": "Restauration",
+      "gym": "Salle de sport",
+      "calendar": "Calendrier",
+      "group": "Groupe",
+      "lesson": "Cours",
+      "event": "Événement",
+      "place": "Lieu"
     }
   },
   "registrations": {
@@ -1759,6 +1783,7 @@
       "sections": {
         "logo": "Logo",
         "themeColours": "Couleurs du thème",
+        "naming": "Dénomination",
         "preview": "Aperçu"
       },
       "fields": {
@@ -1773,7 +1798,11 @@
         "accentColour": "Couleur d'accentuation",
         "backgroundColour": "Couleur de fond",
         "textColour": "Couleur du texte",
-        "resetColours": "Réinitialiser aux couleurs par défaut"
+        "resetColours": "Réinitialiser aux couleurs par défaut",
+        "bookingsLabel": "Nom du menu Réservations",
+        "bookingsLabelHelp": "Ce que les membres voient pour cette section dans leur application. Laissez vide pour utiliser la valeur par défaut.",
+        "bookingsLabelPlaceholder": "Réservations",
+        "bookingsLabelExample": "Par exemple : Réservation de court, Réservation de carrière, Séances de piscine"
       },
       "preview": {
         "organisationName": "Nom de l'organisation",

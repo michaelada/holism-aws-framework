@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import type { PaymentMethod, OrgPaymentMethodData } from '../types/payment-method.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from './apiBaseUrl';
 
 // Create axios instance with interceptor for authentication
 const createAuthenticatedClient = (): AxiosInstance => {

@@ -16,6 +16,7 @@ import {
   TableHead,
   TableRow,
   Chip,
+  Typography,
   TextField,
   MenuItem,
   InputAdornment,
@@ -27,36 +28,51 @@ import {
   VpnKey as VpnKeyIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { User, Tenant } from '../types/admin.types';
+import {
+  User,
+  UserClassification,
+  USER_CLASSIFICATION_LABELS,
+} from '../types/admin.types';
+import type { Organization } from '../types/organization.types';
+
+/**
+ * Distinct colours so the three categories are told apart at a glance down a
+ * long list, rather than reading as one undifferentiated block of chips.
+ */
+const CLASSIFICATION_COLOURS: Record<UserClassification, 'error' | 'primary' | 'default'> = {
+  'super-admin': 'error',
+  'org-admin': 'primary',
+  account: 'default',
+};
 
 interface UserListProps {
   users: User[];
-  tenants?: Tenant[];
+  organizations?: Organization[];
   loading: boolean;
   searchTerm?: string;
-  selectedTenantId?: string;
+  selectedOrganizationId?: string;
   onSearchChange?: (search: string) => void;
-  onTenantFilterChange?: (tenantId: string) => void;
+  onOrganizationFilterChange?: (organizationId: string) => void;
   onCreateClick: () => void;
   onEditClick: (user: User) => void;
   onDeleteClick: (userId: string) => void;
   onResetPasswordClick: (user: User) => void;
-  hideTenantFilter?: boolean;
+  hideOrganizationFilter?: boolean;
 }
 
 export function UserList({
   users,
-  tenants = [],
+  organizations = [],
   loading,
   searchTerm = '',
-  selectedTenantId = '',
+  selectedOrganizationId = '',
   onSearchChange,
-  onTenantFilterChange,
+  onOrganizationFilterChange,
   onCreateClick,
   onEditClick,
   onDeleteClick,
   onResetPasswordClick,
-  hideTenantFilter = false,
+  hideOrganizationFilter = false,
 }: UserListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -68,9 +84,13 @@ export function UserList({
 
   const handleDeleteConfirm = () => {
     if (userToDelete) {
-      onDeleteClick(userToDelete.id);
+      // Close first, act second: invoking the callback while the dialog is open
+      // lets a parent state change unmount this component mid-modal, stranding
+      // the backdrop in the DOM.
+      const id = userToDelete.id;
       setDeleteDialogOpen(false);
       setUserToDelete(null);
+      onDeleteClick(id);
     }
   };
 
@@ -83,7 +103,7 @@ export function UserList({
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Box>
-          <h2>Users</h2>
+          <Typography variant="h2" component="h2">Users</Typography>
         </Box>
         <Button
           variant="contained"
@@ -96,7 +116,7 @@ export function UserList({
       </Box>
 
       {/* Filters */}
-      {!hideTenantFilter && (
+      {!hideOrganizationFilter && (
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           {onSearchChange && (
             <TextField
@@ -113,18 +133,18 @@ export function UserList({
               }}
             />
           )}
-          {onTenantFilterChange && (
+          {onOrganizationFilterChange && (
             <TextField
               select
-              label="Filter by Tenant"
-              value={selectedTenantId}
-              onChange={(e) => onTenantFilterChange(e.target.value)}
+              label="Filter by Organisation"
+              value={selectedOrganizationId}
+              onChange={(e) => onOrganizationFilterChange(e.target.value)}
               sx={{ minWidth: 200 }}
             >
-              <MenuItem value="">All Tenants</MenuItem>
-              {tenants.map((tenant) => (
-                <MenuItem key={tenant.id} value={tenant.id}>
-                  {tenant.displayName}
+              <MenuItem value="">All Organisations</MenuItem>
+              {organizations.map((organization) => (
+                <MenuItem key={organization.id} value={organization.id}>
+                  {organization.displayName}
                 </MenuItem>
               ))}
             </TextField>
@@ -139,8 +159,8 @@ export function UserList({
               <TableCell>Username</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Name</TableCell>
-              <TableCell>Tenants</TableCell>
-              <TableCell>Roles</TableCell>
+              <TableCell>Organisation</TableCell>
+              <TableCell>Type</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -167,14 +187,17 @@ export function UserList({
                     {user.firstName} {user.lastName}
                   </TableCell>
                   <TableCell>
-                    {user.tenants.length > 0 ? (
+                    {user.organizations.length > 0 ? (
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {user.tenants.map((tenantId) => {
-                          const tenant = tenants.find((t) => t.id === tenantId);
+                        {user.organizations.map((organizationId) => {
+                          const organization = organizations.find((o) => o.id === organizationId);
                           return (
                             <Chip
-                              key={tenantId}
-                              label={tenant?.displayName || tenantId}
+                              // Falls back to the raw id when the organisation
+                              // is not in the loaded list — better a visible id
+                              // than a blank chip that hides the association.
+                              key={organizationId}
+                              label={organization?.displayName || organizationId}
                               size="small"
                             />
                           );
@@ -185,10 +208,15 @@ export function UserList({
                     )}
                   </TableCell>
                   <TableCell>
-                    {user.roles.length > 0 ? (
+                    {user.classifications.length > 0 ? (
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {user.roles.map((role) => (
-                          <Chip key={role} label={role} size="small" color="primary" />
+                        {user.classifications.map((classification) => (
+                          <Chip
+                            key={classification}
+                            label={USER_CLASSIFICATION_LABELS[classification]}
+                            size="small"
+                            color={CLASSIFICATION_COLOURS[classification]}
+                          />
                         ))}
                       </Box>
                     ) : (
@@ -207,7 +235,7 @@ export function UserList({
                       size="small"
                       color="primary"
                       onClick={() => onEditClick(user)}
-                      title="Edit user"
+                      aria-label={`Edit ${user.username}`}
                     >
                       <EditIcon />
                     </IconButton>
@@ -215,7 +243,7 @@ export function UserList({
                       size="small"
                       color="secondary"
                       onClick={() => onResetPasswordClick(user)}
-                      title="Reset password"
+                      aria-label={`Reset password for ${user.username}`}
                     >
                       <VpnKeyIcon />
                     </IconButton>
@@ -223,7 +251,7 @@ export function UserList({
                       size="small"
                       color="error"
                       onClick={() => handleDeleteClick(user)}
-                      title="Delete user"
+                      aria-label={`Delete ${user.username}`}
                     >
                       <DeleteIcon />
                     </IconButton>

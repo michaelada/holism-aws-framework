@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Card,
-  CardActionArea,
   CardContent,
   CircularProgress,
   Container,
@@ -17,6 +16,9 @@ import {
 } from '@mui/material';
 import { formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
 import ActivityStatusChip from '../components/ActivityStatusChip';
+import MembershipCard from '../components/MembershipCard';
+import WhatsOnCard from '../components/WhatsOnCard';
+import { useBookingsLabel } from '../hooks/useBookingsLabel';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountDashboard, DashboardWhatsOn } from '../types/account';
@@ -65,6 +67,21 @@ export const HomePage: React.FC = () => {
     void load();
   }, [load]);
 
+  const bookingsLabel = useBookingsLabel();
+
+  /*
+   * Bookings out of the general row and into their own. They recur where the
+   * rest are one-offs, and the club names the area itself, so mixing them in
+   * under "What's on" buries both facts.
+   */
+  const activeMemberships = dashboard?.memberships ?? [];
+  const bookingWhatsOn = dashboard?.whatsOn.filter((item) => item.kind === 'calendar') ?? [];
+  const shopWhatsOn = dashboard?.whatsOn.filter((item) => item.kind === 'merchandise') ?? [];
+  const otherWhatsOn =
+    dashboard?.whatsOn.filter(
+      (item) => item.kind !== 'calendar' && item.kind !== 'merchandise'
+    ) ?? [];
+
   /** Where each teaser leads — the screen that can actually do the thing. */
   const whatsOnTarget = (item: DashboardWhatsOn): string => {
     switch (item.kind) {
@@ -104,35 +121,14 @@ export const HomePage: React.FC = () => {
         dashboard && (
           <Stack spacing={3}>
             {/*
-              The renewal banner leads the page because it is the only thing
-              here with a deadline. It uses the same rule as C4 — including the
-              case where renewal is due but the club has nothing open yet, which
-              gets a note rather than a button that goes nowhere.
+              The same gutter as the teaser rows below, which is what makes the
+              two line up: at `spacing={2}` a half-width summary card is exactly
+              two quarter-width teasers plus the gap between them. At a
+              different spacing the left edges still meet but the right ones do
+              not, and the page reads as slightly broken without it being
+              obvious why.
             */}
-            {dashboard.membership?.canRenew && (
-              <Alert
-                severity="warning"
-                action={
-                  <Button
-                    size="small"
-                    onClick={() => navigate(`/${orgCode}/browse/memberships`)}
-                  >
-                    {t('home.renew')}
-                  </Button>
-                }
-              >
-                {t('home.expiringSoon', {
-                  name: dashboard.membership.name,
-                  count: dashboard.membership.daysRemaining ?? 0,
-                  date: formatDisplayDate(dashboard.membership.validUntil, locale),
-                })}
-              </Alert>
-            )}
-            {dashboard.membership?.renewalNotOpen && (
-              <Alert severity="info">{t('home.renewalNotOpen')}</Alert>
-            )}
-
-            <Grid container spacing={3}>
+            <Grid container spacing={2}>
               {dashboard.comingUp && dashboard.comingUp.length > 0 && (
                 <Grid item xs={12} md={6}>
                   <Card sx={{ height: '100%' }}>
@@ -162,38 +158,6 @@ export const HomePage: React.FC = () => {
                         onClick={() => navigate(`/${orgCode}/entries`)}
                       >
                         {t('home.seeAll')}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-
-              {dashboard.membership && (
-                <Grid item xs={12} md={6}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
-                        {t('home.membership')}
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {dashboard.membership.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('home.membershipUntil', {
-                          date: formatDisplayDate(dashboard.membership.validUntil, locale),
-                        })}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('home.membershipNumber', {
-                          number: dashboard.membership.membershipNumber,
-                        })}
-                      </Typography>
-                      <Button
-                        size="small"
-                        sx={{ mt: 2 }}
-                        onClick={() => navigate(`/${orgCode}/memberships`)}
-                      >
-                        {t('home.viewMemberships')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -283,40 +247,98 @@ export const HomePage: React.FC = () => {
             </Grid>
 
             {/*
-              Only things the member can actually act on — the catalogues return
-              unavailable rows with reasons, which is right on a listing page and
-              wrong on a teaser.
+              Two rows, not one. Bookings are a different kind of thing from a
+              one-off event or a shirt — they recur, and a club renames the area
+              to match what it actually books — so they get their own heading
+              under the club's own word for them rather than being mixed in.
             */}
-            {dashboard.whatsOn.length > 0 && (
+            {/*
+              Memberships first among the rows: they are the thing a member
+              already holds, where everything below is something they might
+              take up. Absent entirely when there are none — a club with
+              memberships the member has not joined gets no empty heading.
+            */}
+            {activeMemberships.length > 0 && (
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
+                  {t('home.memberships')}
+                </Typography>
+                <Grid container spacing={2}>
+                  {activeMemberships.map((membership) => (
+                    <Grid item xs={12} sm={6} md={3} key={membership.id}>
+                      <MembershipCard
+                        membership={membership}
+                        locale={locale}
+                        onRenew={() => navigate(`/${orgCode}/browse/memberships`)}
+                        onOpen={() => navigate(`/${orgCode}/memberships`)}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {otherWhatsOn.length > 0 && (
               <Box>
                 <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
                   {t('home.whatsOn')}
                 </Typography>
                 <Grid container spacing={2}>
-                  {dashboard.whatsOn.map((item) => (
+                  {otherWhatsOn.map((item) => (
                     <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
-                      <Card sx={{ height: '100%' }}>
-                        <CardActionArea
-                          onClick={() => navigate(whatsOnTarget(item))}
-                          sx={{ height: '100%', alignItems: 'stretch' }}
-                        >
-                          <CardContent>
-                            <Typography variant="caption" color="text.secondary">
-                              {t(`home.kind.${item.kind}`)}
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.title}
-                            </Typography>
-                            {item.fee !== null && (
-                              <Typography variant="body2" color="text.secondary">
-                                {item.fee > 0
-                                  ? formatCurrency(item.fee / 100, fallbackCurrency, locale)
-                                  : t('home.free')}
-                              </Typography>
-                            )}
-                          </CardContent>
-                        </CardActionArea>
-                      </Card>
+                      <WhatsOnCard
+                        item={item}
+                        currency={fallbackCurrency}
+                        locale={locale}
+                        onOpen={() => navigate(whatsOnTarget(item))}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {bookingWhatsOn.length > 0 && (
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
+                  {bookingsLabel}
+                </Typography>
+                <Grid container spacing={2}>
+                  {bookingWhatsOn.map((item) => (
+                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                      <WhatsOnCard
+                        item={item}
+                        currency={fallbackCurrency}
+                        locale={locale}
+                        showKind={false}
+                        onOpen={() => navigate(whatsOnTarget(item))}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {/*
+              The shop last, and in its own row: a product is browsed rather
+              than scheduled, and a thumbnail beside a date tile in the same row
+              makes both harder to scan.
+            */}
+            {shopWhatsOn.length > 0 && (
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
+                  {t('home.shop')}
+                </Typography>
+                <Grid container spacing={2}>
+                  {shopWhatsOn.map((item) => (
+                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                      <WhatsOnCard
+                        item={item}
+                        currency={fallbackCurrency}
+                        locale={locale}
+                        showKind={false}
+                        onOpen={() => navigate(whatsOnTarget(item))}
+                      />
                     </Grid>
                   ))}
                 </Grid>
@@ -327,7 +349,7 @@ export const HomePage: React.FC = () => {
               A club with nothing enabled and a member with nothing on: better
               to say so than to render a page of whitespace.
             */}
-            {!dashboard.membership &&
+            {activeMemberships.length === 0 &&
               !dashboard.comingUp?.length &&
               !dashboard.cart &&
               !dashboard.recentPayments &&

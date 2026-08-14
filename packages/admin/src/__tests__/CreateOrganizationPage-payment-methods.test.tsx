@@ -164,7 +164,11 @@ describe('CreateOrganizationPage - Payment Methods Integration', () => {
     await waitFor(() => {
       expect(organizationApi.createOrganization).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'testorg', // Name is sanitized by the form (hyphens removed)
+          // "test org" -> "test-org". The sanitiser used to strip trailing
+          // hyphens on every keystroke, so the hyphen a typed space became was
+          // deleted before the next character arrived and this asserted
+          // 'testorg' — a name the field's own helper text says is wrong.
+          name: 'test-org',
           displayName: 'Test Organization',
           organizationTypeId: '1',
           enabledCapabilities: ['events'],

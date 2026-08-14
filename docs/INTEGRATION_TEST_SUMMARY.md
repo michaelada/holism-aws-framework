@@ -12,37 +12,32 @@ This document summarizes the integration testing completed for the Keycloak Admi
 
 **Test File:** `packages/backend/src/__tests__/integration/admin-workflows.integration.test.ts`
 
-**Test Suites:** 7 test suites covering complete workflows
+**Test Suites:** 5 flows covering complete workflows
 
 #### Tests Implemented:
 
-1. **Complete Tenant Lifecycle Flow**
-   - Tests: Create → Update → Delete workflow
-   - Verifies: Tenant CRUD operations, audit logging
-   - Status: ✅ PASSING
-
-2. **Complete User Lifecycle Flow**
+1. **Complete User Lifecycle Flow**
    - Tests: Create → Update → Password Reset → Delete workflow
-   - Verifies: User CRUD operations, password management, tenant filtering, audit logging
+   - Verifies: User CRUD operations, password management, organisation filtering, audit logging
    - Status: ✅ PASSING
 
-3. **Complete Role Lifecycle Flow**
+2. **Complete Role Lifecycle Flow**
    - Tests: Create → Assign → Remove → Delete workflow
    - Verifies: Role CRUD operations, role assignment/removal, audit logging
    - Status: ✅ PASSING
 
-4. **Authentication and Authorization Flow**
+3. **Authentication and Authorization Flow**
    - Tests: Authentication requirements, admin role verification
    - Verifies: Endpoint protection, role-based access control
    - Status: ✅ PASSING
 
-5. **Comprehensive Audit Logging Flow**
+4. **Comprehensive Audit Logging Flow**
    - Tests: All administrative actions are logged with complete metadata
    - Verifies: Audit log creation, metadata completeness (user_id, action, resource, resource_id, ip_address, timestamp)
    - Status: ✅ PASSING
 
-6. **Complex Multi-Entity Flow**
-   - Tests: Multiple tenants, users, and roles with cross-entity operations
+5. **Complex Multi-Entity Flow**
+   - Tests: Multiple organisations, users, and roles with cross-entity operations
    - Verifies: Complex workflows, filtering, role assignments across entities
    - Status: ✅ PASSING
 
@@ -50,14 +45,13 @@ This document summarizes the integration testing completed for the Keycloak Admi
 
 ```
 Test Suites: 1 passed, 1 total
-Tests:       7 passed, 7 total
-Time:        1.599 s
+Tests:       6 passed, 6 total
 ```
 
 #### Requirements Validated:
 
 - ✅ Requirement 12.8: Integration tests for complete user flows
-- ✅ Requirement 2.1-2.7: Tenant management operations
+- ✅ Requirement 2.1-2.7: Organisation management operations
 - ✅ Requirement 3.1-3.10: User management operations
 - ✅ Requirement 4.1-4.7: Role management operations
 - ✅ Requirement 7.1-7.3: Authentication and authorization
@@ -110,7 +104,7 @@ The script checks:
 - ✅ API routing through Nginx
 - ✅ Auth routing through Nginx
 - ✅ Admin routing through Nginx
-- ✅ Admin API endpoints (tenants, users, roles)
+- ✅ Admin API endpoints (users, roles)
 - ✅ Database connectivity (via backend health)
 
 #### Requirements Validated:
@@ -125,17 +119,16 @@ The script checks:
 
 The documentation includes detailed manual verification procedures for:
 
-### Tenant Management
-- Create tenant with all fields
-- Update tenant information
-- Delete tenant and verify cascade
-- Verify audit logging for all operations
+### Organisation Management
+- Create an organisation under an organisation type
+- Update organisation information
+- Delete organisation and verify cascade
 
 ### User Management
-- Create user with password, tenant, and roles
+- Create user with password, organisation, and roles
 - Update user information
 - Reset user password with temporary flag
-- Filter users by tenant
+- Filter users by organisation
 - Delete user and verify cleanup
 - Verify audit logging for all operations
 

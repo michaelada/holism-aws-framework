@@ -11,7 +11,7 @@ export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
 export type UserType = 'org-admin' | 'account-user';
 
 // Status types
-export type OrganizationStatus = 'active' | 'inactive' | 'blocked';
+export type OrganizationStatus = 'active' | 'inactive';
 export type UserStatus = 'active' | 'inactive';
 
 // Capability category

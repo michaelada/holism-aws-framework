@@ -11,6 +11,14 @@ export interface UserInfo {
   roles: string[];
   groups: string[];
   username: string;
+  /**
+   * The person's name, from the token's `given_name` / `family_name` claims.
+   *
+   * Empty when the realm does not release the `profile` scope, so callers that
+   * need a name have to cope with its absence rather than assume it.
+   */
+  firstName: string;
+  lastName: string;
 }
 
 /**
@@ -79,13 +87,39 @@ function getKey(client: jwksClient.JwksClient) {
  * Extract user information from decoded JWT token
  */
 function extractUserInfo(decoded: any): UserInfo {
+  const { firstName, lastName } = namesFrom(decoded);
+
   return {
     userId: decoded.sub || '',
     email: decoded.email || '',
     username: decoded.preferred_username || decoded.email || '',
     roles: decoded.realm_access?.roles || [],
-    groups: decoded.groups || []
+    groups: decoded.groups || [],
+    firstName,
+    lastName,
   };
+}
+
+/**
+ * The caller's name, from whichever claim carries it.
+ *
+ * Keycloak sends `given_name` and `family_name` with the `profile` scope, and
+ * `name` as the two joined. Falling back to splitting `name` covers a realm
+ * configured to release only that, which would otherwise leave the platform
+ * unable to name a member it can perfectly well identify.
+ */
+function namesFrom(decoded: any): { firstName: string; lastName: string } {
+  const given = String(decoded.given_name || '').trim();
+  const family = String(decoded.family_name || '').trim();
+  if (given || family) return { firstName: given, lastName: family };
+
+  const full = String(decoded.name || '').trim();
+  if (!full) return { firstName: '', lastName: '' };
+
+  // Everything after the first space is the surname: "Máire Ní Fhloinn" keeps
+  // its two-word surname rather than losing the last part of it.
+  const [first, ...rest] = full.split(/\s+/);
+  return { firstName: first || '', lastName: rest.join(' ') };
 }
 
 /**
@@ -115,7 +149,9 @@ export function authenticateToken() {
         email: 'dev@example.com',
         username: 'dev-user',
         roles: ['super-admin', 'admin', 'user'],
-        groups: []
+        groups: [],
+        firstName: 'Dev',
+        lastName: 'User',
       };
       next();
     };

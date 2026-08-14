@@ -138,8 +138,11 @@
     "comingUp": "Coming up",
     "seeAll": "See all",
     "membership": "Membership",
+    "memberships": "Memberships",
     "membershipUntil": "Active until {{date}}",
     "membershipNumber": "Member no. {{number}}",
+    "membershipOneOf": "1 of {{count}} membership",
+    "membershipOneOf_other": "1 of {{count}} memberships",
     "viewMemberships": "View memberships",
     "cart": "Your basket",
     "cartSummary": "{{count}} items · {{total}}",
@@ -148,6 +151,7 @@
     "recentPayments": "Recent payments",
     "allPayments": "All payments",
     "whatsOn": "What’s on",
+    "shop": "Shop",
     "free": "Free",
     "nothingYet": "There is nothing here yet. When the club opens something, it will show up here.",
     "kind": {
@@ -155,6 +159,13 @@
       "merchandise": "Shop",
       "calendar": "Booking",
       "registration": "Registration"
+    },
+    "status": {
+      "open": "Open",
+      "opening-soon": "Opening soon",
+      "closing-soon": "Closing soon",
+      "closed": "Closed",
+      "full": "Entries full"
     }
   },
   "status": {
@@ -310,6 +321,9 @@
     "nothingThisWeek": "Nothing is available this week.",
     "free": "Free",
     "yourSlot": "Your slot",
+    "yourSlot_other": "Your slots",
+    "total": "Total",
+    "removeSlot": "Remove {{date}} at {{time}}",
     "minutes": "{{count}} minutes",
     "placesLeft": "{{count}} places left",
     "chooseSlot": "Choose a slot",

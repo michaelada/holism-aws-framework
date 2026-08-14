@@ -26,6 +26,8 @@ export * from './components/OrgPaymentWidget';
 export * from './components/OrgDatePicker';
 export * from './components/OrgFileUpload';
 export * from './components/EventDateTile/EventDateTile';
+export * from './components/CalendarIcon/CalendarIcon';
+export * from './components/CalendarIcon/calendarIcons';
 export * from './components/RichText/RichText';
 export * from './components/discount';
 

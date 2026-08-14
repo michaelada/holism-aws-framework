@@ -8,23 +8,23 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "=========================================="
-echo "Terraform Plan Verification Tests"
+echo "OpenTofu Plan Verification Tests"
 echo "=========================================="
 echo ""
 
-# Check if Terraform is installed
-if ! command -v terraform &> /dev/null; then
-    echo -e "${RED}ERROR: Terraform is not installed${NC}"
+# Check if OpenTofu is installed
+if ! command -v tofu &> /dev/null; then
+    echo -e "${RED}ERROR: OpenTofu is not installed${NC}"
     echo ""
-    echo "Please install Terraform to run these tests:"
-    echo "  macOS:   brew install terraform"
-    echo "  Linux:   https://www.terraform.io/downloads"
-    echo "  Windows: choco install terraform"
+    echo "Please install OpenTofu to run these tests:"
+    echo "  macOS:   brew install opentofu"
+    echo "  Linux:   https://opentofu.org/docs/intro/install/"
+    echo "  Windows: choco install opentofu"
     echo ""
     exit 1
 fi
 
-echo "Terraform version: $(terraform version -json | grep -o '"terraform_version":"[^"]*"' | cut -d'"' -f4)"
+echo "OpenTofu version: $(tofu version | head -1 | awk '{print $2}')"
 echo ""
 
 # Track test results
@@ -40,11 +40,11 @@ run_test() {
     
     if eval "$test_command" > /dev/null 2>&1; then
         echo -e "${GREEN}PASSED${NC}"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
         return 0
     else
         echo -e "${RED}FAILED${NC}"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
         return 1
     fi
 }
@@ -77,63 +77,63 @@ EOF
         echo 'keycloak_url = "https://auth.example.com"' >> test.tfvars
     fi
     
-    # Initialize Terraform (without backend)
-    run_test "  Terraform init" "terraform init -backend=false"
+    # Initialize OpenTofu (without backend)
+    run_test "  OpenTofu init" "tofu init -backend=false"
     
     # Run plan with dummy variables
-    echo -n "  Terraform plan... "
-    if terraform plan -var-file=test.tfvars -out=test.tfplan > plan.log 2>&1; then
+    echo -n "  OpenTofu plan... "
+    if tofu plan -var-file=test.tfvars -out=test.tfplan > plan.log 2>&1; then
         echo -e "${GREEN}PASSED${NC}"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
         
         # Verify plan contains expected resources
         echo -n "  Verify VPC in plan... "
         if grep -q "aws_vpc.main" plan.log; then
             echo -e "${GREEN}PASSED${NC}"
-            ((TESTS_PASSED++))
+            TESTS_PASSED=$((TESTS_PASSED + 1))
         else
             echo -e "${RED}FAILED${NC}"
-            ((TESTS_FAILED++))
+            TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
         
         echo -n "  Verify RDS in plan... "
         if grep -q "aws_db_instance.postgres" plan.log; then
             echo -e "${GREEN}PASSED${NC}"
-            ((TESTS_PASSED++))
+            TESTS_PASSED=$((TESTS_PASSED + 1))
         else
             echo -e "${RED}FAILED${NC}"
-            ((TESTS_FAILED++))
+            TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
         
         echo -n "  Verify ALB in plan... "
         if grep -q "aws_lb.main" plan.log; then
             echo -e "${GREEN}PASSED${NC}"
-            ((TESTS_PASSED++))
+            TESTS_PASSED=$((TESTS_PASSED + 1))
         else
             echo -e "${RED}FAILED${NC}"
-            ((TESTS_FAILED++))
+            TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
         
         echo -n "  Verify Auto Scaling Group in plan... "
         if grep -q "aws_autoscaling_group.app" plan.log; then
             echo -e "${GREEN}PASSED${NC}"
-            ((TESTS_PASSED++))
+            TESTS_PASSED=$((TESTS_PASSED + 1))
         else
             echo -e "${RED}FAILED${NC}"
-            ((TESTS_FAILED++))
+            TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
         
         echo -n "  Verify Secrets Manager in plan... "
         if grep -q "aws_secretsmanager_secret.app_secrets" plan.log; then
             echo -e "${GREEN}PASSED${NC}"
-            ((TESTS_PASSED++))
+            TESTS_PASSED=$((TESTS_PASSED + 1))
         else
             echo -e "${RED}FAILED${NC}"
-            ((TESTS_FAILED++))
+            TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
     else
         echo -e "${RED}FAILED${NC}"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
         echo "Plan output:"
         cat plan.log
     fi

@@ -75,6 +75,91 @@ export function formatDisplayDateTime(
 }
 
 /**
+ * Day-of-month suffixes, by language.
+ *
+ * Deliberately not every locale. An ordinal date is an English habit and a
+ * French one; German writes `1.` for every day, which `Intl` already produces,
+ * and Spanish, Italian and Portuguese use a plain numeral. Inventing suffixes
+ * for those would not be a nicer date — it would be a wrong one, in a language
+ * the reader speaks and we do not.
+ *
+ * Keyed by the `Intl.PluralRules` ordinal category, which is what knows that
+ * English 21 takes `st` while 11 takes `th`.
+ */
+const ORDINAL_SUFFIXES: Record<string, Partial<Record<Intl.LDMLPluralRule, string>>> = {
+  en: { one: 'st', two: 'nd', few: 'rd', other: 'th' },
+  // "1er septembre", then "2 septembre" — only the first takes a suffix.
+  fr: { one: 'er' },
+};
+
+/** The language part of a locale tag, lower-cased: `en-GB` → `en`. */
+const languageOf = (locale: string): string => locale.split('-')[0]!.toLowerCase();
+
+/**
+ * The same date, with an ordinal day where the language uses one.
+ *
+ * Built from `formatToParts` rather than by assembling a string, so the
+ * locale keeps its own order and separators — only the day token is touched.
+ * A locale with no suffix table comes back exactly as `Intl` rendered it.
+ */
+function withOrdinalDay(
+  date: Date,
+  locale: string,
+  options: Intl.DateTimeFormatOptions
+): string {
+  const suffixes = ORDINAL_SUFFIXES[languageOf(locale)];
+
+  const parts = new Intl.DateTimeFormat(locale, options).formatToParts(date);
+  if (!suffixes) return parts.map((part) => part.value).join('');
+
+  const category = new Intl.PluralRules(locale, { type: 'ordinal' }).select(date.getDate());
+  const suffix = suffixes[category];
+  if (!suffix) return parts.map((part) => part.value).join('');
+
+  return parts
+    .map((part) => (part.type === 'day' ? `${part.value}${suffix}` : part.value))
+    .join('');
+}
+
+/**
+ * A date with an ordinal day — "1st Sept 2026".
+ *
+ * For dates a member reads as a deadline rather than scans in a column. An
+ * ordinal reads the way the date is spoken, which is what makes "closes on the
+ * 22nd" land as a day rather than as a number in a row of numbers.
+ */
+export function formatOrdinalDate(
+  value: string | Date | null | undefined,
+  locale = 'en-GB'
+): string {
+  const date = toDate(value);
+  if (!date) return '—';
+
+  return withOrdinalDay(date, locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/** As `formatOrdinalDate`, with the time of day. */
+export function formatOrdinalDateTime(
+  value: string | Date | null | undefined,
+  locale = 'en-GB'
+): string {
+  const date = toDate(value);
+  if (!date) return '—';
+
+  return withOrdinalDay(date, locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
  * Render a start and end date as one span.
  *
  * A single-day event shows one date rather than "1 Jul – 1 Jul", which reads as

@@ -73,7 +73,7 @@ it can answer without opening code.
 | Summary | Covers |
 |---|---|
 | [architecture.md](.claude/modules/architecture.md) | Monorepo layout, auth, capability model, multi-tenancy, i18n, API and data conventions |
-| [infrastructure.md](.claude/modules/infrastructure.md) | Docker, nginx, Keycloak, Postgres, Prometheus/Grafana, Terraform, scripts |
+| [infrastructure.md](.claude/modules/infrastructure.md) | Docker, nginx, Keycloak, Postgres, Prometheus/Grafana, OpenTofu, scripts |
 
 ### Backend
 
@@ -115,7 +115,7 @@ it can answer without opening code.
 
 | Summary | Package | Covers |
 |---|---|---|
-| [admin.md](.claude/modules/admin.md) | `packages/admin` | Super-admin UI — tenants, organisations, org types, roles, users |
+| [admin.md](.claude/modules/admin.md) | `packages/admin` | Super-admin UI — organisations, org types, roles, users |
 | [frontend.md](.claude/modules/frontend.md) | `packages/frontend` | Metadata-repository UI — object/field definitions and instances |
 
 ---

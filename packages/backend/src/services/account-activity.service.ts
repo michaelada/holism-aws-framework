@@ -202,6 +202,15 @@ export interface AccountMembershipRecord {
   membershipNumber: string;
   membershipTypeId: string;
   membershipTypeName: string;
+  /**
+   * Who the membership is *for*, which is not always who is logged in.
+   *
+   * A parent holds their children's memberships: `members.user_id` is the
+   * parent's, while each row carries the child's name. Without this the three
+   * cards on their screen all read "Junior Member" and differ only by a number
+   * they have no reason to recognise.
+   */
+  memberName: string;
   status: string;
   validUntil: string;
   dateLastRenewed: string;
@@ -691,6 +700,7 @@ export class AccountActivityService {
         `SELECT
            m.id, m.membership_number, m.membership_type_id, m.status,
            m.valid_until, m.date_last_renewed, m.payment_status,
+           m.first_name, m.last_name,
            mt.name AS membership_type_name
          FROM members m
          JOIN membership_types mt ON mt.id = m.membership_type_id
@@ -718,6 +728,7 @@ export class AccountActivityService {
           membershipNumber: row.membership_number,
           membershipTypeId: row.membership_type_id,
           membershipTypeName: row.membership_type_name,
+          memberName: [row.first_name, row.last_name].filter(Boolean).join(' '),
           status: row.status,
           validUntil: row.valid_until,
           dateLastRenewed: row.date_last_renewed,
@@ -743,7 +754,7 @@ export class AccountActivityService {
        FROM membership_types
        WHERE organisation_id = $1
          AND deleted = FALSE
-         AND membership_status = 'active'
+         AND membership_status = 'open'
          AND (valid_until IS NULL OR valid_until >= $2)`,
       [organisationId, today]
     );

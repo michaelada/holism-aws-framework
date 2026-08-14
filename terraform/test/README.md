@@ -26,7 +26,7 @@ Intelligent test runner that automatically detects available tools and runs appr
 
 **Features:**
 - Auto-detects Terraform installation
-- Runs syntax tests (always, no Terraform required)
+- Runs syntax tests (always, no OpenTofu required)
 - Runs validation tests (if Terraform available)
 - Runs plan tests (if Terraform available)
 - Provides clear feedback about what was tested
@@ -90,8 +90,8 @@ Validates Terraform syntax and formatting for all modules and environments.
 
 **Tests performed:**
 - Terraform initialization
-- Configuration validation (`terraform validate`)
-- Format checking (`terraform fmt -check`)
+- Configuration validation (`tofu validate`)
+- Format checking (`tofu fmt -check`)
 - Required file existence checks
 
 **Usage:**
@@ -133,13 +133,13 @@ You can run any test script individually:
 ```bash
 cd terraform/test
 
-# Run only syntax checks (no Terraform required)
+# Run only syntax checks (no OpenTofu required)
 ./syntax-check.sh
 
-# Run only validation tests (requires Terraform)
+# Run only validation tests (requires OpenTofu)
 ./validate.sh
 
-# Run only plan tests (requires Terraform)
+# Run only plan tests (requires OpenTofu)
 ./plan.sh
 ```
 
@@ -186,9 +186,9 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: 1.5.0
+          tofu_version: 1.8.0
       
       - name: Run Terraform Tests
         run: |
@@ -219,9 +219,9 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: 1.5.0
+          tofu_version: 1.8.0
       
       - name: Run All Terraform Tests
         run: |
@@ -269,7 +269,7 @@ You can also run test suites as separate CI/CD steps:
 
 **macOS:**
 ```bash
-brew install terraform
+brew install opentofu
 ```
 
 **Linux (Ubuntu/Debian):**
@@ -281,12 +281,12 @@ sudo apt update && sudo apt install terraform
 
 **Windows:**
 ```powershell
-choco install terraform
+choco install opentofu
 ```
 
 **Verify installation:**
 ```bash
-terraform version
+tofu version
 ```
 
 ## Exit Codes
@@ -315,7 +315,7 @@ Each test script provides:
 ### Terraform Not Found
 ```bash
 # Check if Terraform is installed
-terraform version
+tofu version
 
 # If not installed, see Installation section above
 ```
@@ -334,14 +334,14 @@ cd terraform/test
 ```
 
 ### Validation Errors
-If `terraform validate` fails:
+If `tofu validate` fails:
 1. Check the error message for specific issues
 2. Verify all required files exist (main.tf, variables.tf, outputs.tf)
 3. Ensure module references are correct
-4. Run `terraform fmt` to fix formatting issues
+4. Run `tofu fmt` to fix formatting issues
 
 ### Plan Generation Errors
-If `terraform plan` fails:
+If `tofu plan` fails:
 1. Check that all required variables are defined
 2. Verify module source paths are correct
 3. Ensure provider configuration is valid
@@ -472,12 +472,12 @@ The current test suite validates:
 - ✅ Terraform validate (full HCL validation)
 - ✅ Terraform plan generation
 - ✅ Resource verification in plans
-- ✅ Format checking (terraform fmt)
+- ✅ Format checking (tofu fmt)
 
 ## Best Practices
 
 1. **Run tests before committing:** Always run `./run-all-tests.sh` before pushing changes
-2. **Fix formatting issues:** Run `terraform fmt -recursive` from the terraform directory
+2. **Fix formatting issues:** Run `tofu fmt -recursive` from the terraform directory
 3. **Test incrementally:** Run individual test scripts during development
 4. **Keep tests fast:** Tests should complete in under 2 minutes
 5. **Use dummy values:** Never use real credentials in test scripts

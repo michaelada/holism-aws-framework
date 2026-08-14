@@ -37,12 +37,12 @@ __tests__/                Repo-level structure and CI/CD tests (Jest)
 Root scripts follow a fixed shape: `dev:<pkg>`, `build:<pkg>`, `test:<pkg>`, plus `build:all`,
 `docker:up`, `docker:down`, `docker:logs`.
 
-## The three tiers of identity
+## The two tiers of identity
 
-1. **Tenant** — the top-level customer boundary (`tenants` table).
-2. **Organisation** — a club/association within a tenant (`organizations`). Almost every business
-   table is scoped by `organization_id`.
-3. **User** — a Keycloak identity. Membership of an organisation lives in `organization_users`,
+1. **Organisation** — the customer boundary (`organizations`), classified by its **organisation
+   type**, which fixes its currency, locale, default capabilities and fee rates. Almost every
+   business table is scoped by `organization_id`.
+2. **User** — a Keycloak identity. Membership of an organisation lives in `organization_users`,
    with `user_type` distinguishing `org-admin` from account users, and roles in
    `organization_user_roles` / `organization_admin_roles`.
 
@@ -75,6 +75,16 @@ Keycloak (realm `aws-framework`) issues JWTs; the backend validates them in
 `orgadmin-shell`'s `useAuth`, which publishes a getter through `AuthTokenContext`; `useApi` in
 `orgadmin-core` injects it into every request. There is a `DISABLE_AUTH` escape hatch in the Docker
 compose file, commented out by default.
+
+## Organisation status
+
+`organizations.status` is `active` or `inactive`, constrained in the database. **Inactive means
+closed to everyone**: members lose the directory listing, the `/account/:urlCode` route and their
+session, and org admins are refused at sign-in *and* on every subsequent request
+(`orgadmin-auth.routes.ts`, `capability.middleware.ts`, `orgadmin-role.middleware.ts` all check
+`o.status`). Organisations are never deleted; deactivating is the supported way to close one, and
+`DELETE /api/admin/organizations/:id` answers 409. See
+`docs/ORGANISATION_STATUS_AND_DEACTIVATION.md`.
 
 ## The capability model
 

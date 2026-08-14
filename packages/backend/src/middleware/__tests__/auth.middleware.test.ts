@@ -187,10 +187,83 @@ describe('Authentication Middleware', () => {
         email: 'user@example.com',
         username: 'testuser',
         roles: ['user', 'admin'],
-        groups: ['developers']
+        groups: ['developers'],
+        firstName: '',
+        lastName: '',
       });
       expect(nextFunction).toHaveBeenCalled();
       expect(mockResponse.status).not.toHaveBeenCalled();
+    });
+
+    /*
+     * The name is what a member registering with a second club is identified
+     * by. Read from the token rather than the request body, which is what a
+     * "connect to this club" button — a single button, sending nothing — can
+     * actually supply.
+     */
+    it('takes the name from the token’s profile claims', async () => {
+      mockRequest.headers = { authorization: 'Bearer valid-token' };
+
+      (jwt.verify as jest.Mock).mockImplementation((_t, _k, _o, callback) => {
+        callback(null, {
+          sub: 'user-123',
+          email: 'darragh.otoole@example.test',
+          given_name: 'Darragh',
+          family_name: "O'Toole",
+          name: "Darragh O'Toole",
+        });
+      });
+
+      await authenticateToken()(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(mockRequest.user).toMatchObject({
+        firstName: 'Darragh',
+        lastName: "O'Toole",
+      });
+    });
+
+    it('falls back to splitting the full name when only that is released', async () => {
+      // A realm configured without given_name/family_name would otherwise leave
+      // the platform unable to name somebody it can perfectly well identify.
+      mockRequest.headers = { authorization: 'Bearer valid-token' };
+
+      (jwt.verify as jest.Mock).mockImplementation((_t, _k, _o, callback) => {
+        callback(null, { sub: 'user-123', email: 'm@example.test', name: 'Máire Ní Fhloinn' });
+      });
+
+      await authenticateToken()(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      // Everything after the first space is the surname, so a two-word surname
+      // survives intact.
+      expect(mockRequest.user).toMatchObject({
+        firstName: 'Máire',
+        lastName: 'Ní Fhloinn',
+      });
+    });
+
+    it('leaves the name empty when the token carries none', async () => {
+      mockRequest.headers = { authorization: 'Bearer valid-token' };
+
+      (jwt.verify as jest.Mock).mockImplementation((_t, _k, _o, callback) => {
+        callback(null, { sub: 'user-123', email: 'm@example.test' });
+      });
+
+      await authenticateToken()(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      // Empty rather than undefined, so callers cope with absence explicitly.
+      expect(mockRequest.user).toMatchObject({ firstName: '', lastName: '' });
     });
 
     it('should handle token without realm_access', async () => {
@@ -221,7 +294,9 @@ describe('Authentication Middleware', () => {
         email: 'user@example.com',
         username: 'testuser',
         roles: [],
-        groups: []
+        groups: [],
+        firstName: '',
+        lastName: '',
       });
       expect(nextFunction).toHaveBeenCalled();
     });
@@ -234,7 +309,9 @@ describe('Authentication Middleware', () => {
         email: 'user@example.com',
         username: 'testuser',
         roles: ['user'],
-        groups: []
+        groups: [],
+        firstName: '',
+        lastName: '',
       };
     });
 
@@ -331,7 +408,9 @@ describe('Authentication Middleware', () => {
         email: 'user@example.com',
         username: 'testuser',
         roles: ['user', 'editor'],
-        groups: []
+        groups: [],
+        firstName: '',
+        lastName: '',
       };
     });
 
@@ -454,7 +533,9 @@ describe('Authentication Middleware', () => {
         email: 'user@example.com',
         username: 'testuser',
         roles: ['user'],
-        groups: []
+        groups: [],
+        firstName: '',
+        lastName: '',
       });
       expect(nextFunction).toHaveBeenCalled();
       expect(mockResponse.status).not.toHaveBeenCalled();

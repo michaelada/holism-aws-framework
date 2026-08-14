@@ -50,6 +50,13 @@ export interface Calendar {
   reminderHoursBefore?: number;
   handlingFeeIncluded: boolean;
   discountIds: string[];
+  /**
+   * A Material icon name shown beside the calendar wherever it is offered.
+   *
+   * Null is ordinary rather than broken — a club that has not chosen one gets
+   * the generic marker the screens fall back to.
+   */
+  displayIcon: string | null;
   applicationFormId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -108,6 +115,8 @@ export interface CreateCalendarDto {
   reminderHoursBefore?: number;
   handlingFeeIncluded?: boolean;
   discountIds?: string[];
+  /** A Material icon name; omitted or null leaves the calendar unmarked. */
+  displayIcon?: string | null;
   applicationFormId?: string;
   scheduleRules?: any[];
   timeSlotConfigurations?: any[];
@@ -136,6 +145,8 @@ export interface UpdateCalendarDto {
   reminderHoursBefore?: number;
   handlingFeeIncluded?: boolean;
   discountIds?: string[];
+  /** A Material icon name; omitted or null leaves the calendar unmarked. */
+  displayIcon?: string | null;
   applicationFormId?: string;
   scheduleRules?: any[];
   timeSlotConfigurations?: any[];
@@ -186,6 +197,7 @@ export class CalendarService {
       reminderHoursBefore: row.reminder_hours_before,
       handlingFeeIncluded: row.handling_fee_included || false,
       discountIds: row.discount_ids || [],
+      displayIcon: row.display_icon ?? null,
       applicationFormId: row.application_form_id || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -484,8 +496,8 @@ export class CalendarService {
           use_terms_and_conditions, terms_and_conditions, supported_payment_methods,
           allow_cancellations, cancel_days_in_advance, refund_payment_automatically,
           admin_notification_emails, send_reminder_emails, reminder_hours_before,
-          handling_fee_included, application_form_id, discount_ids)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          handling_fee_included, application_form_id, discount_ids, display_icon)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
          RETURNING *`,
         [
           data.organisationId,
@@ -508,6 +520,7 @@ export class CalendarService {
           data.handlingFeeIncluded ?? false,
           data.applicationFormId || null,
           JSON.stringify(data.discountIds || []),
+          data.displayIcon || null,
         ]
       );
 
@@ -673,6 +686,11 @@ export class CalendarService {
       if (data.discountIds !== undefined) {
         updates.push(`discount_ids = $${paramCount++}`);
         values.push(JSON.stringify(data.discountIds));
+      }
+      if (data.displayIcon !== undefined) {
+        updates.push(`display_icon = $${paramCount++}`);
+        // Empty string means "no icon", not an icon named "".
+        values.push(data.displayIcon || null);
       }
 
       values.push(id);

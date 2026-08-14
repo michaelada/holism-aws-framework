@@ -38,12 +38,20 @@ export function requireOrgAdminRole(roles: string | string[]) {
       const keycloakUserId = req.user.userId;
 
       // Get user's organization admin roles from database
+      /*
+       * `o.status = 'active'` belongs here as well as in the capability
+       * middleware: not every org-admin route passes through both, and a role
+       * check that succeeds for an inactive organisation would hand out
+       * permissions for an organisation nobody should be able to reach.
+       */
       const result = await db.query(
         `SELECT oar.name
          FROM organization_users ou
+         INNER JOIN organizations o ON ou.organization_id = o.id
          INNER JOIN organization_user_roles our ON ou.id = our.organization_user_id
          INNER JOIN organization_admin_roles oar ON our.organization_admin_role_id = oar.id
-         WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin' AND ou.status = 'active'`,
+         WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin'
+           AND ou.status = 'active' AND o.status = 'active'`,
         [keycloakUserId]
       );
 

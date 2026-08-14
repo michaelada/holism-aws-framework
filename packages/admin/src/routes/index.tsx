@@ -1,8 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Box, Button, Typography } from '@mui/material';
 import { ProtectedRoute } from '../components';
 import { DashboardPage } from '../pages/DashboardPage';
-import { TenantsPage } from '../pages/TenantsPage';
-import { TenantDetailsPage } from '../pages/TenantDetailsPage';
 import { UsersPage } from '../pages/UsersPage';
 import { RolesPage } from '../pages/RolesPage';
 import { AccessDeniedPage } from '../pages/AccessDeniedPage';
@@ -18,11 +17,20 @@ import { AddOrganizationAdminUserPage } from '../pages/AddOrganizationAdminUserP
 import { CreateOrganizationRolePage } from '../pages/CreateOrganizationRolePage';
 
 function NotFoundPage() {
+  const navigate = useNavigate();
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>404 - Page Not Found</h1>
-      <p>The page you are looking for does not exist.</p>
-    </div>
+    <Box sx={{ py: 6, maxWidth: '60ch' }}>
+      <Typography variant="h1" component="h1" gutterBottom>
+        Page not found
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        That address does not match anything in the platform admin. It may have been renamed, or
+        the link may be out of date.
+      </Typography>
+      <Button variant="contained" onClick={() => navigate('/dashboard')}>
+        Go to the dashboard
+      </Button>
+    </Box>
   );
 }
 
@@ -115,22 +123,6 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <EditOrganizationPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/tenants"
-        element={
-          <ProtectedRoute>
-            <TenantsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/tenants/:tenantId"
-        element={
-          <ProtectedRoute>
-            <TenantDetailsPage />
           </ProtectedRoute>
         }
       />

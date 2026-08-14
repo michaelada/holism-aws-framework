@@ -68,8 +68,9 @@ npm run dev:backend
 
 ```bash
 npm run dev:frontend
-npm run dev:orgadmin    # org admin    → http://localhost:5175
 npm run dev:admin       # super admin  → http://localhost:5174
+npm run dev:orgadmin    # org admin    → http://localhost:5175
+npm run dev:account       # super admin  → http://localhost:5176
 ```
 
 ### Running Tests
@@ -121,7 +122,7 @@ The framework follows a three-tier architecture:
 ## Key Features
 
 - **Metadata-Driven Development**: Define entities through metadata, automatically generating REST APIs and UI components
-- **Infrastructure as Code**: All AWS resources defined in Terraform
+- **Infrastructure as Code**: All AWS resources defined in OpenTofu (`tofu`)
 - **Environment Parity**: Local development mirrors production using Docker
 - **Type Safety**: TypeScript throughout the stack
 - **Observability**: Built-in logging, metrics, and monitoring with Prometheus and Grafana

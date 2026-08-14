@@ -1,8 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import {
-  Tenant,
-  CreateTenantDto,
-  UpdateTenantDto,
   User,
   CreateUserDto,
   UpdateUserDto,
@@ -101,35 +98,11 @@ export class AdminApiService {
     }
   }
 
-  // Tenant API Methods
-
-  async createTenant(data: CreateTenantDto): Promise<Tenant> {
-    const response = await this.client.post<Tenant>('/api/admin/tenants', data);
-    return response.data;
-  }
-
-  async getTenants(): Promise<Tenant[]> {
-    const response = await this.client.get<Tenant[]>('/api/admin/tenants');
-    return response.data;
-  }
-
-  async getTenant(id: string): Promise<Tenant> {
-    return this.getTenantById(id);
-  }
-
-  async getTenantById(id: string): Promise<Tenant> {
-    const response = await this.client.get<Tenant>(`/api/admin/tenants/${id}`);
-    return response.data;
-  }
-
-  async updateTenant(id: string, data: UpdateTenantDto): Promise<Tenant> {
-    const response = await this.client.put<Tenant>(`/api/admin/tenants/${id}`, data);
-    return response.data;
-  }
-
-  async deleteTenant(id: string): Promise<void> {
-    await this.client.delete(`/api/admin/tenants/${id}`);
-  }
+  /*
+   * The tenant methods were removed. A tenant grouped nothing — `organizations`
+   * never carried a `tenant_id` — and the endpoints behind these are gone. The
+   * platform's top tier is the organisation type. See docs/RETIRE_TENANTS.md.
+   */
 
   // User API Methods
 

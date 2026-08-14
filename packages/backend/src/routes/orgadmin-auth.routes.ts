@@ -46,6 +46,34 @@ router.get('/auth/me', authenticateToken(), async (req: AuthenticatedRequest, re
       return;
     }
 
+    /*
+     * An inactive organisation admits nobody — administrators included.
+     *
+     * This check is deliberately separate from the one above, and the message
+     * is deliberately different. The query filters on `ou.status`, the *user's*
+     * membership; this is `o.status`, the *organisation's*. Until now only the
+     * first was enforced, so deactivating an organisation shut its members out
+     * of the member app while its administrators carried on working in it
+     * unaffected — the opposite of what "inactive" is understood to mean.
+     *
+     * Telling the administrator plainly that the organisation is inactive is
+     * safe: they already know the organisation exists, and a vague "access
+     * denied" would send them to support to be told the same thing.
+     */
+    if (userResult.rows[0].org_status !== 'active') {
+      logger.warn(
+        `Org-admin sign-in refused: organisation ${userResult.rows[0].org_id} is ` +
+          `${userResult.rows[0].org_status}`
+      );
+      res.status(403).json({
+        error: 'Organisation inactive',
+        code: 'ORGANISATION_INACTIVE',
+        message:
+          'This organisation is inactive. Contact the platform administrator to reactivate it.',
+      });
+      return;
+    }
+
     const userRow = userResult.rows[0];
 
     // Update last_login timestamp

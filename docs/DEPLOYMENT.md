@@ -128,9 +128,9 @@ docker push <registry>/aws-framework-admin:staging
 
 ```bash
 cd terraform/environments/staging
-terraform init
-terraform plan
-terraform apply
+tofu init
+tofu plan
+tofu apply
 ```
 
 3. **Deploy application:**
@@ -190,9 +190,9 @@ docker push <registry>/aws-framework-admin:v1.0.0
 
 ```bash
 cd terraform/environments/production
-terraform init
-terraform plan
-terraform apply
+tofu init
+tofu plan
+tofu apply
 ```
 
 3. **Deploy with zero downtime (blue-green):**

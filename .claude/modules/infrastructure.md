@@ -73,7 +73,7 @@ the app and cleared on sign-out, and a second copy would outlive that.
 - `infrastructure/grafana/provisioning/` — datasources and dashboards.
 - `infrastructure/monitoring/README.md` — how the monitoring stack fits together.
 
-## Terraform (`terraform/`)
+## OpenTofu (`terraform/`)
 
 ```
 modules/     networking, compute, database, secrets, monitoring
@@ -84,6 +84,12 @@ test/        validate.sh, syntax-check.sh, plan.sh, ci-test.sh, run-all-tests.sh
 Changes that add configuration (a new environment variable, secret, port or service) need the
 matching module and both environments updated. `terraform/test/run-all-tests.sh` validates before
 planning.
+
+**The CLI is `tofu`, not `terraform`.** The configurations are ordinary HCL and the directory keeps
+its name, but every script, workflow and instruction invokes OpenTofu — `tofu init`, `tofu plan`,
+`tofu apply`. The `terraform {}` blocks inside `.tf` files are language syntax and stay as they are,
+as do the `terraform.tfstate` keys and the `aws-web-framework-terraform-state-*` buckets, which are
+real resource names.
 
 ## Scripts (`scripts/`)
 
@@ -120,3 +126,24 @@ One Markdown file per feature or fix, plus `*_WIREFRAMES.md` per UI module and a
 | "Where do I add a new environment variable?" | `docker-compose*.yml`, `packages/backend/.env.example`, `terraform/modules/*`, both environments |
 | "How is the DB schema created from scratch?" | `infrastructure/init-db.sql` then `packages/backend/migrations/` |
 | "Where are alerts and dashboards defined?" | `infrastructure/prometheus/alerts`, `infrastructure/grafana/provisioning` |
+
+## Demo seed
+
+`npm run seed:demo -- --reset` rebuilds a local environment into a known state: one organisation
+type, three pony clubs, 20 logins, 13 events across every entry-window state, 18 application forms,
+13 membership types with 22 members for the current season — including two parents holding their
+children's memberships and three renewals falling due — 8 shop products at Kildare Hunt and 4
+booking calendars at Laois Hunt (each club carries one opt-in capability, Ward Union none), and
+7 discounts. It writes to **both**
+Postgres and Keycloak, and `--reset` deletes all application data plus the Keycloak users it created.
+
+**Every date is an offset from the run**, resolved in `scripts/seed/dates.ts`, so the same fixture
+appears whenever it is run — entries still closing this week, a membership still due for renewal, a
+blocked week still ahead. The membership season rolls to the following year within 60 days of
+year-end, so a December run does not leave the whole cohort inside the renewal window.
+`scripts/seed/__tests__/dates.test.ts` exercises that against dates the calendar has not reached,
+which is why `jest.config.js` has `scripts` in its roots.
+
+It refuses to run against `NODE_ENV=production`, or against a non-local database or Keycloak without
+an explicit `SEED_ALLOW_REMOTE_*` override. Source in `packages/backend/scripts/seed/`; see
+`docs/EVENTS_DEMO_SEED.md`.

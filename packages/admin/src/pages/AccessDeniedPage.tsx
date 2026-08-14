@@ -10,14 +10,15 @@ export function AccessDeniedPage() {
   const { logout, userName } = useAuth();
 
   return (
+    // No `minHeight: 100vh` and no background of its own: this page renders
+    // inside Layout's chrome, so claiming a full viewport pushed it below the
+    // app bar and left an extra screen of grey beneath it.
     <Box
       sx={{
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        padding: 3,
+        alignItems: 'flex-start',
+        py: 6,
       }}
     >
       <Paper

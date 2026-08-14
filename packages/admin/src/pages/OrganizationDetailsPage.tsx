@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
+  AlertTitle,
   Box,
   Card,
   CardContent,
@@ -31,8 +33,6 @@ import {
   getOrganizationUsers,
   getOrganizationRoles,
   getCapabilities,
-  createOrganizationAdminUser,
-  createOrganizationRole,
   updateOrganizationUser,
   updateOrganizationRole,
   deleteOrganizationUser,
@@ -48,6 +48,8 @@ import type {
   CreateOrganizationAdminUserDto,
   CreateOrganizationAdminRoleDto,
 } from '../types/organization.types';
+import { PageHeader } from '../components/PageHeader';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilityPermissionSelector } from '../components/CapabilityPermissionSelector';
 import { RoleSelector } from '../components/RoleSelector';
@@ -62,6 +64,9 @@ export const OrganizationDetailsPage: React.FC = () => {
   const [roles, setRoles] = useState<OrganizationAdminRole[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<{ id: string; name: string } | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
@@ -94,6 +99,7 @@ export const OrganizationDetailsPage: React.FC = () => {
 
     try {
       setLoading(true);
+      setLoadFailed(false);
       const [orgData, usersData, rolesData, capsData] = await Promise.all([
         getOrganizationById(id),
         getOrganizationUsers(id, 'org-admin'),
@@ -105,6 +111,7 @@ export const OrganizationDetailsPage: React.FC = () => {
       setRoles(rolesData);
       setCapabilities(capsData);
     } catch (error) {
+      setLoadFailed(true);
       showError('Failed to load organisation details');
       console.error('Error loading organisation:', error);
     } finally {
@@ -167,11 +174,10 @@ export const OrganizationDetailsPage: React.FC = () => {
     setUserDialogOpen(true);
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!id) return;
-    if (!window.confirm(`Are you sure you want to delete user "${userName}"?`)) {
-      return;
-    }
+  const handleDeleteUser = async () => {
+    if (!id || !userToDelete) return;
+    const userId = userToDelete.id;
+    setUserToDelete(null);
 
     try {
       await deleteOrganizationUser(id, userId);
@@ -218,11 +224,10 @@ export const OrganizationDetailsPage: React.FC = () => {
     setRoleDialogOpen(true);
   };
 
-  const handleDeleteRole = async (roleId: string, roleName: string) => {
-    if (!id) return;
-    if (!window.confirm(`Are you sure you want to delete role "${roleName}"?`)) {
-      return;
-    }
+  const handleDeleteRole = async () => {
+    if (!id || !roleToDelete) return;
+    const roleId = roleToDelete.id;
+    setRoleToDelete(null);
 
     try {
       await deleteOrganizationRole(id, roleId);
@@ -233,10 +238,36 @@ export const OrganizationDetailsPage: React.FC = () => {
     }
   };
 
-  if (loading || !organization) {
+  if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+          Loading organisation…
+        </Typography>
+      </Box>
+    );
+  }
+
+  // `loading || !organization` used to gate this spinner, so a 404 or a 500 —
+  // which clears `loading` but leaves `organization` null — span forever. The
+  // operator could not tell a slow network from a deleted organisation, and had
+  // no way out but the browser's own back button.
+  if (loadFailed || !organization) {
+    return (
+      <Box>
+        <PageHeader title="Organisation" onBack={() => navigate('/organizations')} />
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={loadData}>
+              Try again
+            </Button>
+          }
+        >
+          <AlertTitle>This organisation could not be loaded</AlertTitle>
+          It may have been deleted, or the server may be unreachable.
+        </Alert>
       </Box>
     );
   }
@@ -442,7 +473,7 @@ export const OrganizationDetailsPage: React.FC = () => {
                           <TableCell align="right">
                             <IconButton 
                               size="small" 
-                              title="Edit"
+                              aria-label={`Edit ${user.firstName} ${user.lastName}`}
                               onClick={() => handleEditUser(user)}
                             >
                               <EditIcon />
@@ -450,8 +481,13 @@ export const OrganizationDetailsPage: React.FC = () => {
                             <IconButton 
                               size="small" 
                               color="error" 
-                              title="Delete"
-                              onClick={() => handleDeleteUser(user.id, `${user.firstName} ${user.lastName}`)}
+                              aria-label={`Delete ${user.firstName} ${user.lastName}`}
+                              onClick={() =>
+                                setUserToDelete({
+                                  id: user.id,
+                                  name: `${user.firstName} ${user.lastName}`,
+                                })
+                              }
                             >
                               <DeleteIcon />
                             </IconButton>
@@ -525,7 +561,7 @@ export const OrganizationDetailsPage: React.FC = () => {
                               <>
                                 <IconButton 
                                   size="small" 
-                                  title="Edit"
+                                  aria-label={`Edit role ${role.displayName}`}
                                   onClick={() => handleEditRole(role)}
                                 >
                                   <EditIcon />
@@ -533,8 +569,10 @@ export const OrganizationDetailsPage: React.FC = () => {
                                 <IconButton 
                                   size="small" 
                                   color="error" 
-                                  title="Delete"
-                                  onClick={() => handleDeleteRole(role.id, role.displayName)}
+                                  aria-label={`Delete role ${role.displayName}`}
+                                  onClick={() =>
+                                    setRoleToDelete({ id: role.id, name: role.displayName })
+                                  }
                                 >
                                   <DeleteIcon />
                                 </IconButton>
@@ -690,6 +728,50 @@ export const OrganizationDetailsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(userToDelete)}
+        title="Remove this administrator?"
+        severity="error"
+        confirmLabel="Remove administrator"
+        message={
+          <>
+            <strong>{userToDelete?.name}</strong> will lose access to {organization.displayName}.
+          </>
+        }
+        consequences="Their roles here are removed with them. Anything they created — events, forms, members — stays with the organisation."
+        onConfirm={handleDeleteUser}
+        onCancel={() => setUserToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(roleToDelete)}
+        title="Delete this role?"
+        severity="error"
+        confirmLabel="Delete role"
+        message={
+          <>
+            <strong>{roleToDelete?.name}</strong> will be removed from {organization.displayName}.
+          </>
+        }
+        consequences={(() => {
+          const affected = users.filter((u) =>
+            (u.roles || []).some((r: { id?: string } | string) =>
+              typeof r === 'string' ? r === roleToDelete?.id : r.id === roleToDelete?.id
+            )
+          ).length;
+          return affected > 0 ? (
+            <>
+              {affected} administrator{affected === 1 ? '' : 's'} currently hold
+              {affected === 1 ? 's' : ''} this role and will lose the permissions it grants.
+            </>
+          ) : (
+            'No administrators currently hold this role.'
+          );
+        })()}
+        onConfirm={handleDeleteRole}
+        onCancel={() => setRoleToDelete(null)}
+      />
     </Box>
   );
 };

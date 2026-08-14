@@ -17,10 +17,11 @@ import type {
   CardPaymentMethodDefault,
   PaymentFeeRates,
   UrlCodeAvailability,
+  OrganisationApplicationFees,
 } from '../types/organization.types';
 import type { PaymentMethod } from '../types/payment-method.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from './apiBaseUrl';
 
 // Create axios instance with interceptor for authentication
 const createAuthenticatedClient = (): AxiosInstance => {
@@ -123,9 +124,13 @@ export const checkUrlCodeAvailability = async (
   return response.data;
 };
 
-export const deleteOrganization = async (id: string): Promise<void> => {
-  await apiClient.delete(`/api/admin/organizations/${id}`);
-};
+/*
+ * `deleteOrganization` was removed. Organisations are deactivated, not deleted:
+ * setting the status to `inactive` closes the club to members and to its own
+ * administrators while keeping everything it holds. The backend endpoint still
+ * exists and answers 409 with that instruction, so an older client is told what
+ * changed rather than getting a bare 404.
+ */
 
 export const updateOrganizationCapabilities = async (
   id: string,
@@ -159,6 +164,48 @@ export const setOrganizationTypePaymentFees = async (
     { fees }
   );
   return response.data.fees;
+};
+
+/**
+ * The Stripe Connect application fee for one organisation, per payment method.
+ *
+ * Each entry carries the organisation's own value and its type's current
+ * default, because the UI has to say whether the two have diverged. This is the
+ * application fee only — handling fees live on the organisation type.
+ */
+export const getOrganizationApplicationFees = async (
+  organizationId: string
+): Promise<OrganisationApplicationFees> => {
+  const response = await apiClient.get(
+    `/api/admin/organizations/${organizationId}/application-fees`
+  );
+  return response.data;
+};
+
+export const setOrganizationApplicationFees = async (
+  organizationId: string,
+  fees: Array<{
+    paymentMethodId: string;
+    applicationFeeFixed: number | null;
+    applicationFeePercentage: number | null;
+  }>
+): Promise<OrganisationApplicationFees> => {
+  const response = await apiClient.put(
+    `/api/admin/organizations/${organizationId}/application-fees`,
+    { fees }
+  );
+  return response.data;
+};
+
+/** Copies the type's current default onto this organisation, for one method. */
+export const resetOrganizationApplicationFee = async (
+  organizationId: string,
+  paymentMethodId: string
+): Promise<OrganisationApplicationFees> => {
+  const response = await apiClient.post(
+    `/api/admin/organizations/${organizationId}/application-fees/${paymentMethodId}/reset`
+  );
+  return response.data;
 };
 
 /** Platform starting values, used to pre-fill the create form. */

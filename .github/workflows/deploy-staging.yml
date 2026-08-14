@@ -139,25 +139,25 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: 1.5.0
+          tofu_version: 1.8.0
       
-      - name: Terraform Init
+      - name: OpenTofu Init
         run: |
           cd terraform/environments/staging
-          terraform init
+          tofu init
       
-      - name: Terraform Plan
+      - name: OpenTofu Plan
         run: |
           cd terraform/environments/staging
-          terraform plan -out=tfplan
+          tofu plan -out=tfplan
       
-      - name: Terraform Apply
+      - name: OpenTofu Apply
         run: |
           cd terraform/environments/staging
-          terraform apply -auto-approve tfplan
+          tofu apply -auto-approve tfplan
       
       - name: Get EC2 instance IPs
         id: get-instances

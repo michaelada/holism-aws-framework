@@ -9,13 +9,13 @@ NC='\033[0m' # No Color
 
 echo ""
 echo -e "${BLUE}=========================================="
-echo "Terraform Test Suite"
+echo "OpenTofu Test Suite"
 echo "==========================================${NC}"
 echo ""
-echo "This script runs all Terraform configuration tests:"
+echo "This script runs all OpenTofu configuration tests:"
 echo "  1. Syntax and structure validation"
-echo "  2. Terraform validate"
-echo "  3. Terraform plan verification"
+echo "  2. OpenTofu validate"
+echo "  3. OpenTofu plan verification"
 echo ""
 
 # Get the test directory
@@ -41,12 +41,12 @@ run_suite() {
     if bash "$script_name"; then
         echo ""
         echo -e "${GREEN}✓ $suite_name PASSED${NC}"
-        ((PASSED_SUITES++))
+        PASSED_SUITES=$((PASSED_SUITES + 1))
         return 0
     else
         echo ""
         echo -e "${RED}✗ $suite_name FAILED${NC}"
-        ((FAILED_SUITES++))
+        FAILED_SUITES=$((FAILED_SUITES + 1))
         return 1
     fi
 }
@@ -55,10 +55,10 @@ run_suite() {
 run_suite "Syntax and Structure Tests" "syntax-check.sh"
 SYNTAX_RESULT=$?
 
-run_suite "Terraform Validate Tests" "validate.sh"
+run_suite "OpenTofu Validate Tests" "validate.sh"
 VALIDATE_RESULT=$?
 
-run_suite "Terraform Plan Tests" "plan.sh"
+run_suite "OpenTofu Plan Tests" "plan.sh"
 PLAN_RESULT=$?
 
 # Final summary
@@ -76,7 +76,7 @@ if [ $FAILED_SUITES -eq 0 ]; then
     echo "✓ ALL TESTS PASSED"
     echo "==========================================${NC}"
     echo ""
-    echo "Your Terraform configurations are valid and ready for deployment!"
+    echo "Your OpenTofu configurations are valid and ready for deployment!"
     exit 0
 else
     echo -e "${RED}=========================================="
@@ -87,8 +87,8 @@ else
     echo ""
     echo "Failed suites:"
     [ $SYNTAX_RESULT -ne 0 ] && echo "  - Syntax and Structure Tests"
-    [ $VALIDATE_RESULT -ne 0 ] && echo "  - Terraform Validate Tests"
-    [ $PLAN_RESULT -ne 0 ] && echo "  - Terraform Plan Tests"
+    [ $VALIDATE_RESULT -ne 0 ] && echo "  - OpenTofu Validate Tests"
+    [ $PLAN_RESULT -ne 0 ] && echo "  - OpenTofu Plan Tests"
     echo ""
     exit 1
 fi

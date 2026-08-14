@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
+  Alert,
+  AlertTitle,
   Box,
+  Button,
   Card,
   CardContent,
-  Typography,
-  TextField,
-  Button,
   CircularProgress,
   MenuItem,
-  IconButton,
+  TextField,
+  Typography,
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getCapabilities,
@@ -23,43 +23,40 @@ import {
 import type { Capability, UpdateOrganizationTypeDto } from '../types/organization.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
-import { PaymentFeeEditor } from '../components/PaymentFeeEditor';
+import { PaymentFeeEditor, hasIncompleteRates, currencySymbol } from '../components/PaymentFeeEditor';
 import type { PaymentFeeEditorMethod } from '../components/PaymentFeeEditor';
 import type { CardPaymentMethodDefault } from '../types/organization.types';
+import { PageHeader } from '../components/PageHeader';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { FormSection } from '../components/FormSection';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import { CURRENCIES, LANGUAGES, LOCALES } from '../constants/localisation';
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CNY'];
-const LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ja', name: 'Japanese' },
-];
-
-const LOCALES = [
-  { code: 'en-GB', name: 'English (UK)' },
-  { code: 'fr-FR', name: 'Français (France)' },
-  { code: 'es-ES', name: 'Español (España)' },
-  { code: 'it-IT', name: 'Italiano (Italia)' },
-  { code: 'de-DE', name: 'Deutsch (Deutschland)' },
-  { code: 'pt-PT', name: 'Português (Portugal)' },
-];
+type FeeLoadState = 'loading' | 'ready' | 'failed';
 
 export const EditOrganizationTypePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
-  
+
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [paymentFees, setPaymentFees] = useState<PaymentFeeEditorMethod[]>([]);
   const [feeDefaults, setFeeDefaults] = useState<CardPaymentMethodDefault[]>([]);
   const [organisationCount, setOrganisationCount] = useState(0);
-  
+  const [feeState, setFeeState] = useState<FeeLoadState>('loading');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // The currency the type was loaded with. Comparing against it is what makes
+  // an unlocked-but-unchanged currency safe to save without a confirmation.
+  const [savedCurrency, setSavedCurrency] = useState<string>('');
+  const [currencyUnlocked, setCurrencyUnlocked] = useState(false);
+  const [currencyPrompt, setCurrencyPrompt] = useState(false);
+
+  const [initialSnapshot, setInitialSnapshot] = useState('');
+
   const [formData, setFormData] = useState<UpdateOrganizationTypeDto & { name?: string }>({
     name: '',
     displayName: '',
@@ -73,10 +70,17 @@ export const EditOrganizationTypePage: React.FC = () => {
     initialMembershipNumber: 1000000,
   });
 
+  const isDirty = useMemo(
+    () => initialSnapshot !== '' && JSON.stringify(formData) !== initialSnapshot,
+    [formData, initialSnapshot]
+  );
+  const { guard, promptOpen, confirmDiscard, cancelDiscard } = useUnsavedChanges(isDirty);
+
   useEffect(() => {
     if (id) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadData = async () => {
@@ -84,12 +88,13 @@ export const EditOrganizationTypePage: React.FC = () => {
 
     try {
       setLoading(true);
+      setLoadFailed(false);
       const [capsData, typeData] = await Promise.all([
         getCapabilities(),
         getOrganizationTypeById(id),
       ]);
       setCapabilities(capsData);
-      setFormData({
+      const loaded = {
         name: typeData.name,
         displayName: typeData.displayName,
         description: typeData.description,
@@ -100,8 +105,14 @@ export const EditOrganizationTypePage: React.FC = () => {
         membershipNumbering: typeData.membershipNumbering || 'internal',
         membershipNumberUniqueness: typeData.membershipNumberUniqueness || 'organization',
         initialMembershipNumber: typeData.initialMembershipNumber || 1000000,
-      });
+      };
+      setFormData(loaded);
+      setSavedCurrency(typeData.currency);
+      setInitialSnapshot(JSON.stringify(loaded));
     } catch (error) {
+      // A failed load must not leave the page spinning forever. It reports and
+      // offers a way back, so the operator is never stranded on a blank screen.
+      setLoadFailed(true);
       showError('Failed to load organisation type');
       console.error('Error loading data:', error);
     } finally {
@@ -115,6 +126,7 @@ export const EditOrganizationTypePage: React.FC = () => {
     if (!id) return;
     (async () => {
       try {
+        setFeeState('loading');
         const [feeResponse, defaults] = await Promise.all([
           getOrganizationTypePaymentFees(id),
           getCardPaymentMethodDefaults(),
@@ -134,30 +146,68 @@ export const EditOrganizationTypePage: React.FC = () => {
         );
         setOrganisationCount(count);
         setFeeDefaults(defaults ?? []);
+        setFeeState('ready');
       } catch (error) {
+        // This used to be a bare console.error. The consequence was silent and
+        // serious: `paymentFees` stayed empty, the save path skipped the fee
+        // write entirely, and the operator was told the type had been updated
+        // successfully while never learning handling fees existed at all.
+        setFeeState('failed');
         console.error('Error loading handling fees:', error);
       }
     })();
   }, [id]);
 
+  const validate = (): boolean => {
+    const next: Record<string, string> = {};
+    if (!formData.name?.trim()) next.name = 'A URL-friendly name is required';
+    if (!formData.displayName?.trim()) next.displayName = 'A display name is required';
+    if (!formData.currency) next.currency = 'A currency is required';
+    if (!formData.language) next.language = 'A language is required';
+    if (!formData.defaultLocale) next.defaultLocale = 'A default locale is required';
+    if (
+      formData.membershipNumbering === 'internal' &&
+      (!formData.initialMembershipNumber || formData.initialMembershipNumber < 1)
+    ) {
+      next.initialMembershipNumber = 'Enter a starting number of 1 or more';
+    }
+    setErrors(next);
+
+    const firstInvalid = Object.keys(next)[0];
+    if (firstInvalid) {
+      // Move focus to the problem rather than announcing it somewhere the
+      // operator is not looking and a screen reader never reaches.
+      const field = document.querySelector<HTMLElement>(`[name="${firstInvalid}"]`);
+      field?.focus();
+      field?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    return firstInvalid === undefined;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
-    
+    if (!validate()) return;
+
+    if (hasIncompleteRates(paymentFees)) {
+      showError('Every handling fee needs a value. Enter 0 where a fee does not apply.');
+      return;
+    }
+
     try {
       setSubmitting(true);
-      
+
       // Prepare form data - only include conditional fields for internal mode
       const submitData: UpdateOrganizationTypeDto = {
         ...formData,
       };
-      
+
       // Remove conditional fields if external mode
       if (formData.membershipNumbering === 'external') {
         delete submitData.membershipNumberUniqueness;
         delete submitData.initialMembershipNumber;
       }
-      
+
       await updateOrganizationType(id, submitData);
 
       if (paymentFees.length > 0) {
@@ -172,7 +222,12 @@ export const EditOrganizationTypePage: React.FC = () => {
         );
       }
 
-      showSuccess('Organisation type updated successfully');
+      setInitialSnapshot(JSON.stringify(formData));
+      showSuccess(
+        feeState === 'failed'
+          ? 'Organisation type updated. Handling fees could not be loaded and were not saved.'
+          : 'Organisation type updated successfully'
+      );
       navigate('/organization-types');
     } catch (error: any) {
       showError(error.response?.data?.error || 'Failed to update organisation type');
@@ -187,198 +242,344 @@ export const EditOrganizationTypePage: React.FC = () => {
       value = value
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
-        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+        .replace(/-+/g, '-'); // Replace multiple hyphens with single hyphen
+      // Trailing hyphens are deliberately left alone while typing. Stripping
+      // them on every keystroke meant a space could never become a hyphen —
+      // "my type" collapsed to "mytype" as you typed.
     }
-    setFormData({ ...formData, [field]: value });
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const leave = () => guard(() => navigate('/organization-types'));
+
+  const currencyLocked = organisationCount > 0 && !currencyUnlocked;
+  const currencyChanged = savedCurrency !== '' && formData.currency !== savedCurrency;
 
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+          Loading organisation type…
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <Box>
+        <PageHeader title="Edit Organisation Type" onBack={() => navigate('/organization-types')} />
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={loadData}>
+              Try again
+            </Button>
+          }
+        >
+          <AlertTitle>This organisation type could not be loaded</AlertTitle>
+          It may have been deleted, or the server may be unreachable.
+        </Alert>
       </Box>
     );
   }
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <IconButton onClick={() => navigate('/organization-types')}>
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4">Edit Organisation Type</Typography>
-      </Box>
+      <PageHeader
+        title="Edit Organisation Type"
+        description={formData.displayName || undefined}
+        onBack={leave}
+        backLabel="Back to organisation types"
+      />
 
-      <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <Box display="flex" flexDirection="column" gap={3}>
-              <TextField
-                label="Name (URL-friendly)"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="e.g., swimming-club"
-                helperText="Lowercase, no spaces, hyphens allowed"
-                required
-                fullWidth
-              />
+      {organisationCount > 0 && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <strong>
+            {organisationCount} organisation{organisationCount === 1 ? '' : 's'}
+          </strong>{' '}
+          {organisationCount === 1 ? 'uses' : 'use'} this type. Changes here reach every one of them.
+        </Alert>
+      )}
 
-              <TextField
-                label="Display Name"
-                value={formData.displayName}
-                onChange={(e) => handleChange('displayName', e.target.value)}
-                required
-                fullWidth
-              />
+      {feeState === 'failed' && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <AlertTitle>Handling fees could not be loaded</AlertTitle>
+          Everything else on this page can still be saved, but card handling fees will be left
+          exactly as they are. Reload the page to try again before changing fees.
+        </Alert>
+      )}
 
-              <TextField
-                label="Description"
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                multiline
-                rows={3}
-                fullWidth
-              />
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <FormSection
+          title="Identity"
+          description="How this type is addressed in URLs and shown to staff."
+        >
+          <TextField
+            name="name"
+            label="Name (URL-friendly)"
+            value={formData.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder="e.g., swimming-club"
+            error={Boolean(errors.name)}
+            helperText={errors.name ?? 'Lowercase, no spaces, hyphens allowed'}
+            required
+            fullWidth
+          />
+          <TextField
+            name="displayName"
+            label="Display Name"
+            value={formData.displayName}
+            onChange={(e) => handleChange('displayName', e.target.value)}
+            error={Boolean(errors.displayName)}
+            helperText={errors.displayName}
+            required
+            fullWidth
+          />
+          <TextField
+            name="description"
+            label="Description"
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            multiline
+            rows={3}
+            fullWidth
+          />
+        </FormSection>
 
+        <FormSection
+          title="Money"
+          description="Currency is fixed for every organisation of this type, and the fixed element of each handling fee is a cash amount in it."
+        >
+          {currencyLocked ? (
+            <Box>
               <TextField
-                select
                 label="Currency"
                 value={formData.currency}
-                onChange={(e) => handleChange('currency', e.target.value)}
-                required
+                InputProps={{ readOnly: true }}
+                helperText={`Locked because ${organisationCount} organisation${
+                  organisationCount === 1 ? '' : 's'
+                } already ${organisationCount === 1 ? 'uses' : 'use'} this type.`}
                 fullWidth
-              >
-                {CURRENCIES.map((currency) => (
-                  <MenuItem key={currency} value={currency}>
-                    {currency}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                label="Language"
-                value={formData.language}
-                onChange={(e) => handleChange('language', e.target.value)}
-                required
-                fullWidth
-              >
-                {LANGUAGES.map((lang) => (
-                  <MenuItem key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                label="Default Locale"
-                value={formData.defaultLocale}
-                onChange={(e) => handleChange('defaultLocale', e.target.value)}
-                helperText="The default language and regional format for organisations of this type"
-                required
-                fullWidth
-              >
-                {LOCALES.map((locale) => (
-                  <MenuItem key={locale.code} value={locale.code}>
-                    {locale.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                label="Membership Numbering"
-                value={formData.membershipNumbering}
-                onChange={(e) => handleChange('membershipNumbering', e.target.value)}
-                helperText="Choose how membership numbers are generated"
-                required
-                fullWidth
-              >
-                <MenuItem value="internal">Internal (System Generated)</MenuItem>
-                <MenuItem value="external">External (User Provided)</MenuItem>
-              </TextField>
-
-              {formData.membershipNumbering === 'internal' && (
-                <>
-                  <TextField
-                    select
-                    label="Membership Number Uniqueness"
-                    value={formData.membershipNumberUniqueness}
-                    onChange={(e) => handleChange('membershipNumberUniqueness', e.target.value)}
-                    helperText="Define the scope for membership number uniqueness"
-                    required
-                    fullWidth
-                  >
-                    <MenuItem value="organization_type">Organization Type Level</MenuItem>
-                    <MenuItem value="organization">Organization Level</MenuItem>
-                  </TextField>
-
-                  <TextField
-                    type="number"
-                    label="Initial Membership Number"
-                    value={formData.initialMembershipNumber}
-                    onChange={(e) => handleChange('initialMembershipNumber', parseInt(e.target.value) || 1000000)}
-                    helperText="The starting number for sequential membership number generation"
-                    inputProps={{ min: 1 }}
-                    required
-                    fullWidth
-                  />
-                </>
-              )}
-
-              <PaymentFeeEditor
-
-                methods={paymentFees}
-
-                currency={formData.currency || 'EUR'}
-
-                defaults={feeDefaults}
-
-                organisationCount={organisationCount}
-
-                onChange={setPaymentFees}
-
-                disabled={submitting}
-
               />
-
-
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  Default Capabilities
-                </Typography>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Select the capabilities that will be enabled by default for all organisations of this type.
-                </Typography>
-                <CapabilitySelector
-                  capabilities={capabilities}
-                  selectedCapabilities={formData.defaultCapabilities || []}
-                  onChange={(selected) => handleChange('defaultCapabilities', selected)}
-                />
-              </Box>
-
-              <Box display="flex" gap={2} justifyContent="flex-end">
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/organization-types')}
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={submitting}
-                >
-                  {submitting ? <CircularProgress size={24} /> : 'Update Organisation Type'}
-                </Button>
-              </Box>
+              <Button size="small" sx={{ mt: 1 }} onClick={() => setCurrencyPrompt(true)}>
+                Change currency
+              </Button>
             </Box>
-          </form>
-        </CardContent>
-      </Card>
+          ) : (
+            <TextField
+              name="currency"
+              select
+              label="Currency"
+              value={formData.currency}
+              onChange={(e) => handleChange('currency', e.target.value)}
+              error={Boolean(errors.currency)}
+              helperText={errors.currency}
+              required
+              fullWidth
+            >
+              {CURRENCIES.map((currency) => (
+                <MenuItem key={currency} value={currency}>
+                  {currency}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+
+          {currencyChanged && (
+            <Alert severity="warning">
+              <AlertTitle>Handling fee amounts are not converted</AlertTitle>
+              Every fixed fee below keeps its number and changes meaning: {currencySymbol(savedCurrency)}
+              0.25 becomes {currencySymbol(formData.currency || savedCurrency)}0.25. Check each one
+              before saving.
+            </Alert>
+          )}
+
+          {feeState !== 'failed' && (
+            <PaymentFeeEditor
+              methods={paymentFees}
+              currency={formData.currency || 'EUR'}
+              defaults={feeDefaults}
+              organisationCount={organisationCount}
+              onChange={setPaymentFees}
+              disabled={submitting}
+            />
+          )}
+        </FormSection>
+
+        <FormSection
+          title="Language and region"
+          description="Defaults inherited by every organisation of this type."
+        >
+          <TextField
+            name="language"
+            select
+            label="Language"
+            value={formData.language}
+            onChange={(e) => handleChange('language', e.target.value)}
+            error={Boolean(errors.language)}
+            helperText={errors.language}
+            required
+            fullWidth
+          >
+            {LANGUAGES.map((lang) => (
+              <MenuItem key={lang.code} value={lang.code}>
+                {lang.name}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            name="defaultLocale"
+            select
+            label="Default Locale"
+            value={formData.defaultLocale}
+            onChange={(e) => handleChange('defaultLocale', e.target.value)}
+            error={Boolean(errors.defaultLocale)}
+            helperText={
+              errors.defaultLocale ??
+              'The default language and regional format for organisations of this type'
+            }
+            required
+            fullWidth
+          >
+            {LOCALES.map((locale) => (
+              <MenuItem key={locale.code} value={locale.code}>
+                {locale.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </FormSection>
+
+        <FormSection
+          title="Membership numbering"
+          description="How members of these organisations are numbered."
+        >
+          <TextField
+            name="membershipNumbering"
+            select
+            label="Membership Numbering"
+            value={formData.membershipNumbering}
+            onChange={(e) => handleChange('membershipNumbering', e.target.value)}
+            helperText="Choose how membership numbers are generated"
+            required
+            fullWidth
+          >
+            <MenuItem value="internal">Internal (System Generated)</MenuItem>
+            <MenuItem value="external">External (User Provided)</MenuItem>
+          </TextField>
+
+          {formData.membershipNumbering === 'internal' && (
+            <>
+              <TextField
+                name="membershipNumberUniqueness"
+                select
+                label="Membership Number Uniqueness"
+                value={formData.membershipNumberUniqueness}
+                onChange={(e) => handleChange('membershipNumberUniqueness', e.target.value)}
+                helperText="Define the scope for membership number uniqueness"
+                required
+                fullWidth
+              >
+                <MenuItem value="organization_type">Organisation Type Level</MenuItem>
+                <MenuItem value="organization">Organisation Level</MenuItem>
+              </TextField>
+
+              <TextField
+                name="initialMembershipNumber"
+                type="number"
+                label="Initial Membership Number"
+                value={formData.initialMembershipNumber}
+                onChange={(e) =>
+                  handleChange('initialMembershipNumber', parseInt(e.target.value, 10) || '')
+                }
+                error={Boolean(errors.initialMembershipNumber)}
+                helperText={
+                  errors.initialMembershipNumber ??
+                  'The starting number for sequential membership number generation'
+                }
+                inputProps={{ min: 1 }}
+                required
+                fullWidth
+              />
+            </>
+          )}
+        </FormSection>
+
+        <FormSection
+          title="Default capabilities"
+          description="Enabled automatically for every new organisation of this type. Existing organisations keep what they already have."
+        >
+          <CapabilitySelector
+            capabilities={capabilities}
+            selectedCapabilities={formData.defaultCapabilities || []}
+            onChange={(selected) => handleChange('defaultCapabilities', selected)}
+          />
+        </FormSection>
+
+        <Card>
+          <CardContent>
+            <Box display="flex" gap={2} justifyContent="flex-end" alignItems="center">
+              {isDirty && (
+                <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto' }}>
+                  Unsaved changes
+                </Typography>
+              )}
+              <Button variant="outlined" onClick={leave} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained" disabled={submitting}>
+                {submitting ? <CircularProgress size={22} /> : 'Update Organisation Type'}
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
+      <ConfirmDialog
+        open={currencyPrompt}
+        title="Change this type's currency?"
+        severity="error"
+        confirmLabel="Unlock currency"
+        confirmPhrase={formData.displayName || undefined}
+        message={
+          <>
+            Currency is not a display setting. The fixed element of every handling fee below is a
+            cash amount in this currency, and changing it re-denominates all of them without
+            converting the numbers — {currencySymbol(savedCurrency)}0.25 becomes 0.25 of the new
+            currency.
+          </>
+        }
+        consequences={
+          <>
+            {organisationCount} organisation{organisationCount === 1 ? '' : 's'} of this type will
+            charge the re-denominated handling fee on live card payments as soon as you save.
+          </>
+        }
+        onConfirm={() => {
+          setCurrencyUnlocked(true);
+          setCurrencyPrompt(false);
+        }}
+        onCancel={() => setCurrencyPrompt(false)}
+      />
+
+      <ConfirmDialog
+        open={promptOpen}
+        title="Discard your changes?"
+        severity="error"
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        message="This organisation type has unsaved changes. Leaving now loses them."
+        onConfirm={confirmDiscard}
+        onCancel={cancelDiscard}
+      />
     </Box>
   );
 };

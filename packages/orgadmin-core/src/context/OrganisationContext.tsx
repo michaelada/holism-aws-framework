@@ -11,7 +11,7 @@ export interface Organisation {
   name: string;
   displayName: string;
   domain?: string;
-  status: 'active' | 'inactive' | 'blocked';
+  status: 'active' | 'inactive';
   currency?: string;
   language?: string;
   enabledCapabilities: string[];

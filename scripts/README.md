@@ -173,3 +173,53 @@ To add more test data:
 1. Add new field definitions to the `createFieldDefinitions()` method
 2. Add new object definitions to the `createObjectDefinitions()` method
 3. Add corresponding data generation logic in `generateInstanceData()`
+
+## seed-demo — events demo data
+
+Puts a local environment into a known state for testing events, and wipes/rebuilds it on demand.
+
+```bash
+npm run seed:demo -- --dry-run      # report only
+npm run seed:demo -- --reset        # wipe everything, then seed
+npm run seed:demo -- --reset-only   # wipe everything and stop
+```
+
+Creates one organisation type (Irish Pony Clubs), three clubs, 12 logins, 13 events with 29
+activities, 12 application forms and 7 discounts. Every login uses `Passw0rd!`.
+
+**`--reset` deletes all tenant data and the Keycloak users this script created.** It refuses to run
+against `NODE_ENV=production`, and against a non-local database or Keycloak unless
+`SEED_ALLOW_REMOTE_DB=yes` / `SEED_ALLOW_REMOTE_KEYCLOAK=yes` is set.
+
+Source lives in `packages/backend/scripts/seed/`. Full description, including what is deliberately
+not seeded: [docs/EVENTS_DEMO_SEED.md](../docs/EVENTS_DEMO_SEED.md).
+
+
+# Info
+
+The password is Passw0rd! for every seeded login (dataset.ts:19), set non-temporary so nobody hits a reset wall.
+
+Platform Admin — http://localhost:5174
+
+super.admin@itsplainsailing.test
+
+Org admins — http://localhost:5175
+
+Email	Organisation
+admin@kildarehunt.test	Kildare Hunt Pony Club
+admin@laoishunt.test	Laois Hunt Pony Club
+admin@wardunion.test	Ward Union Pony Club
+Members — http://localhost:5176/account/`<code>(codes:khpc, lhpc, wupc`)
+
+Email	Organisations
+niamh.walsh@example.test	all three
+cillian.murphy@example.test	all three
+orla.kavanagh@example.test	khpc, lhpc
+darragh.otoole@example.test	lhpc, wupc
+fionn.doyle@example.test	khpc, wupc
+saoirse.brennan@example.test	khpc
+ruairi.kelly@example.test	lhpc
+tadhg.nolan@example.test	wupc — awaiting approval
+Separately, the Keycloak admin console (http://localhost:8080) uses admin / admin by default, from KEYCLOAK_ADMIN_PASSWORD.
+
+The seed prints all of this at the end of a run, so npm run seed:demo will re-list it. One caveat: the users table was empty when I looked earlier, so these accounts may not currently be seeded into this database — the Keycloak side is what matters for login, but if any are missing, a re-run will restore them.

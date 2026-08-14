@@ -330,10 +330,10 @@ output "orgadmin_target_group_arn" {
 cd terraform/environments/staging  # or production
 
 # Plan changes
-terraform plan
+tofu plan
 
 # Apply changes
-terraform apply
+tofu apply
 
 # Verify target groups
 aws elbv2 describe-target-groups --names staging-orgadmin-tg
@@ -604,7 +604,7 @@ VITE_CDN_URL=https://d1234example.cloudfront.net
 ### Staging Deployment
 
 - [ ] Update Terraform compute module with OrgAdmin target group
-- [ ] Apply Terraform changes: `terraform apply`
+- [ ] Apply Terraform changes: `tofu apply`
 - [ ] Build OrgAdmin UI: `npm run build`
 - [ ] Deploy to EC2 instances or container service
 - [ ] Update Nginx configuration on staging servers
@@ -617,7 +617,7 @@ VITE_CDN_URL=https://d1234example.cloudfront.net
 
 - [ ] Create CloudFront Terraform module
 - [ ] Request ACM certificate for custom domain
-- [ ] Apply CloudFront Terraform: `terraform apply`
+- [ ] Apply CloudFront Terraform: `tofu apply`
 - [ ] Build production OrgAdmin UI with production env vars
 - [ ] Deploy to S3: `aws s3 sync dist/ s3://bucket-name/`
 - [ ] Invalidate CloudFront cache
@@ -695,5 +695,5 @@ For issues or questions:
 1. Check the troubleshooting section above
 2. Review the spec documents in `.kiro/specs/orgadmin-system/`
 3. Check application logs: `docker-compose logs -f orgadmin`
-4. Verify infrastructure with: `terraform plan`
+4. Verify infrastructure with: `tofu plan`
 

@@ -14,7 +14,8 @@ describe('PasswordResetDialog', () => {
     enabled: true,
     emailVerified: true,
     roles: ['admin'],
-    tenants: ['tenant-1'],
+    classifications: ['super-admin'] as const,
+    organizations: ['organisation-1'],
     createdAt: '2024-01-01T00:00:00Z',
   };
 

@@ -631,7 +631,9 @@
       "scheduleRuleStartDate": "Start Date",
       "scheduleRuleEndDate": "End Date",
       "scheduleRuleTimeOfDay": "Time of Day",
-      "scheduleRuleReason": "Reason"
+      "scheduleRuleReason": "Reason",
+      "displayIcon": "Icon",
+      "noIcon": "No icon"
     },
     "actions": {
       "exportToExcel": "Export to Excel"
@@ -700,6 +702,28 @@
         "loadFailed": "Failed to load calendar data. Please try again.",
         "timeout": "Request timed out. Please try again."
       }
+    },
+    "icons": {
+      "tennis": "Tennis",
+      "basketball": "Basketball",
+      "football": "Football",
+      "golf": "Golf",
+      "cricket": "Cricket",
+      "athletics": "Athletics",
+      "pool": "Swimming",
+      "sailing": "Sailing",
+      "equestrian": "Equestrian",
+      "hiking": "Hiking",
+      "park": "Grounds",
+      "clubhouse": "Clubhouse",
+      "meetingRoom": "Meeting room",
+      "restaurant": "Dining",
+      "gym": "Gym",
+      "calendar": "Calendar",
+      "group": "Group",
+      "lesson": "Lesson",
+      "event": "Event",
+      "place": "Venue"
     }
   },
   "registrations": {
@@ -1804,6 +1828,7 @@
       "sections": {
         "logo": "Logo",
         "themeColours": "Theme Colours",
+        "naming": "Naming",
         "preview": "Preview"
       },
       "fields": {
@@ -1818,7 +1843,11 @@
         "accentColour": "Accent Colour",
         "backgroundColour": "Background Colour",
         "textColour": "Text Colour",
-        "resetColours": "Reset to Default Colours"
+        "resetColours": "Reset to Default Colours",
+        "bookingsLabel": "Bookings menu name",
+        "bookingsLabelHelp": "What members see this area called in their app. Leave blank to use the default.",
+        "bookingsLabelPlaceholder": "Bookings",
+        "bookingsLabelExample": "For example: Court Booking, Arena Booking, Pool Sessions"
       },
       "preview": {
         "organisationName": "Organisation Name",

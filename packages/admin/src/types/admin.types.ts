@@ -1,30 +1,18 @@
 // Admin API Types
 
-// Tenant Types
-export interface Tenant {
-  id: string;
-  keycloakGroupId: string;
-  name: string;
-  displayName: string;
-  domain?: string;
-  status: string;
-  memberCount?: number;
-  createdAt: string;
-  updatedAt: string;
-}
+/**
+ * What a person is on the platform, as opposed to the individual realm and
+ * organisation roles they hold. Not mutually exclusive — the same person can
+ * administer one club and be a member of another.
+ */
+export type UserClassification = 'super-admin' | 'org-admin' | 'account';
 
-export interface CreateTenantDto {
-  name: string;
-  displayName: string;
-  domain?: string;
-}
-
-export interface UpdateTenantDto {
-  name?: string;
-  displayName?: string;
-  domain?: string;
-  status?: string;
-}
+/** How each classification is labelled and coloured in the user list. */
+export const USER_CLASSIFICATION_LABELS: Record<UserClassification, string> = {
+  'super-admin': 'Super Admin',
+  'org-admin': 'Org-admin',
+  account: 'Account',
+};
 
 // User Types
 export interface User {
@@ -37,7 +25,10 @@ export interface User {
   enabled: boolean;
   emailVerified: boolean;
   roles: string[];
-  tenants: string[];
+  /** Broad categories derived from the roles and organisation membership. */
+  classifications: UserClassification[];
+  /** Organisations this user belongs to, resolved from their Keycloak groups. */
+  organizations: string[];
   phoneNumber?: string;
   department?: string;
   createdAt: string;
@@ -54,7 +45,7 @@ export interface CreateUserDto {
   emailVerified?: boolean;
   phoneNumber?: string;
   department?: string;
-  tenantId?: string;
+  organizationId?: string;
   roles?: string[];
 }
 
@@ -65,14 +56,14 @@ export interface UpdateUserDto {
   enabled?: boolean;
   phoneNumber?: string;
   department?: string;
-  tenantId?: string;
+  organizationId?: string;
   roles?: string[];
 }
 
 export interface UserFilters {
   search?: string;
   email?: string;
-  tenantId?: string;
+  organizationId?: string;
   limit?: number;
   offset?: number;
 }
@@ -114,7 +105,7 @@ export interface Organization {
   contactName?: string;
   contactEmail?: string;
   contactMobile?: string;
-  status: 'active' | 'inactive' | 'blocked';
+  status: 'active' | 'inactive';
   enabledCapabilities?: string[];
   currency?: string;
   language?: string;

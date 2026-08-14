@@ -27,7 +27,7 @@ describe('AccountCatalogueService — calendars', () => {
     name: 'Tennis court 1',
     description: 'All-weather',
     display_colour: '#336699',
-    status: 'active',
+    status: 'open',
     min_days_in_advance: 0,
     max_days_in_advance: 90,
     use_terms_and_conditions: false,
@@ -101,7 +101,7 @@ describe('AccountCatalogueService — calendars', () => {
     });
 
     it('marks an inactive calendar as not taking bookings', async () => {
-      respond({ calendars: [calendarRow({ status: 'inactive' })] });
+      respond({ calendars: [calendarRow({ status: 'closed' })] });
 
       const [calendar] = await service.listCalendars(ORG);
       expect(calendar).toMatchObject({
@@ -264,7 +264,7 @@ describe('AccountCatalogueService — calendars', () => {
     });
 
     it('refuses any slot on a calendar that has stopped taking bookings', async () => {
-      respond({ calendars: [calendarRow({ status: 'inactive' })] });
+      respond({ calendars: [calendarRow({ status: 'closed' })] });
 
       await expect(
         service.assertSlotAvailable(ORG, CALENDAR, SATURDAY, '09:00', 60, 1, TODAY)

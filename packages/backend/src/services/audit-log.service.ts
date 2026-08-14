@@ -46,7 +46,7 @@ export class AuditLogService {
    * Creates an audit log entry with:
    * - User ID of the admin performing the action
    * - Action type (create, update, delete, etc.)
-   * - Resource type (tenant, user, role)
+   * - Resource type (organisation, user, role)
    * - Resource ID (if applicable)
    * - Changes made (for updates)
    * - IP address of the admin user

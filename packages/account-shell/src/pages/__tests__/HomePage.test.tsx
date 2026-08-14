@@ -39,7 +39,7 @@ vi.mock('react-router-dom', async () => {
 
 /** A club with nothing enabled: every optional section absent. */
 const empty = (): AccountDashboard => ({
-  membership: null,
+  memberships: null,
   comingUp: null,
   cart: null,
   recentPayments: null,
@@ -47,15 +47,18 @@ const empty = (): AccountDashboard => ({
 });
 
 const dashboard = (over: Partial<AccountDashboard> = {}): AccountDashboard => ({
-  membership: {
-    id: 'member-1',
-    name: 'Family Membership 2026',
-    membershipNumber: 'KHPC-0412',
-    validUntil: '2027-02-25',
-    daysRemaining: 200,
-    canRenew: false,
-    renewalNotOpen: false,
-  },
+  memberships: [
+    {
+      id: 'member-1',
+      name: 'Family Membership 2026',
+      memberName: 'Niamh Walsh',
+      membershipNumber: 'KHPC-0412',
+      validUntil: '2027-02-25',
+      daysRemaining: 200,
+      canRenew: false,
+      renewalNotOpen: false,
+    },
+  ],
   comingUp: [
     {
       kind: 'entry',
@@ -81,8 +84,36 @@ const dashboard = (over: Partial<AccountDashboard> = {}): AccountDashboard => ({
     { id: 'pay-1', total: 4500, status: 'paid', currency: 'EUR', on: '2026-01-12T00:00:00.000Z' },
   ],
   whatsOn: [
-    { kind: 'event', id: 'event-1', title: 'Summer Camp', detail: null, fee: null },
-    { kind: 'merchandise', id: 'item-1', title: 'Club Polo', detail: null, fee: 2500 },
+    {
+      kind: 'event',
+      id: 'event-1',
+      title: 'Summer Camp',
+      detail: null,
+      fee: null,
+      startDate: '2026-09-01',
+      endDate: null,
+      entriesOpenDate: '2026-07-01T09:00:00Z',
+      entriesClosingDate: '2026-10-01T09:00:00Z',
+      entriesLimit: null,
+      placesRemaining: null,
+      icon: null,
+      colour: null,
+    },
+    {
+      kind: 'merchandise',
+      id: 'item-1',
+      title: 'Club Polo',
+      detail: null,
+      fee: 2500,
+      startDate: null,
+      endDate: null,
+      entriesOpenDate: null,
+      entriesClosingDate: null,
+      entriesLimit: null,
+      placesRemaining: null,
+      icon: null,
+      colour: null,
+    },
   ],
   ...over,
 });
@@ -134,11 +165,41 @@ describe('HomePage (B3)', () => {
     expect(screen.getByText('Awaiting payment')).toBeInTheDocument();
   });
 
+  it('gives every membership its own card, named for the member', async () => {
+    // A parent holding four needs all four, not the soonest with the rest
+    // hidden until they think to open C4.
+    const [first] = dashboard().memberships!;
+    mockExecute.mockResolvedValue(
+      dashboard({
+        memberships: [
+          { ...first!, id: 'm1', memberName: 'Conor McGrath' },
+          { ...first!, id: 'm2', memberName: 'Éabha McGrath' },
+          { ...first!, id: 'm3', memberName: 'Rónán McGrath' },
+        ],
+      })
+    );
+    renderWithProviders(<HomePage />);
+
+    expect(await screen.findByText('Memberships')).toBeInTheDocument();
+    expect(screen.getByText('Conor McGrath')).toBeInTheDocument();
+    expect(screen.getByText('Éabha McGrath')).toBeInTheDocument();
+    expect(screen.getByText('Rónán McGrath')).toBeInTheDocument();
+  });
+
   it('shows the membership card with its number', async () => {
     renderWithProviders(<HomePage />);
 
     expect(await screen.findByText('Family Membership 2026')).toBeInTheDocument();
     expect(screen.getByText(/KHPC-0412/)).toBeInTheDocument();
+  });
+
+  it('renders no memberships section when the member holds none', async () => {
+    mockExecute.mockResolvedValue(dashboard({ memberships: [] }));
+    renderWithProviders(<HomePage />);
+
+    await screen.findByText('What’s on');
+    // An empty heading is worse than no heading.
+    expect(screen.queryByText('Memberships')).not.toBeInTheDocument();
   });
 
   it('shows the basket with its handling fee', async () => {
@@ -155,20 +216,17 @@ describe('HomePage (B3)', () => {
     expect(screen.getByText('€45.00')).toBeInTheDocument();
   });
 
-  describe('the renewal banner', () => {
-    it('leads the page when a membership is nearly up', async () => {
-      mockExecute.mockResolvedValue(
-        dashboard({
-          membership: {
-            ...dashboard().membership!,
-            daysRemaining: 12,
-            canRenew: true,
-          },
-        })
-      );
+  describe('renewal, on the card that needs it', () => {
+    const withMembership = (over: Record<string, unknown>) => {
+      const [first] = dashboard().memberships!;
+      return dashboard({ memberships: [{ ...first!, ...over } as any] });
+    };
+
+    it('offers a renew button when the membership is nearly up', async () => {
+      mockExecute.mockResolvedValue(withMembership({ daysRemaining: 12, canRenew: true }));
       renderWithProviders(<HomePage />);
 
-      expect(await screen.findByText(/expires in 12 days/)).toBeInTheDocument();
+      expect(await screen.findByText(/Expires in 12 days/)).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Renew' }));
       expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/browse/memberships`);
@@ -177,9 +235,7 @@ describe('HomePage (B3)', () => {
     /** The same third condition as C4: due, but nothing open to renew into. */
     it('explains instead when the club has not opened renewals', async () => {
       mockExecute.mockResolvedValue(
-        dashboard({
-          membership: { ...dashboard().membership!, canRenew: false, renewalNotOpen: true },
-        })
+        withMembership({ canRenew: false, renewalNotOpen: true })
       );
       renderWithProviders(<HomePage />);
 
@@ -187,11 +243,27 @@ describe('HomePage (B3)', () => {
       expect(screen.queryByRole('button', { name: 'Renew' })).not.toBeInTheDocument();
     });
 
+    it('offers renewal only on the membership that needs it', async () => {
+      const [first] = dashboard().memberships!;
+      mockExecute.mockResolvedValue(
+        dashboard({
+          memberships: [
+            { ...first!, id: 'm1', memberName: 'Due Soon', daysRemaining: 9, canRenew: true },
+            { ...first!, id: 'm2', memberName: 'Months Left' },
+          ],
+        })
+      );
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Due Soon');
+      expect(screen.getAllByRole('button', { name: 'Renew' })).toHaveLength(1);
+    });
+
     it('says nothing while the membership has a long way to run', async () => {
       renderWithProviders(<HomePage />);
 
       await screen.findByText('Family Membership 2026');
-      expect(screen.queryByText(/expires in/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Expires in/)).not.toBeInTheDocument();
     });
   });
 
@@ -209,7 +281,23 @@ describe('HomePage (B3)', () => {
           // Named differently from the booking on the "coming up" card: the
           // same court legitimately appears in both, and the click has to be
           // aimed at the teaser.
-          whatsOn: [{ kind: 'calendar', id: 'cal-1', title: 'Court 2', detail: null, fee: null }],
+          whatsOn: [
+            {
+              kind: 'calendar',
+              id: 'cal-1',
+              title: 'Court 2',
+              detail: null,
+              fee: null,
+              startDate: null,
+              endDate: null,
+              entriesOpenDate: null,
+              entriesClosingDate: null,
+              entriesLimit: null,
+              placesRemaining: null,
+              icon: null,
+              colour: null,
+            },
+          ],
         })
       );
       renderWithProviders(<HomePage />);
@@ -240,6 +328,75 @@ describe('HomePage (B3)', () => {
       await screen.findByText('Club Polo');
       // An event's price lives on its activities and they differ, so it has none.
       expect(screen.getByText('€25.00')).toBeInTheDocument();
+    });
+
+    it('gives bookings their own row under the club’s own word for them', async () => {
+      contextValue = makeOrganisationContext({
+        publicDetail: {
+          ...(makeOrganisationContext().publicDetail as any),
+          branding: { logoUrl: '', primaryColor: '#1976d2', bookingsLabel: 'Court Booking' },
+        },
+      } as any);
+
+      mockExecute.mockResolvedValue(
+        dashboard({
+          whatsOn: [
+            {
+              kind: 'merchandise', id: 'm1', title: 'Club Polo', detail: null, fee: 2500,
+              startDate: null, endDate: null, entriesOpenDate: null, entriesClosingDate: null,
+              entriesLimit: null, placesRemaining: null, icon: null, colour: null,
+            },
+            {
+              kind: 'calendar', id: 'c1', title: 'Outdoor arena', detail: null, fee: null,
+              startDate: null, endDate: null, entriesOpenDate: null, entriesClosingDate: null,
+              entriesLimit: null, placesRemaining: null, icon: 'equestrian', colour: '#2e7d32',
+            },
+          ],
+        })
+      );
+      renderWithProviders(<HomePage />);
+
+      // Three rows now: bookings under the club's word, the shop under its own
+      // heading, and "What's on" only for what belongs in neither.
+      expect(await screen.findByText('Court Booking')).toBeInTheDocument();
+      expect(screen.getByText('Shop')).toBeInTheDocument();
+      expect(screen.getByText('Outdoor arena')).toBeInTheDocument();
+      expect(screen.getByText('Club Polo')).toBeInTheDocument();
+      // Nothing left for the general row, so it is absent rather than empty.
+      expect(screen.queryByText('What’s on')).not.toBeInTheDocument();
+    });
+
+    it('does not head a bookings row when the club has no calendars', async () => {
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Summer Camp');
+      // The default fixture has no calendar teaser, so no second heading.
+      expect(screen.queryByText('Bookings')).not.toBeInTheDocument();
+    });
+
+    it('dates an event teaser with a calendar tile', async () => {
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Summer Camp');
+      // The tile is announced as one date rather than as four scraps of text.
+      expect(
+        screen.getByRole('group', { name: /1 September 2026/ })
+      ).toBeInTheDocument();
+    });
+
+    it('shows the entry status beneath an event teaser', async () => {
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Summer Camp');
+      expect(screen.getByText('Open')).toBeInTheDocument();
+    });
+
+    it('gives a shop item no date and no entry status', async () => {
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Club Polo');
+      // Only one teaser has a window, so only one status chip may exist.
+      expect(screen.queryAllByText('Open')).toHaveLength(1);
     });
   });
 

@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
+import { useOrganisationFavicon } from '../hooks/useOrganisationFavicon';
 import { AccountMe, PublicOrganisationDetail } from '../types/account';
 
 /**
@@ -135,6 +136,15 @@ export const AccountOrganisationProvider: React.FC<{
       cancelled = true;
     };
   }, [orgCode, executePublic]);
+
+  /*
+   * The tab icon follows the club, for the same reason the header logo does:
+   * a member with three clubs open should not have to read three titles to
+   * tell the tabs apart. Driven from here rather than from the shell because
+   * this is where the branding lands, and the gateway and directory screens
+   * render outside `AppShell`.
+   */
+  useOrganisationFavicon(publicDetail?.branding?.logoUrl);
 
   const resolve = useCallback(async (): Promise<OrganisationState> => {
     // A signed-out visitor is not an error — the gateway (A2) is a public

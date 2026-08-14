@@ -31,11 +31,24 @@ export interface BrandingSettings {
   accentColor: string;
   backgroundColor: string;
   textColor: string;
+  /**
+   * What the member-facing app calls the bookings area.
+   *
+   * "Bookings" says what the software does; a club's members know it as the
+   * court, the arena or the pool. Empty means the default, so a club that never
+   * touches this is not carrying a copy of the word it would have got anyway.
+   *
+   * Only meaningful with the `calendar-bookings` capability — the settings
+   * screen hides the field otherwise — but stored unconditionally, so switching
+   * the capability off and on again does not lose what a club chose.
+   */
+  bookingsLabel?: string;
 }
 
 export const DEFAULT_BRANDING_SETTINGS: BrandingSettings = {
   logoUrl: '',
   logoS3Key: '',
+  bookingsLabel: '',
   primaryColor: '#1976d2',
   secondaryColor: '#dc004e',
   accentColor: '#ff9800',
@@ -55,6 +68,12 @@ const COLOUR_FIELDS: Array<keyof BrandingSettings> = [
 const HEX_COLOUR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 const MAX_LOGO_URL_LENGTH = 2048;
+
+/**
+ * Long enough for "Cross-country schooling", short enough to sit in a
+ * navigation rail and a section heading without wrapping.
+ */
+const MAX_BOOKINGS_LABEL_LENGTH = 40;
 
 /**
  * 12 hours. Long enough that a member keeps the same URL for a session and a
@@ -100,6 +119,25 @@ function sanitizeBrandingSettings(data: any): Partial<BrandingSettings> {
       ]);
     }
     out.logoUrl = logoUrl;
+  }
+
+  if (data.bookingsLabel !== undefined && data.bookingsLabel !== null) {
+    if (typeof data.bookingsLabel !== 'string') {
+      throw new ValidationError('bookingsLabel must be a string', [
+        { field: 'bookingsLabel', message: 'Invalid label' },
+      ]);
+    }
+    const label = data.bookingsLabel.trim();
+    if (label.length > MAX_BOOKINGS_LABEL_LENGTH) {
+      throw new ValidationError('bookingsLabel is too long', [
+        {
+          field: 'bookingsLabel',
+          message: `Must be at most ${MAX_BOOKINGS_LABEL_LENGTH} characters`,
+        },
+      ]);
+    }
+    // Stored trimmed; empty means "use the default" rather than a blank menu.
+    out.bookingsLabel = label;
   }
 
   if (data.logoS3Key !== undefined && data.logoS3Key !== null) {

@@ -5,7 +5,6 @@ export { ValidationService } from './validation.service';
 export { GenericCrudService } from './generic-crud.service';
 export { MetadataService } from './metadata.service';
 export { TableGeneratorService } from './table-generator.service';
-export { TenantService } from './tenant.service';
 export { UserService } from './user.service';
 export { RoleService } from './role.service';
 export { AuditLogService } from './audit-log.service';

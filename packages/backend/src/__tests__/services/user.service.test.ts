@@ -50,7 +50,7 @@ describe('UserService', () => {
 
     // Create mock database
     mockDb = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     } as any;
 
     // Create service instance
@@ -68,21 +68,21 @@ describe('UserService', () => {
       emailVerified: true,
       phoneNumber: '+1234567890',
       department: 'Engineering',
-      tenantId: 'tenant-123',
+      organizationId: 'organisation-123',
       roles: ['user', 'admin'],
     };
 
     it('should create user in Keycloak and database with all options', async () => {
       const mockUserId = 'keycloak-user-123';
       const mockDbUserId = 'db-user-456';
-      const mockTenantGroupId = 'group-789';
+      const mockOrganisationGroupId = 'group-789';
 
       // Mock Keycloak user creation
       mockClient.users.create.mockResolvedValue({ id: mockUserId });
 
-      // Mock tenant lookup
+      // Mock organisation lookup
       mockDb.query.mockResolvedValueOnce({
-        rows: [{ keycloak_group_id: mockTenantGroupId }],
+        rows: [{ keycloak_group_id: mockOrganisationGroupId }],
       } as any);
 
       // Mock role lookups
@@ -95,7 +95,7 @@ describe('UserService', () => {
         rows: [{
           id: mockDbUserId,
           keycloak_user_id: mockUserId,
-          tenant_id: createData.tenantId,
+          organization_id: createData.organizationId,
           username: createData.username,
           email: createData.email,
           preferences: {},
@@ -126,11 +126,11 @@ describe('UserService', () => {
       ]);
 
       mockClient.users.listGroups.mockResolvedValue([
-        { id: mockTenantGroupId, name: 'tenant-group' },
+        { id: mockOrganisationGroupId, name: 'organisation-group' },
       ]);
 
       mockDb.query.mockResolvedValueOnce({
-        rows: [{ id: createData.tenantId }],
+        rows: [{ id: createData.organizationId }],
       } as any);
 
       const result = await userService.createUser(createData);
@@ -160,10 +160,10 @@ describe('UserService', () => {
         },
       });
 
-      // Verify user was added to tenant group
+      // Verify user was added to organisation group
       expect(mockClient.users.addToGroup).toHaveBeenCalledWith({
         id: mockUserId,
-        groupId: mockTenantGroupId,
+        groupId: mockOrganisationGroupId,
       });
 
       // Verify roles were assigned
@@ -172,7 +172,7 @@ describe('UserService', () => {
       // Verify database insertion
       expect(mockDb.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO users'),
-        [mockUserId, createData.tenantId, createData.username, createData.email, '{}']
+        [mockUserId, createData.organizationId, createData.username, createData.email, '{}']
       );
 
       // Verify result
@@ -199,7 +199,7 @@ describe('UserService', () => {
         rows: [{
           id: 'db-user-456',
           keycloak_user_id: mockUserId,
-          tenant_id: null,
+          organization_id: null,
           username: minimalData.username,
           email: minimalData.email,
           preferences: {},
@@ -293,7 +293,7 @@ describe('UserService', () => {
           rows: [{
             id: 'db-user-1',
             keycloak_user_id: 'kc-user-1',
-            tenant_id: 'tenant-1',
+            organization_id: 'organisation-1',
             username: 'user1',
             email: 'user1@example.com',
             preferences: {},
@@ -306,7 +306,7 @@ describe('UserService', () => {
           rows: [{
             id: 'db-user-2',
             keycloak_user_id: 'kc-user-2',
-            tenant_id: null,
+            organization_id: null,
             username: 'user2',
             email: 'user2@example.com',
             preferences: {},
@@ -326,11 +326,11 @@ describe('UserService', () => {
         .mockResolvedValueOnce([]);
 
       mockClient.users.listGroups
-        .mockResolvedValueOnce([{ id: 'group-1', name: 'tenant-group' }])
+        .mockResolvedValueOnce([{ id: 'group-1', name: 'organisation-group' }])
         .mockResolvedValueOnce([]);
 
       mockDb.query
-        .mockResolvedValueOnce({ rows: [{ id: 'tenant-1' }] } as any)
+        .mockResolvedValueOnce({ rows: [{ id: 'organisation-1' }] } as any)
         .mockResolvedValueOnce({ rows: [] } as any);
 
       const result = await userService.getUsers();
@@ -343,6 +343,122 @@ describe('UserService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].username).toBe('user1');
       expect(result[1].username).toBe('user2');
+    });
+
+    it('should classify a platform operator as super-admin', async () => {
+      mockClient.users.find.mockResolvedValue([
+        { id: 'kc-admin', username: 'super', email: 'super@example.com', enabled: true },
+      ]);
+
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      mockClient.users.listRealmRoleMappings.mockResolvedValue([
+        { id: 'role-1', name: 'admin', composite: false },
+      ]);
+      // No organisation groups, and no organization_users row.
+      mockClient.users.listGroups.mockResolvedValue([]);
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await userService.getUsers();
+
+      expect(result[0].classifications).toEqual(['super-admin']);
+    });
+
+    it('should classify a user who administers one organisation and belongs to another', async () => {
+      mockClient.users.find.mockResolvedValue([
+        { id: 'kc-both', username: 'both', email: 'both@example.com', enabled: true },
+      ]);
+
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
+      mockClient.users.listGroups.mockResolvedValue([
+        { id: 'group-a', name: 'admins', path: '/pony-club/kildare-hunt/admins' },
+        { id: 'group-b', name: 'members', path: '/pony-club/laois-hunt/members' },
+      ]);
+
+      // One organisation lookup per group, then the organization_users read.
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [{ id: 'organisation-a' }] } as any)
+        .mockResolvedValueOnce({ rows: [{ id: 'organisation-b' }] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any);
+
+      const result = await userService.getUsers();
+
+      expect(result[0].classifications).toEqual(['org-admin', 'account']);
+      expect(result[0].organizations).toEqual(['organisation-a', 'organisation-b']);
+    });
+
+    it('should classify from organization_users when the Keycloak groups say nothing', async () => {
+      mockClient.users.find.mockResolvedValue([
+        { id: 'kc-drifted', username: 'drifted', email: 'drifted@example.com', enabled: true },
+      ]);
+
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
+      mockClient.users.listGroups.mockResolvedValue([]);
+      mockDb.query.mockResolvedValueOnce({
+        rows: [{ user_type: 'org-admin' }, { user_type: 'account-user' }],
+      } as any);
+
+      const result = await userService.getUsers();
+
+      expect(result[0].classifications).toEqual(['org-admin', 'account']);
+    });
+
+    it('should list all three classifications for a user who holds all three', async () => {
+      mockClient.users.find.mockResolvedValue([
+        { id: 'kc-all', username: 'all', email: 'all@example.com', enabled: true },
+      ]);
+
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      mockClient.users.listRealmRoleMappings.mockResolvedValue([
+        { id: 'role-1', name: 'admin', composite: false },
+      ]);
+      mockClient.users.listGroups.mockResolvedValue([]);
+      mockDb.query.mockResolvedValueOnce({
+        rows: [{ user_type: 'org-admin' }, { user_type: 'account-user' }],
+      } as any);
+
+      const result = await userService.getUsers();
+
+      expect(result[0].classifications).toEqual(['super-admin', 'org-admin', 'account']);
+    });
+
+    it('should resolve organisations for a user who has no users row', async () => {
+      // The usual case for the platform user list: the person exists in
+      // Keycloak and belongs to an organisation group, but `users` — the super
+      // admin's own registry — has no row for them.
+      const mockKcUser = {
+        id: 'kc-user-9',
+        username: 'group.member',
+        email: 'group.member@example.com',
+        firstName: 'Group',
+        lastName: 'Member',
+        enabled: true,
+        emailVerified: true,
+      };
+
+      mockClient.users.find.mockResolvedValue([mockKcUser]);
+
+      // No users row for them
+      mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+      mockClient.users.listRealmRoleMappings.mockResolvedValue([
+        { id: 'role-1', name: 'user', composite: false },
+      ]);
+      mockClient.users.listGroups.mockResolvedValue([
+        { id: 'group-9', name: 'members', path: '/pony-club/kildare-hunt/members' },
+      ]);
+      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'organisation-9' }] } as any);
+
+      const result = await userService.getUsers();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].organizations).toEqual(['organisation-9']);
+      expect(result[0].roles).toEqual(['user']);
     });
 
     it('should filter users by search term', async () => {
@@ -363,7 +479,7 @@ describe('UserService', () => {
         rows: [{
           id: 'db-user-1',
           keycloak_user_id: 'kc-user-1',
-          tenant_id: null,
+          organization_id: null,
           username: 'john.doe',
           email: 'john@example.com',
           preferences: {},
@@ -390,8 +506,8 @@ describe('UserService', () => {
       expect(mockClient.users.find).toHaveBeenCalledWith({ search: 'john' });
     });
 
-    it('should filter users by tenant', async () => {
-      const filters: UserFilters = { tenantId: 'tenant-123' };
+    it('should filter users by organisation', async () => {
+      const filters: UserFilters = { organizationId: 'organisation-123' };
       const mockGroupId = 'group-456';
 
       mockClient.users.find.mockResolvedValue([
@@ -399,7 +515,7 @@ describe('UserService', () => {
         { id: 'kc-user-2', username: 'user2', email: 'user2@example.com' },
       ]);
 
-      // Mock tenant lookup
+      // Mock organisation lookup
       mockDb.query.mockResolvedValueOnce({
         rows: [{ keycloak_group_id: mockGroupId }],
       } as any);
@@ -414,7 +530,7 @@ describe('UserService', () => {
         rows: [{
           id: 'db-user-1',
           keycloak_user_id: 'kc-user-1',
-          tenant_id: 'tenant-123',
+          organization_id: 'organisation-123',
           username: 'user1',
           email: 'user1@example.com',
           preferences: {},
@@ -433,7 +549,7 @@ describe('UserService', () => {
 
       mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
       mockClient.users.listGroups.mockResolvedValue([{ id: mockGroupId }]);
-      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'tenant-123' }] } as any);
+      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'organisation-123' }] } as any);
 
       const result = await userService.getUsers(filters);
 
@@ -447,7 +563,7 @@ describe('UserService', () => {
       const mockUser = {
         id: 'db-user-1',
         keycloak_user_id: 'kc-user-1',
-        tenant_id: 'tenant-1',
+        organization_id: 'organisation-1',
         username: 'testuser',
         email: 'test@example.com',
         preferences: {},
@@ -473,10 +589,10 @@ describe('UserService', () => {
       ]);
 
       mockClient.users.listGroups.mockResolvedValue([
-        { id: 'group-1', name: 'tenant-group' },
+        { id: 'group-1', name: 'organisation-group' },
       ]);
 
-      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'tenant-1' }] } as any);
+      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'organisation-1' }] } as any);
 
       const result = await userService.getUserById('db-user-1');
 
@@ -505,7 +621,7 @@ describe('UserService', () => {
     const mockExistingUser = {
       id: 'db-user-1',
       keycloak_user_id: 'kc-user-1',
-      tenant_id: 'tenant-1',
+      organization_id: 'organisation-1',
       username: 'testuser',
       email: 'old@example.com',
       preferences: {},
@@ -529,7 +645,7 @@ describe('UserService', () => {
 
       mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
       mockClient.users.listGroups.mockResolvedValue([{ id: 'group-1' }]);
-      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'tenant-1' }] } as any);
+      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'organisation-1' }] } as any);
     });
 
     it('should update user in both Keycloak and database', async () => {
@@ -557,7 +673,7 @@ describe('UserService', () => {
 
       mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
       mockClient.users.listGroups.mockResolvedValue([{ id: 'group-1' }]);
-      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'tenant-1' }] } as any);
+      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'organisation-1' }] } as any);
 
       await userService.updateUser('db-user-1', updates);
 
@@ -583,27 +699,37 @@ describe('UserService', () => {
       );
     });
 
-    it('should update tenant association', async () => {
+    it('should update organisation association', async () => {
       const updates: UpdateUserDto = {
-        tenantId: 'tenant-2',
+        organizationId: 'organisation-2',
       };
-
-      // Mock old tenant lookup
-      mockDb.query.mockResolvedValueOnce({
-        rows: [{ keycloak_group_id: 'old-group-id' }],
-      } as any);
-
-      // Mock new tenant lookup
-      mockDb.query.mockResolvedValueOnce({
-        rows: [{ keycloak_group_id: 'new-group-id' }],
-      } as any);
 
       const updatedUser = {
         ...mockExistingUser,
-        tenant_id: updates.tenantId,
+        organization_id: updates.organizationId,
       };
 
-      mockDb.query.mockResolvedValueOnce({ rows: [updatedUser] } as any);
+      /*
+       * Dispatched on the SQL rather than queued in order: updating a user
+       * reads the current user, resolves their organisations and their type,
+       * swaps the group and re-reads the row, and a strict call order breaks
+       * the moment any one of those steps issues another query.
+       */
+      mockDb.query.mockImplementation(async (sql: string, params?: any[]) => {
+        if (sql.includes('FROM users WHERE id')) return { rows: [mockExistingUser] } as any;
+        if (sql.includes('UPDATE users')) return { rows: [updatedUser] } as any;
+        if (sql.includes('FROM organizations o')) return { rows: [{ id: 'organisation-1' }] } as any;
+        if (sql.includes('FROM organization_users')) return { rows: [] } as any;
+        if (sql.includes('SELECT keycloak_group_id FROM organizations')) {
+          return {
+            rows: [{
+              keycloak_group_id:
+                params?.[0] === 'organisation-2' ? 'new-group-id' : 'old-group-id',
+            }],
+          } as any;
+        }
+        return { rows: [] } as any;
+      });
 
       mockClient.users.findOne.mockResolvedValue({
         id: 'kc-user-1',
@@ -614,7 +740,6 @@ describe('UserService', () => {
 
       mockClient.users.listRealmRoleMappings.mockResolvedValue([]);
       mockClient.users.listGroups.mockResolvedValue([{ id: 'new-group-id' }]);
-      mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'tenant-2' }] } as any);
 
       await userService.updateUser('db-user-1', updates);
 
@@ -637,7 +762,7 @@ describe('UserService', () => {
       const mockUser = {
         id: 'db-user-1',
         keycloak_user_id: 'kc-user-1',
-        tenant_id: null,
+        organization_id: null,
         username: 'testuser',
         email: 'test@example.com',
         preferences: {},
@@ -680,7 +805,7 @@ describe('UserService', () => {
       const mockUser = {
         id: 'db-user-1',
         keycloak_user_id: 'kc-user-1',
-        tenant_id: null,
+        organization_id: null,
         username: 'testuser',
         email: 'test@example.com',
         preferences: {},

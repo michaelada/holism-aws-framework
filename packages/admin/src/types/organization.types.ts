@@ -43,7 +43,7 @@ export interface Organization {
   contactName?: string;
   contactEmail?: string;
   contactMobile?: string;
-  status: 'active' | 'inactive' | 'blocked';
+  status: 'active' | 'inactive';
   currency: string;
   language: string;
   enabledCapabilities: string[];
@@ -65,7 +65,7 @@ export interface OrganizationUser {
   email: string;
   firstName: string;
   lastName: string;
-  status: 'active' | 'inactive' | 'blocked';
+  status: 'active' | 'inactive';
   roles?: string[]; // Array of role IDs
   lastLogin?: string;
   createdAt: string;
@@ -139,7 +139,7 @@ export interface UpdateOrganizationDto {
   contactName?: string;
   contactEmail?: string;
   contactMobile?: string;
-  status?: 'active' | 'inactive' | 'blocked';
+  status?: 'active' | 'inactive';
   currency?: string;
   language?: string;
   enabledCapabilities?: string[];
@@ -158,7 +158,7 @@ export interface CreateOrganizationAdminUserDto {
 export interface UpdateOrganizationUserDto {
   firstName?: string;
   lastName?: string;
-  status?: 'active' | 'inactive' | 'blocked';
+  status?: 'active' | 'inactive';
 }
 
 export interface CreateOrganizationAdminRoleDto {
@@ -202,6 +202,35 @@ export interface CardPaymentMethodDefault extends PaymentFeeRates {
   paymentMethodId: string;
   name: string;
   displayName: string;
+}
+
+/**
+ * The Stripe Connect application fee for one organisation and payment method.
+ *
+ * `applicationFeeFixed` / `applicationFeePercentage` are the values in force.
+ * The `typeDefault*` pair is the organisation type's current value, carried
+ * alongside so the UI can say whether this organisation has diverged from what
+ * it was created with. Both pairs are nullable, and null means "the platform
+ * takes the handling fee" — the arrangement before any of this was configurable.
+ */
+export interface OrganisationApplicationFee {
+  paymentMethodId: string;
+  paymentMethodName: string;
+  paymentMethodDisplayName: string;
+  applicationFeeFixed: number | null;
+  applicationFeePercentage: number | null;
+  typeDefaultFixed: number | null;
+  typeDefaultPercentage: number | null;
+  /** `type-fallback` means this organisation has no row of its own yet. */
+  source: 'organisation' | 'type-fallback';
+}
+
+export interface OrganisationApplicationFees {
+  organisationId: string;
+  organisationTypeId: string;
+  organisationTypeName: string;
+  currency: string;
+  fees: OrganisationApplicationFee[];
 }
 
 export interface UrlCodeAvailability {

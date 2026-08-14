@@ -16,7 +16,7 @@ export interface CreateUserDto {
   emailVerified?: boolean;
   phoneNumber?: string;
   department?: string;
-  tenantId?: string;
+  organizationId?: string;
   roles?: string[];
 }
 
@@ -27,17 +27,30 @@ export interface UpdateUserDto {
   enabled?: boolean;
   phoneNumber?: string;
   department?: string;
-  tenantId?: string;
+  organizationId?: string;
   roles?: string[];
 }
 
 export interface UserFilters {
   search?: string;
   email?: string;
-  tenantId?: string;
+  organizationId?: string;
   limit?: number;
   offset?: number;
 }
+
+/**
+ * What a person *is* on the platform, as opposed to the individual realm and
+ * organisation roles they hold.
+ *
+ * - `super-admin` — operates the platform console; the `admin` realm role.
+ * - `org-admin`   — administers one or more organisations.
+ * - `account`     — a member of one or more organisations.
+ *
+ * These are not mutually exclusive: the same person can administer one club
+ * and be a member of another.
+ */
+export type UserClassification = 'super-admin' | 'org-admin' | 'account';
 
 export interface User {
   id: string;
@@ -49,7 +62,9 @@ export interface User {
   enabled: boolean;
   emailVerified: boolean;
   roles: string[];
-  tenants: string[];
+  /** Broad categories derived from `roles` and organisation membership. */
+  classifications: UserClassification[];
+  organizations: string[];
   phoneNumber?: string;
   department?: string;
   createdAt: Date;
@@ -75,13 +90,20 @@ export interface Role {
  * 
  * Key Features:
  * - Creates user in Keycloak with profile and credentials
- * - Adds user to tenant group if specified
+ * - Adds user to the organisation's group if specified
  * - Assigns realm roles to user
- * - Filters users by tenant using group membership
+ * - Filters users by organisation using group membership
  * - Updates both Keycloak and database records
  * - Supports password reset with temporary flag
  */
 export class UserService {
+  /**
+   * Realm roles that make someone a platform operator. `admin` is the one
+   * `requireAdminRole()` enforces; `super-admin` also appears in the
+   * development auth bypass, so both are honoured here.
+   */
+  private static readonly SUPER_ADMIN_ROLES = ['admin', 'super-admin'];
+
   constructor(
     private kcAdmin: KeycloakAdminService,
     private database: typeof db = db
@@ -92,7 +114,7 @@ export class UserService {
    * 
    * Creates a user by:
    * 1. Creating the user in Keycloak with profile and credentials
-   * 2. Adding user to tenant group if specified
+   * 2. Adding user to the organisation's group if specified
    * 3. Assigning realm roles if specified
    * 4. Storing user record in PostgreSQL with Keycloak user ID reference
    * 
@@ -150,24 +172,23 @@ export class UserService {
         });
       }
 
-      // Add user to tenant group if specified
-      if (data.tenantId) {
-        logger.debug('Adding user to tenant group', { 
+      // Add user to the organisation's Keycloak group if one was specified.
+      if (data.organizationId) {
+        logger.debug('Adding user to organisation group', { 
           userId: keycloakUserId, 
-          tenantId: data.tenantId 
+          organizationId: data.organizationId 
         });
 
-        // Get tenant's Keycloak group ID
-        const tenantResult = await this.database.query(
-          'SELECT keycloak_group_id FROM tenants WHERE id = $1',
-          [data.tenantId]
+        const orgResult = await this.database.query(
+          'SELECT keycloak_group_id FROM organizations WHERE id = $1',
+          [data.organizationId]
         );
 
-        if (tenantResult.rows.length === 0) {
-          throw new Error(`Tenant not found: ${data.tenantId}`);
+        if (orgResult.rows.length === 0) {
+          throw new Error(`Organisation not found: ${data.organizationId}`);
         }
 
-        const keycloakGroupId = tenantResult.rows[0].keycloak_group_id;
+        const keycloakGroupId = orgResult.rows[0].keycloak_group_id;
         await client.users.addToGroup({
           id: keycloakUserId,
           groupId: keycloakGroupId,
@@ -193,10 +214,10 @@ export class UserService {
       });
 
       const dbResult = await this.database.query(
-        `INSERT INTO users (keycloak_user_id, tenant_id, username, email, preferences)
+        `INSERT INTO users (keycloak_user_id, organization_id, username, email, preferences)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, keycloak_user_id, tenant_id, username, email, preferences, last_login, created_at, updated_at`,
-        [keycloakUserId, data.tenantId || null, data.username, data.email, '{}']
+         RETURNING id, keycloak_user_id, organization_id, username, email, preferences, last_login, created_at, updated_at`,
+        [keycloakUserId, data.organizationId || null, data.username, data.email, '{}']
       );
 
       const user = await this.mapDbRowToUser(dbResult.rows[0]);
@@ -237,10 +258,10 @@ export class UserService {
    * 
    * Retrieves users from Keycloak and enriches them with:
    * - Local database information
-   * - Tenant associations
+   * - Organisation associations
    * - Role assignments
    * 
-   * @param filters - Optional filters for search, email, tenant, pagination
+   * @param filters - Optional filters for search, email, organisation, pagination
    * @returns Array of users with enriched data
    */
   async getUsers(filters?: UserFilters): Promise<User[]> {
@@ -264,21 +285,20 @@ export class UserService {
         });
       }
 
-      // Filter by tenant if specified
-      if (filters?.tenantId) {
-        logger.debug('Filtering users by tenant', { tenantId: filters.tenantId });
+      // Filter by organisation if specified
+      if (filters?.organizationId) {
+        logger.debug('Filtering users by organisation', { organizationId: filters.organizationId });
 
-        // Get tenant's Keycloak group ID
-        const tenantResult = await this.database.query(
-          'SELECT keycloak_group_id FROM tenants WHERE id = $1',
-          [filters.tenantId]
+        const orgResult = await this.database.query(
+          'SELECT keycloak_group_id FROM organizations WHERE id = $1',
+          [filters.organizationId]
         );
 
-        if (tenantResult.rows.length === 0) {
-          throw new Error(`Tenant not found: ${filters.tenantId}`);
+        if (orgResult.rows.length === 0) {
+          throw new Error(`Organisation not found: ${filters.organizationId}`);
         }
 
-        const keycloakGroupId = tenantResult.rows[0].keycloak_group_id;
+        const keycloakGroupId = orgResult.rows[0].keycloak_group_id;
 
         // Get group members
         const groupMembers = await client.groups.listMembers({ id: keycloakGroupId });
@@ -296,7 +316,7 @@ export class UserService {
 
         try {
           const dbResult = await this.database.query(
-            'SELECT id, keycloak_user_id, tenant_id, username, email, preferences, last_login, created_at, updated_at FROM users WHERE keycloak_user_id = $1',
+            'SELECT id, keycloak_user_id, organization_id, username, email, preferences, last_login, created_at, updated_at FROM users WHERE keycloak_user_id = $1',
             [kcUser.id]
           );
 
@@ -305,7 +325,21 @@ export class UserService {
           if (dbResult.rows.length > 0) {
             user = await this.mapDbRowToUser(dbResult.rows[0]);
           } else {
-            // User exists in Keycloak but not in database - create minimal user object
+            /*
+             * In Keycloak but not in `users`. That is the norm, not an edge
+             * case: `users` is the super admin's own registry, while everyone
+             * who actually belongs to an organisation lives in Keycloak groups
+             * and `organization_users`. Roles and organisations are therefore
+             * resolved from Keycloak here too — returning empty arrays would
+             * show every one of these people as belonging to nothing.
+             */
+            const [roles, membership] = await Promise.all([
+              this.getUserRoles(kcUser.id),
+              this.resolveMembership(kcUser.id),
+            ]);
+
+            const roleNames = roles.map(r => r.name);
+
             user = {
               id: '',
               keycloakUserId: kcUser.id,
@@ -315,8 +349,9 @@ export class UserService {
               lastName: kcUser.lastName || '',
               enabled: kcUser.enabled ?? true,
               emailVerified: kcUser.emailVerified ?? false,
-              roles: [],
-              tenants: [],
+              roles: roleNames,
+              classifications: this.classifyUser(roleNames, membership.classifications),
+              organizations: membership.organizationIds,
               phoneNumber: kcUser.attributes?.phoneNumber?.[0],
               department: kcUser.attributes?.department?.[0],
               createdAt: new Date(kcUser.createdTimestamp || Date.now()),
@@ -346,7 +381,7 @@ export class UserService {
    * Get user by ID
    * 
    * Retrieves a specific user by database ID and enriches with
-   * Keycloak data, roles, and tenant associations.
+   * Keycloak data, roles, and organisation associations.
    * 
    * @param id - Database ID of the user
    * @returns User with enriched data
@@ -357,7 +392,7 @@ export class UserService {
       logger.debug('Fetching user by ID', { id });
 
       const dbResult = await this.database.query(
-        'SELECT id, keycloak_user_id, tenant_id, username, email, preferences, last_login, created_at, updated_at FROM users WHERE id = $1',
+        'SELECT id, keycloak_user_id, organization_id, username, email, preferences, last_login, created_at, updated_at FROM users WHERE id = $1',
         [id]
       );
 
@@ -383,7 +418,7 @@ export class UserService {
    * 
    * Updates user in both Keycloak and database:
    * 1. Updates Keycloak user profile
-   * 2. Updates tenant association if changed
+   * 2. Updates organisation association if changed
    * 3. Updates role assignments if changed
    * 4. Updates database record
    * 
@@ -424,22 +459,22 @@ export class UserService {
 
       logger.info('Keycloak user updated', { userId: currentUser.keycloakUserId });
 
-      // Update tenant association if changed
-      if (updates.tenantId !== undefined) {
-        logger.debug('Updating user tenant association', { 
+      // Update organisation association if changed
+      if (updates.organizationId !== undefined) {
+        logger.debug('Updating user organisation association', { 
           userId: currentUser.keycloakUserId,
-          newTenantId: updates.tenantId 
+          newOrganizationId: updates.organizationId 
         });
 
-        // Remove from old tenant group if exists
-        if (currentUser.tenants.length > 0) {
-          const oldTenantResult = await this.database.query(
-            'SELECT keycloak_group_id FROM tenants WHERE id = $1',
-            [currentUser.tenants[0]]
+        // Remove from the previous organisation's group, if any.
+        if (currentUser.organizations.length > 0) {
+          const oldOrgResult = await this.database.query(
+            'SELECT keycloak_group_id FROM organizations WHERE id = $1',
+            [currentUser.organizations[0]]
           );
 
-          if (oldTenantResult.rows.length > 0) {
-            const oldGroupId = oldTenantResult.rows[0].keycloak_group_id;
+          if (oldOrgResult.rows.length > 0) {
+            const oldGroupId = oldOrgResult.rows[0].keycloak_group_id;
             await client.users.delFromGroup({
               id: currentUser.keycloakUserId,
               groupId: oldGroupId,
@@ -447,18 +482,18 @@ export class UserService {
           }
         }
 
-        // Add to new tenant group if specified
-        if (updates.tenantId) {
-          const newTenantResult = await this.database.query(
-            'SELECT keycloak_group_id FROM tenants WHERE id = $1',
-            [updates.tenantId]
+        // Add to the new organisation's group, if one was given.
+        if (updates.organizationId) {
+          const newOrgResult = await this.database.query(
+            'SELECT keycloak_group_id FROM organizations WHERE id = $1',
+            [updates.organizationId]
           );
 
-          if (newTenantResult.rows.length === 0) {
-            throw new Error(`Tenant not found: ${updates.tenantId}`);
+          if (newOrgResult.rows.length === 0) {
+            throw new Error(`Organisation not found: ${updates.organizationId}`);
           }
 
-          const newGroupId = newTenantResult.rows[0].keycloak_group_id;
+          const newGroupId = newOrgResult.rows[0].keycloak_group_id;
           await client.users.addToGroup({
             id: currentUser.keycloakUserId,
             groupId: newGroupId,
@@ -504,9 +539,9 @@ export class UserService {
         updateFields.push(`email = $${paramIndex++}`);
         updateValues.push(updates.email);
       }
-      if (updates.tenantId !== undefined) {
-        updateFields.push(`tenant_id = $${paramIndex++}`);
-        updateValues.push(updates.tenantId);
+      if (updates.organizationId !== undefined) {
+        updateFields.push(`organization_id = $${paramIndex++}`);
+        updateValues.push(updates.organizationId);
       }
 
       updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
@@ -516,7 +551,7 @@ export class UserService {
         `UPDATE users
          SET ${updateFields.join(', ')}
          WHERE id = $${paramIndex}
-         RETURNING id, keycloak_user_id, tenant_id, username, email, preferences, last_login, created_at, updated_at`,
+         RETURNING id, keycloak_user_id, organization_id, username, email, preferences, last_login, created_at, updated_at`,
         updateValues
       );
 
@@ -753,6 +788,92 @@ export class UserService {
    * @param row - Database row
    * @returns User object with enriched data
    */
+  /**
+   * Which organisations a user belongs to, resolved from their Keycloak groups.
+   *
+   * An organisation's group tree is `<org-type>/<org>/{admins,members}`, so a
+   * member's group is a *child* of the organisation's. Matching on the
+   * organisation's own group id alone would therefore find nothing for anyone
+   * actually placed in `admins` or `members`; the parent path is checked too.
+   *
+   * Keyed on the Keycloak user id rather than a `users` row, because the
+   * platform user list is drawn from Keycloak and most of those people have no
+   * `users` row at all — `users` is the super admin's own registry, not the
+   * record of who belongs where.
+   */
+  private async resolveMembership(keycloakUserId: string): Promise<{
+    organizationIds: string[];
+    classifications: UserClassification[];
+  }> {
+    await this.kcAdmin.ensureAuthenticated();
+    const client = this.kcAdmin.getClient();
+
+    const groups = await client.users.listGroups({ id: keycloakUserId });
+    const organizationIds: string[] = [];
+    const classifications = new Set<UserClassification>();
+
+    for (const group of groups) {
+      if (!group.id) continue;
+
+      const orgResult = await this.database.query(
+        `SELECT o.id
+         FROM organizations o
+         WHERE o.keycloak_group_id = $1
+            OR ($2::text IS NOT NULL AND $2::text LIKE '/' || (
+                 SELECT t.name FROM organization_types t WHERE t.id = o.organization_type_id
+               ) || '/' || o.name || '/%')`,
+        [group.id, group.path ?? null]
+      );
+
+      for (const orgRow of orgResult.rows) {
+        if (!organizationIds.includes(orgRow.id)) organizationIds.push(orgRow.id);
+      }
+
+      // The leaf of the group path says which side of the organisation they
+      // are on: `<org-type>/<org>/admins` administers it, `.../members` belongs
+      // to it.
+      if (orgResult.rows.length > 0) {
+        if (group.path?.endsWith('/admins')) classifications.add('org-admin');
+        if (group.path?.endsWith('/members')) classifications.add('account');
+      }
+    }
+
+    /*
+     * `organization_users` is the record of who belongs where, so it is the
+     * authority; the group paths above only corroborate it. Read second so a
+     * person whose Keycloak groups have drifted is still classified correctly.
+     */
+    const userTypes = await this.database.query(
+      'SELECT DISTINCT user_type FROM organization_users WHERE keycloak_user_id = $1',
+      [keycloakUserId]
+    );
+
+    for (const row of userTypes.rows) {
+      if (row.user_type === 'org-admin') classifications.add('org-admin');
+      if (row.user_type === 'account-user') classifications.add('account');
+    }
+
+    return { organizationIds, classifications: Array.from(classifications) };
+  }
+
+  /**
+   * Broad categories for a user, in a stable order: platform first, then
+   * organisation administration, then membership.
+   */
+  private classifyUser(
+    roleNames: string[],
+    membershipClassifications: UserClassification[]
+  ): UserClassification[] {
+    const classifications = new Set<UserClassification>(membershipClassifications);
+
+    if (roleNames.some(role => UserService.SUPER_ADMIN_ROLES.includes(role))) {
+      classifications.add('super-admin');
+    }
+
+    const order: UserClassification[] = ['super-admin', 'org-admin', 'account'];
+    return order.filter(c => classifications.has(c));
+  }
+
   private async mapDbRowToUser(row: any): Promise<User> {
     await this.kcAdmin.ensureAuthenticated();
     const client = this.kcAdmin.getClient();
@@ -767,23 +888,8 @@ export class UserService {
     // Get user roles
     const roles = await this.getUserRoles(row.keycloak_user_id);
 
-    // Get user groups (tenants)
-    const groups = await client.users.listGroups({ id: row.keycloak_user_id });
-    const tenantIds: string[] = [];
-
-    for (const group of groups) {
-      if (group.id) {
-        // Find tenant by Keycloak group ID
-        const tenantResult = await this.database.query(
-          'SELECT id FROM tenants WHERE keycloak_group_id = $1',
-          [group.id]
-        );
-
-        if (tenantResult.rows.length > 0) {
-          tenantIds.push(tenantResult.rows[0].id);
-        }
-      }
-    }
+    const membership = await this.resolveMembership(row.keycloak_user_id);
+    const roleNames = roles.map(r => r.name);
 
     return {
       id: row.id,
@@ -794,8 +900,9 @@ export class UserService {
       lastName: kcUser.lastName || '',
       enabled: kcUser.enabled ?? true,
       emailVerified: kcUser.emailVerified ?? false,
-      roles: roles.map(r => r.name),
-      tenants: tenantIds,
+      roles: roleNames,
+      classifications: this.classifyUser(roleNames, membership.classifications),
+      organizations: membership.organizationIds,
       phoneNumber: kcUser.attributes?.phoneNumber?.[0],
       department: kcUser.attributes?.department?.[0],
       createdAt: row.created_at,

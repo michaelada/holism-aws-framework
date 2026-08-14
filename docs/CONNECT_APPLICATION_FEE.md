@@ -61,7 +61,11 @@ applicationFee = applicationFeeFixed + applicationFeePercentage% × cardSubtotal
 
 ## 4. Where it is set
 
-Super admin → organisation type → payment fees (`PaymentFeeEditor`, screen J1). The two fields sit
+Super admin → organisation type → payment fees (`PaymentFeeEditor`, screen J1) sets the **default
+that new organisations of the type start with**. Each organisation then carries its own value,
+edited at super admin → organisation → Platform share (`ApplicationFeeEditor`, screen K2). Editing
+the type does not reach organisations that already exist — see
+[ORGANISATION_APPLICATION_FEE.md](ORGANISATION_APPLICATION_FEE.md) §1.3. The two fields sit
 in their own block, visually apart from the three handling-fee fields, with a worked example that
 says either:
 
@@ -89,8 +93,10 @@ misconfiguration goes unnoticed.
 
 ## 6. Not done
 
-- **No per-organisation override.** The fee is inherited from the organisation type, like the
-  handling fee — G5's model, unchanged.
+- ~~**No per-organisation override.**~~ **Superseded.** The application fee is now configurable per
+  organisation, copied from the type when the organisation is created — see
+  [ORGANISATION_APPLICATION_FEE.md](ORGANISATION_APPLICATION_FEE.md). The handling fee remains
+  type-level only, as G5 describes; only the application fee moved.
 - **Nothing is backfilled.** Every existing type reads as unconfigured, which preserves today's
   behaviour but means the new fields are blank until someone fills them in.
 - **Not exercised against real Stripe.** The value reaches `application_fee_amount` on the

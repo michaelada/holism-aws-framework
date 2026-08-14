@@ -1,0 +1,19 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e4]:
+    - img "ItsPlainSailing" [ref=f1e6]
+    - heading "ItsPlainSailing" [level=1] [ref=f1e7]
+  - generic [ref=f1e9]:
+    - heading "Super Administrator Login" [level=2] [ref=f1e10]
+    - paragraph [ref=f1e11]: System administrators only. Please enter your credentials to access the Super Admin Portal.
+    - generic [ref=f1e13]:
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]: Email
+        - textbox "Email" [active] [ref=f1e16]
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: Password
+        - textbox "Password" [ref=f1e19]
+      - button "Sign In" [ref=f1e22] [cursor=pointer]
+    - generic [ref=f1e27]:
+      - text: New user?
+      - link "Create Account" [ref=f1e28] [cursor=pointer]:
+        - /url: /realms/aws-framework/login-actions/registration?client_id=aws-framework-admin&tab_id=MBkkp2HRzFk

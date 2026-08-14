@@ -27,11 +27,17 @@ export interface MerchandiseType {
   applicationFormId?: string;
   supportedPaymentMethods: string[];
   handlingFeeIncluded: boolean;
+  /**
+   * Discounts a club has attached to this product.
+   *
+   * The same shape every other sellable thing carries — events, activities,
+   * membership types, calendars — so the front ends read it the same way.
+   */
+  discountIds: string[];
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
-  discountIds?: string[];
   optionTypes?: {
     id: string;
     name: string;
@@ -101,11 +107,11 @@ export interface CreateMerchandiseTypeDto {
   applicationFormId?: string;
   supportedPaymentMethods: string[];
   handlingFeeIncluded?: boolean;
+  discountIds?: string[];
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
-  discountIds?: string[];
 }
 
 /**
@@ -128,11 +134,11 @@ export interface UpdateMerchandiseTypeDto {
   applicationFormId?: string;
   supportedPaymentMethods?: string[];
   handlingFeeIncluded?: boolean;
+  discountIds?: string[];
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   adminNotificationEmails?: string;
   customConfirmationMessage?: string;
-  discountIds?: string[];
 }
 
 /**
@@ -217,11 +223,11 @@ export class MerchandiseService {
       applicationFormId: row.application_form_id,
       supportedPaymentMethods: parseJsonField(row.supported_payment_methods),
       handlingFeeIncluded: row.handling_fee_included || false,
+      discountIds: row.discount_ids || [],
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
       adminNotificationEmails: row.admin_notification_emails,
       customConfirmationMessage: row.custom_confirmation_message,
-      discountIds: [],
       optionTypes: optionTypes || [],
       deliveryRules: deliveryRules || [],
       createdAt: row.created_at,
@@ -486,8 +492,8 @@ export class MerchandiseService {
           min_order_quantity, max_order_quantity, quantity_increments,
           require_application_form, application_form_id, supported_payment_methods,
           use_terms_and_conditions, terms_and_conditions, admin_notification_emails,
-          custom_confirmation_message, handling_fee_included)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+          custom_confirmation_message, handling_fee_included, discount_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
          RETURNING *`,
         [
           data.organisationId,
@@ -511,6 +517,7 @@ export class MerchandiseService {
           data.adminNotificationEmails || null,
           data.customConfirmationMessage || null,
           data.handlingFeeIncluded ?? false,
+          JSON.stringify(data.discountIds || []),
         ]
       );
 
@@ -671,6 +678,10 @@ export class MerchandiseService {
       if (data.handlingFeeIncluded !== undefined) {
         updates.push(`handling_fee_included = $${paramCount++}`);
         values.push(data.handlingFeeIncluded);
+      }
+      if (data.discountIds !== undefined) {
+        updates.push(`discount_ids = $${paramCount++}`);
+        values.push(JSON.stringify(data.discountIds || []));
       }
       values.push(id);
 

@@ -256,8 +256,19 @@ router.post(
         // The address comes from the verified token, never from the body — a
         // caller must not be able to register under someone else's email.
         email: req.user!.email,
-        firstName,
-        lastName,
+        /*
+         * The name comes from the token for the same reason, and the body is
+         * only a fallback for a realm that does not release the `profile`
+         * scope.
+         *
+         * This screen sends no body at all: connecting to another club is a
+         * single button, because the platform already knows who is pressing it.
+         * Reading the name from the body alone meant every such request arrived
+         * nameless and was rejected as invalid — the member was told the club
+         * could not be joined, when nothing about the club was the problem.
+         */
+        firstName: req.user!.firstName || firstName,
+        lastName: req.user!.lastName || lastName,
         phone,
       });
 

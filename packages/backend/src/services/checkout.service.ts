@@ -544,22 +544,54 @@ export class CheckoutService {
    * payload.
    */
   /**
-   * The platform's configured cut for this organisation's type.
+   * The platform's configured cut for this organisation.
+   *
+   * Resolution order:
+   *
+   *   1. the **organisation's** own row for the card method;
+   *   2. failing that, its **type's** row;
+   *   3. failing that, null — which `calculateApplicationFee` reads as "take
+   *      the handling fee", the arrangement in force before any of this was
+   *      configurable.
+   *
+   * Step 2 is a fallback, not live inheritance. Every organisation is given a
+   * copy of its type's value when it is created, and the migration backfilled
+   * the ones that already existed, so it is only reached when a payment method
+   * is added to a type after organisations exist. Falling back to the type
+   * there beats the alternative, which is an organisation silently reverting to
+   * "take the whole handling fee" because a row happened not to exist.
    *
    * Card payments are the only ones that reach a provider, so the card method's
-   * rates are what matter. Returns null when nothing is configured, which
-   * `calculateApplicationFee` reads as "take the handling fee" — the
-   * arrangement in force before this was configurable.
+   * rates are what matter.
    */
   private async applicationFeeConfig(
     organisationId: string
   ): Promise<ApplicationFeeConfig | null> {
+    /*
+     * Driven from `payment_methods` rather than from either fee table, so the
+     * row is found whether the value lives at organisation level, type level or
+     * both. A CASE on `oaf.id` rather than COALESCE on the values, because
+     * COALESCE cannot tell "the organisation set this to unconfigured" from
+     * "the organisation has no row": both look like NULL, and they mean
+     * opposite things. When the organisation has a row its values are
+     * authoritative even when both are NULL, which is how a club opts back into
+     * "take the handling fee" while its type has a split configured.
+     */
     const result = await db.query(
-      `SELECT f.application_fee_fixed, f.application_fee_percentage
-       FROM organization_type_payment_fees f
-       JOIN organizations o ON o.organization_type_id = f.organization_type_id
-       JOIN payment_methods pm ON pm.id = f.payment_method_id
-       WHERE o.id = $1 AND pm.name IN ('card', 'stripe')
+      `SELECT CASE WHEN oaf.id IS NOT NULL
+                   THEN oaf.application_fee_fixed
+                   ELSE tf.application_fee_fixed END        AS application_fee_fixed,
+              CASE WHEN oaf.id IS NOT NULL
+                   THEN oaf.application_fee_percentage
+                   ELSE tf.application_fee_percentage END   AS application_fee_percentage
+       FROM organizations o
+       JOIN payment_methods pm ON pm.name IN ('card', 'stripe')
+       LEFT JOIN organization_payment_application_fees oaf
+         ON oaf.organization_id = o.id AND oaf.payment_method_id = pm.id
+       LEFT JOIN organization_type_payment_fees tf
+         ON tf.organization_type_id = o.organization_type_id
+        AND tf.payment_method_id = pm.id
+       WHERE o.id = $1 AND (oaf.id IS NOT NULL OR tf.id IS NOT NULL)
        ORDER BY CASE pm.name WHEN 'stripe' THEN 0 ELSE 1 END
        LIMIT 1`,
       [organisationId]
@@ -608,11 +640,28 @@ export class CheckoutService {
    * completed order.
    */
   private async feeConfigSnapshot(organisationId: string): Promise<Record<string, unknown>> {
+    /*
+     * The handling fee still comes from the type — it is configured there and
+     * nowhere else. The application fee is resolved organisation-first, and the
+     * snapshot records **which level supplied it** as well as the value, so a
+     * payment can be explained months later without re-deriving the resolution
+     * from a schema that may have moved on.
+     */
     const result = await db.query(
       `SELECT f.payment_method_id, f.fixed_fee, f.percentage_fee, f.tax_percentage,
-              f.application_fee_fixed, f.application_fee_percentage
+              CASE WHEN oaf.id IS NOT NULL
+                   THEN oaf.application_fee_fixed
+                   ELSE f.application_fee_fixed END        AS application_fee_fixed,
+              CASE WHEN oaf.id IS NOT NULL
+                   THEN oaf.application_fee_percentage
+                   ELSE f.application_fee_percentage END   AS application_fee_percentage,
+              f.application_fee_fixed                      AS type_application_fee_fixed,
+              f.application_fee_percentage                 AS type_application_fee_percentage,
+              (oaf.id IS NOT NULL)                         AS application_fee_from_organisation
        FROM organization_type_payment_fees f
        JOIN organizations o ON o.organization_type_id = f.organization_type_id
+       LEFT JOIN organization_payment_application_fees oaf
+         ON oaf.organization_id = o.id AND oaf.payment_method_id = f.payment_method_id
        WHERE o.id = $1`,
       [organisationId]
     );
@@ -626,6 +675,9 @@ export class CheckoutService {
         taxPercentage: row.tax_percentage,
         applicationFeeFixed: row.application_fee_fixed,
         applicationFeePercentage: row.application_fee_percentage,
+        applicationFeeSource: row.application_fee_from_organisation ? 'organisation' : 'type',
+        typeApplicationFeeFixed: row.type_application_fee_fixed,
+        typeApplicationFeePercentage: row.type_application_fee_percentage,
       })),
     };
   }

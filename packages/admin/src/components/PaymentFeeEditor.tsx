@@ -121,6 +121,23 @@ const format = (value: number, currency: string): string =>
 /** Keeps a cleared field empty rather than snapping it to 0 while typing. */
 const parseRate = (raw: string): number | '' => (raw === '' ? '' : Number(raw));
 
+const isBlank = (value: unknown): boolean =>
+  value === '' || value === null || value === undefined || Number.isNaN(value);
+
+/**
+ * True when any handling-fee field has been left empty.
+ *
+ * Callers must block submission on this. The three handling-fee fields are
+ * required and the save path coerces them with `Number(x) || 0` — so clearing a
+ * field intending to retype it, then saving, used to write a **zero fee** for
+ * every organisation of the type with no warning at all. Emptiness is a
+ * half-finished edit, never an instruction to charge nothing.
+ */
+export const hasIncompleteRates = (methods: PaymentFeeEditorMethod[]): boolean =>
+  methods.some(
+    (m) => isBlank(m.fixedFee) || isBlank(m.percentageFee) || isBlank(m.taxPercentage)
+  );
+
 export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
   methods,
   currency,
@@ -144,6 +161,16 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
     );
   };
 
+  /**
+   * Restores every rate on the method, including the platform share.
+   *
+   * This used to reset only the three handling-fee fields and leave
+   * `applicationFeeFixed` / `applicationFeePercentage` untouched — so an
+   * operator who mistyped the platform's revenue split, then clicked "Reset to
+   * default" expecting a clean slate, silently kept the mistake. There is no
+   * platform default for the application fee, and its unset state is meaningful
+   * ("the platform keeps the handling fee"), so resetting returns it to unset.
+   */
   const resetToDefault = (paymentMethodId: string) => {
     const fallback = defaults?.find((d) => d.paymentMethodId === paymentMethodId);
     if (!fallback) return;
@@ -155,6 +182,8 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
               fixedFee: fallback.fixedFee,
               percentageFee: fallback.percentageFee,
               taxPercentage: fallback.taxPercentage,
+              applicationFeeFixed: null,
+              applicationFeePercentage: null,
             }
           : m
       )
@@ -228,7 +257,12 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                         </InputAdornment>
                       ),
                     }}
-                    helperText="Charged once per card payment"
+                    error={isBlank(method.fixedFee)}
+                    helperText={
+                      isBlank(method.fixedFee)
+                        ? 'Required — enter 0 for no fixed fee'
+                        : 'Charged once per card payment'
+                    }
                     sx={{ width: 200 }}
                   />
 
@@ -244,7 +278,12 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                     InputProps={{
                       endAdornment: <InputAdornment position="end">%</InputAdornment>,
                     }}
-                    helperText="Of the amount charged to the card"
+                    error={isBlank(method.percentageFee)}
+                    helperText={
+                      isBlank(method.percentageFee)
+                        ? 'Required — enter 0 for no percentage fee'
+                        : 'Of the amount charged to the card'
+                    }
                     sx={{ width: 200 }}
                   />
 
@@ -260,7 +299,12 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                     InputProps={{
                       endAdornment: <InputAdornment position="end">%</InputAdornment>,
                     }}
-                    helperText="0 = no tax added"
+                    error={isBlank(method.taxPercentage)}
+                    helperText={
+                      isBlank(method.taxPercentage)
+                        ? 'Required — enter 0 for no tax'
+                        : '0 = no tax added'
+                    }
                     sx={{ width: 200 }}
                   />
                 </Box>
@@ -280,6 +324,28 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                     member pays. Leave both blank to keep the handling fee above.
                   </Typography>
 
+                  {/*
+                    The handling fee above is inherited live: change it and all
+                    N organisations charge the new rate on their next payment.
+                    The platform share is not — it is copied to an organisation
+                    when the organisation is created, and editing it here never
+                    reaches an organisation that already exists. Two different
+                    inheritance rules a few pixels apart is exactly the kind of
+                    thing an operator would otherwise have to learn the hard
+                    way, so it is stated rather than implied.
+                  */}
+                  {organisationCount !== undefined && organisationCount > 0 && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      This is the default that <strong>new</strong> organisations of this type
+                      start with. Changing it does not affect the{' '}
+                      <strong>
+                        {organisationCount} organisation{organisationCount === 1 ? '' : 's'}
+                      </strong>{' '}
+                      that already exist — each carries its own platform share, editable on the
+                      organisation itself.
+                    </Alert>
+                  )}
+
                   <Box display="flex" gap={2} flexWrap="wrap" mt={1}>
                     <TextField
                       label="Application fee (fixed)"
@@ -293,8 +359,18 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                         )
                       }
                       disabled={disabled}
-                      InputProps={{ startAdornment: currencySymbol(currency) }}
-                      inputProps={{ min: 0, step: '0.01' }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            {currencySymbol(currency)}
+                          </InputAdornment>
+                        ),
+                      }}
+                      inputProps={{
+                        min: 0,
+                        step: '0.01',
+                        'aria-label': `${method.displayName} application fee, fixed amount`,
+                      }}
                       sx={{ width: 200 }}
                     />
                     <TextField
@@ -309,8 +385,15 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                         )
                       }
                       disabled={disabled}
-                      InputProps={{ endAdornment: '%' }}
-                      inputProps={{ min: 0, max: 100, step: '0.01' }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                      }}
+                      inputProps={{
+                        min: 0,
+                        max: 100,
+                        step: '0.01',
+                        'aria-label': `${method.displayName} application fee, percentage`,
+                      }}
                       sx={{ width: 200 }}
                     />
                   </Box>
@@ -361,7 +444,7 @@ export const PaymentFeeEditor: React.FC<PaymentFeeEditorProps> = ({
                       onClick={() => resetToDefault(method.paymentMethodId)}
                       disabled={disabled}
                     >
-                      Reset to default
+                      Reset all {method.displayName} rates
                     </Button>
                   )}
                 </Box>

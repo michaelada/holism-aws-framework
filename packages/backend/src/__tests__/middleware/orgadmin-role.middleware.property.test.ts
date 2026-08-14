@@ -45,6 +45,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
         username: 'testuser',
         roles: [],
         groups: [],
+        firstName: '',
+        lastName: '',
       },
     };
 
@@ -81,6 +83,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to return admin role
@@ -128,6 +132,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to return non-admin role
@@ -181,6 +187,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to return no roles
@@ -272,6 +280,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to return admin role plus other roles
@@ -320,6 +330,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to return user's role
@@ -367,6 +379,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to throw error
@@ -415,6 +429,8 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
             username: email.split('@')[0],
             roles: [],
             groups: [],
+            firstName: '',
+            lastName: '',
           };
 
           // Mock database to return role with different case

@@ -95,7 +95,6 @@ Expected behavior:
 
 ```bash
 # These should return 401/403 without authentication
-curl -i http://localhost/api/admin/tenants
 curl -i http://localhost/api/admin/users
 curl -i http://localhost/api/admin/roles
 
@@ -180,8 +179,8 @@ export KEYCLOAK_URL="${BASE_URL}/auth"
    ```bash
    # Using Terraform
    cd terraform/environments/production
-   terraform plan
-   terraform apply
+   tofu plan
+   tofu apply
    ```
 
 2. **Run Verification Script**
@@ -192,7 +191,7 @@ export KEYCLOAK_URL="${BASE_URL}/auth"
 
 3. **Smoke Tests**
    - Login to admin frontend
-   - Create a test tenant
+   - Create a test organisation
    - Create a test user
    - Assign a role to the user
    - Delete test data
@@ -215,36 +214,37 @@ export KEYCLOAK_URL="${BASE_URL}/auth"
 
 ### Complete User Flow Testing
 
-#### Tenant Management Flow
+#### Organisation Management Flow
 
 1. **Login to Admin Frontend**
    - Navigate to `${BASE_URL}/admin`
    - Login with admin credentials
    - Verify redirect to admin dashboard
 
-2. **Create Tenant**
-   - Click "Tenants" in navigation
-   - Click "Create Tenant"
+2. **Create Organisation**
+   - Click "Organisations" in navigation
+   - Click "Create Organisation"
    - Fill in:
-     - Name: `test-tenant-${timestamp}`
-     - Display Name: `Test Tenant`
-     - Domain: `test.example.com`
+     - Organisation Type: select an existing type
+     - Name: `test-organisation-${timestamp}`
+     - Display Name: `Test Organisation`
+     - URL Code: `test-organisation-${timestamp}`
    - Click "Create"
    - Verify success message
-   - Verify tenant appears in list
+   - Verify organisation appears in list
 
-3. **Update Tenant**
-   - Click "Edit" on the test tenant
-   - Update Display Name to `Updated Test Tenant`
+3. **Update Organisation**
+   - Click "Edit" on the test organisation
+   - Update Display Name to `Updated Test Organisation`
    - Click "Save"
    - Verify success message
    - Verify changes reflected in list
 
-4. **Delete Tenant**
-   - Click "Delete" on the test tenant
+4. **Delete Organisation**
+   - Click "Delete" on the test organisation
    - Confirm deletion
    - Verify success message
-   - Verify tenant removed from list
+   - Verify organisation removed from list
 
 #### User Management Flow
 
@@ -258,7 +258,7 @@ export KEYCLOAK_URL="${BASE_URL}/auth"
      - Last Name: `User`
      - Password: `TestPassword123!`
      - Temporary Password: checked
-     - Tenant: Select a tenant
+     - Organisation: Select an organisation
    - Click "Create"
    - Verify success message
    - Verify user appears in list
@@ -349,7 +349,7 @@ export KEYCLOAK_URL="${BASE_URL}/auth"
    ```
 
 2. **Verify Log Entries**
-   - Check tenant creation logged
+   - Check organisation creation logged
    - Check user creation logged
    - Check role assignment logged
    - Check password reset logged
@@ -404,7 +404,7 @@ export KEYCLOAK_URL="${BASE_URL}/auth"
 
 3. Verify admin routes are registered:
    ```bash
-   curl http://localhost:3000/api/admin/tenants
+   curl http://localhost:3000/api/admin/users
    # Should return 401/403, not 404
    ```
 
@@ -500,7 +500,7 @@ Deployment is considered successful when:
 - ✅ Admin frontend is accessible at `/admin`
 - ✅ Admin API endpoints are accessible (return 401/403 without auth)
 - ✅ Keycloak integration works (login/logout)
-- ✅ Complete user flows work (tenant, user, role management)
+- ✅ Complete user flows work (organisation, user, role management)
 - ✅ Authentication and authorization work correctly
 - ✅ Audit logging is functioning
 - ✅ No errors in application logs

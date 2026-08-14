@@ -1,12 +1,12 @@
 # AWS Configuration
 aws_region   = "eu-west-1"
-project_name = "aws-web-framework"
+project_name = "its-plain-sailing"
 
 # Network Configuration
 vpc_cidr = "10.1.0.0/16"
 
 # Database Configuration
-database_name        = "appdb"
+database_name        = "ipsdb"
 db_master_username   = "dbadmin"
 db_instance_class    = "db.r5.large"
 db_allocated_storage = 200

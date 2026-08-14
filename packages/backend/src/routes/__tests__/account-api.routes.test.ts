@@ -35,7 +35,16 @@ jest.mock('../../middleware/auth.middleware', () => ({
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    req.user = { userId, email: 'm@example.com', username: 'm', roles: [], groups: [] };
+    req.user = {
+      userId,
+      email: 'm@example.com',
+      username: 'm',
+      roles: [],
+      groups: [],
+      // The claims a real Keycloak token carries with the `profile` scope.
+      firstName: 'Darragh',
+      lastName: "O'Toole",
+    };
     return next();
   },
 }));
@@ -137,7 +146,7 @@ describe('GET /api/public/organisations/:code', () => {
       urlCode: 'khpc',
       displayName: 'Kildare Hunt Pony Club',
       organisationType: 'Pony Club',
-      branding: { logoUrl: '', primaryColor: '#1976d2' },
+      branding: { logoUrl: '', primaryColor: '#1976d2', bookingsLabel: '' },
       capabilities: ['memberships'],
       currency: 'EUR',
       language: 'en-GB',
@@ -172,7 +181,7 @@ describe('GET /api/account/organisations', () => {
         urlCode: 'khpc',
         displayName: 'Kildare Hunt Pony Club',
         organisationType: 'Pony Club',
-        branding: { logoUrl: '', primaryColor: '#1976d2' },
+        branding: { logoUrl: '', primaryColor: '#1976d2', bookingsLabel: '' },
         status: 'active',
         capabilities: ['memberships'],
       },
@@ -307,6 +316,50 @@ describe('POST /api/account/:orgCode/register', () => {
     expect(res.status).toBe(200);
     expect(res.body.outcome).toBe('pending');
     expect(mocked.resolveMembership).not.toHaveBeenCalled();
+  });
+
+  it('connects a member whose browser sent no body at all', async () => {
+    /*
+     * The regression this exists for. "Connect to this club" is a single
+     * button, so the request carries nothing; reading the name from the body
+     * meant every such request arrived nameless and was refused as invalid,
+     * and the member was told the club could not be joined.
+     */
+    mocked.getOrganisationIdByCode.mockResolvedValue('org-1');
+    mockedRegistration.register.mockResolvedValue({
+      outcome: 'active',
+      organisationUserId: 'ou-1',
+    });
+
+    const res = await request(server)
+      .post('/api/account/khpc/register')
+      .set('x-test-user', 'kc-1');
+
+    expect(res.status).toBe(200);
+    expect(mockedRegistration.register).toHaveBeenCalledWith(
+      'org-1',
+      expect.objectContaining({ firstName: 'Darragh', lastName: "O'Toole" })
+    );
+  });
+
+  it('takes the name from the token in preference to the body', async () => {
+    // Same reasoning as the email below: a caller must not be able to register
+    // under someone else's identity.
+    mocked.getOrganisationIdByCode.mockResolvedValue('org-1');
+    mockedRegistration.register.mockResolvedValue({
+      outcome: 'active',
+      organisationUserId: 'ou-1',
+    });
+
+    await request(server)
+      .post('/api/account/khpc/register')
+      .set('x-test-user', 'kc-1')
+      .send({ firstName: 'Someone', lastName: 'Else' });
+
+    expect(mockedRegistration.register).toHaveBeenCalledWith(
+      'org-1',
+      expect.objectContaining({ firstName: 'Darragh', lastName: "O'Toole" })
+    );
   });
 
   it('takes the email from the verified token, never the body', async () => {

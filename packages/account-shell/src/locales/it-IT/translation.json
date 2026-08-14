@@ -138,8 +138,11 @@
     "comingUp": "In arrivo",
     "seeAll": "Vedi tutto",
     "membership": "Iscrizione",
+    "memberships": "Iscrizioni",
     "membershipUntil": "Attiva fino al {{date}}",
     "membershipNumber": "N. socio {{number}}",
+    "membershipOneOf": "1 di {{count}} iscrizione",
+    "membershipOneOf_other": "1 di {{count}} iscrizioni",
     "viewMemberships": "Vedi le iscrizioni",
     "cart": "Il tuo carrello",
     "cartSummary": "{{count}} articoli · {{total}}",
@@ -148,6 +151,7 @@
     "recentPayments": "Pagamenti recenti",
     "allPayments": "Tutti i pagamenti",
     "whatsOn": "Novità",
+    "shop": "Negozio",
     "free": "Gratuito",
     "nothingYet": "Qui non c’è ancora nulla. Quando il club aprirà qualcosa, comparirà qui.",
     "kind": {
@@ -155,6 +159,13 @@
       "merchandise": "Negozio",
       "calendar": "Prenotazione",
       "registration": "Registrazione"
+    },
+    "status": {
+      "open": "Aperto",
+      "opening-soon": "Apre a breve",
+      "closing-soon": "Chiude a breve",
+      "closed": "Chiuso",
+      "full": "Al completo"
     }
   },
   "status": {
@@ -309,7 +320,10 @@
     "weekOf": "Settimana del {{date}}",
     "nothingThisWeek": "Questa settimana non c’è disponibilità.",
     "free": "Gratuito",
-    "yourSlot": "La tua fascia oraria",
+    "yourSlot": "La tua fascia",
+    "yourSlot_other": "Le tue fasce",
+    "total": "Totale",
+    "removeSlot": "Rimuovi {{date}} alle {{time}}",
     "minutes": "{{count}} minuti",
     "placesLeft": "{{count}} posti rimasti",
     "chooseSlot": "Scegli una fascia oraria",

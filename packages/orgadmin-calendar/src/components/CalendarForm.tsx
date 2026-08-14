@@ -23,6 +23,12 @@ import {
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
 import { useApi } from '@aws-web-framework/orgadmin-core';
+import {
+  CALENDAR_ICON_KEYS,
+  CALENDAR_ICON_LABELS,
+  CalendarIcon,
+  type CalendarIconKey,
+} from '@aws-web-framework/components';
 import { DiscountSelector } from '@aws-web-framework/components';
 import type { CalendarFormData } from '../types/calendar.types';
 import ScheduleRulesSection from './ScheduleRulesSection';
@@ -119,6 +125,43 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
               onChange={(e) => handleChange('displayColour', e.target.value)}
               fullWidth
             />
+            {/*
+              The icon sits with the colour, because the two are one decision:
+              they are what tell one calendar from another wherever it is
+              offered, and choosing them apart invites a green tennis racket.
+            */}
+            <FormControl fullWidth>
+              <InputLabel id="calendar-icon-label">{t('calendar.fields.displayIcon')}</InputLabel>
+              <Select
+                labelId="calendar-icon-label"
+                value={formData.displayIcon ?? ''}
+                label={t('calendar.fields.displayIcon')}
+                onChange={(e) => handleChange('displayIcon', e.target.value || null)}
+                renderValue={(value) => (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarIcon name={value as string} colour={formData.displayColour} />
+                    {value
+                      ? t(`calendar.icons.${value}`, {
+                          defaultValue: CALENDAR_ICON_LABELS[value as CalendarIconKey],
+                        })
+                      : t('calendar.fields.noIcon')}
+                  </Box>
+                )}
+              >
+                <MenuItem value="">
+                  <em>{t('calendar.fields.noIcon')}</em>
+                </MenuItem>
+                {CALENDAR_ICON_KEYS.map((key) => (
+                  <MenuItem key={key} value={key}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarIcon name={key} colour={formData.displayColour} />
+                      {t(`calendar.icons.${key}`, { defaultValue: CALENDAR_ICON_LABELS[key] })}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <FormControl fullWidth>
               <InputLabel>{t('calendar.fields.status')}</InputLabel>
               <Select

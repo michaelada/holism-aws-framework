@@ -2,18 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UsersPage } from '../UsersPage';
 import { NotificationProvider } from '../../context';
-import { User, Tenant, Role } from '../../types/admin.types';
+import { User, Role } from '../../types/admin.types';
+import type { Organization } from '../../types/organization.types';
 
 // Mock the API service
 const mockApi = {
   getUsers: vi.fn(),
-  getTenants: vi.fn(),
   getRoles: vi.fn(),
   createUser: vi.fn(),
   updateUser: vi.fn(),
   deleteUser: vi.fn(),
   resetPassword: vi.fn(),
 } as any;
+
+const mockGetOrganizations = vi.hoisted(() => vi.fn());
+
+vi.mock('../../services/organizationApi', () => ({
+  getOrganizations: mockGetOrganizations,
+}));
 
 vi.mock('../../context', async () => {
   const actual = await vi.importActual('../../context');
@@ -35,17 +41,24 @@ describe('UsersPage', () => {
       enabled: true,
       emailVerified: true,
       roles: ['admin'],
-      tenants: ['tenant-1'],
+      classifications: ['super-admin'] as const,
+      organizations: ['organisation-1'],
       createdAt: '2024-01-01T00:00:00Z',
     },
   ];
 
-  const mockTenants: Tenant[] = [
+  const mockOrganisations: Organization[] = [
     {
-      id: 'tenant-1',
-      keycloakGroupId: 'kc-tenant-1',
-      name: 'tenant-one',
-      displayName: 'Tenant One',
+      id: 'organisation-1',
+      organizationTypeId: 'organisation-type-1',
+      keycloakGroupId: 'kc-organisation-1',
+      name: 'organisation-one',
+      displayName: 'Organisation One',
+      urlCode: 'organisation-one',
+      currency: 'GBP',
+      language: 'en-GB',
+      enabledCapabilities: [],
+      settings: {},
       status: 'active',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
@@ -64,7 +77,7 @@ describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApi.getUsers.mockResolvedValue(mockUsers);
-    mockApi.getTenants.mockResolvedValue(mockTenants);
+    mockGetOrganizations.mockResolvedValue(mockOrganisations);
     mockApi.getRoles.mockResolvedValue(mockRoles);
     mockApi.createUser.mockResolvedValue(mockUsers[0]);
     mockApi.updateUser.mockResolvedValue(mockUsers[0]);
@@ -89,11 +102,11 @@ describe('UsersPage', () => {
     });
   });
 
-  it('should load tenants and roles on mount', async () => {
+  it('should load organizations and roles on mount', async () => {
     renderWithProviders(<UsersPage />);
 
     await waitFor(() => {
-      expect(mockApi.getTenants).toHaveBeenCalled();
+      expect(mockGetOrganizations).toHaveBeenCalled();
       expect(mockApi.getRoles).toHaveBeenCalled();
     });
   });
@@ -120,7 +133,7 @@ describe('UsersPage', () => {
       expect(screen.getByText('john.doe')).toBeInTheDocument();
     });
 
-    const editButton = screen.getByTitle('Edit user');
+    const editButton = screen.getByRole('button', { name: /^Edit / });
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -179,7 +192,7 @@ describe('UsersPage', () => {
       expect(screen.getByText('john.doe')).toBeInTheDocument();
     });
 
-    const editButton = screen.getByTitle('Edit user');
+    const editButton = screen.getByRole('button', { name: /^Edit / });
     fireEvent.click(editButton);
 
     await waitFor(() => {
@@ -210,7 +223,7 @@ describe('UsersPage', () => {
       expect(screen.getByText('john.doe')).toBeInTheDocument();
     });
 
-    const deleteButton = screen.getByTitle('Delete user');
+    const deleteButton = screen.getByRole('button', { name: /^Delete / });
     fireEvent.click(deleteButton);
 
     await waitFor(() => {
@@ -232,7 +245,7 @@ describe('UsersPage', () => {
       expect(screen.getByText('john.doe')).toBeInTheDocument();
     });
 
-    const resetButton = screen.getByTitle('Reset password');
+    const resetButton = screen.getByRole('button', { name: /^Reset password for / });
     fireEvent.click(resetButton);
 
     await waitFor(() => {
@@ -250,7 +263,7 @@ describe('UsersPage', () => {
       expect(screen.getByText('john.doe')).toBeInTheDocument();
     });
 
-    const resetButton = screen.getByTitle('Reset password');
+    const resetButton = screen.getByRole('button', { name: /^Reset password for / });
     fireEvent.click(resetButton);
 
     // Wait for dialog to be fully visible - use findBy which waits automatically
@@ -298,17 +311,17 @@ describe('UsersPage', () => {
     });
   });
 
-  it('should filter users by tenant', async () => {
+  it('should filter users by organisation', async () => {
     renderWithProviders(<UsersPage />);
 
     await waitFor(() => {
       expect(screen.getByText('john.doe')).toBeInTheDocument();
     });
 
-    const tenantFilter = screen.getByLabelText(/filter by tenant/i);
-    fireEvent.mouseDown(tenantFilter);
+    const organisationFilter = screen.getByLabelText(/filter by organisation/i);
+    fireEvent.mouseDown(organisationFilter);
 
-    const options = screen.getAllByText('Tenant One');
+    const options = screen.getAllByText('Organisation One');
     const menuOption = options.find(el => el.closest('[role="option"]'));
     if (menuOption) {
       fireEvent.click(menuOption);
@@ -317,7 +330,7 @@ describe('UsersPage', () => {
     await waitFor(() => {
       expect(mockApi.getUsers).toHaveBeenCalledWith(
         expect.objectContaining({
-          tenantId: 'tenant-1',
+          organizationId: 'organisation-1',
         })
       );
     });

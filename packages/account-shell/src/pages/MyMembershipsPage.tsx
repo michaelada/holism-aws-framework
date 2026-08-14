@@ -114,10 +114,25 @@ const MembershipCard: React.FC<{
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            {membership.membershipTypeName}
-          </Typography>
+        {/*
+          The member's name leads, not the type.
+
+          A parent holds their children's memberships, so a screen headed by the
+          type shows three cards reading "Junior Member" that differ only by a
+          number nobody recognises. Whose it is, is the thing being looked for;
+          what kind it is, is the detail.
+        */}
+        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 1 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="h6">
+              {membership.memberName || membership.membershipTypeName}
+            </Typography>
+            {membership.memberName && (
+              <Typography variant="body2" color="text.secondary">
+                {membership.membershipTypeName}
+              </Typography>
+            )}
+          </Box>
           <Chip
             size="small"
             label={t(`switcher.status.${membership.status}`, {

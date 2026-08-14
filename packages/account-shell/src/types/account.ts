@@ -20,6 +20,8 @@ export interface PublicOrganisation {
   branding: {
     logoUrl: string;
     primaryColor: string;
+    /** What this club calls its bookings area; empty means the default. */
+    bookingsLabel: string;
   };
 }
 
@@ -62,6 +64,8 @@ export interface AccountMembership {
   branding?: {
     logoUrl: string;
     primaryColor: string;
+    /** What this club calls its bookings area; empty means the default. */
+    bookingsLabel?: string;
   };
 }
 
@@ -172,6 +176,8 @@ export interface AccountMembershipRecord {
   membershipNumber: string;
   membershipTypeId: string;
   membershipTypeName: string;
+  /** Who it is for — a parent holds their children's memberships. */
+  memberName: string;
   status: string;
   validUntil: string;
   dateLastRenewed: string;
@@ -344,6 +350,18 @@ export interface DashboardWhatsOn {
   detail: string | null;
   /** Minor units; null when the thing has no single price. */
   fee: number | null;
+  /** Events only; null on everything else, which has no date or window. */
+  startDate: string | null;
+  endDate: string | null;
+  entriesOpenDate: string | null;
+  entriesClosingDate: string | null;
+  entriesLimit: number | null;
+  placesRemaining: number | null;
+  /** Calendars only: the club's chosen icon name and colour. */
+  icon: string | null;
+  colour: string | null;
+  /** Merchandise only: the first product image, shown as a thumbnail. */
+  imageUrl: string | null;
 }
 
 /**
@@ -353,15 +371,23 @@ export interface DashboardWhatsOn {
  * renders nothing at all rather than an empty card.
  */
 export interface AccountDashboard {
-  membership: {
+  /**
+   * Every active membership this login holds here.
+   *
+   * `null` means the club has no memberships at all, which is different from
+   * holding none of them.
+   */
+  memberships: Array<{
     id: string;
     name: string;
+    /** Who it is for — a parent holds their children's memberships. */
+    memberName: string;
     membershipNumber: string;
     validUntil: string;
     daysRemaining: number | null;
     canRenew: boolean;
     renewalNotOpen: boolean;
-  } | null;
+  }> | null;
   comingUp: DashboardComingUp[] | null;
   cart: { itemCount: number; total: number; handlingFee: number; currency: string } | null;
   recentPayments: Array<{
@@ -447,6 +473,8 @@ export interface CatalogueCalendar {
   name: string;
   description: string | null;
   displayColour: string | null;
+  /** A shared icon-set key; null falls back to the generic calendar mark. */
+  displayIcon: string | null;
   minDaysInAdvance: number;
   maxDaysInAdvance: number;
   allowCancellations: boolean;

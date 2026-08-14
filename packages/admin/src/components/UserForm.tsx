@@ -13,16 +13,17 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import { User, CreateUserDto, UpdateUserDto, Tenant, Role } from '../types/admin.types';
+import { User, CreateUserDto, UpdateUserDto, Role } from '../types/admin.types';
+import type { Organization } from '../types/organization.types';
 
 interface UserFormProps {
   user?: User | null;
-  tenants?: Tenant[];
+  organizations?: Organization[];
   roles: Role[];
   loading: boolean;
   onSubmit: (data: CreateUserDto | UpdateUserDto) => void;
   onCancel: () => void;
-  hideTenantSelection?: boolean;
+  hideOrganizationSelection?: boolean;
 }
 
 interface FormData {
@@ -35,7 +36,7 @@ interface FormData {
   emailVerified: boolean;
   phoneNumber: string;
   department: string;
-  tenantId: string;
+  organizationId: string;
   roles: string[];
 }
 
@@ -48,7 +49,7 @@ interface FormErrors {
   phoneNumber?: string;
 }
 
-export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCancel, hideTenantSelection = false }: UserFormProps) {
+export function UserForm({ user, organizations = [], roles, loading, onSubmit, onCancel, hideOrganizationSelection = false }: UserFormProps) {
   const isEditMode = !!user;
 
   const [formData, setFormData] = useState<FormData>({
@@ -61,7 +62,7 @@ export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCance
     emailVerified: false,
     phoneNumber: '',
     department: '',
-    tenantId: '',
+    organizationId: '',
     roles: [],
   });
 
@@ -79,7 +80,7 @@ export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCance
         emailVerified: user.emailVerified,
         phoneNumber: user.phoneNumber || '',
         department: user.department || '',
-        tenantId: user.tenants[0] || '',
+        organizationId: user.organizations[0] || '',
         roles: user.roles || [],
       });
     } else {
@@ -93,7 +94,7 @@ export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCance
         emailVerified: false,
         phoneNumber: '',
         department: '',
-        tenantId: '',
+        organizationId: '',
         roles: [],
       });
     }
@@ -174,7 +175,7 @@ export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCance
         lastName: formData.lastName,
         phoneNumber: formData.phoneNumber || undefined,
         department: formData.department || undefined,
-        tenantId: formData.tenantId || undefined,
+        organizationId: formData.organizationId || undefined,
         roles: formData.roles.length > 0 ? formData.roles : undefined,
       };
       onSubmit(submitData);
@@ -189,7 +190,7 @@ export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCance
         emailVerified: formData.emailVerified,
         phoneNumber: formData.phoneNumber || undefined,
         department: formData.department || undefined,
-        tenantId: formData.tenantId || undefined,
+        organizationId: formData.organizationId || undefined,
         roles: formData.roles.length > 0 ? formData.roles : undefined,
       };
       onSubmit(submitData);
@@ -314,21 +315,21 @@ export function UserForm({ user, tenants = [], roles, loading, onSubmit, onCance
           sx={{ mb: 2 }}
         />
 
-        {!hideTenantSelection && (
+        {!hideOrganizationSelection && (
           <TextField
             fullWidth
             select
-            label="Tenant"
-            value={formData.tenantId}
-            onChange={handleChange('tenantId')}
-            helperText="Optional - assign user to a tenant"
+            label="Organisation"
+            value={formData.organizationId}
+            onChange={handleChange('organizationId')}
+            helperText="Optional — assign this user to an organisation"
             disabled={loading}
             sx={{ mb: 2 }}
           >
             <MenuItem value="">None</MenuItem>
-            {tenants.map((tenant) => (
-              <MenuItem key={tenant.id} value={tenant.id}>
-                {tenant.displayName}
+            {organizations.map((organization) => (
+              <MenuItem key={organization.id} value={organization.id}>
+                {organization.displayName}
               </MenuItem>
             ))}
           </TextField>

@@ -21,7 +21,9 @@ export interface Calendar {
   // Basic Information
   name: string;                        // Display name (e.g., "Tennis Court 1")
   description: string;                 // Detailed information about the resource
-  displayColour: string;               // Hex colour code for calendar view
+  displayColour: string;
+  /** A Material icon name from the shared set; null leaves it unmarked. */
+  displayIcon?: string | null;               // Hex colour code for calendar view
   status: CalendarStatus;              // Open or Closed
   
   // Automated Opening/Closing
@@ -230,6 +232,8 @@ export interface CalendarFormData {
   name: string;
   description: string;
   displayColour: string;
+  /** A Material icon name from the shared set; null leaves it unmarked. */
+  displayIcon?: string | null;
   status: CalendarStatus;
   
   enableAutomatedSchedule: boolean;

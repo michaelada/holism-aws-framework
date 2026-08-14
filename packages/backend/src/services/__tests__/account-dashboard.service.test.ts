@@ -75,6 +75,7 @@ describe('AccountDashboardService', () => {
     id: 'member-1',
     membershipNumber: 'KHPC-0412',
     membershipTypeName: 'Family Membership 2026',
+    memberName: 'Niamh Walsh',
     status: 'active',
     validUntil: '2027-02-25',
     daysRemaining: 200,
@@ -113,7 +114,7 @@ describe('AccountDashboardService', () => {
     it('returns null for those sections rather than an empty list', async () => {
       const dashboard = await service.build(ORG, MEMBER, [], 'EUR', TODAY);
 
-      expect(dashboard.membership).toBeNull();
+      expect(dashboard.memberships).toBeNull();
       expect(dashboard.comingUp).toBeNull();
       expect(dashboard.whatsOn).toEqual([]);
     });
@@ -171,20 +172,48 @@ describe('AccountDashboardService', () => {
     });
   });
 
-  describe('the membership card', () => {
-    it('picks the one expiring soonest, since that is the one with something to do', async () => {
+  describe('the memberships section', () => {
+    it('returns every active membership, soonest to expire first', async () => {
+      // A parent holds their children's; one card about the soonest left the
+      // rest invisible until they thought to open C4.
       activity.listMemberships.mockResolvedValue([
         membership({ id: 'later', validUntil: '2028-01-01' }),
         membership({ id: 'sooner', validUntil: '2026-09-01' }),
+        membership({ id: 'middle', validUntil: '2027-06-01' }),
       ] as any);
 
-      expect((await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).membership?.id).toBe('sooner');
+      const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
+
+      expect(dashboard.memberships?.map((m) => m.id)).toEqual(['sooner', 'middle', 'later']);
     });
 
-    it('ignores memberships that are not active', async () => {
+    it('says whose each membership is', async () => {
+      activity.listMemberships.mockResolvedValue([
+        membership({ memberName: 'Conor McGrath' }),
+      ] as any);
+
+      const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
+
+      expect(dashboard.memberships?.[0]?.memberName).toBe('Conor McGrath');
+    });
+
+    it('leaves out anything not currently held', async () => {
+      activity.listMemberships.mockResolvedValue([
+        membership({ id: 'm1', memberName: 'Conor McGrath' }),
+        membership({ id: 'm2', memberName: 'Old One', status: 'elapsed' }),
+        membership({ id: 'm3', memberName: 'Not Yet', status: 'pending' }),
+      ] as any);
+
+      const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
+
+      expect(dashboard.memberships?.map((m) => m.memberName)).toEqual(['Conor McGrath']);
+    });
+
+    it('returns an empty list when the member holds none', async () => {
+      // Different from the club having no memberships at all, which is null.
       activity.listMemberships.mockResolvedValue([membership({ status: 'elapsed' })] as any);
 
-      expect((await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).membership).toBeNull();
+      expect((await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).memberships).toEqual([]);
     });
 
     /** The renewal rule is C4's, read here rather than recomputed. */
@@ -193,7 +222,7 @@ describe('AccountDashboardService', () => {
         membership({ canRenew: true, renewalNotOpen: false, daysRemaining: 12 }),
       ] as any);
 
-      expect((await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).membership).toMatchObject({
+      expect((await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).memberships?.[0]).toMatchObject({
         canRenew: true,
         daysRemaining: 12,
       });
@@ -227,7 +256,7 @@ describe('AccountDashboardService', () => {
       const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
 
       expect(dashboard.cart).toBeNull();
-      expect(dashboard.membership).toBeDefined();
+      expect(dashboard.memberships).toBeDefined();
     });
   });
 
@@ -263,6 +292,165 @@ describe('AccountDashboardService', () => {
       const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
 
       expect(items.map((item) => item.title)).toEqual(['Polo']);
+    });
+
+    /*
+     * Events are the exception to the rule above: their unavailability is
+     * itself the news, and each card carries a status chip saying which.
+     */
+    describe('events the member cannot enter', () => {
+      const unavailable = (reason: string, over: Record<string, any> = {}) => ({
+        available: false,
+        unavailableReason: reason,
+        ...over,
+      });
+
+      it('teases an event whose entries open in the next few days', async () => {
+        catalogue.listEvents.mockResolvedValue([
+          unavailable('entries-not-open', {
+            id: 'e1',
+            name: 'Autumn Camp',
+            entriesOpenDate: '2026-08-14T09:00:00Z',
+          }),
+        ] as any);
+
+        const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+        expect(items.map((item) => item.title)).toEqual(['Autumn Camp']);
+      });
+
+      it('leaves out an event that opens further off', async () => {
+        catalogue.listEvents.mockResolvedValue([
+          unavailable('entries-not-open', {
+            id: 'e1',
+            name: 'Christmas Rally',
+            entriesOpenDate: '2026-09-01T09:00:00Z',
+          }),
+        ] as any);
+
+        const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+        // Not news yet, and it would push out something closing this week.
+        expect(items).toEqual([]);
+      });
+
+      it('teases an event whose entries have closed', async () => {
+        catalogue.listEvents.mockResolvedValue([
+          unavailable('entries-closed', {
+            id: 'e1',
+            name: 'Spring League',
+            entriesClosingDate: '2026-08-01T09:00:00Z',
+          }),
+        ] as any);
+
+        const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+        expect(items.map((item) => item.title)).toEqual(['Spring League']);
+      });
+
+      it('teases an event that has filled up', async () => {
+        catalogue.listEvents.mockResolvedValue([
+          unavailable('event-full', {
+            id: 'e1',
+            name: 'Summer Camp',
+            entriesLimit: 40,
+            placesRemaining: 0,
+          }),
+        ] as any);
+
+        const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+        expect(items.map((item) => item.title)).toEqual(['Summer Camp']);
+      });
+
+      it('leaves out an event the member has already entered', async () => {
+        catalogue.listEvents.mockResolvedValue([
+          unavailable('already-entered', { id: 'e1', name: 'Hunter Trials' }),
+        ] as any);
+
+        const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+        // They have no reason to be shown it.
+        expect(items).toEqual([]);
+      });
+
+      it('carries the window and capacity so the card can say which it is', async () => {
+        catalogue.listEvents.mockResolvedValue([
+          unavailable('event-full', {
+            id: 'e1',
+            name: 'Summer Camp',
+            startDate: '2026-09-01',
+            endDate: '2026-09-03',
+            entriesOpenDate: '2026-07-01T09:00:00Z',
+            entriesClosingDate: '2026-10-01T09:00:00Z',
+            entriesLimit: 40,
+            placesRemaining: 0,
+          }),
+        ] as any);
+
+        const [item] = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+        expect(item).toMatchObject({
+          startDate: '2026-09-01',
+          endDate: '2026-09-03',
+          entriesOpenDate: '2026-07-01T09:00:00Z',
+          entriesClosingDate: '2026-10-01T09:00:00Z',
+          entriesLimit: 40,
+          placesRemaining: 0,
+        });
+      });
+    });
+
+    it('gives bookings their own allowance rather than sharing the four', async () => {
+      // Three calendars alongside a shop and events used to show exactly one
+      // calendar, which looked broken beside a bookings page listing three.
+      catalogue.listMerchandise.mockResolvedValue([
+        available({ id: 'm1', name: 'Polo', description: null, fromPrice: 2500 }),
+        available({ id: 'm2', name: 'Cap', description: null, fromPrice: 1000 }),
+      ] as any);
+      catalogue.listEvents.mockResolvedValue([
+        available({ id: 'e1', name: 'Summer Camp', startDate: '2026-08-20' }),
+      ] as any);
+      catalogue.listCalendars.mockResolvedValue([
+        available({ id: 'c1', name: 'Arena', description: null }),
+        available({ id: 'c2', name: 'Lessons', description: null }),
+        available({ id: 'c3', name: 'Cross-country', description: null }),
+      ] as any);
+
+      const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+      const calendars = items.filter((item) => item.kind === 'calendar');
+
+      expect(calendars.map((c) => c.title)).toEqual(['Arena', 'Lessons', 'Cross-country']);
+    });
+
+    it('gives the shop its own row too, with a thumbnail', async () => {
+      catalogue.listMerchandise.mockResolvedValue([
+        available({
+          id: 'm1', name: 'Polo', description: null, fromPrice: 2500,
+          images: ['data:image/svg+xml;base64,PHN2Zy8+'],
+        }),
+        available({ id: 'm2', name: 'Cap', description: null, fromPrice: 1000, images: [] }),
+      ] as any);
+
+      const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+      const shop = items.filter((item) => item.kind === 'merchandise');
+
+      expect(shop.map((i) => i.title)).toEqual(['Polo', 'Cap']);
+      expect(shop[0]!.imageUrl).toMatch(/^data:image/);
+      // No image is null rather than undefined, so the card can test for it.
+      expect(shop[1]!.imageUrl).toBeNull();
+    });
+
+    it('still caps each row', async () => {
+      catalogue.listCalendars.mockResolvedValue(
+        Array.from({ length: 7 }, (_, index) =>
+          available({ id: `c${index}`, name: `Calendar ${index}`, description: null })
+        ) as any
+      );
+
+      const items = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).whatsOn;
+
+      expect(items.filter((item) => item.kind === 'calendar')).toHaveLength(4);
     });
 
     it('shows at most four', async () => {

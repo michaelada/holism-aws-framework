@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Alert,
   Box,
@@ -10,6 +11,7 @@ import {
   Container,
   Divider,
   FormControlLabel,
+  Grid,
   IconButton,
   Paper,
   Stack,
@@ -78,7 +80,15 @@ export const BookCalendarPage: React.FC = () => {
   });
   const [calendar, setCalendar] = useState<CatalogueCalendar | null>(null);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
-  const [chosen, setChosen] = useState<AvailableSlot | null>(null);
+  /*
+   * Several slots at once, not one.
+   *
+   * A member booking a court books Tuesday *and* Thursday, and a lesson block
+   * is the same slot several weeks running. One-at-a-time meant a return trip
+   * through the week grid and the basket for each, and nothing about the
+   * underlying booking prevents more than one — each becomes its own cart item.
+   */
+  const [chosen, setChosen] = useState<AvailableSlot[]>([]);
   const [agreed, setAgreed] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -132,37 +142,49 @@ export const BookCalendarPage: React.FC = () => {
    * screen where that matters most, because a slot is the thing two members
    * reliably want at once.
    */
-  const canBook = online && Boolean(chosen) && !saving && (!termsRequired || agreed);
+  const canBook = online && chosen.length > 0 && !saving && (!termsRequired || agreed);
 
   const addToBasket = async () => {
-    if (!chosen || !calendar || !orgCode) return;
+    if (chosen.length === 0 || !calendar || !orgCode) return;
     setSaving(true);
     setError(null);
 
     try {
-      await executeAdd({
-        method: 'POST',
-        url: `/api/account/${orgCode}/cart/items`,
-        data: {
-          itemType: 'booking',
-          /*
-           * The slot in full, not an id — a slot has no row of its own until
-           * it is booked. This is what the cart guard re-checks and what
-           * fulfilment turns into a booking.
-           */
-          contextRef: {
-            calendarId: calendar.id,
-            date: chosen.date,
-            startTime: chosen.startTime,
-            duration: chosen.duration,
-            places: 1,
+      /*
+       * One request per slot, in the order they were picked, rather than one
+       * request carrying several. The cart's guard re-checks each slot as it
+       * arrives, and a batch would have to decide what to do when the third of
+       * five has gone — adding them singly means the member keeps whatever was
+       * still free and is told about the one that was not.
+       *
+       * Sequential rather than parallel: they are writes against the same cart,
+       * and the slot guard reads it.
+       */
+      for (const slot of chosen) {
+        await executeAdd({
+          method: 'POST',
+          url: `/api/account/${orgCode}/cart/items`,
+          data: {
+            itemType: 'booking',
+            /*
+             * The slot in full, not an id — a slot has no row of its own until
+             * it is booked. This is what the cart guard re-checks and what
+             * fulfilment turns into a booking.
+             */
+            contextRef: {
+              calendarId: calendar.id,
+              date: slot.date,
+              startTime: slot.startTime,
+              duration: slot.duration,
+              places: 1,
+            },
+            description: `${calendar.name} — ${formatDisplayDate(slot.date, locale)} ${slot.startTime}`,
+            unitFee: slot.price,
+            handlingFeeIncluded: false,
+            supportedPaymentMethodIds: calendar.supportedPaymentMethodIds,
           },
-          description: `${calendar.name} — ${formatDisplayDate(chosen.date, locale)} ${chosen.startTime}`,
-          unitFee: chosen.price,
-          handlingFeeIncluded: false,
-          supportedPaymentMethodIds: calendar.supportedPaymentMethodIds,
-        },
-      });
+        });
+      }
 
       navigate(`/${orgCode}/cart`);
     } catch (err) {
@@ -174,7 +196,7 @@ export const BookCalendarPage: React.FC = () => {
        * explaining why the screen just changed under them.
        */
       await load();
-      setChosen(null);
+      setChosen([]);
       setError(refusal);
     } finally {
       setSaving(false);
@@ -221,171 +243,306 @@ export const BookCalendarPage: React.FC = () => {
         </Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <IconButton
-            onClick={() => setWeekStart((current) => addDays(current, -7))}
-            aria-label={t('book.previousWeek')}
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-          <Typography variant="h2" sx={{ fontSize: '1.125rem' }}>
-            {t('book.weekOf', { date: formatDisplayDate(days[0], locale) })}
-          </Typography>
-          <IconButton
-            onClick={() => setWeekStart((current) => addDays(current, 7))}
-            aria-label={t('book.nextWeek')}
-          >
-            <ChevronRightIcon />
-          </IconButton>
-        </Stack>
+      {/*
+        The week on the left, the basket beside it.
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress aria-label={t('common.loading')} />
-          </Box>
-        ) : slots.length === 0 ? (
-          <Alert severity="info">{t('book.nothingThisWeek')}</Alert>
-        ) : (
-          <Stack spacing={2}>
-            {days.map((day) => {
-              const daySlots = byDay.get(day) ?? [];
-              if (daySlots.length === 0) return null;
-
-              return (
-                <Box key={day}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    {formatDisplayDate(day, locale)}
-                  </Typography>
-                  {/*
-                    A wrapping row of buttons rather than a grid: slot lengths
-                    differ between days and a fixed grid would leave holes where
-                    a club runs a shorter Saturday.
-                  */}
-                  <ToggleButtonGroup
-                    exclusive
-                    value={chosen && chosen.date === day ? slotKey(chosen) : null}
-                    onChange={(_event, value) => {
-                      const slot = daySlots.find((candidate) => slotKey(candidate) === value);
-                      setChosen(slot ?? null);
-                    }}
-                    sx={{ flexWrap: 'wrap', gap: 1, '& .MuiToggleButtonGroup-grouped': { border: 1, borderRadius: 1 } }}
-                  >
-                    {daySlots.map((slot) => (
-                      <ToggleButton
-                        key={slotKey(slot)}
-                        value={slotKey(slot)}
-                        disabled={!slot.available || !online}
-                        sx={{ flexDirection: 'column', px: 1.5, py: 1, textTransform: 'none' }}
-                      >
-                        <Typography variant="body2" fontWeight={600}>
-                          {slot.startTime}–{slot.endTime}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {slot.available
-                            ? slot.price > 0
-                              ? formatCurrency(slot.price / 100, currency, locale)
-                              : t('book.free')
-                            : t(`book.reason.${slot.unavailableReason ?? 'full'}`)}
-                        </Typography>
-                      </ToggleButton>
-                    ))}
-                  </ToggleButtonGroup>
-                </Box>
-              );
-            })}
-          </Stack>
-        )}
-      </Paper>
-
-      {chosen && (
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h2" gutterBottom>
-            {t('book.yourSlot')}
-          </Typography>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Typography>
-                {formatDisplayDate(chosen.date, locale)}, {chosen.startTime}–{chosen.endTime}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('book.minutes', { count: chosen.duration })}
-                {chosen.placesRemaining > 1 &&
-                  ` · ${t('book.placesLeft', { count: chosen.placesRemaining })}`}
-              </Typography>
-            </Box>
-            <Typography variant="h6">
-              {chosen.price > 0
-                ? formatCurrency(chosen.price / 100, currency, locale)
-                : t('book.free')}
+        A member choosing several slots is running a total in their head, and
+        a summary below the fold makes them scroll to check it after every
+        tap. Kept sticky so it stays with them as they work down the week,
+        and stacked underneath on a phone, where there is no room beside
+        anything.
+      */}
+      {/*
+        Items stretch rather than sitting at flex-start: a sticky element can
+        only travel inside its own parent, so a column shrunk to its content
+        height has nowhere to stick to and the basket scrolls away like anything
+        else. Letting the column match the week's height is what gives it room.
+      */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+            <IconButton
+              onClick={() => setWeekStart((current) => addDays(current, -7))}
+              aria-label={t('book.previousWeek')}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography variant="h2" sx={{ fontSize: '1.125rem' }}>
+              {t('book.weekOf', { date: formatDisplayDate(days[0], locale) })}
             </Typography>
+            <IconButton
+              onClick={() => setWeekStart((current) => addDays(current, 7))}
+              aria-label={t('book.nextWeek')}
+            >
+              <ChevronRightIcon />
+            </IconButton>
           </Stack>
-        </Paper>
-      )}
 
-      {calendar?.termsAndConditions && (
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h2" gutterBottom>
-            {t('form.termsHeading')}
-          </Typography>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress aria-label={t('common.loading')} />
+            </Box>
+          ) : slots.length === 0 ? (
+            <Alert severity="info">{t('book.nothingThisWeek')}</Alert>
+          ) : (
+            <Stack spacing={2}>
+              {days.map((day) => {
+                const daySlots = byDay.get(day) ?? [];
+                if (daySlots.length === 0) return null;
+
+                return (
+                  <Box key={day}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {formatDisplayDate(day, locale)}
+                    </Typography>
+                    {/*
+                      A wrapping row of buttons rather than a grid: slot lengths
+                      differ between days and a fixed grid would leave holes where
+                      a club runs a shorter Saturday.
+                    */}
+                    <ToggleButtonGroup
+                      // Not `exclusive`: a member books Tuesday and Thursday in
+                      // one go, or the same slot several weeks running.
+                      value={chosen.filter((slot) => slot.date === day).map(slotKey)}
+                      onChange={(_event, keys: string[]) => {
+                        /*
+                         * The group reports only its own day, so the days it does
+                         * not know about are carried through untouched — a
+                         * wholesale replace would clear every other day's
+                         * selection the moment this one changed.
+                         */
+                        const stillChosen = daySlots.filter((slot) => keys.includes(slotKey(slot)));
+                        setChosen((previous) => [
+                          ...previous.filter((slot) => slot.date !== day),
+                          ...stillChosen,
+                        ]);
+                      }}
+                      sx={{ flexWrap: 'wrap', gap: 1, '& .MuiToggleButtonGroup-grouped': { border: 1, borderRadius: 1 } }}
+                    >
+                      {daySlots.map((slot) => (
+                        <ToggleButton
+                          key={slotKey(slot)}
+                          value={slotKey(slot)}
+                          disabled={!slot.available || !online}
+                          /*
+                          Chosen slots go green rather than the default grey
+                          fill. With several selectable at once, "which ones
+                          have I picked?" is the question the grid has to answer
+                          at a glance, and a selected-but-grey button reads as
+                          disabled next to the ones that genuinely are.
+                        */
+                        sx={{
+                          flexDirection: 'column',
+                          px: 1.5,
+                          py: 1,
+                          textTransform: 'none',
+                          '&.Mui-selected': {
+                            backgroundColor: 'success.main',
+                            borderColor: 'success.main',
+                            color: 'success.contrastText',
+                            '& .MuiTypography-root': { color: 'inherit' },
+                            '&:hover': { backgroundColor: 'success.dark' },
+                          },
+                        }}
+                        >
+                          <Typography variant="body2" fontWeight={600}>
+                            {slot.startTime}–{slot.endTime}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {slot.available
+                              ? slot.price > 0
+                                ? formatCurrency(slot.price / 100, currency, locale)
+                                : t('book.free')
+                              : t(`book.reason.${slot.unavailableReason ?? 'full'}`)}
+                          </Typography>
+                        </ToggleButton>
+                      ))}
+                    </ToggleButtonGroup>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+        </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
           <Box
-            tabIndex={0}
             sx={{
-              maxHeight: 320,
-              overflowY: 'auto',
-              p: 2,
-              mb: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
-              backgroundColor: 'action.hover',
+              position: { md: 'sticky' },
+              top: { md: 16 },
+              /*
+                A member with a dozen slots chosen would otherwise have a basket
+                taller than the screen, and the add button — the point of the
+                column — would sit below the fold with no way to reach it. It
+                scrolls within itself instead.
+              */
+              maxHeight: { md: 'calc(100vh - 32px)' },
+              overflowY: { md: 'auto' },
             }}
           >
-            <RichText html={calendar.termsAndConditions} sx={{ fontSize: '0.875rem' }} />
+            {chosen.length > 0 && (
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h2" gutterBottom>
+                  {t('book.yourSlot', { count: chosen.length })}
+                </Typography>
+
+                <Stack divider={<Divider />} spacing={0}>
+                  {/*
+                    Listed in time order rather than the order they were tapped: the
+                    member is checking a plan, and a plan reads chronologically.
+                  */}
+                  {[...chosen]
+                    .sort((a, b) =>
+                      a.date === b.date
+                        ? a.startTime.localeCompare(b.startTime)
+                        : a.date.localeCompare(b.date)
+                    )
+                    .map((slot) => (
+                      <Stack
+                        key={slotKey(slot)}
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ py: 1.25 }}
+                      >
+                        <Box>
+                          <Typography>
+                            {formatDisplayDate(slot.date, locale)}, {slot.startTime}–{slot.endTime}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {t('book.minutes', { count: slot.duration })}
+                            {slot.placesRemaining > 1 &&
+                              ` · ${t('book.placesLeft', { count: slot.placesRemaining })}`}
+                          </Typography>
+                        </Box>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="h6">
+                            {slot.price > 0
+                              ? formatCurrency(slot.price / 100, currency, locale)
+                              : t('book.free')}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            aria-label={t('book.removeSlot', {
+                              date: formatDisplayDate(slot.date, locale),
+                              time: slot.startTime,
+                            })}
+                            onClick={() =>
+                              setChosen((previous) =>
+                                previous.filter((candidate) => slotKey(candidate) !== slotKey(slot))
+                              )
+                            }
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </Stack>
+                    ))}
+                </Stack>
+
+                {/*
+                  A total only once there is more than one slot to add up. Repeating a
+                  single slot's price as its own total says nothing.
+                */}
+                {chosen.length > 1 && (
+                  <>
+                    <Divider sx={{ mt: 1 }} />
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      sx={{ pt: 1.5 }}
+                    >
+                      <Typography fontWeight={600}>{t('book.total')}</Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatCurrency(
+                          chosen.reduce((sum, slot) => sum + slot.price, 0) / 100,
+                          currency,
+                          locale
+                        )}
+                      </Typography>
+                    </Stack>
+                  </>
+                )}
+              </Paper>
+            )}
+
+            {calendar?.termsAndConditions && (
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h2" gutterBottom>
+                  {t('form.termsHeading')}
+                </Typography>
+                <Box
+                  tabIndex={0}
+                  sx={{
+                    maxHeight: 320,
+                    overflowY: 'auto',
+                    p: 2,
+                    mb: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    backgroundColor: 'action.hover',
+                  }}
+                >
+                  <RichText html={calendar.termsAndConditions} sx={{ fontSize: '0.875rem' }} />
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={agreed}
+                      onChange={(event) => setAgreed(event.target.checked)}
+                      disabled={saving}
+                    />
+                  }
+                  label={t('form.agreeTerms')}
+                />
+              </Paper>
+            )}
+
+            <Stack direction="row" spacing={2} justifyContent="flex-end">
+              <Button onClick={() => navigate(backTo)} disabled={saving}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="contained" size="large" onClick={addToBasket} disabled={!canBook}>
+                {saving ? t('book.adding') : t('book.addToBasket')}
+              </Button>
+            </Stack>
+
+            {!online && (
+              <Typography variant="caption" color="text.secondary" display="block" textAlign="right" sx={{ mt: 1 }}>
+                {t('offline.selectionBlocked')}
+              </Typography>
+            )}
+            {online && chosen.length === 0 && (
+              <Typography variant="caption" color="text.secondary" display="block" textAlign="right" sx={{ mt: 1 }}>
+                {t('book.chooseSlot')}
+              </Typography>
+            )}
+            {chosen && termsRequired && !agreed && (
+              <Typography variant="caption" color="text.secondary" display="block" textAlign="right" sx={{ mt: 1 }}>
+                {t('form.mustAgree')}
+              </Typography>
+            )}
           </Box>
-          <Divider sx={{ mb: 2 }} />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={agreed}
-                onChange={(event) => setAgreed(event.target.checked)}
-                disabled={saving}
-              />
-            }
-            label={t('form.agreeTerms')}
-          />
-        </Paper>
-      )}
-
-      <Stack direction="row" spacing={2} justifyContent="flex-end">
-        <Button onClick={() => navigate(backTo)} disabled={saving}>
-          {t('common.cancel')}
-        </Button>
-        <Button variant="contained" size="large" onClick={addToBasket} disabled={!canBook}>
-          {saving ? t('book.adding') : t('book.addToBasket')}
-        </Button>
-      </Stack>
-
-      {!online && (
-        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" sx={{ mt: 1 }}>
-          {t('offline.selectionBlocked')}
-        </Typography>
-      )}
-      {online && !chosen && (
-        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" sx={{ mt: 1 }}>
-          {t('book.chooseSlot')}
-        </Typography>
-      )}
-      {chosen && termsRequired && !agreed && (
-        <Typography variant="caption" color="text.secondary" display="block" textAlign="right" sx={{ mt: 1 }}>
-          {t('form.mustAgree')}
-        </Typography>
-      )}
+        </Grid>
+      </Grid>
     </Container>
   );
 };
 
 /** Identity of a slot within a day: its start and how long it runs. */
-const slotKey = (slot: AvailableSlot): string => `${slot.startTime}|${slot.duration}`;
+/**
+ * Identifies one slot across the whole week.
+ *
+ * The date is part of the key because a member may now pick several slots at
+ * once: without it, 10:00 on Saturday and 10:00 on Sunday are the same key, and
+ * selecting one would toggle the other.
+ */
+const slotKey = (slot: AvailableSlot): string =>
+  `${slot.date}|${slot.startTime}|${slot.duration}`;
 
 export default BookCalendarPage;

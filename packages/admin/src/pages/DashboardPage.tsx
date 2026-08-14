@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
+  CardActionArea,
   CardContent,
   Typography,
   Grid,
@@ -21,46 +22,70 @@ import {
   getCapabilities,
   getPaymentMethods,
 } from '../services/organizationApi';
+import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
+import { PageHeader } from '../components/PageHeader';
 
 interface StatCardProps {
   title: string;
   value: number | string;
   icon: React.ReactNode;
-  color: string;
   subtitle?: string;
+  /** Where this figure lives. A number you cannot click is a dead end. */
+  to?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, subtitle }) => {
+/**
+ * One figure on the dashboard.
+ *
+ * The six cards used to carry six hardcoded MUI stock hues — #1976d2, #9c27b0,
+ * #f57c00, #388e3c, #0288d1, #7b1fa2 — none of which was the theme's own
+ * colour. Six unrelated hues on the first screen after login, chosen by nobody,
+ * and all competing equally for attention.
+ *
+ * They are neutral now. The figure carries the weight, the icon is quiet, and
+ * the only colour on this screen belongs to something actionable.
+ */
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, subtitle, to }) => {
+  const navigate = useNavigate();
+
+  const body = (
+    <CardContent sx={{ height: '100%' }}>
+      <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={1.5}>
+        <Box
+          sx={{
+            color: 'text.secondary',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {icon}
+        </Box>
+        <Typography variant="h1" component="p" sx={{ lineHeight: 1 }}>
+          {value}
+        </Typography>
+      </Box>
+      <Typography variant="h6" component="h3" gutterBottom>
+        {title}
+      </Typography>
+      {subtitle && (
+        <Typography variant="body2" color="text.secondary">
+          {subtitle}
+        </Typography>
+      )}
+    </CardContent>
+  );
+
   return (
     <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <Box
-            sx={{
-              backgroundColor: `${color}20`,
-              borderRadius: '8px',
-              padding: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {icon}
-          </Box>
-          <Typography variant="h3" fontWeight="bold">
-            {value}
-          </Typography>
-        </Box>
-        <Typography variant="h6" color="textSecondary" gutterBottom>
-          {title}
-        </Typography>
-        {subtitle && (
-          <Typography variant="body2" color="textSecondary">
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
+      {to ? (
+        <CardActionArea onClick={() => navigate(to)} sx={{ height: '100%' }}>
+          {body}
+        </CardActionArea>
+      ) : (
+        body
+      )}
     </Card>
   );
 };
@@ -130,32 +155,25 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <Box>
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Dashboard
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          System overview and statistics
-        </Typography>
-      </Box>
+      <PageHeader title="Dashboard" description="The platform at a glance." />
 
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Organizations"
+            title="Organisations"
             value={stats.totalOrganizations}
-            icon={<OrganizationIcon sx={{ fontSize: 32, color: '#1976d2' }} />}
-            color="#1976d2"
+            icon={<OrganizationIcon />}
             subtitle={`${stats.activeOrganizations} active`}
+            to="/organizations"
           />
         </Grid>
 
         <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Organization Types"
+            title="Organisation Types"
             value={stats.totalOrganizationTypes}
-            icon={<TypeIcon sx={{ fontSize: 32, color: '#9c27b0' }} />}
-            color="#9c27b0"
+            icon={<TypeIcon />}
+            to="/organization-types"
           />
         </Grid>
 
@@ -163,28 +181,27 @@ export const DashboardPage: React.FC = () => {
           <StatCard
             title="Capabilities"
             value={stats.totalCapabilities}
-            icon={<CapabilityIcon sx={{ fontSize: 32, color: '#f57c00' }} />}
-            color="#f57c00"
+            icon={<CapabilityIcon />}
+            subtitle="Available platform-wide"
           />
         </Grid>
 
         <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Admin Users"
+            title="Administrators"
             value={stats.totalAdminUsers}
-            icon={<UsersIcon sx={{ fontSize: 32, color: '#388e3c' }} />}
-            color="#388e3c"
-            subtitle="Across all organizations"
+            icon={<UsersIcon />}
+            subtitle="Across all organisations"
+            to="/users"
           />
         </Grid>
 
         <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Account Users"
+            title="Members"
             value={stats.totalAccountUsers}
-            icon={<UsersIcon sx={{ fontSize: 32, color: '#0288d1' }} />}
-            color="#0288d1"
-            subtitle="Across all organizations"
+            icon={<UsersIcon />}
+            subtitle="Across all organisations"
           />
         </Grid>
 
@@ -192,22 +209,37 @@ export const DashboardPage: React.FC = () => {
           <StatCard
             title="Payment Methods"
             value={stats.totalPaymentMethods}
-            icon={<PaymentIcon sx={{ fontSize: 32, color: '#7b1fa2' }} />}
-            color="#7b1fa2"
+            icon={<PaymentIcon />}
+            subtitle="Enabled platform-wide"
           />
         </Grid>
       </Grid>
 
+      {/*
+        There used to be a hardcoded `<Chip label="System Operational"
+        color="success" />` here. It asserted platform health regardless of
+        platform health, on the first screen after login, and nothing in this
+        app measures uptime. The figures below are the ones this page can
+        actually stand behind.
+      */}
       <Box mt={4}>
         <Card>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
-              System Status
+            <Typography variant="h6" component="h2" gutterBottom>
+              Totals
             </Typography>
             <Box display="flex" gap={1} flexWrap="wrap" mt={2}>
-              <Chip label="System Operational" color="success" />
-              <Chip label={`${stats.totalOrganizations} Organizations`} variant="outlined" />
-              <Chip label={`${stats.totalAdminUsers + stats.totalAccountUsers} Total Users`} variant="outlined" />
+              <Chip label={`${stats.totalOrganizations} organisations`} variant="outlined" />
+              <Chip
+                label={`${stats.activeOrganizations} active, ${
+                  stats.totalOrganizations - stats.activeOrganizations
+                } not`}
+                variant="outlined"
+              />
+              <Chip
+                label={`${stats.totalAdminUsers + stats.totalAccountUsers} people`}
+                variant="outlined"
+              />
             </Box>
           </CardContent>
         </Card>

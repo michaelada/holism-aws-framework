@@ -1,12 +1,12 @@
-# AWS Web Application Framework - Terraform Infrastructure
+# AWS Web Application Framework - OpenTofu Infrastructure
 
-This directory contains Terraform configurations for provisioning the AWS infrastructure for the web application framework.
+This directory contains OpenTofu configurations for provisioning the AWS infrastructure for the web application framework.
 
 ## Structure
 
 ```
 terraform/
-├── modules/              # Reusable Terraform modules
+├── modules/              # Reusable OpenTofu modules
 │   ├── networking/      # VPC, subnets, security groups
 │   ├── compute/         # EC2, ALB, Auto Scaling
 │   ├── database/        # RDS PostgreSQL
@@ -20,12 +20,12 @@ terraform/
 
 ## Prerequisites
 
-1. **Terraform**: Install Terraform >= 1.0
+1. **OpenTofu**: Install OpenTofu >= 1.6
    ```bash
    # macOS
-   brew install terraform
+   brew install opentofu
    
-   # Or download from https://www.terraform.io/downloads
+   # Or download from https://opentofu.org/docs/intro/install/
    ```
 
 2. **AWS CLI**: Configure AWS credentials
@@ -62,15 +62,15 @@ cd terraform/test
 ```
 
 This will run:
-- ✅ Syntax and structure validation (no Terraform required)
-- ✅ Terraform validate (if Terraform installed)
-- ✅ Terraform plan verification (if Terraform installed)
+- ✅ Syntax and structure validation (no OpenTofu required)
+- ✅ OpenTofu validate (if OpenTofu installed)
+- ✅ OpenTofu plan verification (if OpenTofu installed)
 
 For more details on testing, see [test/README.md](test/README.md).
 
 **Quick test commands:**
 ```bash
-# Run all tests (requires Terraform)
+# Run all tests (requires OpenTofu)
 cd terraform/test && ./run-all-tests.sh
 
 # Run only syntax tests (no Terraform required)
@@ -154,17 +154,17 @@ Manages application secrets using AWS Secrets Manager.
 
 3. Initialize Terraform:
    ```bash
-   terraform init
+   tofu init
    ```
 
 4. Review the plan:
    ```bash
-   terraform plan
+   tofu plan
    ```
 
 5. Apply the configuration:
    ```bash
-   terraform apply
+   tofu apply
    ```
 
 ### Production Environment
@@ -182,17 +182,17 @@ Manages application secrets using AWS Secrets Manager.
 
 3. Initialize Terraform:
    ```bash
-   terraform init
+   tofu init
    ```
 
 4. Review the plan:
    ```bash
-   terraform plan
+   tofu plan
    ```
 
 5. Apply the configuration:
    ```bash
-   terraform apply
+   tofu apply
    ```
 
 ## Environment Differences
@@ -224,7 +224,7 @@ export TF_VAR_database_password="your-password"
 export TF_VAR_keycloak_client_secret="your-secret"
 export TF_VAR_jwt_signing_key="your-key"
 export TF_VAR_session_secret="your-secret"
-terraform apply
+tofu apply
 ```
 
 ### Option 2: Terraform Variables File (Not Committed)
@@ -237,13 +237,13 @@ jwt_signing_key        = "your-key"
 session_secret         = "your-secret"
 EOF
 
-terraform apply
+tofu apply
 ```
 
 ### Option 3: Interactive Input
 ```bash
 # Terraform will prompt for sensitive variables
-terraform apply
+tofu apply
 ```
 
 ## Outputs
@@ -283,8 +283,8 @@ ssh -L 9090:localhost:9090 ec2-user@<monitoring-instance-ip>
 ### Updating Infrastructure
 
 1. Modify Terraform files
-2. Run `terraform plan` to review changes
-3. Run `terraform apply` to apply changes
+2. Run `tofu plan` to review changes
+3. Run `tofu apply` to apply changes
 
 ### Destroying Infrastructure
 
@@ -293,11 +293,11 @@ ssh -L 9090:localhost:9090 ec2-user@<monitoring-instance-ip>
 ```bash
 # Staging
 cd terraform/environments/staging
-terraform destroy
+tofu destroy
 
 # Production (requires additional confirmation)
 cd terraform/environments/production
-terraform destroy
+tofu destroy
 ```
 
 ## Troubleshooting
@@ -327,7 +327,7 @@ aws ec2 describe-instances --filters "Name=tag:Name,Values=staging-monitoring"
 ## Best Practices
 
 1. **Always run tests before deployment**: `cd terraform/test && ./ci-test.sh`
-2. **Always run `terraform plan` before `apply`**
+2. **Always run `tofu plan` before `apply`**
 3. **Use separate AWS accounts for staging and production**
 4. **Enable MFA for production AWS accounts**
 5. **Regularly review and rotate secrets**

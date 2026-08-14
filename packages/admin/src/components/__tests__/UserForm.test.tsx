@@ -1,15 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UserForm } from '../UserForm';
-import { User, Tenant, Role } from '../../types/admin.types';
+import { User, Role } from '../../types/admin.types';
+import type { Organization } from '../../types/organization.types';
 
 describe('UserForm', () => {
-  const mockTenants: Tenant[] = [
+  const mockOrganisations: Organization[] = [
     {
-      id: 'tenant-1',
-      keycloakGroupId: 'kc-tenant-1',
-      name: 'tenant-one',
-      displayName: 'Tenant One',
+      id: 'organisation-1',
+      organizationTypeId: 'organisation-type-1',
+      keycloakGroupId: 'kc-organisation-1',
+      name: 'organisation-one',
+      displayName: 'Organisation One',
+      urlCode: 'organisation-one',
+      currency: 'GBP',
+      language: 'en-GB',
+      enabledCapabilities: [],
+      settings: {},
       status: 'active',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
@@ -41,14 +48,15 @@ describe('UserForm', () => {
     enabled: true,
     emailVerified: true,
     roles: ['admin'],
-    tenants: ['tenant-1'],
+    classifications: ['super-admin'] as const,
+    organizations: ['organisation-1'],
     phoneNumber: '+1234567890',
     department: 'Engineering',
     createdAt: '2024-01-01T00:00:00Z',
   };
 
   const defaultProps = {
-    tenants: mockTenants,
+    organizations: mockOrganisations,
     roles: mockRoles,
     loading: false,
     onSubmit: vi.fn(),
@@ -184,7 +192,7 @@ describe('UserForm', () => {
           emailVerified: false,
           phoneNumber: undefined,
           department: undefined,
-          tenantId: undefined,
+          organizationId: undefined,
           roles: undefined,
         });
       });

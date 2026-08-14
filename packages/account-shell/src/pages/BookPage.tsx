@@ -13,6 +13,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { CalendarIcon } from '@aws-web-framework/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { CatalogueCalendar } from '../types/account';
@@ -90,21 +91,36 @@ export const BookPage: React.FC = () => {
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Stack direction="row" spacing={1.5} alignItems="center">
                       {/*
-                        The club's own colour for this resource, carried across
-                        from the org-admin calendar so the two read as the same
-                        thing.
+                        The club's own icon and colour for this resource,
+                        carried across from the org-admin calendar so the two
+                        read as the same thing.
+
+                        An icon rather than a bare colour swatch: a column of
+                        coloured bars asks the member to remember which colour
+                        means the arena, where a racket or a stable says it
+                        outright. Calendars with no icon chosen still get the
+                        generic calendar mark, so the column stays even.
                       */}
-                      {calendar.displayColour && (
-                        <Box
-                          sx={{
-                            width: 12,
-                            height: 40,
-                            borderRadius: 1,
-                            backgroundColor: calendar.displayColour,
-                            flexShrink: 0,
-                          }}
+                      <Box
+                        aria-hidden
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          flexShrink: 0,
+                          borderRadius: 1.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: calendar.displayColour
+                            ? `${calendar.displayColour}1f`
+                            : 'action.hover',
+                        }}
+                      >
+                        <CalendarIcon
+                          name={calendar.displayIcon}
+                          colour={calendar.displayColour}
                         />
-                      )}
+                      </Box>
                       <Box>
                         <Typography variant="h2" sx={{ fontSize: '1.125rem' }}>
                           {calendar.name}

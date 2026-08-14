@@ -394,6 +394,151 @@ the date as a tear-off calendar page: month band, weekday, day, year. Month and 
 `Intl`, so a French member reads AOÛT / jeudi. It renders one `role="group"` with the full date as
 its label, the visible pieces `aria-hidden` — "AUG Thursday 20 2026" is worse spoken than seen.
 
+### Entry-window dates are ordinal
+
+Both surfaces render opening and closing moments through `formatOrdinalDateTime` — "closes 22nd
+Sept 2026, 23:59" rather than "22 Sept 2026". These are dates a member reads as a *deadline* rather
+than scans in a column, and an ordinal reads the way the date is spoken.
+
+**Only where the language uses one.** The suffix table in `packages/components/src/utils/formatting.ts`
+covers English (`st`/`nd`/`rd`/`th`, chosen by `Intl.PluralRules` so 21 takes `st` while 11 takes
+`th`) and French (`1er`, then nothing). German already writes `1.` and Spanish, Italian and
+Portuguese use a plain numeral — inventing suffixes there would not be a nicer date but a wrong one.
+The formatter is built on `formatToParts` and only rewrites the `day` token, so the locale keeps its
+own order and separators, and a two-digit hour is never mistaken for a day.
+
+### The same rules, twice over, at two sizes
+
+The home screen's "What's on" teasers reuse those rules through
+`components/WhatsOnStatus.tsx`, which collapses the window and the capacity into **one** chip —
+*Open*, *Opening soon*, *Closing soon*, *Closed*, *Entries full* — plus the moment that state turns
+on, with the date drawn by the same `EventDateTile` at `size="small"`.
+
+Browse and home differ in what the member is doing, so they differ in how much they say. Choosing
+between events wants the places remaining as well; glancing at a teaser wants the state and the
+deadline. Both call `entryWindowFor`, so the two screens can never disagree about whether an event
+is open — only about how much detail is worth the space.
+
+Which moment appears follows the state: *opening soon* shows both the opening and the closing (when
+can I enter, and how long will I have), *open* and *closing soon* show only the closing, and
+*closed* says when entries closed. Times are shown throughout, because a closing at 09:00 is a
+different thing to plan around than one at 23:59.
+
+**The dashboard teases events the member cannot enter**, which nothing else in the list does.
+`buildWhatsOn` admits `entries-closed` and `event-full`, and `entries-not-open` when it is within
+`OPENING_WITHIN_DAYS` (3) — deliberately shorter than the client's `OPENING_SOON_DAYS` (14), which
+decides how a window is *phrased* rather than whether it belongs on the screen at all. An event the
+member has already entered stays out. The reasoning is that an event's unavailability is itself the
+news: entries opening on Friday or a camp that filled up are what a member wants to know, and a list
+that omitted them would read as a club with nothing on.
+
+`full` outranks the window while entries are running, and never once they have closed: a closed
+event reads as *Closed*, because "full" would be a detail about a door that is shut anyway. The
+dashboard endpoint hands over `startDate`, `endDate`, the two window dates, `entriesLimit` and
+`placesRemaining` raw rather than a decided status — a second opinion computed server-side would
+eventually disagree with the client's.
+
+## A membership belongs to a person, not to a login
+
+`members.user_id` is the **holder** — whoever signs in — while `first_name` / `last_name` on the row
+are who it is *for*. A parent holds their children's memberships, and those children may have no
+login at all.
+
+So both membership surfaces lead with the member's name and demote the type to a subtitle:
+`MyMembershipsPage`'s cards and the home dashboard's membership card. Headed by the type, a parent
+holding three sees three cards reading "Junior Member" that differ only by a number nobody
+recognises. Both fall back to the type when no name is recorded, since a card headed by nothing is
+worse than one headed by the type.
+
+The dashboard card is about the membership expiring **soonest**, which makes whose it is essential
+rather than decorative — otherwise it announces that something is expiring without saying for whom.
+`totalMemberships` lets it add "1 of 4 memberships" instead of implying it is the whole story.
+
+> **Fixed here:** `openMembershipTypeIds` filtered `membership_status = 'active'`, a value that
+> column never takes — it is `open` or `closed`. The set was therefore always empty, `canRenew`
+> always false, and no membership could ever be renewed; the screen offered "renewals are not open
+> yet" to everyone. A test asserting the literal `'active'` had pinned the bug in place.
+
+## The club names its own bookings area
+
+`useBookingsLabel()` is the single reader for what this club calls bookings — `branding.bookingsLabel`
+from the public record, falling back to the translated `nav.calendar`. Both places the app names the
+area (the navigation entry and the home screen's second row) go through it, so they cannot drift.
+
+The custom label is deliberately **not** translated: it is a name the club chose, and
+machine-translating "Court Booking" into five languages would produce five things it never agreed to.
+
+The home screen puts bookings in **their own row** beneath "What's on", headed by that label. They
+recur where events and shirts are one-offs, and mixing them in buried both that and the club's own
+word. Each booking card leads with its calendar's icon in its calendar's colour — a court, an arena
+and a clubhouse are not interchangeable, and colour alone does not carry that. See
+`docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md`.
+
+## Four rows on the home screen, each with its own budget
+
+Memberships first — what the member already holds — then "What's on", bookings under the club's own
+word for them, and the shop. Memberships are every *active* one as its own card rather than a single
+card about the soonest to expire, which left a parent's other three invisible; renewal is a button
+on the card that needs it rather than a banner that would have to pick one membership to be about.
+
+### The teaser rows
+
+"What's on", bookings and the shop are each capped at four **independently** — one shared cap meant a club with events, a shop and three calendars showed
+exactly one calendar, with nothing on screen to say that was a limit rather than all it had.
+
+Each card leads with what identifies its kind: a date tile for anything dated, the calendar's icon
+in its colour for a booking, a thumbnail for a product. Cards in a named row drop their kind caption
+(`showKind={false}`), since "Shop" above a grid of cards each captioned "Shop" is the same word
+twice.
+
+## Joining a second club sends nothing
+
+`POST /api/account/:orgCode/register` takes the caller's **identity from the verified token**, not
+the request body: the email, so nobody can register under someone else's address, and the name for
+the same reason.
+
+That matters because A4 is a single button. The platform already knows who is pressing it, so the
+request carries no body at all — and reading the name from `req.body` meant every such request
+arrived nameless and was refused as invalid. The member was told the club could not be joined, when
+nothing about the club was the problem.
+
+`extractUserInfo` reads `given_name` / `family_name`, falling back to splitting `name` for a realm
+that releases only that. Empty rather than undefined when a realm releases neither, so callers cope
+with absence explicitly. The body remains a fallback for that case.
+
+## Booking several slots at once
+
+The week grid is multi-select: a member books Tuesday *and* Thursday in one pass, or the same slot
+several weeks running. Each chosen slot becomes **its own cart item**, added in one POST per slot
+rather than a batch — the cart's guard re-checks each as it arrives, and a batch would have to
+decide what to do when the third of five has gone. Adding them singly means the member keeps
+whatever was still free and is told about the one that was not.
+
+`slotKey` includes the **date** for this reason: without it, 10:00 Saturday and 10:00 Sunday share a
+key, and selecting one would toggle the other. Each day's `ToggleButtonGroup` reports only its own
+day, so the other days are carried through untouched on every change.
+
+The basket, terms and the add button sit in a **sticky column beside the week** rather than below
+it: a member picking several slots is running a total in their head, and a summary below the fold
+makes them scroll to check it after every tap. Chosen slots fill success green — with several
+selectable at once, a selected-but-grey button reads as disabled next to the ones that genuinely
+are.
+
+## The tab icon follows the club
+
+`hooks/useOrganisationFavicon.ts` swaps the browser favicon to the organisation's uploaded logo, and
+restores `/favicon.png` when the logo goes away or the member leaves for the directory. A member
+with three clubs open in three tabs otherwise sees the same platform mark on all of them.
+
+Driven from `AccountOrganisationContext`, not `AppShell`, because the gateway and directory screens
+render outside the shell and must still get the right icon.
+
+**The logo is proved to decode before it is applied.** A browser that fails to decode an icon falls
+back to a blank page glyph rather than to the previous one, so pointing the tab straight at an
+unverified upload would let a bad file cost the club its icon entirely. Loading it into an `Image`
+first means a failure is simply a swap that never happens. `apple-touch-icon` is left alone: it is
+baked into a homescreen shortcut at install time, so rewriting it mid-session changes nothing.
+
 ## Two catalogues, not one tabbed page
 
 `/browse/events` and `/browse/memberships` are separate routes with their own menu entries, each

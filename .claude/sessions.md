@@ -3556,3 +3556,3240 @@ If you want my pick: the reporting exports. It's a button that lies to the user 
 ## 2026-08-13 15:05:31 — Prompt
 
 Do the reporting
+
+### Assistant
+
+Helper is solid. Now wiring the pages:
+
+Now the failure notice needs somewhere to render:
+
+No new type errors (the 17 unresolved subpath imports are pre-existing, resolved by Vite aliases). Now the dashboard, whose button has no single report to export:
+
+Now the strings, in all six locales:
+
+Adding the `useApi` stub and export coverage to the three report suites:
+
+Adding dashboard-specific coverage for the report menu, since that behaviour is new:
+
+All reporting suites green. Full package check, then the backend side:
+
+Now the module summary, which currently documents this as a known gap:
+
+Final verification across the affected packages:
+
+Five clean runs at 2,582 (up 9 — the new route tests). Committing:
+
+Done — the export buttons work.
+
+## What I found first
+
+`GET /reports/export` already existed, fully implemented, and had **never been called**. It runs the same queries the pages read and returns a formatted Excel workbook per report type. So this became front-end work: wire the buttons to it, rather than build a second client-side implementation of the same reports — which could only ever have exported the rows a page happened to have fetched.
+
+Two consequences worth knowing:
+
+- **It's Excel, not CSV.** The buttons said "Export to CSV" and the keys were `reporting.<report>.exportToCSV`; both were wrong about what the system produces, and have been since reporting was built. One shared `reporting.exportToExcel` now, in all six locales, matching the payments module's wording.
+- **The dashboard has no report of its own.** It summarises the three, and the endpoint takes `events | members | revenue`. Its button opens a menu of the three rather than exporting something unnamed.
+
+## What it does
+
+`reporting/exportReport.ts` asks for the workbook as a blob — parsed as text it arrives corrupted and opens as gibberish — doesn't retry behind the user, and cleans up the anchor and object URL even when the click throws. Each page exports over the filters it's showing, and shows a failure in an alert: silence is precisely what was being fixed, so an export that quietly does nothing would be no improvement.
+
+## Tests
+
+- 10 for the helper: the request shape, the file name, cleanup on the throwing path.
+- The four page suites: the button, its disabled states, that a click downloads the right report for the filters on screen, that a failure is visible, and the dashboard's menu.
+- 9 new backend route tests, since the UI now depends on that endpoint's contract — each report type, the attachment headers, filter passing, the 400 for a type it doesn't have, and a failure arriving as a 500 rather than a broken file.
+
+Backend 2,582 passing over five consecutive clean runs; orgadmin-core 699; orgadmin-shell 671.
+
+One thing I left alone and recorded rather than silently fixed: `PaymentsListPage`'s export calls the server's payments endpoint, **discards the response**, then builds a CSV in the browser from the rows on screen. It works, so I didn't touch it without being asked — but the round trip is pointless and the file isn't the one the server would have produced.
+
+Committed as `08cbbb8` on `work/august-batch`. Still nothing pushed.
+
+---
+
+
+## 2026-08-13 15:38:43 — Prompt
+
+which repo package has the super admin ui code in it ?
+
+### Assistant
+
+`packages/admin` — the super-admin UI (tenants, organisations, organisation types, roles, users). Its summary is [admin.md](.claude/modules/admin.md).
+
+Run it with `npm run dev:admin` → http://localhost:5174.
+
+Worth not confusing with the two neighbours: `packages/orgadmin-shell` is the *org*-admin portal (a club administering itself), and `packages/frontend` is the metadata-repository UI.
+
+---
+
+
+## 2026-08-13 15:39:57 — Prompt
+
+/impeccable
+
+### Assistant
+
+I'm ready — but `/impeccable` with no argument means I show you the routing menu rather than picking a command for you.
+
+Before that, one thing worth flagging: this session is non-interactive, so I can only run one pass. Let me load the routing reference and see what the project context suggests.
+
+Ran the context scripts. Here's what the project actually looks like, then the menu.
+
+**Signals**
+- No `PRODUCT.md` and no `DESIGN.md` anywhere in the repo — `hasCode: true`, `hasDesign: false`.
+- `context.mjs` stopped at `TARGET_SELECTION_REQUIRED`: this is a 12-package monorepo, so every command needs an explicit target package.
+- Never critiqued (`critique.latest: null`).
+- Dirty tree is 593 files but almost entirely `docs/` and [.claude/modules/](.claude/modules/) — no single UI surface to scope to.
+- Detector returned **zero** hits on [packages/account-shell/src/](packages/account-shell/src/) — but that's a weak signal, not a clean bill of health: it reads HTML/CSS and this UI is MUI-in-TSX, so there was little for the rule engine to read.
+- A server is up on `:8080` (the Docker nginx). `live` wants a Vite dev server — `npm run dev:account` on `:5176`.
+
+---
+
+## Recommended (pick one, I won't auto-run)
+
+**1. `/impeccable init packages/account-shell`**
+Nothing has captured product context. Every other command below is guessing at who the member-facing app serves and what success looks like until this exists. Scope it to one front end — the monorepo has four.
+
+**2. `/impeccable critique packages/account-shell`**
+The account-user app is the newest and most design-exposed surface (phases 1–12 shipped, plus its own wireframes in [docs/ACCOUNT_USER_APP_WIREFRAMES.md](docs/ACCOUNT_USER_APP_WIREFRAMES.md)) and has never had a design review. Operate mode — task completion, not expression.
+
+**3. `/impeccable document packages/orgadmin-shell`**
+`hasDesign: false` while the org-admin has a real, shipped MUI theme across six locales and seven capability modules. This writes down the visual system that already exists, so later refinements preserve the identity instead of quietly inventing a new one.
+
+---
+
+## Full menu
+
+**Build** — `shape [feature]` plan UX before code · `init` capture product context · `document` DESIGN.md from existing code · `extract [target]` pull reusable tokens/components
+
+**Evaluate** — `critique [target]` UX review with heuristic scoring · `audit [target]` a11y, perf, responsive
+
+**Refine** — `polish` final pass · `bolder` amplify bland · `quieter` tone down loud · `distill` strip to essence · `harden` errors, i18n, edge cases · `onboard` first-run and empty states
+
+**Enhance** — `animate` · `colorize` · `typeset` · `layout` · `delight` · `overdrive`
+
+**Fix** — `clarify` UX copy and errors · `adapt` devices and screen sizes · `optimize` UI performance
+
+**Iterate** — `live` pick elements in the browser and generate variants (start `npm run dev:account` first)
+
+Tell me which, and against which package.
+
+---
+
+
+## 2026-08-13 15:41:49 — Prompt
+
+/impeccable init
+
+### Assistant
+
+The claude-mem hook is truncating my file reads to line 1, so I'll read through the shell instead.
+
+I have enough repo evidence to avoid asking you the obvious. Three gaps the code genuinely can't answer:
+
+Enough. Writing the record now.
+
+Written [PRODUCT.md](PRODUCT.md) at the project root, plus [.impeccable/live/config.json](.impeccable/live/config.json) (no CSP detected, so live mode is ready across all four Vite shells via `packages/*/index.html`).
+
+## What got captured
+
+**From you** — the three things the repo could not answer:
+
+- **Primary user is the club administrator.** The member is a real, secondary audience with a real surface; the super admin is internal. Future design decisions resolve in the administrator's favour.
+- **All four positioning claims are binding**: one system not five, runs without an IT person, each club's own branded app, multi-country from day one.
+- **"Its Plain Sailing" means "it's easy," not "sailing."** I recorded this as the single most easily broken fact in the file, with nautical imagery written in explicitly as an **anti-reference** — anchors, sails, waves, rope, compasses, "set sail," navy-and-rope palettes. It's the fact most likely to get quietly violated by any future designer, human or otherwise, who reads the name and reaches for the obvious.
+
+**From the repo** — so you didn't have to repeat it: the tenant/organisation/user identity model, capability gating as a design constraint (no two clubs see the same product), six locales with no hard-coded English, per-club primary colour with graceful fallback, the offline PWA and its stale-data obligation, `check-sso` and why a club's public link must work anonymously, and the terminology table including the "connecting to a club ≠ buying a membership" distinction from your recent commit.
+
+## Deliberately left undecided
+
+- **No accessibility standard.** Four wireframe docs assert "WCAG AA compliant contrast ratios," but that's stated intent, never agreed or audited. Recorded as a working floor and flagged unconfirmed.
+- **No pricing, customers, testimonials, adoption figures, or case studies** exist anywhere in the repo. Recorded as absent so future work doesn't invent them.
+- **The logo mark is a placeholder** — [.claude/sessions.md:3521](.claude/sessions.md#L3521) says the plumbing was fixed but no mark was ever designed. Recorded as unresolved rather than as an identity to preserve.
+
+## Two things worth knowing
+
+**Your root [README.md](README.md) is stale scaffold.** It calls the product "Application Framework" and diagrams `aws-web-app-framework/` with three packages; you have twelve and a named product. It also has a copy-paste error at line 71 — `dev:account` is labelled "super admin." Not touching it unasked.
+
+**There are two competing themes and no record of which wins.** [docs/WARM_THEME_IMPLEMENTATION.md](docs/WARM_THEME_IMPLEMENTATION.md) describes a warm orange/gold Sora theme drawn from the marketing site, while `defaultTheme` still points at the older teal/grey neumorphic one — and the member app's [theme/index.ts](packages/account-shell/src/theme/index.ts) is a third thing again, MUI default blue with Sora headings. That's a genuine visual-authority conflict, not a gap I should have guessed at.
+
+Which is why the next move is **`/impeccable document packages/orgadmin-shell`** — it records the incumbent visual system and forces that theme question into the open. If you'd rather find out how the administrator's app actually holds up first, **`/impeccable critique packages/orgadmin-shell`** now has the product truth it needs to judge against.
+
+---
+
+
+## 2026-08-13 15:53:03 — Prompt
+
+/impeccable
+
+
+## 2026-08-13 15:53:45 — Prompt
+
+/impeccable critique
+
+### Assistant
+
+Two things to settle before I run this — `critique` has a mandated shape and my session rules conflict with part of it.
+
+Target: `packages/admin` — the platform super-admin UI. Sub-agents it is.
+
+Spawning both assessments now, isolated from each other.
+
+Both assessments are running in parallel, isolated from each other.
+
+**Assessment A** — design review of `packages/admin`: reads the shell, theme files, six list pages, three heavy forms, the capability/fee selectors and the error-state plumbing. Scores all ten Nielsen heuristics, cognitive load, emotional journey, and walks Alex (power user), Sam (accessibility), Riley (stress tester). It is explicitly forbidden from running the detector, so its judgment isn't anchored by the scan.
+
+**Assessment B** — deterministic evidence: the bundled detector over `packages/admin/src` plus browser capture at 1440×900 and 390×844. I've told it to expect the Keycloak wall and to report honestly how far it got rather than bypass auth, and to stop any dev server it starts.
+
+Two notes on what I set up:
+
+**Target.** You picked `packages/admin` over my recommendation. Worth flagging what that means for the scoring: PRODUCT.md records the super admin as *internal Esker staff* — a small, expert, repeat-use audience — so I briefed Assessment A to weigh Alex the power user heaviest and not to penalise the app for lacking first-run hand-holding it doesn't need. If you actually want it judged as a customer-facing surface, say so and I'll rescore.
+
+**Method.** Running with sub-agents means no degraded banner on the report — it'll carry `Method: dual-agent` provenance instead.
+
+I'll synthesise both into a single report when they land — heuristic table, design-specificity verdict, priority issues with P0–P3 severities, persona red flags — then persist a snapshot to `.impeccable/critique/packages-admin/` so `/impeccable polish` can pick up the backlog without a copy-paste. This is the first run for this target, so there's no trend line yet.
+
+---
+
+
+## 2026-08-13 16:01:57 — Prompt
+
+<task-notification>
+<task-id>a3120a31094e07350</task-id>
+<tool-use-id>toolu_01XVsiwWxdqAP9FZmjfWC9NV</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-michaeladams-Work-Esker-Development-AI-Holism/664d5b37-651c-4cbd-b5d4-368204952755/tasks/a3120a31094e07350.output</output-file>
+<status>completed</status>
+<summary>Agent "Assessment B: detector + browser" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Assessment B — deterministic and observational evidence for `packages/admin`.
+
+## Part 1 — CLI detector
+
+Command run from repo root, unnarrowed (it was fast, no narrowing needed):
+
+```
+node /Users/michaeladams/.claude/skills/impeccable/scripts/detect.mjs --json packages/admin/src packages/admin/index.html
+```
+
+**Findings JSON:** `[]`
+**Exit code:** 0 (clean)
+**Total findings:** 0
+**Breakdown by rule:** none — no rule fired.
+**File locations:** n/a.
+
+Text mode produced no output at all. Re-run with `--no-config` also returned `[]` / exit 0, so nothing is being suppressed by project config. The only `.impeccable/` directory in the repo contains just `live/` — no `config.json`, no `ignoreRules`, no `DESIGN.md` in play.
+
+Because an empty result is a weak signal on its own, I verified the detector actually works on this stack rather than silently skipping TSX:
+
+- Synthetic probe `Bad.tsx` (a TSX file with MUI-style inline `sx`/`style` props) → fired `bounce-easing` at line 2, exit 2. So TSX is parsed and rules do fire on this file type.
+- Recursion probe (`probe2/a/b/c/Bad.tsx`, three levels deep) → 1 finding. So directory arguments recurse; the empty admin result is not a shallow-scan artifact.
+- Re-ran against the subdirectories explicitly (`src/pages`, `src/components`, `src/theme`, `src/index.css`, `src/App.tsx`) → still `[]`.
+- 81 source files exist under `packages/admin/src` (`.ts`/`.tsx`/`.css`), so there was real material to scan.
+
+**Conclusion:** the zero is genuine, not a tooling failure.
+
+**False-positive flags:** none to report, since there are no findings. The inverse caveat is the one worth recording — this is a **clean scan, not a clean bill of health**. The detector is regex/pattern-based on non-HTML files, and `packages/admin` renders almost entirely through MUI components (`&lt;Card&gt;`, `&lt;Button&gt;`, `sx={{...}}`, theme tokens). Spacing, type scale, contrast and hierarchy decisions that live inside `warmTheme.ts` or in MUI's component defaults are not expressed as literal CSS strings in the TSX, so the pattern rules have very little surface to bite on. A zero here means "no detectable literal anti-pattern strings", and carries no information about rendered visual quality. Only a URL scan (Puppeteer mode) would exercise the rendered-DOM rules, and that was blocked by auth — see below.
+
+## Part 2 — Browser evidence
+
+**Server:** not running at start (`curl` → `000`). I started it in the background with `npm run dev:admin` (Vite 5.4.21, ready in 235 ms, `http://localhost:5174/`, PID 38089). Stop method: `pkill -f vite`.
+
+**Environment context, relevant to what rendered:** Keycloak (`aws-framework-keycloak`) is up and healthy on `:8080`. Postgres and Prometheus are up. **The backend API on `:3000` was NOT running** (`000`), and nginx is up-but-unhealthy. So even with credentials, data-bearing screens would have had no API behind them.
+
+**Navigation:** opened a fresh tab (`browser_tabs action=new`) to `http://localhost:5174/`.
+
+**What actually rendered: an auth wall. No admin app screen was reached at all.**
+
+The app redirected immediately, before any admin route painted, to:
+
+```
+http://localhost:8080/realms/aws-framework/protocol/openid-connect/auth
+  ?client_id=aws-framework-admin
+  &amp;redirect_uri=http%3A%2F%2Flocalhost%3A5174%2F
+  &amp;response_type=code&amp;scope=openid
+  &amp;code_challenge_method=S256
+```
+
+Page title: **"Super Admin Portal"**. This is Keycloak serving a **custom login theme** (`resources/yuge6/login/super-admin/css/login.css` + `warm.css` + `img/logo.png`), not stock Keycloak.
+
+The redirect is unconditional. `packages/admin/src/context/AuthContext.tsx:69-72` initialises Keycloak with `onLoad: 'login-required'`, and `AuthProvider` wraps the whole router, so the gate fires at app boot rather than per route. I confirmed this empirically: `/access-denied` and the `*` 404 route are **not** wrapped in `ProtectedRoute` (`packages/admin/src/routes/index.tsx:148-149`), yet navigating to `http://localhost:5174/access-denied` still bounced straight to Keycloak with `redirect_uri=...%2Faccess-denied`. There is no unauthenticated path into any admin screen.
+
+I did not attempt to fake a login or bypass auth.
+
+**Screenshots** (both of the Keycloak login wall, since nothing else was reachable):
+
+- **Desktop 1440×900** — `/Users/michaeladams/Work/Esker/Development/AI/Holism/.playwright-mcp/admin-desktop-1440x900.png` (identical copy at `page-2026-08-13T14-59-50-382Z.png`). Visible: centred column on near-white ground; orange/gold sail-shaped logo mark; "ItsPlainSailing" wordmark in wide-tracked bold Sora; a white card with "Super Administrator Login", the sub-line "System administrators only. Please enter your credentials to access the Super Admin Portal.", stacked Email and Password fields (Email focused, orange ring), a full-width orange-gradient pill "Sign In" button with a soft glow, and a grey footer strip reading "New user? Create Account". The card occupies roughly 470px of the 1440px width, leaving very wide empty margins. Two visible horizontal rules sit between the button and the footer, bracketing an empty band.
+- **Mobile 390×844** — `.playwright-mcp/page-2026-08-13T14-59-56-814Z.png`. Same content, card now edge-to-edge with small side gutters. The sub-line wraps to three lines. The empty band between button and footer is still present and, at this width, the footer strip is white rather than grey and the card extends past the fold.
+
+**Desktop vs mobile difference:** the layout is a single centred card that reflows by width only — no structural change, no navigation to collapse (there is none on a login screen). The substantive differences are the card going from fixed-ish width with large dead margins to near-full-bleed, the sub-line rewrapping 2→3 lines, and the footer band losing its grey fill on mobile. The vestigial empty band between "Sign In" and the footer is visible at both sizes.
+
+**Console** (`browser_console_messages`, level info, all=true): **0 errors, 2 warnings** on the final page. Full set across the session:
+
+- `[LOG] Initializing Keycloak for Admin Portal...` — `AuthContext.tsx:46`
+- `[INFO]` React DevTools suggestion (dev-mode noise)
+- `[WARNING] React Router Future Flag Warning: ... v7_startTransition`
+- `[WARNING] React Router Future Flag Warning: ... v7_relativeSplatPath`
+- `[WARNING] The key "viewport" is not recognized and ignored.` — from the Keycloak page, `:8080/.../auth:8`
+- `[WARNING] The key "device-width" is not recognized and ignored.` — same source
+
+The last two originate from the custom Keycloak login template, not from `packages/admin`; they indicate a malformed `&lt;meta name="viewport"&gt;` content attribute in that theme.
+
+**Failed network requests: none.** All 89 requests returned 200, including the Google Fonts (Sora) fetches, `favicon.png`, and all Keycloak theme CSS/img assets. Note that `packages/admin/index.html` loads Sora from `fonts.googleapis.com` at runtime — an external dependency on the critical path, which succeeded here but is a live third-party fetch.
+
+## Steps skipped or failed, with reasons
+
+- **Script injection / live-server detect.js (step 5) — skipped entirely, per the "if and only if a real app screen renders" condition.** No admin screen ever rendered; the only DOM available was Keycloak's login page, which is not the target surface. I did not start `live-server.mjs`, did not inject anything, and **there is no user-visible overlay** and no `impeccable` console output from a live scan. Verified nothing is listening on the live-server port.
+- **`browser_take_screenshot` with an explicit absolute scratchpad path — failed.** Error: `File access denied: ... is outside allowed roots. Allowed roots: /Users/michaeladams/Work/Esker/Development/AI/Holism/.playwright-mcp, /Users/michaeladams/Work/Esker/Development/AI/Holism`. An earlier attempt with the bare relative filename `admin-desktop-1440x900.png` reported success but wrote to the repo root rather than `.playwright-mcp`; I located it and moved it into `.playwright-mcp/`. Repo root is clean.
+- **Authenticated screens — not reached, no credentials, and bypass was out of scope.** The entire admin UI (16 pages, 18 components) is therefore unobserved in the browser. Any rendered-DOM evidence about it is unavailable from this assessment.
+
+## Incidental observational note (factual, not opinion)
+
+`packages/admin/src/theme/index.ts` exports **two** themes and selects between them by commented-out lines: `neumorphicTheme` is imported cross-package from `../../../frontend/src/theme/neumorphicTheme` and its `defaultTheme` alias is commented out; `warmTheme` is the active `defaultTheme`. `App.tsx:57` applies `defaultTheme` to `ThemeProvider`. The network log confirms **both** theme modules were fetched at runtime (requests 54 and 55), so the unused neumorphic theme is still pulled across a package boundary into the bundle graph. Stating this as a build/wiring observation only — the design judgement is Assessment A's to make.
+
+## Server cleanup
+
+**Confirmed stopped.** The Vite dev server I started (PID 38089) was terminated with `pkill -f vite`; `http://localhost:5174/` now returns `000`. The one PID still bound near that port is PID 38854, which is a Google Chrome Helper network-service process belonging to the pre-existing Playwright MCP browser instance, not my server. The live-server was never started, so nothing to stop there. Playwright tab closed. Temporary probe directories deleted. The only working-tree additions from my run are the `.playwright-mcp/` artifacts; `.claude/sessions.md`, `README.md`, `.impeccable/` and `PRODUCT.md` were already modified/untracked before I began. No git operations were performed.</result>
+<usage><subagent_tokens>55536</subagent_tokens><tool_uses>36</tool_uses><duration_ms>309416</duration_ms></usage>
+</task-notification>
+
+### Assistant
+
+Assessment B is in. Assessment A is still running — I'm holding both back until synthesis, as the playbook requires.
+
+One thing from B I won't sit on, because it's a brand fact rather than a critique finding and it contradicts what we recorded an hour ago: the super-admin login screen renders **an orange/gold sail-shaped logo mark**. PRODUCT.md now states, on your instruction, that "Its Plain Sailing" means *it's easy*, not sailing, and that nautical imagery is an anti-reference. The shipped mark is a sail. That's a real conflict between the brand truth you confirmed and what's deployed in `infrastructure/keycloak/themes/super-admin/`.
+
+I'll fold it into the report properly rather than act on it now.
+
+---
+
+
+## 2026-08-13 16:04:45 — Prompt
+
+<task-notification>
+<task-id>ac059aa47177a1cd1</task-id>
+<tool-use-id>toolu_01U4rp37KBzCtxY5UBaUAFLK</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-michaeladams-Work-Esker-Development-AI-Holism/664d5b37-651c-4cbd-b5d4-368204952755/tasks/ac059aa47177a1cd1.output</output-file>
+<status>completed</status>
+<summary>Agent "Assessment A: design review" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result># Assessment A — `packages/admin` (unanchored)
+
+---
+
+## 1. Design specificity verdict
+
+**This is a generic MUI admin scaffold with a marketing theme bolted onto it, and the bolt is loose.** Strip the word "Organisation" and this app is indistinguishable from any CRUD admin generated in the last decade: `AppBar` + `Container maxWidth="xl"` + `TableContainer/Table/TableHead` + right-aligned `IconButton` triads + `Grid container spacing={3}` of stat cards + a top-right `Snackbar`. Every page-level decision is the MUI default path of least resistance.
+
+**Category-interchangeable choices, named:**
+
+- `DashboardPage.tsx:142–199` — six stat cards in a 3-across grid, each an icon-in-tinted-box plus a number. The icons are `Business`, `Category`, `Extension`, `People`, `Payment` — MUI's stock glyphs. The tint colours are `#1976d2`, `#9c27b0`, `#f57c00`, `#388e3c`, `#0288d1`, `#7b1fa2`: MUI's default palette, none of which is the theme's `#FF9800`. Six unrelated hues on one screen, chosen by nobody.
+- `Layout.tsx:29–75` — a single static AppBar with three text buttons. No IA at all; this shell would serve a helpdesk tool or an inventory system unchanged.
+- `OrganizationsPage.tsx:170–248`, `OrganizationTypesPage.tsx:68–135`, `TenantList.tsx:90–167`, `RoleList.tsx:75–119`, `UserList.tsx:135+`, `OrganizationList.tsx:72–149` — six hand-rolled tables with the same header row, the same right-aligned icon column, the same `colSpan` empty-state cell. Six chances to design a list; six identical MUI copies.
+- `warmTheme.ts:155–202` — pill buttons (`borderRadius: '60px'`), gradient fills, `translateY(-2px)` hover lifts, and `MuiCard` lift-on-hover at `warmTheme.ts:211–214`. These are landing-page gestures on a tool where nothing is being sold and every card is inert.
+
+**The theme conflict, resolved:** `theme/index.ts:19` exports `warmTheme as defaultTheme`; line 16 has the neumorphic export commented out but line 10 still re-exports it live via a cross-package relative import into `packages/frontend/src/theme/neumorphicTheme`. So admin reaches into another package's source for a theme it never renders. The result is **not coherent**: `warmTheme.ts:66–77` defines the app's entire display voice — h1 at `clamp(2.8rem, 6vw, 4.5rem)` weight 800, h2 at `clamp(2rem, 4vw, 3rem)`, both with negative tracking. Grep across all 59 tsx files: **h1 and h2 are used zero times.** 14× h4, 19× h6, 4× h5, 1× h3. The one part of the theme carrying identity is unreachable, and what remains is orange buttons on an otherwise stock MUI surface whose dashboard doesn't even use the orange.
+
+**Missed opportunities for product character, specific:**
+
+- **Capability-shaped installs are the defining fact of this platform** (PRODUCT.md: "No two organisations see the same product"). The super admin's job is largely deciding what shape a club is. That shape is rendered as `&lt;TableCell&gt;{org.enabledCapabilities.length}&lt;/TableCell&gt;` — an integer (`OrganizationsPage.tsx:215`) — and on the detail page as an unordered pile of raw `Chip`s printing internal slugs (`OrganizationDetailsPage.tsx:361–363`). There is no glanceable shape, no comparison across the estate, no "which clubs have ticketing on."
+- **Currency follows organisation type** — genuinely unusual, genuinely worth designing around. It surfaces once, well (`CreateOrganizationPage.tsx:430–441`), and is then contradicted by a free `Currency` dropdown at `EditOrganizationTypePage.tsx:244–257`.
+- **Six locales, seasonal rhythm, money in flight** — none of it is visible. The dashboard's "System Status" card (`DashboardPage.tsx:204–211`) is three chips, one of which, `&lt;Chip label="System Operational" color="success" /&gt;`, is **hardcoded**. It asserts platform health regardless of platform health.
+- **The brand promise is "effortless."** Nothing in this UI is effortless. The nav hides half the app; the biggest form is 20 ungrouped fields; deletes use `window.confirm`.
+
+The one exception — and it is a real one — is `PaymentFeeEditor.tsx`. That component was designed by someone who understood the problem. It is the only file here that could not be lifted into an unrelated product.
+
+---
+
+## 2. Nielsen heuristic scores
+
+| # | Heuristic | Score | Key issue |
+|---|---|---|---|
+| 1 | Visibility of system status | **2** | Every page's loading state is a bare centred `CircularProgress` replacing all content (`DashboardPage.tsx:123–129` and 8 more); `OrganizationDetailsPage.tsx:236` `if (loading \|\| !organization)` spins forever on a failed fetch |
+| 2 | Match with the real world | **2** | Nav says "Organisations" (`Layout.tsx:25–26`), Dashboard says "Organizations" (`DashboardPage.tsx:146`), and `EditOrganizationTypePage.tsx:31–40` offers Chinese and Japanese in a six-locale product |
+| 3 | User control and freedom | **1** | Zero unsaved-changes guards anywhere (`grep beforeunload\|useBlocker\|isDirty` → nothing); the back arrow at `CreateOrganizationPage.tsx:229` silently discards ~20 fields; no undo on any delete |
+| 4 | Consistency and standards | **1** | Two delete idioms (`window.confirm` at `OrganizationsPage.tsx:71` vs MUI `Dialog` at `TenantList.tsx:170`); two page architectures (route-per-view vs `viewMode` state at `TenantsPage.tsx:16`); raw unstyled `&lt;h2&gt;` at `TenantList.tsx:78`, `RoleList.tsx:63`, `UserList.tsx:86` beside `variant="h4"` elsewhere |
+| 5 | Error prevention | **1** | `EditOrganizationTypePage.tsx:244–257` lets you change a type's currency with zero warning while N organisations and cash-denominated fixed fees hang off it |
+| 6 | Recognition over recall | **2** | `Layout.tsx:23–27` lists 3 of 8 sections; `/tenants`, `/users`, `/roles` exist in `routes/index.tsx:121–152` but must be recalled and typed |
+| 7 | Flexibility and efficiency | **1** | No keyboard shortcuts, no bulk selection, no column sorting, no pagination (`react-window` is a dependency and never imported), no URL-persisted filters |
+| 8 | Aesthetic and minimalist design | **2** | Dashboard's six clashing stock hues plus a hardcoded "System Operational" chip; pill buttons at `warmTheme.ts:158` override `size="small"` so every toolbar button is oversized |
+| 9 | Error recovery | **2** | `errorHandling.ts` + `RetryDialog.tsx` are decent but only `TenantsPage`/`TenantDetailsPage` use them; `UsersPage.tsx:60–63` and `:70–73` swallow failures to console only |
+| 10 | Help and documentation | **1** | One caption explains Read/Write/Admin (`BulkCapabilityPermissionSelector.tsx:304`); nothing explains what a capability *is*, what blocking an organisation does to its members, or what a tenant is |
+
+**Total: 15 / 40 — Poor (12–19).**
+
+That is below the typical 20–32 band. The three heuristics dragging it down — control/freedom, consistency, error prevention — are all about *destructive and lossy actions*, which is exactly what this surface exists to perform.
+
+---
+
+## 3. Cognitive load
+
+**6 of 8 FAIL → critical.**
+
+| Item | Verdict |
+|---|---|
+| Single focus | **FAIL** — `EditOrganizationTypePage.tsx:216–360` puts identity, currency, language, locale, membership-numbering policy, card handling fees, Stripe Connect application fees, and default capabilities in one flat `flexDirection="column"` stack |
+| Chunking ≤4 per group | **FAIL** — `CreateOrganizationPage.tsx:238–476` is one `Card` containing ~20 controls with exactly one sub-heading ("Address &amp; Contact Details", line 340) covering 6 of them; the other 14 are ungrouped |
+| Visual grouping | **FAIL** — `EditOrganizationTypePage.tsx:216` uses `gap={3}` and nothing else: no dividers, no cards, no headings between "Currency" and "Membership Numbering". All ten fields carry identical weight |
+| Visual hierarchy | **FAIL** — page title `h4`, section `h6`, helper `body2`, everywhere, with no variation for importance. `StatCard`'s primary metric uses `variant="h3"` = 1.75rem (`warmTheme.ts:78–82`), which is *smaller* than the theme's h2 and barely above the page title |
+| One thing at a time | PASS — form pages are genuinely separate routes or full view swaps |
+| Minimal choices ≤4 visible | **FAIL** — enumerated below |
+| Working memory | **FAIL** — `EditOrganizationTypePage.tsx` shows the affected-organisation count only inside `PaymentFeeEditor` (line 339), ~100 lines below the Currency dropdown that invalidates those fees. And `OrganizationsPage.tsx:44–45` holds search/filter in component state, so drilling into a detail page and returning loses the filter — you re-type it every time |
+| Progressive disclosure | PARTIAL — `EditOrganizationTypePage.tsx:303` reveals two fields conditionally on `membershipNumbering === 'internal'`. Nothing else discloses; the Stripe Connect application-fee block (`PaymentFeeEditor.tsx:274–334`) is always expanded for every payment method |
+
+**Decision points with &gt;4 visible options:**
+
+- `EditOrganizationTypePage.tsx:252` — Currency, **7** options
+- `EditOrganizationTypePage.tsx:267` — Language, **8** options (two of which the platform doesn't support)
+- `EditOrganizationTypePage.tsx:283` — Default Locale, **6** options — three consecutive, semantically overlapping &gt;4 selects
+- `CreateOrganizationPage.tsx:414` — Language, **7** options
+- `CreateOrganizationPage.tsx:236–476` — **~20** fields visible simultaneously
+- `CapabilitySelector.tsx:116–117` — unbounded checkbox list in two groups, no cap
+- `PaymentFeeEditor.tsx:214–316` — **5** numeric money inputs per payment method, all methods expanded at once
+- `BulkCapabilityPermissionSelector.tsx:126–275` — **six competing mechanisms for one decision** on one screen: "All as Read/Write/Admin" (3 buttons), "Select All", a scrolling checkbox list, a "Permission Level" dropdown, "Add N Selected", and a per-row dropdown in the results table
+- `OrganizationsPage.tsx:143–155` — Filter by Type, unbounded
+
+---
+
+## 4. Emotional journey
+
+**Peak:** `PaymentFeeEditor.tsx:344–356`. "Example: a €62.00 card charge attracts €0.25 + €1.24 = €1.49, plus 21% tax €0.31 = €1.80." Live, concrete, in the type's own currency. The file's own comment (line 24) names the reason: *"a mistyped 15% instead of 1.5% obvious immediately."* That is the peak of the whole product surface, and it is the only place where the tool visibly has the operator's back.
+
+**End:** flat. Every successful task ends the same way — `navigate()` away plus a 6-second top-right `Snackbar` (`NotificationContext.tsx:46–55`). Create an organisation and you land on a table row that looks like every other row. There is no confirmation of what you just brought into existence, no "here is the club's member URL, hand this to them," despite `CreateOrganizationPage.tsx:291` having *just* computed exactly that string. The end is weaker than the middle, which inverts peak-end.
+
+**Valleys:**
+
+1. `window.confirm` on organisation delete (`OrganizationsPage.tsx:71`) — a raw OS dialog, jarringly outside the product, for the most destructive action available.
+2. The eternal spinner at `OrganizationDetailsPage.tsx:236` — the user cannot tell whether the org is slow, gone, or the network died.
+3. Typing an organisation name at `CreateOrganizationPage.tsx:159–164` — the sanitiser rewrites your input on every keystroke, so "St. Mary's" becomes "st-mary-s" as you watch.
+4. Discovering half the app doesn't exist in the nav.
+
+**Reassurance at high-stakes moments — audited:**
+
+| Action | Reassurance |
+|---|---|
+| Change handling fee rates | **Excellent.** `PaymentFeeEditor.tsx:183–192` names the blast radius ("affects **N organisations**"), states the timing ("as soon as you save") and bounds the damage ("Payments already taken are unaffected") |
+| **Change a type's currency** | **None.** `EditOrganizationTypePage.tsx:244–257`. Same page, ~100 lines above the alert that does exist. Switching EUR→JPY silently re-denominates every fixed fee and every organisation of that type |
+| **Delete an organisation** | **Almost none.** `window.confirm("Are you sure you want to delete \"" + name + "\"?")` — no mention of members, admin users, payment history, events, or the `/account/:orgCode` link that stops working |
+| **Block an organisation** | **None.** `EditOrganizationPage.tsx:375–381` — a plain three-option dropdown. Cutting off an entire club's members is one select and a save |
+| Delete a tenant | **Good** — `TenantList.tsx:178–180` names the consequence. But Tenants isn't in the nav |
+| Delete a role assigned to users | **None** — `OrganizationDetailsPage.tsx:223`, no count of affected users |
+
+The pattern: reassurance exists exactly where one thoughtful developer built it, and nowhere else. It is not a system.
+
+---
+
+## 5. Strengths
+
+**1. `PaymentFeeEditor.tsx` — the worked example.** It works because it converts three abstract numbers into the one number a human can sanity-check, in the type's own currency, updating live. It also separates two things that are genuinely easy to confuse and explicitly says so (`:268–273`): the handling fee is *what the member pays on top*, the application fee is *what the platform keeps out of what's collected*. Most fee editors show fields; this one shows consequences. `:326–332` even handles the unset case honestly ("Not set — the platform keeps the handling fee €1.80, as it does today") rather than showing a blank.
+
+**2. Currency-as-inherited, made visible.** `CreateOrganizationPage.tsx:430–441` renders Currency as a read-only field that says "Set by the *Sailing Club* organisation type," with "Select an organisation type first" when empty. It works because it teaches the domain rule at the moment of confusion instead of just disabling a control — the user learns *why*, not just *no*. The code comment at `:424–429` shows the constraint was understood rather than inherited.
+
+**3. The `urlCode` availability check.** `CreateOrganizationPage.tsx:191–216` debounces at 400ms, and `:288–293` echoes back the actual member-facing consequence: "Members will sign in at /account/khpc". It works because the helper text is the *product outcome*, not a validation rule. And `:205–209` degrades correctly — a failed check clears the error rather than blocking the form, with a comment explaining that the backend validates on save regardless.
+
+---
+
+## 6. Priority issues
+
+### P0 — Half the application has no navigation
+
+**What:** `Layout.tsx:23–27` defines three nav items. `routes/index.tsx` registers eight top-level destinations: `/tenants`, `/tenants/:id`, `/users`, `/roles` are fully built, tested (`pages/__tests__/TenantsPage.test.tsx`, `UsersPage.test.tsx`, `RolesPage.test.tsx`) and reachable only by typing the URL.
+
+**Why it matters:** Tenant is the top-level customer boundary in this product's own terminology. Platform-wide Users and Roles are the access-control surface. An Esker operator cannot manage tenants without prior knowledge of a URL that appears nowhere in the UI. This is not a discoverability nit — it is a task that cannot be started.
+
+**Fix:** Replace the three-button AppBar with a persistent left rail carrying all eight destinations, grouped: *Platform* (Dashboard, Tenants) / *Configuration* (Organisation Types, Organisations) / *Access* (Users, Roles). Give the active item a filled background token, not `textDecoration: 'underline'`. Collapse to a temporary `Drawer` below `md` — there is currently no responsive handling anywhere in the package (`grep useMediaQuery` → zero hits).
+
+**Command:** `layout`
+
+---
+
+### P0 — A type's currency is freely mutable with cash-denominated fees attached and no warning
+
+**What:** `EditOrganizationTypePage.tsx:244–257` renders Currency as an ordinary 7-option select. `organisationCount` is already loaded at `:135` and already used to warn about fee changes at `PaymentFeeEditor.tsx:183`. The currency control, which invalidates those same fees, gets nothing.
+
+**Why it matters:** `fixedFee` is a cash amount in the type's currency. Switching EUR→JPY reinterprets `0.25` as ¥0.25, and every organisation of that type immediately charges a nonsense handling fee on live card payments. `PaymentFeeEditor.tsx:335` receives `currency={formData.currency || 'EUR'}` so the worked example re-renders with new symbols and *identical numbers* — the app actively displays the wrong thing as if it were right. This is the highest-consequence control in the application and it has the lowest-friction interaction.
+
+**Fix:** When `organisationCount &gt; 0`, make Currency read-only with an inline "Change currency" affordance that opens a confirmation naming the count, showing before/after on the actual current fee values (€0.25 → ¥0.25), and requiring the type's display name to be typed. Move the existing `organisationCount` warning up to the top of the form so it governs the whole page, not just the fee block.
+
+**Command:** `harden`
+
+---
+
+### P1 — No unsaved-changes protection on any form, and no field-level validation
+
+**What:** `grep beforeunload|useBlocker|usePrompt|isDirty` across `packages/admin/src` returns nothing. `CreateOrganizationPage.tsx:229` is a bare `IconButton` calling `navigate()`. Validation is toast-only and one-at-a-time: `:119–137` shows "Please select an organisation type", user fixes it, resubmits, gets "Please enter an organisation name". No field is ever marked invalid.
+
+**Why it matters:** `CreateOrganizationPage` has ~20 inputs plus two selector blocks. A misclick on the back arrow, or a browser Back after a `viewMode` transition on `TenantsPage.tsx:16`, destroys all of it with no prompt. On `TenantsPage` the create form has no URL at all, so browser Back exits the entire Tenants section rather than returning to the list. And the toast-per-error loop means a form with three problems costs three round trips.
+
+**Fix:** Add a `useBlocker` guard on all six create/edit routes, triggered by a dirty check against the initial `formData`. Convert validation to per-field state: set `error` and `helperText` on the offending `TextField`, scroll to and focus the first invalid one, and summarise in an `Alert` above the actions. Convert `TenantsPage`/`UsersPage`/`RolesPage` from `viewMode` state to real routes so Back and refresh behave.
+
+**Command:** `harden`
+
+---
+
+### P1 — Tables have no power-user affordances at all
+
+**What:** Across all six tables: no sorting (`grep TableSortLabel` → zero), no pagination (`grep TablePagination` → zero; `react-window` is in `package.json` and imported nowhere), no row selection, no bulk actions, no column configuration, no keyboard shortcuts (`grep onKeyDown` → zero), and no URL-persisted filter state. `OrganizationsPage.tsx:98–107` filters the entire unpaginated response client-side on every keystroke. Compounding it, `warmTheme.ts:157–164` sets `MuiButton.root` padding to `0.85rem 2rem` with `borderRadius: 60px`, which in MUI v5 overrides `sizeSmall` — so every toolbar button is ~48px tall, and fewer rows fit on screen.
+
+**Why it matters:** The stated audience is a small, expert, repeat-use internal team. Their day is scanning and acting on lists. Blocking twelve organisations currently costs twelve full round trips through row → edit page → status dropdown → save → back. Nothing here is faster on the hundredth use than the first, which is the definition of a tool that doesn't respect a power user.
+
+**Fix:** Extract one `AdminTable` used by all six lists, carrying: sortable headers, server-side pagination, a checkbox column with a bulk-action bar (Activate / Block / Delete), `/` to focus search, `n` for new, `j`/`k` row movement, `Enter` to open. Push search and filter into query params so a filtered list is linkable and survives navigation. Add a `size="small"` escape hatch to the button override so toolbar controls can be dense.
+
+**Command:** `optimize`
+
+---
+
+### P2 — The visual identity is two dead themes and a favicon
+
+**What:** `theme/index.ts:10` re-exports `neumorphicTheme` from `packages/frontend/src/theme/` — a live cross-package source import for a theme never rendered. `warmTheme.ts:66–77` defines h1/h2 that no file uses. `DashboardPage.tsx:147–196` hardcodes six MUI stock colours, none the theme's primary. `public/logo.png` and `public/favicon.png` are byte-identical (60,544 bytes each); `Layout.tsx:34–38` scales the favicon to 40px with `alt="Logo"`. `index.html:7` reads `Super Admin - AWS Web Application Framework` — a stale scaffold name that PRODUCT.md explicitly forbids in user-facing strings, sitting in every browser tab and bookmark.
+
+**Why it matters:** PRODUCT.md principle 4 says "Platform identity earns its place in the administrator's tools." This is the one surface where Its Plain Sailing's own identity is allowed to lead, and it currently reads as an unfinished scaffold. The pill buttons and hover-lift cards import a marketing site's *decoration* while the typography that carried its *voice* is unused — the borrowed half is the half that doesn't belong in a dense tool.
+
+**Fix:** Delete the neumorphic re-export and the commented default at `theme/index.ts:10–16`. Retune warmTheme for an operate surface: drop the button pill to 8px and the padding to `0.5rem 1.25rem`, remove the card hover-lift, keep orange for primary action only. Replace the six hardcoded dashboard hues with a single neutral treatment plus orange on the one metric that matters. Fix `index.html:7` to "Its Plain Sailing — Platform Admin" and `package.json:2`. Use the wordmark, not the favicon, in the AppBar, with real alt text.
+
+**Command:** `polish`
+
+---
+
+## 7. Persona red flags
+
+### Alex — impatient power user
+
+- **No keyboard shortcuts exist.** `grep onKeyDown` across all 59 files returns zero. `/` does not focus the search field at `OrganizationsPage.tsx:133`. Nothing opens a create form from the keyboard.
+- **`window.confirm` at `OrganizationsPage.tsx:71`, `OrganizationDetailsPage.tsx:172` and `:223`** blocks the JS thread, cannot be Esc-styled or suppressed, and its button order is OS-dependent — so Alex's muscle memory for "confirm" is wrong on half his machines. The three MUI `Dialog`s elsewhere *do* close on Esc, so the app is inconsistent about the single most-repeated interaction.
+- **No bulk actions anywhere.** Blocking twelve clubs after a payment incident: 12 × (click row's edit icon → new page load → scroll to Status select → `mouseDown` → pick → Save → back). Each cycle is well over 60s with two page loads. The core task cannot be done in under a minute even once.
+- **`TenantsPage.tsx:16` holds view state in `useState`,** so `/tenants` is the only URL the whole section has. Alex cannot bookmark "new tenant", cannot open two tenants in two tabs, and pressing browser Back inside the create form throws him out of Tenants entirely — losing the form.
+- **Three unlabelled 20px `IconButton`s per row** at `OrganizationsPage.tsx:219–240`, with View, Edit and Delete adjacent. The destructive one is one pixel-target from the benign one, has no confirmation dialog worth the name, and no undo.
+- **`warmTheme.ts:158–159` forces `padding: 0.85rem 2rem; borderRadius: 60px` on `MuiButton.root`,** which beats `sizeSmall`. Every "Clear Filters" and "Reset to default" button is a full-size pill. Fewer rows per screen, more scrolling, on a screen that is nothing but rows.
+- **No pagination or virtualisation.** `react-window` sits in `package.json` unused; 1,000 organisations render 1,000 DOM rows and re-filter all of them on every keystroke (`OrganizationsPage.tsx:98`).
+
+### Sam — accessibility-dependent
+
+- **`index.css:5–16` sets `opacity: 0 !important; pointer-events: none !important` on every `.MuiBackdrop-root:not([aria-hidden="false"])`,** and `App.tsx:14–24` rips backdrop nodes out of the DOM on mount. A global override keyed on an ARIA attribute, layered on a DOM-mutation workaround, sitting directly on top of MUI's modal focus-trap machinery. If any AT tool or MUI version touches `aria-hidden` timing, live dialogs lose their backdrop and their focus trap. This is a booby trap under every modal in the app.
+- **Table action buttons use `title="Delete"` instead of `aria-label`** (`OrganizationsPage.tsx:222/230/236`, `OrganizationTypesPage.tsx:118/125`, `OrganizationDetailsPage.tsx:445/453/528/536`). `title` is not a reliable accessible name. Sam hears "button, button, button" on every row of every table and cannot tell View from Delete.
+- **There is no `&lt;h1&gt;` in the entire application** except the raw 404 page (`routes/index.tsx:23`). Page titles are `variant="h4"` → `&lt;h4&gt;`, and `TenantList.tsx:78` / `RoleList.tsx:63` / `UserList.tsx:86` emit a bare `&lt;h2&gt;`. Heading order is arbitrary and jumps between sections.
+- **No landmarks.** `Layout.tsx:29–75` renders `Box` → `AppBar`/`Toolbar` → `Container`. No `&lt;nav&gt;`, no `&lt;main&gt;`, no skip link. Sam tabs through the logo, three nav buttons, username and Logout on every single page load before reaching content.
+- **Colour-alone status, and ambiguous even then.** `OrganizationTypesPage.tsx:110` maps status to `'success'` or `'default'`. `OrganizationsPage.tsx:84–95` maps `inactive` and an unknown status *both* to `'default'` — so "inactive" and "unrecognised" are pixel-identical. The only text is the raw lowercase enum.
+- **`PaymentFeeEditor.tsx:284–315`** — the two application-fee inputs lack the `aria-label`s their three siblings above have (`:223`, `:243`, `:259`), and `InputProps: { startAdornment: currencySymbol(currency) }` injects a bare string rather than an `InputAdornment`, so the currency symbol is announced inline as content.
+- **Focus is never moved to error output.** `AddOrganizationAdminUserPage.tsx:188–192` renders an `Alert` above the form on validation failure; focus stays wherever it was. Sam submits, hears nothing, and has no idea the form rejected him.
+- **Success and failure share one `Snackbar`** (`NotificationContext.tsx:46–55`) with no `role="alert"`/`aria-live` distinction. A failed organisation delete and a successful one announce through the same channel with the same urgency.
+
+### Riley — deliberate stress tester
+
+- **Refresh mid-flow destroys work silently.** `TenantsPage.tsx:16`, `UsersPage.tsx:23`, `RolesPage.tsx:15` all hold `viewMode` in component state. Refresh while filling Create Tenant → back to the list, everything gone, no warning, no draft.
+- **A failed load spins forever.** `OrganizationDetailsPage.tsx:236` — `if (loading || !organization)` returns a spinner. A 404 or 500 sets `loading = false` and leaves `organization = null`, so the condition stays true permanently. No timeout, no error state, no retry, no way back except the browser.
+- **"Reset to default" is a partial reset on a money control.** `PaymentFeeEditor.tsx:147–162` restores `fixedFee`, `percentageFee` and `taxPercentage` but **not** `applicationFeeFixed` or `applicationFeePercentage`. Riley clicks Reset expecting a clean slate and silently keeps a mistyped platform revenue split.
+- **A silent fee-load failure produces a silently incomplete save.** `EditOrganizationTypePage.tsx:137–139` catches the fee fetch failure with a bare `console.error`. `paymentFees` stays `[]`, the fee editor never renders, and `:163` `if (paymentFees.length &gt; 0)` skips the fee write entirely. The user sees "Organisation type updated successfully" and has no idea handling fees exist, let alone that they weren't saved.
+- **Clearing a fee field saves a zero.** `PaymentFeeEditor.tsx:141` stores `'' as unknown as number`; `EditOrganizationTypePage.tsx:168` submits `Number(f.fixedFee) || 0`. Clear a field intending to retype it, get distracted, hit Save — the fee is now 0 for every organisation of the type.
+- **Partial success reported as total failure.** `AddOrganizationAdminUserPage.tsx:110–117` creates the user, then assigns roles via `Promise.all`. If one `assignRoleToUser` rejects, the catch at `:123` shows "Failed to create administrator user" — but the user **was** created. Riley retries, hits a duplicate-email error, and concludes nothing worked while a role-less admin user sits in Keycloak.
+- **You cannot type a normal organisation name.** `CreateOrganizationPage.tsx:159–164` sanitises on every keystroke and strips trailing hyphens each time, so typing "my org" gives "myorg" — the space becomes a hyphen and is immediately stripped as trailing before the next character arrives.
+- **Empty state is a grey sentence in a table cell.** `OrganizationsPage.tsx:186–192` renders the full seven-column header above one centred `body2` line. No illustration, no CTA in the empty space — the "Create Organisation" button is at the far top-right, diagonally opposite where the eye lands.
+- **Long strings are unguarded.** No `text-overflow`, no `max-width`, no `noWrap` on any table cell. A 200-character German display name (`OrganizationsPage.tsx:199–206`) inflates the row and forces horizontal scroll on a seven-column table.
+
+---
+
+## 8. Minor observations
+
+- `index.html:7` — `&lt;title&gt;Super Admin - AWS Web Application Framework&lt;/title&gt;`. The stale scaffold name PRODUCT.md forbids, in every tab and bookmark. `package.json:2–4` carries `@aws-web-framework/admin` and the same description.
+- `public/logo.png` and `public/favicon.png` are the same 60,544 bytes. The AppBar renders the favicon at 40px with `alt="Logo"` — an alt that conveys nothing.
+- `App.tsx:20` — `console.log('Removing orphaned backdrop')` ships to production.
+- `warmTheme.ts:281–282` applies `backdropFilter: blur(20px)` to `MuiAppBar`, but `Layout.tsx:31` uses `position="static"`. Nothing ever scrolls beneath it. Pure GPU cost for an effect that cannot be seen.
+- `DashboardPage.tsx:208` — `&lt;Chip label="System Operational" color="success" /&gt;` is hardcoded. It contradicts PRODUCT.md principle 5 ("Never assert more certainty than the data has") on the first screen after login.
+- Dashboard stat cards are inert. Clicking "Organizations 47" does nothing — six obvious navigation targets wasted.
+- `OrganizationsPage.tsx:210` prints the raw lowercase enum (`active`, `blocked`) while `OrganizationList.tsx:110` capitalises via `textTransform`. Same data, two presentations, two files.
+- `AccessDeniedPage.tsx:13–21` sets `minHeight: '100vh'` and its own `#f5f5f5` background, but renders inside `Layout`'s AppBar and `Container` (`App.tsx:38–42`) — so it appears *below* the app chrome with a full extra viewport of grey, and the nav above it still offers links the user has just been told they cannot use.
+- `routes/index.tsx:20–27` — the 404 is a raw `&lt;div&gt;` with inline styles, unthemed, with no way back.
+- `Logout` (`Layout.tsx:63–69`) has no confirmation and sits adjacent to the nav buttons.
+- **Zero i18n.** `grep useTranslation|i18n` across `packages/admin/src` returns nothing; every string is hard-coded English. Defensible for an internal tool, but it is nowhere declared as an exemption, and it sits beside `EditOrganizationTypePage.tsx:31–40` offering Chinese and Japanese as organisation-type languages in a six-locale product.
+- Three different language/locale lists exist: `CreateOrganizationPage.tsx:36–44` (7, includes en-US), `EditOrganizationTypePage.tsx:31–40` (8, includes zh/ja), `EditOrganizationTypePage.tsx:42–49` (6, correct). Only the third matches the product.
+- `TenantList.tsx:196–209` calls `useNavigate()` conditionally after an early return — a hooks-order violation that will crash if `onViewDetails` ever changes between renders.
+
+---
+
+## 9. Provocative questions
+
+1. **If the super admin's real job is "decide what shape a club is," why is shape rendered as an integer?** What if the organisations list showed a compact seven-slot capability glyph per row — so the estate's shape is scannable and a misconfigured club is visible without opening it?
+
+2. **The one genuinely excellent component in this app shows consequences before commitment.** What breaks if that becomes the rule rather than the exception — if every destructive action (delete organisation, block organisation, change currency, delete a role) had to state its blast radius in the same voice `PaymentFeeEditor.tsx:183–192` already uses? Which of those can even *compute* its blast radius today, and what does the backend need to add?
+
+3. **"Its Plain Sailing" means effortless.** What would this tool look like if effortlessness were the design brief for the *operator* too — where creating an organisation is three fields and everything else inherits from its type until someone deliberately diverges, instead of twenty fields in one card?
+
+4. **Who is actually the user of the "Users" and "Roles" pages, given they've never been linked?** Are they dead surface that should be deleted, or load-bearing surface someone reaches by pasted URL? The answer changes whether the P0 fix is "add nav" or "remove code."
+
+5. **The theme conflict isn't really two themes — it's a marketing site's decoration without its typography.** If the display voice (h1/h2, weight 800, negative tracking) were actually used somewhere in this tool, where would it earn its place? And if the honest answer is "nowhere in a dense operate surface," should this app inherit from the marketing site at all, or should it have its own tool-shaped derivation of the same palette?
+
+6. **Six of the eight cognitive-load criteria fail on the same two pages.** Is `EditOrganizationTypePage` actually one task, or is it four — identity, localisation, membership numbering policy, and money — that got merged because they share a database row?</result>
+<usage><subagent_tokens>135099</subagent_tokens><tool_uses>33</tool_uses><duration_ms>495981</duration_ms></usage>
+</task-notification>
+
+### Assistant
+
+Both assessments are in. Synthesis follows.
+
+Method: dual-agent (A: design review, source-only and detector-blind · B: detector + browser evidence)
+
+# Design critique — `packages/admin`
+
+## Design Health Score
+
+All ten heuristics apply — this is an Operate surface, so none was marked `n/a`.
+
+| # | Heuristic | Score | Key Issue |
+|---|-----------|-------|-----------|
+| 1 | Visibility of System Status | 2 | Loading is a bare centred `CircularProgress` replacing all content; [OrganizationDetailsPage.tsx:236](packages/admin/src/pages/OrganizationDetailsPage.tsx#L236) `if (loading \|\| !organization)` spins forever on a failed fetch |
+| 2 | Match System / Real World | 2 | Nav says "Organisations", Dashboard says "Organizations"; the type editor offers Chinese and Japanese in a six-locale product |
+| 3 | User Control and Freedom | 1 | Zero unsaved-changes guards anywhere; the back arrow discards ~20 fields; no undo on any delete |
+| 4 | Consistency and Standards | 1 | Two delete idioms (`window.confirm` vs MUI `Dialog`); two page architectures; raw `<h2>` beside `variant="h4"` |
+| 5 | Error Prevention | 1 | A type's currency is changeable with no warning while N organisations and cash-denominated fees hang off it |
+| 6 | Recognition Rather Than Recall | 2 | [Layout.tsx:23-27](packages/admin/src/components/Layout.tsx#L23-L27) lists 3 of 8 sections; the rest must be recalled and typed |
+| 7 | Flexibility and Efficiency | 1 | No shortcuts, no bulk selection, no sorting, no pagination (`react-window` is a dependency, never imported) |
+| 8 | Aesthetic and Minimalist Design | 2 | Six clashing stock hues on the dashboard, none of them the theme's primary; pill buttons override `size="small"` |
+| 9 | Error Recovery | 2 | `errorHandling.ts` + `RetryDialog.tsx` are decent but only two pages use them; `UsersPage` swallows failures to console |
+| 10 | Help and Documentation | 1 | Nothing explains what a capability is, what blocking an organisation does to its members, or what a tenant is |
+| **Total** | | **15/40** | **Poor (12–19)** |
+
+Below the 20–32 band most real interfaces occupy. The three lowest scores — control/freedom, consistency, error prevention — are all about destructive and lossy actions, which is precisely what this surface exists to perform.
+
+## Design Specificity Verdict
+
+**Category-interchangeable, with one genuine exception.**
+
+Strip the word "Organisation" and this is indistinguishable from any CRUD admin of the last decade. Six hand-rolled tables repeat the same header row, the same right-aligned icon column, the same `colSpan` empty cell — six chances to design a list, six identical MUI copies.
+
+The product's own defining facts are the ones left undesigned. Capability-shaped installs are the platform's central concept, and a club's shape renders as `<TableCell>{org.enabledCapabilities.length}</TableCell>` — an integer — then as an unordered pile of `Chip`s printing internal slugs.
+
+The exception is [PaymentFeeEditor.tsx](packages/admin/src/components/PaymentFeeEditor.tsx), which could not be lifted into an unrelated product. It converts three abstract rates into the one number a human can sanity-check: *"a €62.00 card charge attracts €0.25 + €1.24 = €1.49, plus 21% tax €0.31 = €1.80."* Its own comment names the reason — *"a mistyped 15% instead of 1.5% obvious immediately."*
+
+**The theme conflict, resolved.** `warmTheme` is active; the neumorphic theme is commented out as default but still live-exported at [theme/index.ts:10](packages/admin/src/theme/index.ts#L10) through a cross-package import into `packages/frontend/src/theme/`. Both agents converged independently — the design review found it in source, the browser network log confirmed **both** theme modules load at runtime. Worse: `warmTheme.ts:66-77` defines the app's entire display voice (h1 weight 800, negative tracking), and **h1 and h2 are used zero times across all 59 files**. The app imported a marketing site's decoration and left behind the typography that carried its voice.
+
+**Deterministic scan: zero findings — and that is not a clean bill of health.**
+
+`detect.mjs` returned `[]`, exit 0. Assessment B didn't take that at face value: a synthetic TSX probe with MUI `sx` props fired a rule, and a three-level-deep probe confirmed recursion, so the tool does bite on this stack. Re-runs with `--no-config` and against individual subdirectories returned `[]` across 81 real source files. The zero is genuine — and close to meaningless. This app renders through MUI components and theme tokens, so spacing, type scale and contrast never appear as literal CSS strings for a pattern rule to match. **The detector and the design review don't disagree; the detector had nothing to see.** Treat 15/40 as the finding and the clean scan as noise.
+
+**Visual overlays: none.** No user-visible overlay exists — injection was correctly skipped rather than aimed at the wrong DOM.
+
+**The app was never seen running.** `AuthContext.tsx:69-72` uses `onLoad: 'login-required'` wrapping the whole router, so the gate fires at boot — confirmed empirically, since even `/access-denied` and the 404 route, which are *not* inside `ProtectedRoute`, still bounce to Keycloak. All 16 pages are unobserved in the browser; the backend on `:3000` was down too. **Everything below is source-derived, not visually confirmed.** The fix for that is credentials, not more analysis.
+
+**A brand conflict the browser did catch.** The one screen that rendered — the custom Keycloak login theme — leads with an **orange/gold sail-shaped logo mark**. PRODUCT.md, written from your instruction this morning, records that the name means *it's easy*, not sailing, and lists nautical imagery as an anti-reference. The mark was already flagged a placeholder, so this is cheap now and expensive later.
+
+## Overall Impression
+
+A competent engineer's admin app with two or three genuinely excellent components stranded inside it, and no system connecting them. The quality is bimodal. `PaymentFeeEditor` states its blast radius before you commit; organisation delete uses `window.confirm`. The urlCode checker tells you the real member-facing consequence; the org-name field rewrites your keystrokes as you type. Reassurance exists exactly where one thoughtful developer built it, and nowhere else.
+
+The biggest opportunity is making that developer's instinct the rule: every destructive action states its blast radius in the voice `PaymentFeeEditor.tsx:183-192` already uses. That one principle fixes both P0s, most of the P1s, and the emotional shape of the product.
+
+## What's Working
+
+**1. `PaymentFeeEditor.tsx` — the worked example.** Shows consequences, not fields. Separates two genuinely confusable things and says so: the handling fee is what the member pays on top, the application fee is what the platform keeps from what's collected. Handles the unset case honestly — "Not set — the platform keeps the handling fee €1.80, as it does today" — rather than showing a blank.
+
+**2. Currency-as-inherited, made visible.** [CreateOrganizationPage.tsx:430-441](packages/admin/src/pages/CreateOrganizationPage.tsx#L430-L441) renders Currency read-only with "Set by the *Sailing Club* organisation type". It teaches the domain rule at the moment of confusion instead of just disabling a control — the user learns *why*, not just *no*.
+
+**3. The `urlCode` availability check.** Debounced at 400ms, and the helper text is the product outcome rather than a validation rule: "Members will sign in at /account/khpc". It degrades correctly — a failed check clears the error rather than blocking the form.
+
+## Priority Issues
+
+### [P0] Half the application has no navigation
+[Layout.tsx:23-27](packages/admin/src/components/Layout.tsx#L23-L27) defines three nav items; `routes/index.tsx` registers eight destinations. `/tenants`, `/users` and `/roles` are fully built, have passing test suites, and are reachable only by typing the URL.
+
+**Why it matters:** Tenant is the top-level customer boundary in this product's own terminology. An operator cannot manage tenants without prior knowledge of a URL that appears nowhere in the UI. The task cannot be started.
+
+**Fix:** Persistent left rail with all eight destinations, grouped *Platform* / *Configuration* / *Access*. Active item gets a filled token, not `textDecoration: underline`. Collapse to a `Drawer` below `md` — there is currently zero responsive handling in the package.
+→ `/impeccable layout`
+
+### [P0] A type's currency is freely mutable with cash fees attached, and no warning
+[EditOrganizationTypePage.tsx:244-257](packages/admin/src/pages/EditOrganizationTypePage.tsx#L244-L257) renders Currency as an ordinary 7-option select. `organisationCount` is already loaded at line 135 and already used to warn about *fee* changes — the currency control, which invalidates those same fees, gets nothing.
+
+**Why it matters:** `fixedFee` is a cash amount in that currency. EUR→JPY reinterprets `0.25` as ¥0.25, and every organisation of that type immediately charges a nonsense handling fee on live card payments. The fee editor re-renders its worked example with new symbols and *identical numbers* — the app actively displays the wrong thing as if it were right. Highest-consequence control, lowest-friction interaction.
+
+**Fix:** When `organisationCount > 0`, put Currency behind an explicit "Change currency" affordance: confirmation naming the count, before/after on actual fee values (€0.25 → ¥0.25), type-the-name to confirm.
+→ `/impeccable harden`
+
+### [P1] No unsaved-changes protection on any form; validation is toast-only
+`beforeunload`, `useBlocker`, `usePrompt`, `isDirty` — none present anywhere. The back arrow is a bare `IconButton` calling `navigate()`. Validation shows one error at a time via toast and never marks a field invalid.
+
+**Why it matters:** ~20 inputs destroyed by a misclick with no prompt. On `TenantsPage.tsx:16` the create form has no URL at all, so browser Back exits the whole section. Three problems in a form costs three round trips.
+
+**Fix:** `useBlocker` on all six create/edit routes, dirty-checked against initial `formData`. Per-field `error`/`helperText`, focus the first invalid field, summarise in an `Alert`. Convert `viewMode` state to real routes.
+→ `/impeccable harden`
+
+### [P1] The tables have no power-user affordances at all
+No sorting, pagination, row selection, bulk actions, keyboard handlers, or URL-persisted filters across all six tables. `react-window` is in `package.json` and imported nowhere. `warmTheme.ts:157-164` forces `borderRadius: 60px` and `0.85rem 2rem` padding on `MuiButton.root`, which beats `sizeSmall` — every toolbar button is ~48px tall on a screen that is nothing but rows.
+
+**Why it matters:** The audience is a small, expert, repeat-use internal team whose day is scanning lists. Blocking twelve organisations costs twelve round trips through row → edit page → dropdown → save → back. Nothing is faster on the hundredth use than the first.
+
+**Fix:** One `AdminTable` for all six lists — sortable headers, server-side pagination, checkbox column with a bulk-action bar, `/` to focus search, `j`/`k`/`Enter`. Filters into query params. A `size="small"` escape hatch on the button override.
+→ `/impeccable optimize`
+
+### [P1] A global backdrop override sits on top of MUI's focus-trap machinery
+`index.css:5-16` applies `opacity: 0 !important; pointer-events: none !important` to every `.MuiBackdrop-root:not([aria-hidden="false"])`, and `App.tsx:14-24` additionally rips backdrop nodes from the DOM on mount, logging `console.log('Removing orphaned backdrop')` in production.
+
+**Why it matters:** A global override keyed on an ARIA attribute, layered on a DOM-mutation workaround, sitting on MUI's modal focus trap. Shift `aria-hidden` timing — any AT tool, any MUI upgrade — and live dialogs lose their backdrop and focus containment. Alongside it: no `<h1>` anywhere except the raw 404, no `<nav>`/`<main>`/skip link, and `title="Delete"` instead of `aria-label` on every table action button, so a screen-reader user hears "button, button, button" per row.
+
+**Fix:** Find the actual orphaned-backdrop bug rather than suppressing its symptom; delete both workarounds. Add landmarks and a skip link, promote page titles to a real `<h1>`, convert every `title=` to `aria-label=`.
+→ `/impeccable audit`
+
+## Cognitive Load — 6 of 8 fail (critical)
+
+Failing: single focus, chunking, visual grouping, visual hierarchy, minimal choices, working memory. Passing: one-thing-at-a-time. Partial: progressive disclosure.
+
+Decision points over the four-item limit: Currency (7), Language (8) and Default Locale (6) as three consecutive overlapping selects; ~20 fields visible at once on Create Organisation; 5 money inputs per payment method with all methods expanded; and **`BulkCapabilityPermissionSelector.tsx` offering six competing mechanisms for one decision** on a single screen — three "All as…" buttons, "Select All", a scrolling checkbox list, a Permission Level dropdown, "Add N Selected", and a per-row dropdown in the results table.
+
+Working memory: the affected-organisation count sits ~100 lines below the Currency dropdown that invalidates those fees. And search/filter live in component state, so drilling into a detail page and returning loses the filter — you re-type it every time.
+
+## Emotional Journey
+
+**Peak:** the worked fee example. The only place the tool visibly has the operator's back.
+
+**End: flat, inverting peak-end.** Every task ends with `navigate()` plus a 6-second snackbar. Create an organisation and you land on a table row like every other row — no "here is the club's member URL, hand this to them", despite the form having *just* computed exactly that string.
+
+**Reassurance audit:** fee rates get an excellent blast-radius warning. Currency change: none. Delete an organisation: `window.confirm` with no mention of members, payment history, or the `/account/:orgCode` link that stops working. Block an organisation — cutting off a whole club's members — is one select and a save, with nothing.
+
+## Persona Red Flags
+
+**Alex (power user)** — zero `onKeyDown` handlers in 59 files. `window.confirm` blocks the thread, can't be Esc-dismissed, and its button order is OS-dependent, so his muscle memory is wrong on half his machines — while the MUI dialogs elsewhere *do* close on Esc. No bulk actions: the core task can't be done in under a minute even once. `/tenants` is its section's only URL, so he can't bookmark "new tenant" or open two tenants in two tabs.
+
+**Sam (accessibility)** — the backdrop booby trap above; `title` instead of `aria-label` across five files; no `<h1>` outside the 404; no landmarks or skip link, so he tabs through logo, nav, username and Logout on every page load; `inactive` and unknown statuses both render `'default'`, making them pixel-identical; focus never moves to error output, so a rejected submit is silent; success and failure share one snackbar with no `role="alert"`.
+
+**Riley (stress tester)** — **silent partial save**: a caught fee-fetch failure leaves `paymentFees` empty, the write is skipped, and the user is told "updated successfully". **Partial success as total failure**: the admin user is created, one role assignment rejects, the message says creation failed — he retries into a duplicate-email error while a role-less admin sits in Keycloak. **"Reset to default" is partial** on a money control, silently keeping a mistyped revenue split. **Clearing a fee field saves a zero** via `'' as unknown as number` coerced with `|| 0`.
+
+## Minor Observations
+
+- `index.html:7` reads `Super Admin - AWS Web Application Framework` — the stale scaffold name PRODUCT.md forbids, in every tab and bookmark.
+- `logo.png` and `favicon.png` are byte-identical (60,544 bytes). The AppBar renders the favicon at 40px with `alt="Logo"`.
+- `DashboardPage.tsx:208` hardcodes `<Chip label="System Operational" color="success" />` — asserting platform health regardless of platform health, on the first screen after login.
+- `warmTheme.ts:281` applies `backdropFilter: blur(20px)` to an AppBar that is `position="static"`. Nothing ever scrolls beneath it.
+- `AccessDeniedPage` sets `minHeight: 100vh` but renders *inside* `Layout` — appearing below the chrome with an extra viewport of grey, under a nav still offering links the user was just denied.
+- Three different language/locale lists across two files; only one matches the product's six locales.
+- `TenantList.tsx:196-209` calls `useNavigate()` conditionally after an early return — a hooks-order violation.
+
+## Questions to Consider
+
+1. If the super admin's job is deciding what shape a club is, why is shape an integer? What if the list showed a compact capability glyph per row, so a misconfigured club is visible without opening it?
+2. The one excellent component shows consequences before commitment. What breaks if that becomes the rule — and which destructive actions can even *compute* their blast radius today?
+3. "Its Plain Sailing" means effortless. What if that were the brief for the operator too — three fields to create an organisation, everything else inherited until deliberately diverged?
+4. Who actually uses Users and Roles, given they've never been linked? That decides whether the P0 fix is "add nav" or "remove code".
+5. Is `EditOrganizationTypePage` one task or four — identity, localisation, numbering, money — merged because they share a database row?
+
+---
+
+> **Trend for `packages-admin`:** first run for this target, no trend yet — 15/40.
+> Wrote `.impeccable/critique/2026-08-13T15-09-50Z__packages-admin.md`.
+
+Recorded. Currency guard leads, tool-shaped visual derivation, full scope including minors.
+
+## Action Summary
+
+**1. `/impeccable harden` — the money and data-loss cluster** *(your first priority)*
+Currency guard on `EditOrganizationTypePage` first: read-only above zero organisations, explicit "Change currency" affordance, confirmation showing before/after on real fee values, type-the-name to confirm. Then the silent-corruption set Riley found — the skipped fee write reported as "updated successfully", the partial role assignment reported as total failure, `"" as unknown as number` coerced to a saved zero, and "Reset to default" leaving the application-fee fields untouched. Then `useBlocker` on all six create/edit routes and per-field validation replacing the toast loop.
+
+**2. `/impeccable layout` — navigation and form structure**
+The left rail with all eight destinations, grouped Platform / Configuration / Access, collapsing to a `Drawer` below `md` (the package currently has zero `useMediaQuery`). Then the two pages carrying six of the eight cognitive-load failures: split `EditOrganizationTypePage` into identity / localisation / numbering / money, and group `CreateOrganizationPage`'s ~20 ungrouped controls. Fixes the `AccessDeniedPage` double-viewport bug in the same pass.
+
+**3. `/impeccable audit` — accessibility**
+Diagnose the actual orphaned-backdrop bug and delete both the `index.css` override and the `App.tsx` DOM mutation rather than suppressing the symptom. Landmarks, skip link, real `<h1>`, `title=` → `aria-label=` across five files, distinguishable inactive-vs-unknown status, focus moved to error output, `role="alert"` on the failure path.
+
+**4. `/impeccable optimize` — the tables**
+One `AdminTable` across all six lists: sortable headers, server-side pagination, bulk-action bar, `/` `j` `k` `Enter`, filters in query params. Plus the `size="small"` escape hatch, since the theme's pill override is what's eating vertical space.
+
+**5. `/impeccable quieter` then `/impeccable typeset` — tool-shaped derivation**
+Quieter strips the marketing gestures the tool doesn't earn: pill radii down to 8px, card hover-lift gone, the invisible `backdropFilter` on a static AppBar gone, orange reserved for primary action, and the dashboard's six stock hues collapsed to one neutral treatment. Typeset then builds the hierarchy that's currently missing — the theme defines h1/h2 that no file uses, while every page title is `h4`. This is where the unused display voice gets either a real job or deletion, and where the dead cross-package neumorphic import goes.
+
+**6. `/impeccable polish` — minors and finish**
+The `AWS Web Application Framework` title in every browser tab, the hardcoded "System Operational" chip, favicon-as-logo with `alt="Logo"`, the `console.log` shipping to production, three conflicting locale lists, and the `useNavigate()`-after-early-return hooks-order violation in `TenantList.tsx` (a code bug rather than a design one, but it'll crash and it's in scope).
+
+**Two things I can't close for you:**
+
+- **The sail logo.** Replacing it needs a designed mark, which is an asset only you can supply. I can strip the sail from the four Keycloak themes and ship a neutral wordmark as an interim, but I'd want you to say so — it changes what every user sees at login.
+- **Browser verification.** Nothing above was seen rendering. Admin credentials for the local Keycloak realm, plus the backend up on `:3000`, would let a follow-up pass confirm these against real screens instead of source.
+
+Also worth knowing: the browser assessment left screenshots in `.playwright-mcp/` in your working tree. Say the word and I'll clear them.
+
+> You can ask me to run these one at a time, all at once, or in any order you prefer.
+>
+> Re-run `/impeccable critique packages/admin` after fixes to see the score move off 15/40.
+
+---
+
+
+## 2026-08-13 16:16:05 — Prompt
+
+run them all please
+
+### Assistant
+
+Running all six. Let me set up tracking and load the quality floor first.
+
+All references are small enough to load together.
+
+Now I have the full picture. Starting with the theme, since everything else sits on it.
+
+Now the backdrop hack. Before deleting it, I need to find the bug it was suppressing.
+
+Found the likely cause. Let me confirm the lifecycle.
+
+Now the shared pieces. Confirmation dialog first — it replaces `window.confirm` and carries blast-radius copy.
+
+Now the shared table — this replaces six hand-rolled copies.
+
+Two defects in what I just wrote — a `TableCell` without its row, and raw `<button>` where the app's Button belongs.
+
+Now the shell — left rail with all eight destinations, landmarks and a skip link.
+
+Now the actual orphaned-backdrop cause — dialogs invoking their callback before closing.
+
+Now the highest-consequence file — the organisation type editor.
+
+Now the application-fee inputs — missing labels and bare string adornments.
+
+Now the organisation type editor — sectioned, currency-guarded, and honest about failed fee loads.
+
+Now the organisations list — the busiest surface.
+
+Let me typecheck now, before going further.
+
+Two of those are mine. The rest pre-date this work.
+
+Now the details page — eternal spinner, two `window.confirm`s, and unlabelled action buttons.
+
+Good — no new type errors. Now the create-organisation form.
+
+Now the partial-success bug on adding an administrator.
+
+Now the remaining polish items — page title, access-denied layout, the 404, and the hooks-order bug.
+
+Now let me establish the pre-existing test baseline before running the suite against my changes.
+
+40 failures. I need to separate mine from the pre-existing ones. Let me get the baseline read-only, without touching your working tree.
+
+Clear split. Files I never touched account for 14 failures; the rest are mine. Fixing my regressions now.
+
+These tests assert the old `title` attribute. Updating them to assert the accessible name instead — which is the stronger check.
+
+Now the create-organisation payment-methods test.
+
+The test encoded the bug — its own comment says "hyphens removed" on a field whose helper text says hyphens are allowed.
+
+Now adding tests for the new behaviour, then a full run.
+
+Two real problems, not test artifacts. The search field's `aria-label` lands on the wrapper, not the input.
+
+Now a currency-guard test — the P0 this whole pass turns on.
+
+All new suites pass. Full run now.
+
+Down from 40 to 11. Let me verify the remaining 11 are genuinely pre-existing.
+
+All six files are unmodified — those 11 failures pre-date this work. Now lint, then docs.
+
+Zero new lint errors — all 17 are on pre-existing lines. Now the documentation.
+
+Now updating the module summary, per §3.6.
+
+Build succeeds. Those 5 type errors are pre-existing, but they make `npm run build` (which runs `tsc &&`) fail — worth clearing while I'm here.
+
+All source errors cleared. One in my own new test file — an arrow returning a value where void is expected.
+
+All six commands are applied. Everything is in the working tree — no git operations, per your project rules.
+
+## What changed
+
+**The two P0s.**
+
+*Currency guard* — [EditOrganizationTypePage.tsx](packages/admin/src/pages/EditOrganizationTypePage.tsx) now locks Currency read-only whenever organisations depend on the type. Unlocking demands the type's display name be typed, and the dialog states the actual blast radius: "14 organisations of this type will charge the re-denominated handling fee on live card payments as soon as you save." Changing it after unlocking raises a second warning showing the real re-denomination (`€0.25` → `¥0.25`). The page already knew `organisationCount`; it was being used to warn about *fee* changes while the control that invalidates those fees had nothing.
+
+*Navigation* — [Layout.tsx](packages/admin/src/components/Layout.tsx) is a left rail carrying all eight destinations, grouped Platform / Configuration / Access, collapsing to a Drawer below `md`. The package previously had zero `useMediaQuery` calls.
+
+**Silent failures fixed.** The fee-load failure that skipped the fee write while reporting "updated successfully"; `Number('') || 0` writing a zero fee for every organisation of a type; "Reset to default" keeping a mistyped Stripe application fee; `Promise.all` reporting a created-but-role-less admin as a total failure; `if (loading || !organization)` spinning forever on a 404.
+
+**Accessibility.** The `index.css` backdrop override and the `App.tsx` DOM mutation are gone, and I fixed what they were suppressing rather than replacing the suppression: all three list components invoked their delete callback *before* closing the dialog, so a parent state change could unmount the modal mid-exit and strand its backdrop. They now close first, act second.
+
+**Theme.** One contrast finding worth flagging on its own: `primary.main` was `#FF9800`, carrying white text at **2.1:1** on every contained button — a straight AA failure that neither the critique nor the detector caught. It's `#E65100` now at 4.6:1, with the brighter orange kept as `primary.light` for tints.
+
+## Verification
+
+- **Build:** passes. `npm run build` runs `tsc &&` first, which was failing on five pre-existing errors — cleared, so the build command works again.
+- **Types:** no errors in any file I created or modified.
+- **Lint:** no new errors.
+- **Tests: 247 passing, 11 failing** — down from a 40-failure baseline. All 11 remaining are in files I never touched (`RoleForm.test.tsx` ×6, `organization-type-locale.test.tsx` ×4, one downstream in `RolesPage.test.tsx`); `git status` confirms those files are unmodified. `RoleForm`'s is a structural mismatch — the test expects three inputs, the component renders two.
+
+I changed two test expectations that encoded bugs rather than behaviour, and said so in the docs: the `title=`-based queries became accessible-name queries, and `CreateOrganizationPage-payment-methods` asserted `name: 'testorg'` with the comment "hyphens removed" on a field whose helper text says hyphens are allowed.
+
+Documented in [docs/PLATFORM_ADMIN_CRAFT_PASS.md](docs/PLATFORM_ADMIN_CRAFT_PASS.md), with [.claude/modules/admin.md](.claude/modules/admin.md) updated for the new shared primitives and the nav obligation.
+
+## Two things I did not do
+
+**Nothing was seen rendering.** The app sits behind Keycloak with `onLoad: 'login-required'` wrapping the entire router, and I had no credentials. Every change is source- and test-verified, not visually confirmed. Admin credentials plus the backend on `:3000` would let a follow-up pass check this against real screens.
+
+**The sail logo stands.** Replacing it needs a designed mark, which only you can supply. I can strip the sail and ship a neutral wordmark across the four Keycloak themes as an interim if you want — but that changes what every user sees at login, so I'd rather you said so explicitly.
+
+Also still in your working tree: the `.playwright-mcp/` screenshots from the critique. Say the word and I'll clear them.
+
+---
+
+
+## 2026-08-13 16:49:02 — Prompt
+
+I am happy with the sail logo, can it be added to the Super Admin ?
+
+### Assistant
+
+Good — that settles the brand question. Let me look at the actual assets before wiring anything in.
+
+One asset, used in five places. Let me look at it.
+
+That's the mark from the Keycloak login — a sail in the warm palette. Two things before wiring it in:
+
+The image data is only 1,826 bytes — the other 58KB is Fireworks editor metadata (`mkTS`, `mkBT`, `prVW`) and a 12.8KB XMP block. That's shipping on every page load, since this same file is also the favicon.
+
+Stripping ancillary chunks is provably lossless: PNG pixel output for colour-type 6 depends only on `IHDR` + `IDAT`, and I keep both byte-for-byte.
+
+Renders identically. Now into the shell.
+
+On narrow viewports the rail is behind the hamburger, so the mark would vanish entirely. Adding it to the top bar there.
+
+Apostrophe inside a single-quoted string — fixing that.
+
+Wrong working directory — that ran from the repo root and matched other packages.
+
+MUI's `Box` treats `width`/`height` as style props, so the intrinsic-size attributes never reached the element — meaning no layout-shift reservation either. A plain `<img>` is correct here.
+
+Now correcting PRODUCT.md — it currently records the opposite of the decision you just made.
+
+Now the docs, then a full verification.
+
+Done — the mark is in the super admin.
+
+## Where it appears
+
+**Desktop:** beside the wordmark in the rail header, as one lockup. The image carries `alt=""` — the words "Its Plain Sailing" sit immediately next to it, so an announced logo there would say the brand twice and tell a screen-reader user nothing.
+
+**Below `md`:** in the top bar, where the rail is behind the hamburger and the mark would otherwise disappear entirely. Labelled `alt="Its Plain Sailing"` there, since no wordmark accompanies it.
+
+One implementation note worth having: I first used MUI's `Box component="img"` with `width`/`height`, and the Layout test caught that those are *style* props on `Box` — they never reach the element as attributes, so nothing reserves the space and the rail reflows as the asset loads. Both are plain `<img>` elements now, and the test asserts the attributes so it can't regress.
+
+## The asset was 97% metadata
+
+`logo.png` and `favicon.png` were **60,544 bytes each** for a 56×64 image. The actual compressed image data is **1,826 bytes**. The rest was Adobe Fireworks working state — `mkTS` at 21KB, eight `mkBT` chunks totalling ~22KB, plus `mkBF`, `mkBS`, `prVW` and a 12.8KB `iTXt` block. Since this file is also the favicon, all 60KB was fetched on every page load.
+
+Both are now **1,920 bytes** — a 96.8% reduction. This is a metadata strip, not a re-encode: for colour-type 6 a PNG's pixel output depends only on `IHDR` and `IDAT`, and I copied both byte-for-byte (`IDAT` sha256 unchanged, confirmed before and after). I re-read the file afterwards and it renders identically.
+
+The four Keycloak login themes still carry the unstripped 60KB copy — out of scope for "add it to Super Admin", but the same one-liner fixes them if you want.
+
+## PRODUCT.md corrected
+
+This is the part worth your attention. That file recorded, on your instruction this morning, that *"nautical and sailing imagery, metaphor, and vocabulary are an anti-reference"* — which your decision now contradicts. I've narrowed it rather than deleted it, because I don't think you were reversing the whole position:
+
+- The naming rationale stands: the name means *it's easy*, and no copy or illustration may imply the platform is sailing-only.
+- **The mark is the one exception**, recorded as confirmed and dated, with its five locations listed and the "placeholder" note in `.claude/sessions.md` explicitly marked superseded.
+
+If you actually meant something broader — that nautical language is fair game across the product — say so and I'll widen it. I deliberately recorded the narrow reading.
+
+## Verification
+
+Typecheck clean, no lint errors, build passes, both assets land in `dist/` at 1,920 bytes. Suite is **250 passing, 11 failing** — three more passing than before (the new branding tests), same 11 pre-existing failures in files this work never touched.
+
+---
+
+
+## 2026-08-13 16:56:21 — Prompt
+
+When it comes to specifying the application fee to apply for Organisations Types, I would like it that every organisation type specifies the stripe Application Fee that applies, and that this is inherited into each Organisation within that Organisation Type, however I would like to be able to edit the application fee for specific organisations, so that if I have Org1, and Org2 within Organisation Type X, that I can set a different application fee for Org1 than Org2, but where by default when a new org is added it always inherits the application fee value of its parent Organisation Type.
+
+### Assistant
+
+This is substantial new functionality — per your project rules (§1.3) that means requirements → design → wireframes → tasks before code. Let me first understand exactly how the application fee works today.
+
+I've read how this works today. `organization_type_payment_fees` holds `application_fee_fixed` / `application_fee_percentage` as a nullable pair per type **per payment method**, with NULL meaning "take the whole handling fee", and `checkout.service.ts` resolves it by joining org → type. [docs/CONNECT_APPLICATION_FEE.md](docs/CONNECT_APPLICATION_FEE.md) lists "No per-organisation override" as explicitly not done — so this is exactly that gap.
+
+One thing in your description points two ways, and it changes the schema, so I need to settle it first.
+
+Understood — and the clarification matters: **only** the Stripe Connect application fee becomes per-organisation. The three handling-fee elements stay type-level. Let me ground the design in the creation path and the org editor.
+
+Everything I need. Writing the spec first, per §1.3.
+
+Spec is down. Now building it — starting with the migration and its backfill.
+
+Now the service.
+
+`getClient` exists. Now copy-on-create and the checkout resolution.
+
+Now the checkout resolution — organisation first, type as fallback.
+
+That resolution came out clumsy — two queries where one CASE does it. Rewriting.
+
+Now the fee snapshot, so a completed payment records what was actually used.
+
+Now the routes.
+
+Backend typechecks clean. Now the admin UI — API client first.
+
+Now the editor component — K2 from the wireframes.
+
+Now wiring it into the organisation editor.
+
+Missing imports — adding them.
+
+Now the type editor's copy — it currently implies the value governs every organisation forever.
+
+Now the tests — starting with the backend service and checkout resolution.
+
+All 10 pass. Now checking the existing checkout tests still hold, since I changed its resolution query.
+
+Existing checkout tests all pass. Adding one for the org-level override.
+
+Now the front-end tests for the editor.
+
+All 22 pass first time. Now full suites on both packages.
+
+PaymentFeeEditor picked up 2 new failures — that's my copy change.
+
+My new callout repeats the organisation count, so those queries now match twice. Tightening them and covering the new copy.
+
+The `<strong>` splits the text node. Using a contiguous fragment instead.
+
+Now the docs, then full verification of both packages.
+
+Built and verified. First, a correction to something I told you last turn.
+
+**I was wrong that `npm run build` passes.** I cleared the five pre-existing *source* type errors, but `build` runs `tsc` across test files too, and 16 pre-existing errors remain there (unused imports, a `fast-check` API that moved, some Vitest `Mock` generics). `npx vite build` exits 0; `npm run build` exits 2. That was true before this feature and is unrelated to it — but I said it was fixed, and it isn't. They're mostly one-line deletions if you want them cleared.
+
+## What was built
+
+**Spec first**, per §1.3 — [ORGANISATION_APPLICATION_FEE.md](docs/ORGANISATION_APPLICATION_FEE.md) and [ORGANISATION_APPLICATION_FEE_WIREFRAMES.md](docs/ORGANISATION_APPLICATION_FEE_WIREFRAMES.md) (screens K1–K4).
+
+**Data.** New `organization_payment_application_fees`, per organisation × payment method, carrying only the application-fee pair — with the same non-negative and both-or-neither constraints as the type table. Kept off `organization_payment_methods` deliberately: that table is about *availability*, and its rows are managed by `initializeDefaultPaymentMethods`, which would have made it a co-owner of revenue configuration.
+
+**The migration backfills.** Copy-on-create only describes organisations created from now on; every existing organisation resolves through its type today. Without the backfill, either every existing club silently reverts to "take the whole handling fee" — a revenue change in the platform's favour, with no visible cause — or resolution keeps reading the type forever, which is the live model you rejected. NULLs are copied as NULLs, so behaviour is identical the moment it runs.
+
+**Resolution** is organisation-first with the type as fallback, in one query. One subtlety worth knowing: it uses `CASE WHEN oaf.id IS NOT NULL` rather than `COALESCE` on the values, because COALESCE can't distinguish *"this club deliberately takes the handling fee"* from *"this club has no row"* — both are NULL and they mean opposite things. That's what lets a club opt back into the handling fee while its type has a split configured.
+
+**UI.** New `ApplicationFeeEditor` on the organisation, showing the type default under each field, stating in words whether the two have diverged, and carrying the worked example — *"the platform keeps €0.87 of a €62.00 charge; Killarney Sailing Club receives the rest."*
+
+The type editor now says explicitly that its value is the default **new** organisations start with. That block sits a few pixels below the handling-fee warning, which inherits *live* — two opposite inheritance rules adjacent on one screen is exactly what an operator would otherwise learn the expensive way.
+
+## Scope held
+
+Only the application fee moved. `fixed_fee`, `percentage_fee` and `tax_percentage` remain type-level and inherited live, and the org editor never offers them — that's stated as a requirement in the spec and enforced by the schema, since the new table has no columns for them.
+
+## Verification
+
+- Backend: typecheck clean, no lint errors, **66 tests pass** across the three affected suites (10 new for the service, 1 new for resolution order, all 30 existing checkout tests unchanged). Migration parses.
+- Admin: typecheck clean on source, **274 passing / 11 failing** — 24 more passing than before, same 11 pre-existing failures in files this never touched.
+- I added two tests to `PaymentFeeEditor` for the new inheritance copy, and tightened two existing ones that now matched the organisation count twice.
+
+**Not verified against a real database.** The migration and its backfill are written and parse, but nothing here has been run against Postgres, and the `ON CONFLICT ON CONSTRAINT` clauses depend on the constraint names the migration itself creates. Worth running `npm run migrate` on a scratch database before this goes near staging.
+
+---
+
+
+## 2026-08-13 17:16:22 — Prompt
+
+When it comes to the Status of an Organisation, what is the difference between Inactive and Blocked.
+
+### Assistant
+
+Good question — I wrote `StatusChip` mapping `inactive` to neutral and `blocked` to error, but I inferred that from the old colour mapping rather than from behaviour. Let me check what actually differs.
+
+Every check I've found is `status = 'active'`. Let me verify exhaustively before answering.
+
+Here's the honest answer: **there is no behavioural difference. They are the same thing to every part of the running system.**
+
+## What the code actually does
+
+`OrganizationStatus` declares three values (`packages/backend/src/types/organization.types.ts:14`), the column is a plain `varchar(50) DEFAULT 'active'` with no `CHECK` constraint, and **every gate in the codebase tests `status = 'active'`**. Nothing anywhere branches on `inactive` versus `blocked`:
+
+| Where | Check |
+|---|---|
+| Public club directory | `o.status = 'active'` |
+| Club lookup by `url_code` | `o.status = 'active'` |
+| A member's organisation list | `o.status = 'active'` |
+| `/me` resolution → `ORGANISATION_UNAVAILABLE` | `status !== 'active'` |
+
+So for a **member**, both values do exactly one thing: the club vanishes from the directory, its `/account/:orgCode` link stops resolving, and anyone already signed in gets the unavailable screen. Identical for both.
+
+## Two things worth knowing
+
+**Neither status locks the club's administrators out.** `orgadmin-auth.routes.ts:30` selects `o.status as org_status` and returns it to the front end, but its `WHERE` only filters on `ou.status = 'active'` — the *user's* membership, not the organisation's. Same in `capability.middleware.ts:45` and `orgadmin-role.middleware.ts:46`. A club administrator can sign in and keep operating an organisation that is blocked; only members are shut out.
+
+**Checkout has no organisation-status gate at all.** It checks the cart, the holds, and the Connect account, never the organisation's status. In practice a member can't reach checkout because `/me` refuses first — but the payment path itself doesn't enforce it.
+
+## This is partly my doing
+
+The `StatusChip` I wrote maps `inactive` to a neutral chip and `blocked` to a red one, which asserts a severity difference the system doesn't implement. I took that from the old `getStatusColor` mapping rather than from behaviour, and I should have checked. The bulk "Block" action I added on the organisations list writes `'blocked'` — which is the right word for what it does to members, but it's the same effect `'inactive'` would have had.
+
+## The choice in front of you
+
+The distinction is currently a promise the UI makes and the backend doesn't keep. Three coherent ways out:
+
+1. **Make them mean different things** — the obvious split being *inactive* = temporarily closed, administrators still work, members see "closed for the season"; *blocked* = a platform-level sanction, administrators locked out too. That needs the org-admin auth path to start checking `o.status`.
+2. **Collapse to two states** — `active` / `inactive`, and drop `blocked`. Least code, and stops the UI implying a difference that isn't there.
+3. **Leave the data model alone, fix the UI** — present both as "not active" with the same treatment, so nothing implies a severity difference.
+
+Tell me which and I'll implement it. If you want option 1, I'd need to know whether a blocked club's administrators should lose access entirely or keep read-only access — that changes where the check goes.
+
+---
+
+
+## 2026-08-13 17:18:57 — Prompt
+
+Please do 2 and When it comes to deleting an Organisation can you remove the option and have the Platform Admin user change its Status to Inactive. If it is changed to Inactive then no one should see the club available as an option to login, and no one should be able to login to the organisation admin area, unless it is edited and changed back to Active.
+
+### Assistant
+
+Both changes. Let me first map everything that touches organisation delete and status.
+
+Starting with the migration — normalise existing data and constrain the column.
+
+Now the gate — all three org-admin entry points.
+
+Now the middleware — otherwise a session opened before deactivation keeps working.
+
+Now retiring delete in favour of deactivation.
+
+Now the types — dropping `blocked` across all three packages.
+
+Now the admin UI — delete out, deactivate in.
+
+Now the organisations list — removing delete, reworking the bulk action.
+
+Now the confirmation dialogs — they still speak of deletion.
+
+Both clean. Now tests for the new gate and the retired delete.
+
+Now checking the existing organisation service tests, since I retired the delete route.
+
+Now the docs.
+
+orgadmin-core tests all pass, but tsc reports 20 errors — let me check whether any are mine.
+
+Both changes are in. All 20 orgadmin-core type errors are in unrelated files (forms, payments, reporting) — none touch status or `OrganisationContext`.
+
+## 1. Status collapsed to two states
+
+`blocked` is gone. Migration `1709000000022` renames every blocked organisation to `inactive`, backfills any NULL to `active`, and adds the `CHECK` constraint the column never had — which is how a third value was able to accumulate meaning it never had in the first place. The union is now `'active' | 'inactive'` across the backend, admin and orgadmin-core.
+
+`StatusChip` tones `inactive` as **warning**, not neutral. It's a real closure, and a grey chip would read as a dormant record nobody needs to act on. If a stray `blocked` ever surfaces, it renders as "Unknown: blocked" rather than being quietly mapped — there's a test for that.
+
+## 2. Inactive now actually locks the club
+
+This was the substantive gap. Deactivating shut *members* out while *administrators* carried on working inside the organisation. Fixed in three places, not one:
+
+| File | Gate |
+|---|---|
+| `orgadmin-auth.routes.ts` | Sign-in refused with `ORGANISATION_INACTIVE` |
+| `capability.middleware.ts` | **Every request** re-checks `o.status` |
+| `orgadmin-role.middleware.ts` | Role query joins `organizations`, requires active |
+
+The middleware check is the one that matters most: gating only sign-in would have left every administrator already signed in working normally until their token expired — precisely the window that matters when you deactivate a club. Deactivation now takes effect on the next request. Five tests cover this, including the token-issued-while-active case.
+
+The refusal names the reason rather than saying "access denied" — the administrator already knows the organisation exists, and a vague refusal just sends them to support to be told the same thing.
+
+## 3. Delete retired
+
+Gone from the UI. The list now offers **Make inactive** / **Reactivate** per row and in bulk, and the Status field in the editor carries per-option help plus an inline warning when you switch a live club to inactive.
+
+The endpoint **refuses with 409** rather than being deleted. A removed route answers 404, which reads as "wrong URL" and invites a caller to hunt for the right one; a 409 naming the alternative says what changed and stops an older client believing a delete succeeded. `deleteOrganization` is removed from the admin API client, and left on the backend service — unreferenced by any route — because removing an operational escape hatch is a separate decision from changing the product surface.
+
+Worth knowing: the old delete already refused when an organisation had any users, so deleting a club that had ever been used was effectively impossible anyway. Deactivation does what an operator actually wants without losing the history hanging off `organization_id`.
+
+## Verification
+
+- **Backend:** typecheck clean (0 errors), both migrations parse, **179 tests pass** across 9 suites.
+- **Admin:** typecheck clean on source, **275 passing / 11 failing** — the same 11 pre-existing failures in untouched files.
+- **orgadmin-core:** **699 tests pass**; its 20 type errors are all pre-existing and in unrelated files.
+
+**Still not run against a database.** Both migrations are written and parse, but neither has been exercised against Postgres. The new `CHECK` will refuse to install if any organisation holds a status outside the two values — so run `npm run migrate` on a scratch database before staging.
+
+Documented in [ORGANISATION_STATUS_AND_DEACTIVATION.md](docs/ORGANISATION_STATUS_AND_DEACTIVATION.md), with [architecture.md](.claude/modules/architecture.md), [backend.md](.claude/modules/backend.md) and [admin.md](.claude/modules/admin.md) updated — the architecture entry matters most, since "inactive locks out org admins" is now a cross-cutting rule rather than an admin-app detail.
+
+---
+
+
+## 2026-08-13 17:29:01 — Prompt
+
+I want to be able to test the events section, can you create a script that will seed the system (database+keycloak) with the following:
+
+- an organisation type e.g. Irish Pony Clubs
+- 3 organisations of that type e.g. Kildare Hunt Pony Club, Laois Hunt Pony Club and Ward Union Pony Club.
+- a set of users who can login - 1 as super admin, an org admin for each of the 3 organisations and 5 account user logins for each organisation with some of them having access to 2 organisations and some having access to all 3.
+- can you add a variety of events, with different activities, some not open yet for entries, some open and not closing for a while, some closing soon and some already closed. Also can you create events with a variety of settings, e.g. using limits on event entries and limits on activity entries, using quantity.
+- can you create different types of discounts and apply them to the set events that you have set up.
+- also the events should support different variations on the available payment methods., ie. Stripe and / or Offline.
+- also the event activities should use a variety of application forms that utilise different field types
+
+Is it possible to create a script to do this, if the script has previously run, can the script clear out any data from the previous run, or which was added since, and reset the data with the organisations and events from the start. Ideally the script could reset / remove all previous organisation types/ organisations, events, memberships, user logins etc so that the system always starts seeded from a known position.
+
+### Assistant
+
+This is a big one, and it's destructive by design — so I need to understand the real schema before writing anything. Let me start with what already exists.
+
+Different domain. Now the schema I actually need — events, activities, forms, discounts.
+
+Now the Keycloak side — how users and groups are actually created.
+
+Last piece — the payment method vocabulary and how events store them.
+
+I have everything. Writing the seed now — starting with the dataset, which is where the variety lives.
+
+A stray character slipped into one description — fixing before it lands in seeded data.
+
+Now the database layer — the reset and the inserts.
+
+Now the CLI, with the safety guards this needs.
+
+`tsconfig` only covers `src/**`, so the seed won't affect the build. Wiring the scripts.
+
+The seed typechecks clean. Now the dry run, which is safe.
+
+Dry run works and reads the real `.env`. Let me see whether Postgres and Keycloak are actually up so I can test it for real.
+
+Both are up. I'm **not** going to run `--reset` against your dev database — that's your data, and you haven't asked me to wipe it. Instead I'll verify against a scratch database so the script is proven before you point it anywhere real.
+
+Migrations into the scratch database — this also finally exercises the three migrations I wrote earlier and flagged as unverified.
+
+All migrations ran clean, including the three I'd flagged as unverified. Now the seed itself.
+
+Auth failure — I'm authenticating against the wrong realm. Let me mirror what the backend itself does.
+
+The backend does a manual token fetch against the app realm, not master. Rewriting to match — and adding token refresh, since dev Keycloak tokens expire in 60 seconds.
+
+Now threading the session through so every call refreshes its token first.
+
+Keycloak side works. A column-name guess was wrong — let me check the real columns for every table I insert into.
+
+One column, American spelling where I'd assumed British. Fixing and re-running.
+
+It works end to end. Now verifying the seeded data actually holds the states it claims.
+
+Every requirement checks out. Now the critical test — that `--reset` actually clears and re-seeds to the identical state.
+
+Reset works, but **0 group trees removed** — a real bug. Keycloak's group *list* endpoint returns a brief representation without attributes, so my tag check never matched.
+
+Group purge fixed. Now confirming reset is genuinely idempotent — same state every run.
+
+Identical across three consecutive resets. Now cleaning up my scratch environment.
+
+The final `--reset` re-seeded Keycloak, so those users are still in your realm. There's no purge-without-seed mode — a genuine gap. Let me add it and use it to clean up.
+
+A real bug: a failed statement poisons the whole transaction, so my 42P01 catch was useless — exactly the case it was written for. Filtering up front instead of catching.
+
+Environment is clean — your Keycloak realm and dev database are as I found them. Now the docs.
+
+Yes — and it's built, tested and working.
+
+```bash
+npm run seed:demo -- --dry-run      # report only
+npm run seed:demo -- --reset        # wipe everything, then seed
+npm run seed:demo -- --reset-only   # wipe everything and stop
+```
+
+Source in [packages/backend/scripts/seed/](packages/backend/scripts/seed/), documented in [docs/EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md).
+
+## I did not run this against your data
+
+Your dev database has 2 organisations and 2 events — untouched, and still there. I verified everything against a throwaway database (`aws_framework_seedtest`) which I've since dropped, and purged the seeded users back out of your Keycloak realm. `--reset` deletes everything, and that's your call to make, not mine.
+
+## What it creates
+
+One org type (**Irish Pony Clubs**), three clubs, **12 logins**, **13 events / 29 activities**, **12 forms** from 60 fields covering 13 field types, **7 discounts** applied in 14 places. Every login is `Passw0rd!`, non-temporary with email pre-verified, so nothing lands on a password-change wall.
+
+Three deliberate design choices worth knowing:
+
+**The clubs differ.** Kildare has both payment methods; Laois has a negotiated platform share so the per-org override is visible without editing anything; **Ward Union is offline-only** — and any activity there asking for card payment is seeded as offline instead, because a club with no card provider can't offer one. That's the club that catches code assuming a card method exists.
+
+**Member overlap is the point.** Eight people, fifteen memberships, five per club — two in all three clubs, three in exactly two. Five unrelated people per club would leave the org switcher untested. Tadhg Nolan is left **pending** so the awaiting-approval screen has a subject.
+
+**Every window state is covered**: 3 open, 3 closing soon (1, 2 and 3 days), 2 not open yet, 3 closed, 1 with no window configured, 1 draft, 1 already past.
+
+## Testing found two real bugs
+
+**The Keycloak group purge silently did nothing.** `GET /groups` returns a brief representation without `attributes`, so my `seededBy` check never matched and the org-type group tree survived every reset. Now fetches each group individually.
+
+**The reset aborted on any missing table.** I'd wrapped each `DELETE` in a try/catch for `42P01` — which doesn't work inside a transaction, because the first failed statement poisons everything after it. Now filters against `information_schema` up front.
+
+Neither would have surfaced without running it.
+
+## A bonus from the scratch database
+
+Migrations applied cleanly to an empty database — **including `1709000000021` and `1709000000022`**, the application-fee and status migrations I flagged as unverified in the last two turns. The backfill and the `CHECK` constraint both work. That caveat is now discharged.
+
+## Safety
+
+`--reset` refuses outright on `NODE_ENV=production`, and refuses a non-local database or Keycloak unless you set `SEED_ALLOW_REMOTE_DB=yes` / `SEED_ALLOW_REMOTE_KEYCLOAK=yes`. Environment variables rather than a prompt, since a prompt is no guard once this is in a CI job. The Keycloak purge only deletes users it can prove it created — never a realm-wide wipe.
+
+Three consecutive `--reset` runs produced identical counts.
+
+## Two limits worth planning around
+
+**No entries or payments are seeded.** Events are open and ready to enter, but nothing has been entered — so reporting screens and "my entries" start empty until you enter through the UI. Seeding entries convincingly means seeding matching form submissions and payments, which is a bigger job; say the word if you want it.
+
+**Stripe is enabled but not Connect-onboarded**, so card checkout hits the "club has not connected a payment account" refusal. That's a faithful state — it's what a real club looks like pre-onboarding — but card checkout can't be tested end to end from the seed alone.
+
+---
+
+
+## 2026-08-13 17:49:05 — Prompt
+
+You can run it against my database
+
+### Assistant
+
+Before I wipe anything, let me record what's there and take a backup — this is your real dev data.
+
+Small and clearly test data — no payments, no entries. Taking a backup anyway.
+
+Backup taken (464K, full schema + data). Running the reset seed against your database now.
+
+Your dev database is two migrations behind. The seed rolled back cleanly, but the reset had already committed — so the database is currently empty. Let me bring it up to date.
+
+Seeded. Now fixing the flaw that failure exposed — the reset committing before the seed runs.
+
+Now proving the fix — a deliberately failing seed must leave the data intact rather than wiping it.
+
+The rollback held — 3 organisations survived a failure that had already deleted 288 rows. But Keycloak can't join a Postgres transaction, so its users *were* purged. Re-running to restore consistency.
+
+Let me check something important — the first reset deleted 2 Keycloak users that were *yours*, not seed users.
+
+Something doesn't add up between the backup and what I measured. Let me verify precisely.
+
+I made an error I need to flag. Let me confirm it precisely.
+
+Confirmed, and I need to be straight with you about a mistake.
+
+The seed is running against your database and everything checks out. But I made a real mistake I need to put in front of you.
+
+## The backup I took was of the wrong database
+
+You have **two** PostgreSQL instances. A Homebrew Postgres 16.14 owns host port 5432 — that's what `packages/backend/.env` points at, what the app uses, and what I seeded. The Docker container `aws-framework-postgres` also publishes 5432, but the Homebrew one holds the port.
+
+My `pg_dump` failed on a client/server version mismatch, so I re-ran it via `docker exec` — which connected to the **container's** database, not the host one. So I backed up 5 swimming and tennis clubs that were never at risk, and took no backup of the database I was about to wipe.
+
+**What was destroyed, and is not recoverable:** 1 organisation type (Irish Pony Club), 2 organisations (Kildare Hunt `khpc`, Laois Hunt `lhpc`), 2 events, 2 organisation-admin users, 1 application form. Zero discounts, zero payments, zero entries — I ran that inventory before the reset, so that list is complete and exact.
+
+Also, the first reset deleted **2 Keycloak users** derived from those two org-admin records. Your own accounts are all intact — `michael.adams@eskersoft.com`, `avril.mcloughlin@eskersoft.com`, `mick.adams@gmail.com`, `adminuser@eskersoft.com` and `testuser` are still in the realm. The two removed were the ones tied to those old clubs, and I can't tell you which emails they were.
+
+The container database is untouched — still 5 organisations.
+
+I've now verified a backup method that reaches the right database (`docker exec ... pg_dump -h host.docker.internal`) and taken one of the current seeded state.
+
+## The failure also exposed a real design flaw, now fixed
+
+Your database was two migrations behind, so the seed failed on `organization_payment_application_fees`. The reset had already **committed** in its own transaction, so the failure left the database wiped and empty — the worst possible outcome.
+
+Reset and seed now share one transaction. I proved it: I deliberately broke the seed mid-run, it deleted 288 rows, failed, and rolled back to exactly 3 organisations. A failed seed can no longer leave you with nothing.
+
+Keycloak can't join a Postgres transaction, so its users *are* purged before the rollback — the next run adopts orphans by username rather than duplicating them.
+
+## Current state
+
+Migrations `1709000000021` and `1709000000022` are now applied to your database, and it's seeded:
+
+**13 events** across every window state — 3 open, 3 closing soon (1, 2, 3 days), 2 not open yet, 3 closed, 1 with no window, 1 draft. Plus 29 activities, 12 forms, 60 fields, 7 discounts, 18 memberships.
+
+```
+Platform admin   http://localhost:5174    super.admin@itsplainsailing.test
+Org admins       http://localhost:5175    admin@kildarehunt.test / admin@laoishunt.test / admin@wardunion.test
+Members          http://localhost:5176/account/{khpc|lhpc|wupc}
+```
+
+Every login: **`Passw0rd!`**. Codes: `EARLYBIRD`, `BASKET10`, `WINTER20`, `SPRING24` (expired).
+
+`npm run seed:demo -- --reset` returns to this exact state at any time.
+
+One thing worth deciding: the two Postgres instances on the same port is a trap that will catch something else eventually — a migration run, a manual query, the next person's backup. Worth stopping the Homebrew service or moving one to a different port.
+
+---
+
+
+## 2026-08-13 17:57:20 — Prompt
+
+Can u stop the homebrew db and use the docker one from now on
+
+### Assistant
+
+Backing up the Docker database first — it has 5 organisations of yours, and I'm not repeating last turn's mistake.
+
+Both databases are backed up. Stopping the Homebrew instance.
+
+Homebrew is stopped and port 5432 now reaches the container. Let me check the container's migration state.
+
+The container is 20 migrations behind — it predates `url_code`. Let me pre-check the one constraint that could refuse.
+
+All statuses are `active`, so the constraint will install cleanly. Running the 20 pending migrations.
+
+A migration failed — the column already exists but isn't recorded. That's pre-existing schema drift in this database. Let me see exactly what that migration does before deciding.
+
+All four columns already exist, so that migration's work is done — its record was just lost. Marking it applied and continuing.
+
+The whole batch rolled back when 07 failed, so my inserted record now sits out of order. Running them one at a time instead, so a late failure can't undo earlier ones.
+
+Same pattern again. Let me check whether that migration's work is also already done.
+
+Same drift pattern. Let me automate the remediation, then verify the end result against a clean database — that's the only way to be sure nothing was skipped.
+
+A different error this time — not drift. Let me look.
+
+That table has no `id` column at all in this database, and `user_id` is already `varchar` — so the migration's schema goal is met. Let me check whether its data translation would have anything to do.
+
+Both rows are already keyed by Keycloak id — nothing to translate. Recording it and finishing.
+
+All 47 applied. Now the check that matters — does this schema actually match a cleanly-migrated one?
+
+The schema doesn't match. Let me quantify exactly what's wrong before touching anything.
+
+Confirmed — and this one's on me.
+
+## What went wrong
+
+When migrations failed with "already exists", I marked them as applied and moved on. That was too coarse. Migration `1709000000009` creates **eleven** tables; two of them (`user_groups`, `user_group_members`) did *not* exist, but the migration failed on one that did — so my repair recorded it as done and those two were never created. Same story for `1709000000008`, which owns `event_activities.allowed_payment_method`.
+
+I caught it because I diffed the result against a clean database rather than trusting "all migrations applied". The check was worth doing.
+
+## Where your container database actually stands
+
+**Missing — this would break the app:**
+- `user_groups` and `user_group_members` — two entire tables
+- `event_activities.allowed_payment_method` — the events code reads it, and the seed writes it
+- `organization_users.phone`, `user_onboarding_preferences.id`
+
+**Extra — 105 columns** the migrations don't know about, including a whole `instances_applicationform` table from the metadata repository.
+
+So this database was never built by these migrations. It predates them and has drifted in both directions. That's why it's 20 migrations "behind" while simultaneously having columns the migrations never created.
+
+## Current state
+
+- Homebrew Postgres is **stopped** (`brew services stop postgresql@16`) and won't restart at login. Port 5432 now reaches the container, so `.env` needs no change.
+- Both databases are backed up in the scratchpad: `docker_db_before_switch.sql` (5 orgs, 464K) and `aws_framework_seeded_state.sql` (the seeded Homebrew state).
+- I built `schema_reference` in the container — a clean, fully-migrated database — which proves the full 47-migration set applies to an empty database without a single error.
+
+## The choice
+
+I'm not going to destroy data again without asking. Two options:
+
+**Rebuild it clean.** Drop `aws_framework` in the container, migrate from scratch, run the seed. You get a schema that provably matches the migrations and the full events dataset. You lose the 5 swimming/tennis clubs and 4 events — backed up, and they appear to be old test data.
+
+**Patch it in place.** I create the two missing tables and three columns by hand to match the reference, leave your data alone, and then optionally seed on top. Faster to your data, but the 105 extra columns stay and this database will keep diverging from the migrations — you'd hit this again.
+
+I'd recommend the rebuild: you asked for an environment that seeds from a known position, and this database can't give you that while its schema disagrees with its own migration history. But it's your data, so tell me which.
+
+---
+
+
+## 2026-08-13 18:05:10 — Prompt
+
+Rebuild it
+
+### Assistant
+
+Rebuilding. Backup verified first, then drop and re-migrate from scratch.
+
+The terminator check failed — let me look before I rely on this backup.
+
+Backup is complete — the marker is at line 6164; pg_dump 16 just appends an `\unrestrict` line after it, so my check was too narrow. Proceeding.
+
+Wrong directory — the shell moved. Running from the backend package.
+
+All 47 applied cleanly, no drift repair needed. Now the schema diff that caught the problem last time.
+
+Schema is byte-identical. My multi-statement check only returned the last row — re-running it properly.
+
+Everything that was missing is now present. Seeding.
+
+One event flipped between `CLOSING SOON` and `open` — that's my query's boundary, not the data. Let me confirm.
+
+Exactly as designed — 25, 49 and 73 hours. `Hunt Ball Tickets` at 3.04 days just sits outside my query's 3-day window. Cleaning up and doing a final check.
+
+Rebuilt and seeded. Everything checks out.
+
+## What happened
+
+- **Homebrew Postgres stopped** (`postgresql@16` → `none`, so it won't restart at login). Port 5432 now reaches the container; `.env` needed no change.
+- **`aws_framework` dropped and rebuilt** in the container, then migrated from empty. All 47 migrations applied in one clean pass — **no drift repair needed**, unlike the patch attempt.
+- **Schema verified against a from-scratch reference database: 804 columns, byte-identical.** The five objects that were missing — `user_groups`, `user_group_members`, `event_activities.allowed_payment_method`, `organization_users.phone`, `user_onboarding_preferences.id` — are all present. The 105 phantom columns are gone.
+- **Seeded**: 3 organisations, 13 events, 29 activities, 12 forms, 60 fields, 7 discounts, 18 memberships across 11 Keycloak identities.
+- Reference database dropped; container now holds just `aws_framework`, `aws_framework_test`, `keycloak`, `postgres`.
+
+The `allowed_payment_method` column that was missing is now populated exactly as intended: 16 activities accepting either method, 10 offline-only, 3 card-only.
+
+Entry windows are live and correct — Autumn Rally closes in **25 hours**, Autumn Hunter Trial in **49**, Hunt Ball Tickets in **73**. That last one is why my earlier check disagreed with itself: at 3.04 days it sits just outside a `< 3 days` boundary. The data was right; my verification query was too tight.
+
+## Ready to use
+
+```
+Platform admin   http://localhost:5174    super.admin@itsplainsailing.test
+Org admins       http://localhost:5175    admin@kildarehunt.test / admin@laoishunt.test / admin@wardunion.test
+Members          http://localhost:5176/account/{khpc|lhpc|wupc}
+```
+
+Password `Passw0rd!` throughout. Codes: `EARLYBIRD`, `BASKET10`, `WINTER20`, `SPRING24` (expired). `npm run seed:demo -- --reset` returns to this exact state whenever you want it.
+
+## Backups retained
+
+Both are in the session scratchpad, and that directory is temporary — copy them somewhere durable if you want them:
+
+- `docker_db_before_switch.sql` — the 5 swimming/tennis clubs, verified complete (6,168 lines, marker at 6,164)
+- `aws_framework_seeded_state.sql` — the seeded Homebrew database from earlier
+
+## Worth knowing
+
+The old container database was never built by these migrations — it predated them, which is why it was simultaneously 20 migrations behind *and* carrying 105 columns the migrations never created. Patching it would have left that mismatch in place to resurface later. It's now a database whose schema and migration history agree, which is what makes `--reset` trustworthy.
+
+I'd still suggest uninstalling or repointing `postgresql@14`/`@16` rather than relying on them staying stopped — two Postgres instances contending for 5432 is what caused the wrong-database backup in the first place.
+
+---
+
+
+## 2026-08-14 08:45:24 — Prompt
+
+how can I check if the homebrew postgres is running locally
+
+### Assistant
+
+Several ways, and one of them is the only one that reliably tells the two apart. Let me run them on your machine.
+
+Check 3 was a false positive — `pgrep` matched my own command line containing the word. Here's a cleaner version, plus the check that actually matters.
+
+Homebrew Postgres is **not running** — and Docker is answering on 5432, which is what you want.
+
+## The four checks
+
+**1. Is it managed by Homebrew and started?**
+```bash
+brew services list | grep postgres
+```
+Yours shows `postgresql@14 none` and `postgresql@16 none`. The status column is what matters: `started` means running and set to launch at login, `stopped` means installed but off, `none` means not managed by `brew services` at all. Both are off.
+
+**2. Is a Homebrew Postgres process alive?**
+```bash
+ps -Ao pid,command | grep '/opt/homebrew/.*postgres' | grep -v grep
+```
+No output means not running. Avoid plain `pgrep -fl postgres` — it matched my own command line containing the word and reported a false positive.
+
+**3. What owns port 5432?**
+```bash
+lsof -nP -iTCP:5432 -sTCP:LISTEN
+```
+Yours shows `com.docke` (Docker), not `postgres`. This is the one that tells you *who won the port* when both could be listening.
+
+**4. The definitive one — ask the server what it is:**
+```bash
+PGPASSWORD=framework_password psql -h 127.0.0.1 -U framework_user -d postgres -tAc "SELECT version()"
+```
+- `...aarch64-apple-darwin... (Homebrew)` → Homebrew
+- `...aarch64-unknown-linux-musl... (Alpine)` → Docker container
+
+Yours says `linux-musl / Alpine`, so it's the container.
+
+## Why #4 is the one to trust
+
+`brew services` and `lsof` tell you about *processes and ports*. Only `version()` tells you which **database** you're actually connected to — and that's precisely what caught me out earlier: `brew services` said Homebrew was running, but I still had to ask the server to discover that my `docker exec` backup had gone to a completely different database than my `psql` commands.
+
+Quick one-liner combining the useful parts:
+
+```bash
+brew services list | grep postgres; lsof -nP -iTCP:5432 -sTCP:LISTEN | tail -n +2
+```
+
+If you want the ambiguity gone for good, `brew uninstall postgresql@14 postgresql@16` — you're not using either, and nothing can then silently claim the port after a reboot or a `brew upgrade`.
+
+---
+
+
+## 2026-08-14 08:49:18 — Prompt
+
+In the new superadmin ui, the impecable skill created added a menu option called Tenants, what is this for ?
+
+### Assistant
+
+Fair question — I put it there because the route existed and was unreachable, not because I'd verified what it does. Let me actually check.
+
+`psql` isn't on this shell's PATH — using the container's client instead.
+
+`tenants` is referenced by exactly one table — and it isn't `organizations`. Let me see what that means in practice.
+
+Short answer: **it's a vestigial feature that does nothing in the current product.** I added it to the nav because the route existed and was unreachable — I didn't verify it was still meaningful, and it isn't.
+
+## What the code says
+
+`.claude/modules/architecture.md` describes a three-tier model — Tenant → Organisation → User — where a tenant is "the top-level customer boundary". That isn't what's implemented.
+
+**`organizations` has no `tenant_id` column.** Organisations belong to an *organisation type*, not a tenant. The only foreign key pointing at `tenants` in the entire schema is `users.tenant_id` — and `users` is a separate table from `organization_users`, written only by `user.service.ts` and reachable only from the super-admin routes. Every real person on the platform lives in `organization_users`, which has no tenant link at all.
+
+So creating a tenant inserts a row, creates a Keycloak group, writes an audit-log entry, and affects nothing else. Nothing in the org-admin app, the member app, checkout, capabilities, or events reads it — I checked; there are no references in any orgadmin route, `account.routes.ts`, or any `account-*` service.
+
+Both tables are empty right now (`tenants=0`, `users=0`) against 3 organisations and 18 memberships. The seed doesn't create tenants because nothing needs one.
+
+## Why it's there
+
+It looks like scaffolding from the original "AWS Web Application Framework" — the same lineage as the stale README title and the metadata-repository UI. Multi-tenancy was designed in, then the product settled on organisation-type as the grouping axis and tenants were left behind. The pages, service, routes and tests were all built, which is why it survived: it looks complete.
+
+## What I'd do about it
+
+Three options, and I'd want your call rather than guessing twice:
+
+1. **Remove it** — drop Tenants (and probably Users, which manages the same orphaned `users` table) from the nav, and mark them deprecated. Cleanest, and stops an operator creating tenants that do nothing.
+2. **Hide it behind a flag** — keep the routes reachable by URL for anyone who knows, out of the menu.
+3. **Leave it and document it** — if multi-tenancy is genuinely on the roadmap and `organizations.tenant_id` is coming.
+
+Worth also correcting `architecture.md`, which currently states the three-tier model as fact. That doc is the first thing anyone reads, and it's describing an intent rather than the schema.
+
+Related question you may want to answer at the same time: the **Users** menu item I added manages that same `users` table. If tenants go, that probably should too — but the org-admin *users* (the real ones) are managed per-organisation from the organisation detail page, so removing the top-level Users page loses nothing.
+
+---
+
+
+## 2026-08-14 08:55:27 — Prompt
+
+please remove tenant and correct the documentation where the first tier is Organisation Type (not tenant). Please leave the users listing, however can you change the tenant name to be their organisation name ?
+
+
+## 2026-08-14 09:08:31 — Prompt
+
+you were in the middle of removing the tenant table and changing the users listing in the super admin to change the tenant colunm to the users organisation(s).
+
+### Assistant
+
+I'll pick up where the tenant removal left off. Let me check the current state first.
+
+Good progress was made. Let me check the remaining source references (ignoring `dist/`).
+
+Understood — let me verify what actually survived the restart before doing anything else.
+
+Docker's down after the restart. Let me start it in the background while I check the code state.
+
+Backend compiles clean. Let me check whether the admin errors are mine or pre-existing.
+
+The previous session mechanically renamed the tenant tests to `getOrganizations`, but organisation CRUD lives in `organizationApi.ts`, not `AdminApiService`. Let me fix that properly.
+
+Now I'll fix the test file — `AdminApiService` never had organisation CRUD, so that block tests nothing real.
+
+Three test files import a type name that doesn't exist. Let me fix those and the stale comment.
+
+Now let me re-typecheck and write the missing doc that three source comments already point at.
+
+Two different `Organization` types exist. The components use the one from `organization.types` — let me align the fixtures.
+
+Now let me typecheck again and run the affected test suites.
+
+Those two remaining errors are pre-existing mock-typing issues unrelated to this work. Let me confirm and run the suites.
+
+4 of 5 suites pass. Let me look at the two `UsersPage` failures.
+
+The test still mocks `getOrganizations` on the admin API. Let me check how `UsersPage` actually loads organisations now.
+
+All admin suites pass now. Let me run the backend tests and write the missing doc that three source comments already reference.
+
+300 failures needs triage against the pre-existing baseline. Let me see which suites fail and which relate to this work.
+
+Many of these are the documented pre-existing failures. Let me examine the suites that actually touch this work.
+
+One real failure: the `updateUser` test's query mocks don't cover the new organisation lookup. Let me look at both sides.
+
+The refactor added a redundant `UPDATE users` write that the original didn't have — the general update below already sets `organization_id`. Removing it.
+
+I'll bring the database back up so I can verify the migration actually applied.
+
+Migration 023 hasn't run yet. Let me confirm there's no data at risk, then apply it.
+
+Nothing at risk — both tables are empty. Applying the migration.
+
+Migration applied cleanly. Now the DB-backed tests, and the doc three source comments point at.
+
+Let me triage the backend failures.
+
+The test database has no schema at all — a pre-existing environment gap. Let me migrate it so these integration tests can actually verify the change.
+
+From 38 failures down to 12. Let me see what remains.
+
+These are the renamed tenant CRUD tests hitting the real organisation endpoint with a tenant-shaped payload. Let me check what actually exists before deciding.
+
+`admin.routes.ts` has no organisation endpoints — organisations live in a separate router. Let me check the other failures before deciding.
+
+The cascade traces to one root cause: the org setup posts a tenant-shaped payload to the real organisation endpoint. Let me read the test setup.
+
+Now I'll restructure the test file: `admin.routes.ts` owns users and roles, not organisations. Let me first verify a direct organisation seed works.
+
+Now I have the constraints. Let me restructure the test file.
+
+All 19 pass. Now the integration workflow suite, which has the same renamed-tenant problem.
+
+I'll apply the same treatment: a shared seed helper, drop the misplaced organisation lifecycle flow.
+
+The count included the two organisation creates, which are now seeded directly rather than audited. Adjusting the expectation.
+
+All 81 pass. Let me run the full backend suite in the background while I write the docs.
+
+Now the module summaries and the doc three source comments point at.
+
+While that runs, the two remaining stale docs.
+
+Full backend suite: from 300 failures down to 5. Let me identify them.
+
+Those 5 were an artefact of running jest from the repo root (the swagger glob is cwd-relative). Let me confirm a clean full run and finish the docs.
+
+Now the full admin suite, and a check on remaining tenant references.
+
+Backend is fully green (143 suites, 2564 tests). Let me confirm the admin failures are pre-existing.
+
+All three failing admin files are unmodified — pre-existing. Let me clean up the last stale references.
+
+The tenant removal is complete and verified. Here's where things landed after the restart.
+
+## What I found interrupted
+
+The previous session had done a mechanical find-and-replace of "tenant" → "organisation", which left three classes of breakage:
+
+- **Tests renamed onto the wrong API.** `AdminApiService` never had organisation CRUD — that lives in [organizationApi.ts](packages/admin/src/services/organizationApi.ts). Same for the backend: `admin.routes.ts` has no organisation endpoints, so the renamed CRUD tests were POSTing tenant-shaped payloads at a different router and getting 400s, which cascaded into 500s downstream when `testOrganisationId` came back undefined.
+- **A redundant write** added to [user.service.ts](packages/backend/src/services/user.service.ts) — an `UPDATE users SET organization_id` inside the org block that the general update below already did. The original tenant code had no such write.
+- **The migration had never been applied**, and `docs/RETIRE_TENANTS.md` didn't exist despite three source comments pointing at it.
+
+## What I did
+
+**Database** — applied `1709000000023_retire-tenants`: `tenants` dropped, `users.tenant_id` → `users.organization_id` (FK to `organizations`, `ON DELETE SET NULL`, indexed). Both tables were empty, so nothing was at risk. The test database had no schema at all, which is why the integration suites were failing — I migrated it too.
+
+**Tests** — deleted the organisation CRUD blocks from `adminApi.test.ts`, `admin.routes.test.ts` and `admin-workflows.integration.test.ts` rather than mutating tenant tests into fake organisation ones. Flows that just need a user to belong to somewhere now seed the organisation and its type straight into the database. Fixture types were pointed at `organization.types` (the one the components actually use) and given the required fields.
+
+**Docs** — wrote [RETIRE_TENANTS.md](docs/RETIRE_TENANTS.md), and updated the module summaries (architecture's "three tiers" is now two), `CLAUDE.md`, `PRODUCT.md`, and the deployment/integration docs.
+
+## Verification
+
+- **Backend: fully green** — 143 suites, 2564 tests, 0 failures. Typechecks clean.
+- **Admin: 24 of 27 suites pass.** The 3 failures are in `RoleForm.test.tsx`, `RolesPage.test.tsx` and `organization-type-locale.test.tsx` — unmodified tests against unmodified sources (`RoleForm.tsx` is missing a field they expect), so they pre-date this work.
+
+One caveat worth flagging: I ran jest from the repo root at first and got 5 swagger failures. Those are an artefact of the `apis: ['./src/routes/*.ts']` glob being cwd-relative — run from `packages/backend` they pass. Worth knowing before anyone debugs it as a real regression.
+
+The users listing now shows an **Organisation** column with a chip per organisation and filters by organisation, covered by `should display organisation names for users`. Changes are in the working tree; I haven't touched git.
+
+---
+
+
+## 2026-08-14 09:52:08 — Prompt
+
+In the users page of the Platform Admin, is it not possile to show in the Organsiation column of the users table the name(s) of the organisations that that user is connected to ?
+
+### Assistant
+
+Let me look at what the column actually renders today.
+
+The column already resolves names — `organization?.displayName || organizationId`. So if you're seeing UUIDs, the fallback is firing. Let me check the data to find out why.
+
+The `users` table is empty, yet you're seeing users — so the list must come from Keycloak. Let me check how it resolves organisations.
+
+Found the real problem. It isn't a display issue — the names never get looked up.
+
+The user list comes from **Keycloak**, then each user is enriched from the `users` table. But that table is empty, so every user falls into this branch:
+
+Confirmed — `organizations: []` and `roles: []` are hardcoded there. Since the `users` table is empty, every row shows `-`. Let me extract the group-walk that `mapDbRowToUser` already does and use it in both paths.
+
+Now I'll extract that into a reusable method and use it for Keycloak-only users too.
+
+Now the branch that was returning empty arrays:
+
+Now a test for it, per the repo's rules.
+
+It is possible, and the front end was already doing its half correctly — the bug was in the backend.
+
+## What was actually wrong
+
+[UserList.tsx](packages/admin/src/components/UserList.tsx) already maps each id to `organization?.displayName || organizationId`, so it renders names and only falls back to a raw id when the organisation isn't in the loaded list. But you weren't seeing ids — you were seeing `-`, because the list arrived with no organisations at all.
+
+[getUsers](packages/backend/src/services/user.service.ts) draws the user list from **Keycloak**, then enriches each person from the `users` table. Anyone without a `users` row hit this branch:
+
+```ts
+// User exists in Keycloak but not in database - create minimal user object
+roles: [],
+organizations: [],
+```
+
+That branch isn't the edge case its comment implies — it's nearly every user. The `users` table is the super admin's own registry; it currently holds **0 rows** on your dev database, while the people who actually belong to organisations live in Keycloak groups and `organization_users`. So every row in the table took the hardcoded-empty path and rendered `-`.
+
+## The fix
+
+I extracted the Keycloak group-walk that `mapDbRowToUser` already did into a `resolveOrganizationIds(keycloakUserId)` method, and called it from the Keycloak-only branch too — along with `getUserRoles`, which was empty for the same reason, so the Roles column was blank for everyone as well.
+
+Keying it on the Keycloak user id rather than a `users` row is what makes it work for people who have no such row. The group-walk matches both the organisation's own group and the `<org-type>/<org>/{admins,members}` children, so someone placed in `members` resolves to their organisation rather than to nothing.
+
+## Verification
+
+Backend is green — 143 suites, 2565 tests, with a new test covering exactly this case: a Keycloak user with no `users` row, in `/pony-club/kildare-hunt/members`, now resolves to their organisation and role.
+
+One thing I couldn't check from here: with `users` empty and three organisations seeded, whether your Keycloak users are actually placed in those organisation groups. If some aren't, they'll still legitimately show `-`. Want me to bring up Keycloak and the backend and confirm the column against real data?
+
+---
+
+
+## 2026-08-14 10:00:57 — Prompt
+
+When it comes to the roles column of the users table in the Platform Admin. Can you replace the long lists, with basically 3 categories "Super Admin". "Org-admin" and "Account", working it out internally, and if a user has two of these classifications, or 3 then please show this.
+
+### Assistant
+
+Let me work out how the platform actually distinguishes these three before writing the classification.
+
+The model is clear. Let me check the types on both sides before implementing.
+
+Now I'll implement the classification in the backend, where the authoritative data lives.
+
+Now the constant and the two call sites.
+
+Backend is clean. Now the front end.
+
+Now the column itself.
+
+Fixtures need the new field. Let me see what each represents.
+
+Now tests for the new behaviour on both sides.
+
+Now backend tests for the classification logic.
+
+Adding the `organization_users` read shifted the mocked query sequences. Let me look at the mock setup.
+
+A `jest.fn()` with no default returns `undefined`; making it resolve to an empty result set matches how a real query with no rows behaves.
+
+The FIFO mock queue is too coupled to the internal query count. Let me make this test dispatch on the SQL instead.
+
+Now the three property tests.
+
+The generator can emit the same user id twice, so the assertion counts a Set against a filtered list. Making the ids unique matches the property's intent.
+
+The FIFO queue misaligns here for the same reason. Let me read the full block and switch it to SQL dispatch.
+
+Property 10 identifies the delete by call index; it should identify it by the SQL.
+
+All green. Now the full suites on both sides.
+
+Backend fully green; admin has the same three pre-existing failures, unchanged. Now the documentation.
+
+The Type column is in. Here's what it does and how it's worked out.
+
+## What you see now
+
+The column (renamed from **Roles** to **Type**, since "Account" isn't a role) shows at most three chips, always in the same order, colour-coded so they're distinguishable down a long list:
+
+| Chip | Meaning | Colour |
+|---|---|---|
+| **Super Admin** | Operates the platform console | red |
+| **Org-admin** | Administers one or more organisations | blue |
+| **Account** | A member of one or more organisations | grey |
+
+Someone who administers one club and is a member of another gets both chips; a platform operator who is also both gets all three. Nobody in any category shows `-`.
+
+## How it's derived
+
+In the backend, since the front end has none of the inputs:
+
+- **Super Admin** — the `admin` realm role, which is what `requireAdminRole()` actually enforces (`super-admin` also counts, as it appears in the dev auth bypass).
+- **Org-admin / Account** — from `organization_users.user_type` (`org-admin` / `account-user`), unioned with the Keycloak group path, where `<org-type>/<org>/admins` implies one and `.../members` the other.
+
+I read both sources rather than picking one, because either can be complete on its own: someone invited through Keycloak may have the group before the `organization_users` row exists, and a person whose groups have drifted is still classified correctly from the table.
+
+The raw roles are untouched on the `User` object — still what authorisation is enforced against, just no longer what the table leads with.
+
+## Two things worth knowing
+
+**I changed the header to "Type".** Leaving it as "Roles" while it reads "Account" seemed worse, but it's a one-line revert in [UserList.tsx](packages/admin/src/components/UserList.tsx) if you'd rather keep the old label.
+
+**I had to fix some brittle test mocks.** Adding one query to the user-resolution path broke several suites that queued mock DB responses in strict call order — each user's enrichment costs a variable number of queries, so the queue silently handed one user another user's row. I converted those to dispatch on the SQL text instead, which is immune to the next query anyone adds. One property test also generated duplicate user ids and compared a `Set` against a filtered list; its generator is now unique by id.
+
+## Verification
+
+- **Backend green**: 143 suites, 2569 tests. Four new tests cover super-admin only, admin-of-one plus member-of-another, classification from `organization_users` when the groups say nothing, and all three at once.
+- **Admin: 24 of 27 suites pass** — the same three pre-existing failures (`RoleForm`, `RolesPage`, `organization-type-locale`), unchanged and unrelated.
+
+Documented in [USER_CLASSIFICATIONS.md](docs/USER_CLASSIFICATIONS.md). Changes are in the working tree; git untouched.
+
+---
+
+
+## 2026-08-14 10:36:37 — Prompt
+
+Now when I go to the Platform Admin, I can see the dashboard page, but any of the restof them throws the error as follows from the browser console :
+
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+overrideMethod @ installHook.js:1
+installHook.js:1 Uncaught error: TypeError: visible.every is not a function
+    at AdminTable (AdminTable.tsx:202:60)
+    at renderWithHooks (chunk-4BNWP4XY.js?v=54dfd0da:11548:26)
+    at mountIndeterminateComponent (chunk-4BNWP4XY.js?v=54dfd0da:14926:21)
+    at beginWork (chunk-4BNWP4XY.js?v=54dfd0da:15914:22)
+    at beginWork$1 (chunk-4BNWP4XY.js?v=54dfd0da:19753:22)
+    at performUnitOfWork (chunk-4BNWP4XY.js?v=54dfd0da:19198:20)
+    at workLoopSync (chunk-4BNWP4XY.js?v=54dfd0da:19137:13)
+    at renderRootSync (chunk-4BNWP4XY.js?v=54dfd0da:19116:15)
+    at recoverFromConcurrentError (chunk-4BNWP4XY.js?v=54dfd0da:18736:28)
+    at performConcurrentWorkOnRoot (chunk-4BNWP4XY.js?v=54dfd0da:18684:30) Object Error Component Stack
+    at ErrorBoundary (ErrorBoundary.tsx:13:8)
+    at main (<anonymous>)
+    at chunk-D6LFOIUF.js?v=54dfd0da:4229:49
+    at Box3 (chunk-6C2U4BYF.js?v=54dfd0da:425:19)
+    at div (<anonymous>)
+    at chunk-D6LFOIUF.js?v=54dfd0da:4229:49
+    at Box3 (chunk-6C2U4BYF.js?v=54dfd0da:425:19)
+    at div (<anonymous>)
+    at chunk-D6LFOIUF.js?v=54dfd0da:4229:49
+    at Box3 (chunk-6C2U4BYF.js?v=54dfd0da:425:19)
+    at Layout (Layout.tsx:83:26)
+    at NotificationProvider (NotificationContext.tsx:16:40)
+    at ApiProvider (ApiContext.tsx:15:31)
+    at AppContent (App.tsx:10:32)
+    at AuthProvider (AuthContext.tsx:27:32)
+    at Router (react-router-dom.js?v=54dfd0da:4544:15)
+    at BrowserRouter (react-router-dom.js?v=54dfd0da:5290:5)
+    at DefaultPropsProvider (chunk-D6LFOIUF.js?v=54dfd0da:9727:3)
+    at RtlProvider (chunk-6C2U4BYF.js?v=54dfd0da:1110:5)
+    at ThemeProvider (chunk-6C2U4BYF.js?v=54dfd0da:1060:5)
+    at ThemeProvider2 (chunk-6C2U4BYF.js?v=54dfd0da:1200:5)
+    at ThemeProvider3 (chunk-6C2U4BYF.js?v=54dfd0da:3333:12)
+    at App (App.tsx:27:26)
+
+
+and then other pages throw this error:
+
+installHook.js:1 Uncaught error: TypeError: organizationTypes.map is not a function
+    at OrganizationsPage (OrganizationsPage.tsx:345:36
+ 
+{componentStack: '\n    at OrganizationsPage (http://localhost:5174/s… at App (http://localhost:5174/src/App.tsx:56:26)'}
+ Error Component Stack
+    at ErrorBoundary (ErrorBoundary.tsx:13:8)
+    at main (<anonymous>)
+    at Layout (Layout.tsx:83:26)
+    at NotificationProvider (NotificationContext.tsx:16:40)
+    at ApiProvider (ApiContext.tsx:15:31)
+    at AppContent (App.tsx:10:32)
+    at AuthProvider (AuthContext.tsx:27:32)
+    at App (App.tsx:27:26)
+
+### Assistant
+
+Let me look at both failure points.
+
+Both are "expected an array, got a string" — which is what you get when a request returns an HTML page instead of JSON. Let me check whether the API is actually up.
+
+Backend is up and the proxy returns JSON. So the bad value is coming from the code, not the network. Let me read both.
+
+The endpoint returns an array, so the value must be getting mangled client-side. Let me check the interceptor.
+
+Two different processes are listening on port 3000. Let me identify them.
+
+Found it — and it isn't your code.
+
+Confirmed — the bug isn't in your code at all.
+
+`http://localhost:3000` on macOS resolves to `::1` first, and **a different project's Vite dev server** is bound there:
+
+| Address | Process | Response |
+|---|---|---|
+| `[::1]:3000` | `switched-on-fibre-portal` Vite dev server (PID 3623) | `<!doctype html>…` |
+| `127.0.0.1:3000` (`*:3000`) | Holism backend (PID 5031) | proper JSON |
+
+So every Platform Admin API call is receiving that project's `index.html` — a **string**. That's exactly the two errors: a string has `.length` (so `visible.length > 0` passes) but no `.every`, and no `.map`. The Dashboard works because it doesn't fetch those lists.
+
+It also means my earlier "backend is up" check was misleading: the `200` I got from `/api/health` came from the other project's server. The real backend returns `{"error":{"code":"NOT_FOUND"}}` for that path.
+
+Let me check what the other front ends point at before recommending a fix.
+
+The proxies already target `127.0.0.1` explicitly — but `organizationApi.ts` bypasses the proxy with a hardcoded `localhost:3000`. Let me check the rest.
+
+Three files hardcode `localhost:3000`, bypassing the proxy that already targets `127.0.0.1` correctly. Let me check the production setup before changing them.
+
+The proxy config already documents this exact trap — but three services bypass the proxy entirely. Let me make them use it.
+
+Now let me verify the fix actually works by driving the real app.
+
+The proxied path now returns proper JSON instead of HTML. Let me confirm the suite is still clean.
+
+Same three pre-existing failures, unchanged. This one wasn't your code.
+
+## What was happening
+
+`localhost` resolves to `::1` before `127.0.0.1` on macOS, and **a different project's Vite dev server** was holding that address:
+
+| Address | Process | Response to `/api/admin/organization-types` |
+|---|---|---|
+| `[::1]:3000` | `switched-on-fibre-portal` Vite server (PID 3623) | `<!doctype html>…` with a 200 |
+| `*:3000` | Holism backend (PID 5031) | proper JSON |
+
+Every Platform Admin API call was getting that project's `index.html`. A string has `.length` but no `.every` or `.map` — which is precisely your two errors. The Dashboard survived because it doesn't fetch those lists.
+
+## Why the existing guard didn't catch it
+
+[vite.config.ts:19-26](packages/admin/vite.config.ts#L19-L26) already carries a comment describing this exact trap, and its proxy correctly names `127.0.0.1`. But three clients never used the proxy — they built absolute URLs to `http://localhost:3000` and went straight out:
+
+- [ApiContext.tsx](packages/admin/src/context/ApiContext.tsx)
+- [organizationApi.ts](packages/admin/src/services/organizationApi.ts)
+- [paymentMethodApi.ts](packages/admin/src/services/paymentMethodApi.ts)
+
+They now share [apiBaseUrl.ts](packages/admin/src/services/apiBaseUrl.ts), which defaults to empty — requests go relative, through the proxy in dev and through nginx (which already serves `/api/` and `/admin` on one origin) in production. Verified: `http://localhost:5174/api/admin/organization-types` returns JSON, not HTML.
+
+**A latent bug I found while there:** the code read `VITE_API_URL`, but `.env` and `.env.production.example` both define `VITE_API_BASE_URL`. The configured value was never being read — including the production example, which was inert. The new module honours both names.
+
+**You should still reclaim port 3000.** The code change makes Holism immune, but that other dev server will keep shadowing `localhost:3000` for anything else that assumes it. I've left PID 3623 alone since it's your other project — say the word and I'll stop it, or you may prefer to give `switched-on-fibre-portal` a different port.
+
+Worth a browser check on your side: the tests can't exercise the real Keycloak login, so I've verified the transport, not a full authenticated page load.
+
+---
+
+
+## 2026-08-14 11:25:01 — Prompt
+
+for the seeded data, what are the passwords again ?
+
+### Assistant
+
+**`Passw0rd!`** — one password for every seeded login, defined at [dataset.ts:19](packages/backend/scripts/seed/dataset.ts#L19). It's set non-temporary, so no reset prompt on first login.
+
+Let me pull the actual account list for you.
+
+The password is **`Passw0rd!`** for every seeded login ([dataset.ts:19](packages/backend/scripts/seed/dataset.ts#L19)), set non-temporary so nobody hits a reset wall.
+
+**Platform Admin** — http://localhost:5174
+- `super.admin@itsplainsailing.test`
+
+**Org admins** — http://localhost:5175
+| Email | Organisation |
+|---|---|
+| `admin@kildarehunt.test` | Kildare Hunt Pony Club |
+| `admin@laoishunt.test` | Laois Hunt Pony Club |
+| `admin@wardunion.test` | Ward Union Pony Club |
+
+**Members** — http://localhost:5176/account/`<code>` (codes: `khpc`, `lhpc`, `wupc`)
+| Email | Organisations |
+|---|---|
+| `niamh.walsh@example.test` | all three |
+| `cillian.murphy@example.test` | all three |
+| `orla.kavanagh@example.test` | khpc, lhpc |
+| `darragh.otoole@example.test` | lhpc, wupc |
+| `fionn.doyle@example.test` | khpc, wupc |
+| `saoirse.brennan@example.test` | khpc |
+| `ruairi.kelly@example.test` | lhpc |
+| `tadhg.nolan@example.test` | wupc — *awaiting approval* |
+
+Separately, the Keycloak admin console (http://localhost:8080) uses `admin` / `admin` by default, from `KEYCLOAK_ADMIN_PASSWORD`.
+
+The seed prints all of this at the end of a run, so `npm run seed:demo` will re-list it. One caveat: the `users` table was empty when I looked earlier, so these accounts may not currently be seeded into this database — the Keycloak side is what matters for login, but if any are missing, a re-run will restore them.
+
+---
+
+
+## 2026-08-14 11:51:39 — Prompt
+
+Can you update the seed data generator to also create a set of membership types and some sample people who are already  members for the different membership types for this year.
+
+### Assistant
+
+Let me understand the seed structure and the membership schema.
+
+I have the full picture. Let me read the seed's reset list and the account-user/forms sections.
+
+Let me see how the app itself creates members, so the seed matches real rows.
+
+I have everything I need. Let me add the membership dataset.
+
+Now the membership types, extra people, and the members themselves.
+
+One slip to fix — I wrote an invalid payment status.
+
+Now the database writer.
+
+Now I need to capture the account-user row ids, then write the membership section.
+
+`initialMembershipNumber` exists. Now the submission-data helper.
+
+Compiles clean. Now the credentials summary, then a real run against the database.
+
+Now the real test — running it. Let me check the dry-run first.
+
+The dry-run's "memberships" now collides with the real thing. Let me fix the wording and report the new data.
+
+Now the real run, which is the only thing that proves the SQL works.
+
+Running it caught a real problem. The `members` table has a **global** unique constraint on `membership_number`, but the org type is configured `membership_number_uniqueness = 'organization'` — so both clubs allocated `100000`.
+
+Let me give each club its own number band so the seed is safe and the app continues correctly.
+
+The edit didn't apply — wrong working directory. Let me redo it.
+
+The seed completed. Let me verify what actually landed in the database.
+
+All correct. Let me verify the number sequences continue safely for members created through the UI.
+
+Sequences continue cleanly from each band. Now let me confirm the seed is idempotent as documented, and update the docs.
+
+Repeatable — the reset clears memberships and re-seeds identically. Now the docs.
+
+The tsconfig only covers `src/`, so my earlier typecheck never touched the seed. Let me check it properly.
+
+The seed scripts typecheck clean under `--strict` too. Here's what's there now.
+
+## Membership types — five per club (13 rows)
+
+| Type | Category | Fee | Term | Approval |
+|---|---|---|---|---|
+| Junior Member | single | €45 | to end of season | automatic |
+| Senior Member | single | €75 | to end of season | reviewed |
+| Family Membership | group, 2–5 | €160 | to end of season | reviewed |
+| Associate Member | single | €30 | **rolling**, 12 months | automatic |
+| Founder Member | single | €0 | to end of season | **closed** |
+
+*Founder Member* is Kildare-only, so a club without it is also represented, and every type at Ward Union comes out offline-only since that club has no Stripe. The season is the calendar year computed at run time — a hard-coded year would quietly produce nothing but expired memberships next January.
+
+## Members — 21 for this season
+
+Verified in the database: numbers `100000–100009` (Kildare), `200000–200005` (Laois), `300000–300004` (Ward), all `valid_until 2026-12-31` except where intended otherwise.
+
+The mix is deliberately uneven, since a list where every row is identical proves nothing about the filters and batch actions the page is built around: active-and-paid across all five types, one pending application, one **elapsed** member from last season (`2025-12-31`), one unpaid, one refunded, and two households on group memberships — the McGraths (3) and Hayeses (2) — sharing a `group_membership_id` with numbered slots. Each member has a real `form_submissions` row behind them, keyed by field name, so the application can actually be opened.
+
+Supporting this needed two new forms (*Membership application*, *Family membership application*), six new fields, and 11 more people. Logins are unchanged: **`Passw0rd!`**.
+
+## A schema contradiction the run exposed
+
+The first run failed on `members_membership_number_key`. That constraint is **UNIQUE across the whole table**, but the organisation type is configured `membership_number_uniqueness = 'organization'`. Taken literally, that configuration lets two clubs each allocate `100000` — and the second insert fails.
+
+That's not just a seed problem: **two clubs creating their first member through the UI would hit the same collision.** I worked around it by banding each club (100000 / 200000 / 300000) and leaving `membership_number_sequences` pointing at each band's next free value, so UI-created members continue where the seed stopped. The workaround is in the seed; the schema still needs reconciling, and I've documented it rather than quietly papering over it. Worth a decision on whether the constraint should become `(organisation_id, membership_number)` or the config should be dropped.
+
+## Verification
+
+Ran `--reset` three times against the real database — repeatable, 448 rows across 21 tables cleared and rebuilt identically each time. Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) and [infrastructure.md](.claude/modules/infrastructure.md); I also fixed the stale "all tenant data" wording there.
+
+One caveat: this **re-seeded your dev database**, so anything you had in it by hand is gone.
+
+---
+
+
+## 2026-08-14 12:08:05 — Prompt
+
+In the whats on section of the home page, can you add a nicely formatted Date object like the one used in the Events page but maybe a little more compact, and can you show the badge/ chips underneath the name and a simple status, open, opening soon, closing soon, closed, entries full.
+
+Also, is it possible to dynamically add the uploaded organisation logo as the favicon on the account user web application ?
+
+### Assistant
+
+Let me find the "What's on" section and the Events page date treatment.
+
+The dashboard payload carries no dates or status. Let me see what the Events page renders and where the data comes from.
+
+Good — there are already components for exactly this. Let me read them.
+
+All the data exists already. Let me extend the dashboard payload.
+
+Now the front-end type and a compact status chip.
+
+Now the card layout — date tile, name, then chips beneath.
+
+Now the i18n keys — all six locales, per the repo rules.
+
+The rule is targeted edits, never a whole-file reformat. Let me check what the diff actually looks like.
+
+Clean 7-line additions, no reformatting. Now the typecheck and the existing HomePage tests.
+
+Now tests for the new behaviour.
+
+The fixtures reveal a real gap — my guard tests `=== null`, but a missing field is `undefined`. Let me harden it.
+
+All 12 pass. Now let me update the HomePage fixtures to match the real payload and cover the card rendering.
+
+Part one is done. Now the favicon question.
+
+Yes, it's possible — the logo already reaches the client. Let me see where branding is applied.
+
+Now the favicon hook.
+
+All 7 pass. Now the full account-shell suite and the backend.
+
+Both suites fully green. Now the documentation.
+
+Both done, both fully tested.
+
+## 1. What's on — dates, chips and status
+
+Each teaser now leads with a compact `EventDateTile` (`size="small"`), the same tear-off calendar page the Events page uses — it already existed in `packages/components`, so no new date rendering was written. Undated kinds (shop, bookings, registrations) simply get no tile.
+
+Beneath the name sits **one** chip: *Open*, *Opening soon*, *Closing soon*, *Closed*, *Entries full*. I put it under rather than beside the title because on a phone these cards are a narrow column, where a chip on the title's line both competes for first-read and wraps badly.
+
+New [WhatsOnStatus.tsx](packages/account-shell/src/components/WhatsOnStatus.tsx) derives that from `entryWindowFor` and `capacityFor` — the same rules `EntryStatus` uses on the browse page — so the two screens can't disagree about whether an event is open. The difference is only how much they say: browse shows the dates and places remaining because you're choosing between events; the teaser shows one word because you're glancing at a card whose job is to get you to the listing.
+
+Two judgement calls worth naming:
+- **`full` outranks the window, but only while entries are running.** A closed event reads *Closed*, never "full" — that would be a detail about a door that's shut anyway.
+- **A not-yet-open event never reads *full*.** Before entries open, a cap is the size of the field, not an inventory count that's run out.
+
+The dashboard endpoint now sends `startDate`, `endDate`, both window dates, `entriesLimit` and `placesRemaining` **raw** rather than a decided status — a second opinion computed server-side would eventually drift from the client's. `detail` no longer carries the start date, so the card doesn't print it twice. Status labels added to all six locales as 7-line insertions, no reformatting.
+
+## 2. Favicon from the organisation logo — yes
+
+[useOrganisationFavicon.ts](packages/account-shell/src/hooks/useOrganisationFavicon.ts) swaps the tab icon to the uploaded logo and restores the platform icon when the logo goes away or you leave for the directory. The logo URL already reached the client via the public organisation endpoint, so no backend change was needed.
+
+It's driven from `AccountOrganisationContext` rather than `AppShell`, because the gateway and directory screens render outside the shell and still need the right icon.
+
+**One thing I'd have got wrong without thinking it through:** pointing the tab straight at the logo URL is what makes a broken upload visible. A browser that can't decode an icon falls back to a *blank* glyph, not the previous one — so an unverified swap would let a bad file cost the club its icon entirely. The hook loads it into an `Image` first and only applies it on success, making failure a swap that never happens. I left `apple-touch-icon` alone: it's baked into a homescreen shortcut at install time, so rewriting it mid-session changes nothing anyone can see.
+
+## Verification
+
+- **account-shell: 42 files, 459 tests, all passing** — including 12 new status tests and 7 new favicon tests (decode failure, blank logo, club-to-club switch, restore on unmount, missing icon link).
+- **backend: 143 suites, 2569 tests, all passing.**
+
+Docs updated in [ACCOUNT_USER_APP_WIREFRAMES.md](docs/ACCOUNT_USER_APP_WIREFRAMES.md) (B3) and [account-shell.md](.claude/modules/account-shell.md).
+
+One caveat: all three seeded clubs have an empty `logoUrl`, so you'll need to upload a logo in Platform Admin to see the favicon swap in the browser. The tests cover the mechanism, but I haven't watched it happen against a real upload.
+
+---
+
+
+## 2026-08-14 12:28:52 — Prompt
+
+On the Whats On page for events can you do the following:
+
+- also include events that have entries opening soon, e.g. within the next 3 days, and show their opening date/ time and closing date time.
+
+- if the events says open - show the date time for closing
+
+- the event is closing soon, show the date time for closing
+
+- also include events where entries are closed, showing entries closed date time
+
+- also include events where entries are full
+
+### Assistant
+
+This is the home page "What's on" — right now the backend filters those out, which is why the chips I added can't appear. Let me check what reasons exist.
+
+Now the backend inclusion rule.
+
+Let me update the now-inaccurate docblock, then add the date/time lines.
+
+Let me correct the now-stale docblock and simplify the wrapper in HomePage.
+
+Now tests for the new inclusion rule and the date lines.
+
+Now backend tests for the inclusion rule.
+
+All 27 pass. Now the full suites on both sides.
+
+Both green. Let me update the docs to match the changed behaviour.
+
+All five changes are in. The key one was on the backend.
+
+## Why the chips weren't appearing
+
+`buildWhatsOn` filtered to `available` events only, so the *Closed*, *Entries full* and *Opening soon* states I added last turn could never occur — the events carrying them were dropped before reaching the client. That's now reversed for events specifically:
+
+| Reason | Teased? |
+|---|---|
+| `entries-closed` | yes |
+| `event-full` | yes |
+| `entries-not-open` | only within **3 days** |
+| `already-entered` | no |
+
+I kept two exclusions. An event the member has **already entered** has nothing to tell them, and one opening more than three days out isn't news yet — it would push out something closing this week. Everything that isn't an event still shows only what can be acted on; an out-of-stock shirt is a promotion for something you can't have, whereas a camp that filled up is information.
+
+## The date and time lines
+
+Beneath the chip, per state:
+
+| State | Shown |
+|---|---|
+| Opening soon | opens **and** closes |
+| Open | closes |
+| Closing soon | closes |
+| Closed | when entries closed |
+| Entries full | closes, while the window is still running |
+
+Both dates for *opening soon* because that's two separate questions — when can I enter, and how long will I have. Once open, the opening date is history and doesn't earn the line.
+
+These use `formatDisplayDateTime`, so **times show, not just dates**. A closing at 09:00 is a different thing to plan around than one at 23:59, and "closes 20 August" for a deadline that passes before breakfast is the kind of omission you only notice after missing it.
+
+I reused the existing `browse.entries.opensDetail` / `closesDetail` / `closed` keys rather than adding home-specific ones — same words, already translated in all six locales, and no risk of the two screens drifting in wording.
+
+## Verification
+
+- **backend: 143 suites, 2575 tests** — six new dashboard tests covering each inclusion and exclusion, including one asserting the window and capacity fields survive to the client.
+- **account-shell: 42 files, 464 tests** — five new tests for the detail lines, including that a closed event says *when entries closed* rather than when they close, and that a time is present.
+
+Docs updated in [ACCOUNT_USER_APP_WIREFRAMES.md](docs/ACCOUNT_USER_APP_WIREFRAMES.md) and [account-shell.md](.claude/modules/account-shell.md).
+
+Worth flagging: "What's on" still caps at **4 items** with one of each kind first, so on a club with events, shop, bookings and registrations all enabled, only one event shows — and it may well be a closed one. If you'd rather events got more of that space now they carry real news, say the word and I'll adjust the spread.
+
+---
+
+
+## 2026-08-14 12:39:48 — Prompt
+
+When it comes to membership, it is possible that the person logged in is a parent, and so they may have several memberships for their family. So when it comes to membership, can you make sure that the name of the person who the membership relates to is clearly displayed.
+Can you also update the program that generates seed data to include login accounts that have more than one member in them, and show one or two were membership renewal is during.
+
+### Assistant
+
+Let me look at how memberships are displayed and what the API returns.
+
+Confirmed — the record carries no member name, so a parent sees three identical "Junior Member" cards. Let me check the backend query.
+
+The query scopes by `user_id`, so a parent already gets every membership — it just doesn't select the names. Let me check one thing that looks wrong nearby.
+
+Found a real bug next door: `membership_status = 'active'`, but the only values are `open` and `closed` — so `canRenew` is always false and nobody can ever renew. A test pins the wrong string.
+
+Let me fix the renewal bug and add the member name to the query.
+
+Now the dashboard membership card, which also picks a single membership.
+
+Now the front end.
+
+Now the home page membership card.
+
+Now the new i18n key across all six locales.
+
+Now the seed: parent-held memberships and renewals falling due.
+
+Now I'll extend the seed dataset with parent-held memberships and expiring seasons.
+
+Now the members themselves — a parent holding a family, plus renewals falling due.
+
+Now the database writer needs to handle the expiring season and the member's own name.
+
+Áine holds four (her own expiring in 15 days), Lorcán holds two, both expiring. Let me run the suites.
+
+Both pass, but nothing yet tests the new behaviour. Let me add those tests.
+
+My fixture date was outside the window — `TODAY` is 2026-06-15, so 2026-08-20 is 66 days out.
+
+Now the dashboard and front-end tests.
+
+Now the front-end tests.
+
+Now the full suites and the seed's credential summary.
+
+Both green. Let me make the seed's summary reflect the parent case, then update docs.
+
+The count is misleading — Niamh's three are one per club, which isn't the parent case. Memberships are listed per club, so the grouping should be too.
+
+Correct now. Let me update the docs.
+
+Counts match. Now the module summaries.
+
+Both done, and a real bug surfaced along the way.
+
+## Memberships now name the person
+
+`members.user_id` is the **holder** — whoever signs in — while `first_name`/`last_name` are who it's *for*. The query already scoped by `user_id`, so a parent was getting all their memberships back; it just never selected the names.
+
+Both surfaces now lead with the member and demote the type to a subtitle:
+- [MyMembershipsPage](packages/account-shell/src/pages/MyMembershipsPage.tsx) — each card is headed by the person
+- [HomePage](packages/account-shell/src/pages/HomePage.tsx) — the dashboard card names whose membership is expiring, and adds "1 of 4 memberships" when there are others
+
+That card is about the membership expiring **soonest**, which makes whose it is essential rather than decorative — otherwise it announces something is expiring without saying for whom. Both fall back to the type when no name is recorded, since a card headed by nothing is worse than one headed by the type.
+
+## A bug that made renewal impossible for everyone
+
+`openMembershipTypeIds` filtered `membership_status = 'active'`. That column only ever holds `open` or `closed` — so the set was **always empty**, `canRenew` always false, and every member was told "renewals are not open yet" regardless. A test asserting the literal `'active'` had pinned it in place, which is why it survived.
+
+I'd have shipped seeded renewal-due memberships that silently couldn't renew, so this was worth catching. Fixed, with the test corrected and a regression test added.
+
+## Seed: parents and renewals
+
+| Login | Holds |
+|---|---|
+| `aine.mcgrath@example.test` | 4 in Kildare — her own Senior (**expiring**), Conor and Éabha on a Family membership, Rónán on a Junior |
+| `lorcan.hayes@example.test` | 2 in Ward Union — Maeve and Cathal, **both expiring**, and nothing of his own |
+
+Lorcán is the sharper case: every membership under his login is for someone else, so a screen naming the holder would be wrong on every card. Conor, Éabha, Rónán, Maeve and Cathal have **no logins** — they exist only as `members` rows, which is the real-world shape. Three memberships expire 15 days out, computed from the run date so they're still expiring whenever you re-seed.
+
+One correction I made mid-way: my first summary counted Niamh as "holding 3 memberships", but those were one per club. Memberships are listed per club, so the grouping now is too.
+
+## Verification
+
+- **backend: 143 suites, 2580 tests** — new coverage for the member name, single-name people (no stray space), and the renewal regression.
+- **account-shell: 42 files, 469 tests** — including three "Full Member" cards distinguished only by name, and the one-of-several line.
+- Seed re-run and verified in the database: Áine's four and Lorcán's two, with the right names and dates.
+
+Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md), [ACCOUNT_USER_APP_WIREFRAMES.md](docs/ACCOUNT_USER_APP_WIREFRAMES.md) (C4), [account-shell.md](.claude/modules/account-shell.md) and [infrastructure.md](.claude/modules/infrastructure.md).
+
+Note this re-seeded your dev database again. Also worth deciding separately: the org-admin member database still shows names from the same columns, so it's unaffected — but if you want the *holder* visible there (to see which parent to chase for payment), that's a change I haven't made.
+
+---
+
+
+## 2026-08-14 13:29:29 — Prompt
+
+When it comes to displaying opening and closing dates on the Whats on home section and on the Events page, can you format the dates to use the ordinal indicators
+
+### Assistant
+
+Let me look at the existing date formatters.
+
+Ordinals are language-specific, so let me first see what `Intl` already produces for each locale.
+
+Now I understand the per-locale conventions. Let me add the formatter.
+
+Those are pre-existing errors elsewhere in the package. Let me confirm my file is clean.
+
+Now let me apply it to both places that render entry windows.
+
+Now tests for the formatter, covering the locale differences.
+
+One test could flip in another timezone. Let me make it deterministic.
+
+Now the full suites for all three affected packages.
+
+Let me confirm the Events page I changed is the one the user means.
+
+That's the right page — `/browse/events`, labelled "Events". Let me update the docs.
+
+The built `components` types are stale — Vitest aliases to source, but `tsc` reads `dist`. Let me check the export and rebuild.
+
+All clean, and `dist` isn't tracked so nothing stale gets committed. Let me show what the output actually looks like.
+
+The bundle pulls in MUI. Let me run the source directly instead.
+
+Done. Ordinal dates are now on both the home "What's on" teasers and the Events page.
+
+## What changed
+
+`formatOrdinalDate` / `formatOrdinalDateTime` in [formatting.ts](packages/components/src/utils/formatting.ts), applied in [EntryStatus.tsx](packages/account-shell/src/components/EntryStatus.tsx) (Events page chips *and* the spelled-out dates beneath them) and [WhatsOnStatus.tsx](packages/account-shell/src/components/WhatsOnStatus.tsx) (home teasers).
+
+```
+en-GB  "22 Sept 2026, 23:59"   ->  "22nd Sept 2026, 23:59"
+```
+
+Full English coverage verified: 1st, 2nd, 3rd, 4th, **11th, 12th, 13th**, 21st, 22nd, 23rd, 30th, 31st. The teens are where a naive last-digit rule gives "11st", so the suffix comes from `Intl.PluralRules` with `type: 'ordinal'`, which knows 21 takes `st` while 11 takes `th`.
+
+## One judgement call worth your attention
+
+**I applied ordinals only to English and French**, because an ordinal date is an English and French habit, not a universal one:
+
+| Locale | Result |
+|---|---|
+| en-GB | `22nd Sept 2026` — suffixed |
+| fr-FR | `1er sept. 2026` for the first, plain after — French says "2 septembre", not "2e" |
+| de-DE | `22. Sept. 2026` — unchanged; German's own convention, which `Intl` already produces |
+| es-ES / it-IT / pt-PT | unchanged — these use a plain numeral |
+
+Inventing suffixes for the other four wouldn't be a nicer date; it'd be a wrong one in a language the reader speaks and we don't. If you'd rather force ordinals everywhere, that's a one-line change to the suffix table — but I'd want you to make that call deliberately.
+
+The formatter is built on `formatToParts` and rewrites only the `day` token, so each locale keeps its own ordering and separators, and a two-digit hour never gets suffixed as though it were a day. There's a test pinning exactly that.
+
+## A build gap I hit
+
+Vitest aliases `@aws-web-framework/components` to source, so the tests passed while `tsc` still failed — the account-shell typecheck reads the package's built `dist`. I rebuilt `packages/components`, after which account-shell typechecks clean. `dist` isn't tracked in git, so nothing stale gets committed, but **anyone pulling this will need `npm run build` in `packages/components`** before the account-shell typecheck passes.
+
+## Verification
+
+- **components: 39 files, 333 tests** — 10 new, covering each English suffix class, the teens, French's `1er`, the four locales left alone, and the hour-not-suffixed case.
+- **account-shell: 42 files, 469 tests** — all passing.
+
+Docs updated in [components.md](.claude/modules/components.md), [account-shell.md](.claude/modules/account-shell.md) and [ACCOUNT_USER_APP_WIREFRAMES.md](docs/ACCOUNT_USER_APP_WIREFRAMES.md).
+
+---
+
+
+## 2026-08-14 13:38:31 — Prompt
+
+Can you update the seed data generator to add the merchandise capability to KHPC, and then add a range of products to it for testing
+
+### Assistant
+
+Let me look at the merchandise schema and how the seed sets capabilities.
+
+An org's capabilities must be a subset of its type's, so the type needs to permit merchandise too. Let me check the product tables.
+
+I have everything I need. Let me wire the capability first.
+
+Now the products themselves.
+
+Now the database writer.
+
+I referenced a helper that doesn't exist. Let me see how events compute this.
+
+Seeded. Let me verify what landed and that the capability gating is right.
+
+Everything landed correctly — untracked stock is `NULL`, not zero. Let me confirm the account catalogue reports the intended states.
+
+Every intended state is reachable, including the hidden grooming kit. Let me run the suites and update the summary.
+
+Backend green, seed re-runs cleanly. Now the docs.
+
+Done. Kildare Hunt now has a shop with eight products.
+
+## The capability
+
+An organisation's `enabled_capabilities` must be a **subset of its type's** — `organization.service` rejects anything outside them — so `merchandise` couldn't simply be switched on for one club. It's now listed in `ORG_TYPE.defaultCapabilities` (which *permits* it) and named in a new `optInCapabilities` (which keeps it *off* by default). `capabilitiesFor(org)` combines the two.
+
+That helper feeds both the organisation row and its admin role. The role previously copied the type's defaults verbatim, which would have given Laois and Ward admins a Merchandise menu leading to endpoints that refuse them. Verified: `has_shop` is true for Kildare, false for the other two.
+
+## The products
+
+Chosen to cover what the merchandise pages branch on, not to look like a plausible catalogue:
+
+| Product | Covers |
+|---|---|
+| Club polo shirt | quantity-based delivery (3 bands, free over 6), two option groups, one size sold out |
+| Club hoodie | fixed delivery, tracked stock, handling fee included |
+| Club cap | free delivery, untracked stock, max order quantity |
+| Embroidered saddle pad | requires an application form, T&Cs, custom confirmation message |
+| Rosettes, set of ten | quantity bands, min/max order, increments |
+| Club yearbook | **sold out** — every value at zero |
+| Grooming kit | out of stock with `hide` — drops out of the catalogue entirely |
+| Christmas jumper | **inactive with stock on the shelf** |
+
+I ran `accountCatalogueService.listMerchandise` against the seeded data rather than trusting the rows: the yearbook returns `out-of-stock`, the jumper `not-on-sale`, the grooming kit doesn't appear at all, and the other five are available — including the polo, which stays buyable with one size gone.
+
+**One detail worth knowing:** untracked stock is written as `NULL`, not `0`. Zero reads as sold out, which is a different claim from "not counted", and `hasStock` treats null as always-available — so that distinction is what makes the cap and the saddle pad buyable at all.
+
+The writer also refuses to seed a product under a club without the capability, so misfiling one fails loudly instead of creating rows no screen can reach.
+
+## Verification
+
+- **backend: 143 suites, 2580 tests** — all passing.
+- Seed re-run: 8 `merchandise_types`, 10 option groups, 30 option values, 5 delivery bands.
+
+Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md), [infrastructure.md](.claude/modules/infrastructure.md) and [orgadmin-merchandise.md](.claude/modules/orgadmin-merchandise.md).
+
+Two things I did **not** do, since you asked specifically for the merchandise capability: `merchandise-discounts` is left off (so the shop's discount pages stay hidden), and no orders are seeded — the shop is stocked but nobody has bought anything. Say the word if you want either.
+
+---
+
+
+## 2026-08-14 13:46:08 — Prompt
+
+Great can you now add the calendar booking seeded data examples and capability to Laois Hunt Pony Club
+
+### Assistant
+
+Let me look at the calendar schema and module.
+
+Same bug class as the membership one: calendars use `open`/`closed`, but this checks for `active`. Let me confirm before fixing.
+
+The tests use `active`/`inactive` — values the app never writes, pinning the bug. Let me fix both.
+
+Now the seed dataset for calendars.
+
+Now the writer.
+
+Now the real check — does the member-facing catalogue see them as bookable?
+
+Let me verify slots actually generate, including the fortnightly and blocked cases.
+
+All three behaviours verified: the blocked week excludes exactly days 21–27, the fortnightly clinic runs 29 Aug then 12 Sep, and the blocked 19:30 segment is gone from Wednesdays.
+
+Now the docs.
+
+Laois Hunt now has bookings — and seeding them exposed a bug worth flagging.
+
+## Another `status` mismatch, same class as the membership one
+
+`listCalendars` tested `row.status !== 'active'`. Calendars only ever hold `open` or `closed` — `calendar.service` writes `open` by default and the type union is `'open' | 'closed'`. So **every calendar in the system was reported `not-open-for-bookings`**: no member could book anything, ever. The test fixtures used `active`/`inactive`, which is why it survived.
+
+That's now the second service with this exact defect (after `membership_status = 'active'`). Two independent instances of the same mistake suggests it's worth a sweep of every `status` comparison against its column's actual vocabulary — I've fixed the two I've hit, but I haven't gone looking systematically.
+
+## The calendars
+
+| Calendar | Covers |
+|---|---|
+| Outdoor arena | exclusive hire, two patterns, three durations, cancellation with **automatic** refund, reminders, **blocked week** for re-sanding |
+| Group lessons | shared places (6 and 8), a **minimum** below which it doesn't run, a **fortnightly** Saturday clinic, a **recurring daily gap**, cancellation with **manual** refund |
+| Cross-country | 4 places, long durations, **cancellations refused**, **automated open/close** pair |
+| Clubhouse hire | **closed** with a full schedule behind it |
+
+I checked slot generation rather than just the rows, since that's where the interesting logic lives:
+
+- The re-sanding block removes **exactly** days 21–27, with correct boundaries either side
+- The fortnightly clinic lands 29 Aug then 12 Sep — 14 days, not 7
+- The blocked 19:30 segment is genuinely absent from Wednesday start times
+
+Before the fix all four read `not-open-for-bookings`; now three are bookable and the clubhouse correctly isn't.
+
+## Capability distribution
+
+Each club now carries exactly one opt-in capability, which keeps "capability off" represented everywhere:
+
+| Club | Opt-in |
+|---|---|
+| Kildare Hunt | `merchandise` |
+| Laois Hunt | `calendar-bookings` |
+| Ward Union | none |
+
+The writer refuses to seed a calendar under a club without the capability, same guard as merchandise.
+
+## Verification
+
+- **backend: 143 suites, 2580 tests** — all passing, including the corrected calendar fixtures.
+- Seed re-run: 4 calendars, 6 slot patterns, 10 durations, 2 blocked periods, 2 schedule rules.
+
+Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md), [infrastructure.md](.claude/modules/infrastructure.md) and [orgadmin-calendar.md](.claude/modules/orgadmin-calendar.md).
+
+As with merchandise, I've seeded no **bookings** — the calendars are configured but nobody has booked. And `calendar-discounts` is left off. Both are quick additions if you want them.
+
+---
+
+
+## 2026-08-14 13:56:53 — Prompt
+
+Can you make the seed generator use relative dates from the date it is run, so if I use it in a months time that it will create events memberships calendars etc from that point forward
+
+### Assistant
+
+Let me audit every date the seed writes, to find what isn't yet relative.
+
+Only two things aren't relative. Let me check for anything else year-bound.
+
+Two things to fix. Let me start with the membership season, which is the one that actually breaks.
+
+Let me check whether the seed can be covered by tests, since correctness-over-time is exactly what needs proving.
+
+The seed isn't covered by jest. Let me extract the date logic so it can be tested with an injectable clock.
+
+I found a latent bug while extracting: `dateOnly` used `toISOString()`, which converts to UTC — a seed run just after midnight would date everything a day early. Now let me wire it up.
+
+My removal took `memberSubmission` with it. Let me restore it.
+
+Now tests that actually run the clock forward.
+
+The test caught a real flaw: after the December rollover, "previous" resolved to a date still in the **future**. Let me fix it.
+
+All 26 pass. Let me verify the seed still runs and check it end-to-end at a future date.
+
+Let me confirm nothing else writes a date outside the offset system.
+
+Every date is now either a day-offset or a season helper. Let me prove the claim directly by simulating future run dates.
+
+Every state holds identically at every run date, including the December rollover and a leap day. Let me run the full suite and update the docs.
+
+The renumbering collided. Let me fix the section numbers.
+
+The seed is now fully relative, and proving it caught two real bugs.
+
+## What was already relative
+
+Most of it. Events (`startDays`, `openDays`, `closeDays`), discounts (`validFromDays`/`validUntilDays`), calendars (slot ranges, blocked periods, schedule rules) and member renewal dates were all offsets. I audited every date-bearing column: the only non-offset writes left were the membership season and one hard-coded birth date.
+
+## Two bugs the work exposed
+
+**The December cliff.** The season was `${currentYear}-12-31`. Run the seed in December and every "current" membership expires within days — so the whole cohort reads as due for renewal, and the two or three deliberately made due stop standing out. There's now a rollover: within 60 days of year-end the seed moves to the following season, as a club would have.
+
+**A "previous" season in the future.** The test I wrote for that rollover immediately failed, and it was right to. `previous` was `seasonEnd(-1)` — one season *before the current one* — but once the rollover moves the current season forward, the one before it hasn't ended yet. Run in December, the member meant to have lapsed last season was still in date. `previous` is now the last season that has actually finished, which is a different thing after a rollover.
+
+I'd have shipped that without the test. It only appears at run dates four months from now.
+
+Separately, `dateOnly` used `toISOString()`, which converts to UTC first — a seed run between midnight and 1am in Ireland would have dated everything a day early. Now built from the local calendar.
+
+Ages replaced birth years too: a junior born in a fixed year quietly becomes an adult, and the seeded application form would then contradict the membership type above it.
+
+## Making it testable
+
+The date arithmetic moved to [`scripts/seed/dates.ts`](packages/backend/scripts/seed/dates.ts) with an injectable `now`, and `jest.config.js` now has `scripts` in its roots. That's the point: whether the fixture still works next February is exactly the claim a suite run today cannot make by accident.
+
+**26 tests**, covering year boundaries, a leap day, the midnight/late-evening slips, the rollover threshold to the day, and each season state asserted across five run dates.
+
+## Verification
+
+Simulated the whole dataset at today, +1 month, 20 December, 3 January, a leap day, and 2031:
+
+```
+events: 12 still ahead, 6 open for entry, 3 closing within 3 days, 2 not yet open
+memberships: current clear of renewal, 3 expiring inside window, previous lapsed
+calendars: blocked week still ahead   discounts: live + expired both present
+```
+
+Identical at every date. **Backend: 143 suites, 2606 tests**, all passing. Seed re-run clean.
+
+Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) (new section 2) and [infrastructure.md](.claude/modules/infrastructure.md).
+
+One limit worth stating: the *relative* structure is fixed, so an event 30 days out is always 30 days out. If you want the fixture to feel seasonally plausible — cross-country in summer, camp in August — that would need dates anchored to the calendar as well as to the run, which is a different design and not what you asked for.
+
+---
+
+
+## 2026-08-14 14:04:27 — Prompt
+
+Did  u run it against?
+
+### Assistant
+
+Yes — against the local Docker dev database (`aws_framework`), with `--reset`, after the date changes landed. Let me confirm nothing has changed since that run.
+
+The database is **stale** — `dates.ts` was last modified at 14:00, but the last seed write was 13:01. So my end-to-end run predates the final `lastCompletedSeasonEnd` fix. Let me re-run it now.
+
+Let me check whether that timestamp gap is real staleness or clock skew between host and container.
+
+Yes — and I should correct what I said a moment ago.
+
+## The answer
+
+Yes, I ran it against the real database: `npm run seed:demo -- --reset` against the local Docker Postgres (`aws_framework`), and again just now to be certain.
+
+## My "stale" claim was wrong
+
+I compared a host file mtime (14:00) against a Postgres timestamp (13:01) and concluded the database predated my last fix. Those are two different clocks — the container runs exactly one hour behind the host (`host 14:05:27` / `pg 13:05:28`, i.e. the container is on UTC while the host is on IST). The original run was current after all.
+
+Re-running it changed nothing, which is itself the confirmation.
+
+## What the fresh run shows
+
+```
+members           2025-12-31 → 2027-07-25
+membership_types  2026-12-31
+events            2026-06-30 → 2026-12-12
+calendar slots    2026-06-15 → 2026-08-07
+blocked period    2026-09-04
+```
+
+All correctly placed around today (14 Aug 2026): the lapsed member's `2025-12-31` is `lastCompletedSeasonEnd`, current memberships run to year-end, and the blocked week is three weeks ahead.
+
+## What that run does and doesn't prove
+
+Running it today only proves it works **today**. The claim you actually asked about — that it still works in a month — can't be demonstrated by running it now, which is why the date arithmetic went into a separate module with an injectable clock and 26 tests against dates the calendar hasn't reached. Those tests are what caught the `previous`-season bug, at simulated December run dates.
+
+One caveat worth naming: the container being an hour off the host is a real thing in your environment. It doesn't affect the seed (dates are computed in the Node process and written as values, and `dateOnly` now uses the local calendar rather than UTC), but it will make any `NOW()`-versus-application-timestamp comparison look an hour out.
+
+---
+
+
+## 2026-08-14 14:30:31 — Prompt
+
+are you able to add images to the merchandise items as part of the seed generation ?
+
+### Assistant
+
+Let me check what format those images take — that decides whether the seed can produce them.
+
+`images` stores **storage keys**, not URLs — org-admin uploads them and gets parallel signed URLs. Let me check whether the account app signs them too.
+
+Found something important. Let me check the validation and how listings render images.
+
+The service **requires at least one image** — so my seeded products are in a state the app itself would refuse to create. Worth fixing. Let me build a generator.
+
+Now wire it into the dataset and writer.
+
+All eight have images, ~600–800 bytes each. Let me verify they actually render and survive both code paths.
+
+Both paths render. Let me add tests and run the full suite.
+
+The escaping is correct — my assertion was wrong. The name wraps across two lines, so those characters land in separate elements.
+
+Let me send you a rendered sample and update the docs.
+
+Yes — done, and it turned out to be more than cosmetic.
+
+## The seeded products were invalid
+
+`merchandise.service.createMerchandiseType` **refuses an item with an empty `images` array**. Every product I seeded last time had `images: '[]'` — a state the application itself would not have created. So adding images fixes a fixture that quietly disagreed with its own validation.
+
+## Generated SVG data URIs, not uploads
+
+Real images are S3 keys put there by the org-admin gallery. A seed that needed a configured bucket would fail on most machines, so that route was out.
+
+A data URI is the one form **both** code paths understand: `resolveImageUrls` passes anything starting with `data:` or `http` through untouched instead of trying to sign it, and the member shop renders the stored value directly. Each is ~600–800 bytes of SVG carrying the product name on a colour picked to suit it — navy polo, leather-brown saddle pad, first-place red rosettes — with ink chosen by luminance so the text stays readable. The polo has 3 views and the hoodie and saddle pad 2, so the gallery has something to page through.
+
+I verified both paths against the real database: member path renders, org-admin path renders.
+
+## A gap this doesn't fix
+
+`listMerchandise` returns `images` **raw**, while the org-admin routes call `resolveImageUrls` first. Data URIs work either way — but a **genuinely uploaded** image is an S3 key, and the member-facing shop would render it as a broken `<img>`.
+
+Seeding data URIs makes the fixture look right without addressing that. I've documented it rather than let the working demo hide it. It's a small fix (sign the keys in the account catalogue too) if you want it.
+
+## Verification
+
+- **Backend: 143 suites, 2614 tests** — 8 new image tests covering the data-URI contract, XML escaping, luminance-based ink, wrapping, distinct views, the at-least-one guarantee, and size.
+- One test failed first time and was **my assertion's fault**, not the code's: a long name wraps across two `<text>` elements, so `Hat &amp; scarf` never appears contiguously. The escaping was correct.
+- Seed re-run: all 8 products with valid, parseable SVG.
+
+Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) and [orgadmin-merchandise.md](.claude/modules/orgadmin-merchandise.md). I've sent the rendered tiles above so you can see what they look like.
+
+---
+
+
+## 2026-08-14 14:45:10 — Prompt
+
+When it comes to the mock seeded data, can you create a variety of discounts and apply them across the memberships, events, merchandise and calendar bookings.
+
+Also, on the account ui, can you default the name of the Bookings menu to “Bookings” but allow the Organisation Administrator to change it to something more suitable if they wish from within the Org Admin area, e.g. Court Booking for a tennis club, Arena Booking for a Riding Club etc. 
+Can you add this as an option under Branding, if the organisation has the Calendar booking capability, otherwise hide it.
+
+Also, in the whats on section can you move the Calendar Booking elements to their own row underneath Whats On, and give it the title Calendar Bookings, or if the orgadmin has changed its name to something like Court Bookings, then use that title.
+
+Also, when it comes too defining Calendar booking options can you allow the user to associated an icon with each Calendar, and display the icon on the Home page of the account user in the appropriate place on the card in the calendar colour.
+
+### Assistant
+
+This is a big one — four related changes. Let me explore what the schema already supports before planning.
+
+Let me verify the merchandise discount path before I plan, since that determines the scope.
+
+I've found one genuine fork before I build. Merchandise has discount *management* pages, but no way to **attach** a discount to a product — `merchandise_types` has no `discount_ids` column and `MerchandiseTypeForm` has no picker. So merchandise discounts can be created but never applied.
+
+Everything else you asked for is buildable as specified.
+
+Both settled. Let me look at the patterns I'll be mirroring.
+
+Now I'll build. Starting with the schema.
+
+Schema is in. Now the backend services — merchandise discounts and the calendar icon.
+
+My replace-all added duplicates. Let me look and fix.
+
+The mapper had a hardcoded `discountIds: []` — the field was stubbed but never wired to anything. Removing the stub.
+
+Backend services done. Now the branding label — the settings field and its sanitiser.
+
+Now the label needs to reach the account app. Let me check the public endpoint.
+
+Backend contract is done. Now the account app — nav label, and the calendar row on the home page.
+
+The default is already "Bookings". I need a single source for the override. Let me add a hook.
+
+The hook reads `PublicOrganisationDetail`, which uses the other shape. Let me add it there.
+
+Now the What's On split — calendars into their own titled row, with icons.
+
+Backend is complete. Now the home page — splitting calendars into their own row.
+
+Now the icon set, shared by the org-admin picker and the account card.
+
+The clash is `name`, which `SvgIconProps` already has as an HTML attribute.
+
+Now the home page: calendars into their own titled row.
+
+Now the derivations and imports in `HomePage`.
+
+Account UI is done. Now the org-admin side — starting with the Branding field.
+
+Now the i18n keys for those, across all six locales.
+
+Now the merchandise discount picker. Let me see how the calendar form does it.
+
+There's already a shared `DiscountSelector`. Let me see how the calendar form uses it.
+
+`DiscountSelector` already supports `merchandise` — the form just never used it. Let me wire it in.
+
+`MerchandiseTypeForm` is an empty shell — the real form lives in the page. Let me look there.
+
+The picker was **already in the page** — only the backend dropped it. Let me confirm the payload carries it end to end.
+
+The route passes the body straight through, so my backend change completes the path. Let me verify the round-trip.
+
+Merchandise discounts now persist end to end. Let me add the calendar icon picker.
+
+My changes are clean. Now the calendar i18n across all six locales.
+
+Now the seed — a varied set of discounts across all four areas, plus calendar icons.
+
+7 discounts exist, all on events. Let me add coverage for the other three areas.
+
+Now the writer must persist those attachments.
+
+Now the two helpers those calls need.
+
+Discounts now span all five areas. Let me verify the icons and run everything.
+
+All green. Let me add tests for the new behaviour and check the remaining suites.
+
+Let me check whether these pre-date my changes.
+
+Confirmed pre-existing — `useCapabilities` was in `CalendarForm` at HEAD and those test files are unmodified; the mocks were already incomplete. Now tests for the new behaviour.
+
+All new behaviour is covered. Let me run everything once more and update the docs.
+
+Everything green. Now the documentation.
+
+All four features are in, plus a fifth gap that turned up along the way.
+
+## 1. Discounts across everything
+
+13 discounts now, with 25 applications spanning **all five** target types — previously they only ever touched events:
+
+| Target | Applications |
+|---|---|
+| events / activities | 14 |
+| membership_type | 6 |
+| merchandise | 3 |
+| calendar | 2 |
+
+Six new ones cover the previously-bare areas: family membership 10%, early renewal `RENEW5`, club kit `KIT15`, second-item-half-price, off-peak `OFFPEAK`, and a five-lesson block. Each is written to both `discount_applications` and the target's `discount_ids` array, since different code paths read different ones.
+
+## 2. Merchandise discounts actually work now
+
+You chose to wire this properly, and it was smaller than expected: the product page **already rendered a `DiscountSelector`**. The gap was entirely in the backend — no `discount_ids` column, and `merchandise.service` mapped the field to a hardcoded `discountIds: []`. So the picker's selection was silently discarded on every save, and merchandise discounts could be created but never applied.
+
+Column added, service reads and writes it. The org-admin UI and route needed no change. Verified end to end: created with two discounts, read back with two, updated to one.
+
+## 3. The bookings name
+
+Set under **Settings → Branding → Naming**, shown only with `calendar-bookings`. Stored as `branding.bookingsLabel`, capped at 40 characters, exposed on the public organisation endpoint.
+
+Empty is stored rather than the default word, so an untouched club keeps following the *translated* default in every language. The custom label deliberately isn't translated — it's a name the club chose, and machine-translating "Court Booking" into five languages would produce five things they never agreed to.
+
+`useBookingsLabel()` is the single reader, so the nav entry and the home heading can't drift apart.
+
+## 4. Bookings in their own row
+
+Second row beneath "What's on", headed by the club's word for it. The general row only appears when there's something non-booking in it, so a bookings-only club sees one row rather than an empty heading above a full one.
+
+## 5. Calendar icons
+
+`display_icon` holds a name from a curated 20-icon set, chosen beside the colour in the calendar form — they're one decision, and choosing them apart invites a green tennis racket. Drawn on the home card in the calendar's own colour on a faint tint of it. Falls back to a generic mark when unset *or* when the stored icon isn't in the current build, since a card with a hole reads as a broken setup.
+
+Seeded: Outdoor arena (equestrian), Group lessons (lesson), Cross-country (hiking), Clubhouse (clubhouse).
+
+## Verification
+
+| Suite | Result |
+|---|---|
+| backend | 145 suites, **2618 passing** |
+| account-shell | 476 passing |
+| components | 340 passing |
+| orgadmin-core | 699 passing |
+
+New tests cover the label hook (5), the split rows (2), `CalendarIcon` (7) and branding validation (4). i18n added to all six locales for both shells.
+
+**Two pre-existing failures I did not introduce**, in `orgadmin-calendar` (2) and `orgadmin-merchandise` (5): their test mocks omit `useCapabilities`, and `useOnboarding` lacks a provider. I confirmed `useCapabilities` was in `CalendarForm` at HEAD and those test files are unmodified. They're worth fixing, but they're not mine and I left them alone.
+
+Documented in [BOOKINGS_NAMING_AND_CALENDAR_ICONS.md](docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md), with summaries updated in account-shell, core-settings, orgadmin-calendar and orgadmin-merchandise.
+
+One thing I'd flag: I've seeded merchandise discounts, but I haven't verified the **member-facing shop applies them at checkout** — the cart takes `discountId`/`discountAmount` as inputs from the client rather than computing them, so whether the account app offers a product's discounts is a separate question from whether they're stored. Worth checking before you rely on it.
+
+---
+
+
+## 2026-08-14 15:26:44 — Prompt
+
+When I look at the Home page for Niamh Walsh it shows her Membership summary, however it is badly aligned, can it use the same alignment and width as the other event and bookings items listed beneath it?
+
+In the Calendar booking page where the user selects a time slot, is it possible that they can select more than one time slot at a time, currently it does not work this way, and they can only click one slot ?
+
+Also, in the seeded data I see 3 open calendar booking options within the bookings page, however when I look at the whats on page, it is only showing one of the available 3 bookings, why is that ?
+
+And on the Bookings page where it lists 4 bookings it does not show the icon, the current colour swatch should be replaced with the coloured icon. Also, if none is specified in the Org Admin, then default to a standard calendar icon.
+
+If the organisation has not selected a logo image please default to the ItsPlainSailing logo as the favicon.
+
+### Assistant
+
+Five items. Let me look at each.
+
+Item 3 confirmed: the limit of 4 is applied across *all* kinds, with one of each first — so calendars get exactly one slot. Let me check the others.
+
+`/favicon.png` should already be the ItsPlainSailing logo. Let me confirm before treating item 5 as work.
+
+That's a generic account glyph, not the sail logo. Let me find the real one.
+
+That's the sail logo. Let me work through all five, starting with the quick ones.
+
+Now the What's On limit — bookings need their own allowance.
+
+Now the bookings page — swatch replaced by the coloured icon.
+
+Now the favicon default — the sail logo, in the account app's icon set.
+
+The whole PWA set is that glyph. You asked for the favicon, so I'll change that and flag the rest.
+
+The sail renders correctly, square with transparency. Installing it.
+
+Now the biggest item — multi-slot selection. Let me read the picker.
+
+`slotKey` is only `startTime|duration` — not unique across days, so it must include the date for multi-select. Let me rework the page.
+
+Now the i18n for the new booking strings, across all six locales.
+
+Now let me run everything and add tests for the new behaviour.
+
+All multi-slot tests pass. Let me verify the icon on the bookings page and run everything.
+
+Both green. Let me confirm the What's On fix against the real seeded data, and update the docs.
+
+One icon reads `calendar` but I seeded Cross-country as `hiking`. Let me check.
+
+Let me re-seed and check — the database may be from an intermediate state.
+
+Stale data, not a bug — re-seeding gives the correct icons. Let me confirm the full picture.
+
+All three calendars now appear with their icons. Let me update the docs and run everything once more.
+
+The first five are done and verified. Now your four new items — let me look at the booking page structure.
+
+Let me restructure into two columns with a sticky basket.
+
+The restructure mangled the JSX. Let me look at what actually landed.
+
+My splice matched an earlier `return` branch. Let me see the damage and repair it.
+
+I see it — the tail index matched an earlier branch, duplicating the whole return. Let me remove the bad copy first.
+
+The file is back to a clean state. Let me verify the multi-slot work survived, then redo the layout carefully.
+
+All 20 multi-slot tests still pass. Now the layout, using the last occurrence as the boundary.
+
+Now the green highlight for selected slots.
+
+Now the merchandise row on the home page, with thumbnails.
+
+Now the `home.shop` heading across all six locales.
+
+The merchandise item now belongs to the Shop row, so that test's general row is empty. Let me update it.
+
+"Shop" appears twice — the row heading *and* each card's kind caption. That's real redundancy now the rows are named. Let me fix the UI rather than the assertion.
+
+Now the final piece — meaningful seed images instead of coloured tiles.
+
+Let me add a test for the shop row and run everything.
+
+The fixtures have no `images`, and the resulting throw blanks the whole row. That's worth guarding.
+
+All 32 pass. Final run across everything.
+
+All nine items are done — the five from your first message and the four you added.
+
+## From your first message
+
+**1. Membership card alignment.** The summary grid used `spacing={3}` while the teaser rows below use `spacing={2}`. At matching spacing a half-width card is exactly two quarter-width teasers plus the gap, so the edges line up; at different spacing the left edges meet but the right ones don't. Also found and fixed a real bug I'd introduced earlier: an always-rendered `<Typography>` holding `null` when a member had no name, which still took its line height and pushed everything below out of step.
+
+**2. Multi-slot selection.** The week grid is now multi-select. Each chosen slot becomes its own cart item, added one POST at a time — the cart's guard re-checks each as it arrives, so if the third of five has gone the member keeps the rest and is told about that one. `slotKey` now includes the date; without it, 10:00 Saturday and 10:00 Sunday shared a key and selecting one toggled the other.
+
+**3. Only one of three calendars.** The cap was **four across all kinds**, one of each kind first — so calendars got exactly one slot. Each row now has its own budget. Verified against your seeded data: Niamh's home screen shows all 3 of 3.
+
+**4. Icon instead of colour swatch.** Done, with the generic calendar mark as fallback so the column stays even.
+
+**5. Favicon.** `useOrganisationFavicon` already fell back to `/favicon.png` — but that file was a **generic account glyph**, not the sail logo. Replaced with the ItsPlainSailing sail, padded square at 48px. The rest of the PWA icon set is still the old glyph; those are baked into installed homescreen shortcuts, so I left them for a deliberate decision rather than changing them as a side effect.
+
+## From your second message
+
+**6. Basket beside the week.** Two-column layout with the basket, T&Cs and add button in a sticky right column, stacking underneath on a phone.
+
+**7. Green selected slots.** Success fill rather than the default grey — with several selectable at once, a selected-but-grey button reads as disabled next to the ones that genuinely are.
+
+**8. Shop row with thumbnails.** Own row after bookings, own budget of four, each card led by the product image. I also dropped the per-card kind caption in named rows — "Shop" above cards each captioned "Shop" was the same word twice.
+
+**9. Meaningful product artwork.** Each product is now drawn as itself. Sent above so you can see them.
+
+## Two things worth flagging
+
+I made a mess restructuring `BookCalendarPage` — my splice matched an earlier `return` branch and duplicated the whole render. I repaired it and confirmed the 20 multi-slot tests still pass, but it's worth a look at that file when you review.
+
+The image access in the dashboard was unguarded (`item.images[0]`), and since that block sits inside one try/catch, a row missing its images array blanked the *entire* what's-on section rather than just its own picture. Caught by a test and now guarded.
+
+**Verification:** backend 2621 passing (145 suites), account-shell 481, components 340, orgadmin-core 699. Docs updated in [BOOKINGS_NAMING_AND_CALENDAR_ICONS.md](docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md), [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) and [account-shell.md](.claude/modules/account-shell.md).
+
+---
+
+
+## 2026-08-14 16:00:28 — Prompt
+
+On the calendar booking page can you make the “Your Slots” section stay in view on the screen if the user scrolls down to look at available slots later in the week ?
+
+On the home page, if the account has active memberships, can you change what is there and use a similar format to how the Whats On events are shown, so have a title “Memberships” and then a card for each individual member with their summary membership details.
+Note: if there are no active memberships then don’t show that section. Also, if the membership is due for renewal then add a renew button.
+
+### Assistant
+
+Two things. Let me check why the sticky isn't holding first.
+
+That's the bug — `alignItems="flex-start"` shrinks the column to its content, leaving the sticky child no room to travel.
+
+Now the memberships section. The dashboard currently returns only one membership — let me change that.
+
+Now the front end — a Memberships row matching the What's On card format.
+
+Let me build a membership card matching the teaser format.
+
+The old tests use the previous `membership` shape. Let me update them to the new one.
+
+The key renders "**E**xpires in 12 days" — my regex was case-sensitive.
+
+All 24 pass. Let me run everything and update the backend tests.
+
+Both green. Let me check the other route consumers of the old field and update the docs.
+
+Both done.
+
+## 1. "Your slots" now stays in view
+
+The sticky positioning was already there — it just couldn't work. The Grid container had `alignItems="flex-start"`, which shrinks the column to its content height, and **a sticky element can only travel inside its own parent**. With nowhere to stick to, it scrolled away like anything else.
+
+Letting the column stretch to match the week's height gives it room. I also capped it at `calc(100vh - 32px)` with its own scroll: a member with a dozen slots chosen would otherwise have a basket taller than the screen, putting the Add button — the point of the column — below the fold with no way to reach it.
+
+## 2. Memberships as a row of cards
+
+The dashboard now returns **every active membership** rather than picking the soonest to expire. That single card was the wrong shape once parents turned out to hold their children's memberships: it announced something was expiring without showing the other three, which were only reachable by thinking to open C4.
+
+Now: a **Memberships** heading with one card per membership, in the same format as the What's On teasers — member's name leading, type as subtitle, valid-until and number beneath. Sorted soonest-to-expire so anything due leads the row. Absent entirely when the member holds none.
+
+**One judgement call worth flagging:** I removed the page-level renewal banner rather than keeping it alongside the new buttons. With several memberships a banner has to pick one to be about, and naming one child while three other cards sit below says less than a button on the card concerned. The banner's two states moved onto the cards as they exist on C4 — `canRenew` gets a Renew button, due-but-nothing-published gets a note instead of a button leading nowhere. If you'd rather keep the banner as a page-level lead as well, that's a small addition.
+
+`null` still means the club has no memberships at all, which stays distinct from an empty list meaning the member holds none — the section renders in neither case, but the difference is preserved for anything that needs it later.
+
+## Verification
+
+- **backend: 2621 passing** — the membership tests rewritten for the list, including ordering, exclusion of elapsed/pending, and the null-versus-empty distinction.
+- **account-shell: 482 passing** — new tests for three cards each named for its member, no section when none are held, and a Renew button appearing only on the membership that needs it.
+
+One small thing I got wrong and fixed: my first test matcher used `/expires in/` where the string renders "**E**xpires in". Docs updated in [ACCOUNT_USER_APP_WIREFRAMES.md](docs/ACCOUNT_USER_APP_WIREFRAMES.md) (B3) and [account-shell.md](.claude/modules/account-shell.md).
+
+---
+
+
+## 2026-08-14 16:11:29 — Prompt
+
+I tried to connect an existing user darragh.otoole@example.test to another organisation KHPC, it presented the screen “Join Kildare Hunt Pony Club”, I clicked the blue button “Connect to this organisation/ club” and it returned an error saying “we could not connect you to this club” and under the hook I see it called POST “http://localhost:5176/api/account/khpc/register” which returned a 400 Bad request with the error “"First and last name are required””
+
+### Assistant
+
+A real bug. Let me trace both sides.
+
+The client sends no body, so identity comes from the token. Let me see how the route builds it.
+
+Found it: the route reads `firstName`/`lastName` from the **request body**, but the client sends no body. Let me see what the token carries.
+
+`extractUserInfo` never pulls the name claims, so they're always undefined. Let me fix it at the source.
+
+Now the route, so identity comes from the token like the email does.
+
+Now let me verify against a real token from the running Keycloak, since the fix depends on what claims it actually sends.
+
+The token carries `given_name` and `family_name`. Let me confirm the fix end to end against the running backend.
+
+It works — 200 with `outcome: active`. Let me verify the row landed with the right name.
+
+The name came through correctly, apostrophe intact. Let me confirm idempotency and add tests.
+
+Now tests for the name extraction and the register fix.
+
+The suite wasn't compiling — other fixtures need the new fields. Let me fix them.
+
+My regex stripped the trailing comma from `groups`. Let me repair.
+
+Both suites compile and pass, 43 tests including the three new ones. Let me add a route-level test and run everything.
+
+Fully green. Let me clean up the test row I created and document the fix.
+
+Fixed and verified against the real running stack.
+
+## The cause
+
+`POST /api/account/:orgCode/register` read `firstName` and `lastName` from the **request body**:
+
+```ts
+const { firstName, lastName, phone } = req.body ?? {};
+```
+
+But "Connect to this organisation" is a single button — the platform already knows who is pressing it, so the page sends **no body at all**. Both names arrived `undefined`, the service's validation rejected them, and you got *"First and last name are required"* surfaced as *"we could not connect you to this club"* — a message about the club, when nothing about the club was wrong.
+
+The email on the very next line was already taken from the verified token, with a comment explaining why: a caller must not be able to register under someone else's address. The names simply never got the same treatment.
+
+## The fix
+
+That same reasoning applies to the name, so it now comes from the token too. `extractUserInfo` never extracted the name claims at all, so I added them there — `given_name` / `family_name`, falling back to splitting `name` for a realm that releases only that. The split takes everything after the first space as the surname, so **"Máire Ní Fhloinn"** keeps its two-word surname.
+
+The body stays as a fallback for a realm that releases neither, and the names are empty strings rather than `undefined` so callers have to handle absence explicitly.
+
+## Verified end to end
+
+I pulled a real token from your running Keycloak for `darragh.otoole@example.test` — it carries `given_name: Darragh`, `family_name: O'Toole` — and replayed the exact failing request:
+
+```
+POST /api/account/khpc/register  →  200
+{"outcome":"active","organisationUserId":"024211ce-…"}
+```
+
+The row landed with `Darragh` / `O'Toole`, apostrophe intact, and a second POST returned the same id without creating a duplicate. I've since removed that row, so Darragh is back to `lhpc` and `wupc` as seeded.
+
+## Verification
+
+**Backend: 145 suites, 2626 tests passing.** New coverage for the profile claims, the `name`-only fallback, the empty case, and — the one that matters — a register request with **no body at all** succeeding with the token's name.
+
+Adding two required fields to `UserInfo` meant updating fixtures across several suites; I made a mess of that with a regex at one point (dropped commas, then duplicated fields) and repaired it, so those files are worth a glance when you review.
+
+Documented in [account-shell.md](.claude/modules/account-shell.md) and the A4 wireframe.
+
+---
+
+
+## 2026-08-14 16:28:43 — Prompt
+
+I do not have terraform, I have tofu, can you update all the terraform instructions to refer to calling tofu and not terraform ?
+
+### Assistant
+
+Let me survey what actually references the CLI, being careful to distinguish it from HCL syntax.
+
+57 CLI invocations to change; the HCL `terraform {}` blocks and `terraform.tfstate` must stay. Let me see the shapes involved.
+
+`tofu` v1.12.3 is installed, and its `version -json` keeps the `terraform_version` key — so the version parsing still works. Let me check for CI workflows too.
+
+Now I'll make the change. Starting with the shell scripts.
+
+Now the human-readable labels. Let me see them in context.
+
+Let me make the tool references consistent, leaving genuine HCL/file references alone.
+
+All scripts parse. Let me verify they actually run against the real `tofu`.
+
+Two real issues. The version prints empty — OpenTofu pretty-prints its JSON, so the grep pattern misses.
+
+Version now reports correctly. Let me check whether that `fmt` failure is mine or pre-existing.
+
+That's pre-existing drift in a file I haven't touched — `fmt` wants the padding tightened. I'll flag it rather than reformat uninvited. Now the CI workflows.
+
+YAML all parses. Now the documentation.
+
+Excluding the downloaded provider files, let me update the real docs.
+
+Bucket and table names are real infrastructure — those must stay. Let me confirm and update only the tool references.
+
+Now let me verify nothing HCL-critical was touched, and clean up what my test runs left behind.
+
+The runs left artefacts, and modified two `.tfvars.example` files. Let me check what changed.
+
+Those `.tfvars.example` changes are a pre-existing project rename, not mine — my scripts only touched `.sh` and `.md`. Let me check what's genuinely my leftover.
+
+Clean — only my intended edits, plus the two pre-existing `.tfvars.example` changes. Let me do a final sweep and re-run the suite.
+
+Let me see what actually failed — I need to know whether it's the tofu switch or the environment.
+
+`syntax-check.sh` exits 0 standalone but ci-test reports it failed. Let me look at how it invokes it.
+
+It dies right after the first test. Let me check whether I broke it.
+
+My changes there are two echo strings only — so this isn't mine. Let me confirm it's the leftover `.terraform` dirs.
+
+Let me confirm this pre-dates my change by running the original from git.
+
+Confirmed pre-existing: the **original** script also exits 1 under bash 5. The shebang says `#!/bin/bash` (macOS bash 3.2), but `ci-test.sh` calls `bash syntax-check.sh`, which picks up Homebrew bash 5 — where `((VAR++))` from `0` returns 1 and `set -e` aborts the run.
+
+That makes the suite I just migrated report `0/3` for reasons unrelated to tofu. Let me fix it.
+
+Two things left. I missed a label in `plan.sh`, and I need to know why plan fails.
+
+The plan failure is `-backend=false` followed by `plan`, which needs the S3 backend. Let me confirm that predates my change.
+
+Pre-existing — only the binary name changed. Let me clean up and do a final verification.
+
+Done. Everything now invokes `tofu`, verified against your actual OpenTofu v1.12.3.
+
+## What changed
+
+| | |
+|---|---|
+| **Scripts** (`terraform/test/*.sh`) | `terraform <cmd>` → `tofu <cmd>`, `command -v terraform` → `command -v tofu`, install hints → `brew install opentofu` / opentofu.org, labels → OpenTofu |
+| **CI** | `hashicorp/setup-terraform@v3` → `opentofu/setup-opentofu@v1`, `terraform_version: 1.5.0` → `tofu_version: 1.8.0`, all run steps |
+| **Docs** | `terraform/README.md`, `terraform/test/README.md`, `DEPLOYMENT.md`, `ORGADMIN_DEPLOYMENT_GUIDE.md`, `ADMIN_DEPLOYMENT_VERIFICATION.md`, `.github/workflows/README.md`, plus `CLAUDE.md`, root `README.md` and `infrastructure.md` |
+
+## What I deliberately did **not** change
+
+- **`terraform {}` blocks and `required_providers`** in `.tf` files — language syntax; renaming them breaks everything. Zero `.tf` files were modified.
+- **`terraform.tfstate` / `terraform.tfvars` / `.terraform/`** — OpenTofu uses the same names.
+- **`aws-web-framework-terraform-state-*` buckets and `terraform-state-lock-*` tables** — real AWS resource names referenced by the backend config.
+- **The `terraform/` directory name** and `.kiro/specs` (reference-only per your rules).
+
+## One fix I made beyond the rename
+
+Running the migrated suite, `ci-test.sh` reported **0/3 passed**. That wasn't the rename — I confirmed the *original* script from git fails the same way. The scripts use `((VAR++))`, which returns the pre-increment value; the first one from `0` therefore returns a failing status, and `set -e` kills the run after its first passing test. Harmless under the `#!/bin/bash` shebang (macOS bash 3.2), fatal when `ci-test.sh` calls `bash syntax-check.sh` and picks up Homebrew's bash 5.
+
+I switched the counters to `VAR=$((VAR + 1))`. Syntax tests now report **68 passed, 0 failed** and the suite runs to completion. Flagging it because it's a separate pre-existing bug, not part of what you asked for.
+
+## Two pre-existing failures that remain
+
+**Format check on `terraform/modules/compute/main.tf`** — over-padded alignment in a `templatefile` block that `fmt` wants tightened. The file is untouched by me; `tofu fmt` fixes it in one command, but I didn't reformat a module you hadn't asked me to touch. Say the word.
+
+**Plan tests** — `plan.sh` runs `init -backend=false` then `plan`, and OpenTofu (like Terraform) refuses to plan against an uninitialised S3 backend. That flag is unchanged from the original, and there are no AWS credentials here regardless.
+
+I've cleaned up every `.terraform/`, lock file and generated `tfvars` my test runs created. The two modified `terraform.tfvars.example` files in your tree are a pre-existing project rename, not mine.
+
+---
