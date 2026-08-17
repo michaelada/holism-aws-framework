@@ -30,7 +30,11 @@ export type UnavailableReason =
   | 'already-a-member'
   | 'not-on-sale'
   | 'out-of-stock'
-  | 'not-open-for-bookings';
+  | 'not-open-for-bookings'
+  /** The last places are in other members' baskets, and may yet come back. */
+  | 'held-by-others'
+  /** The member already has this in their own basket. */
+  | 'in-your-basket';
 
 export interface CatalogueActivity {
   id: string;
@@ -284,7 +288,18 @@ export class AccountCatalogueService {
   async listEvents(
     organisationId: string,
     organisationUserId: string,
-    today: Date = new Date()
+    today: Date = new Date(),
+    options: {
+      /**
+       * Leave the member's own basket holds out of the capacity sum.
+       *
+       * Set only where the caller is redeeming that hold — capture-time and
+       * fulfilment re-checks — because counting it would have a member's own
+       * reservation report the activity full and refuse the entry it exists to
+       * guarantee.
+       */
+      excludeOwnHolds?: boolean;
+    } = {}
   ): Promise<CatalogueEvent[]> {
     try {
       const events = await db.query(
@@ -308,7 +323,7 @@ export class AccountCatalogueService {
       const activities = await db.query(
         `SELECT a.id, a.event_id, a.name, a.description, a.fee,
                 a.handling_fee_included, a.application_form_id,
-                a.allow_specify_quantity, a.allowed_payment_method,
+                a.allow_specify_quantity, a.supported_payment_methods,
                 a.limit_applicants, a.applicants_limit,
                 a.use_terms_and_conditions, a.terms_and_conditions,
                 (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_activity_id = a.id)
@@ -329,9 +344,52 @@ export class AccountCatalogueService {
         byEvent.set(row.event_id, list);
       }
 
+      /*
+       * Live basket holds against these activities.
+       *
+       * The same mechanism as a court: an entry sitting in somebody's basket is
+       * a place nobody else can have, until the hold lapses of its own accord.
+       * `SUM(quantity)` rather than a row count because an activity that lets a
+       * member enter several at once takes several places with one line.
+       */
+      const entryHolds = await db.query(
+        `SELECT ci.context_ref->>'activityId' AS activity_id,
+                c.user_id,
+                COALESCE(SUM(ci.quantity), 0)::int AS places
+         FROM cart_items ci
+         JOIN carts c ON c.id = ci.cart_id
+         WHERE c.organisation_id = $1
+           AND c.status = 'open'
+           AND ci.item_type = 'event_entry'
+           AND ci.expires_at IS NOT NULL
+           AND ci.expires_at > NOW()
+           AND ci.context_ref->>'activityId' = ANY($2::text[])
+         GROUP BY 1, 2`,
+        [organisationId, activities.rows.map((row) => row.id)]
+      );
+
+      /** activity id → places held in total, and how many of them the member's own. */
+      const heldByActivity = new Map<string, { total: number; mine: number }>();
+      for (const row of entryHolds.rows) {
+        const isMine = row.user_id === organisationUserId;
+        if (isMine && options.excludeOwnHolds) continue;
+
+        const held = heldByActivity.get(row.activity_id) ?? { total: 0, mine: 0 };
+        held.total += Number(row.places);
+        if (isMine) held.mine += Number(row.places);
+        heldByActivity.set(row.activity_id, held);
+      }
+
       return events.rows.map((event) => {
-        const eventReason = this.eventUnavailableReason(event, today);
         const capped = event.limit_entries && event.entries_limit !== null;
+
+        // An event's cap is spent by holds against any of its activities.
+        const eventHeld = (byEvent.get(event.id) ?? []).reduce(
+          (total, activity) => total + (heldByActivity.get(activity.id)?.total ?? 0),
+          0
+        );
+
+        const eventReason = this.eventUnavailableReason(event, today, eventHeld);
 
         return {
           id: event.id,
@@ -343,12 +401,19 @@ export class AccountCatalogueService {
           entriesClosingDate: event.entries_closing_date ?? null,
           entriesLimit: capped ? Number(event.entries_limit) : null,
           placesRemaining: capped
-            ? Math.max(0, Number(event.entries_limit) - Number(event.entry_count))
+            ? Math.max(
+                0,
+                Number(event.entries_limit) - Number(event.entry_count) - eventHeld
+              )
             : null,
           available: eventReason === null,
           unavailableReason: eventReason,
           activities: (byEvent.get(event.id) ?? []).map((activity) =>
-            this.toActivity(activity, eventReason)
+            this.toActivity(
+              activity,
+              eventReason,
+              heldByActivity.get(activity.id) ?? { total: 0, mine: 0 }
+            )
           ),
         };
       });
@@ -364,28 +429,43 @@ export class AccountCatalogueService {
    * Order matters: a closed event is closed whether or not it is also full, and
    * "entries closed on 1 June" is the more useful thing to be told.
    */
-  private eventUnavailableReason(event: any, today: Date): UnavailableReason | null {
+  private eventUnavailableReason(
+    event: any,
+    today: Date,
+    /** Places against this event's cap sitting in baskets right now. */
+    held: number = 0
+  ): UnavailableReason | null {
     if (event.open_date_entries && new Date(event.open_date_entries) > today) {
       return 'entries-not-open';
     }
     if (event.entries_closing_date && new Date(event.entries_closing_date) < today) {
       return 'entries-closed';
     }
-    if (
-      event.limit_entries &&
-      event.entries_limit !== null &&
-      Number(event.entry_count) >= Number(event.entries_limit)
-    ) {
-      return 'event-full';
+    if (event.limit_entries && event.entries_limit !== null) {
+      const taken = Number(event.entry_count);
+      const limit = Number(event.entries_limit);
+
+      // Genuinely gone before holds are counted: nothing is coming back.
+      if (taken >= limit) return 'event-full';
+      /*
+       * Only the holds stand between the member and a place. Worded as held
+       * rather than full because it may well free up in a minute or two, and a
+       * member told "full" goes away for good.
+       */
+      if (taken + held >= limit) return 'held-by-others';
     }
     return null;
   }
 
-  private toActivity(row: any, eventReason: UnavailableReason | null): CatalogueActivity {
+  private toActivity(
+    row: any,
+    eventReason: UnavailableReason | null,
+    held: { total: number; mine: number } = { total: 0, mine: 0 }
+  ): CatalogueActivity {
     const capped = row.limit_applicants && row.applicants_limit !== null;
-    const placesRemaining = capped
-      ? Math.max(0, Number(row.applicants_limit) - Number(row.entry_count))
-      : null;
+    const taken = Number(row.entry_count);
+    const limit = Number(row.applicants_limit);
+    const placesRemaining = capped ? Math.max(0, limit - taken - held.total) : null;
 
     /*
      * The event's own reason wins — an activity with places left in a closed
@@ -394,7 +474,16 @@ export class AccountCatalogueService {
      */
     let reason: UnavailableReason | null = eventReason;
     if (!reason && Number(row.mine) > 0) reason = 'already-entered';
-    if (!reason && placesRemaining === 0) reason = 'activity-full';
+    /*
+     * A member's own hold is called what it is. They cannot enter twice, but
+     * "in your basket" sends them to the basket, where "full" would send them
+     * away from an entry they have already got.
+     */
+    if (!reason && held.mine > 0) reason = 'in-your-basket';
+    if (!reason && placesRemaining === 0) {
+      // Held rather than full whenever a lapsing hold would bring it back.
+      reason = capped && taken < limit ? 'held-by-others' : 'activity-full';
+    }
 
     return {
       id: row.id,
@@ -404,7 +493,17 @@ export class AccountCatalogueService {
       handlingFeeIncluded: row.handling_fee_included ?? false,
       applicationFormId: row.application_form_id ?? null,
       allowSpecifyQuantity: row.allow_specify_quantity ?? false,
-      supportedPaymentMethodIds: row.allowed_payment_method ?? [],
+      /*
+       * `supported_payment_methods`, the jsonb list of method ids — the same
+       * column memberships, merchandise and calendars read.
+       *
+       * This used to read `allowed_payment_method`, which is a *single* value
+       * (`any` / `pay-offline` / `stripe`) rather than a list. Assigning it to
+       * a `string[]` gave every activity a string where an array belonged, so
+       * `includes()` did substring matching and the cart's `ANY($1::uuid[])`
+       * was handed a bare slug — a 500 with "malformed array literal".
+       */
+      supportedPaymentMethodIds: parseJsonArray(row.supported_payment_methods),
       entriesLimit: capped ? Number(row.applicants_limit) : null,
       placesRemaining,
       // Only when the club has switched them on: stale text left in the column
@@ -790,7 +889,21 @@ export class AccountCatalogueService {
     calendarId: string,
     from: string,
     to: string,
-    today: Date = new Date()
+    today: Date = new Date(),
+    /**
+     * The member the calendar is being drawn for, so their own basket holds can
+     * be worded as theirs. Omitted by callers with no member in hand, which
+     * then see every hold as somebody else's — the safe reading.
+     */
+    viewerId?: string,
+    /**
+     * Leave the viewer's own holds out of the sum altogether.
+     *
+     * Fulfilment is redeeming the member's hold, so counting it would have the
+     * hold block the booking it exists to guarantee — and it takes places, so
+     * merely relabelling the reason would still leave the slot looking full.
+     */
+    excludeViewerHolds = false
   ): Promise<{ calendar: CatalogueCalendar; slots: AvailableSlot[] }> {
     const calendar = (await this.listCalendars(organisationId)).find(
       (candidate) => candidate.id === calendarId
@@ -800,7 +913,7 @@ export class AccountCatalogueService {
       throw new NotFoundError('Calendar not found');
     }
 
-    const [configurations, blocked, bookings, reservations] = await Promise.all([
+    const [configurations, blocked, bookings, reservations, holds] = await Promise.all([
       db.query(
         `SELECT tsc.id, tsc.days_of_week, tsc.start_time, tsc.effective_date_start,
                 tsc.effective_date_end, tsc.recurrence_weeks, tsc.places_available,
@@ -835,6 +948,28 @@ export class AccountCatalogueService {
          FROM slot_reservations
          WHERE calendar_id = $1 AND slot_date BETWEEN $2 AND $3`,
         [calendarId, from, to]
+      ),
+      /*
+       * Live basket holds on this calendar.
+       *
+       * `expires_at > NOW()` is what makes the hold lapse: nothing sweeps the
+       * table, an abandoned basket simply stops counting. The cart must still
+       * be open — once it becomes `ordered` the line has been paid for and a
+       * real booking stands behind it, so counting the hold as well would take
+       * the slot out twice.
+       */
+      db.query(
+        `SELECT ci.context_ref, ci.expires_at, c.user_id
+         FROM cart_items ci
+         JOIN carts c ON c.id = ci.cart_id
+         WHERE c.organisation_id = $1
+           AND c.status = 'open'
+           AND ci.item_type = 'booking'
+           AND ci.expires_at IS NOT NULL
+           AND ci.expires_at > NOW()
+           AND ci.context_ref->>'calendarId' = $2
+           AND ci.context_ref->>'date' BETWEEN $3 AND $4`,
+        [organisationId, calendarId, from, to]
       ),
     ]);
 
@@ -874,6 +1009,21 @@ export class AccountCatalogueService {
         startTime: String(row.start_time),
         duration: Number(row.duration),
       })),
+      holds: holds.rows
+        .filter(
+          (row) => !(excludeViewerHolds && Boolean(viewerId) && row.user_id === viewerId)
+        )
+        .map((row) => {
+          const ref = (row.context_ref ?? {}) as Record<string, any>;
+          return {
+            slotDate: String(ref.date),
+            startTime: String(ref.startTime),
+            duration: Number(ref.duration),
+            places: Number(ref.places ?? 1),
+            heldByViewer: Boolean(viewerId) && row.user_id === viewerId,
+            expiresAt: new Date(row.expires_at).toISOString(),
+          };
+        }),
       from,
       to,
       minDaysInAdvance: calendar.minDaysInAdvance,
@@ -898,14 +1048,33 @@ export class AccountCatalogueService {
     startTime: string,
     duration: number,
     places: number,
-    today: Date = new Date()
+    today: Date = new Date(),
+    /**
+     * The member asking.
+     *
+     * Passing them lets their own basket hold be told apart from a stranger's,
+     * which matters twice: adding the same slot again is refused with "it is
+     * already in your basket", and fulfilment — which is redeeming that very
+     * hold — must not be blocked by it. See `ignoreViewerHold`.
+     */
+    viewerId?: string,
+    /**
+     * Treat the viewer's own hold as no obstacle.
+     *
+     * Set only by fulfilment, where the hold being checked against *is* the one
+     * being turned into a booking. Everywhere else a member's own hold should
+     * stop them taking the slot twice.
+     */
+    ignoreViewerHold = false
   ): Promise<{ calendar: CatalogueCalendar; slot: AvailableSlot }> {
     const { calendar, slots } = await this.listCalendarAvailability(
       organisationId,
       calendarId,
       date,
       date,
-      today
+      today,
+      viewerId,
+      ignoreViewerHold
     );
 
     if (!calendar.available) {
@@ -925,8 +1094,10 @@ export class AccountCatalogueService {
         slot.unavailableReason === 'full'
           ? 'That slot is fully booked'
           : slot.unavailableReason === 'held'
-            ? 'Somebody else is booking that slot'
-            : 'That slot is already taken'
+            ? 'Somebody else is holding that slot at the moment'
+            : slot.unavailableReason === 'in-your-basket'
+              ? 'That slot is already in your basket'
+              : 'That slot is already taken'
       );
     }
     if (places > slot.placesRemaining) {
@@ -1025,17 +1196,46 @@ export class AccountCatalogueService {
    * may have gone in between. This is the check that actually protects
    * capacity — the listing above is presentation.
    */
+  /**
+   * An activity and the event it belongs to, or null if the member cannot see it.
+   *
+   * The event comes back as well as the activity because a cap can live at
+   * either level: an event limited to 60 entries constrains an activity that
+   * sets no limit of its own, and whether an entry takes a hold depends on both.
+   */
+  async findActivity(
+    organisationId: string,
+    organisationUserId: string,
+    activityId: string,
+    today: Date = new Date(),
+    options: { excludeOwnHolds?: boolean } = {}
+  ): Promise<{ event: CatalogueEvent; activity: CatalogueActivity } | null> {
+    const events = await this.listEvents(
+      organisationId,
+      organisationUserId,
+      today,
+      options
+    );
+    for (const event of events) {
+      const activity = event.activities.find((a) => a.id === activityId);
+      if (activity) return { event, activity };
+    }
+    return null;
+  }
+
   async assertActivityAvailable(
     organisationId: string,
     organisationUserId: string,
     activityId: string,
     today: Date = new Date()
   ): Promise<CatalogueActivity> {
-    const events = await this.listEvents(organisationId, organisationUserId, today);
-    for (const event of events) {
-      const activity = event.activities.find((a) => a.id === activityId);
-      if (activity) return activity;
-    }
+    const found = await this.findActivity(
+      organisationId,
+      organisationUserId,
+      activityId,
+      today
+    );
+    if (found) return found.activity;
 
     // Not in the catalogue at all: unpublished, deleted, another club's, or
     // simply wrong. All of them are "you cannot enter this".

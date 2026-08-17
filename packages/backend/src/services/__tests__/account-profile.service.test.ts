@@ -117,8 +117,34 @@ describe('AccountProfileService', () => {
       const update = (mockDb.query as jest.Mock).mock.calls.find((call) =>
         String(call[0]).includes('UPDATE organization_users')
       );
-      expect(String(update?.[0])).toContain('keycloak_user_id = $5');
+      expect(String(update?.[0])).toContain('keycloak_user_id = $5::text');
       expect(update?.[1]).toEqual(expect.arrayContaining(['Adaline', KC]));
+    });
+
+    /**
+     * The cast that made every save fail.
+     *
+     * `$5` is a Keycloak subject and `keycloak_user_id` is `character varying`,
+     * but the clause was written `$5::uuid`. Postgres infers one type per
+     * parameter for the whole statement, so that single cast made `$5` a uuid
+     * everywhere — including the comparison against the varchar column, which
+     * has no `=` operator for that pair. Saving a profile returned a 500 with
+     * "operator does not exist: character varying = uuid" for any member with a
+     * Keycloak identity, which is all of them.
+     */
+    it('compares the Keycloak subject as text, not as a uuid', async () => {
+      await service.updateProfile(OU, { firstName: 'Adaline' });
+
+      const update = (mockDb.query as jest.Mock).mock.calls.find((call) =>
+        String(call[0]).includes('UPDATE organization_users')
+      );
+      const sql = String(update?.[0]);
+
+      expect(sql).toContain('$5::text');
+      expect(sql).not.toContain('$5::uuid');
+      // And the row id keeps its own cast, so neither parameter's type depends
+      // on where it happens to appear first.
+      expect(sql).toContain('id = $6::uuid');
     });
 
     /**

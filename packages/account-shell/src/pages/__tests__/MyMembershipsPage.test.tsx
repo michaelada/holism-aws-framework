@@ -51,6 +51,7 @@ const membership = (over: Partial<AccountMembershipRecord> = {}): AccountMembers
   dateLastRenewed: '2026-01-01',
   paymentStatus: 'paid',
   daysRemaining: 200,
+  formSummary: [],
   canRenew: false,
   renewalNotOpen: false,
   ...over,
@@ -202,5 +203,76 @@ describe('MyMembershipsPage (C4)', () => {
 
     expect(await screen.findByText('We could not load your memberships.')).toBeInTheDocument();
     expect(screen.queryByText('You have no memberships yet.')).not.toBeInTheDocument();
+  });
+});
+
+
+/**
+ * What the member filled in when they applied.
+ *
+ * The application form is gone once the membership exists, so this card is the
+ * only place a member can check the pony's name or the emergency contact they
+ * gave — and spot what needs correcting before the club needs it.
+ */
+describe('MyMembershipsPage — the details behind a membership', () => {
+  const withAnswers = () =>
+    membership({
+      formSummary: [
+        { label: 'Rider name', value: 'Niamh Walsh' },
+        { label: 'Pony name', value: 'Bramble' },
+        { label: 'Medical notes', value: 'Asthma inhaler\ncarried in the tack box' },
+      ],
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+  });
+
+  it('keeps the answers out of the way until they are asked for', async () => {
+    /*
+     * Fifteen rows of reference material would bury the number and the expiry
+     * date, which is what most people open this screen for.
+     *
+     * Not in the document at all, rather than merely hidden: the accordion
+     * unmounts while collapsed, so the answers are also out of reach of a page
+     * search and of a screen reader walking the card.
+     */
+    mockExecute.mockResolvedValue([withAnswers()]);
+    renderWithProviders(<MyMembershipsPage />);
+
+    expect(await screen.findByText(/Your details/)).toBeInTheDocument();
+    expect(screen.queryByText('Bramble')).not.toBeInTheDocument();
+  });
+
+  it('shows every answer, labelled, once expanded', async () => {
+    mockExecute.mockResolvedValue([withAnswers()]);
+    renderWithProviders(<MyMembershipsPage />);
+
+    await userEvent.click(await screen.findByText(/Your details/));
+
+    expect(await screen.findByText('Pony name')).toBeInTheDocument();
+    expect(screen.getByText('Bramble')).toBeInTheDocument();
+    expect(screen.getByText('Rider name')).toBeInTheDocument();
+    // Twice over: the card is headed by the member's name, and the form asked
+    // for it too. Both are correct, so this counts rather than expecting one.
+    expect(screen.getAllByText('Niamh Walsh')).toHaveLength(2);
+  });
+
+  it('counts the answers, so the label says what is behind it', async () => {
+    mockExecute.mockResolvedValue([withAnswers()]);
+    renderWithProviders(<MyMembershipsPage />);
+
+    expect(await screen.findByText('Your details (3 answers)')).toBeInTheDocument();
+  });
+
+  it('shows no expander at all when the club asked nothing', async () => {
+    // An empty accordion is worse than none: it invites a click that reveals
+    // nothing, and implies the club lost the answers.
+    mockExecute.mockResolvedValue([membership({ formSummary: [] })]);
+    renderWithProviders(<MyMembershipsPage />);
+
+    await screen.findByText('Niamh Walsh');
+    expect(screen.queryByText(/Your details/)).not.toBeInTheDocument();
   });
 });

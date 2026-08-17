@@ -28,12 +28,25 @@ export const ORG_TYPE = {
   membershipNumbering: 'internal' as const,
   membershipNumberUniqueness: 'organization' as const,
   initialMembershipNumber: 100000,
+  /**
+   * **Every name here must exist in the `capabilities` table.**
+   *
+   * Nothing validates the seed itself, but the admin API validates any *edit*
+   * to what it wrote — so a name that is not a capability produces a record
+   * that can be created and never saved again. Editing this type's application
+   * fee failed with "Invalid capabilities provided" for exactly that reason,
+   * naming nothing and blaming a field the administrator had not touched.
+   *
+   * `discounts`, `email-notifications` and `document-uploads` were three such
+   * names: plausible, gating nothing, and in no catalogue. The real discount
+   * capabilities are per-module — `entry-discounts`, `membership-discounts` and
+   * the rest — and are listed individually below.
+   */
   defaultCapabilities: [
     'event-management',
     'event-types',
     'venues',
     'entry-discounts',
-    'discounts',
     'memberships',
     'membership-discounts',
     'merchandise',
@@ -41,9 +54,21 @@ export const ORG_TYPE = {
     'payment-processing',
     'reporting',
     'public-search',
-    'email-notifications',
-    'document-uploads',
     'document-management',
+    /*
+     * The rest of the platform's capability catalogue, permitted by the type so
+     * that a club *can* switch them on. Every one of these is also listed in
+     * `optInCapabilities` below, so adding them here does not quietly turn them
+     * on for the three clubs that were seeded before they existed — only Meath
+     * takes them.
+     */
+    'registrations',
+    'registration-discounts',
+    'event-ticketing',
+    'entry-restrictions',
+    'calendar-discounts',
+    'merchandise-discounts',
+    'multi-area-discounts',
   ],
   /**
    * Permitted by the type but **not** switched on for every club.
@@ -54,14 +79,24 @@ export const ORG_TYPE = {
    * ones here keeps "the type allows this" and "this club uses it" separate,
    * which is the distinction the capability handshake is built on.
    */
-  optInCapabilities: ['merchandise', 'calendar-bookings'],
+  optInCapabilities: [
+    'merchandise',
+    'calendar-bookings',
+    'registrations',
+    'registration-discounts',
+    'event-ticketing',
+    'entry-restrictions',
+    'calendar-discounts',
+    'merchandise-discounts',
+    'multi-area-discounts',
+  ],
   /** The platform's cut, inherited as the default by each organisation. */
   applicationFee: { fixed: 0.3, percentage: 1.5 },
   handlingFee: { fixedFee: 0.25, percentageFee: 1.5, taxPercentage: 0 },
 };
 
 export interface SeedOrg {
-  key: 'kildare' | 'laois' | 'ward';
+  key: 'kildare' | 'laois' | 'ward' | 'meath';
   name: string;
   displayName: string;
   urlCode: string;
@@ -77,6 +112,17 @@ export interface SeedOrg {
   applicationFee?: { fixed: number | null; percentage: number | null };
   /** Opt-in capabilities this club switches on, from `ORG_TYPE.optInCapabilities`. */
   extraCapabilities?: string[];
+  /**
+   * Switch on everything the type permits, rather than listing it.
+   *
+   * One club has the lot so that every module can be reached from a single
+   * login — the org-admin menu, the account app's home rows and the reports all
+   * behave differently when a capability is absent, and a demo that needs three
+   * sign-ins to see the whole product is a poor demo. Spelled as a flag rather
+   * than a copy of the capability list, which would go stale the moment the
+   * type gained one.
+   */
+  allCapabilities?: boolean;
 }
 
 /**
@@ -87,10 +133,13 @@ export interface SeedOrg {
  * permissions. Granting the role a capability the club does not have would give
  * an administrator menu entries leading to endpoints that refuse them.
  */
-export const capabilitiesFor = (org: SeedOrg): string[] => [
-  ...ORG_TYPE.defaultCapabilities.filter((c) => !ORG_TYPE.optInCapabilities.includes(c)),
-  ...(org.extraCapabilities ?? []),
-];
+export const capabilitiesFor = (org: SeedOrg): string[] =>
+  org.allCapabilities
+    ? [...ORG_TYPE.defaultCapabilities]
+    : [
+        ...ORG_TYPE.defaultCapabilities.filter((c) => !ORG_TYPE.optInCapabilities.includes(c)),
+        ...(org.extraCapabilities ?? []),
+      ];
 
 export const ORGS: SeedOrg[] = [
   {
@@ -155,6 +204,31 @@ export const ORGS: SeedOrg[] = [
     // Explicitly unconfigured: the platform takes the handling fee.
     applicationFee: { fixed: null, percentage: null },
   },
+  {
+    key: 'meath',
+    name: 'meath-hunt-pony-club',
+    displayName: 'Meath Hunt Pony Club',
+    urlCode: 'mhpc',
+    contactName: 'Deirdre Ó Ceallaigh',
+    contactEmail: 'secretary@meathhunt.test',
+    settings: {
+      address: 'Kilmessan',
+      city: 'Navan',
+      postcode: 'C15 T891',
+      country: 'Ireland',
+      phone: '+353 46 902 1234',
+      website: 'https://meathhunt.test',
+    },
+    paymentMethods: ['pay-offline', 'stripe'],
+    /*
+     * The everything club. The other three each leave something switched off on
+     * purpose, so between them no single login reaches the whole product —
+     * useful for testing the absence of a capability, useless for showing
+     * somebody what the platform does. This one has the lot, including the
+     * registrations and ticketing that nothing else exercises.
+     */
+    allCapabilities: true,
+  },
 ];
 
 export const SUPER_ADMIN = {
@@ -167,6 +241,7 @@ export const ORG_ADMINS: Record<SeedOrg['key'], { email: string; firstName: stri
   kildare: { email: 'admin@kildarehunt.test', firstName: 'Aoife', lastName: 'Byrne' },
   laois: { email: 'admin@laoishunt.test', firstName: 'Seán', lastName: 'Delaney' },
   ward: { email: 'admin@wardunion.test', firstName: 'Máire', lastName: 'Ní Fhloinn' },
+  meath: { email: 'admin@meathhunt.test', firstName: 'Deirdre', lastName: 'Ó Ceallaigh' },
 };
 
 /**
@@ -191,10 +266,10 @@ export interface SeedAccountUser {
 }
 
 export const ACCOUNT_USERS: SeedAccountUser[] = [
-  { email: 'niamh.walsh@example.test', firstName: 'Niamh', lastName: 'Walsh', orgs: ['kildare', 'laois', 'ward'] },
+  { email: 'niamh.walsh@example.test', firstName: 'Niamh', lastName: 'Walsh', orgs: ['kildare', 'laois', 'ward', 'meath'] },
   { email: 'cillian.murphy@example.test', firstName: 'Cillian', lastName: 'Murphy', orgs: ['kildare', 'laois', 'ward'] },
   { email: 'orla.kavanagh@example.test', firstName: 'Órla', lastName: 'Kavanagh', orgs: ['kildare', 'laois'] },
-  { email: 'darragh.otoole@example.test', firstName: 'Darragh', lastName: "O'Toole", orgs: ['laois', 'ward'] },
+  { email: 'darragh.otoole@example.test', firstName: 'Darragh', lastName: "O'Toole", orgs: ['laois', 'ward', 'meath'] },
   { email: 'fionn.doyle@example.test', firstName: 'Fionn', lastName: 'Doyle', orgs: ['kildare', 'ward'] },
   { email: 'saoirse.brennan@example.test', firstName: 'Saoirse', lastName: 'Brennan', orgs: ['kildare'] },
   { email: 'ruairi.kelly@example.test', firstName: 'Ruairí', lastName: 'Kelly', orgs: ['laois'] },
@@ -214,6 +289,18 @@ export const ACCOUNT_USERS: SeedAccountUser[] = [
   { email: 'eoin.sheridan@example.test', firstName: 'Eoin', lastName: 'Sheridan', orgs: ['laois'] },
   { email: 'grainne.duffy@example.test', firstName: 'Gráinne', lastName: 'Duffy', orgs: ['ward'] },
   { email: 'lorcan.hayes@example.test', firstName: 'Lorcán', lastName: 'Hayes', orgs: ['ward'] },
+  /*
+   * Meath-only members, and the owners of the registered horses below.
+   *
+   * Niamh and Darragh above also belong here, so the club with every capability
+   * is reachable from an account that has to switch into it — the case where
+   * the menu changes shape between organisations.
+   */
+  { email: 'brid.mcnamara@example.test', firstName: 'Bríd', lastName: 'McNamara', orgs: ['meath'] },
+  { email: 'colm.fitzgerald@example.test', firstName: 'Colm', lastName: 'Fitzgerald', orgs: ['meath'] },
+  { email: 'aoibhinn.regan@example.test', firstName: 'Aoibhínn', lastName: 'Regan', orgs: ['meath'] },
+  { email: 'seamus.donnelly@example.test', firstName: 'Séamus', lastName: 'Donnelly', orgs: ['meath'] },
+  { email: 'maeve.kiernan@example.test', firstName: 'Maeve', lastName: 'Kiernan', orgs: ['meath'] },
 ];
 
 /* ------------------------------------------------------------------ forms */
@@ -264,6 +351,30 @@ export const FIELDS: SeedField[] = [
   { key: 'guardianName', name: 'guardian_name', label: 'Parent or guardian', datatype: 'text', description: 'Required for members under 18.' },
   { key: 'guardianPhone', name: 'guardian_phone', label: 'Parent or guardian number', datatype: 'phone' },
   { key: 'photoConsent', name: 'photo_consent', label: 'Consent to photographs at club events', datatype: 'boolean' },
+
+  /*
+   * Horse registration.
+   *
+   * A registration is about an **animal**, not a person, and the field names
+   * say so: this is the vocabulary of a passport and a vaccination card rather
+   * than of a rider. It is the distinction the registrations module exists to
+   * make, and reusing the rider fields would have hidden it.
+   */
+  { key: 'horseName', name: 'horse_name', label: 'Horse or pony name', datatype: 'text', validation: { required: true, maxLength: 120 } },
+  { key: 'horseStableName', name: 'horse_stable_name', label: 'Stable name', datatype: 'text', description: 'What he answers to at home, if different.' },
+  { key: 'horseBreed', name: 'horse_breed', label: 'Breed', datatype: 'select', options: ['Irish Sports Horse', 'Connemara', 'Welsh Section B', 'Welsh Section D', 'Thoroughbred', 'Irish Draught', 'Cob', 'Other'], validation: { required: true } },
+  { key: 'horseColour', name: 'horse_colour', label: 'Colour', datatype: 'select', options: ['Bay', 'Chestnut', 'Grey', 'Black', 'Piebald', 'Skewbald', 'Dun', 'Palomino'], validation: { required: true } },
+  { key: 'horseSex', name: 'horse_sex', label: 'Sex', datatype: 'radio', options: ['Mare', 'Gelding', 'Stallion'], validation: { required: true } },
+  { key: 'horseYearFoaled', name: 'horse_year_foaled', label: 'Year foaled', datatype: 'number', validation: { required: true, min: 1990, max: 2026 } },
+  { key: 'horseHeight', name: 'horse_height', label: 'Height (hands)', datatype: 'number', description: 'To the nearest hand, e.g. 14.2 as 14.2.', validation: { required: true } },
+  { key: 'horsePassport', name: 'horse_passport', label: 'Passport number', datatype: 'text', description: 'As printed on the equine passport.', validation: { required: true, maxLength: 40 } },
+  { key: 'horseMicrochip', name: 'horse_microchip', label: 'Microchip number', datatype: 'text', validation: { maxLength: 20 } },
+  { key: 'horseOwner', name: 'horse_owner', label: 'Registered owner', datatype: 'text', validation: { required: true, maxLength: 120 } },
+  { key: 'horseFluVaccine', name: 'horse_flu_vaccine', label: 'Date of last flu vaccination', datatype: 'date', description: 'Must be within the last twelve months to compete.', validation: { required: true } },
+  { key: 'horseVetName', name: 'horse_vet_name', label: "Veterinary practice", datatype: 'text' },
+  { key: 'horseVetPhone', name: 'horse_vet_phone', label: 'Veterinary practice number', datatype: 'phone' },
+  { key: 'horseInsured', name: 'horse_insured', label: 'Insured for third-party liability', datatype: 'boolean' },
+  { key: 'horseNotes', name: 'horse_notes', label: 'Anything the club should know', datatype: 'textarea', description: 'Allergies, quirks, whether he loads.' },
 ];
 
 export interface SeedForm {
@@ -367,13 +478,52 @@ export const FORMS: SeedForm[] = [
       { field: 'photoConsent', group: 'Safety' },
     ],
   },
+  {
+    key: 'horseRegistration',
+    name: 'Horse registration',
+    description:
+      'Passport, vaccination and ownership details for a horse or pony registered with the club for the year.',
+    fields: [
+      { field: 'horseName', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horseStableName', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horseBreed', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horseColour', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horseSex', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horseYearFoaled', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horseHeight', group: 'The horse', wizardStep: 1, wizardStepTitle: 'The horse' },
+      { field: 'horsePassport', group: 'Passport and health', wizardStep: 2, wizardStepTitle: 'Passport and health' },
+      { field: 'horseMicrochip', group: 'Passport and health', wizardStep: 2, wizardStepTitle: 'Passport and health' },
+      { field: 'horseFluVaccine', group: 'Passport and health', wizardStep: 2, wizardStepTitle: 'Passport and health' },
+      { field: 'horseVetName', group: 'Passport and health', wizardStep: 2, wizardStepTitle: 'Passport and health' },
+      { field: 'horseVetPhone', group: 'Passport and health', wizardStep: 2, wizardStepTitle: 'Passport and health' },
+      { field: 'horseOwner', group: 'Ownership', wizardStep: 3, wizardStepTitle: 'Ownership' },
+      { field: 'horseInsured', group: 'Ownership', wizardStep: 3, wizardStepTitle: 'Ownership' },
+      { field: 'horseNotes', group: 'Ownership', wizardStep: 3, wizardStepTitle: 'Ownership' },
+    ],
+  },
 ];
 
 /* -------------------------------------------------------------- discounts */
 
 export interface SeedDiscount {
+  /**
+   * Unique **within its organisation**, not across the seed.
+   *
+   * The same key may appear for several clubs — `familyMembership` means "this
+   * club's family membership discount" — which is what lets a membership type
+   * shared by every club pick up each club's own version rather than one
+   * club's discount leaking into another's.
+   */
   key: string;
   org: SeedOrg['key'];
+  /**
+   * Which module's discount list this belongs to.
+   *
+   * `discounts.module_type` is what the org-admin pages filter on and what the
+   * pickers query, so a membership discount filed under `events` exists but is
+   * invisible everywhere it would be used.
+   */
+  module: 'events' | 'memberships' | 'calendar' | 'merchandise' | 'registrations';
   name: string;
   description: string;
   code?: string;
@@ -391,9 +541,13 @@ export interface SeedDiscount {
 }
 
 export const DISCOUNTS: SeedDiscount[] = [
+  /* ================================================================ Kildare
+   * Events, memberships and the shop — the only club with merchandise.
+   */
   {
     key: 'earlyBird',
     org: 'kildare',
+    module: 'events',
     name: 'Early bird 10%',
     description: 'Ten per cent off entries made well before the closing date.',
     code: 'EARLYBIRD',
@@ -403,90 +557,80 @@ export const DISCOUNTS: SeedDiscount[] = [
     eligibilityCriteria: { requiresCode: true },
     validFromDays: -30,
     validUntilDays: 30,
+    combinable: true,
     priority: 10,
+    status: 'active',
   },
   {
     key: 'memberFiver',
     org: 'kildare',
+    module: 'events',
     name: 'Club member €5 off',
-    description: 'Five euro off each entry for club members. No code — applied automatically.',
+    description: 'Five euro off every entry, applied automatically for members.',
     discountType: 'fixed',
     discountValue: 5,
     applicationScope: 'item',
     eligibilityCriteria: { requiresCode: false },
     validFromDays: -60,
-    priority: 20,
+    validUntilDays: 90,
+    combinable: true,
+    priority: 8,
+    status: 'active',
   },
   {
     key: 'thirdFree',
     org: 'kildare',
+    module: 'events',
     name: 'Third entry free',
-    description: 'Enter three classes, pay for two.',
+    description: 'Enter three classes and the third is free.',
     discountType: 'percentage',
     discountValue: 100,
     applicationScope: 'quantity-based',
-    quantityRules: { minimumQuantity: 3, applyToQuantity: 1, applyEveryN: 3 },
-    validFromDays: -14,
+    quantityRules: { minimumQuantity: 3, applyEveryN: 3 },
+    validFromDays: -20,
+    validUntilDays: 60,
     combinable: false,
-    priority: 5,
+    priority: 6,
+    status: 'active',
+  },
+  {
+    key: 'seasonPass',
+    org: 'kildare',
+    module: 'events',
+    name: 'Season pass 25%',
+    description: 'A quarter off for members entering the whole league. Limited run.',
+    code: 'SEASON25',
+    discountType: 'percentage',
+    discountValue: 25,
+    applicationScope: 'category',
+    // The one usage-limited discount, so the "uses remaining" path has a subject.
+    usageLimits: { totalUses: 40, usesPerMember: 1, used: 12 },
+    validFromDays: -15,
+    validUntilDays: 45,
+    combinable: false,
+    priority: 12,
+    status: 'active',
   },
   {
     key: 'expiredSpring',
     org: 'kildare',
-    name: 'Spring promotion (expired)',
-    description: 'Deliberately expired, so the expiry path has a subject.',
+    module: 'events',
+    name: 'Spring promotion',
+    description: 'Ran in the spring. Left expired so the lapsed-discount path has a subject.',
     code: 'SPRING24',
     discountType: 'percentage',
-    discountValue: 25,
+    discountValue: 15,
     applicationScope: 'item',
-    eligibilityCriteria: { requiresCode: true },
     validFromDays: -120,
     validUntilDays: -30,
+    combinable: false,
+    priority: 4,
     status: 'expired',
   },
   {
-    key: 'cartTenner',
-    org: 'laois',
-    name: '€10 off baskets over €60',
-    description: 'Applies once to the whole basket, not per item.',
-    code: 'BASKET10',
-    discountType: 'fixed',
-    discountValue: 10,
-    applicationScope: 'cart',
-    eligibilityCriteria: { requiresCode: true, minimumPurchaseAmount: 60 },
-    usageLimits: { totalUsageLimit: 50, perUserLimit: 1, currentUsageCount: 0 },
-    validFromDays: -7,
-    validUntilDays: 60,
-  },
-  {
-    key: 'laoisFamily',
-    org: 'laois',
-    name: 'Family rate 15%',
-    description: 'Fifteen per cent off from the second entry onwards.',
-    discountType: 'percentage',
-    discountValue: 15,
-    applicationScope: 'quantity-based',
-    quantityRules: { minimumQuantity: 2 },
-    validFromDays: -30,
-  },
-  {
-    key: 'wardCapped',
-    org: 'ward',
-    name: 'Winter league 20% (capped)',
-    description: 'Twenty per cent off, capped at €15, limited to 25 uses.',
-    code: 'WINTER20',
-    discountType: 'percentage',
-    discountValue: 20,
-    applicationScope: 'item',
-    eligibilityCriteria: { requiresCode: true, maximumDiscountAmount: 15 },
-    usageLimits: { totalUsageLimit: 25, perUserLimit: 2, currentUsageCount: 4 },
-    validFromDays: -10,
-    validUntilDays: 45,
-  },
-  /* ------------------------------------------------- membership discounts */
-  {
     key: 'familyMembership',
     org: 'kildare',
+    module: 'memberships',
     name: 'Family membership 10%',
     description: 'Ten per cent off a family membership, applied automatically.',
     discountType: 'percentage',
@@ -499,25 +643,25 @@ export const DISCOUNTS: SeedDiscount[] = [
     status: 'active',
   },
   {
-    key: 'earlyRenewal',
-    org: 'laois',
-    name: 'Early renewal €5 off',
-    description: 'Five euro off for renewing before the season ends.',
-    code: 'RENEW5',
+    key: 'juniorMembership',
+    org: 'kildare',
+    module: 'memberships',
+    name: 'Junior member €8 off',
+    description: 'Eight euro off a junior membership taken out before the season starts.',
+    code: 'JUNIOR8',
     discountType: 'fixed',
-    discountValue: 5,
+    discountValue: 8,
     applicationScope: 'item',
-    validFromDays: -30,
-    validUntilDays: 60,
+    validFromDays: -40,
+    validUntilDays: 75,
     combinable: true,
     priority: 3,
     status: 'active',
   },
-
-  /* ------------------------------------------------ merchandise discounts */
   {
     key: 'kitBundle',
     org: 'kildare',
+    module: 'merchandise',
     name: 'Club kit 15%',
     description: 'Fifteen per cent off club clothing during the season.',
     code: 'KIT15',
@@ -533,6 +677,7 @@ export const DISCOUNTS: SeedDiscount[] = [
   {
     key: 'secondItemHalf',
     org: 'kildare',
+    module: 'merchandise',
     name: 'Second item half price',
     description: 'Buy two of the same, the second is half price.',
     discountType: 'percentage',
@@ -545,11 +690,113 @@ export const DISCOUNTS: SeedDiscount[] = [
     priority: 4,
     status: 'active',
   },
+  {
+    key: 'shopBasketFive',
+    org: 'kildare',
+    module: 'merchandise',
+    name: '€5 off shop baskets over €40',
+    description: 'Five euro off the whole basket once it passes forty.',
+    code: 'SHOP5',
+    discountType: 'fixed',
+    discountValue: 5,
+    applicationScope: 'cart',
+    eligibilityCriteria: { minimumOrderValue: 4000 },
+    validFromDays: -25,
+    validUntilDays: 65,
+    combinable: true,
+    priority: 2,
+    status: 'active',
+  },
 
-  /* --------------------------------------------------- booking discounts */
+  /* ================================================================== Laois
+   * Events, memberships and the arena — the only club taking bookings.
+   */
+  {
+    key: 'cartTenner',
+    org: 'laois',
+    module: 'events',
+    name: '€10 off baskets over €60',
+    description: 'Ten euro off the whole basket once it passes sixty.',
+    code: 'BASKET10',
+    discountType: 'fixed',
+    discountValue: 10,
+    applicationScope: 'cart',
+    eligibilityCriteria: { minimumOrderValue: 6000 },
+    usageLimits: { totalUses: 100, usesPerMember: 2, used: 8 },
+    validFromDays: -45,
+    validUntilDays: 60,
+    combinable: false,
+    priority: 9,
+    status: 'active',
+  },
+  {
+    key: 'laoisFamily',
+    org: 'laois',
+    module: 'events',
+    name: 'Family rate 15%',
+    description: 'Fifteen per cent off from the second entry in the same family.',
+    discountType: 'percentage',
+    discountValue: 15,
+    applicationScope: 'quantity-based',
+    quantityRules: { minimumQuantity: 2 },
+    validFromDays: -60,
+    validUntilDays: 120,
+    combinable: true,
+    priority: 7,
+    status: 'active',
+  },
+  {
+    key: 'laoisAutumn',
+    org: 'laois',
+    module: 'events',
+    name: 'Autumn league 12%',
+    description: 'Twelve per cent off the autumn fixtures. Not yet started.',
+    code: 'AUTUMN12',
+    discountType: 'percentage',
+    discountValue: 12,
+    applicationScope: 'item',
+    // Starts next month: the not-yet-valid case, which nothing else covers.
+    validFromDays: 30,
+    validUntilDays: 120,
+    combinable: true,
+    priority: 5,
+    status: 'active',
+  },
+  {
+    key: 'familyMembership',
+    org: 'laois',
+    module: 'memberships',
+    name: 'Family membership €20 off',
+    description: 'Twenty euro off a family membership. Laois prices theirs as a flat amount.',
+    discountType: 'fixed',
+    discountValue: 20,
+    applicationScope: 'item',
+    validFromDays: -80,
+    validUntilDays: 120,
+    combinable: false,
+    priority: 5,
+    status: 'active',
+  },
+  {
+    key: 'earlyRenewal',
+    org: 'laois',
+    module: 'memberships',
+    name: 'Early renewal €5 off',
+    description: 'Five euro off for renewing before the season ends.',
+    code: 'RENEW5',
+    discountType: 'fixed',
+    discountValue: 5,
+    applicationScope: 'item',
+    validFromDays: -30,
+    validUntilDays: 60,
+    combinable: true,
+    priority: 3,
+    status: 'active',
+  },
   {
     key: 'offPeakArena',
     org: 'laois',
+    module: 'calendar',
     name: 'Off-peak 20%',
     description: 'Twenty per cent off weekday arena hire outside the evening rush.',
     code: 'OFFPEAK',
@@ -565,6 +812,7 @@ export const DISCOUNTS: SeedDiscount[] = [
   {
     key: 'lessonBlock',
     org: 'laois',
+    module: 'calendar',
     name: 'Block of five lessons 10%',
     description: 'Book five lessons together and the fifth is discounted.',
     discountType: 'percentage',
@@ -577,11 +825,246 @@ export const DISCOUNTS: SeedDiscount[] = [
     priority: 2,
     status: 'active',
   },
+  {
+    key: 'arenaMemberRate',
+    org: 'laois',
+    module: 'calendar',
+    name: 'Member rate €3 off',
+    description: 'Three euro off every arena booking for members.',
+    discountType: 'fixed',
+    discountValue: 3,
+    applicationScope: 'item',
+    eligibilityCriteria: { requiresCode: false, membersOnly: true },
+    validFromDays: -70,
+    validUntilDays: 150,
+    combinable: true,
+    priority: 4,
+    status: 'active',
+  },
 
+  /* =================================================================== Ward
+   * Events and memberships only — no shop, no bookings. The club that shows
+   * what a discount list looks like without the other two capabilities.
+   */
+  {
+    key: 'wardCapped',
+    org: 'ward',
+    module: 'events',
+    name: 'Winter league 20%',
+    description: 'Twenty per cent off, capped, with a limited number of uses.',
+    code: 'WINTER20',
+    discountType: 'percentage',
+    discountValue: 20,
+    applicationScope: 'item',
+    usageLimits: { totalUses: 25, usesPerMember: 1, maximumDiscount: 1500, used: 4 },
+    validFromDays: -15,
+    validUntilDays: 75,
+    combinable: false,
+    priority: 8,
+    status: 'active',
+  },
+  {
+    key: 'wardVolunteer',
+    org: 'ward',
+    module: 'events',
+    name: 'Volunteer thank-you €7 off',
+    description: 'Seven euro off an entry for anyone who stewarded a fixture.',
+    discountType: 'fixed',
+    discountValue: 7,
+    applicationScope: 'item',
+    eligibilityCriteria: { requiresCode: false, volunteersOnly: true },
+    validFromDays: -50,
+    validUntilDays: 100,
+    combinable: true,
+    priority: 6,
+    status: 'active',
+  },
+  {
+    key: 'wardBulkEntries',
+    org: 'ward',
+    module: 'events',
+    name: 'Fourth entry half price',
+    description: 'Enter four or more and the fourth is half price.',
+    discountType: 'percentage',
+    discountValue: 50,
+    applicationScope: 'quantity-based',
+    quantityRules: { minimumQuantity: 4, applyToQuantity: 1 },
+    validFromDays: -35,
+    validUntilDays: 95,
+    combinable: true,
+    priority: 5,
+    status: 'active',
+  },
+  {
+    key: 'wardSuspended',
+    org: 'ward',
+    module: 'events',
+    name: 'Open day 30%',
+    description: 'Switched off by the club while it reconsiders. Not expired — inactive.',
+    code: 'OPENDAY30',
+    discountType: 'percentage',
+    discountValue: 30,
+    applicationScope: 'item',
+    validFromDays: -10,
+    validUntilDays: 80,
+    combinable: false,
+    priority: 1,
+    // Inactive is about the club's switch, not the calendar — a distinction
+    // nothing else in the fixture makes.
+    status: 'inactive',
+  },
+  {
+    key: 'familyMembership',
+    org: 'ward',
+    module: 'memberships',
+    name: 'Family membership 12%',
+    description: 'Twelve per cent off a family membership.',
+    discountType: 'percentage',
+    discountValue: 12,
+    applicationScope: 'item',
+    validFromDays: -85,
+    validUntilDays: 130,
+    combinable: false,
+    priority: 5,
+    status: 'active',
+  },
+  {
+    key: 'earlyRenewal',
+    org: 'ward',
+    module: 'memberships',
+    name: 'Renew early €6 off',
+    description: 'Six euro off for renewing before the season ends.',
+    code: 'WARDRENEW',
+    discountType: 'fixed',
+    discountValue: 6,
+    applicationScope: 'item',
+    validFromDays: -30,
+    validUntilDays: 70,
+    combinable: true,
+    priority: 3,
+    status: 'active',
+  },
+
+  /* ================================================================== Meath
+   * One per module, including the only `registrations` discount in the seed —
+   * the org-admin discount pages filter on `module_type`, so a module with no
+   * discount at all leaves its picker empty and untested.
+   */
+  {
+    key: 'mhpcCampEarly',
+    org: 'meath',
+    module: 'events',
+    name: 'Camp early bird 15%',
+    description: 'Fifteen per cent off camp places booked before the rush.',
+    code: 'CAMP15',
+    discountType: 'percentage',
+    discountValue: 15,
+    applicationScope: 'item',
+    eligibilityCriteria: { requiresCode: true },
+    validFromDays: -20,
+    validUntilDays: 20,
+    combinable: false,
+    priority: 20,
+    status: 'active',
+  },
+  {
+    key: 'mhpcFamilyEntry',
+    org: 'meath',
+    module: 'events',
+    name: 'Third entry half price',
+    description: 'Enter three or more and the third onwards is half price.',
+    discountType: 'percentage',
+    discountValue: 50,
+    applicationScope: 'quantity-based',
+    quantityRules: { minimumQuantity: 3, applyEveryN: 3, applyToQuantity: 1 },
+    eligibilityCriteria: { requiresCode: false },
+    validFromDays: -30,
+    validUntilDays: 60,
+    combinable: true,
+    priority: 5,
+    status: 'active',
+  },
+  {
+    key: 'mhpcFamilyMembership',
+    org: 'meath',
+    module: 'memberships',
+    name: 'Family membership €20 off',
+    description: 'Twenty euro off a family membership.',
+    discountType: 'fixed',
+    discountValue: 20,
+    applicationScope: 'item',
+    eligibilityCriteria: { requiresCode: false },
+    validFromDays: -60,
+    validUntilDays: 120,
+    combinable: true,
+    priority: 6,
+    status: 'active',
+  },
+  {
+    key: 'mhpcArenaOffPeak',
+    org: 'meath',
+    module: 'calendar',
+    name: 'Off-peak arena 20%',
+    description: 'Twenty per cent off weekday arena hire.',
+    code: 'OFFPEAK',
+    discountType: 'percentage',
+    discountValue: 20,
+    applicationScope: 'item',
+    eligibilityCriteria: { requiresCode: true },
+    validFromDays: -15,
+    validUntilDays: 90,
+    combinable: false,
+    priority: 12,
+    status: 'active',
+  },
+  {
+    key: 'mhpcShopBundle',
+    org: 'meath',
+    module: 'merchandise',
+    name: 'Two items 10% off',
+    description: 'Ten per cent off when two or more items are bought together.',
+    discountType: 'percentage',
+    discountValue: 10,
+    applicationScope: 'quantity-based',
+    quantityRules: { minimumQuantity: 2 },
+    eligibilityCriteria: { requiresCode: false },
+    validFromDays: -30,
+    validUntilDays: 120,
+    combinable: true,
+    priority: 4,
+    status: 'active',
+  },
+  {
+    key: 'mhpcHorseRenewal',
+    org: 'meath',
+    module: 'registrations',
+    name: 'Renewal €10 off',
+    description: 'Ten euro off renewing a horse registration for another year.',
+    discountType: 'fixed',
+    discountValue: 10,
+    applicationScope: 'item',
+    eligibilityCriteria: { requiresCode: false },
+    validFromDays: -90,
+    validUntilDays: 180,
+    combinable: true,
+    priority: 7,
+    status: 'active',
+  },
 ];
+
 
 /* ----------------------------------------------------------------- events */
 
+/**
+ * Every fee in this file is in **major units** — `fee: 25` is €25 — and is
+ * inserted raw. Two rules follow from that, both learned the hard way:
+ *
+ *  - Writing minor units here multiplies the price by a hundred. A camp went in
+ *    at `22000` and appeared in the shop at €22,000.
+ *  - **Nothing costs more than €100.** These are demo fixtures; a €500 table or
+ *    a €395 camp week is a distraction on every screen it appears on, and makes
+ *    a test payment awkward to reason about.
+ */
 export interface SeedActivity {
   name: string;
   description: string;
@@ -617,6 +1100,22 @@ export interface SeedEvent {
   addConfirmationMessage?: boolean;
   confirmationMessage?: string;
   discounts?: string[];
+  /**
+   * Issue an electronic ticket per entry.
+   *
+   * Requires the `event-ticketing` capability, so only the club that has
+   * everything can use it — which is the point: nothing else in the seed
+   * produces a ticket, and the ticket screens had no subject.
+   */
+  ticketing?: {
+    headerText: string;
+    instructions: string;
+    footerText?: string;
+    /** Hours the ticket stays valid from the event start. */
+    validityPeriod?: number;
+    includeLogo?: boolean;
+    backgroundColour?: string;
+  };
   activities: SeedActivity[];
 }
 
@@ -629,6 +1128,10 @@ export const VENUES: Record<SeedOrg['key'], Array<{ name: string; address: strin
   ],
   laois: [{ name: 'Ballyroan Showgrounds', address: 'Ballyroan, Co. Laois' }],
   ward: [{ name: 'Ward Union Grounds', address: 'Ashbourne, Co. Meath' }],
+  meath: [
+    { name: 'Kilmessan Equestrian Centre', address: 'Kilmessan, Co. Meath' },
+    { name: 'Tara Hill Cross Country', address: 'Hill of Tara, Navan, Co. Meath' },
+  ],
 };
 
 /**
@@ -661,7 +1164,7 @@ export const EVENTS: SeedEvent[] = [
     entriesLimit: 120,
     addConfirmationMessage: true,
     confirmationMessage: 'Numbers can be collected from the secretary’s office from 8am.',
-    discounts: ['earlyBird', 'memberFiver'],
+    discounts: ['earlyBird', 'memberFiver', 'seasonPass'],
     activities: [
       {
         name: 'Grade 1 — 80cm',
@@ -723,7 +1226,7 @@ export const EVENTS: SeedEvent[] = [
       {
         name: 'Full week, residential',
         description: 'Five days including stabling and meals.',
-        fee: 395,
+        fee: 95,
         form: 'campBooking',
         limitApplicants: true,
         applicantsLimit: 24,
@@ -733,7 +1236,7 @@ export const EVENTS: SeedEvent[] = [
       {
         name: 'Full week, non-residential',
         description: 'Five days, pony travels home each evening.',
-        fee: 275,
+        fee: 75,
         form: 'campBooking',
         limitApplicants: true,
         applicantsLimit: 30,
@@ -858,7 +1361,7 @@ export const EVENTS: SeedEvent[] = [
     status: 'published',
     limitEntries: true,
     entriesLimit: 80,
-    discounts: ['cartTenner', 'laoisFamily'],
+    discounts: ['cartTenner', 'laoisFamily', 'laoisAutumn'],
     activities: [
       {
         name: '70cm',
@@ -969,7 +1472,7 @@ export const EVENTS: SeedEvent[] = [
     openDays: null,
     closeDays: null,
     status: 'published',
-    discounts: ['wardCapped'],
+    discounts: ['wardCapped', 'wardVolunteer', 'wardSuspended'],
     activities: [
       {
         name: 'Family ticket',
@@ -978,7 +1481,7 @@ export const EVENTS: SeedEvent[] = [
         form: 'spectator',
         allowSpecifyQuantity: true,
         payment: 'offline',
-        discounts: ['wardCapped'],
+        discounts: ['wardCapped', 'wardBulkEntries'],
       },
       {
         name: 'Have-a-go lesson',
@@ -1053,11 +1556,148 @@ export const EVENTS: SeedEvent[] = [
       {
         name: 'Table of ten',
         description: 'A full table.',
-        fee: 500,
+        fee: 90,
         form: 'spectator',
         limitApplicants: true,
         applicantsLimit: 20,
         payment: 'offline',
+      },
+    ],
+  },
+
+  /* ------------------------------------------------------------ Meath
+   * The club with every capability. These events exist to give ticketing and
+   * entry restrictions something to act on, which no other club can do.
+   */
+  {
+    key: 'mhpc-summer-camp',
+    org: 'meath',
+    name: 'Summer Pony Camp',
+    description:
+      'Four days of flatwork, jumping and stable management at Kilmessan. Places go quickly.',
+    eventType: 'Camp',
+    venue: 'Kilmessan Equestrian Centre',
+    startDays: 40,
+    endDays: 43,
+    openDays: -10,
+    closeDays: 25,
+    status: 'published',
+    // Capped at the event level, so the whole camp fills even though each
+    // activity has room — the case the account app words as "event full".
+    limitEntries: true,
+    entriesLimit: 40,
+    addConfirmationMessage: true,
+    confirmationMessage:
+      'Camp confirmed. Bring a hat, boots and a filled water bottle; the yard opens at 8:30.',
+    discounts: ['mhpcCampEarly'],
+    activities: [
+      {
+        name: 'Camp — full week, own pony',
+        description: 'Four days, bring your own pony.',
+        fee: 85,
+        form: 'fullEntry',
+        limitApplicants: true,
+        applicantsLimit: 24,
+        payment: 'both',
+        useTermsAndConditions: true,
+        discounts: ['mhpcCampEarly'],
+      },
+      {
+        name: 'Camp — full week, club pony',
+        description: 'Four days on a club pony, for members without one.',
+        fee: 98,
+        form: 'fullEntry',
+        limitApplicants: true,
+        applicantsLimit: 8,
+        payment: 'both',
+      },
+      {
+        name: 'Day ticket',
+        description: 'A single day, for anyone who cannot make the full week.',
+        fee: 65,
+        form: 'shortEntry',
+        allowSpecifyQuantity: true,
+        payment: 'both',
+      },
+    ],
+  },
+  {
+    key: 'mhpc-tara-hunter-trial',
+    org: 'meath',
+    name: 'Tara Hunter Trial',
+    description:
+      'Cross country over the Tara banks. Electronic tickets are issued for this one — bring your phone to the gate.',
+    eventType: 'Cross Country',
+    venue: 'Tara Hill Cross Country',
+    startDays: 21,
+    endDays: 21,
+    openDays: -20,
+    closeDays: 14,
+    status: 'published',
+    discounts: ['mhpcFamilyEntry'],
+    ticketing: {
+      headerText: 'Meath Hunt Pony Club — Tara Hunter Trial',
+      instructions:
+        'Show this ticket at the gate. One ticket admits the named rider and one horse; car passes are separate.',
+      footerText: 'Hard hats to current standard. No dogs on the cross-country course.',
+      validityPeriod: 24,
+      includeLogo: true,
+      backgroundColour: '#123c2b',
+    },
+    activities: [
+      {
+        name: 'Open class',
+        description: 'Open to all grades.',
+        fee: 45,
+        form: 'fullEntry',
+        payment: 'both',
+        handlingFeeIncluded: true,
+        discounts: ['mhpcFamilyEntry'],
+      },
+      {
+        name: 'Junior class',
+        description: 'Under 14s, lower fences.',
+        fee: 35,
+        form: 'fullEntry',
+        payment: 'both',
+      },
+      {
+        name: 'Spectator car pass',
+        description: 'One car, any number of passengers.',
+        fee: 15,
+        form: 'spectator',
+        allowSpecifyQuantity: true,
+        payment: 'both',
+      },
+    ],
+  },
+  {
+    key: 'mhpc-winter-dressage',
+    org: 'meath',
+    name: 'Winter Dressage Series',
+    description: 'Three indoor dressage evenings through the winter. Entries not yet open.',
+    eventType: 'Dressage',
+    venue: 'Kilmessan Equestrian Centre',
+    startDays: 90,
+    endDays: 90,
+    // Not yet open, so Meath has one of every window state too.
+    openDays: 30,
+    closeDays: 85,
+    status: 'published',
+    activities: [
+      {
+        name: 'Preliminary',
+        description: 'Prelim tests.',
+        fee: 30,
+        form: 'shortEntry',
+        payment: 'both',
+      },
+      {
+        name: 'Novice',
+        description: 'Novice tests.',
+        fee: 30,
+        form: 'shortEntry',
+        payment: 'both',
       },
     ],
   },
@@ -1112,6 +1752,7 @@ export const MEMBERSHIP_TYPES: SeedMembershipType[] = [
     status: 'open',
     automaticallyApprove: true,
     memberLabels: ['Junior'],
+    discounts: ['juniorMembership'],
   },
   {
     key: 'senior',
@@ -1132,7 +1773,7 @@ export const MEMBERSHIP_TYPES: SeedMembershipType[] = [
     description: 'One membership covering a household: up to two adults and three children.',
     form: 'membershipFamily',
     category: 'group',
-    fee: 160,
+    fee: 96,
     status: 'open',
     automaticallyApprove: false,
     memberLabels: ['Family'],
@@ -1262,6 +1903,23 @@ export const MEMBERS: SeedMember[] = [
    */
   { email: 'lorcan.hayes@example.test', org: 'ward', type: 'family', status: 'active', paymentStatus: 'pending', payment: 'pay-offline', season: 'expiring', renewedDaysAgo: 350, household: 'hayes', firstName: 'Maeve', lastName: 'Hayes' },
   { email: 'lorcan.hayes@example.test', org: 'ward', type: 'family', status: 'active', paymentStatus: 'pending', payment: 'pay-offline', season: 'expiring', renewedDaysAgo: 350, household: 'hayes', firstName: 'Cathal', lastName: 'Hayes' },
+
+  /* ------------------------------------------------------------- Meath */
+  { email: 'brid.mcnamara@example.test', org: 'meath', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 70 },
+  { email: 'colm.fitzgerald@example.test', org: 'meath', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 64 },
+  { email: 'aoibhinn.regan@example.test', org: 'meath', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 52 },
+  { email: 'seamus.donnelly@example.test', org: 'meath', type: 'associate', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 30 },
+  // Due for renewal, so Meath's home screen shows a Renew button too.
+  { email: 'maeve.kiernan@example.test', org: 'meath', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'expiring', renewedDaysAgo: 340 },
+  // Niamh belongs to all four clubs; this is the one she has let lapse.
+  { email: 'niamh.walsh@example.test', org: 'meath', type: 'junior', status: 'elapsed', paymentStatus: 'paid', payment: 'pay-offline', season: 'previous', renewedDaysAgo: 400 },
+  // A family membership held by one parent for three children, none of whom
+  // has a login — the case the account app has to name the member on the card.
+  { email: 'darragh.otoole@example.test', org: 'meath', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 45, household: 'otoole-meath', firstName: 'Darragh', lastName: "O'Toole" },
+  { email: 'darragh.otoole@example.test', org: 'meath', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 45, household: 'otoole-meath', firstName: 'Éabha', lastName: "O'Toole" },
+  { email: 'darragh.otoole@example.test', org: 'meath', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 45, household: 'otoole-meath', firstName: 'Rónán', lastName: "O'Toole" },
+  // Waiting on the club to approve, so the pending state has a subject here too.
+  { email: 'brid.mcnamara@example.test', org: 'meath', type: 'associate', status: 'pending', paymentStatus: 'pending', payment: 'pay-offline', season: 'current', renewedDaysAgo: 4, firstName: 'Aoife', lastName: 'McNamara' },
 ];
 
 /* --------------------------------------------------------- merchandise */
@@ -1352,7 +2010,7 @@ export const MERCHANDISE: SeedMerchandise[] = [
     trackStock: true,
     lowStockAlert: 5,
     outOfStock: 'show_unavailable',
-    discounts: ['kitBundle', 'secondItemHalf'],
+    discounts: ['kitBundle', 'secondItemHalf', 'shopBasketFive'],
     options: [
       {
         name: 'Size',
@@ -1387,7 +2045,7 @@ export const MERCHANDISE: SeedMerchandise[] = [
     lowStockAlert: 3,
     outOfStock: 'show_unavailable',
     handlingFeeIncluded: true,
-    discounts: ['kitBundle'],
+    discounts: ['kitBundle', 'shopBasketFive'],
     options: [
       {
         name: 'Size',
@@ -1554,6 +2212,362 @@ export const MERCHANDISE: SeedMerchandise[] = [
       },
     ],
   },
+
+  /* ------------------------------------------------------------- Meath */
+  {
+    key: 'mhpc-softshell',
+    org: 'meath',
+    name: 'Club softshell jacket',
+    description: 'Bottle green softshell with the Meath crest. Warm enough for a winter rally.',
+    imageColour: '#123c2b',
+    imageCount: 2,
+    status: 'active',
+    deliveryType: 'fixed',
+    deliveryFee: 6.5,
+    trackStock: true,
+    lowStockAlert: 4,
+    outOfStock: 'show_unavailable',
+    discounts: ['mhpcShopBundle'],
+    options: [
+      {
+        name: 'Size',
+        values: [
+          { name: 'Age 9–11', price: 42, sku: 'MH-SS-0911', stock: 8 },
+          { name: 'Age 12–14', price: 42, sku: 'MH-SS-1214', stock: 6 },
+          { name: 'Small', price: 46, sku: 'MH-SS-S', stock: 5 },
+          { name: 'Medium', price: 46, sku: 'MH-SS-M', stock: 0 },
+          { name: 'Large', price: 46, sku: 'MH-SS-L', stock: 7 },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'mhpc-show-cap',
+    org: 'meath',
+    name: 'Show cap',
+    description: 'Club colours, for the ring rather than the yard.',
+    imageColour: '#5c1a2b',
+    status: 'active',
+    deliveryType: 'free',
+    trackStock: false,
+    discounts: ['mhpcShopBundle'],
+    options: [
+      {
+        name: 'Size',
+        values: [
+          { name: 'One size', price: 18, sku: 'MH-CAP-OS', stock: null },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'mhpc-numnah',
+    org: 'meath',
+    name: 'Embroidered numnah',
+    description: 'Dressage-cut saddle pad with the club crest. Made to order, so allow two weeks.',
+    imageColour: '#3b2d5c',
+    status: 'active',
+    deliveryType: 'fixed',
+    deliveryFee: 4.0,
+    trackStock: true,
+    lowStockAlert: 2,
+    outOfStock: 'hide',
+    // Made to order, so the shop asks who it is for.
+    form: 'shortEntry',
+    minOrder: 1,
+    maxOrder: 4,
+    options: [
+      {
+        name: 'Colour',
+        values: [
+          { name: 'Bottle green', price: 34, sku: 'MH-NUM-GRN', stock: 6 },
+          { name: 'Burgundy', price: 34, sku: 'MH-NUM-BUR', stock: 3 },
+          { name: 'Navy', price: 34, sku: 'MH-NUM-NVY', stock: 0 },
+        ],
+      },
+    ],
+  },
+];
+
+/* -------------------------------------------------------- registrations */
+
+/**
+ * Registering a **horse**, annually.
+ *
+ * The registrations module is the one part of the platform that is not about
+ * people. A registration names an *entity* — here a horse — which belongs to a
+ * member, carries its own number, and has to be renewed. `entity_name` on the
+ * type is what every screen calls the thing being registered, so getting it
+ * right is what makes the module read as "register a horse" rather than as a
+ * second, oddly-worded membership.
+ *
+ * Annual rather than rolling: `is_rolling_registration: false` with a
+ * `valid_until` date means every horse's registration lapses on the same day,
+ * the way a season does, rather than twelve months from whenever each owner
+ * happened to apply.
+ */
+export interface SeedRegistrationType {
+  key: string;
+  org: SeedOrg['key'];
+  name: string;
+  description: string;
+  /** What is being registered. Singular, and used verbatim in the UI. */
+  entityName: string;
+  /** A `FORMS` key. */
+  form: string;
+  /** **Major units**, like every other fee in this file: 35 is €35. */
+  fee: number;
+  status: 'open' | 'closed';
+  /**
+   * False for an annual registration that expires on a fixed date; true for one
+   * that runs `numberOfMonths` from whenever it was taken out.
+   */
+  rolling?: boolean;
+  numberOfMonths?: number;
+  /** Days from now the current registration period ends. Annual types only. */
+  validUntilDays?: number;
+  automaticallyApprove?: boolean;
+  labels?: string[];
+  handlingFeeIncluded?: boolean;
+  useTermsAndConditions?: boolean;
+  termsAndConditions?: string;
+  /** `DISCOUNTS` keys applied to this registration type. */
+  discounts?: string[];
+}
+
+export const REGISTRATION_TYPES: SeedRegistrationType[] = [
+  {
+    key: 'mhpc-horse-annual',
+    org: 'meath',
+    name: 'Horse registration 2026',
+    description:
+      'Every horse or pony competing under Meath Hunt colours must be registered for the season. Renewable each year.',
+    entityName: 'Horse',
+    form: 'horseRegistration',
+    fee: 35,
+    status: 'open',
+    rolling: false,
+    // The season end, so every horse lapses on the same day.
+    validUntilDays: 200,
+    automaticallyApprove: false,
+    labels: ['Competing', 'Non-competing', 'Vetted'],
+    handlingFeeIncluded: false,
+    useTermsAndConditions: true,
+    termsAndConditions:
+      'Registration is for one season and is not transferable between horses. The owner confirms the horse holds a current equine passport and that influenza vaccinations are up to date.',
+    discounts: ['mhpcHorseRenewal'],
+  },
+  {
+    key: 'mhpc-horse-day',
+    org: 'meath',
+    name: 'Day registration',
+    description:
+      'A single-event registration for a horse visiting from another club. Runs three months from the day it is taken out.',
+    entityName: 'Horse',
+    form: 'horseRegistration',
+    fee: 15,
+    status: 'open',
+    // Rolling, so the two mechanisms sit side by side in one club.
+    rolling: true,
+    numberOfMonths: 3,
+    automaticallyApprove: true,
+    labels: ['Visitor'],
+    handlingFeeIncluded: true,
+  },
+];
+
+/**
+ * The horses already on the register.
+ *
+ * `owner` is the account user the registration sits under; `entityName` is the
+ * horse. The two are deliberately different people-and-not-people, which is the
+ * whole shape of the module.
+ */
+export interface SeedRegistration {
+  /** A `REGISTRATION_TYPES` key. */
+  type: string;
+  /** The account user who registered it. */
+  owner: string;
+  /** The horse's name — `registrations.entity_name`. */
+  entityName: string;
+  /** Registered owner as written on the passport, which may not be the member. */
+  ownerName: string;
+  status: 'pending' | 'active' | 'rejected' | 'expired';
+  paymentStatus: 'paid' | 'pending' | 'refunded';
+  payment?: 'pay-offline' | 'stripe';
+  /** Days ago it was taken out or last renewed. */
+  renewedDaysAgo: number;
+  /** Days from now it lapses. Negative for one that already has. */
+  validUntilDays: number;
+  labels?: string[];
+  processed?: boolean;
+  /** Answers for the registration form, keyed by `FIELDS` key. */
+  answers: Record<string, string | number | boolean>;
+}
+
+export const REGISTRATIONS: SeedRegistration[] = [
+  {
+    type: 'mhpc-horse-annual',
+    owner: 'brid.mcnamara@example.test',
+    entityName: 'Ballinteer Boy',
+    ownerName: 'Bríd McNamara',
+    status: 'active',
+    paymentStatus: 'paid',
+    payment: 'stripe',
+    renewedDaysAgo: 60,
+    validUntilDays: 200,
+    labels: ['Competing', 'Vetted'],
+    processed: true,
+    answers: {
+      horseName: 'Ballinteer Boy',
+      horseStableName: 'Bertie',
+      horseBreed: 'Irish Sports Horse',
+      horseColour: 'Bay',
+      horseSex: 'Gelding',
+      horseYearFoaled: 2015,
+      horseHeight: 16.1,
+      horsePassport: 'IRL372615004821',
+      horseMicrochip: '985141000123456',
+      horseOwner: 'Bríd McNamara',
+      horseFluVaccine: '2026-03-14',
+      horseVetName: 'Navan Equine Clinic',
+      horseVetPhone: '+353 46 902 5555',
+      horseInsured: true,
+      horseNotes: 'Loads well. Sharp in a strong wind.',
+    },
+  },
+  {
+    type: 'mhpc-horse-annual',
+    owner: 'colm.fitzgerald@example.test',
+    entityName: 'Tara Mist',
+    ownerName: 'Fitzgerald Family',
+    status: 'active',
+    paymentStatus: 'paid',
+    payment: 'pay-offline',
+    renewedDaysAgo: 45,
+    validUntilDays: 200,
+    labels: ['Competing'],
+    processed: true,
+    answers: {
+      horseName: 'Tara Mist',
+      horseBreed: 'Connemara',
+      horseColour: 'Grey',
+      horseSex: 'Mare',
+      horseYearFoaled: 2017,
+      horseHeight: 14.2,
+      horsePassport: 'IRL372615009134',
+      horseMicrochip: '985141000654321',
+      horseOwner: 'Fitzgerald Family',
+      horseFluVaccine: '2026-05-02',
+      horseVetName: 'Boyne Valley Veterinary',
+      horseInsured: true,
+    },
+  },
+  {
+    type: 'mhpc-horse-annual',
+    owner: 'aoibhinn.regan@example.test',
+    entityName: 'Little Duke',
+    ownerName: 'Aoibhínn Regan',
+    status: 'active',
+    paymentStatus: 'paid',
+    payment: 'stripe',
+    renewedDaysAgo: 30,
+    validUntilDays: 200,
+    labels: ['Non-competing'],
+    processed: true,
+    answers: {
+      horseName: 'Little Duke',
+      horseStableName: 'Duke',
+      horseBreed: 'Welsh Section B',
+      horseColour: 'Chestnut',
+      horseSex: 'Gelding',
+      horseYearFoaled: 2019,
+      horseHeight: 12.2,
+      horsePassport: 'IRL372615011277',
+      horseOwner: 'Aoibhínn Regan',
+      horseFluVaccine: '2026-04-21',
+      horseInsured: false,
+      horseNotes: 'First season. Still green in company.',
+    },
+  },
+  {
+    // Waiting on the club, so the org-admin approval queue is not empty.
+    type: 'mhpc-horse-annual',
+    owner: 'seamus.donnelly@example.test',
+    entityName: 'Kells Rebel',
+    ownerName: 'Séamus Donnelly',
+    status: 'pending',
+    paymentStatus: 'pending',
+    payment: 'pay-offline',
+    renewedDaysAgo: 3,
+    validUntilDays: 200,
+    processed: false,
+    answers: {
+      horseName: 'Kells Rebel',
+      horseBreed: 'Irish Draught',
+      horseColour: 'Black',
+      horseSex: 'Stallion',
+      horseYearFoaled: 2014,
+      horseHeight: 16.3,
+      horsePassport: 'IRL372615002093',
+      horseOwner: 'Séamus Donnelly',
+      horseFluVaccine: '2026-02-08',
+      horseInsured: true,
+    },
+  },
+  {
+    // Lapsed last season — what the renewal prompt is for, and the only way to
+    // see an expired registration without waiting a year.
+    type: 'mhpc-horse-annual',
+    owner: 'maeve.kiernan@example.test',
+    entityName: 'Slane Sunrise',
+    ownerName: 'Maeve Kiernan',
+    status: 'expired',
+    paymentStatus: 'paid',
+    payment: 'stripe',
+    renewedDaysAgo: 420,
+    validUntilDays: -55,
+    labels: ['Competing'],
+    processed: true,
+    answers: {
+      horseName: 'Slane Sunrise',
+      horseBreed: 'Thoroughbred',
+      horseColour: 'Chestnut',
+      horseSex: 'Mare',
+      horseYearFoaled: 2013,
+      horseHeight: 16.0,
+      horsePassport: 'IRL372615007766',
+      horseOwner: 'Maeve Kiernan',
+      horseFluVaccine: '2025-03-30',
+      horseInsured: false,
+    },
+  },
+  {
+    // The rolling type, so both mechanisms have a live example.
+    type: 'mhpc-horse-day',
+    owner: 'niamh.walsh@example.test',
+    entityName: 'Curragh Lad',
+    ownerName: 'Niamh Walsh',
+    status: 'active',
+    paymentStatus: 'paid',
+    payment: 'stripe',
+    renewedDaysAgo: 12,
+    validUntilDays: 78,
+    labels: ['Visitor'],
+    processed: true,
+    answers: {
+      horseName: 'Curragh Lad',
+      horseBreed: 'Cob',
+      horseColour: 'Piebald',
+      horseSex: 'Gelding',
+      horseYearFoaled: 2016,
+      horseHeight: 15.0,
+      horsePassport: 'IRL372615013900',
+      horseOwner: 'Niamh Walsh',
+      horseFluVaccine: '2026-06-11',
+      horseInsured: true,
+    },
+  },
 ];
 
 /* ---------------------------------------------------- calendar bookings */
@@ -1643,7 +2657,7 @@ export const CALENDARS: SeedCalendar[] = [
     refundAutomatically: true,
     sendReminders: true,
     reminderHoursBefore: 24,
-    discounts: ['offPeakArena'],
+    discounts: ['offPeakArena', 'arenaMemberRate'],
     icon: 'equestrian',
     slots: [
       {
@@ -1783,6 +2797,90 @@ export const CALENDARS: SeedCalendar[] = [
         fromDays: -60,
         untilDays: null,
         durations: [[240, 60, 'Evening hire']],
+      },
+    ],
+  },
+
+  /* ------------------------------------------------------------- Meath
+   * Two calendars, deliberately simpler than Laois's. Laois exists to cover
+   * every branch of the booking rules; these exist so the club that has every
+   * capability has something bookable at all.
+   */
+  {
+    key: 'mhpc-indoor-arena',
+    org: 'meath',
+    name: 'Indoor arena',
+    description: 'Floodlit 40x20 indoor school. Exclusive hire.',
+    colour: '#123c2b',
+    status: 'open',
+    minDaysInAdvance: 0,
+    maxDaysInAdvance: 45,
+    allowCancellations: true,
+    cancelDaysInAdvance: 1,
+    refundAutomatically: true,
+    handlingFeeIncluded: true,
+    sendReminders: true,
+    reminderHoursBefore: 24,
+    discounts: ['mhpcArenaOffPeak'],
+    icon: 'equestrian',
+    slots: [
+      {
+        // Weekday evenings, the off-peak the discount is for.
+        days: [1, 2, 3, 4, 5],
+        startTime: '17:00',
+        places: 1,
+        fromDays: -30,
+        untilDays: null,
+        durations: [
+          [30, 12, 'Half hour'],
+          [60, 20, 'Hour'],
+        ],
+      },
+      {
+        days: [0, 6],
+        startTime: '09:00',
+        places: 1,
+        fromDays: -30,
+        untilDays: null,
+        durations: [[60, 25, 'Weekend hour']],
+      },
+    ],
+    blocked: [
+      {
+        type: 'time_segment',
+        days: [1, 2, 3, 4, 5],
+        startTime: '19:00',
+        endTime: '19:30',
+        reason: 'Arena harrowing',
+      },
+    ],
+  },
+  {
+    key: 'mhpc-group-lessons',
+    org: 'meath',
+    name: 'Group lessons',
+    description: 'Shared flatwork lessons with the club instructor. Four to a group.',
+    colour: '#5c1a2b',
+    status: 'open',
+    minDaysInAdvance: 1,
+    maxDaysInAdvance: 30,
+    allowCancellations: true,
+    cancelDaysInAdvance: 2,
+    refundAutomatically: false,
+    useTermsAndConditions: true,
+    sendReminders: true,
+    reminderHoursBefore: 48,
+    icon: 'lesson',
+    slots: [
+      {
+        days: [6],
+        startTime: '10:00',
+        // Shared places, and it will not run for fewer than two.
+        places: 4,
+        minPlaces: 2,
+        fromDays: -14,
+        untilDays: null,
+        durations: [[60, 15, 'Lesson']],
       },
     ],
   },

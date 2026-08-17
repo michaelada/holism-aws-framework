@@ -143,6 +143,11 @@ export interface AccountEntryDetail extends AccountEntry {
   lastName: string;
   email: string;
   formSubmissionId: string | null;
+  /**
+   * What the member answered on the entry form, labelled and in the club's own
+   * field order. Empty when the activity asked nothing.
+   */
+  formSummary: Array<{ label: string; value: string }>;
   eventDescription: string | null;
   activityDescription: string | null;
   confirmationMessage: string | null;
@@ -168,6 +173,12 @@ export interface AccountBooking {
   cancellationNoticeDays: number;
   /** Whether the club's policy means a refund should be expected. */
   refundExpected: boolean;
+  /**
+   * The calendar's own icon key and colour, so a booking is marked with the
+   * same symbol the member picked it from rather than one generic glyph.
+   */
+  displayIcon: string | null;
+  displayColour: string | null;
   status: ActivityStatus;
 }
 
@@ -183,6 +194,11 @@ export interface AccountMembershipRecord {
   dateLastRenewed: string;
   paymentStatus: string | null;
   daysRemaining: number | null;
+  /**
+   * What the member answered on the application form, labelled and in the
+   * club's own field order. Empty when the club asked nothing.
+   */
+  formSummary: Array<{ label: string; value: string }>;
   /** In the renewal window *and* something exists to renew into. */
   canRenew: boolean;
   /** Due, but the club has published nothing to renew into (C4). */
@@ -211,7 +227,11 @@ export type UnavailableReason =
   | 'already-a-member'
   | 'not-on-sale'
   | 'out-of-stock'
-  | 'not-open-for-bookings';
+  | 'not-open-for-bookings'
+  /** The last places are in other members' baskets, and may yet come back. */
+  | 'held-by-others'
+  /** Already in the member's own basket. */
+  | 'in-your-basket';
 
 export interface CatalogueActivity {
   id: string;
@@ -401,9 +421,39 @@ export interface AccountDashboard {
 }
 
 /** One line of a payment — what it bought, and whether that arrived. */
+/**
+ * What a basket line is for.
+ *
+ * These are the exact strings `cart_items.item_type` allows — the column has a
+ * check constraint, so a value that merely looks right (`event-entry` for
+ * `event_entry`) is refused by Postgres at insert time. Typed here rather than
+ * left as `string` because that is what let the hyphenated spelling reach the
+ * database at all.
+ */
+export type CartItemType =
+  | 'event_entry'
+  | 'membership'
+  | 'registration'
+  | 'booking'
+  | 'merchandise';
+
+/** The body of `POST /api/account/:orgCode/cart/items`. */
+export interface AddCartItemRequest {
+  itemType: CartItemType;
+  contextRef: Record<string, unknown>;
+  description: string;
+  unitFee: number;
+  handlingFeeIncluded: boolean;
+  supportedPaymentMethodIds: string[];
+  quantity?: number;
+  formSubmissionId?: string;
+  discountId?: string;
+  discountAmount?: number;
+}
+
 export interface AccountPaymentLine {
   id: string;
-  itemType: string;
+  itemType: CartItemType;
   description: string;
   /** Minor units. */
   fee: number;
@@ -503,8 +553,16 @@ export interface AvailableSlot {
   placesBooked: number;
   placesRemaining: number;
   available: boolean;
-  /** Why not: full, taken by a longer booking, or held mid-checkout. */
-  unavailableReason: 'full' | 'in-use' | 'held' | null;
+  /**
+   * Why not: full, taken by a longer booking, held by another member's basket,
+   * or already in the member's own.
+   */
+  unavailableReason: 'full' | 'in-use' | 'held' | 'in-your-basket' | null;
+  /**
+   * When the member's own hold on this slot lapses; ISO, null unless it is
+   * theirs. Never carries somebody else's expiry.
+   */
+  heldUntil: string | null;
 }
 
 /** `GET …/calendars/:id/availability?from=&to=` — screens D12 and D13. */
@@ -515,7 +573,7 @@ export interface AvailabilityResponse {
 
 export interface CartItemView {
   id: string;
-  itemType: string;
+  itemType: CartItemType;
   contextRef: Record<string, unknown>;
   description: string;
   formSubmissionId: string | null;
@@ -528,7 +586,25 @@ export interface CartItemView {
   paymentMethodDisplayName: string;
   isCard: boolean;
   handlingFeeIncluded: boolean;
-  availablePaymentMethodIds?: string[];
+  /** A booking's calendar mark; null on every other kind. */
+  icon?: string | null;
+  colour?: string | null;
+  /** What the member answered on this item's form, in the club's own order. */
+  formSummary?: Array<{ label: string; value: string }>;
+  /** Methods this item may be switched to, named, so the cart can offer them. */
+  availablePaymentMethods?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+    isCard: boolean;
+  }>;
+  /**
+   * When this line's soft hold lapses; ISO, and null for lines that hold
+   * nothing — a membership or a jumper is not contended.
+   */
+  expiresAt?: string | null;
+  /** Whether that hold has already gone. Checkout refuses while any has. */
+  expired?: boolean;
 }
 
 export interface HandlingFeeBreakdown {
@@ -566,12 +642,22 @@ export interface CheckoutResult {
   /** Null when there is nothing to pay by card. */
   clientSecret: string | null;
   provider: string | null;
+  /**
+   * The provider's public key, served by the API so this app needs no payment
+   * configuration of its own.
+   */
+  publishableKey: string | null;
   amountDue: number;
   handlingFee: number;
   offlineAmount: number;
   currency: string;
   /** True when the order needs no card charge and is already placed. */
   completed: boolean;
+  /**
+   * When the earliest hold on this order lapses; ISO, null when it holds
+   * nothing. The earliest, because one lapsed line refuses the whole basket.
+   */
+  holdExpiresAt: string | null;
 }
 
 /** `GET /api/account/:orgCode/payments/:paymentId`. */

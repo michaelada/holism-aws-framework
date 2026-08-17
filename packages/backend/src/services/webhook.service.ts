@@ -35,6 +35,12 @@ export interface WebhookProcessResult {
   /** False when the event had already been handled. */
   processed: boolean;
   outcome: WebhookEvent['outcome'];
+  /**
+   * What was decided about an authorisation: captured, released because the
+   * order was no longer available, or ignored as already settled. Absent on
+   * every other kind of event.
+   */
+  settlement?: 'captured' | 'released' | 'ignored';
 }
 
 export class WebhookService {
@@ -66,6 +72,19 @@ export class WebhookService {
         await this.fulfilment.fulfilPayment(event.paymentId);
       }
 
+      /*
+       * The same reasoning for an authorisation. If the first delivery claimed
+       * the event and then died before capturing, returning here would leave
+       * the funds authorised and never taken — an authorisation that expires
+       * silently after a few days, so the club is simply never paid.
+       *
+       * Safe to repeat: `settleAuthorisation` acts only on a payment still
+       * awaiting a decision, and reports `ignored` for any other.
+       */
+      if (event.outcome === 'authorised' && event.paymentId) {
+        await this.checkout.settleAuthorisation(event.paymentId, event.providerTransactionId);
+      }
+
       return { processed: false, outcome: event.outcome };
     }
 
@@ -87,6 +106,26 @@ export class WebhookService {
      */
     if (event.outcome === 'ignored' || !event.paymentId) {
       return { processed: true, outcome: event.outcome };
+    }
+
+    /*
+     * The card authorised: funds held, nothing taken yet.
+     *
+     * This is the decision point manual capture exists to create. The checkout
+     * service re-checks that the slots and capped entries in the order are
+     * still available, then either captures — which brings a
+     * `payment_intent.succeeded` along shortly and settles the order through
+     * the branch below — or reverses the authorisation.
+     *
+     * Nothing is confirmed or fulfilled here. An authorisation is not money.
+     */
+    if (event.outcome === 'authorised') {
+      const settlement = await this.checkout.settleAuthorisation(
+        event.paymentId,
+        event.providerTransactionId
+      );
+      await this.linkToPayment(provider, event.id, event.paymentId);
+      return { processed: true, outcome: event.outcome, settlement };
     }
 
     try {

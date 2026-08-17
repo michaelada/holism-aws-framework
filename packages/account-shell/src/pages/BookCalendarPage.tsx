@@ -23,10 +23,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { RichText, formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
+import { HoldCountdown } from '../components/HoldCountdown';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { AvailabilityResponse, AvailableSlot, CatalogueCalendar } from '../types/account';
+import { AvailabilityResponse, AvailableSlot, CatalogueCalendar, CartItemType } from '../types/account';
 
 /** `YYYY-MM-DD` in the member's own timezone, not UTC. */
 const dateKey = (date: Date): string =>
@@ -124,6 +125,17 @@ export const BookCalendarPage: React.FC = () => {
     void load();
   }, [load]);
 
+  /*
+   * Fetch again when one of the member's own holds lapses.
+   *
+   * Their slot has just gone back into circulation, and the grid is still
+   * drawing it as theirs. Several holds can lapse in the same second, so this
+   * has to survive being called a few times over — `load` simply re-reads.
+   */
+  const reloadAvailability = useCallback(() => {
+    void load();
+  }, [load]);
+
   /** Slots grouped by day, so each day renders its own column. */
   const byDay = useMemo(() => {
     const grouped = new Map<string, AvailableSlot[]>();
@@ -165,7 +177,7 @@ export const BookCalendarPage: React.FC = () => {
           method: 'POST',
           url: `/api/account/${orgCode}/cart/items`,
           data: {
-            itemType: 'booking',
+            itemType: 'booking' satisfies CartItemType,
             /*
              * The slot in full, not an id — a slot has no row of its own until
              * it is booked. This is what the cart guard re-checks and what
@@ -178,7 +190,15 @@ export const BookCalendarPage: React.FC = () => {
               duration: slot.duration,
               places: 1,
             },
-            description: `${calendar.name} — ${formatDisplayDate(slot.date, locale)} ${slot.startTime}`,
+            /*
+             * Both ends of the slot. A start time alone leaves the member
+             * checking a basket that does not say how long they booked for,
+             * which is the thing that differs between two bookings of the same
+             * court on the same morning.
+             */
+            description:
+              `${calendar.name} — ${formatDisplayDate(slot.date, locale)} ` +
+              `${slot.startTime}–${slot.endTime}`,
             unitFee: slot.price,
             handlingFeeIncluded: false,
             supportedPaymentMethodIds: calendar.supportedPaymentMethodIds,
@@ -344,6 +364,25 @@ export const BookCalendarPage: React.FC = () => {
                             '& .MuiTypography-root': { color: 'inherit' },
                             '&:hover': { backgroundColor: 'success.dark' },
                           },
+                          /*
+                            A slot already in the member's basket is drawn in
+                            red and cannot be pressed.
+
+                            It is the same "not available to take" state as a
+                            slot somebody else holds, and it reads as one — but
+                            not as the disabled grey of a slot that was never on
+                            offer, which says nothing about why. The countdown
+                            underneath, and the "In your basket" caption, are
+                            what tell the member this one is theirs.
+                          */
+                          ...(slot.unavailableReason === 'in-your-basket' && {
+                            '&.Mui-disabled': {
+                              backgroundColor: 'error.light',
+                              borderColor: 'error.main',
+                              color: 'error.contrastText',
+                              '& .MuiTypography-root': { color: 'inherit' },
+                            },
+                          }),
                         }}
                         >
                           <Typography variant="body2" fontWeight={600}>
@@ -356,6 +395,18 @@ export const BookCalendarPage: React.FC = () => {
                                 : t('book.free')
                               : t(`book.reason.${slot.unavailableReason ?? 'full'}`)}
                           </Typography>
+                          {/*
+                            Only ever the member's own hold: the server does not
+                            send anybody else's expiry, so this cannot become a
+                            countdown to somebody else's slot freeing up.
+                          */}
+                          {slot.heldUntil && (
+                            <HoldCountdown
+                              expiresAt={slot.heldUntil}
+                              color="inherit"
+                              onExpire={reloadAvailability}
+                            />
+                          )}
                         </ToggleButton>
                       ))}
                     </ToggleButtonGroup>

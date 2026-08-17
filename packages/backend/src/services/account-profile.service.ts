@@ -196,13 +196,27 @@ export class AccountProfileService {
      * an org-admin record that happens to share the Keycloak id.
      */
     const updated = await db.query(
+      /*
+       * `$5` is a **Keycloak subject, not a uuid column**, and the cast has to
+       * say so.
+       *
+       * It was written `$5::uuid`, which is not a local coercion: Postgres
+       * infers one type per parameter for the whole statement, so casting it
+       * once made `$5` a `uuid` everywhere — including `keycloak_user_id = $5`,
+       * where the column is `character varying`. Every save then failed with
+       * "operator does not exist: character varying = uuid" and a 500, for any
+       * member who has a Keycloak identity, which is all of them.
+       *
+       * `id = $6::uuid` is cast explicitly for the same reason, so neither
+       * parameter's type depends on where it happens to appear first.
+       */
       `UPDATE organization_users
        SET first_name = $1, last_name = $2, phone = $3, preferred_language = $4,
            updated_at = NOW()
        WHERE user_type = 'account-user'
          AND (
-           ($5::uuid IS NOT NULL AND keycloak_user_id = $5)
-           OR ($5::uuid IS NULL AND id = $6)
+           ($5::text IS NOT NULL AND keycloak_user_id = $5::text)
+           OR ($5::text IS NULL AND id = $6::uuid)
          )
        RETURNING id`,
       [firstName, lastName, phone, language, row.keycloak_user_id, organisationUserId]

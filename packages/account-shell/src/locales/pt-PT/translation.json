@@ -120,6 +120,8 @@
     "payments": "Pagamentos",
     "profile": "Perfil e definições",
     "cart": "Cesto",
+    "cartCount": "1 artigo no seu cesto",
+    "cartCount_other": "{{count}} artigos no seu cesto",
     "menu": "Menu",
     "mine": "As minhas",
     "tickets": "Os meus bilhetes",
@@ -143,7 +145,6 @@
     "membershipNumber": "N.º de sócio {{number}}",
     "membershipOneOf": "1 de {{count}} inscrição",
     "membershipOneOf_other": "1 de {{count}} inscrições",
-    "viewMemberships": "Ver inscrições",
     "cart": "O seu cesto",
     "cartSummary": "{{count}} artigos · {{total}}",
     "cartHandling": "incl. {{fee}} de processamento",
@@ -151,6 +152,9 @@
     "recentPayments": "Pagamentos recentes",
     "allPayments": "Todos os pagamentos",
     "whatsOn": "Em destaque",
+    "upcomingEvents": "Próximos eventos",
+    "viewAll": "Ver todos",
+    "registrations": "Registos",
     "shop": "Loja",
     "free": "Grátis",
     "nothingYet": "Ainda não há nada aqui. Quando o clube abrir algo, aparecerá aqui.",
@@ -176,20 +180,13 @@
   },
   "entries": {
     "title": "As minhas inscrições e reservas",
-    "tabEntries": "Inscrições",
-    "tabBookings": "Reservas",
     "empty": "Ainda não tem inscrições.",
-    "emptyBookings": "Ainda não tem reservas.",
     "emptyHint": "As inscrições que fizer aparecerão aqui.",
     "loadError": "Não foi possível carregar as suas inscrições.",
-    "colEvent": "Evento",
-    "colActivity": "Atividade",
+    "colItem": "Item",
     "colDate": "Data",
     "colFee": "Valor",
     "colStatus": "Estado",
-    "colCalendar": "Calendário",
-    "colSlot": "Horário",
-    "colDuration": "Duração",
     "colPlaces": "Lugares",
     "minutes": "{{count}} min",
     "view": "Ver",
@@ -211,7 +208,7 @@
     "entrant": "Participante",
     "reference": "Inscrição efetuada",
     "yourAnswers": "As suas respostas",
-    "answersUnavailable": "As suas respostas não podem ser consultadas aqui.",
+    "noAnswers": "Esta inscri\u00e7\u00e3o n\u00e3o tinha nenhum formul\u00e1rio a preencher.",
     "noCancel": "As inscrições não podem ser canceladas aqui. Contacte o clube se precisar de desistir.",
     "notFound": "Não encontrámos essa inscrição.",
     "loadError": "Não foi possível carregar a sua inscrição."
@@ -226,7 +223,9 @@
     "expiresIn": "Expira em {{count}} dias",
     "expired": "Expirou há {{count}} dias",
     "renew": "Renovar",
-    "renewalNotOpen": "As renovações ainda não estão abertas."
+    "renewalNotOpen": "As renovações ainda não estão abertas.",
+    "yourDetails": "Os seus dados (1 resposta)",
+    "yourDetails_other": "Os seus dados ({{count}} respostas)"
   },
   "browse": {
     "loadError": "Não foi possível carregar a oferta disponível.",
@@ -247,7 +246,9 @@
       "activity-full": "Esgotada",
       "already-entered": "Já inscrito",
       "not-open-for-applications": "Não aberta",
-      "already-a-member": "Já é membro"
+      "already-a-member": "Já é membro",
+      "held-by-others": "Reservado por outra pessoa",
+      "in-your-basket": "No seu cesto"
     },
     "entries": {
       "notOpen": "Inscrições a {{date}}",
@@ -333,7 +334,8 @@
     "reason": {
       "full": "Esgotado",
       "in-use": "Ocupado",
-      "held": "A ser reservado"
+      "held": "Reservado por outra pessoa",
+      "in-your-basket": "No seu cesto"
     }
   },
   "registrations": {
@@ -385,21 +387,32 @@
       "refunded": "Reembolsado"
     }
   },
+  "holds": {
+    "remaining": "Faltam {{time}}",
+    "expired": "Reserva expirada"
+  },
   "cart": {
     "title": "O seu cesto",
     "empty": "O seu cesto está vazio.",
     "browse": "Encontrar algo em que se inscrever",
     "loadError": "Não foi possível carregar o seu cesto.",
     "remove": "Remover {{item}}",
+    "paymentMethodFor": "Método de pagamento para {{item}}",
     "holdExpired": "Alguns artigos já não estão reservados e podem já não estar disponíveis. Reveja o seu cesto.",
-    "offlineSubtotal": "Pago diretamente ao clube",
+    "offlineSubtotal": "Pago diretamente ao clube (Offline)",
     "cardSubtotal": "Pago com cartão",
     "handlingFee": "Taxa de processamento",
     "handlingFeeTax": "Imposto sobre a taxa de processamento",
     "orderTotal": "Total da encomenda",
     "payingNow": "A pagar agora com cartão",
     "checkout": "Finalizar",
-    "offlineNote": "Parte desta encomenda é paga diretamente ao clube, que a registará quando a receber."
+    "offlineNote": "Parte desta encomenda é paga diretamente ao clube, que a registará quando a receber.",
+    "offlineNoteAll": "Esta encomenda é paga diretamente ao clube, que a regista quando a receber.",
+    "yourAnswers": "Clique para ver o valor do seu formul\u00e1rio de inscri\u00e7\u00e3o",
+    "yourAnswers_other": "Clique para ver os {{count}} valores do seu formul\u00e1rio de inscri\u00e7\u00e3o",
+    "editAnswers": "Alterar respostas",
+    "editAnswersTitle": "Alterar as suas respostas",
+    "changePaymentMethod": "Alterar método de pagamento"
   },
   "checkout": {
     "title": "Pagamento",
@@ -408,6 +421,10 @@
     "pay": "Pagar agora",
     "processing": "A processar…",
     "confirming": "A confirmar o seu pagamento…",
+    "cardUnavailable": "O pagamento com cartão não está disponível para este clube de momento. Contacte o clube para pagar de outra forma.",
+    "holdNotice": "Os seus lugares estão reservados durante",
+    "holdLapsed": "O seu cesto já não está reservado. Volte atrás e adicione novamente os seus artigos.",
+    "backToBasket": "Voltar ao cesto",
     "paymentFailed": "Não foi possível concluir o seu pagamento.",
     "startFailed": "Não foi possível iniciar o seu pagamento.",
     "backToBasket": "Voltar ao cesto"

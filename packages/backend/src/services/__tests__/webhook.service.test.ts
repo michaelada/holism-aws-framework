@@ -21,7 +21,11 @@ const uniqueViolation = () => Object.assign(new Error('duplicate'), { code: '235
 
 describe('WebhookService', () => {
   let service: WebhookService;
-  let checkout: { confirmPayment: jest.Mock; failPayment: jest.Mock };
+  let checkout: {
+    confirmPayment: jest.Mock;
+    failPayment: jest.Mock;
+    settleAuthorisation: jest.Mock;
+  };
   let fulfilment: { fulfilPayment: jest.Mock };
 
   beforeEach(() => {
@@ -31,6 +35,7 @@ describe('WebhookService', () => {
     checkout = {
       confirmPayment: jest.fn().mockResolvedValue(true),
       failPayment: jest.fn().mockResolvedValue(undefined),
+      settleAuthorisation: jest.fn().mockResolvedValue('captured'),
     };
     fulfilment = {
       fulfilPayment: jest.fn().mockResolvedValue({ fulfilled: 1, failed: 0, complete: true }),
@@ -186,5 +191,103 @@ describe('WebhookService', () => {
   it('propagates a database error that is not a duplicate claim', async () => {
     mockDb.query.mockRejectedValueOnce(new Error('connection refused'));
     await expect(service.process('stripe', event())).rejects.toThrow('connection refused');
+  });
+});
+
+/**
+ * Authorisation events, under manual capture.
+ *
+ * The rule that matters: **an authorisation is not money.** Confirming or
+ * fulfilling on this event would hand out an entry for funds that have only
+ * been held, and which the platform may be about to release.
+ */
+describe('WebhookService — authorisations', () => {
+  let service: WebhookService;
+  let checkout: {
+    confirmPayment: jest.Mock;
+    failPayment: jest.Mock;
+    settleAuthorisation: jest.Mock;
+  };
+  let fulfilment: { fulfilPayment: jest.Mock };
+
+  const authorised = (over: Partial<WebhookEvent> = {}): WebhookEvent => ({
+    id: 'evt_2',
+    type: 'payment_intent.amount_capturable_updated',
+    outcome: 'authorised',
+    paymentId: 'pay-1',
+    providerTransactionId: 'pi_1',
+    ...over,
+  });
+
+  beforeEach(() => {
+    mockDb.query.mockReset();
+    mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+    checkout = {
+      confirmPayment: jest.fn().mockResolvedValue(true),
+      failPayment: jest.fn().mockResolvedValue(undefined),
+      settleAuthorisation: jest.fn().mockResolvedValue('captured'),
+    };
+    fulfilment = {
+      fulfilPayment: jest.fn().mockResolvedValue({ fulfilled: 1, failed: 0, complete: true }),
+    };
+    service = new WebhookService(checkout as any, fulfilment as any);
+  });
+
+  it('asks the checkout to decide, and reports what it decided', async () => {
+    const result = await service.process('stripe', authorised());
+
+    expect(checkout.settleAuthorisation).toHaveBeenCalledWith('pay-1', 'pi_1');
+    expect(result).toMatchObject({ processed: true, outcome: 'authorised', settlement: 'captured' });
+  });
+
+  it('neither confirms nor fulfils on an authorisation', async () => {
+    // Funds are held, not taken. The order is settled by the
+    // `payment_intent.succeeded` that follows the capture.
+    await service.process('stripe', authorised());
+
+    expect(checkout.confirmPayment).not.toHaveBeenCalled();
+    expect(fulfilment.fulfilPayment).not.toHaveBeenCalled();
+  });
+
+  it('reports a reversal without treating it as a completed order', async () => {
+    checkout.settleAuthorisation.mockResolvedValue('released');
+
+    const result = await service.process('stripe', authorised());
+
+    expect(result).toMatchObject({ settlement: 'released' });
+    expect(fulfilment.fulfilPayment).not.toHaveBeenCalled();
+  });
+
+  it('still settles when the event is redelivered', async () => {
+    /*
+     * The important one. If the first delivery claimed the event and then died
+     * before capturing, returning early here would leave the funds authorised
+     * and never taken — the authorisation expires after a few days and the club
+     * is simply never paid.
+     */
+    mockDb.query.mockRejectedValueOnce(uniqueViolation());
+
+    const result = await service.process('stripe', authorised());
+
+    expect(result.processed).toBe(false);
+    expect(checkout.settleAuthorisation).toHaveBeenCalledWith('pay-1', 'pi_1');
+  });
+
+  it('ignores an authorisation with no payment behind it', async () => {
+    await service.process('stripe', authorised({ paymentId: null }));
+
+    expect(checkout.settleAuthorisation).not.toHaveBeenCalled();
+  });
+
+  it('fails a reversed authorisation through the ordinary failure path', async () => {
+    // Which is what hands the member's holds back.
+    await service.process(
+      'stripe',
+      authorised({ type: 'payment_intent.canceled', outcome: 'failed' })
+    );
+
+    expect(checkout.failPayment).toHaveBeenCalled();
+    expect(checkout.settleAuthorisation).not.toHaveBeenCalled();
   });
 });

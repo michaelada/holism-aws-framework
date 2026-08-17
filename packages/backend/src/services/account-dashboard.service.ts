@@ -34,9 +34,18 @@ const RECENT_PAYMENTS_LIMIT = 3;
  * shop and calendars showed exactly **one** calendar, whatever it had, and the
  * bookings row looked broken next to a bookings page listing three.
  */
-const WHATS_ON_LIMIT = 4;
+/**
+ * One row's worth each.
+ *
+ * Every kind the home screen gives its own heading gets its own budget. Sharing
+ * one across all of them meant a club with several kinds showed a single card
+ * of each, with nothing on screen to say that was a limit rather than all it
+ * had.
+ */
+const EVENTS_LIMIT = 4;
 const BOOKINGS_LIMIT = 4;
 const SHOP_LIMIT = 4;
+const REGISTRATIONS_LIMIT = 4;
 
 /**
  * How close an unopened event has to be before it is worth teasing.
@@ -432,33 +441,18 @@ export class AccountDashboardService {
      * out of three with nothing on screen to say that was a limit rather than
      * all it had.
      */
-    const bookings = items.filter((item) => item.kind === 'calendar');
-    const shop = items.filter((item) => item.kind === 'merchandise');
-    const rest = items.filter(
-      (item) => item.kind !== 'calendar' && item.kind !== 'merchandise'
-    );
+    const take = (kind: DashboardWhatsOn['kind'], limit: number) =>
+      items.filter((item) => item.kind === kind).slice(0, limit);
 
     /*
-     * One of each remaining kind first, then whatever else fits — so a club
-     * with a dozen registration types and one event still shows the event.
+     * Grouped by kind because the screen groups by kind: each has its own
+     * heading, so each gets its own share rather than competing for one.
      */
-    const seen = new Set<string>();
-    const spread: DashboardWhatsOn[] = [];
-    for (const item of rest) {
-      if (!seen.has(item.kind)) {
-        seen.add(item.kind);
-        spread.push(item);
-      }
-    }
-    for (const item of rest) {
-      if (spread.length >= WHATS_ON_LIMIT) break;
-      if (!spread.includes(item)) spread.push(item);
-    }
-
     return [
-      ...spread.slice(0, WHATS_ON_LIMIT),
-      ...bookings.slice(0, BOOKINGS_LIMIT),
-      ...shop.slice(0, SHOP_LIMIT),
+      ...take('event', EVENTS_LIMIT),
+      ...take('calendar', BOOKINGS_LIMIT),
+      ...take('merchandise', SHOP_LIMIT),
+      ...take('registration', REGISTRATIONS_LIMIT),
     ];
   }
 }

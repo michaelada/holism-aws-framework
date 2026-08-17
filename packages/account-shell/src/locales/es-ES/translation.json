@@ -120,6 +120,8 @@
     "payments": "Pagos",
     "profile": "Perfil y ajustes",
     "cart": "Cesta",
+    "cartCount": "1 art\u00edculo en su cesta",
+    "cartCount_other": "{{count}} art\u00edculos en su cesta",
     "menu": "Menú",
     "mine": "Lo mío",
     "tickets": "Mis entradas",
@@ -143,7 +145,6 @@
     "membershipNumber": "N.º de socio {{number}}",
     "membershipOneOf": "1 de {{count}} membresía",
     "membershipOneOf_other": "1 de {{count}} membresías",
-    "viewMemberships": "Ver membresías",
     "cart": "Su cesta",
     "cartSummary": "{{count}} artículos · {{total}}",
     "cartHandling": "incl. {{fee}} de gestión",
@@ -151,6 +152,9 @@
     "recentPayments": "Pagos recientes",
     "allPayments": "Todos los pagos",
     "whatsOn": "Novedades",
+    "upcomingEvents": "Próximos eventos",
+    "viewAll": "Ver todo",
+    "registrations": "Inscripciones",
     "shop": "Tienda",
     "free": "Gratis",
     "nothingYet": "Aquí todavía no hay nada. Cuando el club abra algo, aparecerá aquí.",
@@ -176,20 +180,13 @@
   },
   "entries": {
     "title": "Mis inscripciones y reservas",
-    "tabEntries": "Inscripciones",
-    "tabBookings": "Reservas",
     "empty": "Todavía no tiene inscripciones.",
-    "emptyBookings": "Todavía no tiene reservas.",
     "emptyHint": "Las inscripciones que realice aparecerán aquí.",
     "loadError": "No hemos podido cargar sus inscripciones.",
-    "colEvent": "Evento",
-    "colActivity": "Actividad",
+    "colItem": "Elemento",
     "colDate": "Fecha",
     "colFee": "Importe",
     "colStatus": "Estado",
-    "colCalendar": "Calendario",
-    "colSlot": "Franja",
-    "colDuration": "Duración",
     "colPlaces": "Plazas",
     "minutes": "{{count}} min",
     "view": "Ver",
@@ -211,7 +208,7 @@
     "entrant": "Participante",
     "reference": "Inscripción realizada",
     "yourAnswers": "Sus respuestas",
-    "answersUnavailable": "Sus respuestas no se pueden consultar aquí.",
+    "noAnswers": "Esta inscripci\u00f3n no ten\u00eda ning\u00fan formulario que rellenar.",
     "noCancel": "Las inscripciones no se pueden cancelar aquí. Póngase en contacto con el club si necesita retirarse.",
     "notFound": "No hemos encontrado esa inscripción.",
     "loadError": "No hemos podido cargar su inscripción."
@@ -226,7 +223,9 @@
     "expiresIn": "Caduca en {{count}} días",
     "expired": "Caducó hace {{count}} días",
     "renew": "Renovar",
-    "renewalNotOpen": "Las renovaciones aún no están abiertas."
+    "renewalNotOpen": "Las renovaciones aún no están abiertas.",
+    "yourDetails": "Sus datos (1 respuesta)",
+    "yourDetails_other": "Sus datos ({{count}} respuestas)"
   },
   "browse": {
     "loadError": "No hemos podido cargar la oferta disponible.",
@@ -247,7 +246,9 @@
       "activity-full": "Completa",
       "already-entered": "Ya inscrito",
       "not-open-for-applications": "No abierta",
-      "already-a-member": "Ya es socio"
+      "already-a-member": "Ya es socio",
+      "held-by-others": "Reservado por otra persona",
+      "in-your-basket": "En su cesta"
     },
     "entries": {
       "notOpen": "Inscripciones el {{date}}",
@@ -333,7 +334,8 @@
     "reason": {
       "full": "Completo",
       "in-use": "Ocupado",
-      "held": "Reservándose"
+      "held": "Reservado por otra persona",
+      "in-your-basket": "En su cesta"
     }
   },
   "registrations": {
@@ -385,21 +387,32 @@
       "refunded": "Reembolsado"
     }
   },
+  "holds": {
+    "remaining": "Quedan {{time}}",
+    "expired": "Reserva caducada"
+  },
   "cart": {
     "title": "Su cesta",
     "empty": "Su cesta está vacía.",
     "browse": "Buscar algo a lo que inscribirse o asociarse",
     "loadError": "No hemos podido cargar su cesta.",
     "remove": "Quitar {{item}}",
+    "paymentMethodFor": "Método de pago para {{item}}",
     "holdExpired": "Algunos artículos ya no están reservados y puede que no estén disponibles. Revise su cesta.",
-    "offlineSubtotal": "Pago directo al club",
+    "offlineSubtotal": "Pago directo al club (Offline)",
     "cardSubtotal": "Pago con tarjeta",
     "handlingFee": "Gastos de gestión",
     "handlingFeeTax": "Impuesto sobre los gastos de gestión",
     "orderTotal": "Total del pedido",
     "payingNow": "Pagando ahora con tarjeta",
     "checkout": "Finalizar compra",
-    "offlineNote": "Parte de este pedido se paga directamente al club. Lo registrarán cuando lo reciban."
+    "offlineNote": "Parte de este pedido se paga directamente al club. Lo registrarán cuando lo reciban.",
+    "offlineNoteAll": "Este pedido se paga directamente al club. Lo registrarán cuando lo reciban.",
+    "yourAnswers": "Haga clic para ver el valor de su formulario de inscripci\u00f3n",
+    "yourAnswers_other": "Haga clic para ver los {{count}} valores de su formulario de inscripci\u00f3n",
+    "editAnswers": "Cambiar respuestas",
+    "editAnswersTitle": "Cambie sus respuestas",
+    "changePaymentMethod": "Cambiar método de pago"
   },
   "checkout": {
     "title": "Pago",
@@ -408,6 +421,10 @@
     "pay": "Pagar ahora",
     "processing": "Procesando…",
     "confirming": "Confirmando su pago…",
+    "cardUnavailable": "El pago con tarjeta no está disponible para este club en este momento. Póngase en contacto con el club para pagar de otra forma.",
+    "holdNotice": "Sus plazas están reservadas durante",
+    "holdLapsed": "Su cesta ya no está reservada. Vuelva atrás y añada sus artículos de nuevo.",
+    "backToBasket": "Volver a la cesta",
     "paymentFailed": "No se ha podido completar su pago.",
     "startFailed": "No hemos podido iniciar su pago.",
     "backToBasket": "Volver a la cesta"

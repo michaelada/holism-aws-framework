@@ -60,6 +60,7 @@ const NAV_ICONS: Record<NavIcon, React.ElementType> = {
   profile: PersonIcon,
 };
 import { useBookingsLabel } from '../hooks/useBookingsLabel';
+import { useCartCount } from '../cart/useCartCount';
 import { useAuthContext } from '../context/AuthContext';
 import { visibleSections } from './navigation';
 import OfflineBanner from './OfflineBanner';
@@ -99,6 +100,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const logoUrl = publicDetail?.branding?.logoUrl || undefined;
   const { logout } = useAuthContext();
   const bookingsLabel = useBookingsLabel();
+  const cartCount = useCartCount(orgCode);
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -150,6 +152,46 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
                       item.labelKey === 'calendar' ? bookingsLabel : t(`nav.${item.labelKey}`)
                     }
                   />
+                  {/*
+                    How full the basket is, beside the word Basket.
+
+                    Rendered only when there is something in it: a badge reading
+                    "0" is a permanent fixture that stops meaning anything, and
+                    the member has nothing to go and look at.
+
+                    The count is announced rather than left to the colour —
+                    `aria-label` on a plain `<span>` would be read as a bare
+                    number, so the whole phrase is given to a screen reader and
+                    the digits are hidden from it.
+                  */}
+                  {item.labelKey === 'cart' && cartCount > 0 && (
+                    <Box
+                      component="span"
+                      aria-label={t('nav.cartCount', { count: cartCount })}
+                      sx={{
+                        ml: 1,
+                        px: 0.75,
+                        minWidth: 20,
+                        height: 20,
+                        borderRadius: '10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        // The club's own primary is used by the selected state
+                        // of this very list, so the count takes a colour that
+                        // cannot be mistaken for selection.
+                        backgroundColor: 'warning.main',
+                        color: 'common.white',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        lineHeight: 1,
+                      }}
+                    >
+                      <Box component="span" aria-hidden>
+                        {cartCount}
+                      </Box>
+                    </Box>
+                  )}
                 </ListItemButton>
               );
             })}

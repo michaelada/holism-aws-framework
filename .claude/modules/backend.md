@@ -132,6 +132,20 @@ returned 500 and the read path masked it by falling back to defaults
 runs from the payment line long after the basket is emptied, so an id alone cannot say which size or
 how many — which is why merchandise, bookings and registrations all need them.
 
+**`cart_items.expires_at` is a soft hold, and the only one there is** (migrations
+`1709000000025`–`26`, [docs/BASKET_SOFT_HOLDS.md](../../docs/BASKET_SOFT_HOLDS.md)). Adding a
+booking, or an event entry against a capped event or activity, stamps an expiry two minutes out;
+`listCalendarAvailability` and `listEvents` subtract lines where `expires_at > NOW()` on a cart
+still `open`. Starting checkout extends every live hold to 15 minutes, `failPayment` drops them back
+to two, and a paid cart moving to `'ordered'` takes them out of the query. **Nothing sweeps the
+table** — an abandoned basket just stops counting. `slot_reservations` is a different thing: a club
+official blocking a court, with a `reason`, written only by the org-admin API.
+
+Two faults were fixed to make that work: `carts_status_check` did not permit `'ordered'`, the status
+`confirmPayment` sets, so every confirmation rolled back; and `expires_at` was
+`timestamp without time zone`, which made a two-minute hold last two minutes *plus the server's UTC
+offset* — right in winter, an hour wrong in summer.
+
 **Five tables are soft-deleted**, all with the same `deleted` / `deleted_at` / `deleted_by` shape
 and an `(organisation_id, deleted)` index: `events` (migration `1709000000017`) and
 `merchandise_types`, `membership_types`, `registration_types`, `calendars` (`1709000000018`). Their
@@ -281,6 +295,71 @@ Things worth knowing before touching any of it:
   **no per-organisation Stripe keys** — the direct-charge fields were removed from the settings tab,
   the `PaymentSettings` contract and stored data (migration `1709000000014`). See
   docs/ACCOUNT_USER_APP_PHASE8_CHECKOUT.md §1 and docs/REMOVE_PER_ORG_STRIPE_KEYS.md.
+- **Payments authorise first and capture second** (`capture_method: 'manual'`,
+  [docs/MANUAL_CAPTURE_AND_HOLD_CONTROL.md](../../docs/MANUAL_CAPTURE_AND_HOLD_CONTROL.md)).
+  Confirming holds the funds; `payment_intent.amount_capturable_updated` arrives as the
+  **`authorised`** outcome, and `settleAuthorisation` re-checks the order through
+  `order-availability.service` before capturing or reversing. Nothing is confirmed or fulfilled on an
+  authorisation — that still happens on `payment_intent.succeeded`, which follows the capture.
+  Reversing costs nothing, where the old automatic capture left the club owing a refund. The price:
+  `automatic_payment_methods` now excludes bank redirects (iDEAL, Bancontact, SEPA), which cannot
+  authorise without taking. `POST /:orgCode/checkout/:paymentId/abandon` cancels the intent when a
+  hold lapses, so a stale tab's client secret stops working.
+- **An offline order closes its own cart, and creates its bookings**
+  ([docs/OFFLINE_CHECKOUT.md](../../docs/OFFLINE_CHECKOUT.md)). `confirmPayment` closes the cart for
+  a card order; the offline path had no equivalent, so the basket kept every line and members
+  checked out repeatedly — five payments against one pair of slots. Separately, fulfilment created
+  only `event_entry` ahead of the money: right for a membership or goods, wrong for a **booking**,
+  because a slot that is not booked is still on sale and the hold lapses two minutes later.
+  **`event_entry`, `booking` and `merchandise` are created before payment**; each can exist in a
+  state that grants nothing (`merchandise_orders` defaults both `order_status` and `payment_status`
+  to `pending`, so an order is recorded and nothing is dispatched). `membership` and `registration`
+  stay deferred, because `createMember`/`createRegistration` set `active` when the type
+  auto-approves — creating one unpaid hands over the entitlement. A membership bought offline is
+  therefore still invisible until the club records the payment.
+- **A `::uuid` cast is not local to its clause.** Postgres infers one type per parameter for the
+  whole statement, so casting `$5` once types it everywhere. `account-profile.service` wrote
+  `($5::uuid IS NOT NULL AND keycloak_user_id = $5)` — `keycloak_user_id` is `character varying`, so
+  every profile save failed with "operator does not exist: character varying = uuid" and a 500
+  ([docs/PROFILE_SAVE_AND_BASKET_WORDING.md](../../docs/PROFILE_SAVE_AND_BASKET_WORDING.md)). Cast
+  each parameter to the type its column actually has.
+- **Capability lists are validated on write but not constrained in the database**, so a record
+  holding a name that is not in the `capabilities` catalogue is writable once and **never editable
+  again** — every update re-validates the whole list
+  ([docs/PHANTOM_CAPABILITIES.md](../../docs/PHANTOM_CAPABILITIES.md)). That is how editing an
+  organisation type's application fee came to fail with "Invalid capabilities provided" about three
+  seeded names (`discounts`, `email-notifications`, `document-uploads`) that gate nothing.
+  `capabilityService.unknownCapabilities()` now names the offenders, the org-type routes return
+  **400** rather than falling through to a 500, migration `1709000000027` strips unknown names from
+  existing rows, and the seed checks itself against the same catalogue before writing.
+- **`/api/admin` is guarded by `requireAdminRole()` at router level.** `admin.routes` mounts on that
+  prefix *before* the more specific routers, so its `router.use` guards run for every path beneath
+  it. A platform administrator therefore needs **both** `admin` and `super-admin` — the handlers
+  require the latter on top. Granting only `super-admin` produces a user who can sign into the admin
+  app and gets 403 from every request in it.
+- **The API serves the Stripe *publishable* key** (`CheckoutResult.publishableKey`,
+  [docs/CHECKOUT_KEY_AND_MEMBERSHIP_DETAILS.md](../../docs/CHECKOUT_KEY_AND_MEMBERSHIP_DETAILS.md)).
+  The account app used to read its own `VITE_STRIPE_PUBLISHABLE_KEY` from a `.env` that does not
+  exist in this repo, so `loadStripe('')` rejected, `useStripe()` stayed null and Pay Now was
+  permanently disabled with nothing on screen to say why. Serving it beside the secret key also
+  stops the two drifting onto different Stripe accounts.
+- **A pending payment is a snapshot, and is retired when its basket changes**
+  ([docs/STALE_PENDING_PAYMENT.md](../../docs/STALE_PENDING_PAYMENT.md)). `startCheckout` reuses an
+  in-flight payment so a page reload cannot charge twice, but that reuse was unconditional — a
+  member who edited their basket got the old total, the old lines and the old Stripe intent.
+  `payments.metadata.cartFingerprint` records what was priced; a mismatch marks the payment
+  `abandoned`, cancels its intent and creates a fresh one. A payment with no fingerprint predates
+  the check and counts as stale.
+- **`listPayments` excludes `pending` and `abandoned`** — attempts are not payments, and listing
+  them put orders in a member's history that were never placed. `paid`, `awaiting_offline`,
+  `refunded` and `failed` all stay.
+- **A booking is refused if the same slot is already in the basket**, checked against `cart_items`
+  directly rather than through availability. Availability only counts unlapsed holds, so two minutes
+  after adding an exclusive slot it read as free and could be added again.
+- **`payment_transactions.item_type` is the basket's spelling, `event_entry`** — fulfilment switched
+  on `event-entry` and failed every paid entry until `itemTypeOf` normalised both. It hid behind the
+  `carts.status` fault above (no payment ever reached fulfilment) *and* behind a test fixture that
+  used the hyphen, so the tests agreed with the code rather than the database.
 - **Never validate a redirect target against `req.get('host')`.** Every front end reaches this API
   through a proxy that rewrites `Host` (Vite's `changeOrigin: true`, nginx), so the backend sees its
   own address and rejects the origin the browser is actually on. Use

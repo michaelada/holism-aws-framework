@@ -27,7 +27,7 @@ import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { CatalogueEvent, CatalogueMembershipType } from '../types/account';
+import { CatalogueEvent, CatalogueMembershipType, CartItemType } from '../types/account';
 
 interface FormField {
   id: string;
@@ -260,7 +260,7 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
         data:
           kind === 'event'
             ? {
-                itemType: 'event-entry',
+                itemType: 'event_entry' satisfies CartItemType,
                 contextRef: { activityId: item.id, eventId: event?.id },
                 description: `${event?.name ?? ''} — ${item.name}`,
                 unitFee: item.fee,
@@ -269,7 +269,7 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
                 formSubmissionId,
               }
             : {
-                itemType: 'membership',
+                itemType: 'membership' satisfies CartItemType,
                 contextRef: { membershipTypeId: item.id },
                 description: item.name,
                 unitFee: item.fee,

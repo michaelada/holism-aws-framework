@@ -21,6 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { formatCurrency } from '@aws-web-framework/components';
+import { HoldCountdown } from '../components/HoldCountdown';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { CheckoutResult, PaymentStatus } from '../types/account';
@@ -42,14 +43,33 @@ import { CheckoutResult, PaymentStatus } from '../types/account';
  * loads the platform key and the connected account never appears here.
  */
 
-/** Loaded once per page load; `loadStripe` is memoised by Stripe itself. */
-let stripePromise: Promise<Stripe | null> | null = null;
-function getStripe(): Promise<Stripe | null> {
-  if (!stripePromise) {
-    stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+/**
+ * Stripe.js, loaded once per key.
+ *
+ * The key comes from the API, which reads it beside the secret key it already
+ * holds. It used to come from this app's own `VITE_STRIPE_PUBLISHABLE_KEY` —
+ * which is still honoured as a fallback, but was not set in this repo, so
+ * `loadStripe('')` rejected, `useStripe()` stayed null, and the Pay button was
+ * disabled for ever with nothing on screen to say why.
+ *
+ * Cached by key rather than as a single promise: the fallback and the served
+ * key can differ, and a cache that ignored that would keep whichever loaded
+ * first.
+ */
+const stripeByKey = new Map<string, Promise<Stripe | null>>();
+
+function getStripe(publishableKey: string): Promise<Stripe | null> {
+  let promise = stripeByKey.get(publishableKey);
+  if (!promise) {
+    promise = loadStripe(publishableKey);
+    stripeByKey.set(publishableKey, promise);
   }
-  return stripePromise;
+  return promise;
 }
+
+/** The key to mount the card form with, or null when there is none to be had. */
+const publishableKeyFor = (checkout: CheckoutResult | null): string | null =>
+  checkout?.publishableKey || import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || null;
 
 export const CheckoutPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -166,9 +186,25 @@ export const CheckoutPage: React.FC = () => {
         </Card>
       )}
 
-      {options && (
-        <Elements stripe={getStripe()} options={options}>
-          <PaymentForm paymentId={checkout!.paymentId} orgCode={orgCode!} />
+      {/*
+        A card charge is due but the platform has no publishable key, so the
+        form cannot be mounted at all. Said plainly: a disabled Pay button with
+        no explanation is indistinguishable from a bug in the member's browser,
+        and this is the club's configuration, not their card.
+      */}
+      {options && !publishableKeyFor(checkout) && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {t('checkout.cardUnavailable')}
+        </Alert>
+      )}
+
+      {options && publishableKeyFor(checkout) && (
+        <Elements stripe={getStripe(publishableKeyFor(checkout)!)} options={options}>
+          <PaymentForm
+            paymentId={checkout!.paymentId}
+            orgCode={orgCode!}
+            holdExpiresAt={checkout!.holdExpiresAt}
+          />
         </Elements>
       )}
     </Container>
@@ -179,10 +215,12 @@ export const CheckoutPage: React.FC = () => {
  * The card form. Separate because `useStripe`/`useElements` only work inside
  * `<Elements>`.
  */
-const PaymentForm: React.FC<{ paymentId: string; orgCode: string }> = ({
-  paymentId,
-  orgCode,
-}) => {
+const PaymentForm: React.FC<{
+  paymentId: string;
+  orgCode: string;
+  /** When the hold behind this order lapses; null when it holds nothing. */
+  holdExpiresAt: string | null;
+}> = ({ paymentId, orgCode, holdExpiresAt }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const stripe = useStripe();
@@ -192,6 +230,33 @@ const PaymentForm: React.FC<{ paymentId: string; orgCode: string }> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [holdLapsed, setHoldLapsed] = useState(false);
+
+  /**
+   * The hold ran out while the member was on this screen.
+   *
+   * Two things happen, and both matter. The form is closed, so they cannot
+   * start a payment for something they no longer hold. And the server is asked
+   * to cancel the payment intent, which is what makes the expiry bite: without
+   * it the client secret in this tab stays valid, and a laptop woken an hour
+   * later could still pay for a slot that has since gone to somebody else.
+   *
+   * Deliberately not awaited into the UI. The member is told immediately; the
+   * cancellation is a tidy-up whose guarantees live on the server, where the
+   * capture-time re-check refuses the order regardless.
+   */
+  const abandon = useCallback(() => {
+    if (submitting) return;
+
+    setHoldLapsed(true);
+    void execute({
+      url: `/api/account/${orgCode}/checkout/${paymentId}/abandon`,
+      method: 'POST',
+    }).catch(() => {
+      // Already failed, already paid, or the network went. The member has been
+      // told; there is nothing useful to say about a best-effort tidy-up.
+    });
+  }, [execute, orgCode, paymentId, submitting]);
 
   /**
    * Wait for the webhook to land.
@@ -252,6 +317,28 @@ const PaymentForm: React.FC<{ paymentId: string; orgCode: string }> = ({
         </Alert>
       )}
 
+      {/*
+        The clock the member is racing, on the screen where they are racing it.
+        Without this the countdown lives only on the basket page — which is the
+        one screen they are not looking at while they type their card number.
+
+        Hidden once they have submitted: the hold is no longer what decides the
+        outcome at that point, and a timer ticking down beside "processing"
+        reads as a threat to a payment already in flight.
+      */}
+      {holdExpiresAt && !submitting && !awaitingConfirmation && (
+        <Alert severity={holdLapsed ? 'warning' : 'info'} sx={{ mb: 2 }}>
+          {holdLapsed ? (
+            t('checkout.holdLapsed')
+          ) : (
+            <Stack direction="row" spacing={1} alignItems="baseline">
+              <span>{t('checkout.holdNotice')}</span>
+              <HoldCountdown expiresAt={holdExpiresAt} onExpire={abandon} variant="body2" />
+            </Stack>
+          )}
+        </Alert>
+      )}
+
       <PaymentElement />
 
       {awaitingConfirmation && (
@@ -266,10 +353,16 @@ const PaymentForm: React.FC<{ paymentId: string; orgCode: string }> = ({
         size="large"
         fullWidth
         sx={{ mt: 3 }}
-        disabled={!stripe || submitting}
+        disabled={!stripe || submitting || holdLapsed}
       >
         {submitting ? t('checkout.processing') : t('checkout.pay')}
       </Button>
+
+      {holdLapsed && (
+        <Button fullWidth sx={{ mt: 1 }} onClick={() => navigate(`/${orgCode}/cart`)}>
+          {t('checkout.backToBasket')}
+        </Button>
+      )}
     </Box>
   );
 };

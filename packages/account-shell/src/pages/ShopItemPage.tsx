@@ -33,7 +33,7 @@ import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { CatalogueMerchandise } from '../types/account';
+import { CatalogueMerchandise, CartItemType } from '../types/account';
 
 interface FormField {
   id: string;
@@ -235,7 +235,7 @@ export const ShopItemPage: React.FC = () => {
         method: 'POST',
         url: `/api/account/${orgCode}/cart/items`,
         data: {
-          itemType: 'merchandise',
+          itemType: 'merchandise' satisfies CartItemType,
           /*
            * The options are keyed by option *type* — "which size", not "large"
            * — because that is the shape `merchandise.service.createOrder`

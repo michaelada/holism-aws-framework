@@ -120,14 +120,19 @@
     "payments": "Payments",
     "profile": "Profile & settings",
     "cart": "Basket",
+    "cartCount": "1 item in your basket",
+    "cartCount_other": "{{count}} items in your basket",
     "menu": "Menu",
     "mine": "Mine",
-    "tickets": "My Tickets",
+    "tickets": "My tickets",
     "browseEvents": "Events",
     "browseMemberships": "Memberships",
-    "orders": "My orders"
+    "orders": "My shop orders"
   },
   "home": {
+    "registrations": "Registrations",
+    "viewAll": "View all",
+    "upcomingEvents": "Upcoming events",
     "welcome": "Welcome back, {{name}}",
     "welcomeAnonymous": "Welcome back",
     "comingSoon": "Your dashboard for {{organisation}} will appear here.",
@@ -143,7 +148,6 @@
     "membershipNumber": "Member no. {{number}}",
     "membershipOneOf": "1 of {{count}} membership",
     "membershipOneOf_other": "1 of {{count}} memberships",
-    "viewMemberships": "View memberships",
     "cart": "Your basket",
     "cartSummary": "{{count}} items · {{total}}",
     "cartHandling": "incl. {{fee}} handling",
@@ -176,20 +180,13 @@
   },
   "entries": {
     "title": "My entries & bookings",
-    "tabEntries": "Entries",
-    "tabBookings": "Bookings",
     "empty": "You have no entries yet.",
-    "emptyBookings": "You have no bookings yet.",
     "emptyHint": "Entries you make will appear here.",
     "loadError": "We could not load your entries.",
-    "colEvent": "Event",
-    "colActivity": "Activity",
+    "colItem": "Item",
     "colDate": "Date",
     "colFee": "Fee",
     "colStatus": "Status",
-    "colCalendar": "Calendar",
-    "colSlot": "Slot",
-    "colDuration": "Duration",
     "colPlaces": "Places",
     "minutes": "{{count}} min",
     "view": "View",
@@ -211,12 +208,14 @@
     "entrant": "Entrant",
     "reference": "Entry made",
     "yourAnswers": "Your answers",
-    "answersUnavailable": "Your answers are not available to view here.",
+    "noAnswers": "This entry had no form to fill in.",
     "noCancel": "Entries cannot be cancelled here. Please contact the club if you need to withdraw.",
     "notFound": "We could not find that entry.",
     "loadError": "We could not load your entry."
   },
   "memberships": {
+    "yourDetails_other": "Your details ({{count}} answers)",
+    "yourDetails": "Your details (1 answer)",
     "title": "My memberships",
     "empty": "You have no memberships yet.",
     "emptyHint": "Memberships you apply for will appear here.",
@@ -240,6 +239,8 @@
     "placesRemaining_one": "{{count}} place left",
     "placesRemaining_other": "{{count}} places left",
     "reason": {
+      "in-your-basket": "In your basket",
+      "held-by-others": "Held by someone else",
       "unavailable": "Not available",
       "entries-not-open": "Entries not open yet",
       "entries-closed": "Entries closed",
@@ -305,7 +306,7 @@
   },
   "book": {
     "title": "Book",
-    "subtitle": "Courts, moorings and rooms you can book.",
+    "subtitle": "Select your calendar booking below",
     "loadError": "We could not load the calendars.",
     "empty": "There is nothing to book at the moment.",
     "notBookable": "Not taking bookings",
@@ -331,9 +332,10 @@
     "adding": "Adding…",
     "addFailed": "We could not book that slot.",
     "reason": {
+      "in-your-basket": "In your basket",
       "full": "Full",
       "in-use": "Taken",
-      "held": "Being booked"
+      "held": "Held by someone else"
     }
   },
   "registrations": {
@@ -385,14 +387,25 @@
       "refunded": "Refunded"
     }
   },
+  "holds": {
+    "remaining": "{{time}} left",
+    "expired": "Hold expired"
+  },
   "cart": {
+    "changePaymentMethod": "Change Payment Method",
+    "editAnswersTitle": "Change your answers",
+    "editAnswers": "Change answers",
+    "yourAnswers_other": "Click to see your {{count}} entry form values",
+    "yourAnswers": "Click to see your entry form value",
+    "offlineNoteAll": "This order is paid directly to the club. They will record it when it arrives.",
+    "paymentMethodFor": "Payment method for {{item}}",
     "title": "Your basket",
     "empty": "Your basket is empty.",
     "browse": "Find something to enter or join",
     "loadError": "We could not load your basket.",
     "remove": "Remove {{item}}",
     "holdExpired": "Some items are no longer held and may no longer be available. Please review your basket.",
-    "offlineSubtotal": "Paying the club directly",
+    "offlineSubtotal": "Paying the club directly (Offline)",
     "cardSubtotal": "Paying by card",
     "handlingFee": "Handling fee",
     "handlingFeeTax": "Tax on handling fee",
@@ -402,6 +415,9 @@
     "offlineNote": "Part of this order is paid directly to the club. They will record it when it arrives."
   },
   "checkout": {
+    "holdLapsed": "Your basket is no longer held. Please go back and add your items again.",
+    "holdNotice": "Your places are held for",
+    "cardUnavailable": "Card payment is not available for this club at the moment. Please contact the club to pay another way.",
     "title": "Payment",
     "payingToClub": "Paying the club directly",
     "payingNow": "Paying now by card",
@@ -463,7 +479,7 @@
     }
   },
   "orders": {
-    "title": "My orders",
+    "title": "My shop orders",
     "loadError": "We could not load your orders.",
     "empty": "You have not ordered anything yet.",
     "visitShop": "Go to the shop",

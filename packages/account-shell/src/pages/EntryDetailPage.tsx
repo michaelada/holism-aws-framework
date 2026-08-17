@@ -151,7 +151,38 @@ export const EntryDetailPage: React.FC = () => {
         <Typography variant="h2" gutterBottom>
           {t('entry.yourAnswers')}
         </Typography>
-        <Typography color="text.secondary">{t('entry.answersUnavailable')}</Typography>
+        {/*
+          What the member actually filled in.
+
+          This screen is the only place they can see it — the form is gone once
+          the entry exists, and the submission endpoint serves only lines still
+          in an open basket. It used to say "your answers are not available to
+          view here" unconditionally, about answers the member had just typed.
+
+          Shown in full rather than behind an expander: unlike My Memberships,
+          where several cards each carry a form, this page is *about* one entry
+          and there is nothing here for the answers to bury.
+        */}
+        {entry.formSummary?.length > 0 ? (
+          <Stack spacing={1.5}>
+            {entry.formSummary.map((answer, index) => (
+              <Field key={`${answer.label}-${index}`} label={answer.label}>
+                {/*
+                  `pre-wrap`, because a long answer to a textarea — medical
+                  notes, say — was written with line breaks that mean something
+                  to whoever reads it back.
+                */}
+                <Box component="span" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {answer.value}
+                </Box>
+              </Field>
+            ))}
+          </Stack>
+        ) : (
+          // The activity asked nothing, which is a real case and a different
+          // statement from "we cannot show you what you wrote".
+          <Typography color="text.secondary">{t('entry.noAnswers')}</Typography>
+        )}
 
         <Divider sx={{ my: 3 }} />
 

@@ -94,50 +94,69 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     );
   });
 
-  it('confirms immediate access when the club auto-approves', async () => {
+  /*
+   * Straight into the club rather than onto a confirmation screen.
+   *
+   * The old "Request sent" panel could not survive the refresh it depended on:
+   * re-resolving puts the shell briefly into `loading`, `OrganisationRoute`
+   * swaps this screen for a spinner, and the page remounts with its state
+   * reset — leaving the member back on the join form with no sign that
+   * anything had happened.
+   */
+  it('sends an approved member into the club’s home page', async () => {
     const user = userEvent.setup();
     render();
 
     await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
 
-    expect(await screen.findByText('Request sent')).toBeInTheDocument();
-    expect(
-      screen.getByText(/now connected to Killiney Harbour Paddling Club/i)
-    ).toBeInTheDocument();
-  });
-
-  it('warns of the approval gate when the club reviews registrations', async () => {
-    const user = userEvent.setup();
-    respondWith('pending');
-    render();
-
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
-
-    // The outcome is the club's setting, not the member's choice, so it can
-    // only be read from the response — predicting it before submitting would be
-    // wrong for exactly the clubs that gate registration.
-    expect(await screen.findByText(/will review your request/i)).toBeInTheDocument();
-  });
-
-  it('sends an approved member into the club and a pending one to the wait screen', async () => {
-    const user = userEvent.setup();
-    render();
-
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
-    await user.click(await screen.findByRole('button', { name: 'Continue' }));
-
-    expect(mockNavigate).toHaveBeenCalledWith('/khpc');
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/khpc', { replace: true })
+    );
   });
 
   it('routes a pending registration to the awaiting-approval screen', async () => {
+    // The outcome is the club's setting, not the member's choice, so it can
+    // only be read from the response — predicting it before submitting would be
+    // wrong for exactly the clubs that gate registration.
     const user = userEvent.setup();
     respondWith('pending');
     render();
 
     await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
-    await user.click(await screen.findByRole('button', { name: 'Continue' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/khpc/pending');
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/khpc/pending', { replace: true })
+    );
+  });
+
+  it('replaces the join form in history, so Back does not return to it', async () => {
+    const user = userEvent.setup();
+    render();
+
+    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    const [, options] = mockNavigate.mock.calls.at(-1)!;
+    expect(options).toEqual({ replace: true });
+  });
+
+  it('still arrives in the club when re-resolving the shell fails', async () => {
+    // The member is already joined by that point; a failed re-read is not a
+    // failed join, and reporting it as one would say it had not worked.
+    const user = userEvent.setup();
+    contextValue = makeOrganisationContext({
+      state: 'not-connected',
+      me: null,
+      refresh: vi.fn().mockRejectedValue(new Error('resolve failed')),
+    });
+    respondWith('active');
+    render();
+
+    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/khpc', { replace: true })
+    );
   });
 
   it('re-resolves the organisation so the member is not left looking disconnected', async () => {

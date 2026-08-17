@@ -74,6 +74,8 @@ const BOOKING = {
   cancellationRefusal: null,
   cancellationNoticeDays: 2,
   refundExpected: false,
+  displayIcon: 'tennis' as string | null,
+  displayColour: '#2e7d32' as string | null,
   status: 'awaiting-payment' as const,
 };
 
@@ -130,20 +132,51 @@ describe('MyEntriesPage (C1)', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/khpc/entries/entry-1');
   });
 
-  it('switches to bookings and shows their own columns', async () => {
-    const user = userEvent.setup();
+  /**
+   * One table, not two tabs.
+   *
+   * Entries and bookings were behind separate tabs, which made the member do
+   * the merging: a Saturday with a lesson at ten and a show entry at two was
+   * two screens, and neither said what came first.
+   */
+  it('lists entries and bookings together', async () => {
     render();
 
-    await user.click(await screen.findByRole('tab', { name: 'Bookings' }));
-
-    expect(await screen.findByText('Court 1')).toBeInTheDocument();
-    expect(screen.getByText('09:00–10:00')).toBeInTheDocument();
-    expect(screen.getByText('Awaiting payment')).toBeInTheDocument();
+    expect(await screen.findByText('Summer Regatta')).toBeInTheDocument();
+    expect(screen.getByText('Court 1')).toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
 
-  it('opens on the tab named in the URL', async () => {
-    render('/khpc/entries?tab=bookings');
-    expect(await screen.findByText('Court 1')).toBeInTheDocument();
+  it('keeps each kind’s own detail', async () => {
+    // An entry names its activity; a booking names its time and its length.
+    render();
+
+    expect(await screen.findByText('Junior Single Sculls')).toBeInTheDocument();
+    expect(screen.getByText(/09:00–10:00/)).toBeInTheDocument();
+    expect(screen.getByText(/60 min/)).toBeInTheDocument();
+  });
+
+  it('marks a booking with its calendar’s own icon', async () => {
+    // A club chooses an icon per calendar, and a court, an arena and a
+    // clubhouse are meant to be told apart at a glance.
+    const { container } = render();
+
+    await screen.findByText('Court 1');
+    expect(container.querySelector('[data-testid="SportsTennisIcon"]')).toBeInTheDocument();
+  });
+
+  it('marks an entry as an entry', async () => {
+    const { container } = render();
+
+    await screen.findByText('Summer Regatta');
+    expect(container.querySelector('[data-testid="EventIcon"]')).toBeInTheDocument();
+  });
+
+  it('still offers to cancel a booking, and only a booking', async () => {
+    render();
+
+    await screen.findByText('Court 1');
+    expect(screen.getAllByRole('button', { name: 'Cancel' })).toHaveLength(1);
   });
 
   /**

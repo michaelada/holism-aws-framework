@@ -118,7 +118,7 @@ describe('BrowsePage (D1/D4)', () => {
           method: 'POST',
           url: '/api/account/khpc/cart/items',
           data: expect.objectContaining({
-            itemType: 'event-entry',
+            itemType: 'event_entry',
             unitFee: 2500,
           }),
         })

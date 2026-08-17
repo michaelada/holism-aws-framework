@@ -1,6 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  Stack,
+  Typography,
+} from '@mui/material';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
 import { formatDisplayDate } from '@aws-web-framework/components';
 import { AccountDashboard } from '../types/account';
@@ -32,7 +41,21 @@ export const MembershipCard: React.FC<{
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent sx={{ flexGrow: 1 }}>
+      {/*
+        The whole card opens My Memberships, rather than a "View memberships"
+        link repeated inside every one of them. With four cards in the row that
+        link appeared four times and said the same thing each time, while the
+        obvious target — the card itself — did nothing.
+
+        `CardActionArea` rather than an onClick on the Card, so it is a real
+        button: reachable by keyboard, announced as one, and with the ripple and
+        hover that tell a mouse user it can be pressed.
+      */}
+      <CardActionArea
+        onClick={onOpen}
+        sx={{ flexGrow: 1, alignItems: 'stretch', justifyContent: 'flex-start' }}
+      >
+        <CardContent sx={{ flexGrow: 1 }}>
         <Stack direction="row" spacing={1.5}>
           <Box
             aria-hidden
@@ -91,25 +114,31 @@ export const MembershipCard: React.FC<{
             sx={{ mt: 1 }}
           />
         )}
-      </CardContent>
+        </CardContent>
+      </CardActionArea>
 
-      <Stack direction="row" spacing={1} sx={{ px: 2, pb: 2 }}>
-        {membership.canRenew && (
-          <Button size="small" variant="contained" onClick={onRenew}>
-            {t('home.renew')}
-          </Button>
-        )}
-        {membership.renewalNotOpen && (
-          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-            {t('home.renewalNotOpen')}
-          </Typography>
-        )}
-        {!membership.canRenew && !membership.renewalNotOpen && (
-          <Button size="small" onClick={onOpen}>
-            {t('home.viewMemberships')}
-          </Button>
-        )}
-      </Stack>
+      {/*
+        Renewal stays outside the action area. It is a different destination
+        from the card's own, and nesting a button inside a button is invalid
+        markup that browsers resolve by firing both.
+
+        Nothing is rendered when there is neither a renewal nor a note: the row
+        used to hold a "View memberships" button there, which is now the card.
+      */}
+      {(membership.canRenew || membership.renewalNotOpen) && (
+        <Stack direction="row" spacing={1} sx={{ px: 2, pb: 2 }}>
+          {membership.canRenew && (
+            <Button size="small" variant="contained" onClick={onRenew}>
+              {t('home.renew')}
+            </Button>
+          )}
+          {membership.renewalNotOpen && (
+            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+              {t('home.renewalNotOpen')}
+            </Typography>
+          )}
+        </Stack>
+      )}
     </Card>
   );
 };

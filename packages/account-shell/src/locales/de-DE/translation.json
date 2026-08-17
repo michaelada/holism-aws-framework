@@ -120,6 +120,8 @@
     "payments": "Zahlungen",
     "profile": "Profil und Einstellungen",
     "cart": "Warenkorb",
+    "cartCount": "1 Artikel in Ihrem Warenkorb",
+    "cartCount_other": "{{count}} Artikel in Ihrem Warenkorb",
     "menu": "Menü",
     "mine": "Meine",
     "tickets": "Meine Tickets",
@@ -143,7 +145,6 @@
     "membershipNumber": "Mitgliedsnr. {{number}}",
     "membershipOneOf": "1 von {{count}} Mitgliedschaft",
     "membershipOneOf_other": "1 von {{count}} Mitgliedschaften",
-    "viewMemberships": "Mitgliedschaften ansehen",
     "cart": "Ihr Warenkorb",
     "cartSummary": "{{count}} Positionen · {{total}}",
     "cartHandling": "inkl. {{fee}} Bearbeitung",
@@ -151,6 +152,9 @@
     "recentPayments": "Letzte Zahlungen",
     "allPayments": "Alle Zahlungen",
     "whatsOn": "Aktuelles",
+    "upcomingEvents": "Kommende Veranstaltungen",
+    "viewAll": "Alle anzeigen",
+    "registrations": "Anmeldungen",
     "shop": "Shop",
     "free": "Kostenlos",
     "nothingYet": "Hier ist noch nichts. Sobald der Verein etwas öffnet, erscheint es hier.",
@@ -176,20 +180,13 @@
   },
   "entries": {
     "title": "Meine Anmeldungen und Buchungen",
-    "tabEntries": "Anmeldungen",
-    "tabBookings": "Buchungen",
     "empty": "Sie haben noch keine Anmeldungen.",
-    "emptyBookings": "Sie haben noch keine Buchungen.",
     "emptyHint": "Ihre Anmeldungen erscheinen hier.",
     "loadError": "Ihre Anmeldungen konnten nicht geladen werden.",
-    "colEvent": "Veranstaltung",
-    "colActivity": "Aktivität",
+    "colItem": "Eintrag",
     "colDate": "Datum",
     "colFee": "Gebühr",
     "colStatus": "Status",
-    "colCalendar": "Kalender",
-    "colSlot": "Zeitfenster",
-    "colDuration": "Dauer",
     "colPlaces": "Plätze",
     "minutes": "{{count}} Min.",
     "view": "Ansehen",
@@ -211,7 +208,7 @@
     "entrant": "Teilnehmer",
     "reference": "Anmeldung erfolgt",
     "yourAnswers": "Ihre Angaben",
-    "answersUnavailable": "Ihre Angaben können hier nicht eingesehen werden.",
+    "noAnswers": "F\u00fcr diese Anmeldung war kein Formular auszuf\u00fcllen.",
     "noCancel": "Anmeldungen können hier nicht storniert werden. Bitte wenden Sie sich an den Verein, wenn Sie zurücktreten möchten.",
     "notFound": "Diese Anmeldung wurde nicht gefunden.",
     "loadError": "Ihre Anmeldung konnte nicht geladen werden."
@@ -226,7 +223,9 @@
     "expiresIn": "Läuft in {{count}} Tagen ab",
     "expired": "Vor {{count}} Tagen abgelaufen",
     "renew": "Verlängern",
-    "renewalNotOpen": "Verlängerungen sind noch nicht möglich."
+    "renewalNotOpen": "Verlängerungen sind noch nicht möglich.",
+    "yourDetails": "Ihre Angaben (1 Antwort)",
+    "yourDetails_other": "Ihre Angaben ({{count}} Antworten)"
   },
   "browse": {
     "loadError": "Das Angebot konnte nicht geladen werden.",
@@ -247,7 +246,9 @@
       "activity-full": "Ausgebucht",
       "already-entered": "Bereits angemeldet",
       "not-open-for-applications": "Nicht geöffnet",
-      "already-a-member": "Bereits Mitglied"
+      "already-a-member": "Bereits Mitglied",
+      "held-by-others": "Von jemand anderem reserviert",
+      "in-your-basket": "In Ihrem Warenkorb"
     },
     "entries": {
       "notOpen": "Anmeldung ab {{date}}",
@@ -333,7 +334,8 @@
     "reason": {
       "full": "Ausgebucht",
       "in-use": "Belegt",
-      "held": "Wird gebucht"
+      "held": "Von jemand anderem reserviert",
+      "in-your-basket": "In Ihrem Warenkorb"
     }
   },
   "registrations": {
@@ -385,21 +387,32 @@
       "refunded": "Erstattet"
     }
   },
+  "holds": {
+    "remaining": "Noch {{time}}",
+    "expired": "Reservierung abgelaufen"
+  },
   "cart": {
     "title": "Ihr Warenkorb",
     "empty": "Ihr Warenkorb ist leer.",
     "browse": "Etwas zum Anmelden oder Beitreten finden",
     "loadError": "Ihr Warenkorb konnte nicht geladen werden.",
     "remove": "{{item}} entfernen",
+    "paymentMethodFor": "Zahlungsart für {{item}}",
     "holdExpired": "Einige Artikel sind nicht mehr reserviert und möglicherweise nicht mehr verfügbar. Bitte prüfen Sie Ihren Warenkorb.",
-    "offlineSubtotal": "Direkt an den Verein",
+    "offlineSubtotal": "Direkt an den Verein (Offline)",
     "cardSubtotal": "Zahlung per Karte",
     "handlingFee": "Bearbeitungsgebühr",
     "handlingFeeTax": "Steuer auf die Bearbeitungsgebühr",
     "orderTotal": "Gesamtbetrag",
     "payingNow": "Jetzt per Karte",
     "checkout": "Zur Kasse",
-    "offlineNote": "Ein Teil dieser Bestellung wird direkt an den Verein gezahlt. Er erfasst den Betrag bei Eingang."
+    "offlineNote": "Ein Teil dieser Bestellung wird direkt an den Verein gezahlt. Er erfasst den Betrag bei Eingang.",
+    "offlineNoteAll": "Diese Bestellung wird direkt an den Verein gezahlt. Der Eingang wird dort erfasst.",
+    "yourAnswers": "Klicken Sie, um Ihren Anmeldeformularwert zu sehen",
+    "yourAnswers_other": "Klicken Sie, um Ihre {{count}} Anmeldeformularwerte zu sehen",
+    "editAnswers": "Angaben ändern",
+    "editAnswersTitle": "Angaben ändern",
+    "changePaymentMethod": "Zahlungsart ändern"
   },
   "checkout": {
     "title": "Zahlung",
@@ -408,6 +421,10 @@
     "pay": "Jetzt bezahlen",
     "processing": "Wird verarbeitet…",
     "confirming": "Ihre Zahlung wird bestätigt…",
+    "cardUnavailable": "Kartenzahlung ist für diesen Verein derzeit nicht verfügbar. Bitte wenden Sie sich an den Verein, um anders zu bezahlen.",
+    "holdNotice": "Ihre Plätze sind reserviert für",
+    "holdLapsed": "Ihr Warenkorb ist nicht mehr reserviert. Bitte gehen Sie zurück und fügen Sie Ihre Artikel erneut hinzu.",
+    "backToBasket": "Zurück zum Warenkorb",
     "paymentFailed": "Ihre Zahlung konnte nicht abgeschlossen werden.",
     "startFailed": "Die Zahlung konnte nicht gestartet werden.",
     "backToBasket": "Zurück zum Warenkorb"

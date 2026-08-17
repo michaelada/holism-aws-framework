@@ -64,7 +64,7 @@ const payment = (over: Partial<AccountPayment> = {}): AccountPayment => ({
     },
     {
       id: 'line-2',
-      itemType: 'event-entry',
+      itemType: 'event_entry',
       description: 'Summer Regatta — Junior Sculls',
       fee: 2600,
       handlingFee: 75,

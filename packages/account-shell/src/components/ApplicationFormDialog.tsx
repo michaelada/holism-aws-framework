@@ -53,6 +53,15 @@ interface ApplicationForm {
 }
 
 export interface ApplicationFormDialogProps {
+  /**
+   * Set to edit answers that already exist rather than collect new ones.
+   *
+   * The form and the previous answers are read from the submission itself, so
+   * `formId` and `contextId` are only consulted when creating. Editing is
+   * limited to a basket the member has not checked out — the server enforces
+   * that, and refuses anything else as not found.
+   */
+  submissionId?: string;
   open: boolean;
   formId: string;
   /** The activity or membership type the answers belong to. */
@@ -66,6 +75,7 @@ export interface ApplicationFormDialogProps {
 
 export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
   open,
+  submissionId,
   formId,
   contextId,
   submissionType,
@@ -90,7 +100,17 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const result = await execute({ url: `/api/account/${orgCode}/forms/${formId}` });
+      /*
+       * Editing reads the submission, which carries both the form and what was
+       * answered; creating reads the form alone. Kept as one loader so the two
+       * paths cannot drift into rendering different things.
+       */
+      const response = submissionId
+        ? await execute({ url: `/api/account/${orgCode}/form-submissions/${submissionId}` })
+        : null;
+      const result = submissionId
+        ? (response as any)?.form
+        : await execute({ url: `/api/account/${orgCode}/forms/${formId}` });
       /*
        * Normalised rather than trusted. `fields` is spread and sorted during
        * render, so a response without it throws inside the render pass and
@@ -103,7 +123,8 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
         description: result?.description ?? null,
         fields: Array.isArray(result?.fields) ? result.fields : [],
       });
-      setValues({});
+      // Prefilled when editing, so the member corrects rather than retypes.
+      setValues(submissionId ? ((response as any)?.submissionData ?? {}) : {});
       setMissing([]);
     } catch {
       setError(t('form.loadFailed'));
@@ -111,7 +132,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [execute, orgCode, formId, open, t]);
+  }, [execute, orgCode, formId, submissionId, open, t]);
 
   useEffect(() => {
     void load();
@@ -141,12 +162,21 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
     setSaving(true);
     setError(null);
     try {
-      const submission = await executeSubmit({
-        method: 'POST',
-        url: `/api/account/${orgCode}/form-submissions`,
-        data: { formId, contextId, submissionType, submissionData: values },
-      });
-      onSubmitted(submission.id);
+      if (submissionId) {
+        await executeSubmit({
+          method: 'PUT',
+          url: `/api/account/${orgCode}/form-submissions/${submissionId}`,
+          data: { submissionData: values },
+        });
+        onSubmitted(submissionId);
+      } else {
+        const submission = await executeSubmit({
+          method: 'POST',
+          url: `/api/account/${orgCode}/form-submissions`,
+          data: { formId, contextId, submissionType, submissionData: values },
+        });
+        onSubmitted(submission.id);
+      }
     } catch {
       setError(t('form.saveFailed'));
     } finally {

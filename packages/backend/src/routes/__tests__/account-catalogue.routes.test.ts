@@ -14,6 +14,14 @@ import request from 'supertest';
  */
 
 jest.mock('../../config/logger');
+/*
+ * The routes reach the database directly in one place: the duplicate-booking
+ * check, which asks the basket whether this slot is already in it. Defaulted to
+ * "no rows" so every other case behaves as it did.
+ */
+jest.mock('../../database/pool', () => ({
+  db: { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }) },
+}));
 
 jest.mock('../../services/account-organisation.service', () => ({
   accountOrganisationService: {
@@ -27,6 +35,7 @@ jest.mock('../../services/account-catalogue.service', () => ({
     listMerchandise: jest.fn(),
     assertMerchandiseAvailable: jest.fn(),
     assertActivityAvailable: jest.fn(),
+    findActivity: jest.fn(),
     listRegistrationTypes: jest.fn(),
     assertRegistrationTypeAvailable: jest.fn(),
     listCalendars: jest.fn(),
@@ -64,6 +73,7 @@ jest.mock('../../middleware/auth.middleware', () => ({
   },
 }));
 
+import { db } from '../../database/pool';
 import { accountOrganisationService } from '../../services/account-organisation.service';
 import { accountCatalogueService } from '../../services/account-catalogue.service';
 import { accountActivityService } from '../../services/account-activity.service';
@@ -76,6 +86,7 @@ const mockedOrg = accountOrganisationService as jest.Mocked<typeof accountOrgani
 const mockedCatalogue = accountCatalogueService as jest.Mocked<typeof accountCatalogueService>;
 const mockedActivity = accountActivityService as jest.Mocked<typeof accountActivityService>;
 const mockedCart = cartService as jest.Mocked<typeof cartService>;
+const mockedDb = db as jest.Mocked<typeof db>;
 const mockedDashboard = accountDashboardService as jest.Mocked<typeof accountDashboardService>;
 
 const app = express();
@@ -205,7 +216,10 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
   /** The guard that existed but was never wired. */
   it('checks an event entry against the catalogue too', async () => {
-    mockedCatalogue.assertActivityAvailable.mockResolvedValue({ available: false } as any);
+    mockedCatalogue.findActivity.mockResolvedValue({
+      event: { entriesLimit: null },
+      activity: { available: false, entriesLimit: null },
+    } as any);
 
     const response = await request(server)
       .post('/api/account/khpc/cart/items')
@@ -216,7 +230,10 @@ describe('POST /api/account/:orgCode/cart/items', () => {
   });
 
   it('adds an entry the catalogue still offers', async () => {
-    mockedCatalogue.assertActivityAvailable.mockResolvedValue({ available: true } as any);
+    mockedCatalogue.findActivity.mockResolvedValue({
+      event: { entriesLimit: null },
+      activity: { available: true, entriesLimit: null },
+    } as any);
 
     const response = await request(server)
       .post('/api/account/khpc/cart/items')
@@ -224,6 +241,66 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     expect(response.status).toBe(201);
     expect(mockedCart.addItem).toHaveBeenCalled();
+  });
+
+  /**
+   * An uncapped entry is not contended, so it takes no hold. Giving it one
+   * would drop the line out of the basket total two minutes later for nothing.
+   */
+  it('holds nothing for an entry with no limit anywhere', async () => {
+    mockedCatalogue.findActivity.mockResolvedValue({
+      event: { entriesLimit: null },
+      activity: { available: true, entriesLimit: null },
+    } as any);
+
+    await request(server)
+      .post('/api/account/khpc/cart/items')
+      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+
+    expect(mockedCart.addItem).toHaveBeenCalledWith(
+      'org-1',
+      'ou-1',
+      'EUR',
+      expect.objectContaining({ expiresAt: null })
+    );
+  });
+
+  it('holds a capped entry, so two members cannot take the last place', async () => {
+    mockedCatalogue.findActivity.mockResolvedValue({
+      event: { entriesLimit: null },
+      activity: { available: true, entriesLimit: 20 },
+    } as any);
+
+    await request(server)
+      .post('/api/account/khpc/cart/items')
+      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+
+    expect(mockedCart.addItem).toHaveBeenCalledWith(
+      'org-1',
+      'ou-1',
+      'EUR',
+      expect.objectContaining({ expiresAt: expect.any(Date) })
+    );
+  });
+
+  it("holds an entry capped only at the event's level", async () => {
+    // The cap can live at either level; an activity with no limit of its own is
+    // still constrained by an event limited to 60 entries.
+    mockedCatalogue.findActivity.mockResolvedValue({
+      event: { entriesLimit: 60 },
+      activity: { available: true, entriesLimit: null },
+    } as any);
+
+    await request(server)
+      .post('/api/account/khpc/cart/items')
+      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+
+    expect(mockedCart.addItem).toHaveBeenCalledWith(
+      'org-1',
+      'ou-1',
+      'EUR',
+      expect.objectContaining({ expiresAt: expect.any(Date) })
+    );
   });
 
   /**
@@ -238,7 +315,7 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     expect(response.status).toBe(201);
     expect(mockedCatalogue.assertMerchandiseAvailable).not.toHaveBeenCalled();
-    expect(mockedCatalogue.assertActivityAvailable).not.toHaveBeenCalled();
+    expect(mockedCatalogue.findActivity).not.toHaveBeenCalled();
     expect(mockedCatalogue.assertSlotAvailable).not.toHaveBeenCalled();
   });
 });
@@ -262,7 +339,10 @@ describe('GET /api/account/:orgCode/catalogue/calendars/:id/availability', () =>
       'org-1',
       'cal-1',
       '2026-08-08',
-      '2026-08-14'
+      '2026-08-14',
+      expect.any(Date),
+      // The viewer, so their own holds read as theirs rather than a stranger's.
+      'ou-1'
     );
   });
 
@@ -330,8 +410,58 @@ describe('POST /api/account/:orgCode/cart/items — a booking', () => {
       '2026-08-08',
       '09:00',
       60,
-      1
+      1,
+      expect.any(Date),
+      // The member asking, so a second attempt at the same slot is refused as
+      // already-in-your-basket rather than silently added twice.
+      'ou-1'
     );
+  });
+
+  /**
+   * A slot is exclusive by its nature, so every booking takes a hold — the
+   * server decides the window rather than trusting one from the request.
+   */
+  it('refuses the same slot twice, even after its hold has lapsed', async () => {
+    /*
+     * `assertSlotAvailable` catches a duplicate only while the hold is live: an
+     * expired hold is invisible to the availability query, so the slot reads as
+     * free and a second identical line goes in. The basket then holds one
+     * exclusive slot twice and checkout prices both — which is how a member
+     * ended up looking at a pending payment listing the same booking twice.
+     */
+    mockedDb.query.mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 } as any);
+
+    const response = await request(server).post('/api/account/khpc/cart/items').send(bookingLine);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatch(/already in your basket/i);
+    expect(mockedCart.addItem).not.toHaveBeenCalled();
+    // Refused before availability is even consulted.
+    expect(mockedCatalogue.assertSlotAvailable).not.toHaveBeenCalled();
+  });
+
+  it('holds the slot it just added', async () => {
+    await request(server).post('/api/account/khpc/cart/items').send(bookingLine);
+
+    expect(mockedCart.addItem).toHaveBeenCalledWith(
+      'org-1',
+      'ou-1',
+      'EUR',
+      expect.objectContaining({ expiresAt: expect.any(Date) })
+    );
+  });
+
+  it('ignores an expiry the client asked for', async () => {
+    // Otherwise a crafted request could hold a contended court for an hour.
+    const far = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await request(server)
+      .post('/api/account/khpc/cart/items')
+      .send({ ...bookingLine, expiresAt: far });
+
+    const passed = mockedCart.addItem.mock.calls.at(-1)?.[3] as { expiresAt: Date };
+    expect(passed.expiresAt.getTime()).toBeLessThan(Date.parse(far));
   });
 
   it('refuses a slot somebody else has taken, with the reason', async () => {

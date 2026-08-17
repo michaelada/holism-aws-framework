@@ -41,6 +41,20 @@ export class HelixPayProvider implements PaymentProvider {
     );
   }
 
+  async capturePayment(_providerTransactionId: string): Promise<void> {
+    throw new PaymentProviderError(
+      'Helix Pay is not yet supported for online payment',
+      this.name
+    );
+  }
+
+  async cancelPayment(_providerTransactionId: string, _reason?: string): Promise<void> {
+    throw new PaymentProviderError(
+      'Helix Pay is not yet supported for online payment',
+      this.name
+    );
+  }
+
   parseWebhook(_rawBody: Buffer | string, _signature: string): WebhookEvent {
     throw new PaymentProviderError(
       'Helix Pay is not yet supported for online payment',

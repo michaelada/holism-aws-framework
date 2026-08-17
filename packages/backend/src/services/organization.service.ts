@@ -269,9 +269,11 @@ export class OrganizationService {
 
       // Validate capabilities
       if (data.enabledCapabilities.length > 0) {
-        const valid = await capabilityService.validateCapabilities(data.enabledCapabilities);
-        if (!valid) {
-          throw new Error('Invalid capabilities provided');
+        const unknown = await capabilityService.unknownCapabilities(data.enabledCapabilities);
+        if (unknown.length > 0) {
+          throw new ValidationError(
+            `Unknown ${unknown.length === 1 ? 'capability' : 'capabilities'}: ${unknown.join(', ')}`
+          );
         }
 
         // Ensure capabilities are subset of org type defaults
@@ -456,9 +458,11 @@ export class OrganizationService {
           );
 
           if (data.enabledCapabilities.length > 0) {
-            const valid = await capabilityService.validateCapabilities(data.enabledCapabilities);
-            if (!valid) {
-              throw new Error('Invalid capabilities provided');
+            const unknown = await capabilityService.unknownCapabilities(data.enabledCapabilities);
+            if (unknown.length > 0) {
+              throw new ValidationError(
+                `Unknown ${unknown.length === 1 ? 'capability' : 'capabilities'}: ${unknown.join(', ')}`
+              );
             }
 
             // Ensure capabilities are subset of org type defaults

@@ -23,13 +23,13 @@ const itemRow = (over: Record<string, any> = {}) => ({
   id: 'item-1',
   cart_id: CART,
   item_type: 'event_entry',
-  context_ref: { supportedPaymentMethodIds: ['pm-stripe', 'pm-offline'] },
+  context_ref: { supportedPaymentMethodIds: ['00000000-0000-4000-8000-00000000ca7d', '00000000-0000-4000-8000-0000000000ff'] },
   description: 'Spring Hunter Trials — Class 2',
   form_submission_id: null,
   quantity: 1,
   unit_fee: 4500,
   fee: 4500,
-  payment_method_id: 'pm-stripe',
+  payment_method_id: '00000000-0000-4000-8000-00000000ca7d',
   payment_method_name: 'stripe',
   payment_method_display_name: 'Pay By Card (Stripe)',
   handling_fee_included: false,
@@ -46,7 +46,7 @@ describe('CartService', () => {
   beforeEach(() => {
     mockDb.query.mockReset();
     mockFees.mockReset();
-    mockFees.mockResolvedValue(new Map([['pm-stripe', STRIPE_CONFIG]]));
+    mockFees.mockResolvedValue(new Map([['00000000-0000-4000-8000-00000000ca7d', STRIPE_CONFIG]]));
     service = new CartService();
   });
 
@@ -84,11 +84,20 @@ describe('CartService', () => {
   });
 
   describe('getCart totals', () => {
-    /** Cart load: find cart, load items, (fees are mocked separately). */
+    /**
+     * Cart load: find cart, load items, then name the methods each item could
+     * switch to (fees are mocked separately).
+     */
     const withItems = (rows: any[]) => {
       mockDb.query
         .mockResolvedValueOnce({ rows: [openCartRow] } as any)
-        .mockResolvedValueOnce({ rows } as any);
+        .mockResolvedValueOnce({ rows } as any)
+        .mockResolvedValueOnce({
+          rows: [
+            { id: '00000000-0000-4000-8000-00000000ca7d', name: 'stripe', display_name: 'Pay By Card' },
+            { id: '00000000-0000-4000-8000-0000000000ff', name: 'pay-offline', display_name: 'Pay Offline' },
+          ],
+        } as any);
     };
 
     it('reproduces the worked example from the design document', async () => {
@@ -97,7 +106,7 @@ describe('CartService', () => {
         itemRow({
           id: 'membership',
           fee: 18000,
-          payment_method_id: 'pm-offline',
+          payment_method_id: '00000000-0000-4000-8000-0000000000ff',
           payment_method_name: 'pay-offline',
         }),
         itemRow({ id: 'booking', fee: 1200 }),
@@ -121,7 +130,7 @@ describe('CartService', () => {
         itemRow({
           id: 'b',
           fee: 1000,
-          payment_method_id: 'pm-offline',
+          payment_method_id: '00000000-0000-4000-8000-0000000000ff',
           payment_method_name: 'pay-offline',
         }),
       ]);
@@ -137,7 +146,7 @@ describe('CartService', () => {
         itemRow({
           id: 'b',
           payment_method_name: 'pay-offline',
-          payment_method_id: 'pm-offline',
+          payment_method_id: '00000000-0000-4000-8000-0000000000ff',
         }),
       ]);
 
@@ -152,7 +161,7 @@ describe('CartService', () => {
         itemRow({ id: 'included', handling_fee_included: true }),
         itemRow({
           id: 'offline',
-          payment_method_id: 'pm-offline',
+          payment_method_id: '00000000-0000-4000-8000-0000000000ff',
           payment_method_name: 'pay-offline',
           handling_fee_included: false,
         }),
@@ -220,9 +229,16 @@ describe('CartService', () => {
       contextRef: { activityId: 'act-1' },
       description: 'Class 2',
       unitFee: 4500,
-      paymentMethodId: 'pm-stripe',
+      paymentMethodId: '00000000-0000-4000-8000-00000000ca7d',
       handlingFeeIncluded: false,
-      supportedPaymentMethodIds: ['pm-stripe', 'pm-offline'],
+      supportedPaymentMethodIds: ['00000000-0000-4000-8000-00000000ca7d', '00000000-0000-4000-8000-0000000000ff'],
+    };
+
+    const methodRows = {
+      rows: [
+        { id: '00000000-0000-4000-8000-00000000ca7d', name: 'stripe', display_name: 'Pay By Card' },
+        { id: '00000000-0000-4000-8000-0000000000ff', name: 'pay-offline', display_name: 'Pay Offline' },
+      ],
     };
 
     const expectInsert = () => {
@@ -230,7 +246,8 @@ describe('CartService', () => {
         .mockResolvedValueOnce({ rows: [openCartRow] } as any)   // find cart
         .mockResolvedValueOnce({ rows: [{ id: 'item-9' }] } as any) // insert
         .mockResolvedValueOnce({ rows: [] } as any)               // touch
-        .mockResolvedValueOnce({ rows: [itemRow({ id: 'item-9' })] } as any);
+        .mockResolvedValueOnce({ rows: [itemRow({ id: 'item-9' })] } as any)
+        .mockResolvedValueOnce(methodRows as any);                // name the alternatives
     };
 
     it('stores the fee net of discount, in minor units', async () => {
@@ -252,13 +269,115 @@ describe('CartService', () => {
 
       const params = mockDb.query.mock.calls[1][1] as any[];
       const contextRef = JSON.parse(params[2]);
-      expect(contextRef.supportedPaymentMethodIds).toEqual(['pm-stripe', 'pm-offline']);
+      expect(contextRef.supportedPaymentMethodIds).toEqual(['00000000-0000-4000-8000-00000000ca7d', '00000000-0000-4000-8000-0000000000ff']);
       expect(contextRef.activityId).toBe('act-1');
+    });
+
+    /*
+     * The member is never asked how to pay while adding a thing to a basket,
+     * so nothing sends a method. Rejecting the request for the omission is what
+     * made every add fail with "that payment method is not accepted for this
+     * item" — a message about a choice nobody had made.
+     */
+    describe('when no payment method was chosen', () => {
+      const { paymentMethodId: _ignored, ...withoutMethod } = validItem;
+
+      it('takes the only supported method when there is just one', async () => {
+        expectInsert();
+        await service.addItem(ORG, USER, 'EUR', {
+          ...withoutMethod,
+          supportedPaymentMethodIds: ['00000000-0000-4000-8000-0000000000ff'],
+        });
+
+        const params = mockDb.query.mock.calls[1][1] as any[];
+        expect(params).toContain('00000000-0000-4000-8000-0000000000ff');
+      });
+
+      it('prefers card when the item accepts several', async () => {
+        // Card completes without the club having to do anything; an offline
+        // default would leave a member believing they had paid.
+        mockDb.query
+          .mockResolvedValueOnce({
+            rows: [
+              { id: '00000000-0000-4000-8000-0000000000ff', name: 'pay-offline' },
+              { id: '00000000-0000-4000-8000-00000000ca7d', name: 'stripe' },
+            ],
+          } as any)
+          .mockResolvedValueOnce({ rows: [openCartRow] } as any)
+          .mockResolvedValueOnce({ rows: [{ id: 'item-9' }] } as any)
+          .mockResolvedValueOnce({ rows: [] } as any)
+          .mockResolvedValueOnce({ rows: [itemRow({ id: 'item-9' })] } as any)
+          .mockResolvedValueOnce(methodRows as any);
+
+        await service.addItem(ORG, USER, 'EUR', withoutMethod);
+
+        const params = mockDb.query.mock.calls[2][1] as any[];
+        expect(params).toContain('00000000-0000-4000-8000-00000000ca7d');
+      });
+
+      it('falls back to the first when a club offers no card at all', async () => {
+        // An offline-only club still has to be able to sell.
+        mockDb.query
+          .mockResolvedValueOnce({
+            rows: [
+              { id: '00000000-0000-4000-8000-0000000000ff', name: 'pay-offline' },
+              { id: '00000000-0000-4000-8000-0000000000c4', name: 'cheque' },
+            ],
+          } as any)
+          .mockResolvedValueOnce({ rows: [openCartRow] } as any)
+          .mockResolvedValueOnce({ rows: [{ id: 'item-9' }] } as any)
+          .mockResolvedValueOnce({ rows: [] } as any)
+          .mockResolvedValueOnce({ rows: [itemRow({ id: 'item-9' })] } as any)
+          .mockResolvedValueOnce(methodRows as any);
+
+        await service.addItem(ORG, USER, 'EUR', {
+          ...withoutMethod,
+          supportedPaymentMethodIds: ['00000000-0000-4000-8000-0000000000ff', '00000000-0000-4000-8000-0000000000c4'],
+        });
+
+        const params = mockDb.query.mock.calls[2][1] as any[];
+        expect(params).toContain('00000000-0000-4000-8000-0000000000ff');
+      });
+
+      it('refuses a list that is not a list, rather than failing the request', async () => {
+        /*
+         * One catalogue mapping handed over a bare string where an array
+         * belonged, which reached Postgres as `ANY('pay-offline')` and took the
+         * whole request down with "malformed array literal". A misconfigured
+         * item should be a refusal the member can act on.
+         */
+        await expect(
+          service.addItem(ORG, USER, 'EUR', {
+            ...withoutMethod,
+            supportedPaymentMethodIds: 'pay-offline' as any,
+          })
+        ).rejects.toThrow(ValidationError);
+        expect(mockDb.query).not.toHaveBeenCalled();
+      });
+
+      it('ignores entries that could never be a method id', async () => {
+        // Names rather than ids: the shape the seed wrote for a while.
+        await expect(
+          service.addItem(ORG, USER, 'EUR', {
+            ...withoutMethod,
+            supportedPaymentMethodIds: ['pay-offline', 'stripe'],
+          })
+        ).rejects.toThrow(ValidationError);
+      });
+
+      it('refuses an item configured with no payment method at all', async () => {
+        await expect(
+          service.addItem(ORG, USER, 'EUR', {
+            ...withoutMethod,
+            supportedPaymentMethodIds: [],
+          })
+        ).rejects.toThrow(ValidationError);
+      });
     });
 
     it('rejects a payment method the item does not accept', async () => {
       await expect(
-        service.addItem(ORG, USER, 'EUR', { ...validItem, paymentMethodId: 'pm-helix' })
+        service.addItem(ORG, USER, 'EUR', { ...validItem, paymentMethodId: '00000000-0000-4000-8000-00000000a11a' })
       ).rejects.toThrow(ValidationError);
       expect(mockDb.query).not.toHaveBeenCalled();
     });
@@ -290,26 +409,26 @@ describe('CartService', () => {
     it('switches to a method the item accepts', async () => {
       mockDb.query
         .mockResolvedValueOnce({
-          rows: [{ context_ref: { supportedPaymentMethodIds: ['pm-stripe', 'pm-offline'] } }],
+          rows: [{ context_ref: { supportedPaymentMethodIds: ['00000000-0000-4000-8000-00000000ca7d', '00000000-0000-4000-8000-0000000000ff'] } }],
         } as any)
         .mockResolvedValue({ rows: [] } as any);
 
-      await service.setItemPaymentMethod(CART, 'item-1', 'pm-offline');
+      await service.setItemPaymentMethod(CART, 'item-1', '00000000-0000-4000-8000-0000000000ff');
 
       const [sql, params] = mockDb.query.mock.calls[1];
       expect(String(sql)).toContain('UPDATE cart_items SET payment_method_id');
-      expect(params).toEqual(['pm-offline', 'item-1']);
+      expect(params).toEqual(['00000000-0000-4000-8000-0000000000ff', 'item-1']);
     });
 
     it('refuses a method the item never accepted', async () => {
       // The list was snapshotted at add time, so a later change to the source
       // item cannot retroactively widen the member's choice.
       mockDb.query.mockResolvedValueOnce({
-        rows: [{ context_ref: { supportedPaymentMethodIds: ['pm-offline'] } }],
+        rows: [{ context_ref: { supportedPaymentMethodIds: ['00000000-0000-4000-8000-0000000000ff'] } }],
       } as any);
 
       await expect(
-        service.setItemPaymentMethod(CART, 'item-1', 'pm-stripe')
+        service.setItemPaymentMethod(CART, 'item-1', '00000000-0000-4000-8000-00000000ca7d')
       ).rejects.toThrow(ValidationError);
     });
 
@@ -317,7 +436,7 @@ describe('CartService', () => {
       mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
 
       await expect(
-        service.setItemPaymentMethod(CART, 'someone-elses-item', 'pm-offline')
+        service.setItemPaymentMethod(CART, 'someone-elses-item', '00000000-0000-4000-8000-0000000000ff')
       ).rejects.toThrow(NotFoundError);
 
       const [sql, params] = mockDb.query.mock.calls[0];

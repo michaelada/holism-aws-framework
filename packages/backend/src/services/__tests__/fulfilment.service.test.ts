@@ -503,16 +503,25 @@ describe('FulfilmentService', () => {
     });
 
     /**
-     * An offline order is not goods-in-hand. Only entries are created ahead of
-     * the money, so this waits for the club to record the payment.
+     * This case used to assert the opposite, and the reasoning behind it was
+     * confused: "an offline order is not goods-in-hand" is about *dispatching*,
+     * not about whether the order exists.
+     *
+     * `merchandise_orders` defaults both `order_status` and `payment_status` to
+     * `pending`, so the order can be recorded while nothing is sent. Deferring
+     * it left the member with nothing under "My shop orders" and the club with
+     * no record that money was owed.
      */
-    it('waits for the money on an offline order', async () => {
+    it('records the order on an offline purchase, unpaid and undispatched', async () => {
+      mockMerchandise.createOrder.mockResolvedValue({ id: 'order-1' } as any);
       respond([merchandiseLine({ payment_status: 'awaiting_offline' })]);
 
       const outcome = await service.fulfilPayment('pay-1');
 
-      expect(outcome).toEqual({ fulfilled: 0, failed: 0, complete: false });
-      expect(mockMerchandise.createOrder).not.toHaveBeenCalled();
+      expect(outcome).toEqual({ fulfilled: 1, failed: 0, complete: true });
+      expect(mockMerchandise.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ paymentMethod: 'offline' })
+      );
     });
   });
   /**
@@ -581,7 +590,13 @@ describe('FulfilmentService', () => {
         '2026-08-08',
         '09:00',
         60,
-        1
+        1,
+        expect.any(Date),
+        // The buyer, and their own hold left out of the sum: this line *is*
+        // that hold being redeemed, so counting it would have the member's own
+        // reservation block the booking it exists to guarantee.
+        'ou-1',
+        true
       );
     });
 
@@ -621,13 +636,24 @@ describe('FulfilmentService', () => {
       expect(mockCatalogue.assertSlotAvailable).not.toHaveBeenCalled();
     });
 
-    it('waits for the money on an offline booking', async () => {
+    /**
+     * This case used to assert the opposite, and the assertion was wrong.
+     *
+     * Waiting for the money on a booking leaves the slot on sale: the basket
+     * hold lapses two minutes after checkout, so the member who has committed
+     * to pay for it watches it go to somebody else — and sees nothing under
+     * "My entries & bookings" in the meantime. The booking is made now, and
+     * records that it is not yet paid for.
+     */
+    it('books the slot on an offline order rather than waiting for the money', async () => {
       respond([bookingLine({ payment_status: 'awaiting_offline' })]);
 
       const outcome = await service.fulfilPayment('pay-1');
 
-      expect(outcome).toEqual({ fulfilled: 0, failed: 0, complete: false });
-      expect(mockCalendar.createBooking).not.toHaveBeenCalled();
+      expect(outcome).toEqual({ fulfilled: 1, failed: 0, complete: true });
+      expect(mockCalendar.createBooking).toHaveBeenCalledWith(
+        expect.objectContaining({ paymentMethod: 'offline' })
+      );
     });
   });
   /**
@@ -757,5 +783,226 @@ describe('FulfilmentService', () => {
       expect(outcome).toEqual({ fulfilled: 0, failed: 0, complete: false });
       expect(mockRegistration.createRegistration).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * The spelling of an item type.
+ *
+ * `cart_items.item_type` is `event_entry`, and `payment_transactions` copies it
+ * verbatim — but this service switched on `event-entry` and was never updated
+ * when the basket moved to the underscore to satisfy its check constraint. Every
+ * paid entry therefore failed with "fulfilment is not implemented for
+ * event_entry".
+ *
+ * It survived because these tests used the hyphen too, and because no payment
+ * had ever reached fulfilment at all: confirming one rolled back on a separate
+ * constraint fault. Two dormant bugs hid each other, and the fixture agreed
+ * with the code rather than with the database.
+ *
+ * So these cases assert the spelling **production actually writes**.
+ */
+describe('FulfilmentService — item type spelling', () => {
+  let service: FulfilmentService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new FulfilmentService();
+  });
+
+  it('fulfils an entry stored the way the basket writes it', async () => {
+    respond([line({ item_type: 'event_entry' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, failed: 0 });
+  });
+
+  it('still fulfils one stored the old way', async () => {
+    // Rows written under the previous convention must not start failing.
+    respond([line({ item_type: 'event-entry' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, failed: 0 });
+  });
+
+  it('creates an unpaid offline entry under the underscore spelling too', async () => {
+    /*
+     * Entries are the one type created before the money arrives. The deferral
+     * test also compared against the hyphen, so an offline entry was being
+     * deferred for ever instead of created.
+     */
+    respond([line({ item_type: 'event_entry', payment_status: 'awaiting_offline' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, failed: 0 });
+  });
+
+  it('still refuses a type it has no idea how to fulfil', async () => {
+    respond([line({ item_type: 'sponsorship' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 0, failed: 1 });
+  });
+});
+
+
+/**
+ * An order paid directly to the club.
+ *
+ * Reported as: two slots booked with Pay Offline, checkout accepted, and then
+ * nothing under "My entries & bookings" — the bookings were never created. They
+ * were being deferred with memberships and merchandise until the money arrived.
+ *
+ * That grouping is wrong for a slot specifically. A booking that does not exist
+ * is a slot **still on sale**: the basket hold lapses two minutes after
+ * checkout, and the member who has just committed to pay watches it go to
+ * somebody else.
+ */
+describe('FulfilmentService — an order placed offline', () => {
+  let service: FulfilmentService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCatalogue.assertSlotAvailable.mockResolvedValue({} as any);
+    mockCalendar.createBooking.mockResolvedValue({ id: 'booking-1' } as any);
+    mockMerchandise.createOrder.mockResolvedValue({ id: 'order-1' } as any);
+    service = new FulfilmentService();
+  });
+
+  /** The options a shop line carries; without them the order cannot be made. */
+  const merchandiseContext = () => ({
+    merchandiseTypeId: 'merch-1',
+    selectedOptions: { 'opt-size': 'val-l' },
+  });
+
+  /** The slot a booking line carries; `bookingLine` above is scoped elsewhere. */
+  const bookingContext = () => ({
+    calendarId: 'cal-1',
+    date: '2026-08-08',
+    startTime: '09:00',
+    duration: 60,
+    places: 1,
+  });
+
+  const offline = (over: Record<string, any> = {}) =>
+    line({ payment_status: 'awaiting_offline', ...over });
+
+  it('creates a booking rather than waiting for the money', async () => {
+    respond([offline({ item_type: 'booking', context_ref: bookingContext() })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, failed: 0 });
+  });
+
+  it('records the booking as not yet paid for', async () => {
+    /*
+     * `calendar.service` reads a payment method as "not paid yet". Without one
+     * the booking would claim to have been paid for, which is the opposite of
+     * what an offline order means.
+     */
+    respond([offline({ item_type: 'booking', context_ref: bookingContext() })]);
+
+    await service.fulfilPayment('pay-1');
+
+    expect(mockCalendar.createBooking).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: 'offline' })
+    );
+  });
+
+  it('leaves a paid booking claiming nothing about a payment method', async () => {
+    respond([line({ item_type: 'booking', context_ref: bookingContext() })]);
+
+    await service.fulfilPayment('pay-1');
+
+    expect(mockCalendar.createBooking).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: undefined })
+    );
+  });
+
+  it('still creates an entry ahead of the money', async () => {
+    respond([offline({ item_type: 'event_entry' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, failed: 0 });
+  });
+
+  it('still holds a membership back until it is paid for', async () => {
+    // An entitlement that runs for a year; granting it before payment gives it
+    // away, and there is no gate to check on the day.
+    respond([offline({ item_type: 'membership' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 0, failed: 0, complete: false });
+  });
+
+  /**
+   * An order record is not the goods.
+   *
+   * Reported as: a shop item bought with Pay Offline, and nothing under "My
+   * shop orders". The line was deferred with memberships, on the reasoning that
+   * goods should not be posted unpaid — which confuses *creating the order*
+   * with *dispatching it*. `merchandise_orders` defaults **both**
+   * `order_status` and `payment_status` to `pending`, so the order can exist
+   * while nothing is sent; and without it the club had no record that money was
+   * owed or what to set aside.
+   */
+  it('creates the shop order rather than waiting for the money', async () => {
+    respond([offline({ item_type: 'merchandise', context_id: 'merch-1', context_ref: merchandiseContext() })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, failed: 0 });
+  });
+
+  it('records how the shop order will be paid, without claiming it is settled', async () => {
+    respond([offline({ item_type: 'merchandise', context_id: 'merch-1', context_ref: merchandiseContext() })]);
+
+    await service.fulfilPayment('pay-1');
+
+    expect(mockMerchandise.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: 'offline' })
+    );
+  });
+
+  it('leaves a paid shop order claiming nothing about a payment method', async () => {
+    respond([line({ item_type: 'merchandise', context_id: 'merch-1', context_ref: merchandiseContext() })]);
+
+    await service.fulfilPayment('pay-1');
+
+    expect(mockMerchandise.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: undefined })
+    );
+  });
+
+  it('still holds a registration back until it is paid for', async () => {
+    /*
+     * The reason that genuinely applies to this type: `createRegistration` sets
+     * `active` when the type auto-approves, so creating one before payment
+     * hands over the registration itself rather than a record of an intention.
+     */
+    respond([offline({ item_type: 'registration' })]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 0, failed: 0, complete: false });
+  });
+
+  it('reports the order as unfinished while anything is deferred', async () => {
+    // `complete: false` is what tells a later run to come back for them.
+    respond([
+      offline({ id: 'line-1', item_type: 'booking', context_ref: bookingContext() }),
+      offline({ id: 'line-2', item_type: 'membership' }),
+    ]);
+
+    const outcome = await service.fulfilPayment('pay-1');
+
+    expect(outcome).toMatchObject({ fulfilled: 1, complete: false });
   });
 });

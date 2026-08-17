@@ -76,6 +76,7 @@ const slot = (over: Partial<AvailableSlot> = {}): AvailableSlot => ({
   placesRemaining: 1,
   available: true,
   unavailableReason: null,
+  heldUntil: null,
   ...over,
 });
 
@@ -140,7 +141,75 @@ describe('BookCalendarPage', () => {
     expect(await screen.findByRole('button', { name: /09:00–10:00/ })).toBeDisabled();
     expect(screen.getByText('Full')).toBeInTheDocument();
     expect(screen.getByText('Taken')).toBeInTheDocument();
-    expect(screen.getByText('Being booked')).toBeInTheDocument();
+    // Worded as somebody else holding it rather than as the slot being gone:
+    // a hold lapses, so the member has a reason to look again in a minute.
+    expect(screen.getByText('Held by someone else')).toBeInTheDocument();
+  });
+
+  it("marks the member's own held slot as theirs, with the time left on it", async () => {
+    respond([
+      slot({
+        startTime: '09:00',
+        endTime: '10:00',
+        available: false,
+        unavailableReason: 'in-your-basket',
+        heldUntil: new Date(Date.now() + 90_000).toISOString(),
+      }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    // "In your basket" rather than the grey nothing an ordinary disabled slot
+    // gets — the member chose this one and must not read it as lost.
+    expect(await screen.findByText('In your basket')).toBeInTheDocument();
+    expect(screen.getByText(/1:2\d left|1:30 left/)).toBeInTheDocument();
+  });
+
+  it('draws a slot already in the basket in red, and refuses the press', async () => {
+    /*
+     * The same "cannot be taken" state as a slot somebody else holds, and it
+     * reads as one — rather than the disabled grey of a slot that was never on
+     * offer, which says nothing about why. The caption and countdown are what
+     * distinguish "yours" from "theirs".
+     */
+    respond([
+      slot({
+        startTime: '09:00',
+        endTime: '10:00',
+        available: false,
+        unavailableReason: 'in-your-basket',
+        heldUntil: new Date(Date.now() + 90_000).toISOString(),
+      }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    const button = await screen.findByRole('button', { name: /09:00–10:00/ });
+    expect(button).toBeDisabled();
+    expect(screen.getByText('In your basket')).toBeInTheDocument();
+  });
+
+  it('does not add a slot that is already in the basket when pressed', async () => {
+    respond([
+      slot({ available: false, unavailableReason: 'in-your-basket', heldUntil: null }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    const button = await screen.findByRole('button', { name: /09:00–10:00/ });
+    await userEvent.click(button).catch(() => undefined);
+
+    // Nothing chosen, so the basket button stays refused.
+    expect(screen.getByRole('button', { name: 'Add to basket' })).toBeDisabled();
+  });
+
+  it("never counts down somebody else's hold", async () => {
+    // The server does not send another member's expiry, and a countdown on a
+    // stranger's slot would only invite people to sit and wait for it.
+    respond([
+      slot({ startTime: '09:00', endTime: '10:00', available: false, unavailableReason: 'held' }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    expect(await screen.findByText('Held by someone else')).toBeInTheDocument();
+    expect(screen.queryByText(/left$/)).not.toBeInTheDocument();
   });
 
   it('will not add to the basket until a slot is chosen', async () => {
@@ -238,6 +307,22 @@ describe('BookCalendarPage', () => {
         '09:00',
         '10:00',
       ]);
+    });
+  });
+
+  it('names both ends of the slot in the basket line', async () => {
+    // A start time alone leaves the member checking a basket that does not say
+    // how long they booked for.
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /09:00–10:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add to basket' }));
+
+    await waitFor(() => {
+      const [call] = mockExecute.mock.calls.find(
+        ([c]: any[]) => c?.method === 'POST' && c?.data?.itemType === 'booking'
+      )!;
+      expect(call.data.description).toContain('09:00–10:00');
     });
   });
 

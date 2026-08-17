@@ -120,6 +120,8 @@
     "payments": "Pagamenti",
     "profile": "Profilo e impostazioni",
     "cart": "Carrello",
+    "cartCount": "1 articolo nel tuo carrello",
+    "cartCount_other": "{{count}} articoli nel tuo carrello",
     "menu": "Menu",
     "mine": "Le mie",
     "tickets": "I miei biglietti",
@@ -143,7 +145,6 @@
     "membershipNumber": "N. socio {{number}}",
     "membershipOneOf": "1 di {{count}} iscrizione",
     "membershipOneOf_other": "1 di {{count}} iscrizioni",
-    "viewMemberships": "Vedi le iscrizioni",
     "cart": "Il tuo carrello",
     "cartSummary": "{{count}} articoli · {{total}}",
     "cartHandling": "incl. {{fee}} di gestione",
@@ -151,6 +152,9 @@
     "recentPayments": "Pagamenti recenti",
     "allPayments": "Tutti i pagamenti",
     "whatsOn": "Novità",
+    "upcomingEvents": "Prossimi eventi",
+    "viewAll": "Vedi tutto",
+    "registrations": "Registrazioni",
     "shop": "Negozio",
     "free": "Gratuito",
     "nothingYet": "Qui non c’è ancora nulla. Quando il club aprirà qualcosa, comparirà qui.",
@@ -176,20 +180,13 @@
   },
   "entries": {
     "title": "Le mie iscrizioni e prenotazioni",
-    "tabEntries": "Iscrizioni",
-    "tabBookings": "Prenotazioni",
     "empty": "Non hai ancora iscrizioni.",
-    "emptyBookings": "Non hai ancora prenotazioni.",
     "emptyHint": "Le iscrizioni che effettuerai appariranno qui.",
     "loadError": "Non è stato possibile caricare le tue iscrizioni.",
-    "colEvent": "Evento",
-    "colActivity": "Attività",
+    "colItem": "Voce",
     "colDate": "Data",
     "colFee": "Quota",
     "colStatus": "Stato",
-    "colCalendar": "Calendario",
-    "colSlot": "Fascia oraria",
-    "colDuration": "Durata",
     "colPlaces": "Posti",
     "minutes": "{{count}} min",
     "view": "Vedi",
@@ -211,7 +208,7 @@
     "entrant": "Partecipante",
     "reference": "Iscrizione effettuata",
     "yourAnswers": "Le tue risposte",
-    "answersUnavailable": "Le tue risposte non sono consultabili qui.",
+    "noAnswers": "Questa iscrizione non prevedeva alcun modulo da compilare.",
     "noCancel": "Le iscrizioni non possono essere annullate qui. Contatta il club se devi ritirarti.",
     "notFound": "Non abbiamo trovato questa iscrizione.",
     "loadError": "Non è stato possibile caricare la tua iscrizione."
@@ -226,7 +223,9 @@
     "expiresIn": "Scade tra {{count}} giorni",
     "expired": "Scaduto {{count}} giorni fa",
     "renew": "Rinnova",
-    "renewalNotOpen": "I rinnovi non sono ancora aperti."
+    "renewalNotOpen": "I rinnovi non sono ancora aperti.",
+    "yourDetails": "I tuoi dati (1 risposta)",
+    "yourDetails_other": "I tuoi dati ({{count}} risposte)"
   },
   "browse": {
     "loadError": "Non è stato possibile caricare le offerte disponibili.",
@@ -247,7 +246,9 @@
       "activity-full": "Al completo",
       "already-entered": "Già iscritto",
       "not-open-for-applications": "Non aperto",
-      "already-a-member": "Già tesserato"
+      "already-a-member": "Già tesserato",
+      "held-by-others": "Riservato da un altro utente",
+      "in-your-basket": "Nel tuo carrello"
     },
     "entries": {
       "notOpen": "Iscrizioni dal {{date}}",
@@ -333,7 +334,8 @@
     "reason": {
       "full": "Al completo",
       "in-use": "Occupato",
-      "held": "In prenotazione"
+      "held": "Riservato da un altro utente",
+      "in-your-basket": "Nel tuo carrello"
     }
   },
   "registrations": {
@@ -385,21 +387,32 @@
       "refunded": "Rimborsato"
     }
   },
+  "holds": {
+    "remaining": "{{time}} rimanenti",
+    "expired": "Prenotazione scaduta"
+  },
   "cart": {
     "title": "Il tuo carrello",
     "empty": "Il tuo carrello è vuoto.",
     "browse": "Trova qualcosa a cui iscriverti",
     "loadError": "Non è stato possibile caricare il tuo carrello.",
     "remove": "Rimuovi {{item}}",
+    "paymentMethodFor": "Metodo di pagamento per {{item}}",
     "holdExpired": "Alcuni articoli non sono più riservati e potrebbero non essere più disponibili. Controlla il carrello.",
-    "offlineSubtotal": "Pagato direttamente al club",
+    "offlineSubtotal": "Pagato direttamente al club (Offline)",
     "cardSubtotal": "Pagato con carta",
     "handlingFee": "Spese di gestione",
     "handlingFeeTax": "Imposta sulle spese di gestione",
     "orderTotal": "Totale ordine",
     "payingNow": "Pagamento con carta ora",
     "checkout": "Vai al pagamento",
-    "offlineNote": "Una parte di questo ordine viene pagata direttamente al club, che la registrerà alla ricezione."
+    "offlineNote": "Una parte di questo ordine viene pagata direttamente al club, che la registrerà alla ricezione.",
+    "offlineNoteAll": "Quest'ordine si paga direttamente al club, che lo registrerà al ricevimento.",
+    "yourAnswers": "Clicca per vedere il valore del tuo modulo d\u2019iscrizione",
+    "yourAnswers_other": "Clicca per vedere i {{count}} valori del tuo modulo d\u2019iscrizione",
+    "editAnswers": "Modifica risposte",
+    "editAnswersTitle": "Modifica le tue risposte",
+    "changePaymentMethod": "Cambia metodo di pagamento"
   },
   "checkout": {
     "title": "Pagamento",
@@ -408,6 +421,10 @@
     "pay": "Paga ora",
     "processing": "Elaborazione…",
     "confirming": "Conferma del pagamento in corso…",
+    "cardUnavailable": "Il pagamento con carta non è disponibile per questo club al momento. Contatta il club per pagare in un altro modo.",
+    "holdNotice": "I tuoi posti sono riservati per",
+    "holdLapsed": "Il tuo carrello non è più riservato. Torna indietro e aggiungi di nuovo i tuoi articoli.",
+    "backToBasket": "Torna al carrello",
     "paymentFailed": "Non è stato possibile completare il pagamento.",
     "startFailed": "Non è stato possibile avviare il pagamento.",
     "backToBasket": "Torna al carrello"

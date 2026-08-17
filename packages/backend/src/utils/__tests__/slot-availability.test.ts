@@ -4,6 +4,7 @@ import {
   BlockedPeriod,
   ExistingBooking,
   ExistingReservation,
+  ExistingHold,
 } from '../slot-availability';
 
 /**
@@ -334,5 +335,183 @@ describe('calculateAvailableSlots', () => {
 
     const keys = slots.map((slot) => `${slot.date} ${slot.startTime} ${slot.duration}`);
     expect(keys).toEqual([...keys].sort());
+  });
+});
+
+/**
+ * Soft holds — slots sitting in somebody's basket.
+ *
+ * The cases that matter are the ones where a hold has to behave like a booking
+ * (it takes places, and one of a different length blocks the time entirely)
+ * while still being told apart from one: it lapses, and it is worded
+ * differently to the member who owns it.
+ */
+describe('calculateAvailableSlots — basket holds', () => {
+  const TODAY = new Date(2026, 7, 1);
+
+  const config = (over: Partial<SlotConfiguration> = {}): SlotConfiguration => ({
+    daysOfWeek: [6],
+    startTime: '09:00',
+    effectiveDateStart: null,
+    effectiveDateEnd: null,
+    recurrenceWeeks: 1,
+    placesAvailable: 1,
+    minPlacesRequired: null,
+    durationOptions: [{ duration: 60, price: 1000 }],
+    ...over,
+  });
+
+  const hold = (over: Partial<ExistingHold> = {}): ExistingHold => ({
+    slotDate: '2026-08-08',
+    startTime: '09:00',
+    duration: 60,
+    places: 1,
+    heldByViewer: false,
+    expiresAt: '2026-08-01T10:02:00.000Z',
+    ...over,
+  });
+
+  const run = (over: Partial<Parameters<typeof calculateAvailableSlots>[0]> = {}) =>
+    calculateAvailableSlots({
+      configurations: [config()],
+      blockedPeriods: [],
+      bookings: [],
+      reservations: [],
+      from: '2026-08-08',
+      to: '2026-08-08',
+      minDaysInAdvance: 0,
+      maxDaysInAdvance: 90,
+      today: TODAY,
+      ...over,
+    });
+
+  const at = (slots: ReturnType<typeof run>, startTime: string) =>
+    slots.find((slot) => slot.startTime === startTime)!;
+
+  it('leaves slots alone when nothing is held', () => {
+    expect(at(run(), '09:00')).toMatchObject({
+      available: true,
+      unavailableReason: null,
+      heldUntil: null,
+    });
+  });
+
+  it("shows another member's hold as held, not as gone", () => {
+    // The whole point: the slot is still listed, with a reason that says it may
+    // come back. A member who sees it vanish assumes it was booked.
+    expect(at(run({ holds: [hold()] }), '09:00')).toMatchObject({
+      available: false,
+      unavailableReason: 'held',
+    });
+  });
+
+  it("never leaks how long somebody else's hold has left", () => {
+    expect(at(run({ holds: [hold()] }), '09:00').heldUntil).toBeNull();
+  });
+
+  it("calls the member's own hold what it is, and dates it", () => {
+    const slot = at(run({ holds: [hold({ heldByViewer: true })] }), '09:00');
+
+    expect(slot.unavailableReason).toBe('in-your-basket');
+    expect(slot.heldUntil).toBe('2026-08-01T10:02:00.000Z');
+  });
+
+  it('prefers the viewer’s own hold when the slot is held by both', () => {
+    // "In your basket" is actionable; "somebody has this" is not, and they
+    // cannot add it a second time either way.
+    const slot = at(
+      run({
+        configurations: [config({ placesAvailable: 2 })],
+        holds: [hold(), hold({ heldByViewer: true })],
+      }),
+      '09:00'
+    );
+
+    expect(slot.unavailableReason).toBe('in-your-basket');
+  });
+
+  it('takes places rather than the whole slot when there is room for more', () => {
+    const slot = at(run({ configurations: [config({ placesAvailable: 3 })], holds: [hold()] }), '09:00');
+
+    expect(slot).toMatchObject({ available: true, placesRemaining: 2 });
+  });
+
+  it('counts holds against the same cap as bookings', () => {
+    const slot = at(
+      run({
+        configurations: [config({ placesAvailable: 2 })],
+        bookings: [
+          {
+            bookingDate: '2026-08-08',
+            startTime: '09:00',
+            duration: 60,
+            placesBooked: 1,
+            bookingStatus: 'confirmed',
+          } as ExistingBooking,
+        ],
+        holds: [hold()],
+      }),
+      '09:00'
+    );
+
+    expect(slot).toMatchObject({ available: false, unavailableReason: 'held', placesRemaining: 0 });
+  });
+
+  it('says full, not held, when the bookings alone used the slot up', () => {
+    // Nothing is coming back, and "held" would have a member wait for a slot
+    // that will never free up.
+    const slot = at(
+      run({
+        bookings: [
+          {
+            bookingDate: '2026-08-08',
+            startTime: '09:00',
+            duration: 60,
+            placesBooked: 1,
+            bookingStatus: 'confirmed',
+          } as ExistingBooking,
+        ],
+      }),
+      '09:00'
+    );
+
+    expect(slot.unavailableReason).toBe('full');
+  });
+
+  it('blocks the time when a hold of a different length lies across it', () => {
+    // The same rule bookings follow: a two-hour hold from 09:00 is using the
+    // court at 10:00, whatever shape the slot on offer is.
+    const slots = run({
+      configurations: [config({ durationOptions: [{ duration: 60, price: 1000 }] })],
+      holds: [hold({ startTime: '09:30', duration: 120 })],
+    });
+
+    expect(at(slots, '10:00').unavailableReason).toBe('held');
+    expect(at(slots, '09:00').unavailableReason).toBe('held');
+    expect(at(slots, '12:00').available).toBe(true);
+  });
+
+  it('ignores holds on other days', () => {
+    expect(at(run({ holds: [hold({ slotDate: '2026-08-15' })] }), '09:00').available).toBe(true);
+  });
+
+  it("does not let a club official's block be mistaken for a member's basket", () => {
+    // A reservation is somebody at the club taking the court out; it is not
+    // going to lapse in two minutes, and it is never "in your basket".
+    const slot = at(
+      run({
+        reservations: [{ slotDate: '2026-08-08', startTime: '09:00', duration: 60 }],
+        holds: [hold({ heldByViewer: true })],
+      }),
+      '09:00'
+    );
+
+    expect(slot.unavailableReason).toBe('held');
+  });
+
+  it('treats a hold with no places recorded as taking one', () => {
+    const slot = at(run({ holds: [hold({ places: 0 })] }), '09:00');
+
+    expect(slot.unavailableReason).toBe('held');
   });
 });

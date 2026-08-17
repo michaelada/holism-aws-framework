@@ -202,10 +202,20 @@ endpoint refuses more than 62 days.
 **Taken slots are shown, disabled, with the reason** — full, in use, or being booked by somebody
 else. Hiding them turns a busy Saturday into what looks like a closed one.
 
-**Choosing a slot holds nothing.** The slot is re-checked when the line reaches the basket and again
-at fulfilment, because a court is the thing two members reliably want at once. When the add is
-refused, the week is re-read *and then* the refusal is shown — reloading clears the error, so the
-order matters.
+**Choosing a slot holds nothing; adding it to the basket does.** The slot is re-checked when the
+line reaches the basket and again at fulfilment, because a court is the thing two members reliably
+want at once. When the add is refused, the week is re-read *and then* the refusal is shown —
+reloading clears the error, so the order matters.
+
+Since [docs/BASKET_SOFT_HOLDS.md](../../docs/BASKET_SOFT_HOLDS.md), a line in the basket holds its
+slot for two minutes (15 once checkout starts). The grid draws the three states differently: the
+member's own hold is `in-your-basket`, **in red** with a live `HoldCountdown` — the same
+"cannot be taken" signal a stranger's hold gets, rather than the disabled grey of a slot that was
+never on offer, which says nothing about why;
+somebody else's is `held` — **worded as held rather than full**, because it may come back, and grey
+would read as "you lost it"; and `full` stays for places that are genuinely gone. The server never
+sends another member's expiry, so a countdown can only ever be your own. When one reaches zero the
+week is re-read, so the grid never keeps drawing a slot the member no longer has.
 
 ## Registrations (phase 11)
 
@@ -474,16 +484,20 @@ word. Each booking card leads with its calendar's icon in its calendar's colour 
 and a clubhouse are not interchangeable, and colour alone does not carry that. See
 `docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md`.
 
-## Four rows on the home screen, each with its own budget
+## Five rows on the home screen, each with its own budget
 
-Memberships first — what the member already holds — then "What's on", bookings under the club's own
-word for them, and the shop. Memberships are every *active* one as its own card rather than a single
+Memberships first — what the member already holds — then **Upcoming events**, bookings under the
+club's own word for them, the shop, and registrations.
+
+*Upcoming events* carries a **View all** button level with its heading. Four teasers look like the
+whole programme, and a member who reads them that way never opens the events page; putting the way
+out beside the title says there is more before they have finished scanning what is there. Memberships are every *active* one as its own card rather than a single
 card about the soonest to expire, which left a parent's other three invisible; renewal is a button
 on the card that needs it rather than a banner that would have to pick one membership to be about.
 
 ### The teaser rows
 
-"What's on", bookings and the shop are each capped at four **independently** — one shared cap meant a club with events, a shop and three calendars showed
+Each row is capped at four **independently** — one shared cap meant a club with events, a shop and three calendars showed
 exactly one calendar, with nothing on screen to say that was a limit rather than all it had.
 
 Each card leads with what identifies its kind: a date tile for anything dated, the calendar's icon
@@ -505,6 +519,162 @@ nothing about the club was the problem.
 `extractUserInfo` reads `given_name` / `family_name`, falling back to splitting `name` for a realm
 that releases only that. Empty rather than undefined when a realm releases neither, so callers cope
 with absence explicitly. The body remains a fallback for that case.
+
+## Every basket line carries a mark
+
+`CartItemIcon` draws a tinted square in the item's own colour — the same treatment the home screen
+gives its cards, because a basket is where a member checks they picked the right things and it
+should look like the screens they picked them from.
+
+A **booking** uses its calendar's own icon and colour, resolved in the cart service from
+`context_ref.calendarId` (one query per basket, none when it holds no bookings). A club's bookable
+things are meant to be told apart, which is why a calendar carries a mark at all.
+
+Everything else takes the icon for its **type** — event, membership, registration, shop — because
+one event entry is not visually distinct from another and pretending otherwise would be noise.
+
+## Held lines carry their own clock
+
+A basket holding a court and a jumper has one line on a timer and one not, and a single warning at
+the top of the page cannot say which. So `HoldCountdown` sits under the description of any line with
+an `expiresAt`, and lines without one — memberships, merchandise — show nothing rather than an
+expiry they do not have.
+
+When a countdown reaches zero the basket reloads, which is what turns it into the `HOLD_EXPIRED`
+warning and stops checkout. That refusal is deliberate: charging for a place that is no longer
+reserved is worse than making the member add it again.
+
+The payment screen carries the same clock — see
+[docs/MANUAL_CAPTURE_AND_HOLD_CONTROL.md](../../docs/MANUAL_CAPTURE_AND_HOLD_CONTROL.md). `CheckoutPage`
+was already **embedded** (Stripe's `PaymentElement`, not a hosted redirect), it simply knew nothing
+about holds. It now shows `checkout.holdExpiresAt` counting down, disables *Pay now* the moment it
+lapses, offers *Back to basket*, and posts to `/checkout/:paymentId/abandon` — which cancels the
+payment intent, so the client secret in a tab left open stops working. The countdown hides once the
+payment is in flight: a timer beside "processing" reads as a threat to a payment that has already
+left.
+
+## Entries and bookings share one table
+
+C1 lists both in a single table, ordered **coming up first (soonest), then past (most recent)** —
+a single sort either way opens on the least useful end
+([docs/MERGED_ACTIVITY_LIST.md](../../docs/MERGED_ACTIVITY_LIST.md)). The tabs are gone, with
+`?tab=` and the per-kind column keys.
+
+Each row carries `CartItemIcon`, reused from the basket: an entry gets the event glyph, a booking
+gets **its own calendar's icon in its own colour**, which `listBookings` now returns as
+`displayIcon` / `displayColour`. Only entry rows are clickable — a booking's detail is already in
+the row, and there is no page behind it.
+
+## The basket count is pushed, not polled
+
+The **Basket** menu item carries an orange badge with the number of **lines** in the basket — not
+quantities, and not expired holds
+([docs/BASKET_COUNT_BADGE.md](../../docs/BASKET_COUNT_BADGE.md)). Nothing when it is empty.
+
+The screens that change the basket are scattered, so rather than threading a refresh through each
+one, `useAccountApi` fires `notifyCartChanged()` after any successful **write** to a cart or
+checkout URL, and `useCartCount` refetches. A page needs to know nothing about the badge, and a page
+added later gets it for free. Reads are excluded — the count is refreshed *by* a read. The listener
+registry is a module-level set in `src/cart/cartActivity.ts`, not a context, so one number in the
+menu does not re-render every screen.
+
+Orange rather than the club's primary, because primary is already the selected state of that same
+list; announced as a phrase (`nav.cartCount`) with the digits `aria-hidden`, since a bare number
+beside "Basket" is not a sentence.
+
+## A member can see what they filled in, everywhere it was asked
+
+The application form is gone once the thing it created exists, and
+`GET /form-submissions/:id` serves only lines still in an **open** basket — so once
+checkout completes, the member's own records are the only place their answers survive. All three
+screens read them through `utils/form-summary.ts`, so one submission is described the same way
+wherever it appears:
+
+| Screen | How |
+|---|---|
+| Basket | `formSummary` per line, behind *Click to see your N entry form values*, with *Change answers* |
+| My Memberships | collapsed *Your details*, unmounted until opened |
+| Entry detail (C2) | shown in full — the page is about one entry, so there is nothing to bury |
+
+Entry detail previously said *"Your answers are not available to view here"* **unconditionally** —
+a placeholder that read as an explanation, on a screen that had never rendered answers. An activity
+that asked nothing now says so (`entry.noAnswers`) rather than showing an empty heading.
+
+## Memberships: the card is the link, and the details are behind it
+
+A membership card on the home screen **is** the link to My Memberships — a `CardActionArea`, so it
+is keyboard-reachable and announced as a button. The per-card *View memberships* link it replaced
+appeared once in every card and said the same thing each time. Renew stays outside the action area:
+it goes somewhere else, and a button inside a button is markup browsers resolve by firing both.
+
+On My Memberships each record carries a collapsed **Your details** section holding every answer from
+the application form, labelled and in the club's field order — the only record a member has of what
+the club was told, since the form is gone once the membership exists. It **unmounts while
+collapsed** rather than hiding: several memberships of a dozen answers each would otherwise put a
+hundred hidden rows in the page, reachable by search and by a screen reader. A club that asked
+nothing gets no expander at all.
+
+The answers come from `utils/form-summary.ts`, shared with the basket so the two describe the same
+submission the same way.
+
+## The basket shows the answers, and lets them be corrected
+
+Each line carries a `formSummary` — the application form's answers, labelled and in the club's own
+field order, built by joining the submission to its form. Empty answers are left out: a summary is
+for confirming what was said, and a list of blanks buries it.
+
+Between filling the form in and the club receiving the entry, the basket is the member's **only**
+sight of what they wrote. A mistyped pony name or the wrong age group is otherwise found by the club
+rather than by them, so the summary carries a *Change answers* button, opening the same
+`ApplicationFormDialog` prefilled with what was submitted.
+
+**Editing is confined to an open basket.** `GET`/`PUT /api/account/:orgCode/form-submissions/:id`
+resolve the submission through `cart_items → carts`, requiring the cart to be `open` and both the
+submission and the cart to belong to the resolved account. Once checked out, the club has been told
+what was said, and a member quietly rewriting it afterwards would change a record somebody has acted
+on. Anything else is a **404, not a 403** — a member has no business learning that another member's
+submission exists. An edit is re-validated by the same rules as the original, so correcting answers
+clears the same bar as giving them.
+
+## The cart picks a payment method; the member changes it
+
+Nothing asks a member how they want to pay while they are adding a thing to a basket, so nothing
+sends a method — `paymentMethodId` is optional on `AddCartItemDto` and the cart resolves it:
+
+- **one** supported method → that one, since there is nothing to decide
+- **several** → the **card** method, because it completes without the club having to do anything;
+  an offline default would leave a member believing they had paid while the club is still waiting
+  to record it
+- several, none of them card → the first, so an offline-only club can still sell
+
+The cart page then offers the alternatives as a `Select` per line. Changing one reloads the whole
+cart rather than patching locally: the handling fee is charged on the card portion of the basket, so
+moving a single item between card and offline re-prices the rest.
+
+`CartItemView.availablePaymentMethods` carries names, not just ids — ids were enough to *validate* a
+switch but not to *offer* one, so the page could only ever show the method already chosen.
+
+> **`itemType` is a union, not a string.** `cart_items.item_type` has a check constraint, so a value
+> that merely looks right — `event-entry` for `event_entry` — is refused by Postgres at insert time
+> with a 500. Two pages sent the hyphenated spelling, and the client typed the field as `string`, so
+> nothing caught it; the test fixtures had copied the same wrong value, so they agreed with the bug.
+> `CartItemType` now lives in `types/account.ts` and every call site annotates its literal with
+> `satisfies CartItemType`, which turns the mistake into a compile error where it is written.
+>
+> **Event activities carry two payment columns**, and the catalogue read the wrong one.
+> `allowed_payment_method` is a *single* value (`any` / `pay-offline` / `stripe`); the list of method
+> ids is `supported_payment_methods`, the same jsonb column memberships, merchandise and calendars
+> use. Assigning the single value to a `string[]` gave every activity a string where an array
+> belonged — so `includes()` did substring matching, and once the cart started resolving a default
+> the bare slug reached Postgres as `ANY('pay-offline')` and took the request down with "malformed
+> array literal". `defaultPaymentMethodFor` now filters to uuid-shaped ids and refuses anything else
+> as a validation error, so a misconfigured item is something a member can act on rather than a 500.
+>
+> **This is why every add to basket failed** with "that payment method is not accepted for this
+> item". The guard compared the item's accepted methods against a `paymentMethodId` no front end has
+> ever sent, so it was always `includes(undefined)`. A second break sat behind it: the seed stored
+> method *names* where the column and the guard both use *ids*, so even a correct request could not
+> have matched.
 
 ## Booking several slots at once
 

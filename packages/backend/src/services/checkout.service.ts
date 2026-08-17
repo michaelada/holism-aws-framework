@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { ValidationError, NotFoundError } from '../middleware/errors';
@@ -9,6 +10,8 @@ import {
 } from './payment-providers';
 import { calculateApplicationFee, ApplicationFeeConfig } from '../utils/handling-fee';
 import { fulfilmentService } from './fulfilment.service';
+import { BASKET_HOLD_MINUTES, CHECKOUT_HOLD_MINUTES } from '../utils/holds';
+import { orderAvailabilityService } from './order-availability.service';
 
 /**
  * Turning a cart into a payment.
@@ -40,13 +43,63 @@ export interface CheckoutResult {
   /** Null for an order with nothing to pay by card. */
   clientSecret: string | null;
   provider: string | null;
+  /**
+   * The provider's public key, for mounting the card form.
+   *
+   * Served here so a front end needs no payment configuration of its own. The
+   * account app used to read it from a `.env` that did not exist in this repo,
+   * which left `loadStripe('')` failing silently and the Pay button disabled
+   * for ever with nothing on screen to explain it.
+   */
+  publishableKey: string | null;
   amountDue: number;
   handlingFee: number;
   offlineAmount: number;
   currency: string;
   /** True when there is nothing to charge and the order is already complete. */
   completed: boolean;
+  /**
+   * When the earliest hold on this order lapses; ISO, null when it holds
+   * nothing.
+   *
+   * The *earliest*, because one lapsed line refuses the whole basket — showing
+   * the member the longest would count them down to the wrong moment.
+   */
+  holdExpiresAt: string | null;
 }
+
+/**
+ * A fingerprint of exactly what is being paid for.
+ *
+ * A `pending` payment is a **snapshot of a basket at one moment**: its
+ * `card_amount` and its `payment_transactions` lines are fixed when checkout
+ * starts, and the Stripe intent is created for that figure. The basket is not
+ * frozen alongside it — a member can go back and add, remove or re-price a
+ * line, and nothing anywhere noticed.
+ *
+ * Reusing that payment then charges last time's total for this time's basket.
+ * Left alone it also leaves phantom entries in the member's payment history:
+ * an order they never placed, listing items they have since removed.
+ *
+ * So the payment carries a fingerprint of the basket it was priced for, and one
+ * that no longer matches is retired rather than reused. Items, quantities, fees
+ * and chosen payment methods all count, because every one of them changes what
+ * is owed.
+ */
+export const cartFingerprint = (cart: CartView): string =>
+  createHash('sha256')
+    .update(
+      JSON.stringify({
+        items: cart.items
+          .map((item) => [item.id, item.quantity, item.fee, item.paymentMethodId])
+          .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+        // The totals as well: a club can change its handling fee between one
+        // checkout and the next without any line changing at all.
+        total: cart.totals.orderTotal,
+        card: cart.totals.chargedToCardNow,
+      })
+    )
+    .digest('hex');
 
 /** uuid v1–v5, matching what the column accepts. */
 const UUID_PATTERN =
@@ -104,12 +157,232 @@ export class CheckoutService {
       );
     }
 
-    const existing = await this.findPendingPayment(cart.id);
+    /*
+     * Extend every hold on the cart to cover the payment attempt.
+     *
+     * The browsing hold is two minutes, which is nowhere near enough to get
+     * through a card form, a bank's 3-D Secure step and a redirect back. Left
+     * alone it would lapse while the member was typing, somebody else could
+     * take the slot, and fulfilment would then refuse the booking of a member
+     * who had already paid — a refund and a very reasonable complaint.
+     *
+     * Committing to pay is the moment that deserves the longer window, so it
+     * is taken here rather than by making the browsing hold generous.
+     */
+    await this.extendHolds(cart.id, CHECKOUT_HOLD_MINUTES);
+
+    /*
+     * Read back rather than computed from the cart in hand: `getCart` ran
+     * before the extension, so its expiries are the two-minute ones the member
+     * has already left behind. Counting them down on the payment screen would
+     * expire the page while the hold was in fact good for another quarter hour.
+     */
+    const holdExpiresAt = await this.earliestHold(cart.id);
+
+    const existing = await this.findPendingPayment(cart.id, cartFingerprint(cart));
     if (existing) {
-      return existing;
+      return { ...existing, holdExpiresAt };
     }
 
-    return this.createPayment(organisationId, organisationUserId, cart);
+    const created = await this.createPayment(organisationId, organisationUserId, cart);
+    return { ...created, holdExpiresAt };
+  }
+
+  /**
+   * The soonest hold on a cart to lapse, as an ISO instant.
+   *
+   * The soonest rather than the latest because one lapsed line refuses the
+   * whole basket — a countdown to the last one would run past the moment the
+   * order actually stopped being payable.
+   */
+  private async earliestHold(cartId: string): Promise<string | null> {
+    const result = await db.query(
+      `SELECT MIN(expires_at) AS expires_at
+       FROM cart_items
+       WHERE cart_id = $1 AND expires_at IS NOT NULL`,
+      [cartId]
+    );
+
+    const value = result.rows[0]?.expires_at;
+    return value ? new Date(value).toISOString() : null;
+  }
+
+  /**
+   * Push every live hold on a cart out to `minutes` from now.
+   *
+   * Only lines that already hold something are touched: `expires_at IS NOT
+   * NULL` keeps a membership or a t-shirt from acquiring an expiry it never
+   * had, which would drop it out of the basket total once it passed.
+   *
+   * Lines whose hold has already lapsed are left alone too. Silently reviving
+   * one would hand back a slot somebody else may have taken in the meantime;
+   * `startCheckout` refuses the whole cart in that case instead.
+   */
+  private async extendHolds(cartId: string, minutes: number): Promise<void> {
+    await db.query(
+      `UPDATE cart_items
+       SET expires_at = NOW() + ($2 || ' minutes')::interval
+       WHERE cart_id = $1
+         AND expires_at IS NOT NULL
+         AND expires_at > NOW()`,
+      [cartId, String(minutes)]
+    );
+  }
+
+  /**
+   * Hand the slots back after a payment that will not now happen.
+   *
+   * Without this an abandoned or declined payment would keep its slots out of
+   * circulation for the rest of the checkout window, which is fifteen minutes
+   * of a Saturday court nobody can book and nobody is paying for. Dropping the
+   * holds back to the browsing window returns them almost at once while still
+   * giving a member who is retrying a moment to do so.
+   */
+  private async releaseHolds(cartId: string): Promise<void> {
+    await this.extendHolds(cartId, BASKET_HOLD_MINUTES);
+  }
+
+  /**
+   * Decide what to do with money the member has authorised but not yet paid.
+   *
+   * The point of manual capture. The card has been authorised, so the funds are
+   * held and nothing has moved. Before taking them, the platform asks whether
+   * the slots and capped entries in this order are still there:
+   *
+   *  - **still there** → capture, and Stripe's `payment_intent.succeeded` then
+   *    confirms and fulfils it through the existing path;
+   *  - **gone** → reverse the authorisation, fail the payment with the reason,
+   *    and hand the holds back.
+   *
+   * The second branch is the whole reason for the change. Under automatic
+   * capture the same situation left the club holding money it had to refund;
+   * reversing an authorisation costs nothing and leaves nothing on the member's
+   * statement.
+   *
+   * Idempotent, because webhooks are redelivered: a payment that is no longer
+   * awaiting a decision is left exactly as it is.
+   */
+  async settleAuthorisation(
+    paymentId: string,
+    providerTransactionId: string | null
+  ): Promise<'captured' | 'released' | 'ignored'> {
+    const payment = await db.query(
+      `SELECT id, cart_id, payment_status, payment_provider, provider_transaction_id
+       FROM payments WHERE id = $1`,
+      [paymentId]
+    );
+
+    const row = payment.rows[0];
+    if (!row) throw new NotFoundError('Payment not found');
+
+    /*
+     * Only a payment still waiting is acted on. `paid` means the capture
+     * already went through — a redelivery of the authorisation event must not
+     * try to decide again — and `failed` means it was already reversed.
+     */
+    if (row.payment_status !== 'pending' && row.payment_status !== 'authorised') {
+      return 'ignored';
+    }
+
+    const intentId = providerTransactionId ?? row.provider_transaction_id;
+    if (!intentId) {
+      logger.error('Cannot settle an authorisation with no provider reference', { paymentId });
+      return 'ignored';
+    }
+
+    const provider = this.providers.get(row.payment_provider);
+    if (!provider) {
+      // Retryable: the deployment is misconfigured, and the authorisation is
+      // still good. Throwing has the webhook redelivered once it is fixed.
+      throw new Error(`Payment provider "${row.payment_provider}" is not available`);
+    }
+
+    // Recorded before either branch, so an authorisation whose capture then
+    // fails is visible as such rather than looking like an untouched payment.
+    await db.query(
+      `UPDATE payments SET payment_status = 'authorised', updated_at = NOW()
+       WHERE id = $1 AND payment_status = 'pending'`,
+      [paymentId]
+    );
+
+    const availability = await orderAvailabilityService.check(paymentId);
+
+    if (availability.available) {
+      await provider.capturePayment(intentId);
+      return 'captured';
+    }
+
+    logger.warn('Reversing an authorisation because the order is no longer available', {
+      paymentId,
+      reason: availability.reason,
+    });
+
+    await provider.cancelPayment(intentId, 'requested_by_customer');
+    await this.failPayment(
+      paymentId,
+      availability.reason ?? 'Part of your order is no longer available'
+    );
+
+    return 'released';
+  }
+
+  /**
+   * Give up on a payment the member never completed.
+   *
+   * Called when the hold behind an order lapses while the payment screen is
+   * open. Cancelling the intent is what makes the expiry mean something: the
+   * `client_secret` a stale tab is holding stops working, so a member who wakes
+   * a laptop an hour later cannot pay for a slot that has since gone.
+   *
+   * Deliberately tolerant. It is a best-effort tidy-up, and the guarantees live
+   * elsewhere — the capture-time re-check and fulfilment both refuse an order
+   * whose slot has gone, whether or not this ran.
+   */
+  async abandonCheckout(
+    organisationId: string,
+    organisationUserId: string,
+    paymentId: string
+  ): Promise<{ abandoned: boolean }> {
+    const payment = await db.query(
+      `SELECT id, cart_id, payment_status, payment_provider, provider_transaction_id
+       FROM payments
+       WHERE id = $1 AND organisation_id = $2 AND user_id = $3`,
+      [paymentId, organisationId, organisationUserId]
+    );
+
+    const row = payment.rows[0];
+    // Scoped by member, and 404 rather than 403: a payment id must not be
+    // confirmable by whoever guesses it.
+    if (!row) throw new NotFoundError('Payment not found');
+
+    /*
+     * Anything past `pending` is not the member's to abandon. `authorised` in
+     * particular is mid-decision on the server, and cancelling underneath that
+     * would race the capture.
+     */
+    if (row.payment_status !== 'pending') {
+      return { abandoned: false };
+    }
+
+    if (row.provider_transaction_id) {
+      const provider = this.providers.get(row.payment_provider);
+      if (provider) {
+        try {
+          await provider.cancelPayment(row.provider_transaction_id, 'abandoned');
+        } catch (error) {
+          // Logged, not raised. The member is being told their hold expired;
+          // failing that message because Stripe was briefly unreachable would
+          // leave them staring at a payment form that no longer works.
+          logger.warn('Could not cancel an abandoned payment intent', {
+            paymentId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+
+    await this.failPayment(paymentId, 'The hold on your basket expired before payment completed');
+    return { abandoned: true };
   }
 
   /**
@@ -119,7 +392,11 @@ export class CheckoutService {
    * of view. The provider intent is reused too — Stripe returns the same intent
    * for the same idempotency key.
    */
-  private async findPendingPayment(cartId: string): Promise<CheckoutResult | null> {
+  private async findPendingPayment(
+    cartId: string,
+    /** The basket as it stands now. A payment priced for anything else is retired. */
+    fingerprint: string
+  ): Promise<CheckoutResult | null> {
     const result = await db.query(
       `SELECT id, currency, card_amount, offline_amount, handling_fee,
               payment_provider, provider_transaction_id, metadata
@@ -133,16 +410,95 @@ export class CheckoutService {
     const row = result.rows[0];
     if (!row) return null;
 
+    /*
+     * The basket has changed since this payment was priced.
+     *
+     * Reusing it would charge the old total for the new basket — and show the
+     * member a summary of items they may no longer be buying. The old payment
+     * is retired and a fresh one created against what is actually in the
+     * basket now.
+     *
+     * A payment with no fingerprint at all predates this check; treated as
+     * stale, because there is no way to tell whether it still matches and
+     * guessing wrong means charging the wrong amount.
+     */
+    if (row.metadata?.cartFingerprint !== fingerprint) {
+      await this.retireStalePayment(row.id, row.payment_provider, row.provider_transaction_id);
+      return null;
+    }
+
     return {
       paymentId: row.id,
       clientSecret: row.metadata?.clientSecret ?? null,
       provider: row.payment_provider ?? null,
+      publishableKey: this.providers.get(row.payment_provider)?.publishableKey ?? null,
       amountDue: row.card_amount ?? 0,
       handlingFee: row.handling_fee ?? 0,
       offlineAmount: row.offline_amount ?? 0,
       currency: row.currency,
       completed: false,
+      // Filled in by `startCheckout`, which knows the window it just set.
+      holdExpiresAt: null,
     };
+  }
+
+  /**
+   * Retire a payment for a basket that has since changed.
+   *
+   * Marked `abandoned` rather than `failed`: nothing was attempted and nothing
+   * was declined, and the member's payment history should not show a failure
+   * for a basket they simply edited. It is also what keeps these out of the
+   * list — see `account-activity.service`.
+   *
+   * The provider intent goes with it. Leaving it open would leave an authorisable
+   * intent for the old amount, and a stale tab holding its client secret could
+   * still pay it.
+   *
+   * Best-effort on the provider side. If Stripe cannot be reached the local
+   * payment is still retired: continuing to reuse it would be worse, and the
+   * abandoned intent expires on Stripe's own schedule.
+   */
+  private async retireStalePayment(
+    paymentId: string,
+    providerName: string | null,
+    providerTransactionId: string | null
+  ): Promise<void> {
+    logger.info('Retiring a pending payment whose basket has changed', { paymentId });
+
+    if (providerName && providerTransactionId) {
+      const provider = this.providers.get(providerName);
+      if (provider) {
+        try {
+          await provider.cancelPayment(providerTransactionId, 'abandoned');
+        } catch (error) {
+          logger.warn('Could not cancel the intent behind a stale payment', {
+            paymentId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+
+    await db.query(
+      `UPDATE payments
+       SET payment_status = 'abandoned',
+           metadata = jsonb_set(
+             COALESCE(metadata, '{}'::jsonb),
+             '{failureMessage}',
+             to_jsonb('Your basket changed, so this payment was replaced'::text)
+           ),
+           updated_at = NOW()
+       WHERE id = $1 AND payment_status = 'pending'`,
+      [paymentId]
+    );
+
+    // The lines went with it. Left `pending` they would keep appearing as
+    // outstanding work against an order that no longer exists.
+    await db.query(
+      `UPDATE payment_transactions SET status = 'abandoned', updated_at = NOW()
+       WHERE payment_id = $1 AND fulfilled_at IS NULL`,
+      [paymentId]
+    );
   }
 
   private async createPayment(
@@ -165,7 +521,7 @@ export class CheckoutService {
             payment_method, payment_status, cart_id, handling_fee,
             offline_amount, card_amount, fee_config_snapshot, metadata,
             created_at, updated_at)
-         VALUES ($1, $2, 'cart', $3, $4, 'card', 'pending', $5, $6, $7, $8, $9, '{}'::jsonb,
+         VALUES ($1, $2, 'cart', $3, $4, 'card', 'pending', $5, $6, $7, $8, $9, $10,
                  NOW(), NOW())
          RETURNING id`,
         [
@@ -180,6 +536,8 @@ export class CheckoutService {
           totals.offlineSubtotal,
           totals.chargedToCardNow,
           JSON.stringify(feeConfigSnapshot),
+          // What this payment was priced for. Checked before it is ever reused.
+          JSON.stringify({ cartFingerprint: cartFingerprint(cart) }),
         ]
       );
       paymentId = payment.rows[0].id;
@@ -268,11 +626,15 @@ export class CheckoutService {
         paymentId,
         clientSecret: null,
         provider: null,
+        // Nothing to pay by card, so nothing to mount a card form with.
+        publishableKey: null,
         amountDue: 0,
         handlingFee: totals.handlingFee.total,
         offlineAmount: totals.offlineSubtotal,
         currency: cart.currency,
         completed: true,
+        // An offline order holds nothing: it is placed, not paid for later.
+        holdExpiresAt: null,
       };
     }
 
@@ -374,11 +736,13 @@ export class CheckoutService {
         paymentId,
         clientSecret: intent.clientSecret,
         provider: provider.name,
+        publishableKey: provider.publishableKey ?? null,
         amountDue: totals.chargedToCardNow,
         handlingFee: totals.handlingFee.total,
         offlineAmount: totals.offlineSubtotal,
         currency: cart.currency,
         completed: false,
+        holdExpiresAt: null,
       };
     } catch (error) {
       // The payment row stays, marked failed. Deleting it would lose the record
@@ -465,14 +829,22 @@ export class CheckoutService {
 
   /** Record a failed attempt. The cart is left open so the member can retry. */
   async failPayment(paymentId: string, reason?: string): Promise<void> {
-    await db.query(
+    const result = await db.query(
       `UPDATE payments
        SET payment_status = 'failed',
            metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{failureMessage}', to_jsonb($2::text)),
            updated_at = NOW()
-       WHERE id = $1 AND payment_status <> 'paid'`,
+       WHERE id = $1 AND payment_status <> 'paid'
+       RETURNING cart_id`,
       [paymentId, reason ?? 'Payment failed']
     );
+
+    // The payment window is over, so the slots go back rather than sitting out
+    // the rest of it. A retry re-extends them.
+    const cartId = result.rows[0]?.cart_id;
+    if (cartId) {
+      await this.releaseHolds(cartId);
+    }
   }
 
   /**
@@ -519,13 +891,36 @@ export class CheckoutService {
   }
 
   /** Nothing to charge — the club records the money when it arrives. */
+  /**
+   * Place an order that will be paid directly to the club.
+   *
+   * **The cart is closed here, exactly as `confirmPayment` closes it for a card
+   * order.** It was not, and that is a worse fault than it sounds: the basket
+   * still held every line after checkout, so a member who checked out and saw
+   * their items still sitting there did the only sensible thing and checked out
+   * again — producing a second payment for the same order, and a third. Five
+   * accumulated against one pair of slots before it was reported.
+   *
+   * Closing the cart is also what releases the holds on those slots: the
+   * availability queries only count holds on a cart that is still `open`, and
+   * the booking created below is what stands behind the slot instead.
+   */
   private async markAwaitingOfflinePayment(paymentId: string): Promise<void> {
-    await db.query(
+    const result = await db.query(
       `UPDATE payments
        SET payment_status = 'awaiting_offline', payment_method = 'offline', updated_at = NOW()
-       WHERE id = $1`,
+       WHERE id = $1
+       RETURNING cart_id`,
       [paymentId]
     );
+
+    const cartId = result.rows[0]?.cart_id;
+    if (cartId) {
+      await db.query(
+        `UPDATE carts SET status = 'ordered', updated_at = NOW() WHERE id = $1`,
+        [cartId]
+      );
+    }
   }
 
   /**

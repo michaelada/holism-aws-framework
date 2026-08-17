@@ -130,12 +130,35 @@ One Markdown file per feature or fix, plus `*_WIREFRAMES.md` per UI module and a
 ## Demo seed
 
 `npm run seed:demo -- --reset` rebuilds a local environment into a known state: one organisation
-type, three pony clubs, 20 logins, 13 events across every entry-window state, 18 application forms,
-13 membership types with 22 members for the current season — including two parents holding their
-children's memberships and three renewals falling due — 8 shop products at Kildare Hunt and 4
-booking calendars at Laois Hunt (each club carries one opt-in capability, Ward Union none), and
-7 discounts. It writes to **both**
-Postgres and Keycloak, and `--reset` deletes all application data plus the Keycloak users it created.
+type, **four** pony clubs, 21 logins, 16 events across every entry-window state, application forms,
+membership types with 32 members for the current season — including parents holding their children's
+memberships and renewals falling due — shop products, booking calendars and 30 discounts spread so
+every club has a list for each capability it holds. Discount keys are scoped to their organisation,
+so a shared definition like `familyMembership` resolves to each club's own version rather than
+leaking one club's discount into another's records. It writes to **both** Postgres and Keycloak, and
+`--reset` deletes all application data plus the Keycloak users it created.
+
+**Three clubs each leave a capability switched off on purpose** — Kildare alone has the shop, Laois
+alone has bookings, Ward Union takes no card payments — so the *absence* of a capability stays
+testable. **Meath Hunt Pony Club (`mhpc`) has all 22**, including the registrations and event
+ticketing nothing else exercises, so one login reaches the whole product. It takes them through an
+`allCapabilities` flag rather than a copied list, which would go stale the moment the type gained
+one; the additions went into the type's `optInCapabilities` too, so the other three are unchanged.
+
+**Registrations are about an animal, not a person.** Meath registers horses on a `horseRegistration`
+form built from passport vocabulary, and the three identities a registration keeps apart —
+`entity_name` (the horse), `owner_name` (whoever the passport says) and `user_id` (the member whose
+login it sits under) — are deliberately three different answers in the fixture. Both period
+mechanisms appear: an annual type with a fixed `valid_until`, and a rolling three-month one.
+
+**Every club gets a Stripe test connected account** (`scripts/seed/stripe.ts`), because a club
+without one cannot take a card payment and the whole checkout path is then unreachable. They are
+`custom` accounts — a `standard` one stays `charges_enabled: false` until a human completes hosted
+onboarding — created against the platform's own `sk_test_` key. **A live key is refused outright,
+with no override.** Accounts carry `metadata.seededBy` and `--reset` deletes only those; `--no-stripe`
+skips the step. Nothing is copied from a production platform: live and test are separate universes
+in Stripe, and this application keeps no per-organisation keys in any case. See
+`docs/SEED_STRIPE_AND_MEATH.md`.
 
 **Every date is an offset from the run**, resolved in `scripts/seed/dates.ts`, so the same fixture
 appears whenever it is run — entries still closing this week, a membership still due for renewal, a
@@ -146,4 +169,4 @@ which is why `jest.config.js` has `scripts` in its roots.
 
 It refuses to run against `NODE_ENV=production`, or against a non-local database or Keycloak without
 an explicit `SEED_ALLOW_REMOTE_*` override. Source in `packages/backend/scripts/seed/`; see
-`docs/EVENTS_DEMO_SEED.md`.
+`docs/EVENTS_DEMO_SEED.md` and `docs/SEED_STRIPE_AND_MEATH.md`.

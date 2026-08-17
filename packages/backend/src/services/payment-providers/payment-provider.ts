@@ -54,8 +54,15 @@ export interface PaymentIntentResult {
   destinationAccountId: string;
 }
 
-/** The outcome of a provider event, normalised. */
-export type PaymentOutcome = 'succeeded' | 'failed' | 'ignored';
+/**
+ * The outcome of a provider event, normalised.
+ *
+ * `authorised` is the money being *held on the card, not taken* — the state a
+ * manual-capture payment reaches when the member confirms. It is the point at
+ * which the platform decides whether to capture or to reverse, and it exists
+ * precisely so that decision can be made after re-checking what was bought.
+ */
+export type PaymentOutcome = 'succeeded' | 'authorised' | 'failed' | 'ignored';
 
 export interface WebhookEvent {
   /** The provider's own event id — the idempotency key for processing. */
@@ -80,10 +87,47 @@ export interface PaymentProvider {
   /** Matches `payments.payment_provider`. */
   readonly name: string;
 
+  /**
+   * A public key the browser needs to mount the provider's payment form, if it
+   * has such a thing. Empty when the provider needs none, or is unconfigured.
+   *
+   * Served to the client by the API so a front end needs no payment provider
+   * configuration of its own — the account app previously carried its own copy
+   * in a `.env` that did not exist, which left the Pay button permanently
+   * disabled with nothing on screen to say why.
+   */
+  readonly publishableKey?: string;
+
   /** Whether this organisation has finished configuring the provider. */
   isConfigured(): boolean;
 
   createPaymentIntent(request: PaymentIntentRequest): Promise<PaymentIntentResult>;
+
+  /**
+   * Take the money the member authorised.
+   *
+   * The second half of a manual-capture payment. Between authorising and this
+   * call the platform re-checks that what was bought is still there, so a
+   * capture means "we can honour this order", not merely "the card worked".
+   *
+   * Must be idempotent: a webhook can arrive twice, and capturing an already
+   * captured payment must not charge twice or throw.
+   */
+  capturePayment(providerTransactionId: string): Promise<void>;
+
+  /**
+   * Let the authorisation go without taking anything.
+   *
+   * Used when the slot went while the member was paying, and when a hold lapses
+   * before they confirm at all. **This is not a refund**: no money moved, so
+   * there is no refund fee and nothing lands on the member's statement beyond a
+   * pending authorisation that drops off.
+   *
+   * Must be idempotent, and must not throw when the payment is already settled
+   * — losing that race is expected, and is what the capture-time re-check and
+   * fulfilment exist to catch.
+   */
+  cancelPayment(providerTransactionId: string, reason?: string): Promise<void>;
 
   /**
    * Verify a webhook's signature and normalise it.

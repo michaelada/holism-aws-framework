@@ -63,6 +63,8 @@ describe('AccountCatalogueService — calendars', () => {
     blocked?: any[];
     bookings?: any[];
     reservations?: any[];
+    /** Live basket holds, as the cart_items join returns them. */
+    holds?: any[];
   } = {}) => {
     mockDb.query = jest.fn().mockImplementation((sql: string) => {
       const text = String(sql);
@@ -76,7 +78,9 @@ describe('AccountCatalogueService — calendars', () => {
               ? over.bookings ?? []
               : text.includes('slot_reservations')
                 ? over.reservations ?? []
-                : [];
+                : text.includes('FROM cart_items')
+                  ? over.holds ?? []
+                  : [];
       return Promise.resolve({ rows, rowCount: rows.length });
     });
   };
@@ -270,5 +274,153 @@ describe('AccountCatalogueService — calendars', () => {
         service.assertSlotAvailable(ORG, CALENDAR, SATURDAY, '09:00', 60, 1, TODAY)
       ).rejects.toBeInstanceOf(ValidationError);
     });
+  });
+});
+
+/**
+ * Slots sitting in somebody's basket.
+ *
+ * The service's job here is narrow: ask the right question of `cart_items`, and
+ * label each hold as the viewer's or a stranger's. Deciding what a hold does to
+ * a slot belongs to `calculateAvailableSlots` and is tested there.
+ */
+describe('AccountCatalogueService — calendar holds', () => {
+  const mockDb = db as jest.Mocked<typeof db>;
+  const ORG = 'org-1';
+  const CALENDAR = 'cal-1';
+  const MEMBER = 'ou-1';
+  const SATURDAY = '2026-08-08';
+  const TODAY = new Date('2026-08-01T00:00:00Z');
+
+  const calendarRow = () => ({
+    id: CALENDAR,
+    name: 'Tennis court 1',
+    description: null,
+    colour: '#2e7d32',
+    display_icon: 'tennis',
+    status: 'open',
+    min_days_in_advance: 0,
+    max_days_in_advance: 90,
+    allow_cancellations: true,
+    cancel_days_in_advance: 2,
+    supported_payment_methods: [],
+    terms_and_conditions: null,
+    use_terms_and_conditions: false,
+  });
+
+  const configurationRow = () => ({
+    id: 'tsc-1',
+    days_of_week: [6],
+    start_time: '09:00:00',
+    effective_date_start: null,
+    effective_date_end: null,
+    recurrence_weeks: 1,
+    places_available: 1,
+    min_places_required: null,
+    duration_options: [{ duration: 60, price: '12.00', label: null }],
+  });
+
+  const holdRow = (over: Record<string, unknown> = {}) => ({
+    context_ref: { calendarId: CALENDAR, date: SATURDAY, startTime: '09:00', duration: 60, places: 1 },
+    expires_at: '2026-08-01T10:02:00.000Z',
+    user_id: 'someone-else',
+    ...over,
+  });
+
+  let holdsSql = '';
+  let holdsParams: any[] = [];
+
+  const respond = (holds: any[]) => {
+    mockDb.query = jest.fn().mockImplementation((sql: string, params?: any[]) => {
+      const text = String(sql);
+      if (text.includes('FROM cart_items')) {
+        holdsSql = text;
+        holdsParams = params ?? [];
+        return Promise.resolve({ rows: holds, rowCount: holds.length });
+      }
+      const rows = text.includes('FROM calendars')
+        ? [calendarRow()]
+        : text.includes('time_slot_configurations')
+          ? [configurationRow()]
+          : [];
+      return Promise.resolve({ rows, rowCount: rows.length });
+    });
+  };
+
+  const availability = (holds: any[] = [], viewer?: string, exclude = false) => {
+    respond(holds);
+    return new AccountCatalogueService().listCalendarAvailability(
+      ORG,
+      CALENDAR,
+      SATURDAY,
+      SATURDAY,
+      TODAY,
+      viewer,
+      exclude
+    );
+  };
+
+  const nineOClock = (slots: any[]) => slots.find((slot) => slot.startTime === '09:00');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    holdsSql = '';
+    holdsParams = [];
+  });
+
+  it('asks only for holds that have not lapsed, on open carts', async () => {
+    await availability();
+
+    // These three clauses are the whole expiry mechanism: nothing sweeps the
+    // table, an abandoned basket simply stops counting.
+    expect(holdsSql).toContain("c.status = 'open'");
+    expect(holdsSql).toContain('ci.expires_at > NOW()');
+    expect(holdsSql).toContain("ci.item_type = 'booking'");
+    expect(holdsParams).toEqual([ORG, CALENDAR, SATURDAY, SATURDAY]);
+  });
+
+  it("reports a stranger's hold as held", async () => {
+    const { slots } = await availability([holdRow()], MEMBER);
+
+    expect(nineOClock(slots)).toMatchObject({
+      available: false,
+      unavailableReason: 'held',
+      heldUntil: null,
+    });
+  });
+
+  it("reports the viewer's own hold as theirs", async () => {
+    const { slots } = await availability([holdRow({ user_id: MEMBER })], MEMBER);
+
+    expect(nineOClock(slots)).toMatchObject({
+      unavailableReason: 'in-your-basket',
+      heldUntil: '2026-08-01T10:02:00.000Z',
+    });
+  });
+
+  it('treats every hold as a stranger’s when nobody is asking', async () => {
+    // A caller with no member in hand — the safe reading, since claiming a hold
+    // is somebody's would show them a slot they do not have.
+    const { slots } = await availability([holdRow({ user_id: MEMBER })]);
+
+    expect(nineOClock(slots)!.unavailableReason).toBe('held');
+  });
+
+  it('leaves the viewer’s own hold out entirely when asked to', async () => {
+    // Fulfilment redeeming that very hold: counting it would have the member's
+    // own reservation block the booking it exists to guarantee.
+    const { slots } = await availability([holdRow({ user_id: MEMBER })], MEMBER, true);
+
+    expect(nineOClock(slots)).toMatchObject({ available: true, heldUntil: null });
+  });
+
+  it("still counts other members' holds when excluding the viewer's", async () => {
+    const { slots } = await availability(
+      [holdRow({ user_id: MEMBER }), holdRow()],
+      MEMBER,
+      true
+    );
+
+    expect(nineOClock(slots)!.unavailableReason).toBe('held');
   });
 });

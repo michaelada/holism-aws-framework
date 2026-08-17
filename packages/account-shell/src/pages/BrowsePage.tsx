@@ -30,8 +30,7 @@ import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import {
   CatalogueActivity,
   CatalogueEvent,
-  CatalogueMembershipType,
-} from '../types/account';
+  CatalogueMembershipType, CartItemType } from '../types/account';
 
 type TabKey = 'events' | 'memberships';
 
@@ -269,7 +268,7 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
                           requestAdd(
                             activity.id,
                             {
-                              itemType: 'event-entry',
+                              itemType: 'event_entry' satisfies CartItemType,
                               contextRef: { activityId: activity.id, eventId: event.id },
                               description: `${event.name} — ${activity.name}`,
                               unitFee: activity.fee,
@@ -337,7 +336,7 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
                           requestAdd(
                             type.id,
                             {
-                              itemType: 'membership',
+                              itemType: 'membership' satisfies CartItemType,
                               contextRef: { membershipTypeId: type.id },
                               description: type.name,
                               // The price is a property of the membership type.

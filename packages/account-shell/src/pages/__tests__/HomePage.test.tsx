@@ -197,7 +197,7 @@ describe('HomePage (B3)', () => {
     mockExecute.mockResolvedValue(dashboard({ memberships: [] }));
     renderWithProviders(<HomePage />);
 
-    await screen.findByText('What’s on');
+    await screen.findByText('Upcoming events');
     // An empty heading is worse than no heading.
     expect(screen.queryByText('Memberships')).not.toBeInTheDocument();
   });
@@ -214,6 +214,51 @@ describe('HomePage (B3)', () => {
 
     expect(await screen.findByText('Recent payments')).toBeInTheDocument();
     expect(screen.getByText('€45.00')).toBeInTheDocument();
+  });
+
+  /**
+   * The card is the link.
+   *
+   * Each membership card carried a "View memberships" button. With four cards
+   * in the row that was the same words four times, while the obvious target —
+   * the card itself — did nothing at all.
+   */
+  describe('opening a membership from the home screen', () => {
+    it('takes the whole card to My Memberships', async () => {
+      renderWithProviders(<HomePage />);
+
+      const [first] = dashboard().memberships!;
+      await screen.findByText(first!.memberName as string);
+
+      await userEvent.click(screen.getByText(first!.memberName as string));
+
+      expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/memberships`);
+    });
+
+    it('no longer repeats a link inside every card', async () => {
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Memberships');
+      expect(screen.queryByRole('button', { name: 'View memberships' })).not.toBeInTheDocument();
+    });
+
+    it('keeps renew as its own button, not folded into the card', async () => {
+      /*
+       * Renewal goes somewhere else — the membership catalogue — so it stays a
+       * separate control. Nesting it inside the card's own button would also be
+       * invalid markup that browsers resolve by firing both.
+       */
+      const [first] = dashboard().memberships!;
+      mockExecute.mockResolvedValue(
+        dashboard({ memberships: [{ ...first!, daysRemaining: 10, canRenew: true } as any] })
+      );
+      renderWithProviders(<HomePage />);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Renew' }));
+
+      expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/browse/memberships`);
+      expect(mockNavigate).not.toHaveBeenCalledWith(`/${contextValue.orgCode}/memberships`);
+    });
   });
 
   describe('renewal, on the card that needs it', () => {
@@ -363,7 +408,7 @@ describe('HomePage (B3)', () => {
       expect(screen.getByText('Outdoor arena')).toBeInTheDocument();
       expect(screen.getByText('Club Polo')).toBeInTheDocument();
       // Nothing left for the general row, so it is absent rather than empty.
-      expect(screen.queryByText('What’s on')).not.toBeInTheDocument();
+      expect(screen.queryByText('Upcoming events')).not.toBeInTheDocument();
     });
 
     it('does not head a bookings row when the club has no calendars', async () => {
@@ -372,6 +417,17 @@ describe('HomePage (B3)', () => {
       await screen.findByText('Summer Camp');
       // The default fixture has no calendar teaser, so no second heading.
       expect(screen.queryByText('Bookings')).not.toBeInTheDocument();
+    });
+
+    it('offers a way through to the full events list', async () => {
+      // Four teasers look like the whole programme, and a member who reads them
+      // as such never opens the events page.
+      renderWithProviders(<HomePage />);
+
+      await screen.findByText('Upcoming events');
+      await userEvent.click(screen.getByRole('button', { name: 'View all' }));
+
+      expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/browse/events`);
     });
 
     it('dates an event teaser with a calendar tile', async () => {

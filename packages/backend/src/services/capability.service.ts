@@ -184,13 +184,40 @@ export class CapabilityService {
    * Validate capability names
    */
   async validateCapabilities(capabilityNames: string[]): Promise<boolean> {
+    return (await this.unknownCapabilities(capabilityNames)).length === 0;
+  }
+
+  /**
+   * The names that are not capabilities this platform knows about.
+   *
+   * Returned rather than reduced to a boolean so a refusal can **say which**.
+   * "Invalid capabilities provided" is a message that tells an administrator
+   * nothing: they cannot see the catalogue, they did not necessarily change the
+   * capabilities at all, and the offending name may well have been in the
+   * record before they opened it.
+   *
+   * That is not hypothetical. Editing an organisation type's application fee
+   * failed with exactly that message, because the record carried three names
+   * that no longer exist — nothing the administrator had touched, and nothing
+   * the error named.
+   *
+   * A name that exists but is switched off (`is_active = false`) counts as
+   * unknown: it cannot be granted, and saying it is not a capability is nearer
+   * the truth than saying nothing.
+   */
+  async unknownCapabilities(capabilityNames: string[]): Promise<string[]> {
+    if (capabilityNames.length === 0) return [];
+
     try {
       const result = await db.query(
-        'SELECT COUNT(*) as count FROM capabilities WHERE name = ANY($1) AND is_active = true',
+        'SELECT name FROM capabilities WHERE name = ANY($1) AND is_active = true',
         [capabilityNames]
       );
 
-      return parseInt(result.rows[0].count) === capabilityNames.length;
+      const known = new Set(result.rows.map((row: { name: string }) => row.name));
+      // De-duplicated: a list that repeats an unknown name should not repeat it
+      // in the refusal.
+      return [...new Set(capabilityNames)].filter((name) => !known.has(name));
     } catch (error) {
       logger.error('Error validating capabilities:', error);
       throw error;

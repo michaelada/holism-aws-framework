@@ -2,17 +2,34 @@
 /**
  * Demo seed for the events capability.
  *
- * Puts the system into a known state: one organisation type, three pony clubs,
- * a super admin, an administrator per club, eight members holding fifteen
- * memberships across them, and thirteen events covering every entry-window
- * state, both limit mechanisms, quantity, all three payment arrangements, four
- * application forms and seven discounts.
+ * Puts the system into a known state: one organisation type, four pony clubs, a
+ * super admin, an administrator per club, members holding memberships across
+ * them, and events covering every entry-window state, both limit mechanisms,
+ * quantity, all three payment arrangements, application forms and discounts.
+ *
+ * Three of the clubs each leave something switched off on purpose, so that the
+ * absence of a capability stays represented. **Meath Hunt Pony Club has every
+ * capability**, including the registrations and event ticketing nothing else
+ * exercises, so one login reaches the whole product.
+ *
+ * ## Stripe
+ *
+ * Each club is given a **test-mode connected account**, because a club without
+ * one cannot take a card payment and the entire checkout path — authorisation,
+ * capture, reversal, webhook — is then unreachable from a seeded database.
+ *
+ * These are created fresh against the platform's own `sk_test_` key. Nothing is
+ * copied from a production platform: live and test are separate universes in
+ * Stripe, and this application stores no per-organisation Stripe keys in any
+ * case (see `docs/REMOVE_PER_ORG_STRIPE_KEYS.md`). A live key here is refused
+ * outright, with no override.
  *
  * ## Running it
  *
  *   npm run seed:demo -- --reset     wipe all application data, then seed
  *   npm run seed:demo -- --reset-only wipe all application data and stop
  *   npm run seed:demo -- --dry-run   report what it would do, change nothing
+ *   npm run seed:demo -- --no-stripe skip creating Stripe test connected accounts
  *   npm run seed:demo                seed on top of what is there (rarely what you want)
  *
  * ## Why it refuses to run by default
@@ -40,6 +57,11 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import { Pool } from 'pg';
 import {
   ACCOUNT_USERS,
+  DISCOUNTS,
+  REGISTRATIONS,
+  REGISTRATION_TYPES,
+  SEED_TAG,
+  capabilitiesFor,
   EVENTS,
   MEMBERS,
   MEMBERSHIP_TYPES,
@@ -61,12 +83,28 @@ import {
   upsertUser,
 } from './keycloak';
 import { collectKnownEmails, resetDatabase, seedDatabase } from './database';
+import {
+  SeededConnectAccount,
+  StripeSeeder,
+  connectSettings,
+  stripeConfigFromEnv,
+  stripeUnavailableReason,
+} from './stripe';
 
 const args = process.argv.slice(2);
 const RESET = args.includes('--reset');
 const DRY_RUN = args.includes('--dry-run');
 /** Clear everything and stop, leaving the system empty rather than re-seeded. */
 const RESET_ONLY = args.includes('--reset-only');
+/**
+ * Skip creating Stripe connected accounts.
+ *
+ * They are created by default when a **test** key is configured, because a club
+ * without one cannot take a card payment and half the product is then
+ * unreachable. This flag is for working offline, or when the Stripe account is
+ * not to be touched.
+ */
+const NO_STRIPE = args.includes('--no-stripe');
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', 'postgres', 'keycloak', 'host.docker.internal']);
 
@@ -137,11 +175,31 @@ async function main(): Promise<void> {
     log(`    ${Object.keys(ORG_ADMINS).length} organisation admins`);
     log(`    ${ACCOUNT_USERS.length} account logins      across ${ACCOUNT_USERS.reduce((n, u) => n + u.orgs.length, 0)} club affiliations`);
     log(`    ${MEMBERSHIP_TYPES.length} membership types    ${MEMBERS.length} members for this season`);
-    log(`    ${MERCHANDISE.length} shop products     at ${ORGS.find((o) => o.extraCapabilities?.includes('merchandise'))?.displayName}`);
-    log(`    ${CALENDARS.length} calendars         at ${ORGS.find((o) => o.extraCapabilities?.includes('calendar-bookings'))?.displayName}`);
-    log(`    ${EVENTS.length} events              ${EVENTS.reduce((n, e) => n + e.activities.length, 0)} activities`);
+    // Named from the data rather than hard-coded, so a club gaining or losing
+    // a capability does not leave this line quietly lying.
+    const clubsWith = (capability: string) =>
+      ORGS.filter((o) => capabilitiesFor(o).includes(capability))
+        .map((o) => o.displayName)
+        .join(', ');
+
+    log(`    ${MERCHANDISE.length} shop products     at ${clubsWith('merchandise')}`);
+    log(`    ${CALENDARS.length} calendars         at ${clubsWith('calendar-bookings')}`);
+    log(`    ${EVENTS.length} events             ${EVENTS.reduce((n, e) => n + e.activities.length, 0)} activities`);
+    log(`    ${REGISTRATION_TYPES.length} registration types  ${REGISTRATIONS.length} registered ${REGISTRATION_TYPES[0]?.entityName.toLowerCase() ?? 'entities'}s at ${clubsWith('registrations')}`);
+    log('');
+    const stripeReason = stripeUnavailableReason(stripeConfigFromEnv());
+    log(
+      NO_STRIPE
+        ? '  Would skip Stripe (--no-stripe).'
+        : stripeReason
+          ? `  Would skip Stripe — ${stripeReason}.`
+          : `  Would create ${ORGS.length} Stripe test connected accounts, one per club.`
+    );
     log('');
     if (RESET) log('  Would first DELETE all application data and every seeded Keycloak user.');
+    if (RESET && !NO_STRIPE && !stripeReason) {
+      log('  Would first delete the Stripe test accounts a previous run created.');
+    }
     log('');
     return;
   }
@@ -214,8 +272,22 @@ async function main(): Promise<void> {
 
     /* --- Keycloak users: the database needs the ids they hand back ------- */
     const superAdminId = await upsertUser(keycloak, SUPER_ADMIN);
-    await ensureRealmRole(keycloak, superAdminId, 'super-admin');
-    log(`  keycloak: super admin ${SUPER_ADMIN.email}`);
+    /*
+     * **Both** roles, because the Platform Admin needs both.
+     *
+     * `admin.routes` applies `requireAdminRole()` — the `admin` realm role — at
+     * router level, and it is mounted on `/api/admin` *before* the more
+     * specific routers, so it guards every path under that prefix. The
+     * individual handlers then require `super-admin` on top.
+     *
+     * Granting only `super-admin`, as this did, produced a super admin who
+     * could sign into the admin app and get a 403 from every request in it —
+     * including the ones that list what the screen is meant to show.
+     */
+    for (const role of ['super-admin', 'admin']) {
+      await ensureRealmRole(keycloak, superAdminId, role);
+    }
+    log(`  keycloak: super admin ${SUPER_ADMIN.email}  [super-admin, admin]`);
 
     const groups: Record<string, { orgGroupId: string; adminsGroupId: string; membersGroupId: string }> = {};
     const orgAdminIds: Record<string, string> = {};
@@ -238,13 +310,82 @@ async function main(): Promise<void> {
     log(`  keycloak: ${ACCOUNT_USERS.length} member logins`);
     log('');
 
+    /*
+     * --- Stripe connected accounts --------------------------------------
+     *
+     * Created before the database rows so each club's account id can be
+     * written into its settings in the same transaction. Stripe cannot join
+     * that transaction, so a seed that fails afterwards leaves the accounts
+     * behind — harmless, and the next `--reset` deletes them by their metadata.
+     *
+     * Nothing here copies anything from a production platform. Live and test
+     * are separate universes in Stripe, and this application keeps no
+     * per-organisation keys in any case — only an account id.
+     */
+    const connectByOrg: Record<string, Record<string, unknown>> = {};
+    const stripeReason = stripeUnavailableReason(stripeConfigFromEnv());
+
+    if (NO_STRIPE) {
+      log('  stripe: skipped (--no-stripe)');
+      log('');
+    } else if (stripeReason) {
+      log(`  stripe: skipped — ${stripeReason}`);
+      log('  stripe: clubs will show as not connected and cannot take card payments');
+      log('');
+    } else {
+      const stripe = new StripeSeeder(stripeConfigFromEnv());
+
+      if (RESET) {
+        const purged = await stripe.purgeSeededAccounts(SEED_TAG);
+        log(`  stripe: ${purged.deleted} seeded test accounts removed${purged.failed ? `, ${purged.failed} could not be` : ''}`);
+      }
+
+      const now = new Date();
+      const created: Array<{ org: (typeof ORGS)[number]; account: SeededConnectAccount }> = [];
+
+      for (const org of ORGS) {
+        const account = await stripe.createTestAccount({
+          displayName: org.displayName,
+          email: org.contactEmail,
+          seedTag: SEED_TAG,
+        });
+        created.push({ org, account });
+        log(`  stripe: ${org.displayName} — ${account.accountId}`);
+      }
+
+      // One pass for whatever Stripe had not finished verifying, rather than
+      // waiting on each account in turn. Says so, because it can take half a
+      // minute and a silent pause reads as a hang.
+      if (created.some((c) => !c.account.chargesEnabled)) {
+        log('  stripe: waiting for Stripe to finish verifying…');
+      }
+      await stripe.reconcile(created.map((c) => c.account));
+
+      for (const { org, account } of created) {
+        connectByOrg[org.key] = connectSettings(account, now);
+      }
+
+      const notReady = created.filter((c) => !c.account.chargesEnabled);
+      if (notReady.length > 0) {
+        log('');
+        log(`  stripe: ${notReady.map((c) => c.org.displayName).join(', ')} still verifying.`);
+        log('          Stripe finishes on its own; opening that club\'s Payment Settings');
+        log('          re-reads the account and clears it.');
+      }
+      log('');
+    }
+
     /* --- then the database, in the transaction opened above ------------- */
-    const result = await seedDatabase(client, {
-      superAdminId,
-      orgAdminIds,
-      accountUserIds,
-      groups,
-    });
+    const result = await seedDatabase(
+      client,
+      {
+        superAdminId,
+        orgAdminIds,
+        accountUserIds,
+        groups,
+      },
+      connectByOrg
+    );
     await client.query('COMMIT');
 
     log('  seeded:');
@@ -272,7 +413,10 @@ function printCredentials(): void {
   log(`    ${SUPER_ADMIN.email}`);
   log('');
   log('  Organisation admins  (http://localhost:5175)');
-  ORGS.forEach((org) => log(`    ${ORG_ADMINS[org.key].email.padEnd(34)} ${org.displayName}`));
+  ORGS.forEach((org) => {
+    const note = org.allCapabilities ? '  [every capability]' : '';
+    log(`    ${ORG_ADMINS[org.key].email.padEnd(34)} ${org.displayName}${note}`);
+  });
   log('');
   log('  Members  (http://localhost:5176/account/<code>)');
   ACCOUNT_USERS.forEach((user) => {
@@ -309,24 +453,67 @@ function printCredentials(): void {
   const dueSoon = MEMBERS.filter((m) => m.season === 'expiring').length;
   log(`  ${dueSoon} memberships are due for renewal within the next 30 days.`);
   log('');
-  const shopOrgs = ORGS.filter((o) => o.extraCapabilities?.includes('merchandise'));
+  /*
+   * Derived from the capability rather than from `extraCapabilities`, which
+   * misses the club that takes everything through `allCapabilities` — it listed
+   * Kildare as the only shop while Meath quietly had one too.
+   */
+  const clubsWith = (capability: string) =>
+    ORGS.filter((o) => capabilitiesFor(o).includes(capability));
+
+  const shopOrgs = clubsWith('merchandise');
+  log(`  Shop  (${shopOrgs.map((o) => o.displayName).join(', ')})`);
   shopOrgs.forEach((org) => {
     const products = MERCHANDISE.filter((m) => m.org === org.key);
-    log(`  Shop  (${org.displayName} only — the other clubs have no merchandise capability)`);
-    log(`    ${products.length} products, covering free / fixed / quantity-based delivery,`);
-    log('    tracked and untracked stock, a sold-out item, a hidden one and an inactive one.');
+    log(`    ${String(products.length).padStart(2)} products  ${org.displayName}`);
   });
+  log('    Covering free / fixed / quantity-based delivery, tracked and untracked');
+  log('    stock, a sold-out item, a hidden one and an inactive one.');
   log('');
-  const bookingOrgs = ORGS.filter((o) => o.extraCapabilities?.includes('calendar-bookings'));
+
+  const bookingOrgs = clubsWith('calendar-bookings');
+  log(`  Bookings  (${bookingOrgs.map((o) => o.displayName).join(', ')})`);
   bookingOrgs.forEach((org) => {
     const calendars = CALENDARS.filter((c) => c.org === org.key);
-    log(`  Bookings  (${org.displayName} only — the other clubs have no calendar capability)`);
-    log(`    ${calendars.length} calendars: ${calendars.map((c) => c.name).join(', ')}`);
-    log('    Covering exclusive and shared places, a fortnightly pattern, a blocked week,');
-    log('    a recurring daily gap, cancellation allowed and refused, and a closed calendar.');
+    log(`    ${org.displayName.padEnd(26)} ${calendars.map((c) => c.name).join(', ')}`);
   });
+  log('    Covering exclusive and shared places, a fortnightly pattern, a blocked week,');
+  log('    a recurring daily gap, cancellation allowed and refused, and a closed calendar.');
   log('');
-  log('  Discount codes: EARLYBIRD, SPRING24 (expired), BASKET10, WINTER20');
+
+  const registrationOrgs = clubsWith('registrations');
+  if (registrationOrgs.length > 0) {
+    log(`  Registrations  (${registrationOrgs.map((o) => o.displayName).join(', ')})`);
+    REGISTRATION_TYPES.forEach((type) => {
+      const mine = REGISTRATIONS.filter((r) => r.type === type.key);
+      const period = type.rolling ? `rolling, ${type.numberOfMonths} months` : 'annual, fixed end date';
+      log(`    ${type.name.padEnd(26)} ${type.entityName}  (${period})  ${mine.length} registered`);
+    });
+    log('    A registration is about an animal, not a person: the horse, its passport');
+    log('    and its owner, held under the member whose login it sits on.');
+    log('');
+  }
+
+  const ticketedEvents = EVENTS.filter((e) => e.ticketing);
+  if (ticketedEvents.length > 0) {
+    log('  Electronic tickets');
+    ticketedEvents.forEach((event) => {
+      const org = ORGS.find((o) => o.key === event.org)!;
+      log(`    ${event.name.padEnd(26)} ${org.displayName}`);
+    });
+    log('');
+  }
+
+  log('  Discounts');
+  ORGS.forEach((org) => {
+    const mine = DISCOUNTS.filter((d) => d.org === org.key);
+    const byModule = [...new Set(mine.map((d) => d.module))]
+      .map((m) => `${m} ${mine.filter((d) => d.module === m).length}`)
+      .join(', ');
+    log(`    ${org.displayName.padEnd(26)} ${mine.length}  (${byModule})`);
+  });
+  const codes = DISCOUNTS.filter((d) => d.code).map((d) => d.code);
+  log(`    codes: ${codes.join(', ')}`);
   log('');
 }
 

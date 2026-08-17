@@ -9,6 +9,7 @@ import {
 } from '../../test/renderWithProviders';
 import { AccountOrganisationContextValue } from '../../context/AccountOrganisationContext';
 import { setViewportWidth } from '../../test/setup';
+import { notifyCartChanged } from '../../cart/cartActivity';
 
 const mockNavigate = vi.fn();
 const mockLogout = vi.fn();
@@ -24,6 +25,27 @@ vi.mock('../../context/AccountOrganisationContext', async () => {
 vi.mock('../../context/AuthContext', () => ({
   useAuthContext: () => ({ logout: mockLogout }),
 }));
+
+/*
+ * The shell reads the basket to size its badge. Answered here so every existing
+ * case renders as it did, and overridden per-case below.
+ */
+const mockExecute = vi.fn().mockResolvedValue({ items: [] });
+
+vi.mock('../../hooks/useAccountApi', async () => {
+  const actual = await vi.importActual<typeof import('../../hooks/useAccountApi')>(
+    '../../hooks/useAccountApi'
+  );
+  return {
+    ...actual,
+    useAccountApi: () => ({
+      execute: mockExecute,
+      loading: false,
+      error: null,
+      reset: () => undefined,
+    }),
+  };
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -179,5 +201,93 @@ describe('AppShell (B1/B2)', () => {
   it('shows no menu button on a desktop, where the drawer is always present', () => {
     render();
     expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument();
+  });
+});
+
+
+/**
+ * How full the basket is, beside the word Basket.
+ *
+ * The count has to survive being changed from anywhere — a slot from the
+ * calendar, a size from the shop — so it listens for cart writes rather than
+ * being handed a refresh by each screen.
+ */
+describe('AppShell — the basket count', () => {
+  const cart = (lines: number, over: Record<string, unknown>[] = []) => ({
+    items: [
+      ...Array.from({ length: lines }, (_, i) => ({ id: `item-${i}`, expired: false })),
+      ...over,
+    ],
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+    mockExecute.mockResolvedValue({ items: [] });
+  });
+
+  it('shows nothing at all when the basket is empty', async () => {
+    // A badge reading "0" is a permanent fixture that stops meaning anything,
+    // and there is nothing for the member to go and look at.
+    render();
+
+    expect(await screen.findByText('Basket')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/in your basket/i)).not.toBeInTheDocument();
+  });
+
+  it('counts the lines in the basket', async () => {
+    mockExecute.mockResolvedValue(cart(3));
+    render();
+
+    expect(await screen.findByLabelText('3 items in your basket')).toBeInTheDocument();
+  });
+
+  it('counts lines, not quantities', async () => {
+    // Three of one jumper is one thing to come back to; a badge reading "3"
+    // would send the member to check.
+    mockExecute.mockResolvedValue({ items: [{ id: 'item-1', quantity: 3, expired: false }] });
+    render();
+
+    expect(await screen.findByLabelText('1 item in your basket')).toBeInTheDocument();
+  });
+
+  it('leaves out a line whose hold has lapsed', async () => {
+    // Checkout refuses the basket while one is present, so counting it would
+    // advertise an item the member cannot buy.
+    mockExecute.mockResolvedValue(cart(2, [{ id: 'gone', expired: true }]));
+    render();
+
+    expect(await screen.findByLabelText('2 items in your basket')).toBeInTheDocument();
+  });
+
+  it('announces the count as a phrase, not a bare number', async () => {
+    mockExecute.mockResolvedValue(cart(1));
+    render();
+
+    const badge = await screen.findByLabelText('1 item in your basket');
+    // The digits themselves are hidden, or a screen reader reads them twice.
+    expect(badge.querySelector('[aria-hidden]')).toHaveTextContent('1');
+  });
+
+  it('says nothing when the basket cannot be read', async () => {
+    // Decoration on a menu: an offline member should not be shown an error
+    // about a number they did not ask for.
+    mockExecute.mockRejectedValue(new Error('offline'));
+    render();
+
+    expect(await screen.findByText('Basket')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/in your basket/i)).not.toBeInTheDocument();
+  });
+
+  it('re-reads the basket when something writes to it', async () => {
+    mockExecute.mockResolvedValue(cart(1));
+    render();
+    await screen.findByLabelText('1 item in your basket');
+
+    // What a page adding a slot causes, without knowing the badge exists.
+    mockExecute.mockResolvedValue(cart(2));
+    notifyCartChanged();
+
+    expect(await screen.findByLabelText('2 items in your basket')).toBeInTheDocument();
   });
 });

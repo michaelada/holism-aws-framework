@@ -43,7 +43,6 @@ export const RegisterWithOrganisationPage: React.FC = () => {
   const [organisation, setOrganisation] = useState<PublicOrganisationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [outcome, setOutcome] = useState<RegisterResult['outcome'] | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,17 +62,44 @@ export const RegisterWithOrganisationPage: React.FC = () => {
         method: 'POST',
         url: `/api/account/${orgCode}/register`,
       });
-      setOutcome(result.outcome);
-      // An `active` outcome means the shell can now resolve this organisation,
-      // so the context is re-resolved before the member continues — otherwise
-      // "Continue" would land on a screen still holding the not-connected state.
-      await refresh();
+      /*
+       * Re-resolve before leaving. The shell still holds `not-connected` for
+       * this club, and the destination is keyed on the same `orgCode`, so
+       * navigating first would land on the not-connected screen rather than the
+       * club's home page.
+       *
+       * Its own try: the member is already joined by this point, and a failure
+       * to re-read the shell's state is not a failure to join. Reporting it as
+       * one would tell them it had not worked when it had.
+       */
+      try {
+        await refresh();
+      } catch {
+        // Nothing to do — the destination resolves the organisation itself.
+      }
+
+      /*
+       * Then go, rather than offering a "Continue" button.
+       *
+       * The button could not survive the refresh it depends on: re-resolving
+       * puts the shell briefly into `loading`, `OrganisationRoute` swaps this
+       * screen for a spinner, and the page remounts afterwards with its
+       * `outcome` reset — dropping the member back on the join form with no
+       * sign that anything had happened. Landing on the club's own home page is
+       * both the confirmation and the thing they were trying to reach.
+       *
+       * `replace`, so Back returns to wherever they came from rather than to a
+       * join form for a club they have already joined.
+       */
+      navigate(result.outcome === 'active' ? `/${orgCode}` : `/${orgCode}/pending`, {
+        replace: true,
+      });
     } catch {
       setFailed(t('register.failed'));
     } finally {
       setSubmitting(false);
     }
-  }, [executeRegister, orgCode, refresh, t]);
+  }, [executeRegister, navigate, orgCode, refresh, t]);
 
   const name = organisation?.displayName || orgCode || '';
 
@@ -81,31 +107,6 @@ export const RegisterWithOrganisationPage: React.FC = () => {
     return (
       <Container maxWidth="sm" sx={{ py: 10, textAlign: 'center' }}>
         <CircularProgress aria-label={t('common.loading')} />
-      </Container>
-    );
-  }
-
-  if (outcome) {
-    return (
-      <Container maxWidth="sm" sx={{ py: { xs: 4, md: 8 } }}>
-        <Paper sx={{ p: { xs: 3, md: 4 } }}>
-          <Typography variant="h1" gutterBottom>
-            {t('register.submitted.title')}
-          </Typography>
-          <Typography color="text.secondary" sx={{ mb: 3 }}>
-            {outcome === 'active'
-              ? t('register.submitted.bodyAuto', { organisation: name })
-              : t('register.submitted.bodyApproval')}
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() =>
-              navigate(outcome === 'active' ? `/${orgCode}` : `/${orgCode}/pending`)
-            }
-          >
-            {t('register.submitted.continue')}
-          </Button>
-        </Paper>
       </Container>
     );
   }

@@ -692,6 +692,10 @@ the tab navigates directly instead of opening a sheet.
 **Notes**
 - Every card is capability-gated and hides entirely when it has nothing to show, so a
   memberships-only org sees a clean two-card dashboard rather than a grid of empty states.
+- **Upcoming events** is the events row, with a **View all** button beside the heading leading to
+  [D1](#d1--browse--whats-on). Four teasers read as the whole programme otherwise, and a member who
+  takes them that way never opens the listing. Registrations have their own row rather than sitting
+  under an events heading.
 - **Memberships are a row of cards, one per active membership**, in the same shape as the what's-on
   teasers and headed *Memberships*. A single card about the soonest to expire was the wrong shape
   once parents turned out to hold their children's: it announced that something was expiring without

@@ -58,6 +58,7 @@ const DETAIL = {
   lastName: 'Rivers',
   email: 'sam@example.com',
   formSubmissionId: 'fs-1',
+  formSummary: [] as Array<{ label: string; value: string }>,
   eventDescription: 'Annual regatta',
   activityDescription: 'Under 18',
   confirmationMessage: null as string | null,
@@ -112,12 +113,6 @@ describe('EntryDetailPage (C2)', () => {
    * silently drop answers to since-deleted fields. Saying so is better than
    * showing a rendering that is quietly wrong.
    */
-  it('says the answers are unavailable rather than rendering them wrongly', async () => {
-    render();
-
-    expect(await screen.findByText(/answers are not available/i)).toBeInTheDocument();
-  });
-
   it('shows a confirmation message the club chose to publish', async () => {
     mockExecute.mockResolvedValue({ ...DETAIL, confirmationMessage: 'See you there' });
     render();
@@ -148,5 +143,72 @@ describe('EntryDetailPage (C2)', () => {
 
     await user.click(await screen.findByRole('button', { name: /back to my entries/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/khpc/entries');
+  });
+});
+
+
+/**
+ * The answers the member gave when they entered.
+ *
+ * This screen is the only place they can be seen: the form is gone once the
+ * entry exists, and the submission endpoint serves only lines still in an open
+ * basket. It used to say "your answers are not available to view here" — about
+ * answers the member had typed minutes earlier, on an entry still awaiting
+ * payment.
+ */
+describe('EntryDetailPage — your answers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+  });
+
+  it('shows every answer, labelled and in order', async () => {
+    mockExecute.mockResolvedValue({
+      ...DETAIL,
+      formSummary: [
+        { label: 'Rider name', value: 'Sam Rivers' },
+        { label: 'Dietary requirements', value: 'Gluten free' },
+      ],
+    });
+    render();
+
+    expect(await screen.findByText('Rider name')).toBeInTheDocument();
+    expect(screen.getByText('Sam Rivers')).toBeInTheDocument();
+    expect(screen.getByText('Dietary requirements')).toBeInTheDocument();
+    expect(screen.getByText('Gluten free')).toBeInTheDocument();
+  });
+
+  it('no longer claims the answers cannot be shown', async () => {
+    mockExecute.mockResolvedValue({
+      ...DETAIL,
+      formSummary: [{ label: 'Rider name', value: 'Sam Rivers' }],
+    });
+    render();
+
+    await screen.findByText('Rider name');
+    expect(screen.queryByText(/not available to view/i)).not.toBeInTheDocument();
+  });
+
+  it('says the entry had no form, rather than showing an empty heading', async () => {
+    // A real case — plenty of activities ask nothing — and a different
+    // statement from "we cannot show you what you wrote".
+    mockExecute.mockResolvedValue({ ...DETAIL, formSummary: [] });
+    render();
+
+    expect(await screen.findByText(/no form to fill in/i)).toBeInTheDocument();
+  });
+
+  it('shows the answers on an entry that is still awaiting payment', async () => {
+    // The reported case: the entry is not paid for yet, and its answers are
+    // exactly what the member wants to check before paying.
+    mockExecute.mockResolvedValue({
+      ...DETAIL,
+      status: 'awaiting-payment' as const,
+      paymentStatus: 'pending',
+      formSummary: [{ label: 'Dietary requirements', value: 'Gluten free' }],
+    });
+    render();
+
+    expect(await screen.findByText('Gluten free')).toBeInTheDocument();
   });
 });

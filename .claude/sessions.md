@@ -6798,3 +6798,2120 @@ I've cleaned up every `.terraform/`, lock file and generated `tfvars` my test ru
 ## 2026-08-14 16:57:56 — Prompt
 
 please merge all the work on to main
+
+### Assistant
+
+That's a git operation you've explicitly asked for, so I'll proceed — but let me survey the state first, since there's a lot outstanding.
+
+Someone's already committed the work — 17 commits ahead of main, one file outstanding. Let me see it.
+
+Clean state: fast-forward is possible. Let me sanity-check the most recent commit before merging.
+
+Only local dev placeholders, and already tracked from an earlier commit. Proceeding with the merge.
+
+Merged. `main` now points at exactly the same commit as `work/august-batch`.
+
+## What happened
+
+It was a **fast-forward** — `main` had nothing the branch lacked, so all 18 commits transferred with their history intact and no merge commit. **727 files** changed across the range.
+
+Before merging I committed the one outstanding file (`.claude/sessions.md`, the session log) and checked the range for anything that shouldn't reach main:
+
+- No `.env` files with real credentials, no `.pem`, no `dist/`, no `node_modules`, no `.terraform/` or `.tfstate` artefacts
+- The three env-adjacent files are `.env.example` templates and `packages/backend/.env.test`, which holds only local dev placeholders (`framework_password`, `test-secret`) and was already tracked from an earlier commit
+
+Working tree is clean.
+
+## Two things you should know
+
+**I have not pushed.** You asked to merge, not to push, and `main` is now 18 commits ahead of `origin/main`. Say the word and I'll push.
+
+**There's a pre-existing stash** — `stash@{0}: WIP on main: 5be8050 renamed file` — from before this session. I left it untouched, but it predates the merge, so if it holds anything you still want it's worth checking whether it still applies cleanly.
+
+`work/august-batch` still exists and points at the same commit; I've left it in place rather than deleting it.
+
+---
+
+
+## 2026-08-14 17:01:41 — Prompt
+
+On the home page for events, can you change the title from “What’s on” to “Upcoming events” with a “View all” link to the right of the title, which brings the user to the event section in case they think that is all the events that there are and might miss something.
+
+When I request to join another organisation, and it is successful it should redirect me to their home page, but instead it leaves me on the Join page not knowing whether it worked or not.
+
+### Assistant
+
+Two items. Let me look at both.
+
+There *is* a confirmation panel, so something is unmounting it. Let me check the route guard.
+
+The register page unmounts while `refresh()` briefly sets the state to `loading`, taking the confirmation panel with it. Redirecting is the right fix. Let me check the routes first.
+
+Both routes exist. Let me make the redirect happen.
+
+The confirmation panel is now unreachable. Let me remove it and make the refresh failure non-misleading.
+
+The four tests assert the old panel. Let me rewrite them for the redirect.
+
+All nine pass. Now the events row title and "View all" link.
+
+That row holds events **and** registrations, so renaming it alone would mislabel registrations. Let me split them properly, matching the other rows.
+
+Let me drop the now-redundant kind caption and add the registrations row.
+
+Let me add a test for the "View all" link and run everything.
+
+Both green. Let me update the docs and commit onto `main`, since that's where you're now working.
+
+I was about to commit — but you asked for the merge last message, not this one, so I'll leave these in the working tree.
+
+Both done.
+
+## 1. "Upcoming events" with a View all link
+
+The heading is now **Upcoming events**, with a **View all** button level with it (not under the cards) leading to `/browse/events`. Four teasers read as the whole programme otherwise, which is exactly the mistake you described — putting the way out beside the title says there's more before the member has finished scanning what's there.
+
+One thing that shaped the implementation: **that row wasn't events-only.** It held everything except bookings and merchandise — so events *and* registrations. Renaming it "Upcoming events" would have mislabelled any registration cards. Registrations now get their own row, matching the pattern the other kinds already follow, and each kind gets its own budget of four on the backend rather than competing for a shared one. I also dropped the per-card "Event" caption, since the heading now says it.
+
+That's slightly more than you asked for, but the alternative was a heading that lies about some of its cards.
+
+## 2. Redirect after joining
+
+There *was* a "Request sent" panel with a Continue button — it just couldn't survive. Re-resolving the shell (`refresh()`) puts it briefly into `loading`, `OrganisationRoute` swaps the page for a spinner, and the page remounts with its `outcome` reset. You landed back on the join form with no sign anything had happened, which is exactly what you saw.
+
+Now: on success it re-resolves, then redirects — the club's home page when auto-approved, the awaiting-approval screen when the club reviews registrations. `replace: true`, so Back doesn't return you to a join form for a club you've already joined. I removed the unreachable panel rather than leaving dead code.
+
+**One case worth naming:** the refresh now has its own `try`. The member is already joined by that point, so a failure to re-read the shell's state isn't a failure to join — reporting it as one would tell them it hadn't worked when it had. There's a test for that path.
+
+## Verification
+
+- **account-shell: 483 passing** — join-page tests rewritten for the redirect (including history replacement and the refresh-failure path), plus a new test for the View all link.
+- **backend: 2626 passing.**
+
+Docs updated in [account-shell.md](.claude/modules/account-shell.md) and the B3/A4 wireframes.
+
+Note you're now on `main` after the merge, and I've left these 14 files uncommitted — say the word if you want them committed.
+
+---
+
+
+## 2026-08-15 09:00:56 — Prompt
+
+When it comes to the mock seeded data, can you create a variety of discounts and apply different types of discounts  across the memberships, events, merchandise and calendar bookings and spread them over the different organistions you have set up.
+
+### Assistant
+
+Let me look at the current spread before expanding it.
+
+Ward has one discount and no membership discounts. Let me check the unused schema features before designing the spread.
+
+Real problem: **every** seeded discount has `module_type = 'events'`, including the membership, merchandise and calendar ones I added. Let me confirm what that breaks.
+
+Two real bugs here. Let me check whether membership discounts are also crossing organisations.
+
+Two genuine bugs: discounts are all filed under the `events` module, and keys resolve globally so **Ward's membership carries a Laois discount**. Let me fix both and expand the set.
+
+Now let me rewrite the discount set — balanced across clubs, with the right modules.
+
+Now the writer must scope keys per organisation and use the module.
+
+Now let me attach the new discounts to entities so every club has coverage.
+
+Now let me attach the new ones so each club's coverage is real.
+
+The Ward attachment used the wrong event, and the file write never ran. Let me redo all three with the right targets.
+
+Seeded. Let me verify the spread and confirm the cross-organisation leak is gone.
+
+Every club now has discounts across every capability it holds. Let me check the variety and that module filtering works.
+
+Module filtering works — before the fix, memberships/merchandise/calendar would all have shown zero. Let me run the tests.
+
+Now the documentation.
+
+Done — 24 discounts, and spreading them uncovered two real bugs.
+
+## The spread
+
+Every club now has a discount list for **every capability it holds**, and none for the ones it doesn't:
+
+| Club | events | memberships | merchandise | calendar |
+|---|---|---|---|---|
+| Kildare Hunt | 5 | 2 | 3 | — no calendars |
+| Laois Hunt | 3 | 2 | — no shop | 3 |
+| Ward Union | 4 | 2 | — | — |
+
+Ward went from **one** discount to six. It's the useful one: no shop, no bookings, so its pages show what the module looks like for a club running only events and memberships.
+
+Merchandise stays Kildare-only and calendar Laois-only — those are the only clubs with the capabilities, so a discount elsewhere would be unreachable.
+
+## Variety
+
+14 percentage / 9 fixed; item, cart, quantity-based and one `category` scope; 13 with codes and 11 automatic; three kinds of quantity rule (every-Nth, from-the-Nth, one-of-N); usage limits including a capped discount and a per-member limit; six eligibility shapes. Also newly represented: an **inactive** discount (the club's switch, distinct from expired) and one **not yet valid**, starting next month.
+
+## Two bugs this exposed
+
+**Every seeded discount was filed under `module_type = 'events'`** — including the membership, merchandise and calendar ones I added earlier. The org-admin pages and the pickers filter on that column, so those three lists came back **empty** despite the discounts existing and being attached. `SeedDiscount` now carries its `module`; verified per club, per module, against the real service.
+
+**Discount keys resolved globally.** Membership types are defined once and created for every club, so a key lookup that ignored the organisation gave **Ward's Family Membership a Kildare discount** and its Senior a Laois one. Keys are now scoped to their organisation, which lets `familyMembership` mean "this club's family discount" and resolve to nothing where a club has none. Verified: **zero** cross-organisation attachments across memberships, events, merchandise and calendars.
+
+The second one is the sort of thing that would have read as a pricing bug in the product rather than a fixture problem, so it was worth finding.
+
+## Verification
+
+Backend **2626 tests passing**. Seed re-run clean: 24 discounts, 33 applications. The summary now prints the per-club, per-module breakdown and all 13 codes.
+
+Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) and [infrastructure.md](.claude/modules/infrastructure.md). Changes are uncommitted on `main`.
+
+---
+
+
+## 2026-08-16 12:49:09 — Prompt
+
+Everytime I try to add something to my basket I get the error message "That payment method is not accepted for this item", can you tel lme what this means ?
+
+### Assistant
+
+Let me find where that's raised.
+
+No page sends `paymentMethodId` — only a test fixture mentions it. Let me confirm across every caller and check the route.
+
+Every caller omits it, so the guard always fails. Let me understand the intended model before saying what it means.
+
+A second mismatch: `supported_payment_methods` stores **name slugs**, but `payment_method_id` is a **UUID**. Let me see which the app itself writes.
+
+Let me check whether the route fills it in before I conclude.
+
+The message is a guard in the cart service, and it's failing for **two independent reasons** — neither of which is anything you're doing wrong.
+
+## What the message means
+
+Every cart item stores *which* payment method the member chose, and the cart refuses an item whose chosen method isn't one the source item accepts. The check is:
+
+```ts
+if (!item.supportedPaymentMethodIds?.includes(item.paymentMethodId)) {
+  throw new ValidationError('That payment method is not accepted for this item');
+}
+```
+
+Plain English: *"you've asked to pay for this by a method the club doesn't accept for it."*
+
+## Why it fires every time
+
+**1. No page ever sends a chosen method.** All six add-to-basket callers — events, memberships, bookings, shop, registrations — send `supportedPaymentMethodIds` but never `paymentMethodId`. So the check is always `[...].includes(undefined)`, which is always false. I traced it back to the commit that introduced the member app: it has never been sent. This isn't a regression from recent work; add-to-basket has never worked.
+
+**2. Even if it were sent, the values wouldn't match.** `cart_items.payment_method_id` is a UUID foreign key into `payment_methods`, and the org-admin treats these lists as ids (`pm.id === methodId`). But the seeded items store **name slugs**:
+
+```
+Club polo shirt | ["pay-offline", "stripe"]
+Outdoor arena   | ["pay-offline", "stripe"]
+```
+
+A UUID will never appear in that list. **That one is my fault** — my seed wrote slugs where the application expects ids.
+
+## What fixing it involves
+
+Two separate pieces:
+
+- **The seed** — write the real `payment_methods` UUIDs instead of slugs. Small and contained; mine to fix.
+- **The front end** — decide where the member picks a method and send it. That's a design question rather than a typo: the column is `NOT NULL` and flows through to the order, so the model wants a method per item, but nothing in the UI asks for one. The natural options are defaulting to the item's only/first supported method at add time, or moving the choice to checkout and relaxing the column.
+
+I've only diagnosed so far — no code changed. Want me to fix the seed and default the method at add time, or would you rather decide the checkout model first?
+
+---
+
+
+## 2026-08-16 13:02:45 — Prompt
+
+If an item only has one payment method supportted then that is the one to choose automatically. If an item supports more than one payment method, please add it to the cart using the Card Payment method, but in the cart they can change it .
+
+### Assistant
+
+Let me look at what the account app knows about payment methods and whether the cart can already change them.
+
+The backend already has the change endpoint and card classifier — the gap is the default. Let me check the cart page's switcher.
+
+Three pieces then: the seed's ids, a server-side default, and a switcher in the cart. Starting with the seed bug.
+
+Now the server-side default, in the place that already knows the method names.
+
+Now let me add tests for the defaulting rules, then verify against the real database.
+
+All four new cases pass. Now the cart switcher — the view needs names for the alternatives.
+
+The extra query shifted the mocked sequences. Let me look.
+
+`addItem` also gained a lookup. Let me update its mock too.
+
+All 28 pass. Now the cart page switcher.
+
+Now let me re-seed and verify the whole flow end to end against the real backend.
+
+That's a different (correct) validation — it got past the payment check. Let me supply the option.
+
+It works. Let me verify the single-method case and the switch.
+
+Both rules confirmed against the real stack. Let me clean up my test rows and run the full suites.
+
+Done, and verified against the running stack.
+
+## The rules, as you specified
+
+`paymentMethodId` is now optional when adding to a basket, and the cart resolves it:
+
+| Item accepts | Chosen |
+|---|---|
+| one method | that one — nothing to decide |
+| several, one is card | **card** |
+| several, none card | the first |
+
+I put the decision on the **server** rather than in each page. Six front ends add to the basket, and the cart service is the only place that already knows what the methods are *called* — a client-side rule would have needed a new endpoint just to learn which id means "card", and six copies of the same logic to drift.
+
+The last row is a guess I had to make: an offline-only club still has to be able to sell, and refusing would have been worse than picking. Ward Union is exactly that case, and I tested it.
+
+## Changing it in the cart
+
+Each line now offers a `Select` of the item's accepted methods, calling the existing change endpoint. Changing one **reloads the whole cart** rather than patching locally — the handling fee is charged on the card portion of the basket, so moving one item between card and offline re-prices everything else.
+
+That needed a small backend change: `availablePaymentMethodIds` became `availablePaymentMethods` with names. Ids were enough to *validate* a switch but not to *offer* one — the page had no other source for what a method is called, which is why it could only ever show the one already chosen.
+
+## Verified end to end
+
+Against the real backend and Keycloak, as Niamh:
+
+- **Club cap** (two methods) → added as **Pay By Card (Stripe)**, with both alternatives offered
+- Switched it to **Pay Offline** → `204`, cart re-read confirms
+- **Ward Union entry** (offline only) → added as **Pay Offline**, one alternative
+
+Along the way the guard also correctly rejected a cap with no colour chosen — a different validation doing its job, which confirmed the payment check was no longer the blocker.
+
+## Verification
+
+Backend **2630 passing** (four new tests: single method, card preference, no-card fallback, and an item configured with no method at all). Account-shell **483 passing**. Seed re-run: `supported_payment_methods` now holds UUIDs.
+
+I cleared the test carts I created. Docs updated in [account-shell.md](.claude/modules/account-shell.md) and [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md). 23 files uncommitted on `main`.
+
+---
+
+
+## 2026-08-16 13:16:51 — Prompt
+
+When I try to add an event ent5ry item to the basket it fails, and the browser console shows the following error:
+
+2026-08-16 13:16:11 [error]: Database query error {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "text": "SELECT id, name FROM payment_methods WHERE id = ANY($1::uuid[])",
+  "params": [
+    "pay-offline"
+  ],
+  "error": {
+    "length": 191,
+    "name": "error",
+    "severity": "ERROR",
+    "code": "22P02",
+    "detail": "Array value must start with \"{\" or dimension information.",
+    "where": "unnamed portal parameter $1 = '...'",
+    "file": "arrayfuncs.c",
+    "line": "319",
+    "routine": "array_in"
+  },
+  "duration": "0.001s",
+  "operation": "SELECT",
+  "table": "payment_methods"
+}
+2026-08-16 13:16:11 [error]: Error in POST /account/:orgCode/cart/items: malformed array literal: "pay-offline" {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "length": 191,
+  "name": "error",
+  "severity": "ERROR",
+  "code": "22P02",
+  "detail": "Array value must start with \"{\" or dimension information.",
+  "where": "unnamed portal parameter $1 = '...'",
+  "file": "arrayfuncs.c",
+  "line": "319",
+  "routine": "array_in",
+  "stack": "error: malformed array literal: \"pay-offline\"\n    at /Users/michaeladams/Work/Esker/Development/AI/Holism/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async DatabasePool.query (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/database/pool.ts:94:22)\n    at async CartService.defaultPaymentMethodFor (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/services/cart.service.ts:395:21)\n    at async CartService.addItem (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/services/cart.service.ts:310:11)\n    at async <anonymous> (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/routes/account.routes.ts:403:20)"
+}
+2026-08-16 13:16:11 [error]: Request failed with server error {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "method": "POST",
+  "path": "/wupc/cart/items",
+  "statusCode": 500,
+  "duration": "15ms",
+  "userId": "d825f393-ddc4-44c6-8c96-297e567d5b95"
+}
+
+### Assistant
+
+All four tables hold UUIDs now. So the slug is coming from somewhere else — let me trace the catalogue.
+
+Found it. Event activities have a **second** column, `allowed_payment_method` — a single value (`pay-offline` / `stripe` / `any`) — and the catalogue assigns that *string* to a field typed `string[]`.
+
+The jsonb column **is** correct — the catalogue just reads the wrong one. Let me check the query selects it.
+
+Now the fix — select and read the same column every other catalogue mapping uses.
+
+Now let me make the cart resilient, so bad data can't produce a 500 again.
+
+My test fixtures use `pm-stripe`-style ids, which aren't UUIDs. The guard is right — the column is `uuid` — so the fixtures should be faithful.
+
+Let me add a regression test for the malformed list, then verify against the real stack.
+
+Proper arrays of ids now. Let me replay the exact failing request.
+
+Both rules confirmed for event entries. Let me run the full suites.
+
+Fixed. That was a **third**, separate cause, specific to event entries.
+
+## What the log showed
+
+`ANY($1::uuid[])` received the bare string `"pay-offline"` instead of an array of ids. Postgres can't parse a string as an array, hence `malformed array literal`.
+
+## Why event entries had a slug
+
+Event activities carry **two** payment columns:
+
+| Column | Holds |
+|---|---|
+| `allowed_payment_method` | a **single** value — `any`, `pay-offline` or `stripe` |
+| `supported_payment_methods` | the **jsonb list of method ids** |
+
+The catalogue read the first and assigned it to a field typed `string[]`:
+
+```ts
+supportedPaymentMethodIds: row.allowed_payment_method ?? [],
+```
+
+So every activity carried a *string* where an array belonged. Memberships, merchandise and calendars all read `supported_payment_methods` correctly — activities were the odd one out.
+
+That also explains the original symptom on this path: `"pay-offline".includes(undefined)` is false, so the guard rejected it. Once the cart began resolving a default, the same bad value went to Postgres and turned a 400 into a 500.
+
+The jsonb column was already correct in the database, so the fix was to read it — one column in the query, one line in the mapping.
+
+## The 500 shouldn't have been possible
+
+A misconfigured item taking down the whole request was the wrong failure mode. `defaultPaymentMethodFor` now filters to uuid-shaped values and refuses anything else as a validation error, so bad data gives the member an actionable refusal rather than a stack trace. Two regression tests cover it: a bare string, and a list of names rather than ids.
+
+While fixing that I also made the cart test fixtures uuid-shaped — they used `pm-stripe`-style ids, which is exactly the shape that couldn't occur in a `uuid` column, and which is why the tests never caught this.
+
+## Verified
+
+Replayed your exact request:
+
+- **Ward Union event entry** (offline-only) → `201`, *Pay Offline*
+- **Kildare activity** accepting both → `201`, defaults to *Pay By Card (Stripe)* with both offered
+
+Backend **2632 passing**, account-shell **483 passing**. Test carts cleared.
+
+Worth noting: `allowed_payment_method` still exists and is still written by the org-admin. Nothing reads it in the member app now, but the two columns can disagree — worth deciding which is authoritative before that bites somewhere else.
+
+---
+
+
+## 2026-08-16 13:46:16 — Prompt
+
+I tried again and I ma getitng an error, but possibly it is a different one this time, the browser console shows the following when i add the event entry to my basket:
+
+2026-08-16 13:45:13 [error]: Database query error {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "text": "INSERT INTO cart_items\n        (cart_id, item_type, context_ref, description, form_submission_id,\n         quantity, unit_fee, fee, payment_method_id, handling_fee_included,\n         discount_id, discount_amount, expires_at)\n       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)\n       RETURNING *",
+  "params": [
+    "4d31d25c-0437-49c0-9f41-650e5a6732f0",
+    "event-entry",
+    "{\"activityId\":\"08c3f999-e1cc-4aa7-bc6f-f68780bd4b00\",\"eventId\":\"4114e31e-fda8-4f8e-8cd4-475b48c910fb\",\"supportedPaymentMethodIds\":[\"ab169387-058d-460f-b684-81e31deb237e\"]}",
+    "Ward Union Open Day — Have-a-go lesson",
+    "99036d2c-166f-4794-94c3-bd449e90e07c",
+    1,
+    1500,
+    1500,
+    "ab169387-058d-460f-b684-81e31deb237e",
+    false,
+    null,
+    0,
+    null
+  ],
+  "error": {
+    "length": 588,
+    "name": "error",
+    "severity": "ERROR",
+    "code": "23514",
+    "detail": "Failing row contains (87e4bfa0-ec11-45c8-af0f-3001d728d25c, 4d31d25c-0437-49c0-9f41-650e5a6732f0, event-entry, {\"eventId\": \"4114e31e-fda8-4f8e-8cd4-475b48c910fb\", \"activityId\"..., Ward Union Open Day — Have-a-go lesson, 99036d2c-166f-4794-94c3-bd449e90e07c, 1, 1500, 1500, ab169387-058d-460f-b684-81e31deb237e, f, null, 0, null, 2026-08-16 12:45:13.361218, 2026-08-16 12:45:13.361218).",
+    "schema": "public",
+    "table": "cart_items",
+    "constraint": "cart_items_item_type_check",
+    "file": "execMain.c",
+    "line": "2109",
+    "routine": "ExecConstraints"
+  },
+  "duration": "0.001s",
+  "operation": "INSERT",
+  "table": "cart_items"
+}
+2026-08-16 13:45:13 [error]: Error in POST /account/:orgCode/cart/items: new row for relation "cart_items" violates check constraint "cart_items_item_type_check" {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "length": 588,
+  "name": "error",
+  "severity": "ERROR",
+  "code": "23514",
+  "detail": "Failing row contains (87e4bfa0-ec11-45c8-af0f-3001d728d25c, 4d31d25c-0437-49c0-9f41-650e5a6732f0, event-entry, {\"eventId\": \"4114e31e-fda8-4f8e-8cd4-475b48c910fb\", \"activityId\"..., Ward Union Open Day — Have-a-go lesson, 99036d2c-166f-4794-94c3-bd449e90e07c, 1, 1500, 1500, ab169387-058d-460f-b684-81e31deb237e, f, null, 0, null, 2026-08-16 12:45:13.361218, 2026-08-16 12:45:13.361218).",
+  "schema": "public",
+  "table": "cart_items",
+  "constraint": "cart_items_item_type_check",
+  "file": "execMain.c",
+  "line": "2109",
+  "routine": "ExecConstraints",
+  "stack": "error: new row for relation \"cart_items\" violates check constraint \"cart_items_item_type_check\"\n    at /Users/michaeladams/Work/Esker/Development/AI/Holism/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async DatabasePool.query (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/database/pool.ts:94:22)\n    at async CartService.addItem (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/services/cart.service.ts:332:20)\n    at async <anonymous> (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/routes/account.routes.ts:403:20)"
+}
+2026-08-16 13:45:13 [error]: Request failed with server error {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "method": "POST",
+  "path": "/wupc/cart/items",
+  "statusCode": 500,
+  "duration": "11ms",
+  "userId": "d825f393-ddc4-44c6-8c96-297e567d5b95"
+}
+
+### Assistant
+
+Different one — and my earlier test passed because I used `event_entry` with an underscore while the UI sends `event-entry`. Let me check the constraint.
+
+Two places send the hyphenated form; everything else matches. Let me check whether the client has a type that should have caught it.
+
+`itemType` is typed as a bare `string` on the client, so nothing could catch it. Let me fix the values and close that hole.
+
+Now the typing, so a wrong literal fails to compile instead of reaching the database.
+
+Now let me make the call sites use that type, so the compiler actually guards them.
+
+Let me confirm the guard actually bites, by deliberately reintroducing the bug.
+
+The guard works — the hyphenated spelling is now a compile error. Let me verify the real request.
+
+Fixed — a fourth, unrelated cause, and one my earlier verification should have caught.
+
+## What was wrong
+
+`cart_items.item_type` has a check constraint allowing exactly:
+
+```
+event_entry  membership  registration  booking  merchandise
+```
+
+Two pages — `EntryFormPage` and `BrowsePage` — sent **`event-entry`** with a hyphen. Postgres refused the row. The other four types were all correct, which is why only event entries failed.
+
+## Why nothing caught it
+
+The client typed the field as a bare `string`, so TypeScript had nothing to check against. Worse, three test fixtures had copied the same hyphenated value — so the tests **agreed with the bug** rather than catching it.
+
+**And my own verification missed it.** When I tested this path an hour ago I hand-wrote `event_entry` with an underscore, because that's what the backend's `CartItemType` union says. I tested what the server expects rather than what the browser sends, which is precisely the gap the bug lived in. That's a lesson worth stating plainly.
+
+## The fix, and closing the hole
+
+The two literals are corrected, and the fixtures with them. Beyond that, `CartItemType` now exists in the client's types, and every one of the six call sites annotates its literal with `satisfies CartItemType`.
+
+I checked that this actually bites rather than assuming it: reintroducing the hyphen produces
+
+```
+BrowsePage.tsx(271,55): error TS1360: Type '"event-entry"' does not satisfy the expected type 'CartItemType'.
+```
+
+So the next occurrence is a compile error where it's written, not a 500 at insert time.
+
+## Verified
+
+Replayed your exact item — Ward Union Open Day, Have-a-go lesson — against the running backend: **201**, stored as `event_entry`, defaulted to **Pay Offline** (Ward is offline-only).
+
+Backend **2632 passing**, account-shell **483 passing**. Test carts cleared.
+
+Four separate faults have now surfaced on this one path. If it fails again, the pattern suggests checking the *browser's* actual request payload against the database constraints directly — that's the comparison that would have found all four at once.
+
+---
+
+
+## 2026-08-16 13:56:08 — Prompt
+
+When the user is viewing the contents of their basket, can you do the following 
+
+1. provide a summary of what they filled out in their applicaiton form
+2. allow them to make changes to the Application form values in case they made a mistake
+
+### Assistant
+
+Let me look at what's available for form submissions on the account side.
+
+The dialog only creates submissions. Let me check what read/update exists for the account side.
+
+The service has read/update but no account-side routes. Let me check how the dialog stores answers before designing.
+
+I have what I need. Starting with the cart summary.
+
+Now the routes to read and update a submission, scoped to what the member may change.
+
+Let me reuse the POST route's existing validation rather than inventing a second one.
+
+Backend is in place. Let me verify it end to end before touching the UI.
+
+My shell split broke on the spaces inside the JSON array. Let me redo with a proper separator.
+
+The validator names the field — `vaccination_status`. Let me correct and retry.
+
+The summary works. Now the read and update endpoints, including the ownership guard.
+
+Let me check the columns my ownership query assumes.
+
+The column is `user_id`, not `organisation_user_id`. Let me fix the query.
+
+The token had expired. Now let me verify the update and the ownership guard.
+
+The guard holds. Now the cart UI — summary plus editing.
+
+Now let me extend the form dialog to support editing an existing submission.
+
+Now the cart page — show the summary and offer the edit.
+
+Let me add tests for the new behaviour and run everything.
+
+The button is gated on `formSubmissionId`, which the fixture leaves null. Let me check.
+
+Both the accordion label and the button match my loose regex. Let me target precisely.
+
+Both done.
+
+## 1. The summary
+
+Each basket line now carries a `formSummary` — the answers, labelled and in the club's own field order, built by joining the submission to its form definition. It renders as a collapsible *"Your N answers"* under the item.
+
+Two choices worth naming: **empty answers are left out**, since a summary is for confirming what was said and a list of blanks buries it; and it's built in **one query per basket** rather than one per line, because the answers live in a jsonb blob keyed by field name while the labels live on the form — both have to be read together to say anything a member would recognise.
+
+Verified against the real backend:
+
+```
+Spring League — Class 1
+   Rider name: Niamh Walsh      Age group: 18+
+   Date of birth: 2012-04-18    Pony or horse name: Bramble
+   Email address: …             Vaccination status: Up to date
+```
+
+## 2. Editing
+
+A *Change answers* button opens the existing `ApplicationFormDialog`, prefilled. I extended that component with an optional `submissionId` rather than writing a second one, so the create and edit paths can't drift into rendering different forms.
+
+Two new endpoints back it, and the access rule is the part I'd want you to check:
+
+**Editing is confined to an open basket.** The submission is resolved *through* `cart_items → carts`, requiring the cart to be `open` and both the submission and the cart to belong to the resolved account. Once checked out, the club has been told what was said, and a member quietly rewriting it afterwards would change a record somebody has already acted on.
+
+Anything failing that check is a **404, not a 403** — a member has no business learning that someone else's submission exists. Tested: as Cillian, both `GET` and `PUT` on Niamh's submission return 404.
+
+Edits are re-validated by the same validator the original submission used, so correcting answers clears the same bar as giving them. Confirmed: removing a required answer returns 400 naming the field.
+
+## Verified end to end
+
+Created a submission, added it to the basket, saw the summary, corrected the pony from **Bramble** to **Thistle** via `PUT` (204), and re-read the basket showing **Thistle**.
+
+Backend **2632 passing**, account-shell **485 passing** (two new cart tests). Test data cleared.
+
+One thing I'd flag: the summary shows raw stored values, so a date reads as `2012-04-18` rather than `18 April 2012`, and a multi-select reads as comma-joined text. Formatting those per datatype would be a small follow-up if you want it.
+
+---
+
+
+## 2026-08-16 14:18:04 — Prompt
+
+On the basket page, if the "Paying now by card" is zero, then don't show it.
+Also, if the item in the basket has more than one payment method where you show the drop down list, can you add a label to the left called "Change Payment Method"
+
+### Assistant
+
+Both are small. Let me make them.
+
+The label only shows with more than one method, and the fixture still uses the old field name.
+
+Both done.
+
+## 1. "Paying now by card" hidden when zero
+
+It was shown whenever anything was being paid offline. Now it also requires something actually being charged — so an entirely offline basket no longer shows a `€0.00` line.
+
+The original condition is still there for good reason: the two figures differ whenever anything is offline, and confusing them is how a member believes they've paid the club in full. Your change narrows it to the case where there's genuinely something to pay now.
+
+## 2. "Change Payment Method" label
+
+Added to the left of the drop-down, which only appears when an item accepts more than one method. A bare drop-down beside a price reads as part of the item rather than as something the member may change.
+
+Translated across all six locales.
+
+## Verification
+
+Two new tests: one that the label renders, one that the row disappears when `chargedToCardNow` is zero. **487 passing** in account-shell.
+
+The label test failed first time and caught something real — the `CartPage` fixture had no `availablePaymentMethods` at all, so it had never exercised the switcher I added earlier. It does now.
+
+---
+
+
+## 2026-08-16 14:21:47 — Prompt
+
+When I have 3 items in the basket and all 3 are pay offline, the Info message near the bottom of the cart says 
+"Part of this order is paid directly to the club. They will record it when it arrives."
+
+However since all 3 items are Pay Offline, the message should not say "Part of this order ..."
+
+### Assistant
+
+Fixed. The note now depends on whether anything is actually going on a card:
+
+| Basket | Message |
+|---|---|
+| some offline, some card | "**Part of this order** is paid directly to the club…" |
+| all offline | "**This order** is paid directly to the club…" |
+
+The condition is `chargedToCardNow > 0` — the same figure that decides whether the "Paying now by card" row appears, so the two can't contradict each other. When it's zero, both the row and the "part of" wording drop out together.
+
+Worth naming why this mattered beyond the grammar: the old wording told a member paying entirely offline that *some* of their money had gone by card. That invites them to go looking for a charge that was never going to happen.
+
+Translated across all six locales, with two tests covering both wordings. **489 passing** in account-shell.
+
+---
+
+
+## 2026-08-16 14:23:27 — Prompt
+
+In the summary table in the basket  it has a row called "Paying the club directly", can you update this to say "Paying the club directly (Offline)".
+
+### Assistant
+
+Two keys share that text. Let me check which the basket summary uses.
+
+The basket uses `cart.offlineSubtotal`; `checkout.payingToClub` is a separate screen. Changing just the basket one, as asked.
+
+I reworded some translations rather than just appending. Let me correct that — and "(Offline)" should stay literal, since the payment method itself displays as "Pay Offline" in every language.
+
+Done. The basket summary row now reads **"Paying the club directly (Offline)"**.
+
+Two things worth mentioning:
+
+**I overreached on the first attempt** and reworded several translations rather than just appending — French became "Réglé directement au club", Italian "Pagamento diretto al club". I've reverted those; each locale now keeps its existing wording with the suffix appended and nothing else changed.
+
+**"(Offline)" is left literal in all six languages.** The payment method itself renders as "Pay Offline" from the database regardless of locale, so translating the parenthetical would have made the summary row disagree with the method name shown in the drop-down two lines above it.
+
+There's a second key with the same English text — `checkout.payingToClub` on the checkout screen — which I've left alone, since you asked about the basket. Worth knowing they'll now read slightly differently across the two pages if that matters to you.
+
+**489 passing**; one existing test asserted the old text and is updated.
+
+---
+
+
+## 2026-08-16 14:26:10 — Prompt
+
+In the shopping cart, can you include the coloured icons to the left of the item title, for calendar bookings use their coloured cion, for the other items use something suitable.
+
+### Assistant
+
+Bookings carry `calendarId`, so I can resolve their icon. Let me add that to the cart view.
+
+The interface edit didn't apply. Let me look and add it properly.
+
+Now the client — a shared icon per item type, matching the home-page treatment.
+
+All three pass. Let me verify against the real backend and run everything.
+
+Done. Each basket line now carries a mark to the left of its title.
+
+## Bookings use their own calendar's icon
+
+Resolved server-side from `context_ref.calendarId`, so a booking shows exactly what its club chose — the arena's stable icon in its green, the lessons' school icon in its blue. Verified against the real backend: a booking for Laois's Outdoor arena comes back with `icon=equestrian colour=#2e7d32`.
+
+One query per basket, and none at all when there are no bookings — most baskets don't have any.
+
+## Everything else takes its type's icon
+
+| Type | Icon |
+|---|---|
+| event entry | Event |
+| membership | Card membership |
+| registration | How-to-reg |
+| shop | Shopping bag |
+
+The reasoning behind the split: a club's bookable things are *meant* to be told apart from each other — that's why a calendar carries an icon at all. One event entry, by contrast, isn't visually distinct from another, so per-item marks there would be noise rather than information.
+
+They're drawn as a tinted square in the item's colour, the same treatment the home screen gives its cards. A basket is where a member checks they picked the right things, so it should look like the screens they picked them from.
+
+## Verification
+
+Backend **2632 passing**, account-shell **492 passing** — three new tests covering a booking's own mark, the type fallback, and a shop line. Test carts cleared.
+
+One gap worth naming: for non-booking items the icon uses the theme's primary colour, so all four look alike in colour and differ only in shape. If you'd rather each type had its own colour, that's a small addition to `CartItemIcon`.
+
+---
+
+
+## 2026-08-16 14:30:38 — Prompt
+
+The change payment method line is very close to the item title line above it can you add a line underneath the item title to show a clear separation between the two.
+
+### Assistant
+
+Added a divider under the item title, with breathing room either side, so the "Change Payment Method" control reads as a separate thing rather than a second line of the item's name.
+
+One decision: it's drawn **only when the drop-down is there**. Items with a single payment method show just their name and a plain text line, and a rule above nothing would be a stray mark rather than a separation.
+
+**492 passing** in account-shell.
+
+---
+
+
+## 2026-08-16 14:32:05 — Prompt
+
+In the basket, in the calendar booking title, can you include the end time of the slot also.
+
+### Assistant
+
+Done. Booking lines now read:
+
+```
+Outdoor arena — 5 September 2026 09:00–10:00
+```
+
+The end time is what distinguishes two bookings of the same court on the same morning, so a start time alone left the basket unable to say how long you'd booked for.
+
+**One thing to know:** the description is written when the item is added, so anything already sitting in a basket keeps its old text. Only new bookings pick this up — remove and re-add if you want to see it on an existing one.
+
+**493 passing**, with a test asserting the posted description carries both ends.
+
+---
+
+
+## 2026-08-16 14:35:13 — Prompt
+
+I added "Cross-country schooling — 22 Aug 2026 10:00–13:00" to my basket, but when I went back into the Calendar Booking page for "Cross-country schooling" it was showing that that slot was still available, should it not have been shown as being booked at the moment ?
+
+### Assistant
+
+Good question. Let me check how slot availability is calculated.
+
+Availability does subtract holds from `slot_reservations`. Let me check whether adding to the basket creates one.
+
+Let me check what happens at checkout if two members hold the same slot.
+
+Let me verify the consequence concretely rather than assert it — two members, same exclusive slot.
+
+You're right that it should be, and it isn't. Here's what's actually happening.
+
+## Why the slot still shows free
+
+Availability subtracts two things: confirmed `bookings`, and `slot_reservations`. But `slot_reservations` is an **org-admin** feature — a club blocking out a slot by hand, with a reason, via `/api/orgadmin/calendars/:id/reservations`.
+
+Adding a booking to your basket writes **only** a `cart_items` row. It creates no reservation, and `expires_at` — the column whose own comment reads *"soft hold for capacity-limited items"* — is never set by anything. The design clearly anticipated holds; nothing implements them.
+
+So availability is checked once, at the moment you add, and never again while the item sits in your basket.
+
+## The part that concerns me more
+
+I tested two members adding the **same exclusive-hire arena slot** (places = 1):
+
+```
+Niamh:   201
+Cillian: 201
+```
+
+Both succeeded, and both `expires_at` are null. Worse, checkout doesn't re-check either — the concurrency guard in `confirmPayment` only protects against duplicate webhook deliveries, not against two people paying for the same slot. So both could pay, and the club would discover the clash afterwards.
+
+That's a live double-booking risk on any capacity-limited calendar, and it exists whether or not you want the hold behaviour.
+
+## What I'd suggest
+
+The two are separable, and the second matters more:
+
+**A re-check at fulfilment** — cheap, and turns a silent double-booking into a refusal the club can act on. No product decisions needed.
+
+**A soft hold** — what you actually asked about. The column exists, so it's mostly plumbing, but it needs decisions I shouldn't make for you: how long a hold lasts, whether it renews while the member is active, what the *other* member sees ("held by someone else" vs simply gone), and what happens when a hold expires with the item still in the basket.
+
+I've only diagnosed and cleared my test rows — no code changed. Want me to do the fulfilment re-check now and come back to holds, or shall we settle the hold rules first and do both together?
+
+---
+
+
+## 2026-08-16 14:42:09 — Prompt
+
+Can you add a soft hold with a clear indication to the user, and then others will see it as "Held by someone else" with automatic expiry on the hold after something like 2 minutes.
+Do we need special handling for someone who starts the payment process with Stripe but never completes it, how can we handle this ?
+
+We need a similar mechanisem for Event entries when there is a limit on the number of event, or activity entrires, the person should only have a hold of the entry slot for a specific period, and if they do not use itm then it should be released.
+
+### Assistant
+
+A re-check at fulfilment does exist — let me read it, since it changes what the hold needs to do.
+
+Fulfilment does re-check — correcting my earlier claim: the risk isn't a double booking, it's the second member paying and their line then failing. Now the event-entry capacity side:
+
+Confirmed a latent bug while wiring this up: `confirmPayment` sets `carts.status='ordered'`, but the check constraint only allows `open`/`checked_out`/`abandoned` — so that update aborts the whole confirm transaction. That directly blocks hold release on purchase, so it's in scope. Let me build.
+
+Now the slot calculator — teaching it about holds:
+
+Now the catalogue service — querying live holds and feeding them in:
+
+Cleaner to drop the viewer's own holds entirely for fulfilment, rather than patch around the places arithmetic:
+
+Now the event-entry side — holds against capped events and activities:
+
+Now reorder so the event reason sees its holds:
+
+Now the route — deciding the hold and passing it to the cart:
+
+Now fulfilment must redeem its own hold rather than trip over it:
+
+Now the checkout extension — the answer to the Stripe question:
+
+The `HOLD_EXPIRED` warning already exists in the cart — good, the checkout guard is in place. Now the extension:
+
+Now the `carts.status='ordered'` constraint bug, which would otherwise abort every successful confirm:
+
+Let me typecheck the backend before going further:
+
+That machinery was all in place and simply never fed. Migration and backend tests:
+
+Now the tests for the calculator and the hold policy:
+
+All 40 pass. Now a test for the hold policy itself:
+
+Now the front end. Let me see how slots render today:
+
+Now a countdown component — the visible part of "you hold this":
+
+Now wire it into the calendar page:
+
+Now the i18n keys across all six locales:
+
+My edits are exactly the targeted ones; the rest of that diff is earlier session work. Typecheck and test the front end:
+
+One failure — my rewording of `book.reason.held`. Let me fix it and add coverage for the new states:
+
+All 23 pass. Now tests for the countdown component itself:
+
+My test's arithmetic was off by the advanced second, not the component:
+
+All 505 pass. Now the backend suite, to catch anything my service changes broke:
+
+Now add hold coverage to the capacity suite — the event-entry half of the request:
+
+Now the other two failing suites:
+
+Assertion arity plus a mock that stubs the old method. Let me fix each:
+
+Now tests for the checkout hold extension — the Stripe-abandonment behaviour:
+
+The mock dispatches on SQL, so the extension slots in cleanly:
+
+Let me add the `failPayment` release test, which uses that constant:
+
+Now let me add coverage for the calendar-availability hold query, then run everything:
+
+Full backend suite:
+
+All 2692 backend tests pass. Let me verify live, since the original report came from the browser:
+
+`heldUntil` is flowing. Now the actual scenario — member one adds it, member two looks:
+
+Let me run a second backend on another port rather than disturb the running dev server:
+
+A real failure in my code, not a stale server. Let me see it:
+
+My curl omitted `handlingFeeIncluded` — and the log shows `expires_at` set to exactly two minutes ahead. Retrying with a complete body:
+
+The hold is taken. Now the two views — the holder's and everyone else's:
+
+Exactly the two behaviours asked for. Now the expiry, and the double-add refusal:
+
+That timestamp looks an hour off. Let me check the column type — this decides whether expiry is really 2 minutes:
+
+A real bug, and a nasty one: the hold is live for **1 hour 1 minute**, not 2. `expires_at` is `timestamp without time zone`, the app writes a UTC+1 local time, and `NOW()` compares in UTC — so holds last 2 minutes *plus the UTC offset*, and would have looked correct in winter. Fixing the column type:
+
+Now a genuine 2 minutes. Let me verify the checkout extension and then let it lapse:
+
+The whole lifecycle works end to end. Let me clean up and update the documentation:
+
+Now the documentation:
+
+Now the module summaries, per §3.6:
+
+That claim is now false. Let me correct it:
+
+Final verification — both suites and typechecks together:
+
+Done — all 2692 backend and 505 front-end tests pass, and I verified the whole lifecycle live against a running stack.
+
+## What holds now
+
+Adding a **booking**, or an **event entry against a capped event or activity**, stamps `cart_items.expires_at` two minutes out. Availability then subtracts live holds. Verified live on the LHPC arena slot:
+
+| Who | Sees |
+|---|---|
+| The member who added it | **In your basket**, with a live countdown |
+| Any other member | **Held by someone else** |
+| Same member adding again | *"That slot is already in your basket"* |
+| Another member adding | *"Somebody else is holding that slot at the moment"* |
+
+That last one is the exact race that returned `201` for both members before.
+
+Held is deliberately worded apart from **full** — a hold may come back, and a member told "full" goes away for good. Uncapped entries, memberships and merchandise take no hold; an expiry would just drop them out of the basket total for nothing.
+
+The expiry mechanism is `expires_at > NOW()` and nothing else. No sweeper, no timer — an abandoned basket simply stops counting.
+
+## Your Stripe question
+
+Yes, it needs special handling, because two minutes cannot cover a card form plus 3-D Secure. The hold isn't one fixed duration:
+
+1. **Checkout starts** → holds extend to **15 minutes** (verified: `00:14:59`). Lapsed holds are *not* revived — the basket is refused instead, since somebody else may have taken the slot.
+2. **Member abandons the page** → nothing needs to happen. The hold lapses and the slot returns by itself.
+3. **Payment fails/declines** → `failPayment` drops holds back to two minutes, so the slot returns quickly rather than sitting out the full window unpaid.
+4. **Payment succeeds** → cart becomes `ordered`, leaving the hold query; a real booking stands behind the slot.
+5. **A stale payment completes late** → fulfilment's `assertSlotAvailable` refuses the line, as it already did.
+
+Correcting something I said earlier: fulfilment **does** already re-check availability — I was wrong about that. So the pre-existing failure was never a double booking; it was the second member paying and *then* being refused. That backstop is what lets holds stay advisory.
+
+## Two pre-existing bugs I had to fix
+
+- **`carts.status = 'ordered'` violated its own check constraint.** `confirmPayment` sets it; the constraint allowed only `open`/`checked_out`/`abandoned`. Every confirmation was rolling back.
+- **A two-minute hold measured 1h 2m.** `expires_at` was `timestamp without time zone`, so a UTC+1 local time was compared against a UTC `NOW()`. Nastier than its size: correct in winter, an hour wrong in summer. Now `timestamptz` — re-measured at `00:01:59`.
+
+## One gap I left, deliberately
+
+The hold is a `SELECT`-then-`INSERT` with no lock, so two requests milliseconds apart can both pass. Closing it needs a unique constraint or a row lock on the calendar. Fulfilment already refuses the second booking, so the worst case is the old behaviour — but the exposure is now milliseconds instead of a whole checkout. Say the word if you want that closed properly.
+
+Written up in [docs/BASKET_SOFT_HOLDS.md](docs/BASKET_SOFT_HOLDS.md), with [backend.md](.claude/modules/backend.md) and [account-shell.md](.claude/modules/account-shell.md) updated — the latter had a "choosing a slot holds nothing" claim that's now false. Five new i18n keys across all six locales.
+
+Two things to note: your dev server on `:3000` is still running pre-change code, so restart it to see this in the browser; and the two new migrations are already applied to your local database.
+
+---
+
+
+## 2026-08-16 17:16:16 — Prompt
+
+Can we use Stripe embedded payments to have better control over the hold, e.g. if the person is taking too long to make their payment then we can stop it ?
+
+### Assistant
+
+Good question, and the answer turns on what the current integration actually is. Let me look.
+
+Two useful findings, and the first one changes the premise:
+
+**You're already on embedded payments.** [CheckoutPage.tsx:255](packages/account-shell/src/pages/CheckoutPage.tsx#L255) renders Stripe's `PaymentElement` and confirms via `stripe.confirmPayment()` on your own page — that *is* the embedded integration. There's no hosted redirect to migrate away from, so switching gains you nothing.
+
+**But you have none of the control that embedding makes possible.** [CheckoutPage.tsx](packages/account-shell/src/pages/CheckoutPage.tsx) has no hold awareness at all — no countdown, no expiry check. The countdown I just built is on the basket page, and the checkout page is precisely where the member lingers for those 15 minutes. And there's no `cancel` anywhere in the Stripe provider or checkout service.
+
+## What can actually "stop it"
+
+Three levers, increasing in strength:
+
+**1. UI — free, but not authoritative.** Countdown on the checkout page, disable Pay when the hold lapses. Stops the honest case. Doesn't stop a stale tab, because the `client_secret` is still valid.
+
+**2. Cancel the PaymentIntent server-side — the real lever.** `paymentIntents.cancel()` works while the intent is `requires_payment_method` / `requires_confirmation` / `requires_action` — i.e. any time before they've confirmed. Cancel on hold expiry and a stale tab's Pay button fails outright. This is what makes the expiry authoritative rather than advisory, and it's a small change.
+
+**3. Manual capture — the genuinely better answer.** You currently create intents with automatic capture ([stripe.provider.ts:102](packages/backend/src/services/payment-providers/stripe.provider.ts#L102)), so money moves the instant they confirm. With `capture_method: 'manual'` the flow becomes: confirm → *authorise only* → server re-checks the slot → capture, or cancel.
+
+That's the one that fixes the underlying problem rather than shrinking the window. Today if fulfilment refuses the slot, the club has taken money and owes a refund. With manual capture, cancelling an uncaptured authorisation **isn't a refund** — no money moved, no refund fee, just a pending auth that drops off the statement.
+
+## The honest caveats
+
+- **A race always remains.** Between the member pressing Pay and Stripe processing, a cancel can lose. Manual capture doesn't remove that — it makes the loss cost an auth reversal instead of a refund.
+- **Manual capture narrows payment methods.** You use `automatic_payment_methods: { enabled: true }`, which offers whatever Stripe thinks fits. Cards and card-backed wallets support manual capture; bank redirects like iDEAL, Bancontact and SEPA generally don't, so they'd disappear from the Element. Whether that matters depends on which clubs you're selling to.
+- **Capture becomes a step that must happen.** An authorisation left uncaptured expires (~7 days for cards) and no money ever arrives. That needs a webhook path and a monitor, not just a happy path.
+- Your Connect setup (`application_fee_amount` + `transfer_data`) does support manual capture, so that part is fine.
+
+My recommendation: do **1 and 2 now** — they're cheap, low-risk, and close the stale-tab hole. Treat **3** as a separate decision, because it's a payments-behaviour change with a real product trade-off, not just an implementation detail.
+
+Right — countdown, cancel-on-expiry, and manual capture. Let me map the existing payment lifecycle before changing it.
+
+Now I have the full picture. Starting with the provider contract:
+
+Now the Stripe provider — manual capture plus the two new operations:
+
+Now the capacity re-check needs to ignore the buyer's own hold, same as bookings:
+
+Now the order-level re-check that runs between authorisation and capture:
+
+`parseContextRef` is now needed in two services — extracting it rather than duplicating:
+
+Important catch — `payment_transactions` uses `event-entry` (hyphen) while `cart_items` uses `event_entry`. Let me confirm:
+
+That's a live bug — `cart_items` was moved to `event_entry` but fulfilment still switches on `'event-entry'`. Let me confirm against real data:
+
+Only pending rows — no payment has ever completed (the `carts.status` constraint bug guaranteed that), so this mismatch has never been exercised. But it sits directly on the path I'm building. Fixing it:
+
+Now fix the item type filter in my new service and wire in the shared helper:
+
+The backticks in my SQL comment closed the template literal:
+
+Now the checkout service: settle the authorisation, and abandon on expiry.
+
+Now the two new checkout operations — settling an authorisation, and abandoning on expiry:
+
+Now wire the `authorised` outcome into the webhook service:
+
+A redelivered authorisation must still settle, or a crashed first delivery leaves funds authorised and never captured:
+
+Now the abandon route:
+
+Now the checkout page — the countdown, the disabled Pay button, and the abandon call:
+
+Now the three new i18n keys across all six locales:
+
+Both suites green, but that means nothing yet asserts the new behaviour. Let me add the tests:
+
+Now the settlement decision — the core of manual capture:
+
+Now the order-availability check and the fulfilment item-type fix:
+
+Now a regression test pinning the fulfilment item-type bug, plus the webhook path:
+
+The test fixture used the hyphen form, which is exactly why the bug survived. Let me pin the real production spelling:
+
+Now the webhook routing of the `authorised` outcome:
+
+Now the front end — the checkout page behaviour:
+
+No CheckoutPage test exists at all. Let me match the conventions of a neighbouring suite:
+
+The suite uses real translations, not identity `t()`. Let me assert the English:
+
+All 7 pass. Full suites now:
+
+Everything green. Now let me verify live, since the webhook path is the part tests can't fully prove:
+
+No club has a Connect account configured, so a true end-to-end card payment can't run here. Let me verify what doesn't need Stripe:
+
+The 15-minute hold dropped back to the 2-minute browsing window, and a second abandon is a no-op. Cleaning up:
+
+Now the documentation:
+
+My edit duplicated the trailing line — fixing:
+
+Final verification of everything together:
+
+Those two `components` errors are pre-existing — I haven't touched that package. Final test run:
+
+All 2731 backend and 512 front-end tests pass; both packages typecheck clean.
+
+## The premise needed correcting
+
+**You were already on embedded payments.** [CheckoutPage.tsx](packages/account-shell/src/pages/CheckoutPage.tsx) renders Stripe's `PaymentElement` and confirms on your own page — there was no hosted redirect to migrate away from. What was missing was the control that embedding makes possible: the payment screen knew nothing about holds, and nothing anywhere could cancel a payment intent.
+
+## What's built
+
+**Manual capture.** Intents now use `capture_method: 'manual'`. Confirming authorises the card; `payment_intent.amount_capturable_updated` arrives as a new `authorised` outcome, the order is re-checked, and only then is the money captured — or the authorisation reversed. Reversing isn't a refund: no money moved, no refund fee, nothing on the statement but a pending line that drops off. Previously the same situation left the club owing a refund.
+
+**Stopping a slow payment.** The checkout page now shows the countdown, disables Pay the instant it lapses, offers *Back to basket*, and posts to `/checkout/:paymentId/abandon` — which cancels the intent, so a stale tab's `client_secret` stops working. Verified live: it released a 15-minute hold back to the 2-minute window, returned `{abandoned: false}` on a second call, and 404s for a payment that isn't yours.
+
+**A gap that pre-dated holds:** fulfilment re-checked booking slots but never event-entry capacity, so a capped activity could be oversold. That's now checked before the money is taken.
+
+## A third dormant bug
+
+`payment_transactions.item_type` is `event_entry`; fulfilment switched on `event-entry`. **Every paid event entry would have failed.** It survived because no payment had ever reached fulfilment — the `carts.status` fault from the last change guaranteed that — and because the test fixture used the hyphen too. The test agreed with the code rather than with the database. Fixed, with tests that assert the spelling production actually writes.
+
+## What this costs you
+
+- **Bank redirects disappear from the Element.** iDEAL, Bancontact and SEPA can't authorise without taking, so Stripe excludes them. Cards and card-backed wallets are unaffected. This is the trade-off you accepted, but it's worth confirming against what your clubs actually use.
+- **Capture is now a step that must happen.** An uncaptured authorisation expires after a few days and the club is never paid — hence retryable capture errors and settlement on webhook redelivery.
+- **The race isn't gone.** It now costs an auth reversal instead of a refund.
+
+## What I could not verify
+
+**No end-to-end Stripe test.** No seeded club has a Connect account, and a destination charge needs one, so no real authorisation was ever created — the capture and cancel calls are proven against a mocked client only. Before this goes near production it wants one manual pass in Stripe test mode with a connected account: confirm a card, watch it sit at `requires_capture`, and exercise both branches. I'd treat that as required, not optional.
+
+Written up in [docs/MANUAL_CAPTURE_AND_HOLD_CONTROL.md](docs/MANUAL_CAPTURE_AND_HOLD_CONTROL.md), with [backend.md](.claude/modules/backend.md), [account-shell.md](.claude/modules/account-shell.md) and the earlier holds doc updated. Three new i18n keys across all six locales. Your dev server on `:3000` is untouched and still running pre-change code.
+
+---
+
+
+## 2026-08-17 08:33:44 — Prompt
+
+On another system, I have many organisations that have used Stripe Connect and authorised me to use their Stripe accounts for payments, I have their stripe account id, their public key and their private key. With this information can I get their test public and private key so I can run tests using their test stripe info, here on this dev environment?
+
+### Assistant
+
+Let me ground this in what your codebase actually needs, because that changes the answer.
+
+Short answer: **no — and you don't need them.**
+
+## Why you can't
+
+Stripe's live and test modes are separate universes with no mapping between them. Concretely:
+
+- A live `acct_...` ID has no test-mode counterpart. Test connected accounts are different objects with different IDs.
+- Connect OAuth tokens are issued per-mode. If those orgs authorised you in live mode, you received live credentials only, and there's no endpoint to exchange them for test ones.
+- A connected account's own test keys are visible only to *them*, in their own dashboard. As a platform you never receive another business's test secret key.
+
+There's no API, transformation, or lookup that crosses that boundary. It's a deliberate security wall.
+
+## Why it doesn't matter
+
+Your codebase holds **no per-organisation Stripe keys at all** — that was removed deliberately (migration `1709000000014`, `docs/REMOVE_PER_ORG_STRIPE_KEYS.md`). The only secret is the platform's `STRIPE_SECRET_KEY` in [stripe.provider.ts:49](packages/backend/src/services/payment-providers/stripe.provider.ts#L49). Per-org state is just two fields:
+
+```
+settings.stripeConnect.accountId
+settings.stripeConnect.chargesEnabled
+```
+
+Charges are destination charges on your platform key with `transfer_data.destination`. So even if you had those orgs' keys, **nothing in this codebase would read them.** All you need is an `acct_` ID that exists in test mode.
+
+## What you should do instead
+
+You already have `sk_test_` configured, and [stripe-connect.service.ts:149](packages/backend/src/services/stripe-connect.service.ts#L149) already creates connected accounts — run it against your test key and it creates *test-mode* accounts. That's the whole gap.
+
+For accounts that reach `charges_enabled: true` without clicking through onboarding, create them as `custom` with capabilities requested and `tos_acceptance` prefilled with test data, rather than the `standard` the onboarding flow uses. Then write the resulting `acct_` IDs into the seeded clubs' settings.
+
+That would close the verification gap I flagged last turn — no club currently has a Connect account, which is why I couldn't exercise the manual-capture path end to end.
+
+## One thing worth flagging
+
+Those production credentials shouldn't come near this dev environment regardless of the test-key question. A Connect OAuth `access_token` acts on the live account and can move real money; sitting in a dev `.env` it's outside whatever controls your production system has, and it's other businesses' money, not yours. Nothing about testing here requires them — the path above uses only your own test key.
+
+Want me to add a seed step that creates test connected accounts for the seeded clubs and stores their IDs? It'd call Stripe's API against your test key to create real (test-mode) accounts on your platform, so I'd rather you say go before I do that.
+
+---
+
+
+## 2026-08-17 08:37:13 — Prompt
+
+Yes, please add the creation of tests cnnected stripe accounts to the seed data generator.
+
+Also, In the seed data generator program, can you create a 4th organisation within the IPC organisation type called Meath Hunt Pony Club, can you add user logins for orgadmin and accounts and can you sets its capabilities to have everything, and can you create example data across all capabilities including registrations where the registration relates to a horse and is annual in nature,
+
+### Assistant
+
+Let me get the shape of the seed generator first.
+
+Now let me see what the seed already covers, and whether registrations exist in it at all:
+
+This is substantial — let me track it properly.
+
+Now the Stripe seed module:
+
+Let me match the service's exact API version and state shape rather than my guesses:
+
+Now the org type capabilities and Meath itself:
+
+I duplicated two existing users instead of extending their org lists — fixing:
+
+Now the data structures I need to extend. Let me see how each is keyed by org:
+
+Now the Meath data. Venues, events with ticketing, members, merchandise, calendars and discounts:
+
+All three form keys exist. Now the Meath discounts, including a registrations one:
+
+Now Meath members, merchandise and calendars:
+
+Now Meath merchandise and calendars:
+
+There's a test asserting every product has distinct artwork, so new keys need drawings. Let me add both:
+
+Now Meath calendars:
+
+Now the registrations. Let me see the field definitions so the horse form fits the existing vocabulary:
+
+Now the registration types and the registered horses themselves:
+
+Now wiring it into `database.ts`. Let me see how forms and submissions are created, since registrations need both:
+
+Now the `registrationSubmission` helper and the imports:
+
+Now the ticketing config for the Meath event that issues tickets:
+
+Now wiring Stripe into the seed run. Let me see how `index.ts` orchestrates:
+
+Let me dry-run it before touching anything real:
+
+Now the real run:
+
+Stripe rejects `.test` as a business URL. The shared transaction rolled everything back cleanly, so nothing is half-seeded:
+
+Still failing — let me find which field Stripe actually objects to:
+
+Stripe rejects `example.com` too. Let me use a product description instead of a URL:
+
+`product_description` works, but charges aren't enabled yet. Let me see what's outstanding:
+
+Two requirements missing — a state and a bank account. Let me add both:
+
+Requirements cleared but verification is asynchronous. Let me see how long it takes to settle:
+
+That settles it — `state` + a test bank account, and it comes up enabled. Let me apply all three fixes with a short poll for the cases where verification lags:
+
+The seed ran. Let me check the Stripe and registrations sections:
+
+Registrations and capabilities are right. One club's verification lagged past my poll — let me check whether it settled since:
+
+`card_payments: pending` with nothing outstanding — Stripe is just slow sometimes. A longer poll per account would block the seed, so let me reconcile all of them in one pass at the end:
+
+All four connected accounts are live. Now let me verify Meath end to end through the API:
+
+The registrations work end to end. Now the card path, which the Connect account unblocks:
+
+Every capability has data. Now the card checkout, which was impossible before the Connect account:
+
+A real PaymentIntent — the card path works for the first time. Let me confirm it's manual capture, which closes the gap I flagged two turns ago:
+
+Confirmed against real Stripe: `capture_method: manual`, the fee routed to Meath's account, and `payment_method_types: card` only — the bank-redirect trade-off I described last turn, now observed rather than predicted. Cleaning up the test artefacts:
+
+Now the credential printout, so the new club and its data are discoverable:
+
+`--reset --no-stripe` leaves the previous run's Stripe accounts orphaned. My metadata-based purge catches them — let me confirm on a full re-seed:
+
+The orphans were purged. Now the tests and documentation:
+
+All green. Now the documentation:
+
+Both done, seeded and verified. All 2753 backend and 512 front-end tests pass.
+
+## Stripe test connected accounts
+
+Every club now gets one, created against your own `sk_test_` key — all four came back `charges_enabled: true`.
+
+They're **`custom`** accounts, not `standard`. Your `stripe-connect.service` creates `standard`, which is right in production but useless in a seed: it sits at `charges_enabled: false` until a human clicks through hosted onboarding. The app only reads the account id, so the difference is invisible downstream.
+
+Guards: a **live key is refused outright, with no override flag** — this creates connected accounts from a script whose sibling command is `--reset`. Accounts carry `metadata.seededBy`, so `--reset` deletes only what it can prove it created. `--no-stripe` skips the step.
+
+Three things Stripe made awkward, each with a misleading error:
+
+- `Not a valid URL` on `business_profile[url]` — it validates against real domains and rejects your `.test` addresses *and* `example.com`. Used `product_description` instead.
+- Silent `charges_enabled: false` — needs `individual.address.state` and an `external_account`, visible only in `requirements.past_due`.
+- One club in four stuck at `card_payments: pending` with **nothing** in `currently_due`. Verification is async and uneven, so the batch is reconciled once after all accounts exist rather than waiting per club.
+
+## Meath Hunt Pony Club
+
+`mhpc`, 22 capabilities against 13–14 for the others. Admin `admin@meathhunt.test`, five Meath-only members plus Niamh and Darragh who also belong elsewhere. Events (one with electronic tickets, one capped at event level, one not yet open), 10 memberships, 3 shop products, 2 calendars, 6 discounts — one per module.
+
+I used an `allCapabilities` flag rather than copying the list, which would go stale the moment the type gained one, and added the new capabilities to `optInCapabilities` so your existing three clubs are untouched.
+
+**Horse registrations** are annual as asked: `is_rolling_registration: false` with a fixed `valid_until`, so every horse lapses on the same day. Six horses covering active, pending and expired, plus a rolling three-month "day registration" so both mechanisms are represented. The form is built from passport vocabulary rather than reused rider fields, because the point of the module is that `entity_name` (the horse), `owner_name` (the passport holder) and `user_id` (the member) are allowed to be three different answers — and the fixture makes them so.
+
+## The card path now works
+
+This closes the gap I flagged two turns ago. A real checkout produced:
+
+```
+status         : requires_payment_method
+capture_method : manual
+transfer_dest  : acct_… (Meath's account)
+payment methods: card
+```
+
+So manual capture is really in force, destination charges route correctly, and `payment_method_types` is card-only — the bank-redirect trade-off I described last turn, now observed rather than predicted.
+
+**Still unverified:** a card actually being confirmed and captured. That needs a browser driving Stripe's form. The environment can support it now; it couldn't before.
+
+Two notes: `--reset --no-stripe` orphans the previous run's Stripe accounts, though the next full reset purges them by metadata; and re-seeding churns accounts, so expect new `acct_` ids each time.
+
+Written up in [docs/SEED_STRIPE_AND_MEATH.md](docs/SEED_STRIPE_AND_MEATH.md), with [infrastructure.md](.claude/modules/infrastructure.md) updated.
+
+---
+
+
+## 2026-08-17 09:26:10 — Prompt
+
+The payment section seens to be confused, I have one iotem in my basket at the moment, and it shows a pending payment, with the same item in twice, I think this is because I added it, removed it and then added it again.
+
+### Assistant
+
+Let me look at the actual data rather than guess at the mechanism.
+
+Reproduced. The cart has one item; the pending payment has **two identical lines**, both created in the same instant — and it's priced for both:
+
+`card_amount` is 7130 for a basket now worth 3500, with a live Stripe intent for that amount — and nothing in the cart service touches payments. Let me confirm what happens on the next checkout:
+
+`findPendingPayment` returns the stale amount and the old client secret with no check that the cart still matches. Let me see how the duplicate got in, and what removal does:
+
+The `expires_at` on the current cart item (08:26) post-dates the payment (08:21) — so the payment is a snapshot of a basket that no longer exists. Let me check what the Payments screen filters on:
+
+Two distinct faults, and the worse one isn't the display. Let me see how metadata is written at payment creation:
+
+Now the fix. A pending payment must not outlive the basket it was priced for:
+
+Now the reported symptom — attempts showing up as payments:
+
+The same backtick-in-template-literal mistake I made earlier:
+
+Now the likely origin of the two lines — the same slot twice in one basket. The existing guard only fires while a hold is live:
+
+Now let me clean up the bad row in your database and verify the fixes:
+
+Payments screen is clean. Now the important test — does changing the basket after checkout still charge the old amount?
+
+That total is far too high for a €42 item — let me look at the basket:
+
+The day ticket shows €6,500 — my seed says `fee: 6500` (€65). Let me check whether I got the seed's fee convention wrong:
+
+My error, introduced this session: the seed's activity fees are in **major** units (Kildare's `fee: 25` → €25), and I wrote Meath's in minor. Let me check every money field I added:
+
+Confirmed — every other fee is inserted raw, so the dataset is in major units throughout. Three of my additions are wrong:
+
+All the money is right now. Let me re-seed with Stripe and test the stale-payment fix properly:
+
+The old payment is replaced rather than reused. Let me confirm the retirement is clean and idempotency still holds:
+
+The stale Stripe intent is cancelled too, so no orphaned authorisable intent for the wrong amount. Now the duplicate-slot guard:
+
+The guard now holds even after the hold lapses — which is how the duplicate got in. Let me add tests:
+
+One older test's registry stub lacks `get`, which the new retire path uses. Let me fix the helper:
+
+This test asserts correct behaviour but its fixture predates the fingerprint. Let me update it:
+
+Now tests for the payments-list filter and the duplicate guard:
+
+That second test asserts nothing useful — let me make it actually check the exclusion list:
+
+Now the duplicate-slot guard test, and the full suites:
+
+`db` isn't mocked in that suite — my new query broke it. Let me add the mock:
+
+All green. Now the documentation:
+
+You'd spotted something worse than a display glitch. All 2768 backend and 512 front-end tests pass.
+
+## What was actually there
+
+Your basket held one item at €35. The pending payment had two identical lines and `card_amount` **7130** — €71.30 — with a live Stripe intent for that amount. Both lines shared a `created_at` to the microsecond, so they were written by a single checkout: the basket really did hold that booking twice at the time.
+
+## Three faults
+
+**1. A pending payment was reused however much the basket had changed.** `startCheckout` reuses an in-flight payment so a page reload can't charge twice — but that reuse was unconditional. A payment is a snapshot: amount, lines and Stripe intent all fixed when checkout starts. Edit the basket and the next checkout still handed back the old total and old client secret. **You'd have been charged €71.30 for a €35 basket.**
+
+Fixed by fingerprinting the basket onto the payment. A mismatch retires the old payment — marked `abandoned`, lines marked `abandoned`, intent cancelled — and creates a fresh one. Reuse for an *unchanged* basket is untouched, so reload protection still works.
+
+**2. Attempts were listed as payments.** `listPayments` had no status filter at all, so every abandoned checkout appeared as an order you never placed. Now excludes `pending` and `abandoned`; `paid`, `awaiting_offline`, `refunded` and `failed` all stay, since a decline is something you have to act on.
+
+**3. The same slot could go in twice** — the origin of the duplicate. The existing guard works through availability, which only counts *unlapsed* holds. Two minutes after adding an exclusive slot its hold goes invisible, the slot reads as free, and adding it again succeeds. Now checked against the basket directly, which doesn't expire.
+
+Your description was right, incidentally, just off by one step: the add/remove/re-add happened *after* checkout, which is exactly what left the payment stranded.
+
+Verified live: checkout at €42.88 → add an item → checkout again returns a **new** payment at €77.39, the old one `abandoned` and its Stripe intent confirmed `canceled`; checkout again unchanged reuses it; Payments screen empty; duplicate slot refused both before and after the hold lapses. I retired the bad row in your database, so your Payments screen is clean now.
+
+## One unrelated bug I found
+
+Reproducing this, I noticed the Meath seed priced a day ticket at **€6,500**. The seed's fees are major units throughout (Kildare's `fee: 25` is €25, inserted raw) and I'd written Meath's in minor units last turn — so every Meath price was 100× too high. Corrected across events, calendar durations and registration types, and the registration insert now writes raw like everything else rather than dividing by 100, which had made it the one exception. That was my error from the previous change, not a pre-existing one.
+
+Written up in [docs/STALE_PENDING_PAYMENT.md](docs/STALE_PENDING_PAYMENT.md), with [backend.md](.claude/modules/backend.md) updated. The database is re-seeded and clean.
+
+---
+
+
+## 2026-08-17 09:49:08 — Prompt
+
+On the home page of the account login, for each membership card, it shows a link “View memberships” - it does not need to be there inside every card. However can you make each of these cards clickable so that it brings the user to My Memberships area.
+Also, in the My Memberships area, within each listed membership can you have an expand area which can be used to show all the form values for that specific membership.
+ 
+Also, for some of the seeded data the entry / booking/ membership fees are too much, e.g. Summer Pony Camp 6,500 Euro, no item should be more than 100 euro, can you update the seed data program with this change.
+
+Also, when I click checkout it shows a summary with the total being hard on the card, but the Pay No button is greyed out, this was with the Meath Hunt Pony Club.
+
+### Assistant
+
+Four things. Let me start with the checkout bug, since that's blocking.
+
+Found it. The publishable key lives in `packages/backend/.env`, but the account app is a separate Vite project reading `packages/account-shell/.env`, which doesn't exist — so `loadStripe('')` fails, `useStripe()` stays null, and the button is disabled forever with no explanation.
+
+Let me have the backend serve the key rather than duplicating config:
+
+Now surface it through checkout, and make the page explain itself rather than silently disabling:
+
+Now the i18n key for that message, across all six locales:
+
+Let me verify the key now reaches the client:
+
+The key now reaches the client — that's the greyed-out button fixed. Let me clean up and move to the membership cards:
+
+Now the My Memberships expander. Let me see the page and whether form values are available:
+
+Memberships don't return form data. The cart already builds exactly this — let me reuse its approach:
+
+This is now needed by two services, so let me extract it rather than duplicate:
+
+Now add the form answers to the memberships listing:
+
+Now the front end — the expander on each membership:
+
+The keys landed in the wrong section — `renewalNotOpen` exists in `home` too. Let me fix:
+
+Now the seed prices. Let me audit every money value across all clubs:
+
+Nine items over €100, across all four clubs — not only Meath. Let me fix them all in the dataset:
+
+Exactly the six intended, plus my earlier Meath additions. Re-seeding and verifying:
+
+Nothing over €100 anywhere. Now let me verify the whole flow live and run the suites:
+
+Everything the checkout page needs is now present. Let me add tests and run the suites:
+
+Three suites need their fixtures updating for the new field. Let me fix them:
+
+Now tests for the clickable card and the memberships expander:
+
+Two real points: MUI keeps accordion children mounted, and my fixture's rider name collides with the card heading. Let me fix both:
+
+Now a test for the clickable home card:
+
+All green. Now the documentation:
+
+All four done. 2768 backend and 522 front-end tests pass.
+
+## The greyed-out Pay button
+
+**The account app had no Stripe publishable key.** It reads `VITE_STRIPE_PUBLISHABLE_KEY` from `packages/account-shell/.env` — a file that doesn't exist in this repo, only `.env.example` does. So `loadStripe('')` rejected, `useStripe()` stayed null, and `disabled={!stripe || …}` could never clear.
+
+The key *did* exist, in `packages/backend/.env`. It was just in the wrong place for a separate Vite app to read, and nothing said so.
+
+Two fixes, because there were two faults:
+
+- **The API now serves it** as `CheckoutResult.publishableKey`, read beside the secret key it already holds. The front end needs no payment config of its own, and the two keys can't drift onto different Stripe accounts. Your `VITE_` variable still works as a fallback.
+- **When there's no key, the page says so** — "Card payment is not available for this club at the moment" — instead of a dead button. A disabled button with no reason is indistinguishable from a broken browser, and this was the club's configuration, not your card.
+
+Verified live at Meath: `pk_test_…` and a client secret both present in the checkout response.
+
+## Membership cards
+
+The per-card *View memberships* link is gone; the whole card opens My Memberships, as a `CardActionArea` so it's keyboard-reachable and announced as a button. **Renew stays outside it** — it goes somewhere else, and a button inside a button is invalid markup that browsers resolve by firing both.
+
+## My Memberships details
+
+Each membership now has a collapsed **Your details (n answers)** section with every form answer, labelled and in the club's field order. Three choices worth naming: collapsed by default, since it's reference material that would bury the number and expiry date; **unmounted** while collapsed rather than hidden, so several memberships don't put a hundred hidden rows in the page; and no expander at all when the club asked nothing.
+
+The summary builder moved to `utils/form-summary.ts`, shared with the basket — two copies would eventually disagree about how an unanswered optional field looks.
+
+## Seed prices
+
+You were right that the fees were wrong, and it was broader than Meath — **nine items over €100 across all four clubs**:
+
+| | |
+|---|---|
+| Table of ten (Ward Union) | €500 → €90 |
+| Full week, residential (Kildare) | €395 → €95 |
+| Camp, club pony (Meath) | €280 → €98 |
+| Full week, non-residential (Kildare) | €275 → €75 |
+| Camp, own pony (Meath) | €220 → €85 |
+| Family Membership (all four) | €160 → €96 |
+
+The €6,500 you saw was the 100× unit error I'd already corrected mid-session, so you were looking at pre-fix data — but the cap was still being broken by six items independent of that. The rule is now written where the fees are declared, next to the units note, since both have been got wrong once each. Dearest item anywhere is now €98.
+
+Re-seeded and re-verified. Written up in [docs/CHECKOUT_KEY_AND_MEMBERSHIP_DETAILS.md](docs/CHECKOUT_KEY_AND_MEMBERSHIP_DETAILS.md), with both module summaries updated.
+
+---
+
+
+## 2026-08-17 10:31:58 — Prompt
+
+In the Platform Admin, I edited the organisation type for the Irish Pony Club, and set the Application Fee to 0.50 cents, however when I clicked save, I got a 500 error, and the backend shows the following:
+
+2026-08-17 10:17:45 [error]: Error updating organization type: Invalid capabilities provided {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "stack": "Error: Invalid capabilities provided\n    at OrganizationTypeService.updateOrganizationType (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/services/organization-type.service.ts:249:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async <anonymous> (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/routes/organization-type.routes.ts:225:20)"
+}
+2026-08-17 10:17:45 [error]: Error in PUT /organization-types/:id: Invalid capabilities provided {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "stack": "Error: Invalid capabilities provided\n    at OrganizationTypeService.updateOrganizationType (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/services/organization-type.service.ts:249:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async <anonymous> (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/src/routes/organization-type.routes.ts:225:20)"
+}
+2026-08-17 10:17:45 [error]: Request failed with server error {
+  "service": "aws-web-framework-backend",
+  "environment": "development",
+  "method": "PUT",
+  "path": "/c848c348-008f-4b7d-9b23-4635393778b0",
+  "statusCode": 500,
+  "duration": "32ms",
+  "userId": "2b53628b-a464-4035-8fd4-07cbf20a3f1e"
+}
+
+### Assistant
+
+Let me look at what's actually stored versus what the validator accepts.
+
+Found it. The org type stores 22 capabilities; three don't exist in the `capabilities` catalogue, so any save is rejected. Let me check whether those three are real features or seed typos:
+
+Three findings. Those names gate nothing in the app, and they pre-date my work — they're in commit `ed13904`. Let me check the blast radius and the error handling:
+
+All four clubs carry the same three phantoms, and the validator returns a bare boolean — which is why the message can't say which ones. Let me check the organisation path too:
+
+Now use it at all four call sites, with a message that names them:
+
+Two of four — the create paths use different indentation. Let me get those:
+
+Now the routes must return 400 rather than 500 for a validation failure:
+
+The routes match on message substrings. Let me add a proper `ValidationError` branch, which is what I now throw:
+
+The organisation route already returned 400; only the org-type route mapped it to 500. Now the seed:
+
+Let me add a guard so the seed can't reintroduce a phantom name silently:
+
+Now the migration to repair existing records:
+
+All phantoms gone. Let me reproduce the original failure to confirm the fix:
+
+`admin.routes` applies `requireAdminRole()` at router level and is mounted on `/api/admin` *before* the more specific routers — so it guards everything. Let me check what role that needs:
+
+Confirmed — and this reveals a second problem: **the seeded super admin can't use the Platform Admin at all**, because every `/api/admin/*` path needs the `admin` role and the seed only grants `super-admin`:
+
+Now let me reproduce the exact failing scenario:
+
+The save that returned 500 now returns 200. Let me confirm the error handling is also fixed for a genuinely bad capability:
+
+A 400 that names the offenders, and the record is left untouched. Let me add tests:
+
+These mock a `count` result that my implementation no longer returns. Let me update them and add coverage:
+
+The tests mock `validateCapabilities` but not the new method. Let me update the mocks:
+
+One left, asserting the old opaque message. Let me update it to assert the improvement:
+
+Now the remaining suite — let me check whether it's mine or pre-existing:
+
+Passes in isolation — that's the known unseeded-generator flake CLAUDE.md §3.3 documents. Let me run everything:
+
+I stashed changes that weren't mine — restoring immediately:
+
+I made a mistake there — `git stash push` with a pathspec that had no changes stashed *other* uncommitted work, including pre-existing changes in `packages/components` that aren't mine. Let me restore those two files exactly:
+
+All seven files the stash held are byte-identical to their pre-stash state. Let me clear the staging and drop the stash:
+
+Working tree is fully restored. Now, those admin failures: I have **zero** changes in `packages/admin`, so let me confirm what they actually are:
+
+Unrelated UI structure failures in a package I haven't touched — pre-existing, per §3.3. Let me prove the new seed guard actually fires rather than being dead code:
+
+The guard works, though the grammar slips on the singular. Let me fix that:
+
+The account-shell suite now fails — let me see why:
+
+These mention `Dietary needs` and a `Vegetarian` checkbox — the multi-select renderer. Let me find the actual cause rather than assume:
+
+An export is missing from `packages/components/src/index.ts` — one of the WIP files. Let me confirm it's not something I disturbed:
+
+Now it's clear, and it isn't the capability work. The working tree's `index.ts` has the two `CalendarIcon` exports **removed** relative to HEAD:
+
+Definitive: the `CalendarIcon` files still exist, three account-shell files import the symbol, but `index.ts` stopped exporting it — and that file changed at **11:16:47**, minutes ago, after my last green run. That's an accidental break, not a deliberate removal. Restoring the two lines:
+
+Three remain, all in checkbox rendering. Let me confirm whose change that is:
+
+`applicationField.ts` still references `FieldDatatype.PHONE`, which the working tree's `metadata.types.ts` no longer defines — so `packages/components` doesn't compile. Let me confirm that's independent of today's work:
+
+The application fee had nothing to do with it. Backend suite: 2773 passing.
+
+## What was wrong
+
+The org type held **22** capability names; three weren't capabilities at all:
+
+```
+discounts        email-notifications        document-uploads
+```
+
+None is in the `capabilities` catalogue, and none is consulted anywhere in the backend or any front end. The list is a free-form jsonb array — nothing constrains it on the way in — but **every update re-validates the whole list**. So a record holding an unknown name is writable once and never editable again. Changing *any* field re-submits the capabilities and gets refused. All four clubs carried them too.
+
+They pre-date this session's work (commit `ed13904`); the capabilities I added for Meath were all real.
+
+## Four fixes
+
+1. **The refusal names them.** `unknownCapabilities()` replaces a boolean, so you now get `Unknown capabilities: not-a-thing, also-not-a-thing` instead of a message that told you nothing about a field you hadn't touched.
+2. **400, not 500.** The org-type route mapped errors by matching message substrings; this one matched none, so it fell through to the 500. Both handlers now check `ValidationError` by type first.
+3. **The seed no longer writes them, and checks itself** against the same catalogue before writing — verified by deliberately planting a bogus name and watching it refuse.
+4. **Migration `1709000000027`** strips unknown names from existing rows, written generally rather than naming those three.
+
+Verified with your exact scenario: `PUT` with `applicationFeeFixed: 0.50` now returns **200**.
+
+## A second fault I hit while verifying
+
+**The seeded super admin couldn't use the Platform Admin at all.** `admin.routes` applies `requireAdminRole()` at router level and mounts on `/api/admin` *before* the specific routers, so it guards everything beneath; the handlers then require `super-admin` on top. Both roles are needed. The seed granted only `super-admin` — so `super.admin@itsplainsailing.test` gets 403 from every request in the admin app. Now grants both. Your own account has `admin` from an earlier setup, which is why your request got as far as the service.
+
+## Two things I need to flag
+
+**I made a git mistake.** I ran `git stash push packages/admin` to test whether some failures were pre-existing; because that path had no changes, git stashed *everything else*, including your uncommitted `packages/components` work. Popping it conflicted. I restored all seven affected files from the stash and verified each is **byte-identical** to its pre-stash state, then dropped the stash. Nothing was lost, and there are no stashes or conflicts now — but I shouldn't have run it, and I won't touch stash again.
+
+**`packages/components` is in a broken state that isn't mine.** Relative to HEAD it has 66 deletions and one comment added:
+
+- `FieldDatatype.PHONE` removed from `metadata.types.ts`, while `applicationField.ts`, `TextRenderer`, `FieldRenderer` and `validator.ts` all still reference it — so the package doesn't compile.
+- `MultiSelectRenderer`'s checkbox rendering removed (61 lines).
+- The two `CalendarIcon` exports removed from `index.ts`, while three account-shell files still import the symbol.
+
+I restored **only** the `CalendarIcon` exports, because the files and importers all still exist and it was blocking verification of my own work — that took account-shell from 12 failures to 3. The remaining 3 (`EntryFormPage` checkbox and phone tests) come from the `PHONE`/`MultiSelectRenderer` deletions, which are a larger change I've left alone rather than overwrite what might be deliberate. `git checkout HEAD -- packages/components/src/types/metadata.types.ts packages/components/src/components/FieldRenderer/renderers/MultiSelectRenderer.tsx` would restore them if that's an accidental revert — your call.
+
+Written up in [docs/PHANTOM_CAPABILITIES.md](docs/PHANTOM_CAPABILITIES.md), with [backend.md](.claude/modules/backend.md) updated.
+
+---
+
+
+## 2026-08-17 12:02:39 — Prompt
+
+On the basket page for entries listed the text reads “Your X answers” where X is the number of fields entered on the form, could you change it to “Click to see your X entry form values” 
+
+If an account user has a booked time slot in his basket, can you make sure that that time slot is shown as a red shading to show it is already booked and is not clickable at the moment.
+
+When I call save profile for an account user, it does a post on http://localhost:5176/api/account/lhpc/profile but the post returns the error  {error: "Failed to save the profile"}
+
+### Assistant
+
+Three things. Let me start with the profile bug.
+
+The route is `PUT`, and that message is its 500 handler — so the request reached it and `updateProfile` threw. Let me look:
+
+Let me reproduce it live to get the real error rather than guess:
+
+A 400 with a different message. Let me check what the front end actually sends, and what languages are accepted:
+
+The real cause: `operator does not exist: character varying = uuid` in the UPDATE. Let me see it:
+
+Found it. `$5::uuid` in the first clause makes Postgres infer `$5` as `uuid` for the whole statement, then compares it to `keycloak_user_id`, which is `varchar`:
+
+Confirmed and pre-existing — I haven't touched that file. Let me fix the cast:
+
+The fix works and correctly propagates to all three of his clubs. Let me restore the seeded state and move on:
+
+Now the basket wording:
+
+Two `yourAnswers` keys exist — my regex hit the wrong one. Let me see what I overwrote:
+
+Line 215 is `entry.yourAnswers` — a different screen I clobbered. Let me revert the locales and redo this scoped to the `cart` section only:
+
+I've made an error — `git checkout --` reverted the whole file, losing this session's uncommitted locale work in en-GB. The other five locales still have it, so let me recover from those:
+
+20 keys lost plus two value changes. Let me check those:
+
+All six locales are back in sync. Now the other five need the new basket wording (only en-GB has it so far):
+
+i18n consistency passes. Two CartPage tests assert the old wording — let me update them (the three EntryFormPage ones are the `packages/components` breakage):
+
+Now the booking slot in red:
+
+Let me verify the styling and add a test:
+
+Now a test for the profile fix, then the full suites:
+
+Backend fully green (2774). The 3 account-shell failures are the same `packages/components` breakage from last turn — unchanged by this work. Let me document:
+
+All three done. Backend 2774 passing, account-shell 521.
+
+## The profile save
+
+`PUT /profile` returned a 500 for **every** member. The real error was in the log:
+
+```
+operator does not exist: character varying = uuid
+```
+
+The query matched on either the Keycloak subject or the row id:
+
+```sql
+($5::uuid IS NOT NULL AND keycloak_user_id = $5)
+```
+
+`$5` is a Keycloak subject and `keycloak_user_id` is `character varying`. The `::uuid` looks like a local coercion for the null test, but **Postgres infers one type per parameter for the whole statement** — so that single cast typed `$5` as `uuid` everywhere, including the comparison against the varchar column, where no `=` operator exists for that pair.
+
+Now `$5::text` against the column and `$6::uuid` for the id, so neither parameter's type depends on where it first appears. Verified with your exact payload: 200, and the name, phone and language written to all three of that member's club rows.
+
+(Two notes: it's a `PUT`, not a POST — the message you saw is that handler's 500. And the file was unchanged from HEAD, so this pre-dates the current work.)
+
+## Basket wording
+
+`Your 2 answers` → **`Click to see your 2 entry form values`**, singular form to match, across all six locales. `yourAnswers` also exists under `entry` — a different screen — so this had to be scoped to the `cart` section rather than replaced by name.
+
+## The slot you already hold
+
+Now `error.light` with an `error.main` border, still unclickable. Red is right because it's the same "not available to take" state a stranger's hold gets; what it must *not* look like is the disabled grey of a slot that was never on offer. The "In your basket" caption and countdown are what mark it as yours.
+
+## One thing to flag
+
+While rewording the locales I hit the duplicate `yourAnswers` key and my first attempt overwrote the wrong one. Fixing that, I ran `git checkout --` on `en-GB/translation.json`, which reverted the whole file to HEAD and lost this session's uncommitted keys in it. I recovered by diffing the key sets against the other five locales — which were untouched — and restoring all 20 missing keys plus two changed values. The i18n consistency test now passes and all six locales have identical key sets (449 each). Nothing was lost, but that's the second time I've been careless with a git command this session, and I'll stick to file edits.
+
+The 3 remaining account-shell failures are unchanged and unrelated — still the `packages/components` breakage (`FieldDatatype.PHONE` and the `MultiSelectRenderer` checkbox rendering absent from the working tree while their consumers remain).
+
+Written up in [docs/PROFILE_SAVE_AND_BASKET_WORDING.md](docs/PROFILE_SAVE_AND_BASKET_WORDING.md), with both module summaries updated.
+
+---
+
+
+## 2026-08-17 13:07:55 — Prompt
+
+I just ordered a Hunt Ball Ticket on the Ward Union Pony Club page,, when I click into the entry from the “My entries & bookings” page (which is awaiting payment) it shows the entry details, but on the Your Answers section it says “Your answers are not available to view here.” - can you correct that so whatever the person entered on the form is displayed there.
+
+### Assistant
+
+Let me see where that message comes from.
+
+The page never had the answers — that line is an unconditional placeholder. Let me see what `getEntry` returns:
+
+Now the page:
+
+`Box` and `Stack` are already imported. Now the frontend type and the new i18n key:
+
+Now let me verify live — ordering the actual Hunt Ball ticket the report describes:
+
+Exactly the entry reported — awaiting payment, now returning the four answers including their dietary requirement. Let me add tests:
+
+Now the page test:
+
+The fixture is `DETAIL`, and one old test asserts the removed placeholder. Let me fix both:
+
+Green apart from the three pre-existing `packages/components` failures. Let me document:
+
+Done. Backend 2776 passing, account-shell 524.
+
+## What was wrong
+
+That line wasn't a fallback for a missing case — it was **unconditional**. The entry detail screen had never rendered answers at all; `entry.answersUnavailable` was a placeholder sitting under the "Your answers" heading, worded so it read like an explanation.
+
+And there was nowhere else to look. The form is gone once the entry exists, and `GET /form-submissions/:id` only serves lines still in an **open** basket — so it refuses the moment checkout completes. Your entry was awaiting payment, which is exactly when someone wants to check what they typed.
+
+## The fix
+
+`getEntry` now returns `formSummary`, built by the same `utils/form-summary.ts` the basket and My Memberships already use — so one submission is described identically wherever it appears.
+
+Shown in full rather than behind an expander. On My Memberships I collapsed it because that screen lists several memberships and the answers would bury the number and expiry date; this page is *about* one entry, so there's nothing for them to bury.
+
+When an activity genuinely asked nothing, it now says the entry had no form rather than showing an empty heading — a different statement from "we can't show you what you wrote". The old key is removed from all six locales.
+
+## Verified against your actual entry
+
+Ward Union's *Hunt Ball Tickets — Individual ticket*, still `awaiting-payment`:
+
+```
+Rider name            = MIchel
+Email address         = michael.adams@sonalake.com
+Mobile number         = 098908
+Dietary requirements  = Gluten free
+```
+
+I left your entry in place rather than clearing it.
+
+One test had to go: `says the answers are unavailable rather than rendering them wrongly` was pinning the placeholder as though it were intended behaviour. Replaced with four cases covering the answers rendering, the no-form case, and specifically an entry that is still awaiting payment.
+
+The 3 remaining account-shell failures are unchanged — still the `packages/components` breakage (`FieldDatatype.PHONE` and the `MultiSelectRenderer` checkbox rendering missing from the working tree while their consumers remain). Worth resolving at some point, since it also means that package doesn't compile.
+
+Written up in [docs/PROFILE_SAVE_AND_BASKET_WORDING.md](docs/PROFILE_SAVE_AND_BASKET_WORDING.md), with [account-shell.md](.claude/modules/account-shell.md) updated.
+
+---
+
+
+## 2026-08-17 13:16:11 — Prompt
+
+When I have items in my basket, can you update the “Basket” menu option to include a small subscript label in orange with white text to show the number of items in the users cart.
+
+### Assistant
+
+Let me see how the nav is built and whether anything already tracks the cart.
+
+The count needs to stay fresh as items are added from several pages. Let me see how requests flow:
+
+One `execute` serves every page, so I can hook the count there — meaning any page that touches the basket updates the badge for free.
+
+Now the count itself:
+
+Now the badge in the shell:
+
+Now the i18n key for the screen-reader label:
+
+Now tests, including the pub/sub behaviour that keeps the badge fresh:
+
+Now the badge itself in the shell:
+
+Let me verify it live, since the interesting part is the badge updating without the page knowing:
+
+Lines not quantities, as intended. Cleaning up:
+
+Those five are yours, not mine — leaving them. Now the documentation:
+
+Done. Account-shell 542 passing, backend 2776 — the 3 failures are the same pre-existing `packages/components` breakage.
+
+## The badge
+
+Orange (`warning.main`) with white text, beside **Basket**, hidden entirely when the basket is empty — a badge reading `0` is a permanent fixture that stops carrying information.
+
+It counts **lines, not quantities**: three of one jumper is one thing to come back to, and a `3` beside a single-item basket would send you to check. Verified live — a line of quantity 3 shows `1`. Expired holds are excluded, since checkout refuses the basket while one is present and counting it would advertise something you can't buy.
+
+## Keeping it accurate
+
+The count sits in the shell, but the things that change it are scattered — a slot from the calendar, a size from the shop, an entry from a form, a removal on the basket page. Threading a refresh callback through each has a predictable failure: a screen added later quietly stops updating the badge, and nothing points at why.
+
+So the notification fires where all of them already pass — `useAccountApi`, after any successful **write** to a cart or checkout URL:
+
+```
+POST   /cart/items                    → notify
+DELETE /cart/items/:id                → notify
+PUT    /cart/items/:id/payment-method → notify
+POST   /checkout                      → notify
+GET    /cart                          → no (it *is* the refresh)
+PUT    /profile                       → no
+```
+
+A page needs to know nothing about the badge. Reads are excluded deliberately, or the count would fetch itself forever.
+
+The listener registry is a module-level set rather than a context — putting it in a provider would re-render every screen whenever anything touched the basket, to update one number in a menu.
+
+## Two smaller choices
+
+**Orange rather than the club's primary**, because primary is already the selected state of that same list; a count wearing it would read as selection.
+
+**Announced as a phrase** — `aria-label="3 items in your basket"` with the digits `aria-hidden`, so a screen reader doesn't read them twice. A bare "3" next to "Basket" isn't a sentence. New key `nav.cartCount` in all six locales.
+
+I left the five basket items already in the database alone — they're yours (Darragh's Hunt Ball ticket and lessons, Niamh's lessons), not test data of mine.
+
+Written up in [docs/BASKET_COUNT_BADGE.md](docs/BASKET_COUNT_BADGE.md), with [account-shell.md](.claude/modules/account-shell.md) updated.
+
+---
+
+
+## 2026-08-17 13:25:16 — Prompt
+
+I just booked two slots for Meath Hunt Pony Club using the “Pay Offline” option, added them to my basket and changed the two items so say Pay Offline, and clicked Checkout, where it told me I still had to pay the club. However when I look at My entries & bookings, they are not listed, I repeated the process and still they are not shown (e.g. as pending). Now when I look under Payments I see to payments listed both with status “Awaiting payment”. Plus the original 2 bookings are still sitting in my basket.
+Maybe the seed data needs to be reset and I run the test again ?
+
+### Assistant
+
+Let me look at the actual state before answering the reset question.
+
+Reproduced exactly: five offline payments, every cart still `open`, every line `pending` with no error — silently deferred. Let me read the offline path:
+
+Two distinct faults. Let me check how the card path closes the cart, and whether a booking can be created unpaid:
+
+Now I have the full picture. Three fixes — starting with the cart never closing:
+
+Now the deferral — a booking not created is a slot someone else can take:
+
+Now let me verify end to end with a fresh offline booking:
+
+The booking landed on **21 August** but the slot was the **22nd**. Let me check:
+
+Database is correct — `2026-08-22`. The `21st` was my script slicing a UTC-serialised date. Let me check the app doesn't make the same mistake:
+
+Correct round trip — stored as the 22nd, and the browser formats it back to the 22nd in local time. Now tests:
+
+One existing test pinned the old behaviour. Let me look at it:
+
+Now a test for the cart closing, which caused the duplicate payments:
+
+Now let me clear the debris the bug left in your database:
+
+`stripe_ready: 0` — the last seed I ran was `--no-stripe`. Let me check and restore that:
+
+The `--no-stripe` run I did earlier removed them, so card payments would fail. Since you suggested a reset anyway, let me do a clean full seed:
+
+Meath's verification lagged past the seed's reconcile. Let me check whether Stripe has settled it:
+
+Stripe has settled it — the seed just gave up before it did. Let me sync that and verify the whole flow:
+
+Your exact scenario now works. Cleaning up my verification data:
+
+**No, the seed wasn't the problem** — it was two code faults, and a reset would have reproduced them exactly. Backend now 2787 passing.
+
+## Why nothing appeared
+
+**The offline path never closed the cart.** `confirmPayment` does it for card orders; `markAwaitingOfflinePayment` only touched `payments`. So the basket kept every line — and a member who checks out and sees their items still sitting there does the only sensible thing and checks out again. That's your duplicate payments: **five had accumulated against one pair of slots** by the time you reported it.
+
+**Bookings were held back until the money arrived.** Fulfilment created only event entries ahead of payment:
+
+```ts
+if (!paid && itemType !== 'event_entry') { deferred++; continue; }
+```
+
+For a membership that's right — an entitlement running a year, given away if granted unpaid. Merchandise too. **But a booking is the opposite case and was wrongly grouped with them.** A slot that isn't booked is a slot *still on sale*: your hold lapsed two minutes after checkout, so you'd committed to pay and could have watched it go to someone else — while seeing nothing at all under My entries & bookings.
+
+Everything needed already existed: `bookings` has its own `payment_status`, and the account app has an `awaiting-payment` state it renders. Bookings now join entries in being created ahead of the money, marked unpaid.
+
+One existing test asserted the old behaviour — it was pinning the bug, so I corrected it rather than working around it.
+
+## Your scenario, re-run
+
+Two Group lessons slots at Meath, both Pay Offline, one checkout:
+
+| | Before | After |
+|---|---|---|
+| Basket afterwards | 2 items | **empty** |
+| My entries & bookings | nothing | **2 bookings, awaiting-payment** |
+| Payments | one per attempt | **one**, 2 lines |
+
+## What I did to your database
+
+Cleared the debris (5 stray payments, the stuck cart), then ran a full `--reset` — partly because you suggested it, but mainly because an earlier `--no-stripe` run of mine had left all four clubs *without* Connect accounts, so card payments would have failed too. That's restored. I also cleared my own verification bookings, so you're starting clean.
+
+One thing worth knowing: Stripe's verification is asynchronous and one club in four tends to still be `pending` when the seed's reconcile pass gives up — Meath was, this time. I checked Stripe directly (it had settled) and synced it. If you see that message again, opening that club's Payment Settings re-reads the account; it isn't a failure.
+
+The 3 account-shell failures are unchanged — still the `packages/components` breakage.
+
+Written up in [docs/OFFLINE_CHECKOUT.md](docs/OFFLINE_CHECKOUT.md), with [backend.md](.claude/modules/backend.md) updated.
+
+---
+
+
+## 2026-08-17 13:43:09 — Prompt
+
+Is it possible to show the entries and bookings on the "My entries & bookings" page in the same table, with the icon associated with the specific item shown on the left of each entry.
+
+### Assistant
+
+Let me look at the page as it stands.
+
+Two tabs with different columns. Let me check whether bookings carry their calendar's icon:
+
+Now let me add the icon and colour to bookings, mirroring the cart:
+
+Now the merged table. Let me see the current page's data flow:
+
+Now the merge. Let me read the rest so I restructure it correctly:
+
+Now the render — one table with the icon column:
+
+Clean. Now the i18n key for the merged column:
+
+One test asserts the tabs that no longer exist. Let me replace it with coverage of the merge:
+
+Let me verify live, with a member who has both kinds:
+
+The calendar's own icon and colour now reach the client. Let me run everything and clean up:
+
+Done. Backend 2787 passing, account-shell 545.
+
+## One table
+
+The tabs made you do the merging — a Saturday with a lesson at ten and a show entry at two was two screens, and neither said which came first. Now it's one list answering "what have I got on".
+
+Each kind keeps the detail that differs:
+
+| | |
+|---|---|
+| Entry | event name, activity beneath, event date |
+| Booking | calendar name, `09:00–10:00 · 60 min` beneath, booking date |
+
+## The icon
+
+`CartItemIcon` already did exactly this in the basket, so I reused it rather than writing a second one. An entry gets the event glyph; a **booking gets its own calendar's icon in its own colour** — the same mark you picked it from, so a court, an arena and a clubhouse are distinguishable rather than sharing one generic booking symbol.
+
+That needed the icon on the wire: `listBookings` now returns `displayIcon` and `displayColour`, the way the cart service already did. Verified live — a booking comes back with `equestrian` / `#123c2b`, Meath's own choice for the indoor arena.
+
+## Ordering
+
+**Coming up first, soonest first; then past, most recent first.** A single sort either way opens on the least useful end — ascending starts at last season, descending at something months away. An entry with no date sorts as far future rather than as 1970.
+
+## Three smaller calls
+
+- **Only entry rows are clickable.** An entry has a detail screen; a booking's detail is already in its row, and a cursor promising a page that doesn't exist is worse than none.
+- **The icon column has no heading** — it labels the row, not a value.
+- **Cancel stays put**, on bookings the club allows, with the reason shown when it refuses.
+
+I removed eight now-meaningless keys (`tabEntries`, `tabBookings`, `colEvent`, `colActivity`, `colCalendar`, `colSlot`, `colDuration`, `emptyBookings`) and the `?tab=` URL parameter, and added `entries.colItem` across all six locales.
+
+One test asserted tab-switching; I replaced it with five covering the merge, the per-kind detail, both icons, and that cancel still appears only on bookings.
+
+I cleared the bookings and carts from my verification, so the database is back to the clean seed. The 3 account-shell failures are unchanged — still the `packages/components` breakage.
+
+Written up in [docs/MERGED_ACTIVITY_LIST.md](docs/MERGED_ACTIVITY_LIST.md), with [account-shell.md](.claude/modules/account-shell.md) updated.
+
+---
+
+
+## 2026-08-17 13:55:06 — Prompt
+
+I just bought an item in the show and paid offline, but then when I sent to the My shop orders section, nothing is showing.
+
+### Assistant
+
+Same class of bug as the bookings. Let me check what's actually happening.
+
+Cart closed correctly, but the merchandise line is deferred so no order row exists. Let me see what an order record can express:
+
+Both `payment_status` and `order_status` exist, so "ordered, unpaid, not dispatched" is representable. Let me check what creating one actually does:
+
+Stock is reserved on creation, like a booking holds its slot. Let me check whether the other types would actually *grant* anything if created unpaid:
+
+The rule needs to be per-type, not blanket:
+
+- **Merchandise** — `order_status` and `payment_status` both default to `pending`, so nothing is dispatched. The order record is not the goods.
+- **Membership / registration** — `createMember` and `createRegistration` set `active` when the type auto-approves, so creating one unpaid genuinely *would* grant it.
+
+Fixing the reported one:
+
+Let me check the shop-orders listing doesn't filter these out too:
+
+No status filter, so a pending order will show. Let me verify live with your exact scenario:
+
+Two `merchandise_orders` rows from one checkout, but stock only decremented once and the list shows one. Let me look:
+
+Not duplicates — two different `user_id`s. You've been testing in parallel. Let me confirm:
+
+Clear now. Your 12:53 order pre-dates the fix; your 13:06 one — after my change reached your `tsx watch` server — **did** create an order. Let me repair the stranded one:
+
+Your stranded order is now visible. Let me clean up only my own test data and add tests:
+
+Now it's attempted but fails — my fixture lacks the options. Let me match the existing merchandise fixture:
+
+One left — the old test that pinned this behaviour as correct:
+
+The fixture's fine — that describe mocks `createOrder` per-test. Let me add it:
+
+Same root cause as the bookings, and my earlier fix didn't go far enough. Backend 2790 passing.
+
+## What was wrong
+
+My reasoning last time was that "goods should not be posted unpaid" — but that confuses **creating the order** with **dispatching it**. `merchandise_orders` defaults *both* `order_status` and `payment_status` to `pending`, so the order can exist while nothing is sent.
+
+Deferring it meant the member saw nothing, **and the club had no order at all** — no record that money was owed or what to set aside. An order record is not the goods.
+
+Merchandise now joins entries and bookings, with the payment method recorded so the club's list says what it's waiting for. Stock is reserved on creation, the same trade a booking makes with its slot.
+
+## The rule, restated
+
+An offline order creates every record that can exist in a state granting nothing:
+
+| Type | Created? | Why |
+|---|---|---|
+| `event_entry` | yes | created `pending`; the gate checks on the day |
+| `booking` | yes | an unbooked slot is still on sale, and the hold lapses |
+| `merchandise` | yes | both statuses default to `pending` |
+| `membership` | **no** | `createMember` sets `active` on auto-approve — that *is* the entitlement |
+| `registration` | **no** | same |
+
+**So a membership bought offline is still invisible until the club records the payment.** Changing that means forcing `pending` when unpaid regardless of auto-approval — a decision about approval semantics rather than fulfilment, so I've left it and flagged it rather than sweeping it in. Say the word if you want it.
+
+## Your data
+
+You've been testing in parallel, which made this easy to confirm:
+
+- **12:53** — your order, before the fix: line deferred, no order row. That's the report.
+- **13:06** — your order *after* my change reached your `tsx watch` server: order created correctly.
+
+I re-ran fulfilment for the stranded 12:53 payment, so both your orders now show. You have two in *My shop orders*; I removed only Bríd's, which was mine.
+
+One existing test asserted the old behaviour as correct (`waits for the money on an offline order`) — it was pinning the confused reasoning, so I corrected it rather than working around it.
+
+Documentation is in [docs/OFFLINE_CHECKOUT.md](docs/OFFLINE_CHECKOUT.md) alongside the bookings fix, with [backend.md](.claude/modules/backend.md) updated.
+
+---
+
+
+## 2026-08-17 15:58:09 — Prompt
+
+can you reset the seed data
+
+### Assistant
+
+Meath's verification lagged again — third time running. Let me check and sync:
+
+This has now needed hand-patching three resets running, so let me stop it recurring:
+
+Reset done. Clean slate: no carts, payments, bookings, shop orders or entries; the four clubs, 31 member logins, 16 events, 6 registered horses and all the seeded data back.
+
+All four Stripe test connected accounts are live and `chargesEnabled`. Meath came back `false` again — same asynchronous verification lag — so I checked Stripe directly (it had settled) and synced it.
+
+That's now happened on three resets running, so I widened the seed's reconcile from ~14 seconds to ~45, backing off, and it prints a line while it waits rather than pausing silently. It should stop needing the manual check.
+
+Everything is as the seed defines it — password `Passw0rd!` for every login:
+
+- `super.admin@itsplainsailing.test` — Platform Admin, with both `super-admin` and `admin`
+- `admin@meathhunt.test` — Meath, the club with every capability
+- `brid.mcnamara@example.test`, `niamh.walsh@example.test` and the rest for the account app
+
+Your test data from this session — the Hunt Ball entry, the shop orders, the offline bookings — is gone, which is what a reset means. All the fixes from today are in the code, so re-running any of those flows should now behave correctly first time.
+
+---

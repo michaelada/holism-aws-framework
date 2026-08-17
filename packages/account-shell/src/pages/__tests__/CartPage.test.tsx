@@ -40,10 +40,18 @@ const cart = (over: Record<string, unknown> = {}) => ({
   items: [
     {
       id: 'item-1',
-      itemType: 'event-entry',
+      itemType: 'event_entry',
+      formSummary: [
+        { label: 'Rider name', value: 'Niamh Walsh' },
+        { label: 'Pony or horse name', value: 'Bramble' },
+      ],
       contextRef: {},
       description: 'Summer Regatta — Junior Sculls',
-      formSubmissionId: null,
+      formSubmissionId: 'sub-1',
+      availablePaymentMethods: [
+        { id: 'pm-card', name: 'stripe', displayName: 'Pay By Card', isCard: true },
+        { id: 'pm-offline', name: 'pay-offline', displayName: 'Pay Offline', isCard: false },
+      ],
       quantity: 1,
       unitFee: 2500,
       fee: 2500,
@@ -116,7 +124,7 @@ describe('CartPage (F1)', () => {
 
     // Confusing these is how a member believes they have paid the club in full.
     expect(await screen.findByText('Paying now by card')).toBeInTheDocument();
-    expect(screen.getByText('Paying the club directly')).toBeInTheDocument();
+    expect(screen.getByText('Paying the club directly (Offline)')).toBeInTheDocument();
     expect(screen.getByText(/paid directly to the club/i)).toBeInTheDocument();
   });
 
@@ -201,5 +209,126 @@ describe('CartPage — offline', () => {
     render();
 
     expect(await screen.findByText(/Summer Regatta/)).toBeInTheDocument();
+  });
+
+  it('summarises what the member filled in, so it can be checked before paying', async () => {
+    // Between the form and the club receiving the entry this is their only
+    // sight of it.
+    render();
+
+    await screen.findByText('Summer Regatta — Junior Sculls');
+    await userEvent.click(screen.getByText('Click to see your 2 entry form values'));
+
+    expect(screen.getByText(/Niamh Walsh/)).toBeInTheDocument();
+    expect(screen.getByText(/Bramble/)).toBeInTheDocument();
+  });
+
+  it('offers a way to correct them', async () => {
+    render();
+
+    await screen.findByText('Summer Regatta — Junior Sculls');
+    await userEvent.click(screen.getByText('Click to see your 2 entry form values'));
+
+    expect(
+      screen.getByRole('button', { name: 'Change answers' })
+    ).toBeInTheDocument();
+  });
+
+  it('labels the payment-method control so it reads as changeable', async () => {
+    render();
+
+    await screen.findByText('Summer Regatta — Junior Sculls');
+    expect(screen.getByText('Change Payment Method')).toBeInTheDocument();
+  });
+
+  it('hides "paying now" when there is nothing to charge', async () => {
+    // An entirely offline basket has nothing to pay by card, and a €0.00 line
+    // answers a question nobody asked.
+    mockExecute.mockResolvedValue(
+      cart({
+        totals: {
+          ...cart().totals,
+          offlineSubtotal: 5000,
+          chargedToCardNow: 0,
+        },
+      })
+    );
+    render();
+
+    await screen.findByText('Summer Regatta — Junior Sculls');
+    expect(screen.queryByText('Paying now by card')).not.toBeInTheDocument();
+  });
+
+  describe('the offline note', () => {
+    it('says "part of" only when part of the order is on a card', async () => {
+      mockExecute.mockResolvedValue(
+        cart({
+          totals: { ...cart().totals, offlineSubtotal: 5000, chargedToCardNow: 3000 },
+        })
+      );
+      render();
+
+      await screen.findByText('Summer Regatta — Junior Sculls');
+      expect(screen.getByText(/^Part of this order/)).toBeInTheDocument();
+    });
+
+    it('speaks of the whole order when nothing is on a card', async () => {
+      // Otherwise it tells the member about a card payment that is never going
+      // to happen, which invites them to go looking for it.
+      mockExecute.mockResolvedValue(
+        cart({
+          totals: { ...cart().totals, offlineSubtotal: 5000, chargedToCardNow: 0 },
+        })
+      );
+      render();
+
+      await screen.findByText('Summer Regatta — Junior Sculls');
+      expect(screen.queryByText(/^Part of this order/)).not.toBeInTheDocument();
+      expect(screen.getByText(/^This order is paid directly/)).toBeInTheDocument();
+    });
+  });
+
+  describe('the item marks', () => {
+    it('draws a booking with its own calendar icon and colour', async () => {
+      mockExecute.mockResolvedValue(
+        cart({
+          items: [
+            {
+              ...cart().items[0],
+              itemType: 'booking',
+              description: 'Outdoor arena — Saturday',
+              icon: 'equestrian',
+              colour: '#2e7d32',
+            },
+          ],
+        })
+      );
+      render();
+
+      await screen.findByText('Outdoor arena — Saturday');
+      // The club chose this mark for that calendar; a court and an arena are
+      // meant to be told apart.
+      expect(document.querySelector('[data-testid="BedroomBabyIcon"]')).toBeInTheDocument();
+    });
+
+    it('falls back to a mark for the item’s type', async () => {
+      render();
+
+      await screen.findByText('Summer Regatta — Junior Sculls');
+      // One event entry is not visually distinct from another.
+      expect(document.querySelector('[data-testid="EventIcon"]')).toBeInTheDocument();
+    });
+
+    it('marks a shop line as a purchase', async () => {
+      mockExecute.mockResolvedValue(
+        cart({
+          items: [{ ...cart().items[0], itemType: 'merchandise', description: 'Club polo' }],
+        })
+      );
+      render();
+
+      await screen.findByText('Club polo');
+      expect(document.querySelector('[data-testid="ShoppingBagIcon"]')).toBeInTheDocument();
+    });
   });
 });

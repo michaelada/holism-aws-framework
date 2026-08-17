@@ -147,7 +147,15 @@ router.post(
       res.status(201).json(type);
     } catch (error) {
       logger.error('Error in POST /organization-types:', error);
-      if (error instanceof Error && (
+      /*
+       * A refusal, not a fault. Checked by type before the substring tests
+       * below, which are the older style: a validation failure that falls
+       * through to the 500 branch tells the administrator only that something
+       * broke, and leaves the message — which names what was wrong — unread.
+       */
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+      } else if (error instanceof Error && (
         error.message.includes('locale') ||
         error.message.includes('Membership number') ||
         error.message.includes('Initial membership number')
@@ -230,7 +238,15 @@ router.put(
       res.json(type);
     } catch (error) {
       logger.error('Error in PUT /organization-types/:id:', error);
-      if (error instanceof Error && (
+      /*
+       * A refusal, not a fault. Checked by type before the substring tests
+       * below, which are the older style: a validation failure that falls
+       * through to the 500 branch tells the administrator only that something
+       * broke, and leaves the message — which names what was wrong — unread.
+       */
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+      } else if (error instanceof Error && (
         error.message.includes('locale') ||
         error.message.includes('Membership number') ||
         error.message.includes('Initial membership number') ||

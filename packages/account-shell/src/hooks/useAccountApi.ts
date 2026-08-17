@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import axios, { AxiosRequestConfig } from 'axios';
 import { useAuthContext } from '../context/AuthContext';
 import { rememberResponse, recallResponse } from '../offline/responseCache';
+import { isCartMutation, notifyCartChanged } from '../cart/cartActivity';
 import { useStaleData } from '../offline/StaleDataContext';
 
 export interface ApiRequest {
@@ -127,6 +128,15 @@ export function useAccountApi<T = unknown>(): UseAccountApiReturn<T> {
         const response = await axios(config);
 
         if (cacheable) rememberResponse(userId!, request.url, response.data);
+
+        /*
+         * The basket count lives in the navigation, and the things that change
+         * it are scattered across the app. Raising the notification here — the
+         * one place every request already passes — means a screen that adds to
+         * the basket does not have to know the badge exists, and one added
+         * later gets it without being told.
+         */
+        if (isCartMutation(request.url, method)) notifyCartChanged();
 
         return response.data as T;
       } catch (err: unknown) {

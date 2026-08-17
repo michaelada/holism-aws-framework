@@ -181,7 +181,7 @@ describe('OrganizationService', () => {
       };
 
       mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
-      mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue([]);
 
       // Mock Keycloak group creation
       mockClient.groups.find.mockResolvedValue([]);
@@ -235,19 +235,25 @@ describe('OrganizationService', () => {
 
     it('should throw error for invalid capabilities', async () => {
       mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
-      mockCapabilityService.validateCapabilities.mockResolvedValue(false);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue(['not-a-capability']);
 
       await expect(service.createOrganization({
         organizationTypeId: 'type-1',
         name: 'test',
         displayName: 'Test',
         enabledCapabilities: ['invalid-capability']
-      })).rejects.toThrow('Invalid capabilities provided');
+        /*
+         * Names the offender. The old message was "Invalid capabilities
+         * provided", which told an administrator nothing: they cannot see the
+         * catalogue, and the offending name may have been in the record before
+         * they opened it — which is exactly how an unrelated edit came to fail.
+         */
+      })).rejects.toThrow('Unknown capability: not-a-capability');
     });
 
     it('should throw error when capabilities not in type defaults', async () => {
       mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
-      mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue([]);
 
       await expect(service.createOrganization({
         organizationTypeId: 'type-1',
@@ -338,7 +344,7 @@ describe('OrganizationService', () => {
         .mockResolvedValueOnce({ rows: [mockUpdated] } as any); // update query
 
       mockOrgTypeService.getOrganizationTypeById.mockResolvedValue(mockOrgType);
-      mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue([]);
       mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       const result = await service.updateOrganization('1', {
@@ -543,7 +549,7 @@ describe('OrganizationService', () => {
         updatedAt: new Date()
       });
 
-      mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue([]);
       mockOrgPaymentMethodDataService.getOrgPaymentMethods.mockResolvedValue([]);
 
       const result = await service.updateOrganizationCapabilities(

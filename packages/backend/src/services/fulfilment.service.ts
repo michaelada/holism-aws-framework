@@ -6,6 +6,7 @@ import { calendarService } from './calendar.service';
 import { registrationService } from './registration.service';
 import { accountCatalogueService } from './account-catalogue.service';
 import { ticketingService } from './ticketing.service';
+import { parseContextRef } from '../utils/context-ref';
 
 /**
  * Turning a paid payment into the things it bought.
@@ -30,27 +31,24 @@ import { ticketingService } from './ticketing.service';
  */
 
 /**
- * `context_ref` as an object, whatever the driver handed back.
+ * One spelling of an item type, whichever spelling the row carries.
  *
- * node-pg parses jsonb, but a row written before the column existed has null,
- * and a hand-repaired row can hold a string. An unreadable context is an empty
- * one — the caller then fails with "no options recorded", which says what is
- * wrong, rather than a TypeError that does not.
+ * `cart_items.item_type` is `event_entry`, and `payment_transactions` copies it
+ * verbatim — but this service was written against `event-entry` and never
+ * updated when the basket moved to the underscore form to satisfy
+ * `cart_items_item_type_check`. Every entry therefore fell through to the
+ * `default` branch and failed with "fulfilment is not implemented for
+ * event_entry".
+ *
+ * It went unnoticed because no payment had ever reached fulfilment: confirming
+ * one always rolled back on a separate constraint fault (see migration
+ * `1709000000025`). Two dormant bugs hid each other.
+ *
+ * Both spellings are accepted rather than one being chosen, because rows
+ * written under either convention may exist and a payment must not fail over
+ * punctuation.
  */
-const parseContextRef = (value: unknown): Record<string, unknown> => {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-  return {};
-};
+const itemTypeOf = (value: unknown): string => String(value ?? '').replace(/-/g, '_');
 
 /** `YYYY-MM-DD` as local midnight — see `createBooking` for why not `new Date`. */
 const localDate = (key: string): Date => {
@@ -123,13 +121,32 @@ export class FulfilmentService {
 
     for (const line of lines.rows) {
       /*
-       * Only entries are created ahead of the money. A membership is an
-       * entitlement that runs for a year; granting one before payment gives it
-       * away, and unlike an event entry there is no gate to check on the day.
-       * Those lines stay unfulfilled — not failed — and are picked up when the
-       * club records the payment.
+       * What an offline order creates before the money arrives.
+       *
+       * The distinction is **not** "cheap things yes, valuable things no". It is
+       * whether the record can exist in a state that grants nothing:
+       *
+       *  - `event_entry` — created `pending`; the gate checks on the day.
+       *  - `booking` — created with `payment_status: pending`. A slot that is
+       *    not booked is a slot *still on sale*, and the basket hold lapses two
+       *    minutes after checkout, so deferring loses the member the thing they
+       *    have just committed to pay for.
+       *  - `merchandise` — `merchandise_orders` defaults **both**
+       *    `order_status` and `payment_status` to `pending`, so the order
+       *    exists and nothing is dispatched. Deferring it meant the member saw
+       *    nothing under "My shop orders" *and the club had no order at all* —
+       *    no record that money was owed, or what to set aside. An order record
+       *    is not the goods.
+       *
+       * Memberships and registrations stay deferred, and for a reason that does
+       * apply to them specifically: `createMember` and `createRegistration` set
+       * `active` when the type auto-approves, so creating one before payment
+       * hands over a year's entitlement. Making them would need that rule
+       * changed first, which is a decision about approval rather than about
+       * fulfilment.
        */
-      if (!paid && line.item_type !== 'event-entry') {
+      const createdBeforePayment = ['event_entry', 'booking', 'merchandise'];
+      if (!paid && !createdBeforePayment.includes(itemTypeOf(line.item_type))) {
         deferred += 1;
         continue;
       }
@@ -160,8 +177,8 @@ export class FulfilmentService {
 
   /** Create the record one line paid for, returning its id. */
   private async fulfilLine(line: any): Promise<string> {
-    switch (line.item_type) {
-      case 'event-entry':
+    switch (itemTypeOf(line.item_type)) {
+      case 'event_entry':
         return this.createEventEntry(line);
       case 'membership':
         return this.createMembership(line);
@@ -351,6 +368,12 @@ export class FulfilmentService {
       // Null quantity means one: lines created before the column existed.
       quantity: line.quantity ?? 1,
       formSubmissionId: line.form_submission_id ?? undefined,
+      /*
+       * How it will be paid, recorded on the order so the club's own list says
+       * what it is waiting for. `payment_status` defaults to `pending` either
+       * way — this does not claim the order has been settled.
+       */
+      paymentMethod: line.payment_status === 'paid' ? undefined : 'offline',
     });
 
     return order.id;
@@ -381,14 +404,24 @@ export class FulfilmentService {
 
     const placesBooked = Number(places ?? 1);
 
-    // Throws with a readable reason when the slot has gone in the meantime.
+    /*
+     * Throws with a readable reason when the slot has gone in the meantime.
+     *
+     * The buyer's own basket hold is left out of the sum: this line *is* that
+     * hold being redeemed, and counting it would have the member's own
+     * reservation report the slot as taken and refuse the booking it exists to
+     * guarantee.
+     */
     await accountCatalogueService.assertSlotAvailable(
       line.organisation_id,
       String(calendarId),
       String(date),
       String(startTime),
       Number(duration),
-      placesBooked
+      placesBooked,
+      new Date(),
+      line.user_id,
+      true
     );
 
     const booking = await calendarService.createBooking({
@@ -406,6 +439,14 @@ export class FulfilmentService {
       // `bookings.price_per_place` is decimal; the line is in minor units.
       pricePerPlace: (line.fee ?? 0) / 100 / Math.max(1, placesBooked),
       formSubmissionId: line.form_submission_id ?? undefined,
+      /*
+       * `calendar.service` reads a payment method as "not paid yet" — it sets
+       * `payment_status` to `pending` when one is given and `paid` when it is
+       * not. Passing the order's method is therefore what stops an offline
+       * booking claiming to have been paid for, which is the whole reason it
+       * can be created this early.
+       */
+      paymentMethod: line.payment_status === 'paid' ? undefined : 'offline',
     });
 
     return booking.id;

@@ -69,6 +69,29 @@ export interface ExistingReservation {
   duration: number;
 }
 
+/**
+ * A live soft hold — a slot sitting in somebody's basket.
+ *
+ * Distinct from {@link ExistingReservation}, which is a club official blocking
+ * the court for a reason of their own. A hold belongs to a member, lapses by
+ * itself, and is worded differently to the person who owns it: "in your basket"
+ * rather than "held by someone else".
+ *
+ * Only holds that have not yet lapsed should be passed in; the calculator does
+ * not know what time it is relative to a hold's expiry.
+ */
+export interface ExistingHold {
+  slotDate: string;
+  startTime: string;
+  duration: number;
+  /** Places the hold takes; a hold on a multi-place slot need not take it all. */
+  places: number;
+  /** True when this hold belongs to the member the calendar is being drawn for. */
+  heldByViewer: boolean;
+  /** ISO instant the hold lapses, so the holder can be shown a countdown. */
+  expiresAt: string;
+}
+
 export interface AvailableSlot {
   /** `YYYY-MM-DD`, the club's local date. */
   date: string;
@@ -83,7 +106,23 @@ export interface AvailableSlot {
   placesBooked: number;
   placesRemaining: number;
   available: boolean;
-  unavailableReason: 'full' | 'in-use' | 'held' | null;
+  /**
+   * Why the slot cannot be taken.
+   *
+   * `held` covers both a club official's block and another member's basket —
+   * from the outside they are the same thing, "somebody has this right now".
+   * `in-your-basket` is the viewer's own hold, which is worth saying plainly:
+   * otherwise a member sees the slot they just chose greyed out and reads it as
+   * having lost it.
+   */
+  unavailableReason: 'full' | 'in-use' | 'held' | 'in-your-basket' | null;
+  /**
+   * When the viewer's own hold lapses; ISO, and null unless they hold it.
+   *
+   * Never set from somebody else's hold — how long a stranger has left is not
+   * the viewer's business, and showing it invites people to sit and wait.
+   */
+  heldUntil: string | null;
 }
 
 const MINUTES_IN_DAY = 24 * 60;
@@ -166,6 +205,8 @@ export function calculateAvailableSlots(options: {
   blockedPeriods: BlockedPeriod[];
   bookings: ExistingBooking[];
   reservations: ExistingReservation[];
+  /** Live basket holds. Optional: a caller with no notion of holds passes none. */
+  holds?: ExistingHold[];
   from: string;
   to: string;
   minDaysInAdvance: number;
@@ -205,6 +246,16 @@ export function calculateAvailableSlots(options: {
     dateKey: toDateKey(reservation.slotDate),
     start: toMinutes(reservation.startTime),
     end: toMinutes(reservation.startTime) + reservation.duration,
+  }));
+
+  const holding = (options.holds ?? []).map((hold) => ({
+    dateKey: toDateKey(hold.slotDate),
+    start: toMinutes(hold.startTime),
+    end: toMinutes(hold.startTime) + hold.duration,
+    duration: hold.duration,
+    places: hold.places > 0 ? hold.places : 1,
+    mine: hold.heldByViewer,
+    expiresAt: hold.expiresAt,
   }));
 
   const slots = new Map<string, AvailableSlot>();
@@ -281,7 +332,48 @@ export function calculateAvailableSlots(options: {
               reservation.end > start
           );
 
-          const reason = onHold ? 'held' : inUse ? 'in-use' : placesRemaining <= 0 ? 'full' : null;
+          /*
+           * Basket holds are counted exactly as bookings are, because that is
+           * what they are on their way to becoming: a hold of this same shape
+           * takes places, and a hold of a different shape across this time
+           * takes the court out entirely.
+           */
+          const exactHolds = holding.filter(
+            (hold) =>
+              hold.dateKey === dateKey &&
+              hold.start === start &&
+              hold.duration === option.duration
+          );
+          const overlappingHolds = holding.filter(
+            (hold) =>
+              hold.dateKey === dateKey &&
+              hold.start < end &&
+              hold.end > start &&
+              !(hold.start === start && hold.duration === option.duration)
+          );
+
+          const placesHeld = exactHolds.reduce((total, hold) => total + hold.places, 0);
+          const remaining = placesRemaining - placesHeld;
+          const heldOut = overlappingHolds.length > 0 || (placesHeld > 0 && remaining <= 0);
+
+          const mine = [...exactHolds, ...overlappingHolds].filter((hold) => hold.mine);
+
+          /*
+           * The viewer's own hold outranks a stranger's when both exist: being
+           * told the slot is in your basket is actionable, being told somebody
+           * has it is not, and the member cannot add it twice either way.
+           */
+          const reason = onHold
+            ? 'held'
+            : inUse
+              ? 'in-use'
+              : heldOut
+                ? mine.length > 0
+                  ? 'in-your-basket'
+                  : 'held'
+                : remaining <= 0
+                  ? 'full'
+                  : null;
 
           slots.set(key, {
             date: dateKey,
@@ -291,9 +383,15 @@ export function calculateAvailableSlots(options: {
             price: option.price,
             placesAvailable,
             placesBooked,
-            placesRemaining: Math.max(0, placesRemaining),
+            placesRemaining: Math.max(0, remaining),
             available: reason === null,
             unavailableReason: reason,
+            // The longest of the viewer's own holds: with two, the slot is
+            // theirs until the later one goes.
+            heldUntil:
+              mine.length > 0
+                ? mine.map((hold) => hold.expiresAt).sort().slice(-1)[0]
+                : null,
           });
         }
       }

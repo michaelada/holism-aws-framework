@@ -28,7 +28,7 @@ groups, roles).
 | Memberships | 5 membership types per club (13 in total), with 22 members for this season |
 | Shop | 8 products at Kildare Hunt, each with a generated image, plus 10 option groups and 30 option values |
 | Bookings | 4 calendars at Laois Hunt, with 6 slot patterns, 10 durations, 2 blocks and 2 schedule rules |
-| Discounts | 13, applied across events, activities, memberships, merchandise and calendars (25 applications) |
+| Discounts | 24, spread across all three clubs and every capability each holds (33 applications) |
 
 Every login uses the password **`Passw0rd!`**, non-temporary and with the email pre-verified, so no
 seeded account lands on a password-change or confirm-your-email wall.
@@ -202,6 +202,11 @@ grounds so a gallery has something to page through without pretending to be a se
 > looks right — but a **genuinely uploaded** image is an S3 key that the member-facing shop would
 > render as a broken `<img>`. Seeding data URIs makes the fixture work without fixing that.
 
+**Payment methods are stored as ids, not names.** `supported_payment_methods` is compared against
+`cart_items.payment_method_id` — a uuid — and the org-admin pickers match on `pm.id`. The seed wrote
+its own slugs (`"pay-offline"`, `"stripe"`) for a while, which produced lists nothing could match and
+made every add to basket fail with "that payment method is not accepted for this item".
+
 **Untracked stock is `NULL`, not `0`.** Zero reads as sold out, which is a different claim from
 "not counted" — and `hasStock` treats null as "always available", so the distinction decides whether
 the cap and the saddle pad are buyable.
@@ -244,31 +249,43 @@ Dates are offsets from the run, so the blocked week is always still ahead of tod
 
 ### Discounts
 
-| Discount | Type | Scope | Code |
-|---|---|---|---|
-| Early bird 10% | percentage | item | `EARLYBIRD` |
-| Club member €5 off | fixed | item | — (automatic) |
-| Third entry free | percentage 100% | quantity-based, every 3rd | — |
-| Spring promotion | percentage | item | `SPRING24` — **expired**, so the expiry path has a subject |
-| €10 off baskets over €60 | fixed | cart | `BASKET10` — with usage limits |
-| Family rate 15% | percentage | quantity-based, from the 2nd | — |
-| Winter league 20% | percentage | item | `WINTER20` — capped at €15, 25 uses, 4 already used |
+**24, spread so every club has a discount list for every capability it holds** — and none for the
+ones it does not:
 
-Six more cover the other capabilities, so every discountable thing in the platform has a worked
-example rather than only events:
+| Club | events | memberships | merchandise | calendar |
+|---|---|---|---|---|
+| Kildare Hunt | 5 | 2 | 3 | — (no calendars) |
+| Laois Hunt | 3 | 2 | — (no shop) | 3 |
+| Ward Union | 4 | 2 | — | — |
 
-| Discount | Applies to | Scope |
-|---|---|---|
-| Family membership 10% | Family membership type | item, automatic |
-| Early renewal €5 off | Senior membership type | item, code `RENEW5` |
-| Club kit 15% | Polo and hoodie | item, code `KIT15` |
-| Second item half price | Polo | quantity-based, from the 2nd |
-| Off-peak 20% | Outdoor arena | item, code `OFFPEAK` |
-| Block of five lessons 10% | Group lessons | quantity-based, from the 5th |
+Ward is the club worth having: no shop and no bookings, so its discount pages show what the module
+looks like for a club that only runs events and memberships.
 
-Each is written to `discount_applications` **and** to the `discount_ids` array on the target,
-because both are in the schema and different code paths read different ones — the array drives the
-screens, the join table answers "where is this discount used?".
+Between them they cover the shapes the discount engine branches on:
+
+| Axis | Covered by |
+|---|---|
+| **Type** | 14 percentage, 9 fixed |
+| **Scope** | item, cart, quantity-based, and one `category` |
+| **Codes** | 13 with a code, 11 applied automatically |
+| **Quantity rules** | every-Nth (third free), from-the-Nth (family rate), one-of-N (second item half) |
+| **Usage limits** | 3, including one with a cap on the discount itself and a per-member limit |
+| **Eligibility** | 6, covering `requiresCode`, minimum order value, members-only and volunteers-only |
+| **Status** | 22 active, 1 **expired**, 1 **inactive** — the club's switch, not the calendar |
+| **Validity** | one **not yet valid**, starting next month |
+| **Combinable** | 13 yes, 11 no |
+
+> **Two bugs fixed while spreading these.**
+>
+> Every seeded discount was written with `module_type = 'events'`, so the membership, merchandise
+> and calendar ones existed but were invisible: the org-admin pages and the pickers filter on that
+> column, and each of those lists came back empty. `SeedDiscount` now carries its `module`.
+>
+> Discount keys resolved **globally**, while membership types are defined once and created for every
+> club — so Ward's Family Membership carried Kildare's discount and its Senior carried Laois's. Keys
+> are now scoped to their organisation, which lets `familyMembership` mean "this club's family
+> discount" and resolve to nothing for a club that has none. Verified: zero cross-organisation
+> attachments across memberships, events, merchandise and calendars.
 
 ---
 

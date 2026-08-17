@@ -28,7 +28,7 @@ import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { CatalogueRegistrationType } from '../types/account';
+import { CatalogueRegistrationType, CartItemType } from '../types/account';
 
 interface FormField {
   id: string;
@@ -174,7 +174,7 @@ export const RegistrationFormPage: React.FC = () => {
         method: 'POST',
         url: `/api/account/${orgCode}/cart/items`,
         data: {
-          itemType: 'registration',
+          itemType: 'registration' satisfies CartItemType,
           contextRef: { registrationTypeId: type.id, entityName: entityName.trim() },
           // The name is in the description too: it is what the member will
           // recognise in the basket, where "Horse registration 2026" alone

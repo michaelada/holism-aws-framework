@@ -175,6 +175,45 @@ describe('AccountActivityService', () => {
       );
     });
 
+    /**
+     * What the member wrote on the entry form.
+     *
+     * The detail screen is the only place they can see it — the form is gone
+     * once the entry exists, and the submission endpoint serves only lines
+     * still in an open basket. It said "your answers are not available to view
+     * here" about answers the member had just typed.
+     */
+    it('returns the answers the member gave', async () => {
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [entryRow({ form_submission_id: 'fs-1' })] } as any)
+        // The form-summary join: one row per answered field, in form order.
+        .mockResolvedValueOnce({
+          rows: [
+            { submission_id: 'fs-1', submission_data: { rider_name: 'Sam Rivers', diet: 'Gluten free' }, field_name: 'rider_name', label: 'Rider name', order: 1 },
+            { submission_id: 'fs-1', submission_data: { rider_name: 'Sam Rivers', diet: 'Gluten free' }, field_name: 'diet', label: 'Dietary requirements', order: 2 },
+          ],
+        } as any);
+
+      const entry = await service.getEntry(ORG, MEMBER, 'entry-1', TODAY);
+
+      expect(entry.formSummary).toEqual([
+        { label: 'Rider name', value: 'Sam Rivers' },
+        { label: 'Dietary requirements', value: 'Gluten free' },
+      ]);
+    });
+
+    it('returns no answers for an activity that asked nothing', async () => {
+      // A real case, and a different statement from "we cannot show you what
+      // you wrote" — the screen says so rather than showing an empty heading.
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [entryRow({ form_submission_id: null })] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any);
+
+      const entry = await service.getEntry(ORG, MEMBER, 'entry-1', TODAY);
+
+      expect(entry.formSummary).toEqual([]);
+    });
+
     it('scopes the lookup by entry, member and organisation together', async () => {
       mockDb.query.mockResolvedValue({ rows: [entryRow()] } as any);
       await service.getEntry(ORG, MEMBER, 'entry-1', TODAY);
@@ -387,6 +426,44 @@ describe('AccountActivityService', () => {
         },
       ],
       ...over,
+    });
+
+    /**
+     * Attempts are not payments.
+     *
+     * A member reported the payments screen as "confused": one item in their
+     * basket, and a pending payment beside it listing that item twice. The
+     * pending payment was a checkout they had started and abandoned, still
+     * carrying the contents of a basket from ten minutes earlier.
+     */
+    it('leaves out checkouts that were started and never finished', async () => {
+      mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+      await service.listPayments(ORG, MEMBER);
+
+      const [sql] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain("NOT IN ('pending', 'abandoned')");
+    });
+
+    it('excludes those two and nothing else', async () => {
+      /*
+       * The other half of the rule, and the one worth pinning: `awaiting_offline`
+       * is money the member owes, `failed` is a decline they have to act on, and
+       * hiding either would be worse than showing an attempt. Asserting the
+       * exclusion list exactly is what stops a later edit quietly widening it.
+       */
+      mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+      await service.listPayments(ORG, MEMBER);
+
+      const sql = String(mockDb.query.mock.calls[0][0]);
+      const excluded = sql.match(/NOT IN \(([^)]*)\)/)?.[1] ?? '';
+      const statuses = excluded
+        .split(',')
+        .map((s) => s.trim().replace(/'/g, ''))
+        .filter(Boolean);
+
+      expect(statuses.sort()).toEqual(['abandoned', 'pending']);
     });
 
     it('totals card and offline together', async () => {

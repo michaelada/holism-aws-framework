@@ -206,29 +206,88 @@ describe('CapabilityService', () => {
     });
   });
 
+  /**
+   * Which names are not capabilities — and it has to be *which*.
+   *
+   * The old check counted matches and returned a boolean, so a refusal could
+   * only ever say "Invalid capabilities provided". A super-admin editing an
+   * organisation type's application fee met exactly that: a 500 naming nothing,
+   * about three capability names their record had carried since it was seeded
+   * and which they had never touched.
+   */
+  describe('unknownCapabilities', () => {
+    /** The catalogue answers with the subset it recognises. */
+    const catalogue = (known: string[]) =>
+      mockDb.query.mockResolvedValue({ rows: known.map((name) => ({ name })) } as any);
+
+    it('names the ones it does not recognise', async () => {
+      catalogue(['memberships']);
+
+      const unknown = await service.unknownCapabilities([
+        'memberships',
+        'not-a-thing',
+        'also-not-a-thing',
+      ]);
+
+      expect(unknown).toEqual(['not-a-thing', 'also-not-a-thing']);
+    });
+
+    it('returns nothing when every name is known', async () => {
+      catalogue(['cap1', 'cap2', 'cap3']);
+
+      await expect(service.unknownCapabilities(['cap1', 'cap2', 'cap3'])).resolves.toEqual([]);
+    });
+
+    it('asks nothing of the database for an empty list', async () => {
+      await expect(service.unknownCapabilities([])).resolves.toEqual([]);
+      expect(mockDb.query).not.toHaveBeenCalled();
+    });
+
+    it('reports a repeated unknown name once', async () => {
+      // The refusal reads as a sentence; repeating a name in it helps nobody.
+      catalogue([]);
+
+      await expect(
+        service.unknownCapabilities(['ghost', 'ghost', 'ghost'])
+      ).resolves.toEqual(['ghost']);
+    });
+
+    it('counts a deactivated capability as unknown', async () => {
+      /*
+       * The query filters on `is_active`, so a switched-off capability comes
+       * back unmatched. It cannot be granted, and saying it is not a capability
+       * is nearer the truth than saying nothing at all.
+       */
+      catalogue([]);
+
+      await expect(service.unknownCapabilities(['retired-thing'])).resolves.toEqual([
+        'retired-thing',
+      ]);
+      const [sql] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('is_active = true');
+    });
+  });
+
   describe('validateCapabilities', () => {
+    const catalogue = (known: string[]) =>
+      mockDb.query.mockResolvedValue({ rows: known.map((name) => ({ name })) } as any);
+
     it('should return true when all capabilities are valid', async () => {
-      mockDb.query.mockResolvedValue({ rows: [{ count: '3' }] } as any);
+      catalogue(['cap1', 'cap2', 'cap3']);
 
-      const result = await service.validateCapabilities(['cap1', 'cap2', 'cap3']);
-
-      expect(result).toBe(true);
+      await expect(service.validateCapabilities(['cap1', 'cap2', 'cap3'])).resolves.toBe(true);
     });
 
     it('should return false when some capabilities are invalid', async () => {
-      mockDb.query.mockResolvedValue({ rows: [{ count: '2' }] } as any);
+      catalogue(['cap1', 'cap2']);
 
-      const result = await service.validateCapabilities(['cap1', 'cap2', 'cap3']);
-
-      expect(result).toBe(false);
+      await expect(service.validateCapabilities(['cap1', 'cap2', 'cap3'])).resolves.toBe(false);
     });
 
     it('should return false when no capabilities are valid', async () => {
-      mockDb.query.mockResolvedValue({ rows: [{ count: '0' }] } as any);
+      catalogue([]);
 
-      const result = await service.validateCapabilities(['invalid1', 'invalid2']);
-
-      expect(result).toBe(false);
+      await expect(service.validateCapabilities(['invalid1', 'invalid2'])).resolves.toBe(false);
     });
   });
 });

@@ -1,9 +1,11 @@
-import { CheckoutService, contextIdFrom } from '../checkout.service';
+import { CheckoutService, cartFingerprint, contextIdFrom } from '../checkout.service';
+import { BASKET_HOLD_MINUTES, CHECKOUT_HOLD_MINUTES } from '../../utils/holds';
 import { db } from '../../database/pool';
 import { cartService } from '../cart.service';
 import { ValidationError, NotFoundError } from '../../middleware/errors';
 import { createMockClient } from '../../test-helpers/mock-db-client';
 import { fulfilmentService } from '../fulfilment.service';
+import { orderAvailabilityService } from '../order-availability.service';
 
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
@@ -13,10 +15,14 @@ jest.mock('../cart.service', () => ({
 jest.mock('../fulfilment.service', () => ({
   fulfilmentService: { fulfilPayment: jest.fn() },
 }));
+jest.mock('../order-availability.service', () => ({
+  orderAvailabilityService: { check: jest.fn() },
+}));
 
 const mockDb = db as jest.Mocked<typeof db>;
 const mockCart = cartService as jest.Mocked<typeof cartService>;
 const mockFulfilment = fulfilmentService as jest.Mocked<typeof fulfilmentService>;
+const mockAvailability = orderAvailabilityService as jest.Mocked<typeof orderAvailabilityService>;
 
 const ORG = 'org-1';
 const MEMBER = 'ou-1';
@@ -61,8 +67,15 @@ const cart = (over: Record<string, any> = {}) => ({
   ...over,
 });
 
-/** A provider registry whose card provider is this spy. */
-const registryFor = (provider: any) => ({ forCardPayment: () => provider }) as any;
+/**
+ * A provider registry whose card provider is this spy.
+ *
+ * `get` as well as `forCardPayment`: retiring a stale payment looks the
+ * provider up by name to cancel its intent, and a registry without it fails
+ * with "this.providers.get is not a function" rather than anything meaningful.
+ */
+const registryFor = (provider: any) =>
+  ({ forCardPayment: () => provider, get: () => provider }) as any;
 
 const stripeLike = () => ({
   name: 'stripe',
@@ -164,6 +177,52 @@ describe('CheckoutService', () => {
       );
 
       await expect(service.startCheckout(ORG, MEMBER, 'EUR')).rejects.toThrow(/no longer held/i);
+    });
+
+    /**
+     * The answer to "what if they start paying and never finish".
+     *
+     * Two minutes is nowhere near enough for a card form plus a 3-D Secure
+     * round trip. Without this the hold would lapse mid-payment, somebody else
+     * could take the slot, and fulfilment would refuse a member who had already
+     * paid — a refund and a very reasonable complaint.
+     */
+    it('extends the holds to cover the payment attempt', async () => {
+      withConnectedAccount();
+      await service.startCheckout(ORG, MEMBER, 'EUR');
+
+      const extend = mockDb.query.mock.calls.find(
+        ([sql]) => String(sql).includes('UPDATE cart_items') && String(sql).includes('expires_at')
+      );
+
+      expect(extend).toBeDefined();
+      expect(extend![1]).toEqual(['cart-1', String(CHECKOUT_HOLD_MINUTES)]);
+    });
+
+    it('extends only the lines that were already holding something', async () => {
+      // A membership or a jumper must not acquire an expiry it never had: an
+      // expired line drops out of the basket total.
+      withConnectedAccount();
+      await service.startCheckout(ORG, MEMBER, 'EUR');
+
+      const [sql] = mockDb.query.mock.calls.find(([text]) =>
+        String(text).includes('UPDATE cart_items')
+      )!;
+
+      expect(String(sql)).toContain('expires_at IS NOT NULL');
+    });
+
+    it('does not revive a hold that had already lapsed', async () => {
+      // Somebody else may have taken the slot in the meantime; the basket is
+      // refused as a whole instead.
+      withConnectedAccount();
+      await service.startCheckout(ORG, MEMBER, 'EUR');
+
+      const [sql] = mockDb.query.mock.calls.find(([text]) =>
+        String(text).includes('UPDATE cart_items')
+      )!;
+
+      expect(String(sql)).toContain('expires_at > NOW()');
     });
 
     it('charges the amount the server calculated, not anything the client sent', async () => {
@@ -295,7 +354,16 @@ describe('CheckoutService', () => {
             handling_fee: 123,
             payment_provider: 'stripe',
             provider_transaction_id: 'pi_1',
-            metadata: { clientSecret: 'existing_secret' },
+            /*
+             * The fingerprint of the basket this payment was priced for. It has
+             * to match the cart the test hands back, or the payment is
+             * correctly judged stale and replaced — which is the whole point of
+             * the check, and not what this case is about.
+             */
+            metadata: {
+              clientSecret: 'existing_secret',
+              cartFingerprint: cartFingerprint(cart() as any),
+            },
           },
         ],
         rowCount: 1,
@@ -539,5 +607,560 @@ describe('CheckoutService', () => {
       expect(String(sql)).toContain('user_id = $3');
       expect(params).toEqual(['pay-1', ORG, MEMBER]);
     });
+  });
+});
+
+/**
+ * Handing the slots back when a payment will not now happen.
+ *
+ * The other half of the abandoned-Stripe question. `startCheckout` stretches
+ * the holds to cover the attempt; without this they would keep a Saturday court
+ * out of circulation for the rest of that window with nobody paying for it.
+ */
+describe('CheckoutService — releasing holds after a failed payment', () => {
+  const provider = {
+    name: 'stripe',
+    isConfigured: () => true,
+    createPaymentIntent: jest.fn(),
+  };
+  const service = new CheckoutService({ forCardPayment: () => provider } as any);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDb.query.mockResolvedValue({ rows: [{ cart_id: 'cart-1' }], rowCount: 1 } as any);
+  });
+
+  it('drops the holds back to the browsing window', async () => {
+    await service.failPayment('pay-1', 'Card declined');
+
+    const extend = mockDb.query.mock.calls.find(([sql]) =>
+      String(sql).includes('UPDATE cart_items')
+    );
+
+    expect(extend).toBeDefined();
+    expect(extend![1]).toEqual(['cart-1', String(BASKET_HOLD_MINUTES)]);
+  });
+
+  it('still records the failure itself', async () => {
+    await service.failPayment('pay-1', 'Card declined');
+
+    const [sql, params] = mockDb.query.mock.calls[0];
+    expect(String(sql)).toContain("payment_status = 'failed'");
+    expect(params).toEqual(['pay-1', 'Card declined']);
+  });
+
+  it('leaves a paid payment alone rather than releasing its slots', async () => {
+    // The guard is in the SQL: a payment already `paid` matches no row, so
+    // nothing comes back and there is no cart to release.
+    mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+    await service.failPayment('pay-1');
+
+    expect(
+      mockDb.query.mock.calls.some(([sql]) => String(sql).includes('UPDATE cart_items'))
+    ).toBe(false);
+  });
+
+  it('copes with a payment that has no cart behind it', async () => {
+    mockDb.query.mockResolvedValue({ rows: [{ cart_id: null }], rowCount: 1 } as any);
+
+    await expect(service.failPayment('pay-1')).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * The capture decision.
+ *
+ * Manual capture exists to create exactly this moment: the card is authorised,
+ * the funds are held, and nothing has moved yet. What happens next depends on
+ * whether the order is still available — and getting that wrong in either
+ * direction is expensive. Capture something that has gone and the club owes a
+ * refund; reverse something that is fine and the member is turned away for no
+ * reason.
+ */
+describe('CheckoutService — settling an authorisation', () => {
+  const provider = {
+    name: 'stripe',
+    isConfigured: () => true,
+    createPaymentIntent: jest.fn(),
+    capturePayment: jest.fn().mockResolvedValue(undefined),
+    cancelPayment: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const service = new CheckoutService({ forCardPayment: () => provider, get: () => provider } as any);
+
+  const payment = (over: Record<string, any> = {}) => ({
+    id: 'pay-1',
+    cart_id: 'cart-1',
+    payment_status: 'pending',
+    payment_provider: 'stripe',
+    provider_transaction_id: 'pi_1',
+    ...over,
+  });
+
+  /** The payment lookup first, then whatever the branch needs. */
+  const withPayment = (row: Record<string, any> | null) => {
+    mockDb.query.mockImplementation((sql: string) => {
+      if (String(sql).includes('FROM payments')) {
+        return Promise.resolve({ rows: row ? [row] : [], rowCount: row ? 1 : 0 } as any);
+      }
+      return Promise.resolve({ rows: [{ cart_id: 'cart-1' }], rowCount: 1 } as any);
+    });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    provider.capturePayment.mockResolvedValue(undefined);
+    provider.cancelPayment.mockResolvedValue(undefined);
+  });
+
+  it('captures when everything in the order is still there', async () => {
+    withPayment(payment());
+    mockAvailability.check.mockResolvedValue({ available: true, reason: null });
+
+    await expect(service.settleAuthorisation('pay-1', 'pi_1')).resolves.toBe('captured');
+    expect(provider.capturePayment).toHaveBeenCalledWith('pi_1');
+    expect(provider.cancelPayment).not.toHaveBeenCalled();
+  });
+
+  it('reverses the authorisation when a slot went while they were paying', async () => {
+    withPayment(payment());
+    mockAvailability.check.mockResolvedValue({
+      available: false,
+      reason: 'Outdoor arena: that slot is fully booked',
+    });
+
+    await expect(service.settleAuthorisation('pay-1', 'pi_1')).resolves.toBe('released');
+    expect(provider.cancelPayment).toHaveBeenCalledWith('pi_1', 'requested_by_customer');
+    expect(provider.capturePayment).not.toHaveBeenCalled();
+  });
+
+  it('records why, so the member is told which line failed', async () => {
+    withPayment(payment());
+    mockAvailability.check.mockResolvedValue({
+      available: false,
+      reason: 'Outdoor arena: that slot is fully booked',
+    });
+
+    await service.settleAuthorisation('pay-1', 'pi_1');
+
+    const failure = mockDb.query.mock.calls.find(([sql]) =>
+      String(sql).includes("payment_status = 'failed'")
+    );
+    expect(failure![1]).toEqual(['pay-1', 'Outdoor arena: that slot is fully booked']);
+  });
+
+  it('never charges twice when the webhook is redelivered', async () => {
+    // A payment already captured is past deciding; deciding again could only
+    // charge a second time or reverse money already taken.
+    withPayment(payment({ payment_status: 'paid' }));
+
+    await expect(service.settleAuthorisation('pay-1', 'pi_1')).resolves.toBe('ignored');
+    expect(provider.capturePayment).not.toHaveBeenCalled();
+    expect(mockAvailability.check).not.toHaveBeenCalled();
+  });
+
+  it('leaves an already-reversed payment alone', async () => {
+    withPayment(payment({ payment_status: 'failed' }));
+
+    await expect(service.settleAuthorisation('pay-1', 'pi_1')).resolves.toBe('ignored');
+    expect(provider.cancelPayment).not.toHaveBeenCalled();
+  });
+
+  it('will still decide for a payment left mid-settlement', async () => {
+    // A first delivery that recorded `authorised` and then died must not leave
+    // the funds held and never captured — the authorisation would expire and
+    // the club would simply never be paid.
+    withPayment(payment({ payment_status: 'authorised' }));
+    mockAvailability.check.mockResolvedValue({ available: true, reason: null });
+
+    await expect(service.settleAuthorisation('pay-1', 'pi_1')).resolves.toBe('captured');
+  });
+
+  it('marks the payment authorised before deciding, so a stuck one is visible', async () => {
+    withPayment(payment());
+    mockAvailability.check.mockResolvedValue({ available: true, reason: null });
+
+    await service.settleAuthorisation('pay-1', 'pi_1');
+
+    expect(
+      mockDb.query.mock.calls.some(([sql]) => String(sql).includes("payment_status = 'authorised'"))
+    ).toBe(true);
+  });
+
+  it('reports an unknown payment rather than guessing', async () => {
+    withPayment(null);
+
+    await expect(service.settleAuthorisation('pay-1', 'pi_1')).rejects.toThrow(NotFoundError);
+  });
+
+  it('falls back to the recorded intent when the event carries none', async () => {
+    withPayment(payment());
+    mockAvailability.check.mockResolvedValue({ available: true, reason: null });
+
+    await service.settleAuthorisation('pay-1', null);
+
+    expect(provider.capturePayment).toHaveBeenCalledWith('pi_1');
+  });
+});
+
+/**
+ * Giving up on a payment the member never completed.
+ *
+ * What makes an expired hold mean something on the payment screen: without the
+ * cancellation the client secret in a stale tab stays valid, and a laptop woken
+ * an hour later could still pay for a slot that has since gone.
+ */
+describe('CheckoutService — abandoning a checkout', () => {
+  const provider = {
+    name: 'stripe',
+    isConfigured: () => true,
+    createPaymentIntent: jest.fn(),
+    capturePayment: jest.fn(),
+    cancelPayment: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const service = new CheckoutService({ forCardPayment: () => provider, get: () => provider } as any);
+
+  const withPayment = (row: Record<string, any> | null) => {
+    mockDb.query.mockImplementation((sql: string) => {
+      if (String(sql).includes('FROM payments')) {
+        return Promise.resolve({ rows: row ? [row] : [], rowCount: row ? 1 : 0 } as any);
+      }
+      return Promise.resolve({ rows: [{ cart_id: 'cart-1' }], rowCount: 1 } as any);
+    });
+  };
+
+  const pending = {
+    id: 'pay-1',
+    cart_id: 'cart-1',
+    payment_status: 'pending',
+    payment_provider: 'stripe',
+    provider_transaction_id: 'pi_1',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    provider.cancelPayment.mockResolvedValue(undefined);
+  });
+
+  it('cancels the intent, so a stale tab can no longer pay', async () => {
+    withPayment(pending);
+
+    await expect(service.abandonCheckout(ORG, MEMBER, 'pay-1')).resolves.toEqual({
+      abandoned: true,
+    });
+    expect(provider.cancelPayment).toHaveBeenCalledWith('pi_1', 'abandoned');
+  });
+
+  it('scopes to the member, not to the payment id alone', async () => {
+    withPayment(pending);
+
+    await service.abandonCheckout(ORG, MEMBER, 'pay-1');
+
+    const [, params] = mockDb.query.mock.calls[0];
+    expect(params).toEqual(['pay-1', ORG, MEMBER]);
+  });
+
+  it("reports somebody else's payment as not found", async () => {
+    withPayment(null);
+
+    await expect(service.abandonCheckout(ORG, MEMBER, 'pay-1')).rejects.toThrow(NotFoundError);
+  });
+
+  it('refuses to cancel underneath a settlement already in progress', async () => {
+    // `authorised` is mid-decision on the server. Cancelling here would race
+    // the capture and could reverse an order that is about to succeed.
+    withPayment({ ...pending, payment_status: 'authorised' });
+
+    await expect(service.abandonCheckout(ORG, MEMBER, 'pay-1')).resolves.toEqual({
+      abandoned: false,
+    });
+    expect(provider.cancelPayment).not.toHaveBeenCalled();
+  });
+
+  it('leaves a paid payment alone', async () => {
+    withPayment({ ...pending, payment_status: 'paid' });
+
+    await expect(service.abandonCheckout(ORG, MEMBER, 'pay-1')).resolves.toEqual({
+      abandoned: false,
+    });
+  });
+
+  it('still tells the member, even when Stripe cannot be reached', async () => {
+    // They are being told their hold expired. Failing that message because a
+    // best-effort tidy-up failed would leave them at a form that no longer works.
+    withPayment(pending);
+    provider.cancelPayment.mockRejectedValue(new Error('stripe is down'));
+
+    await expect(service.abandonCheckout(ORG, MEMBER, 'pay-1')).resolves.toEqual({
+      abandoned: true,
+    });
+  });
+});
+
+/**
+ * A pending payment must not outlive the basket it was priced for.
+ *
+ * `startCheckout` reuses an in-flight payment so that reloading the page does
+ * not create a second charge. That idempotency was unconditional, and a basket
+ * is not frozen when checkout starts — so a member who went back and changed
+ * theirs got the *old* payment: the old total, the old Stripe intent, and a
+ * summary listing items they had since removed.
+ *
+ * Reported as "the payments section seems confused: one item in my basket, and
+ * a pending payment showing the same item twice". The display was the visible
+ * half; being charged last time's total was the other.
+ */
+describe('CheckoutService — a basket that changed under a pending payment', () => {
+  const provider = {
+    name: 'stripe',
+    isConfigured: () => true,
+    createPaymentIntent: jest.fn().mockResolvedValue({
+      providerTransactionId: 'pi_new',
+      clientSecret: 'pi_new_secret',
+      destinationAccountId: ACCOUNT,
+    }),
+    capturePayment: jest.fn(),
+    cancelPayment: jest.fn().mockResolvedValue(undefined),
+  };
+
+  let service: CheckoutService;
+
+  /**
+   * Answers the checkout sequence, with a pending payment already on the cart
+   * whose fingerprint is `storedFingerprint`.
+   */
+  const withPendingPayment = (storedFingerprint: string | undefined) => {
+    mockDb.query.mockImplementation((sql: string) => {
+      const text = String(sql);
+
+      if (text.includes('FROM payments') && text.includes("payment_status = 'pending'")) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: 'pay-old',
+              currency: 'EUR',
+              card_amount: 4288,
+              offline_amount: 0,
+              handling_fee: 88,
+              payment_provider: 'stripe',
+              provider_transaction_id: 'pi_old',
+              metadata:
+                storedFingerprint === undefined ? {} : { cartFingerprint: storedFingerprint },
+            },
+          ],
+          rowCount: 1,
+        } as any);
+      }
+      if (text.includes('stripeConnect')) {
+        return Promise.resolve({
+          rows: [{ account_id: ACCOUNT, charges_enabled: true }],
+          rowCount: 1,
+        } as any);
+      }
+      if (text.includes('MIN(expires_at)')) {
+        return Promise.resolve({ rows: [{ expires_at: null }], rowCount: 1 } as any);
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 } as any);
+    });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    provider.cancelPayment.mockResolvedValue(undefined);
+    service = new CheckoutService({ forCardPayment: () => provider, get: () => provider } as any);
+    mockCart.getCart.mockResolvedValue(cart() as any);
+  });
+
+  it('reuses the payment when the basket is untouched', async () => {
+    // The idempotency that stops a reload creating a second charge. It must
+    // survive the fix, or every page refresh churns a new payment and intent.
+    const fingerprint = cartFingerprint(cart() as any);
+    withPendingPayment(fingerprint);
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).toBe('pay-old');
+    expect(provider.cancelPayment).not.toHaveBeenCalled();
+  });
+
+  it('will not reuse a payment priced for a different basket', async () => {
+    withPendingPayment('a-fingerprint-from-an-older-basket');
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).not.toBe('pay-old');
+  });
+
+  it('retires the stale payment rather than leaving it pending', async () => {
+    // Left `pending` it keeps appearing in the member's payment history as an
+    // order they never placed.
+    withPendingPayment('stale');
+
+    await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    const retire = mockDb.query.mock.calls.find(([sql]) =>
+      String(sql).includes("payment_status = 'abandoned'")
+    );
+    expect(retire).toBeDefined();
+    expect(retire![1]).toEqual(['pay-old']);
+  });
+
+  it('cancels the intent behind it, so nothing can pay the old amount', async () => {
+    withPendingPayment('stale');
+
+    await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(provider.cancelPayment).toHaveBeenCalledWith('pi_old', 'abandoned');
+  });
+
+  it('treats a payment with no fingerprint as stale', async () => {
+    // Predates the check. There is no way to tell whether it still matches, and
+    // guessing wrong means charging the wrong amount.
+    withPendingPayment(undefined);
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).not.toBe('pay-old');
+  });
+
+  it('still replaces the payment when Stripe cannot be reached', async () => {
+    // Continuing to reuse a payment for the wrong basket would be worse than an
+    // abandoned intent, which expires on Stripe's own schedule anyway.
+    withPendingPayment('stale');
+    provider.cancelPayment.mockRejectedValue(new Error('stripe is down'));
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).not.toBe('pay-old');
+  });
+});
+
+describe('cartFingerprint', () => {
+  it('is stable for an unchanged basket', () => {
+    expect(cartFingerprint(cart() as any)).toBe(cartFingerprint(cart() as any));
+  });
+
+  it('changes when an item is added', () => {
+    const bigger = cart({ items: [cartItem(), cartItem({ id: 'item-2' })] });
+
+    expect(cartFingerprint(bigger as any)).not.toBe(cartFingerprint(cart() as any));
+  });
+
+  it('changes when a quantity changes', () => {
+    const more = cart({ items: [cartItem({ quantity: 2 })] });
+
+    expect(cartFingerprint(more as any)).not.toBe(cartFingerprint(cart() as any));
+  });
+
+  it('changes when the chosen payment method changes', () => {
+    // It moves money between the card and offline totals, so the amount to
+    // charge changes even though the items did not.
+    const offline = cart({ items: [cartItem({ paymentMethodId: 'pm-offline', isCard: false })] });
+
+    expect(cartFingerprint(offline as any)).not.toBe(cartFingerprint(cart() as any));
+  });
+
+  it('changes when the total moves without any line changing', () => {
+    // A club can alter its handling fee between one checkout and the next.
+    const dearer = cart({ totals: { ...cart().totals, orderTotal: 9999 } });
+
+    expect(cartFingerprint(dearer as any)).not.toBe(cartFingerprint(cart() as any));
+  });
+
+  it('does not depend on the order items come back in', () => {
+    const a = cart({ items: [cartItem(), cartItem({ id: 'item-2' })] });
+    const b = cart({ items: [cartItem({ id: 'item-2' }), cartItem()] });
+
+    expect(cartFingerprint(a as any)).toBe(cartFingerprint(b as any));
+  });
+});
+
+/**
+ * An order paid directly to the club.
+ *
+ * Reported as: two slots checked out with Pay Offline, and afterwards **the
+ * items were still in the basket**. The member did the only sensible thing and
+ * checked out again — producing a second payment for the same order, then a
+ * third. Five had accumulated against one pair of slots before it was reported.
+ *
+ * The card path closes the cart in `confirmPayment`. The offline path had no
+ * equivalent, so nothing ever moved it off `open`.
+ */
+describe('CheckoutService — placing an offline order', () => {
+  const provider = {
+    name: 'stripe',
+    isConfigured: () => true,
+    createPaymentIntent: jest.fn(),
+    capturePayment: jest.fn(),
+    cancelPayment: jest.fn(),
+  };
+
+  let service: CheckoutService;
+
+  /** A basket with nothing to charge to a card. */
+  const offlineCart = () =>
+    cart({
+      items: [cartItem({ paymentMethodId: 'pm-offline', isCard: false })],
+      totals: {
+        ...cart().totals,
+        offlineSubtotal: 2500,
+        cardSubtotal: 0,
+        chargedToCardNow: 0,
+        orderTotal: 2500,
+      },
+    });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new CheckoutService({ forCardPayment: () => provider, get: () => provider } as any);
+    mockCart.getCart.mockResolvedValue(offlineCart() as any);
+    mockDb.query.mockImplementation((sql: string) => {
+      if (String(sql).includes('MIN(expires_at)')) {
+        return Promise.resolve({ rows: [{ expires_at: null }], rowCount: 1 } as any);
+      }
+      if (String(sql).includes('RETURNING cart_id')) {
+        return Promise.resolve({ rows: [{ cart_id: 'cart-1' }], rowCount: 1 } as any);
+      }
+      if (String(sql).includes('RETURNING id')) {
+        return Promise.resolve({ rows: [{ id: 'pay-1' }], rowCount: 1 } as any);
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 } as any);
+    });
+  });
+
+  it('closes the cart, so the items do not sit in the basket afterwards', async () => {
+    await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    const closed = mockDb.query.mock.calls.find(([sql]) =>
+      String(sql).includes("UPDATE carts SET status = 'ordered'")
+    );
+
+    expect(closed).toBeDefined();
+    expect(closed![1]).toEqual(['cart-1']);
+  });
+
+  it('records the payment as awaiting the club’s money', async () => {
+    await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    const marked = mockDb.query.mock.calls.find(([sql]) =>
+      String(sql).includes("payment_status = 'awaiting_offline'")
+    );
+
+    expect(marked).toBeDefined();
+  });
+
+  it('never asks a provider to charge nothing', async () => {
+    // A zero charge is rejected by Stripe, and there is nothing to charge.
+    await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(provider.createPaymentIntent).not.toHaveBeenCalled();
+  });
+
+  it('reports the order as complete, with nothing due by card', async () => {
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result).toMatchObject({ completed: true, amountDue: 0, offlineAmount: 2500 });
   });
 });

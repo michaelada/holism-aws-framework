@@ -112,7 +112,7 @@ describe('OrganizationTypeService', () => {
         defaultCapabilities: ['event-management', 'memberships']
       };
 
-      mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue([]);
 
       const mockCreated = {
         id: '1',
@@ -144,7 +144,7 @@ describe('OrganizationTypeService', () => {
 
       const result = await service.createOrganizationType(newType, 'user-123');
 
-      expect(mockCapabilityService.validateCapabilities).toHaveBeenCalledWith(newType.defaultCapabilities);
+      expect(mockCapabilityService.unknownCapabilities).toHaveBeenCalledWith(newType.defaultCapabilities);
       expect(result.name).toBe('tennis-club');
       expect(result.membershipNumbering).toBe('internal');
       expect(result.membershipNumberUniqueness).toBe('organization');
@@ -364,7 +364,7 @@ describe('OrganizationTypeService', () => {
         defaultCapabilities: ['invalid-capability']
       };
 
-      mockCapabilityService.validateCapabilities.mockResolvedValue(false);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue(['not-a-capability']);
 
       const mockClient = {
         query: jest.fn()
@@ -419,7 +419,7 @@ describe('OrganizationTypeService', () => {
 
       const result = await service.createOrganizationType(newType);
 
-      expect(mockCapabilityService.validateCapabilities).not.toHaveBeenCalled();
+      expect(mockCapabilityService.unknownCapabilities).not.toHaveBeenCalled();
       expect(result.defaultCapabilities).toEqual([]);
     });
   });
@@ -432,7 +432,7 @@ describe('OrganizationTypeService', () => {
         defaultCapabilities: ['event-management']
       };
 
-      mockCapabilityService.validateCapabilities.mockResolvedValue(true);
+      mockCapabilityService.unknownCapabilities.mockResolvedValue([]);
 
       const mockCurrent = {
         id: '1',

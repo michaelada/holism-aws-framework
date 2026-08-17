@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -15,6 +18,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatDisplayDate } from '@aws-web-framework/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
@@ -164,6 +168,60 @@ const MembershipCard: React.FC<{
           <Typography variant="body2" color="error.main" sx={{ mt: 1 }}>
             {t('memberships.expired', { count: Math.abs(remaining) })}
           </Typography>
+        )}
+
+        {/*
+          What the member actually filled in when they applied.
+
+          The application form is the only record of what the club was told —
+          the form itself is gone once the membership exists — so this is where
+          a member checks the pony's name, the age group or the emergency
+          contact they gave, and spots what needs correcting.
+
+          Collapsed by default: it is reference material, and a card that opens
+          fifteen rows of it buries the number and the expiry date that are the
+          reason most people come to this screen. Nothing is rendered at all
+          when the club's form asked nothing.
+        */}
+        {membership.formSummary?.length > 0 && (
+          <Accordion
+            elevation={0}
+            disableGutters
+            /*
+              Unmounted while collapsed, rather than merely hidden. A member can
+              hold several memberships and each form runs to a dozen or more
+              answers, so the default would render a hundred hidden rows that
+              nobody has asked to see — and leave them findable by search and by
+              a screen reader walking the page.
+            */
+            TransitionProps={{ unmountOnExit: true }}
+            sx={{ mt: 1.5, '&:before': { display: 'none' }, backgroundColor: 'transparent' }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 0 }}>
+              <Typography variant="body2" color="primary">
+                {t('memberships.yourDetails', { count: membership.formSummary.length })}
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: 0, pt: 0 }}>
+              <Stack spacing={1}>
+                {membership.formSummary.map((answer, index) => (
+                  <Box key={`${answer.label}-${index}`}>
+                    <Typography variant="caption" color="text.secondary" component="div">
+                      {answer.label}
+                    </Typography>
+                    {/*
+                      `pre-wrap`, because a long answer to a textarea — medical
+                      notes, say — was written with line breaks that mean
+                      something to whoever reads it back.
+                    */}
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {answer.value}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
         )}
 
         {(membership.canRenew || membership.renewalNotOpen) && (

@@ -16,7 +16,9 @@ import { accountTicketingService } from '../services/account-ticketing.service';
 import { accountProfileService } from '../services/account-profile.service';
 import { applicationFormService } from '../services/application-form.service';
 import { formSubmissionService } from '../services/form-submission.service';
+import { db } from '../database/pool';
 import { validateSubmissionData } from '../utils/application-field-validation';
+import { BASKET_HOLD_MINUTES, holdExpiry } from '../utils/holds';
 import { ValidationError, NotFoundError } from '../middleware/errors';
 import { logger } from '../config/logger';
 
@@ -62,21 +64,30 @@ async function assertAddable(
   organisationId: string,
   organisationUserId: string,
   body: any
-): Promise<void> {
+): Promise<{ holdMinutes: number | null }> {
   const contextRef = body?.contextRef ?? {};
 
   switch (body?.itemType) {
     case 'event-entry':
     case 'event_entry': {
-      const activity = await accountCatalogueService.assertActivityAvailable(
+      const found = await accountCatalogueService.findActivity(
         organisationId,
         organisationUserId,
         contextRef.activityId
       );
-      if (!activity.available) {
+      if (!found || !found.activity.available) {
         throw new ValidationError('That activity can no longer be entered');
       }
-      return;
+      /*
+       * An entry is only worth holding where places can run out. An uncapped
+       * activity in an uncapped event has nothing for two members to contend
+       * over, and giving it an expiry would drop the line out of the basket
+       * total two minutes later for no reason at all.
+       */
+      const capacityLimited =
+        found.activity.entriesLimit !== null || found.event.entriesLimit !== null;
+
+      return { holdMinutes: capacityLimited ? BASKET_HOLD_MINUTES : null };
     }
 
     case 'merchandise': {
@@ -86,7 +97,7 @@ async function assertAddable(
         Object.values(contextRef.selectedOptions ?? {}) as string[],
         Number(body?.quantity ?? 1)
       );
-      return;
+      return { holdMinutes: null };
     }
 
     case 'registration': {
@@ -95,23 +106,66 @@ async function assertAddable(
         contextRef.registrationTypeId,
         contextRef.entityName
       );
-      return;
+      return { holdMinutes: null };
     }
 
     case 'booking': {
+      /*
+       * The same slot, already in this basket.
+       *
+       * `assertSlotAvailable` catches this too, but only while the hold is
+       * live: an expired hold is invisible to the availability query, so the
+       * slot reads as free and a second identical line goes in. The basket then
+       * holds one exclusive slot twice, and checkout prices both.
+       *
+       * Checked directly against the basket, which does not expire, rather than
+       * through availability, which does.
+       */
+      const duplicate = await db.query(
+        `SELECT 1
+         FROM cart_items ci
+         JOIN carts c ON c.id = ci.cart_id
+         WHERE c.organisation_id = $1
+           AND c.user_id = $2
+           AND c.status = 'open'
+           AND ci.item_type = 'booking'
+           AND ci.context_ref->>'calendarId' = $3
+           AND ci.context_ref->>'date' = $4
+           AND ci.context_ref->>'startTime' = $5
+           AND (ci.context_ref->>'duration')::int = $6
+         LIMIT 1`,
+        [
+          organisationId,
+          organisationUserId,
+          contextRef.calendarId,
+          contextRef.date,
+          contextRef.startTime,
+          Number(contextRef.duration),
+        ]
+      );
+
+      if (duplicate.rows.length > 0) {
+        throw new ValidationError('That slot is already in your basket');
+      }
+
       await accountCatalogueService.assertSlotAvailable(
         organisationId,
         contextRef.calendarId,
         contextRef.date,
         contextRef.startTime,
         Number(contextRef.duration),
-        Number(contextRef.places ?? 1)
+        Number(contextRef.places ?? 1),
+        new Date(),
+        // Their own hold on this slot means they already have it, and the
+        // guard says so rather than letting them add it twice.
+        organisationUserId
       );
-      return;
+      // A slot is exclusive by its nature; every booking takes a hold.
+      return { holdMinutes: BASKET_HOLD_MINUTES };
     }
 
     default:
-      return;
+      return { holdMinutes: null };
   }
 }
 
@@ -398,13 +452,25 @@ router.post(
        * of something limited to two — none of which the screens offer, and all
        * of which the club would then have to unpick after the money arrived.
        */
-      await assertAddable(organisationId, organisationUserId, req.body);
+      const { holdMinutes } = await assertAddable(
+        organisationId,
+        organisationUserId,
+        req.body
+      );
 
       const item = await cartService.addItem(
         organisationId,
         organisationUserId,
         currency,
-        req.body
+        {
+          ...req.body,
+          /*
+           * The hold is set here rather than trusted from the request: a
+           * client that asked for an hour on a contended court would be taking
+           * it out of everybody else's calendar for an hour.
+           */
+          expiresAt: holdMinutes === null ? null : holdExpiry(holdMinutes),
+        }
       );
       return res.status(201).json(item);
     } catch (error) {
@@ -730,6 +796,51 @@ router.post(
       }
       logger.error('Error in POST /account/:orgCode/checkout:', error);
       return res.status(500).json({ error: 'Failed to start checkout' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/account/{orgCode}/checkout/{paymentId}/abandon:
+ *   post:
+ *     summary: Give up on a payment whose hold has lapsed
+ *     description: >
+ *       Called by the payment screen when the countdown on the member's hold
+ *       reaches zero. Cancels the provider's payment intent, which is what
+ *       makes the expiry bite: the client secret a stale tab is holding stops
+ *       working, so a member who returns an hour later cannot pay for a slot
+ *       that has since gone to somebody else.
+ *
+ *       Best-effort by design. It returns 200 with `abandoned: false` for a
+ *       payment that has moved on — one already authorised is mid-decision on
+ *       the server, and cancelling underneath that would race the capture.
+ *     tags: [Account]
+ *     responses:
+ *       200:
+ *         description: Whether the payment was abandoned
+ *       404:
+ *         description: No such payment belonging to this member
+ */
+router.post(
+  '/:orgCode/checkout/:paymentId/abandon',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationId, organisationUserId } = req.account!;
+      const result = await checkoutService.abandonCheckout(
+        organisationId,
+        organisationUserId,
+        req.params.paymentId
+      );
+      return res.json(result);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: { code: 'NOT_FOUND', message: error.message } });
+      }
+      logger.error('Error in POST /account/:orgCode/checkout/:paymentId/abandon:', error);
+      return res.status(500).json({ error: 'Failed to release the payment' });
     }
   }
 );
@@ -1232,7 +1343,7 @@ router.get(
   requireAccountCapability('calendar-bookings'),
   async (req: AccountRequest, res: Response) => {
     try {
-      const { organisationId } = req.account!;
+      const { organisationId, organisationUserId } = req.account!;
       const { from, to } = req.query as { from?: string; to?: string };
 
       if (!isDateKey(from) || !isDateKey(to)) {
@@ -1255,7 +1366,11 @@ router.get(
           organisationId,
           req.params.calendarId,
           from!,
-          to!
+          to!,
+          new Date(),
+          // So the member's own basket holds read as theirs rather than as a
+          // stranger's, which would look like having lost the slot they chose.
+          organisationUserId
         )
       );
     } catch (error) {
@@ -1433,6 +1548,122 @@ router.post(
         return res.status(400).json({ error: error.message });
       }
       logger.error('Error in POST /account/:orgCode/form-submissions:', error);
+      return res.status(500).json({ error: 'Failed to save your answers' });
+    }
+  }
+);
+
+/**
+ * The answers behind one basket line, and changes to them.
+ *
+ * **Only while the item is still in an open basket.** Once it has been checked
+ * out the club has been told what was said, and a member quietly rewriting it
+ * afterwards would change a record somebody has already acted on. Before that
+ * point it is still a draft, and a mistyped pony height should not mean
+ * emptying the basket and starting again.
+ *
+ * Ownership is checked against the resolved account, never the body: the
+ * submission has to belong to this member, in this organisation, or it is a
+ * 404 rather than a 403 — a member has no business learning that somebody
+ * else's submission exists.
+ */
+async function ownEditableSubmission(
+  req: AccountRequest
+): Promise<{ id: string; formId: string; submissionData: Record<string, unknown> } | null> {
+  const { organisationId, organisationUserId } = req.account!;
+
+  const result = await db.query(
+    `SELECT fs.id, fs.form_id, fs.submission_data
+     FROM form_submissions fs
+     JOIN cart_items ci ON ci.form_submission_id = fs.id
+     JOIN carts c ON c.id = ci.cart_id
+     WHERE fs.id = $1
+       AND fs.organisation_id = $2
+       AND fs.user_id = $3
+       AND c.user_id = $3
+       AND c.status = 'open'
+     LIMIT 1`,
+    [req.params.submissionId, organisationId, organisationUserId]
+  );
+
+  const row = result.rows[0];
+  return row
+    ? { id: row.id, formId: row.form_id, submissionData: row.submission_data ?? {} }
+    : null;
+}
+
+router.get(
+  '/:orgCode/form-submissions/:submissionId',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const submission = await ownEditableSubmission(req);
+      if (!submission) {
+        return res.status(404).json({ error: 'Those answers were not found' });
+      }
+
+      const form = await applicationFormService.getApplicationFormWithFields(
+        submission.formId
+      );
+      if (!form) {
+        return res.status(404).json({ error: 'That form is no longer available' });
+      }
+
+      return res.json({ id: submission.id, form, submissionData: submission.submissionData });
+    } catch (error) {
+      logger.error('Error in GET /account/:orgCode/form-submissions/:submissionId:', error);
+      return res.status(500).json({ error: 'Failed to load your answers' });
+    }
+  }
+);
+
+router.put(
+  '/:orgCode/form-submissions/:submissionId',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const submission = await ownEditableSubmission(req);
+      if (!submission) {
+        return res.status(404).json({ error: 'Those answers were not found' });
+      }
+
+      const { submissionData } = req.body ?? {};
+      if (!submissionData || typeof submissionData !== 'object') {
+        return res.status(400).json({ error: 'submissionData is required' });
+      }
+
+      /*
+       * Re-validated against the form as it stands, exactly as the first
+       * submission was. A member editing their answers has to clear the same
+       * bar as one making them.
+       */
+      const form = await applicationFormService.getApplicationFormWithFields(
+        submission.formId
+      );
+      if (!form) {
+        return res.status(404).json({ error: 'That form is no longer available' });
+      }
+
+      const fieldErrors = validateSubmissionData(form.fields as any, submissionData);
+      if (fieldErrors.length > 0) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_SUBMISSION',
+            message: 'Some answers need correcting',
+            fields: fieldErrors,
+          },
+        });
+      }
+
+      await formSubmissionService.updateSubmission(submission.id, { submissionData });
+      return res.status(204).send();
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error('Error in PUT /account/:orgCode/form-submissions/:submissionId:', error);
       return res.status(500).json({ error: 'Failed to save your answers' });
     }
   }

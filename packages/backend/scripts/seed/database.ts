@@ -19,7 +19,10 @@ import {
   MEMBERS,
   MEMBERSHIP_TYPES,
   MERCHANDISE,
+  REGISTRATIONS,
+  REGISTRATION_TYPES,
   SeedMember,
+  SeedRegistration,
   capabilitiesFor,
   ORGS,
   ORG_ADMINS,
@@ -55,9 +58,40 @@ export { dayOffset };
  * what the form renderer reads back — keying by the seed's own field keys would
  * produce submissions that display as empty.
  */
+/**
+ * A registration's answers, keyed the way the form renderer reads them.
+ *
+ * The dataset writes answers under the seed's own field keys (`horseName`)
+ * because that is what a human editing it can follow; `form_submissions`
+ * has to hold the field *names* (`horse_name`). Translating here keeps the
+ * dataset readable without producing submissions that display as blanks.
+ *
+ * A field the dataset does not answer is simply absent rather than empty: the
+ * optional ones — a stable name, a microchip — are optional precisely so some
+ * registrations can be missing them.
+ */
+const registrationSubmission = (
+  registration: SeedRegistration
+): Record<string, unknown> => {
+  const byKey = new Map(FIELDS.map((field) => [field.key, field.name]));
+  const answers: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(registration.answers)) {
+    const name = byKey.get(key);
+    if (!name) {
+      throw new Error(
+        `${registration.entityName} answers "${key}", which is not a field in FIELDS.`
+      );
+    }
+    answers[name] = value;
+  }
+
+  return answers;
+};
+
 const memberSubmission = (member: SeedMember): Record<string, unknown> => {
   const person = ACCOUNT_USERS.find((u) => u.email === member.email)!;
-  const county = { kildare: 'Kildare', laois: 'Laois', ward: 'Meath' }[member.org];
+  const county = { kildare: 'Kildare', laois: 'Laois', ward: 'Meath', meath: 'Meath' }[member.org];
   const junior = member.type === 'junior' || member.type === 'family';
 
   return {
@@ -229,12 +263,52 @@ export async function seedDatabase(
     orgAdminIds: Record<string, string>;
     accountUserIds: Record<string, string>;
     groups: Record<string, { orgGroupId: string }>;
-  }
+  },
+  /**
+   * Stripe connected accounts, keyed by organisation.
+   *
+   * Merged into `settings.stripeConnect`, which is the only per-club Stripe
+   * state this application keeps. Absent when the seed ran without Stripe —
+   * every club is then simply not connected, which is what an unconfigured
+   * platform looks like anyway.
+   */
+  stripeConnect: Record<string, Record<string, unknown>> = {}
 ): Promise<SeedResult> {
   const counts: Record<string, number> = {};
   const bump = (k: string, n = 1) => (counts[k] = (counts[k] ?? 0) + n);
 
   /* --- organisation type ------------------------------------------------ */
+
+  /*
+   * Every capability the seed is about to write must be a real one.
+   *
+   * The seed inserts straight into the table, so nothing would otherwise stop
+   * it writing a name the platform has never heard of. The admin API validates
+   * on *edit*, which means the failure surfaces much later and somewhere else:
+   * a super-admin changing an unrelated field is told "Invalid capabilities
+   * provided" about names they never entered.
+   *
+   * Checked here, once, against the same catalogue the API validates against.
+   */
+  const catalogue = await client.query('SELECT name FROM capabilities WHERE is_active = TRUE');
+  const known = new Set(catalogue.rows.map((row: { name: string }) => row.name));
+  const phantom = [
+    ...new Set([
+      ...ORG_TYPE.defaultCapabilities,
+      ...ORGS.flatMap((org) => capabilitiesFor(org)),
+    ]),
+  ].filter((name) => !known.has(name));
+
+  if (phantom.length > 0) {
+    throw new Error(
+      (phantom.length === 1
+        ? `The seed names a capability that does not exist: ${phantom[0]}. `
+        : `The seed names ${phantom.length} capabilities that do not exist: ${phantom.join(', ')}. `) +
+        `Add it to the capabilities table, or correct ORG_TYPE.defaultCapabilities — an ` +
+        `organisation carrying a name that is not a capability can be created and never edited again.`
+    );
+  }
+
   const typeResult = await client.query(
     `INSERT INTO organization_types
        (name, display_name, description, currency, language, default_locale,
@@ -262,6 +336,17 @@ export async function seedDatabase(
   const methodRows = await client.query(`SELECT id, name FROM payment_methods`);
   const methodId: Record<string, string> = {};
   methodRows.rows.forEach((r) => (methodId[r.name] = r.id));
+
+  /*
+   * Payment method **ids**, not names.
+   *
+   * `supported_payment_methods` is compared against `cart_items.payment_method_id`
+   * — a uuid — and the org-admin pickers match on `pm.id` too. Storing the
+   * seed's own slugs produced lists nothing could ever match, so every add to
+   * basket was refused with "that payment method is not accepted for this item".
+   */
+  const methodIdsFor = (names: readonly string[]): string[] =>
+    names.map((name) => methodId[name]).filter(Boolean);
 
   /* --- handling + application fees on the type -------------------------- */
   for (const name of ['pay-offline', 'stripe']) {
@@ -306,7 +391,14 @@ export async function seedDatabase(
         ORG_TYPE.currency,
         ORG_TYPE.defaultLocale,
         JSON.stringify(capabilitiesFor(org)),
-        JSON.stringify(org.settings),
+        // The club's own settings, plus its connected account when there is
+        // one. `settings` is a single jsonb blob that several features share,
+        // so this is a merge rather than a write.
+        JSON.stringify(
+          stripeConnect[org.key]
+            ? { ...org.settings, stripeConnect: stripeConnect[org.key] }
+            : org.settings
+        ),
       ]
     );
     orgIds[org.key] = result.rows[0].id;
@@ -503,7 +595,16 @@ export async function seedDatabase(
   }
 
   /* --- discounts -------------------------------------------------------- */
-  const discountIds: Record<string, string> = {};
+  /*
+   * Keyed by organisation *then* discount key.
+   *
+   * A flat key-to-id map let one club's discount attach to another's records:
+   * membership types are defined once and created for every club, so a lookup
+   * that ignored the organisation gave Ward's family membership Kildare's
+   * discount. Scoping the map means a key resolves to this club's own version
+   * or to nothing.
+   */
+  const discountIds: Record<string, Record<string, string>> = {};
 
   /**
    * The ids behind a list of discount keys, skipping any that were not seeded.
@@ -511,8 +612,10 @@ export async function seedDatabase(
    * Written to the entity's own `discount_ids` array, which is what the front
    * ends read to decide what to offer.
    */
-  const discountIdsFor = (keys?: string[]): string[] =>
-    (keys ?? []).map((key) => discountIds[key]).filter(Boolean) as string[];
+  const discountIdsFor = (orgKey: SeedOrg['key'], keys?: string[]): string[] =>
+    (keys ?? [])
+      .map((key) => discountIds[orgKey]?.[key])
+      .filter(Boolean) as string[];
 
   /**
    * The same attachment recorded the other way round, in
@@ -530,12 +633,13 @@ export async function seedDatabase(
     orgKey: SeedOrg['key']
   ): Promise<void> => {
     for (const key of keys ?? []) {
-      if (!discountIds[key]) continue;
+      const discountId = discountIds[orgKey]?.[key];
+      if (!discountId) continue;
       await c.query(
         `INSERT INTO discount_applications (discount_id, target_type, target_id, applied_by)
          VALUES ($1,$2,$3,$4)
          ON CONFLICT (discount_id, target_type, target_id) DO NOTHING`,
-        [discountIds[key], targetType, targetId, orgAdminRowIds[orgKey]]
+        [discountId, targetType, targetId, orgAdminRowIds[orgKey]]
       );
       bump('discount_applications');
     }
@@ -547,10 +651,11 @@ export async function seedDatabase(
          (organisation_id, module_type, name, description, code, discount_type, discount_value,
           application_scope, quantity_rules, eligibility_criteria, valid_from, valid_until,
           usage_limits, combinable, priority, status, created_by)
-       VALUES ($1,'events',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id`,
       [
         orgIds[discount.org],
+        discount.module,
         discount.name,
         discount.description,
         discount.code ?? null,
@@ -568,14 +673,15 @@ export async function seedDatabase(
         orgAdminRowIds[discount.org],
       ]
     );
-    discountIds[discount.key] = r.rows[0].id;
+    discountIds[discount.org] ??= {};
+    discountIds[discount.org][discount.key] = r.rows[0].id;
     bump('discounts');
   }
 
   /* --- events and activities -------------------------------------------- */
   for (const event of EVENTS) {
     const orgId = orgIds[event.org];
-    const eventDiscountIds = (event.discounts ?? []).map((k) => discountIds[k]).filter(Boolean);
+    const eventDiscountIds = discountIdsFor(event.org, event.discounts);
 
     const r = await client.query(
       `INSERT INTO events
@@ -607,12 +713,45 @@ export async function seedDatabase(
     const eventId = r.rows[0].id as string;
     bump('events');
 
+    /*
+     * Electronic tickets, where the club has asked for them.
+     *
+     * Gated on the capability rather than on the dataset alone: an event
+     * configured for ticketing under a club without `event-ticketing` would
+     * write a row that no screen can reach, and silently.
+     */
+    if (event.ticketing) {
+      if (!capabilitiesFor(ORGS.find((o) => o.key === event.org)!).includes('event-ticketing')) {
+        throw new Error(
+          `"${event.name}" is configured for tickets but ${event.org} has no event-ticketing ` +
+            `capability. Add it to that organisation, or drop the ticketing block.`
+        );
+      }
+
+      await client.query(
+        `INSERT INTO event_ticketing_config
+           (event_id, generate_electronic_tickets, ticket_header_text, ticket_instructions,
+            ticket_footer_text, ticket_validity_period, include_event_logo, ticket_background_color)
+         VALUES ($1,TRUE,$2,$3,$4,$5,$6,$7)`,
+        [
+          eventId,
+          event.ticketing.headerText,
+          event.ticketing.instructions,
+          event.ticketing.footerText ?? '',
+          event.ticketing.validityPeriod ?? null,
+          event.ticketing.includeLogo ?? false,
+          event.ticketing.backgroundColour ?? null,
+        ]
+      );
+      bump('event_ticketing_config');
+    }
+
     for (const discountKey of event.discounts ?? []) {
-      if (!discountIds[discountKey]) continue;
+      if (!discountIds[event.org]?.[discountKey]) continue;
       await client.query(
         `INSERT INTO discount_applications (discount_id, target_type, target_id, applied_by)
          VALUES ($1,'event',$2,$3)`,
-        [discountIds[discountKey], eventId, orgAdminRowIds[event.org]]
+        [discountIds[event.org][discountKey], eventId, orgAdminRowIds[event.org]]
       );
       bump('discount_applications');
     }
@@ -634,9 +773,7 @@ export async function seedDatabase(
       const supported = wanted.filter((m) => m === 'pay-offline' || clubHasCard);
       const effective = supported.length > 0 ? supported : ['pay-offline'];
 
-      const activityDiscountIds = (activity.discounts ?? [])
-        .map((k) => discountIds[k])
-        .filter(Boolean);
+      const activityDiscountIds = discountIdsFor(event.org, activity.discounts);
 
       const ar = await client.query(
         `INSERT INTO event_activities
@@ -664,17 +801,17 @@ export async function seedDatabase(
           effective.length === 1 ? effective[0] : 'any',
           activity.handlingFeeIncluded ?? false,
           JSON.stringify(activityDiscountIds),
-          JSON.stringify(effective),
+          JSON.stringify(methodIdsFor(effective)),
         ]
       );
       bump('event_activities');
 
       for (const discountKey of activity.discounts ?? []) {
-        if (!discountIds[discountKey]) continue;
+        if (!discountIds[event.org]?.[discountKey]) continue;
         await client.query(
           `INSERT INTO discount_applications (discount_id, target_type, target_id, applied_by)
            VALUES ($1,'event_activity',$2,$3)`,
-          [discountIds[discountKey], ar.rows[0].id, orgAdminRowIds[event.org]]
+          [discountIds[event.org][discountKey], ar.rows[0].id, orgAdminRowIds[event.org]]
         );
         bump('discount_applications');
       }
@@ -717,7 +854,7 @@ export async function seedDatabase(
           type.rolling?.months ?? null,
           type.automaticallyApprove,
           JSON.stringify(type.memberLabels),
-          JSON.stringify(methods),
+          JSON.stringify(methodIdsFor(methods)),
           type.useTermsAndConditions ?? false,
           type.useTermsAndConditions
             ? 'Membership runs to the end of the season and is not transferable. Hats and body protectors to current standards are required at all mounted activities.'
@@ -728,7 +865,7 @@ export async function seedDatabase(
           type.people ? JSON.stringify(type.people.titles) : null,
           type.handlingFeeIncluded ?? false,
           type.fee,
-          JSON.stringify(discountIdsFor(type.discounts)),
+          JSON.stringify(discountIdsFor(org.key, type.discounts)),
         ]
       );
 
@@ -854,6 +991,129 @@ export async function seedDatabase(
     bump('membership_number_sequences');
   }
 
+  /* --- registrations ------------------------------------------------------ */
+
+  /*
+   * Registering a horse rather than a person.
+   *
+   * The shape mirrors memberships — a form submission, then the record that
+   * points at it — because that is genuinely what the module does. What differs
+   * is the subject: `entity_name` is the horse, `owner_name` is whoever the
+   * passport says owns it, and `user_id` is the member whose login it sits
+   * under. Those three are allowed to be three different answers, which is why
+   * a registration is not just a membership with another label.
+   */
+  const registrationTypeIds: Record<string, string> = {};
+
+  for (const type of REGISTRATION_TYPES) {
+    const org = ORGS.find((o) => o.key === type.org)!;
+
+    if (!capabilitiesFor(org).includes('registrations')) {
+      throw new Error(
+        `Registration type "${type.name}" is under ${type.org}, which has no registrations ` +
+          `capability. Add it to that organisation, or move the type.`
+      );
+    }
+
+    const result = await client.query(
+      `INSERT INTO registration_types
+         (organisation_id, name, description, entity_name, registration_form_id,
+          registration_status, is_rolling_registration, valid_until, number_of_months,
+          automatically_approve, registration_labels, supported_payment_methods,
+          use_terms_and_conditions, terms_and_conditions, handling_fee_included,
+          discount_ids, fee)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+       RETURNING id`,
+      [
+        orgIds[type.org],
+        type.name,
+        type.description,
+        type.entityName,
+        formIds[type.org][type.form],
+        type.status,
+        type.rolling ?? false,
+        // A rolling type counts months from the day it is taken out, so it has
+        // no fixed end; an annual one lapses on a date shared by every horse.
+        type.rolling ? null : dateOnly(type.validUntilDays ?? 365),
+        type.rolling ? type.numberOfMonths ?? 12 : null,
+        type.automaticallyApprove ?? false,
+        JSON.stringify(type.labels ?? []),
+        JSON.stringify(methodIdsFor(org.paymentMethods)),
+        type.useTermsAndConditions ?? false,
+        type.termsAndConditions ?? '',
+        type.handlingFeeIncluded ?? false,
+        JSON.stringify(discountIdsFor(type.org, type.discounts ?? [])),
+        /*
+         * Raw, like every other fee the seed writes. The dataset holds major
+         * units throughout — an activity at `fee: 25` is €25 — and dividing
+         * here would have made registrations the one exception, which is
+         * exactly the kind of inconsistency that produces a €3,500 horse.
+         */
+        type.fee,
+      ]
+    );
+    registrationTypeIds[type.key] = result.rows[0].id;
+    bump('registration_types');
+  }
+
+  let nextRegistrationNumber = 1;
+
+  for (const registration of REGISTRATIONS) {
+    const type = REGISTRATION_TYPES.find((t) => t.key === registration.type)!;
+    const orgUserId = accountUserRowIds[type.org]?.[registration.owner];
+
+    if (!orgUserId) {
+      throw new Error(
+        `${registration.owner} registered ${registration.entityName} with ${type.org}, but is ` +
+          `not an account user there. Add the organisation to their ACCOUNT_USERS entry.`
+      );
+    }
+
+    const submission = await client.query(
+      `INSERT INTO form_submissions
+         (form_id, organisation_id, user_id, submission_type, context_id, submission_data, status)
+       VALUES ($1,$2,$3,'registration',$4,$5,$6)
+       RETURNING id`,
+      [
+        formIds[type.org][type.form],
+        orgIds[type.org],
+        orgUserId,
+        registrationTypeIds[type.key],
+        // Keyed by each field's `name`, not the seed's own key — the form
+        // renderer reads back by name, and a submission keyed the other way
+        // displays as a set of blanks.
+        JSON.stringify(registrationSubmission(registration)),
+        registration.status === 'pending' ? 'pending' : 'approved',
+      ]
+    );
+    bump('form_submissions');
+
+    await client.query(
+      `INSERT INTO registrations
+         (organisation_id, registration_type_id, user_id, registration_number, entity_name,
+          owner_name, form_submission_id, date_last_renewed, status, valid_until, labels,
+          processed, payment_status, payment_method)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+      [
+        orgIds[type.org],
+        registrationTypeIds[type.key],
+        orgUserId,
+        `MH-${String(nextRegistrationNumber++).padStart(4, '0')}`,
+        registration.entityName,
+        registration.ownerName,
+        submission.rows[0].id,
+        dateOnly(-registration.renewedDaysAgo),
+        registration.status,
+        dateOnly(registration.validUntilDays),
+        JSON.stringify(registration.labels ?? []),
+        registration.processed ?? registration.status !== 'pending',
+        registration.paymentStatus,
+        registration.payment ?? null,
+      ]
+    );
+    bump('registrations');
+  }
+
   /* --- merchandise -------------------------------------------------------- */
   for (const item of MERCHANDISE) {
     /*
@@ -902,14 +1162,14 @@ export async function seedDatabase(
         item.increments ?? null,
         Boolean(item.form),
         item.form ? formIds[item.org][item.form] : null,
-        JSON.stringify(effective),
+        JSON.stringify(methodIdsFor(effective)),
         item.useTermsAndConditions ?? false,
         item.useTermsAndConditions
           ? 'Club kit is made to order and cannot be returned once printed. Sizes are as manufactured; please check the size guide before ordering.'
           : null,
         item.confirmationMessage ?? null,
         item.handlingFeeIncluded ?? false,
-        JSON.stringify(discountIdsFor(item.discounts)),
+        JSON.stringify(discountIdsFor(item.org, item.discounts)),
       ]
     );
 
@@ -989,7 +1249,7 @@ export async function seedDatabase(
         calendar.useTermsAndConditions
           ? 'Facilities are booked at your own risk. Hats and body protectors to current standards are required, and the arena must be left as found.'
           : null,
-        JSON.stringify(ORGS.find((o) => o.key === calendar.org)!.paymentMethods),
+        JSON.stringify(methodIdsFor(ORGS.find((o) => o.key === calendar.org)!.paymentMethods)),
         calendar.allowCancellations ?? false,
         // Only meaningful when cancellations are allowed at all.
         calendar.allowCancellations ? calendar.cancelDaysInAdvance ?? null : null,
@@ -997,7 +1257,7 @@ export async function seedDatabase(
         calendar.sendReminders ?? false,
         calendar.sendReminders ? calendar.reminderHoursBefore ?? 24 : null,
         calendar.handlingFeeIncluded ?? false,
-        JSON.stringify(discountIdsFor(calendar.discounts)),
+        JSON.stringify(discountIdsFor(calendar.org, calendar.discounts)),
         calendar.icon ?? null,
       ]
     );

@@ -120,6 +120,8 @@
     "payments": "Paiements",
     "profile": "Profil et paramètres",
     "cart": "Panier",
+    "cartCount": "1 article dans votre panier",
+    "cartCount_other": "{{count}} articles dans votre panier",
     "menu": "Menu",
     "mine": "Mes activités",
     "tickets": "Mes billets",
@@ -143,7 +145,6 @@
     "membershipNumber": "N° de membre {{number}}",
     "membershipOneOf": "1 sur {{count}} adhésion",
     "membershipOneOf_other": "1 sur {{count}} adhésions",
-    "viewMemberships": "Voir les adhésions",
     "cart": "Votre panier",
     "cartSummary": "{{count}} articles · {{total}}",
     "cartHandling": "dont {{fee}} de frais",
@@ -151,6 +152,9 @@
     "recentPayments": "Paiements récents",
     "allPayments": "Tous les paiements",
     "whatsOn": "À l’affiche",
+    "upcomingEvents": "Événements à venir",
+    "viewAll": "Tout voir",
+    "registrations": "Inscriptions",
     "shop": "Boutique",
     "free": "Gratuit",
     "nothingYet": "Il n’y a encore rien ici. Dès que le club proposera quelque chose, cela apparaîtra ici.",
@@ -176,20 +180,13 @@
   },
   "entries": {
     "title": "Mes inscriptions et réservations",
-    "tabEntries": "Inscriptions",
-    "tabBookings": "Réservations",
     "empty": "Vous n'avez encore aucune inscription.",
-    "emptyBookings": "Vous n'avez encore aucune réservation.",
     "emptyHint": "Les inscriptions que vous effectuerez apparaîtront ici.",
     "loadError": "Nous n'avons pas pu charger vos inscriptions.",
-    "colEvent": "Événement",
-    "colActivity": "Activité",
+    "colItem": "\u00c9l\u00e9ment",
     "colDate": "Date",
     "colFee": "Frais",
     "colStatus": "Statut",
-    "colCalendar": "Calendrier",
-    "colSlot": "Créneau",
-    "colDuration": "Durée",
     "colPlaces": "Places",
     "minutes": "{{count}} min",
     "view": "Voir",
@@ -211,7 +208,7 @@
     "entrant": "Participant",
     "reference": "Inscription effectuée",
     "yourAnswers": "Vos réponses",
-    "answersUnavailable": "Vos réponses ne peuvent pas être consultées ici.",
+    "noAnswers": "Cette inscription ne comportait aucun formulaire \u00e0 remplir.",
     "noCancel": "Les inscriptions ne peuvent pas être annulées ici. Veuillez contacter le club si vous devez vous retirer.",
     "notFound": "Nous n'avons pas trouvé cette inscription.",
     "loadError": "Nous n'avons pas pu charger votre inscription."
@@ -226,7 +223,9 @@
     "expiresIn": "Expire dans {{count}} jours",
     "expired": "Expirée il y a {{count}} jours",
     "renew": "Renouveler",
-    "renewalNotOpen": "Les renouvellements ne sont pas encore ouverts."
+    "renewalNotOpen": "Les renouvellements ne sont pas encore ouverts.",
+    "yourDetails": "Vos informations (1 réponse)",
+    "yourDetails_other": "Vos informations ({{count}} réponses)"
   },
   "browse": {
     "loadError": "Nous n'avons pas pu charger les offres disponibles.",
@@ -247,7 +246,9 @@
       "activity-full": "Complet",
       "already-entered": "Déjà inscrit",
       "not-open-for-applications": "Non ouverte",
-      "already-a-member": "Déjà adhérent"
+      "already-a-member": "Déjà adhérent",
+      "held-by-others": "Réservé par quelqu’un d’autre",
+      "in-your-basket": "Dans votre panier"
     },
     "entries": {
       "notOpen": "Inscriptions le {{date}}",
@@ -333,7 +334,8 @@
     "reason": {
       "full": "Complet",
       "in-use": "Occupé",
-      "held": "En cours de réservation"
+      "held": "Réservé par quelqu’un d’autre",
+      "in-your-basket": "Dans votre panier"
     }
   },
   "registrations": {
@@ -385,21 +387,32 @@
       "refunded": "Remboursé"
     }
   },
+  "holds": {
+    "remaining": "{{time}} restant",
+    "expired": "Réservation expirée"
+  },
   "cart": {
     "title": "Votre panier",
     "empty": "Votre panier est vide.",
     "browse": "Trouver une inscription ou une adhésion",
     "loadError": "Nous n'avons pas pu charger votre panier.",
     "remove": "Retirer {{item}}",
+    "paymentMethodFor": "Moyen de paiement pour {{item}}",
     "holdExpired": "Certains éléments ne sont plus réservés et peuvent ne plus être disponibles. Veuillez vérifier votre panier.",
-    "offlineSubtotal": "Payé directement au club",
+    "offlineSubtotal": "Payé directement au club (Offline)",
     "cardSubtotal": "Payé par carte",
     "handlingFee": "Frais de traitement",
     "handlingFeeTax": "Taxe sur les frais de traitement",
     "orderTotal": "Total de la commande",
     "payingNow": "Payé maintenant par carte",
     "checkout": "Passer au paiement",
-    "offlineNote": "Une partie de cette commande est payée directement au club. Il l'enregistrera à réception."
+    "offlineNote": "Une partie de cette commande est payée directement au club. Il l'enregistrera à réception.",
+    "offlineNoteAll": "Cette commande est réglée directement au club. Il l’enregistrera à réception.",
+    "yourAnswers": "Cliquez pour voir la valeur de votre formulaire d\u2019inscription",
+    "yourAnswers_other": "Cliquez pour voir les {{count}} valeurs de votre formulaire d\u2019inscription",
+    "editAnswers": "Modifier les réponses",
+    "editAnswersTitle": "Modifier vos réponses",
+    "changePaymentMethod": "Changer le moyen de paiement"
   },
   "checkout": {
     "title": "Paiement",
@@ -408,6 +421,10 @@
     "pay": "Payer",
     "processing": "Traitement…",
     "confirming": "Confirmation de votre paiement…",
+    "cardUnavailable": "Le paiement par carte n’est pas disponible pour ce club pour le moment. Veuillez contacter le club pour régler autrement.",
+    "holdNotice": "Vos places sont réservées pendant",
+    "holdLapsed": "Votre panier n’est plus réservé. Veuillez revenir en arrière et ajouter à nouveau vos articles.",
+    "backToBasket": "Retour au panier",
     "paymentFailed": "Votre paiement n'a pas pu aboutir.",
     "startFailed": "Nous n'avons pas pu démarrer votre paiement.",
     "backToBasket": "Retour au panier"

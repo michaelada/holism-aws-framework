@@ -1,4 +1,5 @@
 import { db } from '../database/pool';
+import { formSummariesFor } from '../utils/form-summary';
 import { logger } from '../config/logger';
 import { NotFoundError, ValidationError } from '../middleware/errors';
 import { calendarService } from './calendar.service';
@@ -98,6 +99,11 @@ export interface AccountEntryDetail extends AccountEntry {
   lastName: string;
   email: string;
   formSubmissionId: string | null;
+  /**
+   * What the member answered on the entry form, labelled and in the club's own
+   * field order. Empty when the activity asked nothing.
+   */
+  formSummary: Array<{ label: string; value: string }>;
   eventDescription: string | null;
   activityDescription: string | null;
   confirmationMessage: string | null;
@@ -125,6 +131,15 @@ export interface AccountBooking {
   cancellationNoticeDays: number;
   /** Whether the club's policy means the member should expect their money back. */
   refundExpected: boolean;
+  /**
+   * The calendar's own icon key and colour, as the club chose them.
+   *
+   * Carried so the activity screen can mark a booking with the same symbol the
+   * member picked it from — a court, an arena, a clubhouse — rather than one
+   * generic booking glyph for all of them.
+   */
+  displayIcon: string | null;
+  displayColour: string | null;
   status: ActivityStatus;
 }
 
@@ -216,6 +231,11 @@ export interface AccountMembershipRecord {
   dateLastRenewed: string;
   paymentStatus: string | null;
   daysRemaining: number | null;
+  /**
+   * What the member answered on the application form, labelled and in the
+   * club's own field order. Empty when the club asked nothing.
+   */
+  formSummary: Array<{ label: string; value: string }>;
   /** In the renewal window *and* something exists to renew into. */
   canRenew: boolean;
   /**
@@ -297,12 +317,26 @@ export class AccountActivityService {
         throw new NotFoundError('Entry not found');
       }
 
+      /*
+       * The answers the member gave when they entered.
+       *
+       * This screen is the only place they can see them: the form itself is
+       * gone once the entry exists, and the submission endpoint only serves
+       * lines still sitting in an open basket. Without this the page had
+       * nothing to show and said so — "your answers are not available to view
+       * here" — about answers the member had just typed.
+       */
+      const answers = await formSummariesFor([row.form_submission_id]);
+
       return {
         ...this.toEntry(row, today),
         firstName: row.first_name,
         lastName: row.last_name,
         email: row.email,
         formSubmissionId: row.form_submission_id ?? null,
+        // Empty when the activity had no form, which is a real case: the page
+        // then shows nothing rather than an empty heading.
+        formSummary: answers.get(row.form_submission_id) ?? [],
         eventDescription: row.event_description ?? null,
         activityDescription: row.activity_description ?? null,
         // Suppressed unless the club turned it on, so an unfinished draft
@@ -332,7 +366,11 @@ export class AccountActivityService {
            b.total_price, b.booking_status, b.payment_status, b.cancelled_at,
            b.refund_processed,
            c.name AS calendar_name, c.allow_cancellations,
-           c.cancel_days_in_advance, c.refund_payment_automatically
+           c.cancel_days_in_advance, c.refund_payment_automatically,
+           -- The club's own mark for this calendar. Entries and bookings share
+           -- one table on the activity screen, and the icon is what tells a
+           -- lesson from a show entry at a glance.
+           c.display_icon, c.display_colour
          FROM bookings b
          JOIN calendars c ON c.id = b.calendar_id
          WHERE b.user_id = $1 AND c.organisation_id = $2
@@ -379,6 +417,8 @@ export class AccountActivityService {
         cancellationRefusal: cancellation.reason,
         cancellationNoticeDays: cancellation.noticeDays,
         refundExpected: cancellation.refundExpected,
+        displayIcon: row.display_icon ?? null,
+        displayColour: row.display_colour ?? null,
         status: deriveActivityStatus(
           {
             recordStatus: row.booking_status,
@@ -574,6 +614,17 @@ export class AccountActivityService {
          FROM payments p
          LEFT JOIN payment_transactions pt ON pt.payment_id = p.id
          WHERE p.user_id = $1 AND p.organisation_id = $2
+           -- Attempts are not payments. A pending checkout is one a member
+           -- opened and has not finished; an abandoned one had its basket
+           -- change underneath it. Neither is something the member did, and
+           -- listing them puts orders in the history that were never placed,
+           -- itemised with lines they may since have removed.
+           --
+           -- Everything representing a real obligation or outcome stays: paid,
+           -- awaiting_offline, refunded, and failed -- a decline is worth
+           -- seeing, because the member has to act on it.
+           -- See docs/PAYMENT_HISTORY_SHOWED_ATTEMPTS.md.
+           AND p.payment_status NOT IN ('pending', 'abandoned')
          GROUP BY p.id
          ORDER BY COALESCE(p.payment_date, p.created_at) DESC`,
         [organisationUserId, organisationId]
@@ -700,7 +751,7 @@ export class AccountActivityService {
         `SELECT
            m.id, m.membership_number, m.membership_type_id, m.status,
            m.valid_until, m.date_last_renewed, m.payment_status,
-           m.first_name, m.last_name,
+           m.first_name, m.last_name, m.form_submission_id,
            mt.name AS membership_type_name
          FROM members m
          JOIN membership_types mt ON mt.id = m.membership_type_id
@@ -712,6 +763,16 @@ export class AccountActivityService {
       if (result.rows.length === 0) return [];
 
       const renewable = await this.openMembershipTypeIds(organisationId, today);
+      /*
+       * What the member filled in when they applied.
+       *
+       * One query for the whole list. It is the only record they have of what
+       * the club was told — the form itself is gone once the application is
+       * approved — so it belongs on this screen rather than nowhere.
+       */
+      const answers = await formSummariesFor(
+        result.rows.map((row) => row.form_submission_id)
+      );
 
       return result.rows.map((row) => {
         const due = isDueForRenewal(
@@ -736,6 +797,9 @@ export class AccountActivityService {
           daysRemaining: daysUntil(row.valid_until, today),
           canRenew: due && somethingToRenewInto,
           renewalNotOpen: due && !somethingToRenewInto,
+          // Empty when the club asked nothing, or the application predates the
+          // form. The screen then shows no expander rather than an empty one.
+          formSummary: answers.get(row.form_submission_id) ?? [],
         };
       });
     } catch (error) {

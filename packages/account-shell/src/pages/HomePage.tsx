@@ -77,10 +77,9 @@ export const HomePage: React.FC = () => {
   const activeMemberships = dashboard?.memberships ?? [];
   const bookingWhatsOn = dashboard?.whatsOn.filter((item) => item.kind === 'calendar') ?? [];
   const shopWhatsOn = dashboard?.whatsOn.filter((item) => item.kind === 'merchandise') ?? [];
-  const otherWhatsOn =
-    dashboard?.whatsOn.filter(
-      (item) => item.kind !== 'calendar' && item.kind !== 'merchandise'
-    ) ?? [];
+  const eventWhatsOn = dashboard?.whatsOn.filter((item) => item.kind === 'event') ?? [];
+  const registrationWhatsOn =
+    dashboard?.whatsOn.filter((item) => item.kind === 'registration') ?? [];
 
   /** Where each teaser leads — the screen that can actually do the thing. */
   const whatsOnTarget = (item: DashboardWhatsOn): string => {
@@ -278,18 +277,40 @@ export const HomePage: React.FC = () => {
               </Box>
             )}
 
-            {otherWhatsOn.length > 0 && (
+            {eventWhatsOn.length > 0 && (
               <Box>
-                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
-                  {t('home.whatsOn')}
-                </Typography>
+                {/*
+                  "View all" beside the heading, not under the cards.
+
+                  Four teasers look like the whole programme, and a member who
+                  reads them as such never opens the events page. Putting the
+                  way out level with the title says there is more before they
+                  have finished scanning what is here.
+                */}
+                <Stack
+                  direction="row"
+                  alignItems="baseline"
+                  justifyContent="space-between"
+                  sx={{ mb: 1 }}
+                >
+                  <Typography variant="h2" sx={{ fontSize: '1.125rem' }}>
+                    {t('home.upcomingEvents')}
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => navigate(`/${orgCode}/browse/events`)}
+                  >
+                    {t('home.viewAll')}
+                  </Button>
+                </Stack>
                 <Grid container spacing={2}>
-                  {otherWhatsOn.map((item) => (
+                  {eventWhatsOn.map((item) => (
                     <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
                       <WhatsOnCard
                         item={item}
                         currency={fallbackCurrency}
                         locale={locale}
+                        showKind={false}
                         onOpen={() => navigate(whatsOnTarget(item))}
                       />
                     </Grid>
@@ -305,6 +326,27 @@ export const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {bookingWhatsOn.map((item) => (
+                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                      <WhatsOnCard
+                        item={item}
+                        currency={fallbackCurrency}
+                        locale={locale}
+                        showKind={false}
+                        onOpen={() => navigate(whatsOnTarget(item))}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {registrationWhatsOn.length > 0 && (
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
+                  {t('home.registrations')}
+                </Typography>
+                <Grid container spacing={2}>
+                  {registrationWhatsOn.map((item) => (
                     <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
                       <WhatsOnCard
                         item={item}

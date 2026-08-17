@@ -114,6 +114,15 @@ const ARTWORK: Record<string, (background: string) => string> = {
   yearbook: (bg) => svg(bg, book('#3d5a3d', '#f4f6f2')),
   'grooming-kit': (bg) => svg(bg, groomingKit('#5a4a7d', '#f0ecf7')),
   'christmas-jumper': (bg) => svg(bg, christmasJumper('#8b1a1a', '#f6f2ea')),
+  /*
+   * Meath's shop. The same drawings in the club's own colours rather than new
+   * shapes — a second club selling a cap should look like a different club's
+   * cap, which is exactly what the colour change gives. The palettes must stay
+   * distinct from the ones above, or `draws each product differently` fails.
+   */
+  'mhpc-softshell': (bg) => svg(bg, hoodie('#123c2b', '#dfe9e3')),
+  'mhpc-show-cap': (bg) => svg(bg, cap('#5c1a2b', '#f4e9ec')),
+  'mhpc-numnah': (bg) => svg(bg, saddlePad('#e9e2f4', '#3b2d5c')),
 };
 
 /** A pale wash of the product's colour, so the drawing has ground to sit on. */

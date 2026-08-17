@@ -6,6 +6,7 @@ import {
   UpdateOrganizationTypeDto
 } from '../types/organization.types';
 import { capabilityService } from './capability.service';
+import { ValidationError } from '../middleware/errors';
 
 export class OrganizationTypeService {
   // Supported locales for validation
@@ -149,9 +150,11 @@ export class OrganizationTypeService {
       
       // Validate capabilities
       if (data.defaultCapabilities.length > 0) {
-        const valid = await capabilityService.validateCapabilities(data.defaultCapabilities);
-        if (!valid) {
-          throw new Error('Invalid capabilities provided');
+        const unknown = await capabilityService.unknownCapabilities(data.defaultCapabilities);
+        if (unknown.length > 0) {
+          throw new ValidationError(
+            `Unknown ${unknown.length === 1 ? 'capability' : 'capabilities'}: ${unknown.join(', ')}`
+          );
         }
       }
 
@@ -244,9 +247,13 @@ export class OrganizationTypeService {
 
         // Validate capabilities if provided
         if (data.defaultCapabilities && data.defaultCapabilities.length > 0) {
-          const valid = await capabilityService.validateCapabilities(data.defaultCapabilities);
-          if (!valid) {
-            throw new Error('Invalid capabilities provided');
+          const unknown = await capabilityService.unknownCapabilities(data.defaultCapabilities);
+          if (unknown.length > 0) {
+            // Named, because the administrator cannot see the catalogue and may
+            // not have touched the capabilities at all.
+            throw new ValidationError(
+              `Unknown ${unknown.length === 1 ? 'capability' : 'capabilities'}: ${unknown.join(', ')}`
+            );
           }
         }
 

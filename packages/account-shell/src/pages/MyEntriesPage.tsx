@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -14,14 +14,12 @@ import {
   DialogTitle,
   Paper,
   Stack,
-  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
   Typography,
 } from '@mui/material';
 import {
@@ -31,10 +29,35 @@ import {
 } from '@aws-web-framework/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { AccountBooking, AccountEntry } from '../types/account';
+import { AccountBooking, AccountEntry, ActivityStatus } from '../types/account';
 import ActivityStatusChip from '../components/ActivityStatusChip';
+import CartItemIcon from '../components/CartItemIcon';
 
-type TabKey = 'entries' | 'bookings';
+/**
+ * One line on the activity screen, whichever kind it is.
+ *
+ * The original record is kept alongside the flattened fields because a booking
+ * still needs its cancellation policy and an entry still needs its id to
+ * navigate to — flattening everything either kind might want would be most of
+ * both types again.
+ */
+interface ActivityRow {
+  kind: 'entry' | 'booking';
+  /** Prefixed by kind: an entry and a booking could share an id. */
+  id: string;
+  /** A calendar's icon key; bookings only. */
+  icon: string | null;
+  colour: string | null;
+  title: string;
+  detail: string;
+  /** Epoch milliseconds, for ordering. */
+  on: number;
+  when: string;
+  fee: number | null;
+  status: ActivityStatus;
+  entry: AccountEntry | null;
+  booking: AccountBooking | null;
+}
 
 /**
  * C1 — My Entries & Bookings. Route `/:orgCode/entries`.
@@ -50,7 +73,6 @@ type TabKey = 'entries' | 'bookings';
 export const MyEntriesPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { orgCode, me, hasCapability } = useAccountOrganisation();
 
   const { execute: executeEntries } = useAccountApi<AccountEntry[]>();
@@ -69,20 +91,6 @@ export const MyEntriesPage: React.FC = () => {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  /**
-   * The tab lives in the URL so a member can link to, or reload onto, the one
-   * they were looking at. It falls back to whichever tab the club actually has.
-   */
-  const requested = searchParams.get('tab') as TabKey | null;
-  const tab: TabKey =
-    requested === 'bookings' && showBookings
-      ? 'bookings'
-      : requested === 'entries' && showEntries
-        ? 'entries'
-        : showEntries
-          ? 'entries'
-          : 'bookings';
 
   const currency = me?.organisation.currency;
   const locale = i18n.language;
@@ -119,12 +127,66 @@ export const MyEntriesPage: React.FC = () => {
     void load();
   }, [load]);
 
-  const bothTabs = showEntries && showBookings;
+  /**
+   * Entries and bookings, in one list.
+   *
+   * They were two tables behind two tabs, which made the member do the merging:
+   * a Saturday with a lesson at ten and a show entry at two was two screens,
+   * and neither said what came first. One table answers "what have I got on"
+   * in the order it will happen.
+   *
+   * The kinds keep their own detail — an entry names its activity, a booking
+   * names its time and length — and are told apart by the mark on the left,
+   * which for a booking is the club's own icon for that calendar.
+   */
+  const rows = useMemo<ActivityRow[]>(() => {
+    const merged: ActivityRow[] = [
+      ...entries.map((entry) => ({
+        kind: 'entry' as const,
+        id: `entry-${entry.id}`,
+        icon: null,
+        colour: null,
+        title: entry.eventName,
+        detail: entry.activityName,
+        /** Sorted on; an entry with no date sorts as far future rather than 1970. */
+        on: entry.startDate ? Date.parse(entry.startDate) : Number.MAX_SAFE_INTEGER,
+        when: formatDateRange(entry.startDate, entry.endDate, locale),
+        fee: entry.fee,
+        status: entry.status,
+        entry,
+        booking: null,
+      })),
+      ...bookings.map((booking) => ({
+        kind: 'booking' as const,
+        id: `booking-${booking.id}`,
+        icon: booking.displayIcon,
+        colour: booking.displayColour,
+        title: booking.calendarName,
+        detail: `${booking.startTime}–${booking.endTime} · ${t('entries.minutes', {
+          count: booking.duration,
+        })}`,
+        on: Date.parse(booking.bookingDate),
+        when: formatDisplayDate(booking.bookingDate, locale),
+        fee: booking.totalPrice,
+        status: booking.status,
+        entry: null,
+        booking,
+      })),
+    ];
 
-  const rows = useMemo(
-    () => (tab === 'entries' ? entries : bookings),
-    [tab, entries, bookings]
-  );
+    /*
+     * Coming up first, soonest first; then what has been and gone, most recent
+     * first. A single sort either way puts the least useful end at the top —
+     * ascending opens on last season, descending on something months away.
+     */
+    const now = Date.now();
+    return merged.sort((a, b) => {
+      const aFuture = a.on >= now;
+      const bFuture = b.on >= now;
+      if (aFuture !== bFuture) return aFuture ? -1 : 1;
+      return aFuture ? a.on - b.on : b.on - a.on;
+    });
+  }, [entries, bookings, locale, t]);
 
   /**
    * Cancel, then re-read.
@@ -165,17 +227,6 @@ export const MyEntriesPage: React.FC = () => {
         {t('entries.title')}
       </Typography>
 
-      {bothTabs && (
-        <Tabs
-          value={tab}
-          onChange={(_, value: TabKey) => setSearchParams({ tab: value })}
-          sx={{ mb: 2 }}
-        >
-          <Tab value="entries" label={t('entries.tabEntries')} />
-          <Tab value="bookings" label={t('entries.tabBookings')} />
-        </Tabs>
-      )}
-
       {failed && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t('entries.loadError')}
@@ -189,9 +240,7 @@ export const MyEntriesPage: React.FC = () => {
       ) : rows.length === 0 ? (
         !failed && (
           <Stack spacing={1} sx={{ py: 4 }}>
-            <Typography>
-              {t(tab === 'entries' ? 'entries.empty' : 'entries.emptyBookings')}
-            </Typography>
+            <Typography>{t('entries.empty')}</Typography>
             <Typography color="text.secondary">{t('entries.emptyHint')}</Typography>
           </Stack>
         )
@@ -205,87 +254,75 @@ export const MyEntriesPage: React.FC = () => {
           <Table size="small" sx={{ minWidth: 650 }}>
             <TableHead>
               <TableRow>
-                {tab === 'entries' ? (
-                  <>
-                    <TableCell>{t('entries.colEvent')}</TableCell>
-                    <TableCell>{t('entries.colActivity')}</TableCell>
-                    <TableCell>{t('entries.colDate')}</TableCell>
-                    <TableCell align="right">{t('entries.colFee')}</TableCell>
-                    <TableCell>{t('entries.colStatus')}</TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell>{t('entries.colCalendar')}</TableCell>
-                    <TableCell>{t('entries.colSlot')}</TableCell>
-                    <TableCell>{t('entries.colDate')}</TableCell>
-                    <TableCell align="right">{t('entries.colDuration')}</TableCell>
-                    <TableCell align="right">{t('entries.colFee')}</TableCell>
-                    <TableCell>{t('entries.colStatus')}</TableCell>
-                  </>
-                )}
+                {/* The mark's column carries no heading — it labels the row, not a value. */}
+                <TableCell sx={{ width: 56 }} />
+                <TableCell>{t('entries.colItem')}</TableCell>
+                <TableCell>{t('entries.colDate')}</TableCell>
+                <TableCell align="right">{t('entries.colFee')}</TableCell>
+                <TableCell>{t('entries.colStatus')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {tab === 'entries'
-                ? entries.map((entry) => (
-                    <TableRow
-                      key={entry.id}
-                      hover
-                      sx={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/${orgCode}/entries/${entry.id}`)}
-                    >
-                      <TableCell>{entry.eventName}</TableCell>
-                      <TableCell>{entry.activityName}</TableCell>
-                      <TableCell>
-                        {formatDateRange(entry.startDate, entry.endDate, locale)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(entry.fee, currency, locale)}
-                      </TableCell>
-                      <TableCell>
-                        <ActivityStatusChip status={entry.status} />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : bookings.map((booking) => (
-                    <TableRow key={booking.id} hover>
-                      <TableCell>{booking.calendarName}</TableCell>
-                      <TableCell>
-                        {booking.startTime}–{booking.endTime}
-                      </TableCell>
-                      <TableCell>{formatDisplayDate(booking.bookingDate, locale)}</TableCell>
-                      <TableCell align="right">
-                        {t('entries.minutes', { count: booking.duration })}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(booking.totalPrice, currency, locale)}
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <ActivityStatusChip status={booking.status} />
-                          {/*
-                            The club's policy decides this, on the server. When
-                            it says no, the reason is shown rather than the row
-                            simply lacking a button — a member who cannot cancel
-                            should know whether that is the policy or the clock.
-                          */}
-                          {booking.canCancel ? (
-                            <Button size="small" onClick={() => setCancelling(booking)}>
-                              {t('entries.cancel')}
-                            </Button>
-                          ) : (
-                            booking.cancellationRefusal === 'too-late' && (
-                              <Typography variant="caption" color="text.secondary">
-                                {t('entries.cancelTooLate', {
-                                  count: booking.cancellationNoticeDays,
-                                })}
-                              </Typography>
-                            )
-                          )}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+              {rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  hover={row.kind === 'entry'}
+                  // Only an entry has a detail screen to open. A booking's own
+                  // detail is already in the row, and a cursor promising a page
+                  // that does not exist is worse than none.
+                  sx={row.kind === 'entry' ? { cursor: 'pointer' } : undefined}
+                  onClick={
+                    row.entry
+                      ? () => navigate(`/${orgCode}/entries/${row.entry!.id}`)
+                      : undefined
+                  }
+                >
+                  <TableCell>
+                    <CartItemIcon
+                      itemType={row.kind === 'entry' ? 'event_entry' : 'booking'}
+                      icon={row.icon}
+                      colour={row.colour}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{row.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {row.detail}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{row.when}</TableCell>
+                  <TableCell align="right">
+                    {formatCurrency(row.fee, currency, locale)}
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <ActivityStatusChip status={row.status} />
+                      {/*
+                        The club's policy decides this, on the server. When it
+                        says no, the reason is shown rather than the row simply
+                        lacking a button — a member who cannot cancel should
+                        know whether that is the policy or the clock.
+
+                        `stopPropagation` is not needed: only entry rows carry a
+                        click, and only bookings carry this button.
+                      */}
+                      {row.booking?.canCancel ? (
+                        <Button size="small" onClick={() => setCancelling(row.booking)}>
+                          {t('entries.cancel')}
+                        </Button>
+                      ) : (
+                        row.booking?.cancellationRefusal === 'too-late' && (
+                          <Typography variant="caption" color="text.secondary">
+                            {t('entries.cancelTooLate', {
+                              count: row.booking.cancellationNoticeDays,
+                            })}
+                          </Typography>
+                        )
+                      )}
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
