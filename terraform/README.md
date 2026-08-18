@@ -2,6 +2,25 @@
 
 This directory contains OpenTofu configurations for provisioning the AWS infrastructure for the web application framework.
 
+## Environments
+
+| | Shape | Cost |
+|---|---|---|
+| `testing/` | **One EC2 instance** running the whole `docker compose` — no NAT, no RDS, no load balancer | **~$20–33/month** |
+| `staging/` | ALB, RDS, autoscaling group, NAT gateway, separate monitoring instance | ~$145/month |
+| `production/` | As staging, multi-AZ | ~$350–500/month |
+
+`testing/` is for answering "does the product work?"; the other two model a real
+deployment. See [docs/DEPLOY_SINGLE_INSTANCE.md](../docs/DEPLOY_SINGLE_INSTANCE.md).
+
+**A caution about `staging/` and `production/`:** their `user_data` does not
+actually deploy the application — it installs Docker and then reaches an
+explicit placeholder. They also provision no Keycloak and no front-end hosting,
+and their load balancer targets ports 5173 and 5174 (the metadata UI and
+super-admin), predating the org-admin and account applications. Treat them as
+infrastructure scaffolding rather than as something that will bring the platform
+up.
+
 ## Structure
 
 ```
@@ -13,6 +32,7 @@ terraform/
 │   ├── monitoring/      # CloudWatch, Prometheus, Grafana
 │   └── secrets/         # AWS Secrets Manager
 ├── environments/        # Environment-specific configurations
+│   ├── testing/        # ONE instance, whole stack, ~$20-33/month
 │   ├── staging/        # Staging environment
 │   └── production/     # Production environment
 └── README.md           # This file

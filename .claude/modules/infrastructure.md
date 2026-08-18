@@ -64,6 +64,18 @@ the app and cleared on sign-out, and a second copy would outlive that.
   `aws-framework` realm before their app can sign anyone in — a missing one fails with "Client not
   found" before any credentials are entered. Per-app guides: docs/ORGADMIN_KEYCLOAK_SETUP.md and
   docs/ACCOUNT_APP_KEYCLOAK_SETUP.md. A fresh machine or CI environment needs all four.
+- **`account-password-check` is the exception: the seed creates it.** A *confidential*,
+  direct-grant-only client that lets the backend verify a member's current password when they change
+  their password or email address from the account app — Keycloak's Admin API can set a password but
+  cannot check one. `ensurePasswordCheckClient` in `scripts/seed/keycloak.ts` creates it and
+  reconciles an existing one, because a client with direct grants switched off or the wrong secret
+  fails at the worst possible moment: a member typing their correct password and being told it is
+  wrong. The backend needs `KEYCLOAK_PASSWORD_CHECK_CLIENT_ID` and
+  `KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET`; **unset, every password check fails**, so the service
+  refuses to run rather than reporting a wrong password. Deployed environments must set their own
+  secret — the seed's default is a development value and the seed refuses non-local Keycloak anyway.
+  It deliberately has no browser flow, no service account and no redirect URIs, so it cannot sign
+  anybody in to anything. See docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md §3.4.
 - **Every front-end client needs an `oidc-audience-mapper` adding `aws-framework-backend`.** The
   backend verifies bearer tokens with `audience: KEYCLOAK_CLIENT_ID`, and a token minted for a
   front-end client does not carry that audience on its own. Without the mapper, sign-in succeeds and
@@ -72,6 +84,37 @@ the app and cleared on sign-out, and a second copy would outlive that.
 - `infrastructure/prometheus/` — scrape config and `alerts/`.
 - `infrastructure/grafana/provisioning/` — datasources and dashboards.
 - `infrastructure/monitoring/README.md` — how the monitoring stack fits together.
+
+## Deploying the whole platform to one instance (`terraform/environments/testing/`)
+
+For testing, and deliberately a different shape from `staging/` and `production/`: one EC2 instance
+running `docker-compose.deploy.yml`, no NAT gateway, no RDS, no load balancer, no second box for
+monitoring. **~$20–33/month against staging's ~$145.**
+Full record: [docs/DEPLOY_SINGLE_INSTANCE.md](../../docs/DEPLOY_SINGLE_INSTANCE.md).
+
+The pieces, and why each exists:
+
+| | |
+|---|---|
+| `docker-compose.deploy.yml` | The *deployment* stack. `docker-compose.yml` is for development — it proxies the front ends to Vite dev servers on the host and publishes every port |
+| `Dockerfile.web` | Builds all four front ends and serves them from nginx. `PUBLIC_URL` is **compiled into the bundles**, so an image belongs to one hostname |
+| `infrastructure/nginx/deploy.conf` | One origin: `/account`, `/orgadmin`, `/admin`, `/metadata`, with `/api` and `/auth` proxied. No CORS, one certificate |
+| `infrastructure/keycloak/realm-import.json` | The realm, all seven clients and their audience mappers, held with placeholders instead of secrets |
+| `scripts/deploy/bootstrap.sh` | Generates secrets **once**, renders the realm, migrates, starts, optionally seeds |
+
+Three things reliably go wrong here:
+
+- **The realm is imported once and ignored afterwards.** Regenerating secrets later leaves the realm
+  holding one set and the backend using another — which presents as "sign-in works, every API call
+  is 401". `bootstrap.sh` is idempotent for exactly this reason.
+- **`KC_PROXY_HEADERS: xforwarded` is not optional** behind the TLS-terminating nginx. Without it
+  Keycloak advertises `http://` redirect URLs and the sign-in loop never closes.
+- **The front-end build is the memory peak**, not anything at run time. The `user_data` adds 2 GB of
+  swap before the first build, because on a 2 GB instance it is otherwise killed with an error that
+  blames esbuild.
+
+`admin` and `frontend` gained `basename={import.meta.env.BASE_URL}` so they can be served under a
+path prefix at all — in development that is `/` and nothing changes.
 
 ## OpenTofu (`terraform/`)
 

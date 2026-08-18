@@ -1,9 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { venueService } from '../services/venue.service';
 import { authenticateToken, requireOrgAdminCapability } from '../middleware';
+import {
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * @swagger
@@ -119,6 +128,7 @@ router.post(
 router.get(
   '/venues/:id',
   authenticateToken(),
+  byResource('venue', 'id'),
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
@@ -173,6 +183,7 @@ router.get(
 router.put(
   '/venues/:id',
   authenticateToken(),
+  byResource('venue', 'id'),
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
@@ -213,6 +224,7 @@ router.put(
 router.delete(
   '/venues/:id',
   authenticateToken(),
+  byResource('venue', 'id'),
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {

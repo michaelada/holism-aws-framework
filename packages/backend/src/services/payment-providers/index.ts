@@ -33,8 +33,16 @@ export class PaymentProviderRegistry {
    *
    * Null rather than a throw: an organisation that has not finished setting up
    * payments is a configuration state the checkout explains, not an exception.
+   *
+   * **No name is the clearest case of an unknown one.** `payments.payment_provider`
+   * is null until an intent is attached — an offline order never attaches one at
+   * all — so callers routinely hold a name they got from a row rather than from
+   * a literal. This used to be `name.toLowerCase()`, which turned every one of
+   * those into a 500 reading "Cannot read properties of null".
    */
-  get(name: string): PaymentProvider | null {
+  get(name: string | null | undefined): PaymentProvider | null {
+    if (!name) return null;
+
     const provider = this.providers.get(name.toLowerCase());
     if (!provider || !provider.isConfigured()) return null;
     return provider;

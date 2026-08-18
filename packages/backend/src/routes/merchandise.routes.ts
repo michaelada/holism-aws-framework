@@ -3,6 +3,11 @@ import multer from 'multer';
 import { merchandiseService } from '../services/merchandise.service';
 import { merchandiseOptionService } from '../services/merchandise-option.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byBodyOrCurrent,
+  byCurrentOrganisation,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
@@ -12,7 +17,13 @@ import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
 import crypto from 'crypto';
 import path from 'path';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 // Configure multer for memory storage (merchandise images)
 const upload = multer({
@@ -101,6 +112,7 @@ router.get(
 router.get(
   '/merchandise-types/:id',
   authenticateToken(),
+  byResource('merchandiseType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -129,6 +141,7 @@ router.get(
 router.post(
   '/merchandise-types',
   authenticateToken(),
+  byBodyOrCurrent(),
   requireMerchandiseCapability,
   async (req: Request, res: Response) => {
     try {
@@ -155,6 +168,7 @@ router.post(
 router.put(
   '/merchandise-types/:id',
   authenticateToken(),
+  byResource('merchandiseType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -181,6 +195,7 @@ router.put(
 router.delete(
   '/merchandise-types/:id',
   authenticateToken(),
+  byResource('merchandiseType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -218,6 +233,7 @@ router.delete(
 router.get(
   '/merchandise-types/:id/options',
   authenticateToken(),
+  byResource('merchandiseType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -240,6 +256,7 @@ router.get(
 router.post(
   '/merchandise-types/:id/options',
   authenticateToken(),
+  byResource('merchandiseType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -267,6 +284,7 @@ router.post(
 router.put(
   '/merchandise-types/:typeId/options/:optionId',
   authenticateToken(),
+  byResource('merchandiseType', 'typeId'),
   async (req: Request, res: Response) => {
     try {
       const { optionId } = req.params;
@@ -293,6 +311,7 @@ router.put(
 router.delete(
   '/merchandise-types/:typeId/options/:optionId',
   authenticateToken(),
+  byResource('merchandiseType', 'typeId'),
   async (req: Request, res: Response) => {
     try {
       const { optionId } = req.params;
@@ -357,6 +376,7 @@ router.get(
 router.get(
   '/merchandise-orders/:id',
   authenticateToken(),
+  byResource('merchandiseOrder', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -384,6 +404,7 @@ router.get(
 router.post(
   '/merchandise-orders',
   authenticateToken(),
+  byBodyOrCurrent(),
   async (req: Request, res: Response) => {
     try {
       const order = await merchandiseService.createOrder(req.body);
@@ -409,6 +430,7 @@ router.post(
 router.put(
   '/merchandise-orders/:id/status',
   authenticateToken(),
+  byResource('merchandiseOrder', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -484,6 +506,7 @@ router.get(
 router.post(
   '/merchandise-types/:id/stock/adjust',
   authenticateToken(),
+  byResource('merchandiseType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { selectedOptions, quantityChange } = req.body;
@@ -516,6 +539,7 @@ router.post(
 router.post(
   '/merchandise-images/upload',
   authenticateToken(),
+  byCurrentOrganisation(),
   upload.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -580,6 +604,7 @@ function unescapeHtml(str: string): string {
 router.get(
   '/merchandise-images/url',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { key } = req.query;
@@ -609,6 +634,7 @@ router.get(
 router.delete(
   '/merchandise-images',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { key } = req.query;

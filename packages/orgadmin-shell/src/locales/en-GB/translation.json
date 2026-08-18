@@ -2128,6 +2128,12 @@
       "expired": "Expired"
     }
   },
+  "organisationSwitcher": {
+    "heading": "Your organisations",
+    "count_one": "You administer {{count}} organisation.",
+    "count_other": "You administer {{count}} organisations.",
+    "current": "Currently administering {{name}}. Change organisation"
+  },
   "navigation": {
     "organisation": "Organisation",
     "loading": "Loading...",

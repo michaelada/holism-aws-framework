@@ -324,6 +324,9 @@ describe('AccountCatalogueService — calendar holds', () => {
     context_ref: { calendarId: CALENDAR, date: SATURDAY, startTime: '09:00', duration: 60, places: 1 },
     expires_at: '2026-08-01T10:02:00.000Z',
     user_id: 'someone-else',
+    // The query computes this: whether the hold still stands. A lapsed one
+    // reserves nothing, and only the viewer's own is fetched at all.
+    live: true,
     ...over,
   });
 
@@ -376,7 +379,35 @@ describe('AccountCatalogueService — calendar holds', () => {
     expect(holdsSql).toContain("c.status = 'open'");
     expect(holdsSql).toContain('ci.expires_at > NOW()');
     expect(holdsSql).toContain("ci.item_type = 'booking'");
-    expect(holdsParams).toEqual([ORG, CALENDAR, SATURDAY, SATURDAY]);
+    expect(holdsParams).toEqual([ORG, CALENDAR, SATURDAY, SATURDAY, null]);
+  });
+
+  it("fetches the viewer's own lines whether or not the hold still stands", async () => {
+    /*
+     * The two halves differ. A stranger's basket only counts while the hold is
+     * live; the viewer's own line is in their basket until they remove it or
+     * check out, and the add guard refuses a second copy regardless of the
+     * clock. Showing it as free was the screen contradicting itself.
+     */
+    await availability([], MEMBER);
+
+    expect(holdsSql).toContain('c.user_id = $5');
+    expect(holdsParams[4]).toBe(MEMBER);
+  });
+
+  it("keeps showing the viewer their own line after the hold lapses", async () => {
+    const { slots } = await availability(
+      [holdRow({ user_id: MEMBER, live: false, expires_at: '2026-08-01T09:00:00.000Z' })],
+      MEMBER
+    );
+
+    expect(nineOClock(slots)).toMatchObject({
+      available: false,
+      unavailableReason: 'in-your-basket',
+      // Reserving nothing, though: their hold is gone and the place is really
+      // free for anybody else.
+      placesRemaining: 1,
+    });
   });
 
   it("reports a stranger's hold as held", async () => {

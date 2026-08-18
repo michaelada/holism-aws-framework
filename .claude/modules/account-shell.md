@@ -15,7 +15,7 @@ Design and all 51 wireframes: [docs/ACCOUNT_USER_APP_WIREFRAMES.md](../../docs/A
 
 | Path | Purpose |
 |---|---|
-| `src/App.tsx` | Routes. `/`, `/switch`, `/:orgCode`, `/:orgCode/register`, `/:orgCode/pending`, `/:orgCode/entries`, `/:orgCode/entries/:entryId`, `/:orgCode/memberships`, `/:orgCode/tickets`, `/:orgCode/tickets/:ticketId`, `/:orgCode/profile`, `/:orgCode/browse/events`, `/:orgCode/browse/memberships`, `/:orgCode/browse/events/:itemId/enter`, `/:orgCode/browse/memberships/:itemId/apply`, `/:orgCode/shop`, `/:orgCode/shop/:itemId`, `/:orgCode/orders`, `/:orgCode/book`, `/:orgCode/book/:calendarId`, `/:orgCode/register-interest`, `/:orgCode/register-interest/:typeId`, `/:orgCode/registrations`, `/:orgCode/payments` |
+| `src/App.tsx` | Routes. `/`, `/switch`, `/:orgCode`, `/:orgCode/register`, `/:orgCode/pending`, `/:orgCode/entries`, `/:orgCode/entries/:entryId`, `/:orgCode/memberships`, `/:orgCode/tickets`, `/:orgCode/tickets/:ticketId`, `/:orgCode/profile`, `/:orgCode/browse/events`, `/:orgCode/browse/memberships`, `/:orgCode/browse/events/:itemId/enter`, `/:orgCode/browse/memberships/:itemId/apply`, `/:orgCode/shop`, `/:orgCode/shop/:itemId`, `/:orgCode/orders`, `/:orgCode/book`, `/:orgCode/book/:calendarId`, `/:orgCode/register-interest`, `/:orgCode/register-interest/:typeId`, `/:orgCode/registrations`, `/:orgCode/payments`, `/confirm-email` (unbranded, anonymous) |
 | `src/hooks/useAuth.ts` | Keycloak, **`check-sso`** not `login-required` |
 | Keycloak client | **`account-app`**, created by hand — see docs/ACCOUNT_APP_KEYCLOAK_SETUP.md. Served under base path **`/account`**, so both `…/account` and `…/account/*` must be registered as redirect URIs or logout breaks |
 | `src/context/AuthContext.tsx` | Holds the single `useAuth` instance |
@@ -27,7 +27,7 @@ Design and all 51 wireframes: [docs/ACCOUNT_USER_APP_WIREFRAMES.md](../../docs/A
 | `src/components/OrganisationRoute.tsx` | Maps that state to a screen |
 | `src/components/AppShell.tsx` | B1/B2 responsive shell |
 | `src/components/navigation.ts` | Nav model + `visibleSections()` capability gate |
-| `src/pages/` | A1, A2, A4, A6, A7, A8, B3, C1, C2, C4, C6, C8, C9, C10, D7–D13, F1, F2, P1 |
+| `src/pages/` | A1, A2, A4, A6, A7, A8, B3, C1, C2, C4, C6, C8, C9, C10, D7–D13, F1, F2, P1, P6 |
 | `src/theme/index.ts` | `buildTheme(primaryColor)` — per-club branding |
 | `src/i18n/config.ts` | Six locales, `localeForLanguage()` |
 | `src/test/` | `setup.ts` (matchMedia), `renderWithProviders.tsx` |
@@ -51,6 +51,9 @@ GET  /api/account/:orgCode/tickets        C9   (capability: event-ticketing)
 GET  /api/account/:orgCode/tickets/:id    C10  (capability: event-ticketing)
 GET  /api/account/:orgCode/profile        P1
 PUT  /api/account/:orgCode/profile        P1   (name, phone, language only)
+POST /api/account/:orgCode/profile/password   P4   (current password required)
+POST /api/account/:orgCode/profile/email      P5   (asks for a link; changes nothing yet)
+POST /api/public/email-change/confirm         P6   (anonymous — the link is the authority)
 GET  /api/account/:orgCode/catalogue/merchandise  D9, D10 (capability: merchandise)
 GET  /api/account/:orgCode/orders         C8   (capability: merchandise)
 GET  /api/account/:orgCode/catalogue/calendars                        D11 (capability: calendar-bookings)
@@ -209,9 +212,11 @@ reloading clears the error, so the order matters.
 
 Since [docs/BASKET_SOFT_HOLDS.md](../../docs/BASKET_SOFT_HOLDS.md), a line in the basket holds its
 slot for two minutes (15 once checkout starts). The grid draws the three states differently: the
-member's own hold is `in-your-basket`, **in red** with a live `HoldCountdown` — the same
+member's own line is `in-your-basket`, **in red** with a live `HoldCountdown` — the same
 "cannot be taken" signal a stranger's hold gets, rather than the disabled grey of a slot that was
-never on offer, which says nothing about why;
+never on offer, which says nothing about why. **It stays red after the hold lapses**, because the
+line is still in the basket and the add guard still refuses a second copy; the countdown then reads
+*Hold expired*, and the places are released to everybody else;
 somebody else's is `held` — **worded as held rather than full**, because it may come back, and grey
 would read as "you lost it"; and `full` stays for places that are genuinely gone. The server never
 sends another member's expiry, so a countdown can only ever be your own. When one reaches zero the
@@ -284,6 +289,13 @@ that computed its own answers would start disagreeing with the screens it links 
 enabled but empty returns `[]` — a different answer, and the screen shows it differently. The basket
 and the "what's on" row **fail soft**: neither is worth taking the home screen down for.
 
+**There is no recent-payments card**
+([docs/HOME_SCREEN_RECENT_PAYMENTS_REMOVED.md](../../docs/HOME_SCREEN_RECENT_PAYMENTS_REMOVED.md)),
+and the dashboard therefore does not read payments at all —
+the `listPayments` call was removed from the `Promise.all` with it, so the section is not merely
+hidden. Payments have their own page (C6), and the home screen is for what a member can act on
+rather than a receipt they have already had.
+
 ## Offline and the PWA (phase 12)
 
 Full record:
@@ -354,7 +366,7 @@ registry in `account-shell` — every screen is a page here — so these are pag
 
 ---
 
-## Profile & settings (P1, P2)
+## Profile & settings (P1, P4, P5, P6)
 
 `/:orgCode/profile`, **not** capability-gated — every member has an identity to maintain whatever
 the club has enabled. Full record:
@@ -365,10 +377,26 @@ edit writes Keycloak *and every* `organization_users` row for that identity. Upd
 current club's row is the obvious bug: the copies drift and the member stays misspelled elsewhere.
 The screen warns about this only when the member belongs to more than one organisation.
 
-**Email and password are read-only here** and hand off to Keycloak's account console via
-`keycloak.createAccountUrl({ redirectUri })`, behind a confirm dialog. Both need verification to be
-safe, and Keycloak already implements it — an unverified email change locks a member out of the
-address they sign in with.
+**Email and password are changed here, in dialogs**, with Keycloak updated underneath — no
+redirect to the account console, and no interstitial
+([docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md](../../docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md)).
+`ChangePasswordDialog` and `ChangeEmailDialog` are the two components; `ConfirmEmailChangePage` is
+the unbranded `/confirm-email` route the emailed link lands on, outside `/:orgCode` because an
+address belongs to the identity and the page is opened with no session.
+
+Two things the console used to do for us still happen, and both matter:
+
+- **The current password is required** for either change, verified by a direct-grant login against
+  a confidential Keycloak client (see [backend.md](backend.md)). Keycloak can *set* a password and
+  cannot *verify* one.
+- **A new address is proved before it is used.** An account user's Keycloak username *is* their
+  email, so an unverified change hands them a login they do not own. The link goes to the new
+  address and nothing moves until it is followed.
+
+Password policy is never duplicated in the client — the realm's own complaint is shown verbatim, so
+a tightened policy needs no front-end change. The email dialog's success state says nothing about
+whether an address was already taken; the server answers identically either way, and reporting a
+clash would give back exactly what that identical response exists to withhold.
 
 **Language preference is stored twice on purpose**: `organization_users.preferred_language` for the
 app (read on every organisation resolve, via `GET /me` → `user.preferredLanguage`) and Keycloak's
@@ -486,8 +514,10 @@ and a clubhouse are not interchangeable, and colour alone does not carry that. S
 
 ## Five rows on the home screen, each with its own budget
 
-Memberships first — what the member already holds — then **Upcoming events**, bookings under the
-club's own word for them, the shop, and registrations.
+**Upcoming events** first — what a member opens the home screen to find out — then memberships (what
+they already hold, which is reference rather than news), bookings under the club's own word for
+them, the shop, and registrations. The order is pinned by a test, since a reorder would otherwise
+pass every other case on the page.
 
 *Upcoming events* carries a **View all** button level with its heading. Four teasers look like the
 whole programme, and a member who reads them that way never opens the events page; putting the way
@@ -565,6 +595,19 @@ gets **its own calendar's icon in its own colour**, which `listBookings` now ret
 `displayIcon` / `displayColour`. Only entry rows are clickable — a booking's detail is already in
 the row, and there is no page behind it.
 
+## The basket block on the home screen
+
+In **its own full-width row**, before the teaser rows — a basket with something in it is the most
+actionable thing on the page. That row is what fixes the alignment: it was previously the second
+cell of a two-column summary grid, so the card sat in the right-hand half while every row below
+started at the left ([docs/CONFIGURABLE_HOLD_WINDOWS.md](../../docs/CONFIGURABLE_HOLD_WINDOWS.md)).
+
+The title stays **inside** the card, as "Coming up" keeps its own, with a
+shopping-cart mark in `warning.main` — the same orange as the count in the navigation, so the badge
+and the card read as one thing. *Go to basket* sits level with the figures under
+`justifyContent: space-between`, not beneath them: it takes a row off the card's height, and pins
+the button right as the figures grow.
+
 ## The basket count is pushed, not polled
 
 The **Basket** menu item carries an orange badge with the number of **lines** in the basket — not
@@ -577,6 +620,14 @@ checkout URL, and `useCartCount` refetches. A page needs to know nothing about t
 added later gets it for free. Reads are excluded — the count is refreshed *by* a read. The listener
 registry is a module-level set in `src/cart/cartActivity.ts`, not a context, so one number in the
 menu does not re-render every screen.
+
+**A card payment is the exception, and needs `notifyIfSettled`.** The basket is emptied by
+`confirmPayment`, reached only from the Stripe webhook — so it happens after the checkout write
+returned, with no client request involved, and the client's only remaining call is a status poll,
+which is a read. Left to the write rule alone the badge kept its pre-payment count. `CheckoutPage`
+and `OrderConfirmationPage` therefore both announce a payment that reaches any status but `pending`.
+Paying offline never had the fault, because `markAwaitingOfflinePayment` closes the cart during the
+checkout request itself.
 
 Orange rather than the club's primary, because primary is already the selected state of that same
 list; announced as a phrase (`nav.cartCount`) with the digits `aria-hidden`, since a bare number

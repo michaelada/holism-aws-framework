@@ -1,10 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { calendarService } from '../services/calendar.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byBodyOrCurrent,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * Middleware to check if organisation has calendar-bookings capability
@@ -130,6 +140,7 @@ router.get(
 router.get(
   '/calendars/:id',
   authenticateToken(),
+  byResource('calendar', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -166,6 +177,7 @@ router.get(
 router.post(
   '/calendars',
   authenticateToken(),
+  byBodyOrCurrent(),
   requireCalendarBookingsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -209,6 +221,7 @@ router.post(
 router.put(
   '/calendars/:id',
   authenticateToken(),
+  byResource('calendar', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -246,6 +259,7 @@ router.put(
 router.patch(
   '/calendars/:id/status',
   authenticateToken(),
+  byResource('calendar', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -284,6 +298,7 @@ router.patch(
 router.delete(
   '/calendars/:id',
   authenticateToken(),
+  byResource('calendar', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -361,6 +376,7 @@ router.get(
 router.get(
   '/calendars/:calendarId/bookings',
   authenticateToken(),
+  byResource('calendar', 'calendarId'),
   async (req: Request, res: Response) => {
     try {
       const { calendarId } = req.params;
@@ -394,6 +410,7 @@ router.get(
 router.get(
   '/bookings/:id',
   authenticateToken(),
+  byResource('booking', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -430,6 +447,7 @@ router.get(
 router.post(
   '/bookings',
   authenticateToken(),
+  byBodyOrCurrent(),
   async (req: Request, res: Response) => {
     try {
       const booking = await calendarService.createBooking(req.body);
@@ -478,6 +496,7 @@ router.post(
 router.get(
   '/calendars/:calendarId/bookings/range',
   authenticateToken(),
+  byResource('calendar', 'calendarId'),
   async (req: Request, res: Response) => {
     try {
       const { calendarId } = req.params;
@@ -533,6 +552,7 @@ router.get(
 router.get(
   '/calendars/:calendarId/reservations',
   authenticateToken(),
+  byResource('calendar', 'calendarId'),
   requireCalendarBookingsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -592,6 +612,7 @@ router.get(
 router.post(
   '/calendars/:calendarId/reservations',
   authenticateToken(),
+  byResource('calendar', 'calendarId'),
   requireCalendarBookingsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -639,6 +660,7 @@ router.post(
 router.delete(
   '/reservations/:id',
   authenticateToken(),
+  byResource('reservation', 'id'),
   requireCalendarBookingsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -688,6 +710,7 @@ router.delete(
 router.post(
   '/bookings/:id/cancel',
   authenticateToken(),
+  byResource('booking', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

@@ -2083,6 +2083,12 @@
       "expired": "Expiré"
     }
   },
+  "organisationSwitcher": {
+    "heading": "Vos organisations",
+    "count_one": "Vous administrez {{count}} organisation.",
+    "count_other": "Vous administrez {{count}} organisations.",
+    "current": "Vous administrez actuellement {{name}}. Changer d'organisation"
+  },
   "navigation": {
     "organisation": "Organisation",
     "loading": "Chargement...",

@@ -14,6 +14,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
 import ActivityStatusChip from '../components/ActivityStatusChip';
 import MembershipCard from '../components/MembershipCard';
@@ -120,6 +121,108 @@ export const HomePage: React.FC = () => {
         dashboard && (
           <Stack spacing={3}>
             {/*
+              The basket gets a row to itself, at the left edge.
+
+              It used to be the second cell of the two-column summary grid, so
+              with anything beside it the card sat in the right-hand half while
+              every row below started at the left — which reads as a stray
+              margin rather than as a column.
+
+              First, too: a basket with something in it is the most actionable
+              thing on this page, and it is what the member came back to finish.
+            */}
+            {dashboard.cart && (
+              <Box>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Card sx={{ height: '100%' }}>
+                      <CardContent>
+                        {/*
+                          The title belongs to the card, as it does on the
+                          summary card below it — "Coming up" carries its own.
+                          Lifting it out made this the odd one of the pair.
+
+                          What made the block look indented was the grid, not
+                          this: it was the second cell of a two-column row, so
+                          the card sat in the right-hand half. It has a row to
+                          itself now, so the card's edge lines up with the
+                          teasers below whatever the title does.
+
+                          The cart mark is the same orange as the count in the
+                          navigation, so the two read as one thing: the badge
+                          says there is something in the basket, and this is
+                          where it is.
+                        */}
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                          <ShoppingCartIcon
+                            sx={{ color: 'warning.main', fontSize: '1.25rem' }}
+                            aria-hidden
+                          />
+                          <Typography variant="h2" sx={{ fontSize: '1.125rem' }}>
+                            {t('home.cart')}
+                          </Typography>
+                        </Stack>
+
+                        {/*
+                          The button sits level with the figures rather than
+                          under them, which takes a whole row off the card's
+                          height — this is a summary, and it should not be
+                          taller than the teasers beneath it.
+
+                          `space-between` rather than a margin: the figures grow
+                          with the basket (an added handling-fee line, a longer
+                          total) and the button stays pinned to the right edge
+                          whatever they do.
+                        */}
+                        <Stack
+                          direction="row"
+                          spacing={2}
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="body2">
+                              {t('home.cartSummary', {
+                                count: dashboard.cart.itemCount,
+                                total: formatCurrency(
+                                  dashboard.cart.total / 100,
+                                  dashboard.cart.currency || fallbackCurrency,
+                                  locale
+                                ),
+                              })}
+                            </Typography>
+                            {dashboard.cart.handlingFee > 0 && (
+                              <Typography variant="body2" color="text.secondary">
+                                {t('home.cartHandling', {
+                                  fee: formatCurrency(
+                                    dashboard.cart.handlingFee / 100,
+                                    dashboard.cart.currency || fallbackCurrency,
+                                    locale
+                                  ),
+                                })}
+                              </Typography>
+                            )}
+                          </Box>
+
+                          <Button
+                            size="small"
+                            variant="contained"
+                            // Never squeezed to fit: a wrapped "Go to / basket"
+                            // is worse than the figures beside it eliding.
+                            sx={{ flexShrink: 0 }}
+                            onClick={() => navigate(`/${orgCode}/cart`)}
+                          >
+                            {t('home.goToCart')}
+                          </Button>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            {/*
               The same gutter as the teaser rows below, which is what makes the
               two line up: at `spacing={2}` a half-width summary card is exactly
               two quarter-width teasers plus the gap between them. At a
@@ -162,87 +265,6 @@ export const HomePage: React.FC = () => {
                   </Card>
                 </Grid>
               )}
-
-              {dashboard.cart && (
-                <Grid item xs={12} md={6}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
-                        {t('home.cart')}
-                      </Typography>
-                      <Typography variant="body2">
-                        {t('home.cartSummary', {
-                          count: dashboard.cart.itemCount,
-                          total: formatCurrency(
-                            dashboard.cart.total / 100,
-                            dashboard.cart.currency || fallbackCurrency,
-                            locale
-                          ),
-                        })}
-                      </Typography>
-                      {dashboard.cart.handlingFee > 0 && (
-                        <Typography variant="body2" color="text.secondary">
-                          {t('home.cartHandling', {
-                            fee: formatCurrency(
-                              dashboard.cart.handlingFee / 100,
-                              dashboard.cart.currency || fallbackCurrency,
-                              locale
-                            ),
-                          })}
-                        </Typography>
-                      )}
-                      <Button
-                        size="small"
-                        variant="contained"
-                        sx={{ mt: 2 }}
-                        onClick={() => navigate(`/${orgCode}/cart`)}
-                      >
-                        {t('home.goToCart')}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-
-              {dashboard.recentPayments && (
-                <Grid item xs={12} md={6}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
-                        {t('home.recentPayments')}
-                      </Typography>
-                      <Stack spacing={1}>
-                        {dashboard.recentPayments.map((payment) => (
-                          <Stack
-                            key={payment.id}
-                            direction="row"
-                            justifyContent="space-between"
-                            spacing={1}
-                          >
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDisplayDate(payment.on, locale)}
-                            </Typography>
-                            <Typography variant="body2">
-                              {formatCurrency(
-                                payment.total / 100,
-                                payment.currency || fallbackCurrency,
-                                locale
-                              )}
-                            </Typography>
-                          </Stack>
-                        ))}
-                      </Stack>
-                      <Button
-                        size="small"
-                        sx={{ mt: 2 }}
-                        onClick={() => navigate(`/${orgCode}/payments`)}
-                      >
-                        {t('home.allPayments')}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
             </Grid>
 
             {/*
@@ -252,31 +274,14 @@ export const HomePage: React.FC = () => {
               under the club's own word for them rather than being mixed in.
             */}
             {/*
-              Memberships first among the rows: they are the thing a member
-              already holds, where everything below is something they might
-              take up. Absent entirely when there are none — a club with
-              memberships the member has not joined gets no empty heading.
-            */}
-            {activeMemberships.length > 0 && (
-              <Box>
-                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
-                  {t('home.memberships')}
-                </Typography>
-                <Grid container spacing={2}>
-                  {activeMemberships.map((membership) => (
-                    <Grid item xs={12} sm={6} md={3} key={membership.id}>
-                      <MembershipCard
-                        membership={membership}
-                        locale={locale}
-                        onRenew={() => navigate(`/${orgCode}/browse/memberships`)}
-                        onOpen={() => navigate(`/${orgCode}/memberships`)}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
+              Upcoming events lead, memberships follow.
 
+              What is *on* is the thing a member comes back to the home screen
+              to find out; a membership they already hold changes a couple of
+              times a year and is reference rather than news. Both are absent
+              entirely when empty — a club whose events the member has already
+              been through gets no empty heading.
+            */}
             {eventWhatsOn.length > 0 && (
               <Box>
                 {/*
@@ -312,6 +317,26 @@ export const HomePage: React.FC = () => {
                         locale={locale}
                         showKind={false}
                         onOpen={() => navigate(whatsOnTarget(item))}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {activeMemberships.length > 0 && (
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
+                  {t('home.memberships')}
+                </Typography>
+                <Grid container spacing={2}>
+                  {activeMemberships.map((membership) => (
+                    <Grid item xs={12} sm={6} md={3} key={membership.id}>
+                      <MembershipCard
+                        membership={membership}
+                        locale={locale}
+                        onRenew={() => navigate(`/${orgCode}/browse/memberships`)}
+                        onOpen={() => navigate(`/${orgCode}/memberships`)}
                       />
                     </Grid>
                   ))}
@@ -394,7 +419,6 @@ export const HomePage: React.FC = () => {
             {activeMemberships.length === 0 &&
               !dashboard.comingUp?.length &&
               !dashboard.cart &&
-              !dashboard.recentPayments &&
               dashboard.whatsOn.length === 0 && (
                 <Card>
                   <CardContent>

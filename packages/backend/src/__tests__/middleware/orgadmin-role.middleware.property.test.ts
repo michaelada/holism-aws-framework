@@ -13,7 +13,7 @@
 import * as fc from 'fast-check';
 import { Response } from 'express';
 import { requireOrgAdminRole, requireOrgAdmin } from '../../middleware/orgadmin-role.middleware';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+import { OrganisationRequest } from '../../middleware/capability.middleware';
 import { db } from '../../database/pool';
 
 // Mock the database
@@ -33,12 +33,23 @@ jest.mock('../../config/logger', () => ({
 }));
 
 describe('Feature: manual-member-addition, Property 16: Authorization Enforcement', () => {
-  let mockRequest: Partial<AuthenticatedRequest>;
+  let mockRequest: Partial<OrganisationRequest>;
   let mockResponse: Partial<Response>;
   let mockNext: jest.Mock;
 
   beforeEach(() => {
     mockRequest = {
+      /*
+       * The organisation is already established, as it is on a real org-admin
+       * route: the capability chain resolves and verifies it first, and the
+       * role check reuses that rather than asking again.
+       *
+       * Set here so these properties stay about *roles*. Whether the role check
+       * scopes itself to the right organisation when it has to resolve one
+       * alone is its own question, covered in
+       * `src/middleware/__tests__/orgadmin-tenancy.middleware.test.ts`.
+       */
+      organisationId: '11111111-1111-4111-8111-111111111111',
       user: {
         userId: 'test-user-id',
         email: 'test@example.com',
@@ -98,7 +109,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -147,7 +158,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -202,7 +213,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -239,7 +250,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -296,7 +307,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -346,7 +357,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
           // Require any of: admin, manager, editor
           const middleware = requireOrgAdminRole(['admin', 'manager', 'editor']);
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -388,7 +399,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );
@@ -444,7 +455,7 @@ describe('Feature: manual-member-addition, Property 16: Authorization Enforcemen
 
           const middleware = requireOrgAdmin();
           await middleware(
-            mockRequest as AuthenticatedRequest,
+            mockRequest as OrganisationRequest,
             mockResponse as Response,
             mockNext
           );

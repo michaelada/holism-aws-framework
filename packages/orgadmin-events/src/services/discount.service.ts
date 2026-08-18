@@ -33,9 +33,29 @@ import type {
  */
 type TokenProvider = () => string | null;
 
+/** Which organisation the administrator is working in. */
+type OrganisationProvider = () => string | null;
+
+/**
+ * Put the organisation in the URL, as `useApi` does for everything else.
+ *
+ * A local copy rather than an import, because this package resolves
+ * orgadmin-core through its built output and that build is currently stale —
+ * importing the canonical `organisationScopedUrl` would not typecheck here. The
+ * rule is four lines and the server accepts both forms, so a small duplicate is
+ * cheaper than coupling this fix to an unrelated build being fixed first.
+ */
+function scopedUrl(url: string, organisationId: string): string {
+  if (!url.startsWith('/api/orgadmin/')) return url;
+  if (url.startsWith('/api/orgadmin/organisations/')) return url;
+  if (url.startsWith('/api/orgadmin/auth/')) return url;
+  return url.replace('/api/orgadmin/', `/api/orgadmin/organisations/${organisationId}/`);
+}
+
 class DiscountService {
   private api: AxiosInstance;
   private tokenProvider: TokenProvider | null = null;
+  private organisationProvider: OrganisationProvider | null = null;
 
   constructor() {
     this.api = axios.create({
@@ -45,12 +65,25 @@ class DiscountService {
       },
     });
 
-    // Add auth token interceptor
+    /*
+     * This service predates `useApi` and keeps its own axios instance, so it
+     * gets none of what that hook injects. The token was already handled here;
+     * the organisation was not, which meant every call from these screens
+     * reached the server saying nothing about which club it was about — fine
+     * for an administrator of one, ambiguous for an administrator of several.
+     */
     this.api.interceptors.request.use((config) => {
       const token = this.tokenProvider?.();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+
+      const organisationId = this.organisationProvider?.();
+      if (organisationId) {
+        config.headers['X-Organisation-Id'] = organisationId;
+        config.url = scopedUrl(config.url ?? '', organisationId);
+      }
+
       return config;
     });
   }
@@ -58,6 +91,11 @@ class DiscountService {
   /**
    * Set the token provider function
    */
+  /** Told by `useDiscountService`, from the same context `useApi` reads. */
+  setOrganisationProvider(provider: OrganisationProvider) {
+    this.organisationProvider = provider;
+  }
+
   setTokenProvider(provider: TokenProvider) {
     this.tokenProvider = provider;
   }

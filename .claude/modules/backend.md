@@ -44,7 +44,7 @@ migrations/       node-pg-migrate migrations (the schema's source of truth)
 | `/api/orgadmin/users` | `user-management.routes` |
 | `/api/orgadmin` | `user-group.routes` — account-user groups, used by discount eligibility |
 | `/api/user-preferences` | `user-preferences.routes` |
-| `/api/public` | `public.routes` — **unauthenticated**, backs the account app's organisation directory and sign-in gateway |
+| `/api/public` | `public.routes` — **unauthenticated**, backs the account app's organisation directory and sign-in gateway, plus the email-change confirmation whose link is opened with no session |
 | `/api/account` | `account.routes` — account-user application; the organisation comes from the URL, not the token |
 
 Several routers share the `/api/orgadmin` prefix, so a path collision between two routers is
@@ -90,6 +90,7 @@ same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/A
 | `orgadmin-role.middleware` | `requireOrgAdminRole()`, `requireOrgAdmin()` |
 | `capability.middleware` | `loadOrganisationCapabilities()`, `requireCapability()`, `requireAllCapabilities()`, `requireOrgAdminCapability()` — org admins only |
 | `account-auth.middleware` | `resolveAccountOrganisation()`, `requireAccountCapability()` — the account-user equivalent |
+| `organisation-scope.middleware` | `scopeToOrganisation()` and its shorthands — **which organisation a request concerns, and whether the caller may act there.** Required on every org-admin route; a structural test enforces it |
 | `field-capability.middleware` | Capability gating at field granularity |
 | `input-validation.middleware`, `xss-protection.middleware`, `csrf.middleware`, `rate-limit.middleware` | Request hardening |
 | `request-logger.middleware`, `metrics.middleware` | Observability |
@@ -118,6 +119,7 @@ carts  cart_items  payment_transactions
 discounts  discount_applications  discount_usage  user_groups  user_group_members
 event_types  venues  slot_reservations  membership_number_sequences
 reports  user_onboarding_preferences
+pending_email_changes  org_admin_last_organisation
 ```
 
 **`user_onboarding_preferences.user_id` is a Keycloak subject, not a row id, and deliberately has no
@@ -131,6 +133,17 @@ returned 500 and the read path masked it by falling back to defaults
 `1709000000020`): `context_ref` and `quantity` are copied from `cart_items` at checkout. Fulfilment
 runs from the payment line long after the basket is emptied, so an id alone cannot say which size or
 how many — which is why merchandise, bookings and registrations all need them.
+
+**Hold windows are per organisation**, in `organizations.settings.holds`, set by the super-admin
+([docs/CONFIGURABLE_HOLD_WINDOWS.md](../../docs/CONFIGURABLE_HOLD_WINDOWS.md)). Defaults are **3
+minutes** for the basket (was a fixed 2) and 15 for payment; ranges 1–60 and 5–180. Reading
+(`holdWindowsFrom`) falls back and clamps, because it is asked while a member is adding to a basket;
+writing (`holdWindowsError`) refuses and names the limit. `hold-windows.service` caches for 30s and
+`updateOrganization` drops the entry, so an edit applies to the next basket.
+
+**A lapsed hold is deleted from the basket on read** — `getCart` removes those lines and returns a
+warning naming what went (`itemId: null`, because the row has gone). Only lines that held something
+are touched; a membership does not vanish for sitting in a basket. Still no sweeper and no timer.
 
 **`cart_items.expires_at` is a soft hold, and the only one there is** (migrations
 `1709000000025`–`26`, [docs/BASKET_SOFT_HOLDS.md](../../docs/BASKET_SOFT_HOLDS.md)). Adding a
@@ -194,7 +207,10 @@ currency sent by a client rather than honouring it.
 - `organization_users.user_type` is **`'org-admin'`** or **`'account-user'`**. The `org_admin_users`
   and `account_users` views from migration `013` filter on `'admin'`/`'account'` and so match
   nothing — they are unused; do not reach for them.
-- Guard org-admin endpoints with `authenticateToken()` and the appropriate capability middleware.
+- Guard org-admin endpoints with `authenticateToken()` **and** something that establishes the
+  organisation — `requireOrgAdminCapability()` where the path names one, otherwise a
+  `scopeToOrganisation` shorthand. `authenticateToken()` alone says who the caller is and nothing
+  about where they may act; 127 routes were once wrong in exactly that way.
 - **Answers submitted against a definition are validated server-side.** `POST
   /account/:orgCode/form-submissions` checks `submissionData` against the form's own fields
   (`src/utils/application-field-validation.ts`) and refuses with `400 INVALID_SUBMISSION` plus a
@@ -215,7 +231,7 @@ currency sent by a client rather than honouring it.
 | "What does this table hold?" | `migrations/` (search the table name) |
 | "Why does this service fail on a column/table?" | [docs/SCHEMA_DRIFT_AUDIT.md](../../docs/SCHEMA_DRIFT_AUDIT.md) |
 | "How is this authorised?" | The middleware chain on the route |
-| "Why is this 403?" | `capability.middleware` and the organisation's `enabled_capabilities` |
+| "Why is this 403?" | `capability.middleware` (the organisation's `enabled_capabilities`) or `organisation-scope.middleware` (the caller does not administer the organisation the request concerns) |
 | "Where is this business rule?" | The matching `*.service.ts` |
 | "How is a card handling fee calculated?" | `src/utils/handling-fee.ts` — pure, and the only place the rules live |
 | "Where do cart totals come from?" | `cart.service.getCart` — computed server-side and returned whole; the client never recomputes |
@@ -268,12 +284,90 @@ returns false so the registry never selects it). `checkout.service.ts` turns a c
 
 Things worth knowing before touching any of it:
 
+- **Every org-admin route establishes which organisation it is about, and verifies it.**
+  Two guards do this and they share one membership check:
+  `loadOrganisationCapabilities` for the 30 routes that name an organisation in
+  their path, and `scopeToOrganisation` (`organisation-scope.middleware.ts`) for
+  the rest — `byResource` / `byParam` / `byBodyOrCurrent` /
+  `byCurrentOrganisation`, chosen by what the route has to work with.
+
+  **127 routes previously had no organisation check of any kind** — only
+  `authenticateToken()`. Any signed-in user of any club could read and write any
+  other club's data; verified live as an ordinary member, including a successful
+  `PUT /events/:id`. `POST /users/admins/:id/reset-password` would set any
+  administrator's password anywhere. Authentication answers *who*; it never
+  answered *where*, and a route that omits the second question looks exactly like
+  one that asks it — which is why
+  `src/routes/__tests__/orgadmin-routes-are-scoped.test.ts` enumerates every
+  org-admin route and fails, by name, on any scoped by authentication alone.
+
+  Ownership is resolved by **joining** to the parent (a booking through its
+  calendar, a ticket through its event) rather than by a denormalised column, so
+  the answer stays true if a resource moves. A resource in another club and a
+  resource that does not exist answer identically, or the routes become a way of
+  testing whether an id is real. See docs/ORGADMIN_ROUTE_TENANCY.md.
+- **Every org-admin data router is mounted twice**, bare and under
+  `/api/orgadmin/organisations/:organisationId`, so a request says which club it
+  is about. Both forms are equally checked, and where the path names an
+  organisation it must **agree** with the resource being acted on — otherwise an
+  administrator of two clubs could put one in the path and the other's resource
+  id after it, and the URL would describe something the request did not do.
+
+  **The bare mount is registered first, and the order is load-bearing.** Several
+  routers already declare scoped collection routes of their own
+  (`/organisations/:organisationId/discounts/:moduleType`); mounting the scoped
+  prefix first strips it off and re-offers `/discounts/events` to the same
+  router, where `/discounts/:id` matches and reads "events" as an id. Bare-first
+  lets the fully-specified route win and everything else fall through.
+- **An org admin may act only on an organisation they administer, and may administer several.**
+  `loadOrganisationCapabilities` resolves the organisation from the **request** —
+  `req.params.organisationId` for the 30 data routes that carry it, else the
+  `X-Organisation-Id` header the shell sends — and verifies membership of *that*
+  one before attaching `organisationId`, `organisationUserId` and `capabilities`.
+  The URL wins over the header.
+
+  It previously looked up the caller's *own* organisation, checked the capability
+  against it, and left the handler to use `req.params.organisationId` anyway —
+  with nothing comparing the two. An administrator of one club could substitute
+  another club's id and be served; reproduced live before it was fixed.
+  `requireOrgAdminRole` was worse in a second way: it gathered role names across
+  every organisation the identity belonged to, so a role at one club would
+  satisfy a check against another. Both are scoped now, through the same
+  resolver so they cannot disagree.
+
+  With no organisation named, the fallback is ordered (remembered choice, then
+  display name) rather than an unordered `LIMIT 1`. `org_admin_last_organisation`
+  is a *starting point*, never an authority: what decides which organisation a
+  request acts on is the request. `/auth/me` returns `organisations[]` so the
+  shell can offer a switcher, and `org-admin-user.service` now **adopts** an
+  existing Keycloak identity rather than trying to create a second user with the
+  same username — deleting it only when the last membership row goes.
+  See docs/ORGADMIN_MULTI_ORGANISATION.md.
 - **An account user's own profile edits fan out across their identity.**
   `account-profile.service.ts` writes Keycloak **first and fatally**, then every
   `organization_users` row sharing that `keycloak_user_id` (scoped to `user_type = 'account-user'`).
-  Name, phone and language belong to the person, not to one club. Email and password are not
-  editable through the API at all — they hand off to Keycloak's account console, which already
-  implements the verification flows. See docs/ACCOUNT_USER_APP_PHASE10_PROFILE.md.
+  Name, phone and language belong to the person, not to one club.
+  See docs/ACCOUNT_USER_APP_PHASE10_PROFILE.md.
+- **Email and password are changed through the API too**, by `account-credentials.service.ts`, with
+  no hand-off to Keycloak's account console. Two things about it are load-bearing:
+
+  **Keycloak can set a password but cannot verify one.** There is no "is this the current password?"
+  in the Admin API, so the check is a direct-grant login against `account-password-check` — a
+  *confidential* client that exists only for this, created by the seed. The public `account-app`
+  client is untouched: turning direct grants on there would let anyone post username-and-password
+  pairs at the token endpoint with no secret. The tokens it returns are discarded, and the auth
+  middleware pins the audience to `KEYCLOAK_CLIENT_ID`, so a token from this client cannot be used
+  to call the API. **If `KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET` is unset the service throws rather
+  than falling through** — Keycloak answers a secretless confidential client with the same 401 it
+  uses for a bad password, so without that guard every member is told their correct password is
+  wrong.
+
+  **An account user's Keycloak username *is* their email address**, so changing the address changes
+  the credential. Nothing moves until a link sent to the new address is followed
+  (`pending_email_changes`, token hashed at rest, single-use, one hour); confirmation then updates
+  `email` **and** `username` together, plus every `organization_users` row for that identity. The
+  request endpoint answers identically whether or not the address is already taken, so it cannot be
+  used to discover which addresses are registered. See docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md.
 - **Fulfilment runs at a different moment for card and offline orders.** A card order fulfils when
   Stripe confirms it; an **offline order fulfils when checkout completes**, because a cheque may
   take weeks and the member should not be without their entry or ticket until then. The entry is
@@ -337,6 +431,17 @@ Things worth knowing before touching any of it:
   it. A platform administrator therefore needs **both** `admin` and `super-admin` — the handlers
   require the latter on top. Granting only `super-admin` produces a user who can sign into the admin
   app and gets 403 from every request in it.
+- **`registry.get(name)` tolerates a null name.** `payments.payment_provider` is null until an intent
+  is attached and stays null on an offline order, so callers hold a name read from a row rather than
+  a literal; `name.toLowerCase()` turned each of those into a 500.
+- **A `pending` payment with a card amount but no client secret is discarded, not resumed.**
+  `createPayment` writes the row before asking the provider, so a failure between the two leaves one
+  that cannot be confirmed — handing it back gives the member a checkout with no card form.
+- **`chargesEnabled` is a cache of Stripe's answer, and a `false` is re-checked before it is
+  believed.** Verification is asynchronous, so a club that finished verifying after the last refresh
+  was recorded as unable to take payments and stayed that way until somebody opened its Payment
+  Settings — refusing every member in the meantime. `attachProviderIntent` now calls
+  `refreshState` on that branch only.
 - **The API serves the Stripe *publishable* key** (`CheckoutResult.publishableKey`,
   [docs/CHECKOUT_KEY_AND_MEMBERSHIP_DETAILS.md](../../docs/CHECKOUT_KEY_AND_MEMBERSHIP_DETAILS.md)).
   The account app used to read its own `VITE_STRIPE_PUBLISHABLE_KEY` from a `.env` that does not

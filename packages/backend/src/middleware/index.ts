@@ -23,6 +23,15 @@ export {
 export { validateFieldCapability } from './field-capability.middleware';
 
 export {
+  scopeToOrganisation,
+  byResource,
+  byParam,
+  byBodyOrCurrent,
+  byCurrentOrganisation,
+} from './organisation-scope.middleware';
+export type { ResourceKind, OrganisationSource } from './organisation-scope.middleware';
+
+export {
   errorHandler,
   asyncHandler
 } from './error-handler.middleware';

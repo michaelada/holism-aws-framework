@@ -14,11 +14,13 @@ import { checkoutService } from '../services/checkout.service';
 import { accountCatalogueService } from '../services/account-catalogue.service';
 import { accountTicketingService } from '../services/account-ticketing.service';
 import { accountProfileService } from '../services/account-profile.service';
+import { accountCredentialsService } from '../services/account-credentials.service';
 import { applicationFormService } from '../services/application-form.service';
 import { formSubmissionService } from '../services/form-submission.service';
 import { db } from '../database/pool';
 import { validateSubmissionData } from '../utils/application-field-validation';
-import { BASKET_HOLD_MINUTES, holdExpiry } from '../utils/holds';
+import { holdExpiry } from '../utils/holds';
+import { holdWindowsService } from '../services/hold-windows.service';
 import { ValidationError, NotFoundError } from '../middleware/errors';
 import { logger } from '../config/logger';
 
@@ -52,7 +54,7 @@ const SUBMISSION_TYPES = [
 ] as const;
 
 /**
- * Refuse a basket line the catalogue would not offer.
+ * Refuse a basket line the catalogue would not offer, and say whether it holds.
  *
  * The check belongs to the item type, so this dispatches rather than trying to
  * be general. A type with no case falls through rather than being refused:
@@ -64,7 +66,7 @@ async function assertAddable(
   organisationId: string,
   organisationUserId: string,
   body: any
-): Promise<{ holdMinutes: number | null }> {
+): Promise<{ holds: boolean }> {
   const contextRef = body?.contextRef ?? {};
 
   switch (body?.itemType) {
@@ -87,7 +89,7 @@ async function assertAddable(
       const capacityLimited =
         found.activity.entriesLimit !== null || found.event.entriesLimit !== null;
 
-      return { holdMinutes: capacityLimited ? BASKET_HOLD_MINUTES : null };
+      return { holds: capacityLimited };
     }
 
     case 'merchandise': {
@@ -97,7 +99,7 @@ async function assertAddable(
         Object.values(contextRef.selectedOptions ?? {}) as string[],
         Number(body?.quantity ?? 1)
       );
-      return { holdMinutes: null };
+      return { holds: false };
     }
 
     case 'registration': {
@@ -106,7 +108,7 @@ async function assertAddable(
         contextRef.registrationTypeId,
         contextRef.entityName
       );
-      return { holdMinutes: null };
+      return { holds: false };
     }
 
     case 'booking': {
@@ -161,11 +163,11 @@ async function assertAddable(
         organisationUserId
       );
       // A slot is exclusive by its nature; every booking takes a hold.
-      return { holdMinutes: BASKET_HOLD_MINUTES };
+      return { holds: true };
     }
 
     default:
-      return { holdMinutes: null };
+      return { holds: false };
   }
 }
 
@@ -452,11 +454,14 @@ router.post(
        * of something limited to two — none of which the screens offer, and all
        * of which the club would then have to unpick after the money arrived.
        */
-      const { holdMinutes } = await assertAddable(
+      const { holds } = await assertAddable(
         organisationId,
         organisationUserId,
         req.body
       );
+
+      // The club's own basket window, not the platform's.
+      const { basketMinutes } = await holdWindowsService.forOrganisation(organisationId);
 
       const item = await cartService.addItem(
         organisationId,
@@ -469,7 +474,7 @@ router.post(
            * client that asked for an hour on a contended court would be taking
            * it out of everybody else's calendar for an hour.
            */
-          expiresAt: holdMinutes === null ? null : holdExpiry(holdMinutes),
+          expiresAt: holds ? holdExpiry(basketMinutes) : null,
         }
       );
       return res.status(201).json(item);
@@ -962,6 +967,94 @@ router.put(
       }
       logger.error('Error in PUT /account/:orgCode/profile:', error);
       return res.status(500).json({ error: 'Failed to save the profile' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/account/{orgCode}/profile/password:
+ *   post:
+ *     summary: Change the member's own password
+ *     description: >
+ *       Requires the current password, which is checked by attempting a
+ *       direct-grant login — Keycloak's Admin API can set a password but cannot
+ *       verify one. The new password is judged by the realm's own policy, and
+ *       the realm's own complaint is what comes back, so a form that satisfies
+ *       this API and then fails Keycloak's rules cannot happen.
+ *       Applies to every organisation this identity belongs to.
+ *     tags: [Account]
+ *     responses:
+ *       204:
+ *         description: Changed
+ *       400:
+ *         description: The current password was wrong, or the new one was refused
+ */
+router.post(
+  '/:orgCode/profile/password',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationUserId } = req.account!;
+      const { currentPassword, newPassword } = req.body ?? {};
+
+      await accountCredentialsService.changePassword(
+        organisationUserId,
+        currentPassword,
+        newPassword
+      );
+      return res.status(204).send();
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error('Error in POST /account/:orgCode/profile/password:', error);
+      return res.status(500).json({ error: 'Failed to change the password' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/account/{orgCode}/profile/email:
+ *   post:
+ *     summary: Ask to change the member's own email address
+ *     description: >
+ *       Sends a link to the new address and changes nothing until it is
+ *       followed — an account user's Keycloak username *is* their email, so an
+ *       unverified change would hand them a login they do not own.
+ *       The response is identical whether or not the address already belongs to
+ *       somebody else; answering otherwise would let a member test which
+ *       addresses are registered with the platform.
+ *     tags: [Account]
+ *     responses:
+ *       202:
+ *         description: A link has been sent, if the address could receive one
+ *       400:
+ *         description: The address was malformed, or the current password was wrong
+ */
+router.post(
+  '/:orgCode/profile/email',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationUserId } = req.account!;
+      const { currentPassword, newEmail } = req.body ?? {};
+
+      const result = await accountCredentialsService.requestEmailChange(
+        organisationUserId,
+        currentPassword,
+        newEmail
+      );
+      return res.status(202).json(result);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error('Error in POST /account/:orgCode/profile/email:', error);
+      return res.status(500).json({ error: 'Failed to start the email change' });
     }
   }
 );

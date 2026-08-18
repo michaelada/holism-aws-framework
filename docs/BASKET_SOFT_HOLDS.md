@@ -162,6 +162,64 @@ is re-checked before the money is taken, and an expired hold cancels the payment
 intent so a stale tab cannot pay. Point 5 below — the stale payment that
 completes late — is now caught before the money moves rather than after.
 
+## A lapsed hold is not an empty basket
+
+Reported as: two slots in the basket, and the calendar showing them as free and
+clickable rather than red.
+
+The hold had lapsed. Availability counted only holds where `expires_at > NOW()`,
+so after two minutes the member's own slots read as available — while the
+add guard, which checks the **basket** rather than the clock, refused a second
+copy with "that slot is already in your basket". The screen contradicted itself.
+
+The two questions are different and are now asked separately:
+
+| | Counts while the hold is live | Counts until removed or checked out |
+|---|---|---|
+| Somebody else's basket | ✅ | — |
+| **Your own basket** | for places | ✅ for saying it is yours |
+
+So a lapsed line:
+
+- **reserves nothing** — the places really are free, and another member sees the
+  slot as available, which is the whole point of an expiry;
+- **still shows as `in-your-basket`** to its owner, red and unclickable, because
+  it is still in their basket and they cannot add it twice.
+
+`heldUntil` is then in the past, so the countdown beneath reads *Hold expired* —
+which is the honest description: yours, in your basket, no longer reserved.
+
+`ExistingHold.live` carries the distinction into the calculator. It defaults to
+in-force when absent, so a caller that predates it keeps the old behaviour
+rather than silently freeing every slot.
+
+## A slot that clashes is not a slot you have
+
+A configuration with several duration options produces **overlapping rows by
+design**: Laois's cross-country schooling offers a three-hour morning and a
+four-hour extended morning, both from 10:00. They are two ways to book one
+session, not two sessions.
+
+Picking both added the first and refused the second with *"That slot is already
+in your basket"* — about a row the member could see was a different one — while
+the grid painted both as theirs.
+
+Three things were wrong, and all three are fixed:
+
+- The calculator now separates an **exact** own hold (`in-your-basket`) from an
+  **overlapping** one (`clashes-with-basket`), so the calendar says *"Overlaps
+  one in your basket"* and the add refuses with *"That overlaps a slot already
+  in your basket"*.
+- The clashing row gets **no countdown**. One would imply it frees up when the
+  clock runs out; what it actually waits on is the basket line being removed.
+- The booking page no longer lets two clashing slots be chosen at once. The
+  later choice wins and the one it clashes with visibly deselects — they are
+  alternatives for the same session, and a member clicking "extended morning"
+  after "morning" means the longer one.
+
+Sessions that merely **abut** are left alone: 13:00 starts exactly where the
+three-hour morning ends, and a member may well want both.
+
 ## Known gap
 
 A hold is taken by a `SELECT`-then-`INSERT` with no lock between them, so two

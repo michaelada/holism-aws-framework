@@ -41,6 +41,27 @@ const addDays = (date: Date, days: number): Date => {
   return next;
 };
 
+/** Minutes since midnight, for comparing slots that start on the same day. */
+const minutesOf = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
+
+/**
+ * Whether two slots on this calendar cannot both be taken.
+ *
+ * The same test the server applies to a hold: same day, and the times cross.
+ * A calendar with several duration options from one start produces overlapping
+ * rows on purpose — 10:00–13:00 and 10:00–14:00 are two ways to book the same
+ * morning, not two mornings.
+ */
+const overlaps = (a: AvailableSlot, b: AvailableSlot): boolean => {
+  if (a.date !== b.date) return false;
+  const aStart = minutesOf(a.startTime);
+  const bStart = minutesOf(b.startTime);
+  return aStart < bStart + b.duration && bStart < aStart + a.duration;
+};
+
 /** The seven days from `start`, as keys. */
 const weekFrom = (start: Date): string[] =>
   Array.from({ length: 7 }, (_, offset) => dateKey(addDays(start, offset)));
@@ -333,9 +354,30 @@ export const BookCalendarPage: React.FC = () => {
                          * selection the moment this one changed.
                          */
                         const stillChosen = daySlots.filter((slot) => keys.includes(slotKey(slot)));
+
+                        /*
+                         * Two slots that overlap cannot both be booked.
+                         *
+                         * A calendar offering several lengths from one start —
+                         * a three-hour morning and a four-hour extended
+                         * morning — produces overlapping rows by design. Both
+                         * were selectable, and the second was then refused at
+                         * the basket, after the first had already gone in.
+                         *
+                         * The later choice wins and the one it clashes with is
+                         * dropped, because they are alternatives for the same
+                         * session: a member clicking "extended morning" after
+                         * "morning" means the longer one. The dropped row
+                         * visibly deselects, so nothing happens silently.
+                         */
+                        const withoutClashes = stillChosen.reduce<AvailableSlot[]>(
+                          (kept, slot) => [...kept.filter((other) => !overlaps(other, slot)), slot],
+                          []
+                        );
+
                         setChosen((previous) => [
                           ...previous.filter((slot) => slot.date !== day),
-                          ...stillChosen,
+                          ...withoutClashes,
                         ]);
                       }}
                       sx={{ flexWrap: 'wrap', gap: 1, '& .MuiToggleButtonGroup-grouped': { border: 1, borderRadius: 1 } }}

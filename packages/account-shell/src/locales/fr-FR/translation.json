@@ -7,6 +7,7 @@
     "loading": "Chargement…",
     "retry": "Réessayer",
     "cancel": "Annuler",
+    "done": "Terminé",
     "back": "Retour",
     "close": "Fermer",
     "signIn": "Se connecter",
@@ -149,8 +150,6 @@
     "cartSummary": "{{count}} articles · {{total}}",
     "cartHandling": "dont {{fee}} de frais",
     "goToCart": "Aller au panier",
-    "recentPayments": "Paiements récents",
-    "allPayments": "Tous les paiements",
     "whatsOn": "À l’affiche",
     "upcomingEvents": "Événements à venir",
     "viewAll": "Tout voir",
@@ -335,7 +334,8 @@
       "full": "Complet",
       "in-use": "Occupé",
       "held": "Réservé par quelqu’un d’autre",
-      "in-your-basket": "Dans votre panier"
+      "in-your-basket": "Dans votre panier",
+      "clashes-with-basket": "Chevauche un cr\u00e9neau de votre panier"
     }
   },
   "registrations": {
@@ -398,7 +398,7 @@
     "loadError": "Nous n'avons pas pu charger votre panier.",
     "remove": "Retirer {{item}}",
     "paymentMethodFor": "Moyen de paiement pour {{item}}",
-    "holdExpired": "Certains éléments ne sont plus réservés et peuvent ne plus être disponibles. Veuillez vérifier votre panier.",
+    "holdExpired": "Certains \u00e9l\u00e9ments vous \u00e9taient r\u00e9serv\u00e9s, mais la r\u00e9servation a expir\u00e9 et ils ont \u00e9t\u00e9 retir\u00e9s de votre panier. Veuillez les ajouter \u00e0 nouveau si vous les voulez toujours.",
     "offlineSubtotal": "Payé directement au club (Offline)",
     "cardSubtotal": "Payé par carte",
     "handlingFee": "Frais de traitement",
@@ -495,6 +495,13 @@
       "cancelled": "Annulé"
     }
   },
+  "confirmEmail": {
+    "doneTitle": "Adresse e-mail modifiée",
+    "doneBody": "Vous vous connectez désormais avec {{email}}.",
+    "failedTitle": "Ce lien n'est plus valable",
+    "failedBody": "Les liens durent une heure et ne peuvent servir qu'une fois. Votre adresse e-mail n'a pas changé — recommencez depuis Profil et paramètres.",
+    "goToSignIn": "Aller à la connexion"
+  },
   "profile": {
     "title": "Profil et paramètres",
     "loadFailed": "Votre profil n’a pas pu être chargé. Veuillez réessayer.",
@@ -529,8 +536,26 @@
     "signInBlurb": "Votre adresse e-mail et votre mot de passe sont gérés dans les paramètres de votre compte, où les modifications peuvent être vérifiées en toute sécurité.",
     "changePassword": "Changer le mot de passe",
     "changeEmail": "Changer l’adresse e-mail",
-    "leavingBlurb": "Vous allez être dirigé vers les paramètres de votre compte pour effectuer cette modification, puis ramené ici directement.",
-    "continueToAccount": "Continuer",
+    "password": {
+      "current": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "mismatch": "Ils ne correspondent pas.",
+      "appliesEverywhere": "Cela modifie votre connexion pour tous les clubs auxquels vous appartenez.",
+      "failed": "Votre mot de passe n'a pas pu être modifié. Veuillez réessayer.",
+      "show": "Afficher le mot de passe",
+      "hide": "Masquer le mot de passe"
+    },
+    "email": {
+      "blurb": "Vous vous connectez avec cette adresse : nous enverrons donc un lien à la nouvelle pour vérifier qu'elle vous parvient. Rien ne change tant que vous ne l'avez pas suivi.",
+      "new": "Nouvelle adresse e-mail",
+      "sameAsNow": "C'est déjà votre adresse e-mail.",
+      "send": "Envoyer le lien",
+      "checkInbox": "Consultez votre boîte de réception",
+      "sentTo": "Nous avons envoyé un lien à {{email}}.",
+      "sentBlurb": "Suivez-le dans l'heure pour terminer le changement. D'ici là, vous vous connectez comme d'habitude avec votre adresse actuelle.",
+      "failed": "Nous n'avons pas pu lancer le changement. Veuillez réessayer."
+    },
     "memberSince": "Membre depuis {{when}}",
     "lastSignIn": "Dernière connexion {{when}}"
   }

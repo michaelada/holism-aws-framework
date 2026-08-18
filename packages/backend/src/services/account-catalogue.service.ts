@@ -959,17 +959,26 @@ export class AccountCatalogueService {
        * the slot out twice.
        */
       db.query(
-        `SELECT ci.context_ref, ci.expires_at, c.user_id
+        `SELECT ci.context_ref, ci.expires_at, c.user_id,
+                (ci.expires_at IS NOT NULL AND ci.expires_at > NOW()) AS live
          FROM cart_items ci
          JOIN carts c ON c.id = ci.cart_id
          WHERE c.organisation_id = $1
            AND c.status = 'open'
            AND ci.item_type = 'booking'
-           AND ci.expires_at IS NOT NULL
-           AND ci.expires_at > NOW()
            AND ci.context_ref->>'calendarId' = $2
-           AND ci.context_ref->>'date' BETWEEN $3 AND $4`,
-        [organisationId, calendarId, from, to]
+           AND ci.context_ref->>'date' BETWEEN $3 AND $4
+           AND (
+             -- Somebody else's basket only counts while the hold stands; once it
+             -- lapses the slot is genuinely back on sale.
+             ci.expires_at > NOW()
+             -- The viewer's own line counts either way. It is in their basket
+             -- until they remove it or check out, and the add guard refuses a
+             -- second copy regardless of the clock — so showing it as free was
+             -- the screen contradicting itself.
+             OR c.user_id = $5
+           )`,
+        [organisationId, calendarId, from, to, viewerId ?? null]
       ),
     ]);
 
@@ -1021,6 +1030,7 @@ export class AccountCatalogueService {
             duration: Number(ref.duration),
             places: Number(ref.places ?? 1),
             heldByViewer: Boolean(viewerId) && row.user_id === viewerId,
+            live: Boolean(row.live),
             expiresAt: new Date(row.expires_at).toISOString(),
           };
         }),
@@ -1097,7 +1107,9 @@ export class AccountCatalogueService {
             ? 'Somebody else is holding that slot at the moment'
             : slot.unavailableReason === 'in-your-basket'
               ? 'That slot is already in your basket'
-              : 'That slot is already taken'
+              : slot.unavailableReason === 'clashes-with-basket'
+                ? 'That overlaps a slot already in your basket'
+                : 'That slot is already taken'
       );
     }
     if (places > slot.placesRemaining) {

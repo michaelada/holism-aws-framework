@@ -1,9 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { paymentService } from '../services/payment.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { byResource } from '../middleware/organisation-scope.middleware';
+import { OrganisationRequest } from '../middleware/capability.middleware';
 import { logger } from '../config/logger';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * @swagger
@@ -141,6 +149,9 @@ router.get(
 router.get(
   '/payments/:id',
   authenticateToken(),
+  // The payment's own organisation, not the caller's: this route names a
+  // payment and nothing else, and had no organisation check at all.
+  byResource('payment', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -200,15 +211,29 @@ router.get(
 router.post(
   '/payments/:id/refund',
   authenticateToken(),
-  async (req: Request, res: Response) => {
+  /*
+   * Scoped by the payment, deliberately — **not** by the `organisationId` in
+   * the body, which the handler goes on to use. A caller supplying both could
+   * otherwise refund another club's payment by naming their own organisation,
+   * and money would move.
+   */
+  byResource('payment', 'id'),
+  async (req: OrganisationRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { organisationId, refundAmount, refundReason, requestedBy } = req.body;
+      const { refundAmount, refundReason, requestedBy } = req.body;
 
-      // Validate required fields
-      if (!organisationId || !refundAmount || !requestedBy) {
+      /*
+       * The payment's organisation, established by the guard above — not the
+       * one in the body. They are the same in every honest request, and taking
+       * the body's would let a caller refund another club's payment by naming
+       * their own. The body field is now ignored rather than trusted.
+       */
+      const organisationId = req.organisationId!;
+
+      if (!refundAmount || !requestedBy) {
         return res.status(400).json({ 
-          error: 'organisationId, refundAmount, and requestedBy are required' 
+          error: 'refundAmount and requestedBy are required' 
         });
       }
 

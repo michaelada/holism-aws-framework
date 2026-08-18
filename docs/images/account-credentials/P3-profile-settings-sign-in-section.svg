@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="321" viewBox="0 0 640.40 321.00" role="img" aria-label="P3 — Profile &amp; Settings, sign-in section">
+<title>P3 — Profile &amp; Settings, sign-in section</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="321.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M105.7 126.5L581.5 126.5 M43.3 177.5L503.5 177.5 M43.3 211.5L503.5 211.5 M19.9 296.5L620.5 296.5 M19.9 24.5L19.9 296.5 M43.3 177.5L43.3 211.5 M503.5 177.5L503.5 211.5 M620.5 24.5L620.5 296.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Profile &amp; Settings                                                        </text>
+<text class="tx" x="23.80" y="92.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ℹ These details are shared across the 4 clubs you belong to.              </text>
+<text class="tx" x="23.80" y="126.50" textLength="78.00" lengthAdjust="spacingAndGlyphs">  Sign-in </text>
+<text class="tx" x="23.80" y="160.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Email address                                                             </text>
+<text class="tx" x="47.20" y="194.50" textLength="452.40" lengthAdjust="spacingAndGlyphs"> michael@example.com                                      </text>
+<text class="tx" x="507.40" y="194.50" textLength="109.20" lengthAdjust="spacingAndGlyphs">  (read-only) </text>
+<text class="tx" x="23.80" y="228.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  This is also the address you sign in with.                                </text>
+<text class="tx" x="23.80" y="262.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  [ Change password ]   [ Change email address ]                            </text>
+</svg>

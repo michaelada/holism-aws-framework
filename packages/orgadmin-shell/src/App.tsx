@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth';
 import { CapabilityProvider } from './context/CapabilityContext';
 import { 
   AuthTokenContext,
+  OrganisationIdContext,
   OrganisationProvider,
 } from '@aws-web-framework/orgadmin-core';
 import { Layout } from './components/Layout';
@@ -196,7 +197,20 @@ const App: React.FC = () => {
     clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'orgadmin-client',
   };
 
-  const { loading, error, authenticated, user, organisation, capabilities, isOrgAdmin, logout, getToken } = useAuth(keycloakConfig);
+  const {
+    loading,
+    error,
+    authenticated,
+    user,
+    organisation,
+    organisations,
+    capabilities,
+    isOrgAdmin,
+    logout,
+    getToken,
+    getOrganisationId,
+    switchOrganisation,
+  } = useAuth(keycloakConfig);
 
   // Extract organization locale from organization data
   const organizationLocale = useMemo(() => {
@@ -301,10 +315,23 @@ const App: React.FC = () => {
     <BrowserRouter basename="/orgadmin">
       <LocaleProvider organizationLocale={organizationLocale || 'en-GB'}>
         <AuthTokenContext.Provider value={getToken}>
+          {/*
+            Every org-admin API call carries the current organisation, for the
+            routes that do not name one in their path. Provided here rather than
+            passed by each caller, for the same reason the token is: a caller
+            that has to remember is a caller that will forget, and forgetting
+            means acting on the wrong club's data.
+          */}
+          <OrganisationIdContext.Provider value={getOrganisationId}>
           <OrganisationProvider organisation={organisation}>
             <OnboardingProvider>
               <CapabilityProvider capabilities={capabilities}>
-                <Layout modules={availableModules} onLogout={logout}>
+                <Layout
+                  modules={availableModules}
+                  onLogout={logout}
+                  organisations={organisations}
+                  onSwitchOrganisation={switchOrganisation}
+                >
                   <Suspense fallback={<LoadingScreen />}>
                     <Routes>
                       {/* Dashboard (landing page) */}
@@ -338,6 +365,7 @@ const App: React.FC = () => {
               </CapabilityProvider>
             </OnboardingProvider>
           </OrganisationProvider>
+          </OrganisationIdContext.Provider>
         </AuthTokenContext.Provider>
       </LocaleProvider>
     </BrowserRouter>

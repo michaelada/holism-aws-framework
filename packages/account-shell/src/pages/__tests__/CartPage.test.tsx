@@ -128,13 +128,30 @@ describe('CartPage (F1)', () => {
     expect(screen.getByText(/paid directly to the club/i)).toBeInTheDocument();
   });
 
-  it('warns when a hold has lapsed, because checkout will refuse', async () => {
+  /**
+   * A lapsed hold is removed, not greyed out.
+   *
+   * The line used to stay in the basket priced at nothing, blocking checkout
+   * until the member noticed and deleted it themselves. `itemId` is null in the
+   * warning because the row is already gone — the message is what stops the
+   * basket simply shrinking without explanation.
+   */
+  it('says what was removed when a hold ran out', async () => {
     mockExecute.mockResolvedValue(
-      cart({ warnings: [{ itemId: 'item-1', code: 'HOLD_EXPIRED', message: 'gone' }] })
+      cart({
+        warnings: [
+          {
+            itemId: null,
+            code: 'HOLD_EXPIRED',
+            message: '"Court 1" was held for you, but the hold ran out and it has been removed',
+          },
+        ],
+      })
     );
     render();
 
-    expect(await screen.findByText(/no longer held/i)).toBeInTheDocument();
+    expect(await screen.findByText(/have been removed from your basket/i)).toBeInTheDocument();
+    expect(screen.getByText(/add them again/i)).toBeInTheDocument();
   });
 
   it('reloads after removing an item, because the fee changes', async () => {

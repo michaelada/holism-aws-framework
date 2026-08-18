@@ -1,5 +1,9 @@
 import { Router, Response } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.middleware';
+import {
+  byCurrentOrganisation,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { AppError } from '../middleware/errors';
@@ -13,7 +17,13 @@ import { userGroupService } from '../services/user-group.service';
  * surface — so an admin can only ever manage their own organisation's groups.
  */
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 async function resolveOrganisationId(keycloakUserId: string): Promise<string | null> {
   const result = await db.query(
@@ -69,6 +79,7 @@ function withOrganisation(
 router.get(
   '/user-groups',
   authenticateToken(),
+  byCurrentOrganisation(),
   withOrganisation('Failed to load user groups', async (organisationId, _req, res) => {
     res.json({ groups: await userGroupService.list(organisationId) });
   })
@@ -89,6 +100,7 @@ router.get(
 router.post(
   '/user-groups',
   authenticateToken(),
+  byCurrentOrganisation(),
   withOrganisation('Failed to create the user group', async (organisationId, req, res) => {
     const group = await userGroupService.create(organisationId, req.body ?? {});
     res.status(201).json(group);
@@ -108,6 +120,7 @@ router.post(
 router.put(
   '/user-groups/:id',
   authenticateToken(),
+  byResource('userGroup', 'id'),
   withOrganisation('Failed to update the user group', async (organisationId, req, res) => {
     const group = await userGroupService.update(organisationId, req.params.id, req.body ?? {});
     res.json(group);
@@ -130,6 +143,7 @@ router.put(
 router.delete(
   '/user-groups/:id',
   authenticateToken(),
+  byResource('userGroup', 'id'),
   withOrganisation('Failed to delete the user group', async (organisationId, req, res) => {
     const result = await userGroupService.remove(organisationId, req.params.id);
     res.json(result);
@@ -149,6 +163,7 @@ router.delete(
 router.get(
   '/user-groups/:id/members',
   authenticateToken(),
+  byResource('userGroup', 'id'),
   withOrganisation('Failed to load group members', async (organisationId, req, res) => {
     res.json({ members: await userGroupService.listMembers(organisationId, req.params.id) });
   })
@@ -172,6 +187,7 @@ router.get(
 router.post(
   '/user-groups/:id/members',
   authenticateToken(),
+  byResource('userGroup', 'id'),
   withOrganisation('Failed to add group members', async (organisationId, req, res) => {
     const added = await userGroupService.addMembers(
       organisationId,
@@ -197,6 +213,7 @@ router.post(
 router.delete(
   '/user-groups/:id/members/:userId',
   authenticateToken(),
+  byResource('userGroup', 'id'),
   withOrganisation('Failed to remove the group member', async (organisationId, req, res) => {
     await userGroupService.removeMember(organisationId, req.params.id, req.params.userId);
     res.status(204).send();

@@ -2,11 +2,23 @@ import { Router, Request, Response } from 'express';
 import { discountService } from '../services/discount.service';
 import { discountValidatorService } from '../services/discount-validator.service';
 import { discountCalculatorService } from '../services/discount-calculator.service';
-import { authenticateToken, requireOrgAdminCapability } from '../middleware';
+import {
+  authenticateToken,
+  byBodyOrCurrent,
+  byCurrentOrganisation,
+  byResource,
+  requireOrgAdminCapability,
+} from '../middleware';
 import { logger } from '../config/logger';
 import { ModuleType } from '../types/discount.types';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 // Helper function to get capability based on module type
 function getCapabilityForModule(moduleType: ModuleType): string {
@@ -92,6 +104,7 @@ router.get(
 router.post(
   '/discounts',
   authenticateToken(),
+  byBodyOrCurrent(),
   async (req: Request, res: Response) => {
     try {
       const { moduleType } = req.body;
@@ -132,6 +145,7 @@ router.post(
 router.get(
   '/discounts/:id',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -175,6 +189,7 @@ router.get(
 router.put(
   '/discounts/:id',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -222,6 +237,7 @@ router.put(
 router.delete(
   '/discounts/:id',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -284,6 +300,7 @@ router.delete(
 router.delete(
   '/discounts/:id/force',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -332,6 +349,7 @@ router.delete(
 router.get(
   '/discounts/:id/membership-types',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -383,6 +401,7 @@ router.get(
 router.post(
   '/discounts/:id/apply',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -410,6 +429,7 @@ router.post(
 router.delete(
   '/discounts/:id/apply/:targetType/:targetId',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id, targetType, targetId } = req.params;
@@ -433,6 +453,7 @@ router.delete(
 router.get(
   '/discounts/target/:targetType/:targetId',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { targetType, targetId } = req.params;
@@ -452,6 +473,7 @@ router.get(
 router.post(
   '/discounts/validate',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { discountId, userId, amount, quantity } = req.body;
@@ -487,6 +509,7 @@ router.post(
 router.post(
   '/discounts/validate-code',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { code, organisationId } = req.body;
@@ -514,6 +537,7 @@ router.post(
 router.post(
   '/discounts/calculate',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { discountId, itemPrice, quantity, organisationId } = req.body;
@@ -547,6 +571,7 @@ router.post(
 router.post(
   '/discounts/calculate-cart',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { cartItems, discountIds, userId, organisationId } = req.body;
@@ -581,6 +606,7 @@ router.post(
 router.get(
   '/discounts/:id/usage',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (_req: Request, res: Response) => {
     try {
       // TODO: Implement pagination for usage history
@@ -599,6 +625,7 @@ router.get(
 router.get(
   '/discounts/:id/stats',
   authenticateToken(),
+  byResource('discount', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

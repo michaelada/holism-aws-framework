@@ -26,6 +26,7 @@ import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
 import { HelpButton } from './HelpButton';
+import { OrganisationSwitcher } from './OrganisationSwitcher';
 import { useOnboarding } from '../context/OnboardingContext';
 
 const DRAWER_WIDTH = 260;
@@ -35,6 +36,15 @@ interface LayoutProps {
   children: React.ReactNode;
   modules?: ModuleRegistration[];
   onLogout?: () => void;
+  /**
+   * Every organisation the administrator belongs to.
+   *
+   * Defaulted rather than required so the many existing renders of this layout
+   * — and its tests — do not all have to be taught about a switcher that most
+   * administrators will never see.
+   */
+  organisations?: Array<{ id: string; displayName: string }>;
+  onSwitchOrganisation?: (organisationId: string) => void | Promise<void>;
 }
 
 /**
@@ -48,11 +58,31 @@ interface LayoutProps {
  * 
  * Requirements: 2.2.1, 3.4.1, 1.2
  */
-export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout }) => {
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  modules = [],
+  onLogout,
+  organisations = [],
+  onSwitchOrganisation,
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+
+  /**
+   * Switch club, then go to the dashboard.
+   *
+   * Not a preference: capabilities belong to the organisation, so half the time
+   * the page currently open is a module the other club does not have. Staying
+   * put would land the administrator on a capability-denied screen the instant
+   * they chose — and the dashboard is the one page every organisation has.
+   */
+  const handleSwitchOrganisation = async (organisationId: string) => {
+    if (!onSwitchOrganisation) return;
+    await onSwitchOrganisation(organisationId);
+    navigate('/');
+  };
   const location = useLocation();
   const { organisation } = useOrganisation();
   const { t } = useTranslation();
@@ -335,14 +365,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, modules = [], onLogout
             )}
           </Box>
 
-          {/* Organisation Name in AppBar (desktop only) */}
-          <Typography
-            variant="body2"
-            sx={{ display: { xs: 'none', md: 'block' }, mr: 2 }}
-            color="text.secondary"
-          >
-            {organisation?.displayName || t('navigation.loading')}
-          </Typography>
+          {/*
+            Which club is being administered, and — for somebody who administers
+            several — how to change it. Renders as a plain label when there is
+            only one, which is the ordinary case.
+          */}
+          <OrganisationSwitcher
+            organisations={organisations}
+            currentId={organisation?.id}
+            onSwitch={handleSwitchOrganisation}
+          />
 
           {/* Help Button */}
           <HelpButton 

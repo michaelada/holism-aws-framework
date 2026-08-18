@@ -1,10 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { ticketingService } from '../services/ticketing.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * Middleware to check if organisation has event-ticketing capability
@@ -102,6 +111,7 @@ router.get(
 router.get(
   '/events/:eventId/ticketing-config',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -144,6 +154,7 @@ router.get(
 router.post(
   '/events/:eventId/ticketing-config',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -188,6 +199,7 @@ router.post(
 router.put(
   '/events/:eventId/ticketing-config',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -225,6 +237,7 @@ router.put(
 router.delete(
   '/events/:eventId/ticketing-config',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -260,6 +273,7 @@ router.delete(
 router.get(
   '/events/:eventId/ticket-sales',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -297,6 +311,7 @@ router.get(
 router.get(
   '/tickets/:ticketId',
   authenticateToken(),
+  byResource('ticket', 'ticketId'),
   async (req: Request, res: Response) => {
     try {
       const { ticketId } = req.params;
@@ -335,6 +350,7 @@ router.get(
 router.get(
   '/tickets/qr/:qrCode',
   authenticateToken(),
+  byResource('ticketByQr', 'qrCode'),
   async (req: Request, res: Response) => {
     try {
       const { qrCode } = req.params;
@@ -387,6 +403,7 @@ router.get(
 router.put(
   '/tickets/:ticketId/scan-status',
   authenticateToken(),
+  byResource('ticket', 'ticketId'),
   async (req: Request, res: Response) => {
     try {
       const { ticketId } = req.params;
@@ -434,6 +451,7 @@ router.put(
 router.get(
   '/tickets/:ticketId/scan-history',
   authenticateToken(),
+  byResource('ticket', 'ticketId'),
   async (req: Request, res: Response) => {
     try {
       const { ticketId } = req.params;

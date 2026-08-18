@@ -71,8 +71,30 @@ jest.mock('../../middleware/capability.middleware', () => ({
   },
   loadOrganisationCapabilities: () => (_req: any, _res: any, next: any) => next(),
   requireCapability: () => (_req: any, _res: any, next: any) => next(),
-  requireAllCapabilities: () => (_req: any, _res: any, next: any) => next()
+  requireAllCapabilities: () => (_req: any, _res: any, next: any) => next(),
+  organisationOfRequest: async () => 'test-org-123'
 }));
+
+/*
+ * Mocked for the same reason the capability middleware is: these cases are
+ * about what the discount routes do, not about which organisation a caller may
+ * act in. Whether that guard refuses correctly is its own subject —
+ * `src/middleware/__tests__/organisation-scope.middleware.test.ts` — and a
+ * structural test enforces that every org-admin route carries one.
+ */
+jest.mock('../../middleware/organisation-scope.middleware', () => {
+  const allow = () => (req: any, _res: any, next: any) => {
+    req.organisationId = 'test-org-123';
+    next();
+  };
+  return {
+    scopeToOrganisation: allow,
+    byResource: allow,
+    byParam: allow,
+    byBodyOrCurrent: allow,
+    byCurrentOrganisation: allow,
+  };
+});
 
 import request from 'supertest';
 import type { Server } from 'http';

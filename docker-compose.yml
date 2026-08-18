@@ -66,6 +66,10 @@ services:
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
       KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
       KEYCLOAK_ADMIN_REALM: aws-framework
+      # Verifies a member's CURRENT password when they change it or their email
+      # address. Confidential and direct-grant only; created by the seed.
+      KEYCLOAK_PASSWORD_CHECK_CLIENT_ID: account-password-check
+      KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET: ${KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET:-account-password-check-dev-secret}
       # Development: Disable authentication
       # DISABLE_AUTH: true
     ports:

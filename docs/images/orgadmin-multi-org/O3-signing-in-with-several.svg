@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="253" viewBox="0 0 640.40 253.00" role="img" aria-label="O3 — Signing in with several">
+<title>O3 — Signing in with several</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="640.40" height="253.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 58.5L620.5 58.5 M51.1 143.5L168.1 143.5 M183.7 143.5L300.7 143.5 M316.3 143.5L433.3 143.5 M51.1 194.5L168.1 194.5 M183.7 194.5L300.7 194.5 M316.3 194.5L433.3 194.5 M19.9 228.5L620.5 228.5 M19.9 24.5L19.9 228.5 M51.1 143.5L51.1 194.5 M168.1 143.5L168.1 194.5 M183.7 143.5L183.7 194.5 M300.7 143.5L300.7 194.5 M316.3 143.5L316.3 194.5 M433.3 143.5L433.3 194.5 M620.5 24.5L620.5 228.5"/>
+<text class="tx" x="39.40" y="41.50">☰</text>
+<text class="tx" x="55.00" y="41.50" textLength="413.40" lengthAdjust="spacingAndGlyphs">  Laois Hunt Pony Club  ▾                            </text>
+<text class="tx" x="468.40" y="41.50">🔔</text>
+<text class="tx" x="484.00" y="41.50" textLength="132.60" lengthAdjust="spacingAndGlyphs">   Ada Adams  ▾  </text>
+<text class="tx" x="23.80" y="92.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">   Welcome back, Ada                                                        </text>
+<text class="tx" x="23.80" y="109.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">   Laois Hunt Pony Club · you administer 3 organisations                    </text>
+<text class="tx" x="55.00" y="160.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Members      </text>
+<text class="tx" x="187.60" y="160.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Awaiting     </text>
+<text class="tx" x="320.20" y="160.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> Bookings     </text>
+<text class="tx" x="55.00" y="177.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> 128          </text>
+<text class="tx" x="187.60" y="177.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> payment  7   </text>
+<text class="tx" x="320.20" y="177.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> today   4    </text>
+</svg>

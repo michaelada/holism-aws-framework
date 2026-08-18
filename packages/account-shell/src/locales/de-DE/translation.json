@@ -7,6 +7,7 @@
     "loading": "Wird geladen…",
     "retry": "Erneut versuchen",
     "cancel": "Abbrechen",
+    "done": "Fertig",
     "back": "Zurück",
     "close": "Schließen",
     "signIn": "Anmelden",
@@ -149,8 +150,6 @@
     "cartSummary": "{{count}} Positionen · {{total}}",
     "cartHandling": "inkl. {{fee}} Bearbeitung",
     "goToCart": "Zum Warenkorb",
-    "recentPayments": "Letzte Zahlungen",
-    "allPayments": "Alle Zahlungen",
     "whatsOn": "Aktuelles",
     "upcomingEvents": "Kommende Veranstaltungen",
     "viewAll": "Alle anzeigen",
@@ -335,7 +334,8 @@
       "full": "Ausgebucht",
       "in-use": "Belegt",
       "held": "Von jemand anderem reserviert",
-      "in-your-basket": "In Ihrem Warenkorb"
+      "in-your-basket": "In Ihrem Warenkorb",
+      "clashes-with-basket": "\u00dcberschneidet sich mit einem im Warenkorb"
     }
   },
   "registrations": {
@@ -398,7 +398,7 @@
     "loadError": "Ihr Warenkorb konnte nicht geladen werden.",
     "remove": "{{item}} entfernen",
     "paymentMethodFor": "Zahlungsart für {{item}}",
-    "holdExpired": "Einige Artikel sind nicht mehr reserviert und möglicherweise nicht mehr verfügbar. Bitte prüfen Sie Ihren Warenkorb.",
+    "holdExpired": "Einige Artikel waren f\u00fcr Sie reserviert, aber die Reservierung ist abgelaufen und sie wurden aus Ihrem Warenkorb entfernt. Bitte f\u00fcgen Sie sie erneut hinzu, wenn Sie sie noch m\u00f6chten.",
     "offlineSubtotal": "Direkt an den Verein (Offline)",
     "cardSubtotal": "Zahlung per Karte",
     "handlingFee": "Bearbeitungsgebühr",
@@ -495,6 +495,13 @@
       "cancelled": "Storniert"
     }
   },
+  "confirmEmail": {
+    "doneTitle": "E-Mail-Adresse geändert",
+    "doneBody": "Sie melden sich jetzt mit {{email}} an.",
+    "failedTitle": "Dieser Link ist nicht mehr gültig",
+    "failedBody": "Links sind eine Stunde gültig und können einmal verwendet werden. Ihre E-Mail-Adresse wurde nicht geändert – beginnen Sie erneut unter Profil & Einstellungen.",
+    "goToSignIn": "Zur Anmeldung"
+  },
   "profile": {
     "title": "Profil & Einstellungen",
     "loadFailed": "Ihr Profil konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
@@ -529,8 +536,26 @@
     "signInBlurb": "Ihre E-Mail-Adresse und Ihr Passwort werden in Ihren Kontoeinstellungen verwaltet, wo Änderungen sicher bestätigt werden können.",
     "changePassword": "Passwort ändern",
     "changeEmail": "E-Mail-Adresse ändern",
-    "leavingBlurb": "Sie werden zu Ihren Kontoeinstellungen weitergeleitet und danach direkt hierher zurückgebracht.",
-    "continueToAccount": "Weiter",
+    "password": {
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "confirm": "Neues Passwort bestätigen",
+      "mismatch": "Diese stimmen nicht überein.",
+      "appliesEverywhere": "Dies ändert Ihre Anmeldung für alle Vereine, denen Sie angehören.",
+      "failed": "Ihr Passwort konnte nicht geändert werden. Bitte versuchen Sie es erneut.",
+      "show": "Passwort anzeigen",
+      "hide": "Passwort ausblenden"
+    },
+    "email": {
+      "blurb": "Sie melden sich mit dieser Adresse an. Wir senden einen Link an die neue Adresse, um zu prüfen, ob er Sie erreicht. Bis Sie ihm folgen, ändert sich nichts.",
+      "new": "Neue E-Mail-Adresse",
+      "sameAsNow": "Das ist bereits Ihre E-Mail-Adresse.",
+      "send": "Link senden",
+      "checkInbox": "Prüfen Sie Ihren Posteingang",
+      "sentTo": "Wir haben einen Link an {{email}} gesendet.",
+      "sentBlurb": "Folgen Sie ihm innerhalb einer Stunde, um die Änderung abzuschließen. Bis dahin melden Sie sich wie gewohnt mit Ihrer aktuellen Adresse an.",
+      "failed": "Die Änderung konnte nicht gestartet werden. Bitte versuchen Sie es erneut."
+    },
     "memberSince": "Mitglied seit {{when}}",
     "lastSignIn": "Zuletzt angemeldet {{when}}"
   }

@@ -13,6 +13,8 @@ import { KeycloakAdminService } from './keycloak-admin.service';
 import cacheService from './cache.service';
 import { orgPaymentMethodDataService } from './org-payment-method-data.service';
 import { ValidationError } from '../middleware/errors';
+import { holdWindowsError } from '../utils/holds';
+import { holdWindowsService } from './hold-windows.service';
 import {
   slugifyUrlCode,
   validateUrlCode,
@@ -530,6 +532,19 @@ export class OrganizationService {
           values.push(JSON.stringify(data.enabledCapabilities));
         }
         if (data.settings !== undefined) {
+          /*
+           * Hold windows are checked rather than clamped: an administrator who
+           * typed 500 should be told the limit, not silently given 180.
+           */
+          const holds = (data.settings as { holds?: Record<string, unknown> }).holds;
+          if (holds) {
+            const problem = holdWindowsError({
+              basketMinutes: holds.basketMinutes as number | undefined,
+              checkoutMinutes: holds.checkoutMinutes as number | undefined,
+            });
+            if (problem) throw new ValidationError(problem);
+          }
+
           // Merge into the existing settings JSONB rather than replacing it,
           // so updating one group of settings (e.g. address) does not wipe
           // others stored under the same column (e.g. paymentSettings, which
@@ -558,6 +573,10 @@ export class OrganizationService {
         }
 
         const updatedOrg = this.rowToOrganization(result.rows[0]);
+
+        // The hold windows are cached for half a minute; drop them so a change
+        // the super-admin has just made applies to the very next basket.
+        holdWindowsService.forget(id);
 
         // Sync payment methods if provided
         if (data.enabledPaymentMethods !== undefined) {

@@ -243,6 +243,70 @@ export async function ensureRealmRole(
 }
 
 /**
+ * The confidential client that lets the backend check a member's password.
+ *
+ * Keycloak's Admin API can *set* a password and cannot *verify* one, so the
+ * only way to answer "is this really your current password?" is to attempt a
+ * login — which needs a client with direct access grants enabled.
+ *
+ * It is deliberately its own client rather than a flag on `account-app`.
+ * `account-app` is public, so it needs no secret; turning direct grants on
+ * there would let anyone post username-and-password pairs at the token
+ * endpoint. This one is confidential, so the grant is usable only by something
+ * holding the secret — which is the backend, and nothing else.
+ *
+ * Nothing but the grant is enabled: no browser flow, no service account, no
+ * redirect URIs. It cannot be used to sign anybody in to anything.
+ *
+ * See docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md §3.4.
+ */
+export async function ensurePasswordCheckClient(
+  session: KeycloakSession,
+  clientId: string,
+  secret: string
+): Promise<{ created: boolean }> {
+  await session.refresh();
+  const { client } = session;
+
+  const existing = await client.clients.find({ clientId });
+  if (existing.length > 0) {
+    /*
+     * Reconciled rather than left alone. A client that exists with the wrong
+     * secret, or with direct grants switched off, fails at the worst moment —
+     * a member typing their correct password and being told it is wrong — and
+     * the seed is the only place that says what this client is meant to be.
+     */
+    await client.clients.update(
+      { id: existing[0].id! },
+      {
+        clientId,
+        secret,
+        publicClient: false,
+        directAccessGrantsEnabled: true,
+        standardFlowEnabled: false,
+        implicitFlowEnabled: false,
+        serviceAccountsEnabled: false,
+      }
+    );
+    return { created: false };
+  }
+
+  await client.clients.create({
+    clientId,
+    description: `Password verification for the account app. Created by ${SEED_TAG}`,
+    secret,
+    publicClient: false,
+    directAccessGrantsEnabled: true,
+    standardFlowEnabled: false,
+    implicitFlowEnabled: false,
+    serviceAccountsEnabled: false,
+    enabled: true,
+  });
+
+  return { created: true };
+}
+
+/**
  * Deletes every user this seed created, and the group trees it built.
  *
  * Users are found two ways and the union is deleted: by the `seededBy`

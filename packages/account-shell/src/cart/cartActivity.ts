@@ -38,6 +38,28 @@ export function notifyCartChanged(): void {
 }
 
 /**
+ * A payment that has settled has taken its basket with it.
+ *
+ * The basket is emptied **server-side, after the request that started
+ * checkout has already returned** — the card is confirmed with Stripe by the
+ * browser, and the cart only becomes `ordered` once the webhook lands. So the
+ * write that `useAccountApi` notices is the one that happens *before* the
+ * basket empties, and the only thing the client afterwards is a poll of the
+ * payment's status, which is a read.
+ *
+ * That is the whole reason the badge could outlive the basket. The settlement
+ * itself is the event worth announcing, so the two screens that watch a
+ * payment resolve say so here.
+ *
+ * Any status but `pending` counts. A paid or offline-settled basket is closed;
+ * a failed one is still open but has had its holds shortened, so the count is
+ * worth re-reading either way.
+ */
+export function notifyIfSettled(status: string | null | undefined): void {
+  if (status && status !== 'pending') notifyCartChanged();
+}
+
+/**
  * Whether a request was a write to the basket.
  *
  * Matched on the path rather than on a flag the caller passes, for the same

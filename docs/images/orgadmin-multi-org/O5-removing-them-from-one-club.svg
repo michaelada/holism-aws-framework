@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="438" height="287" viewBox="0 0 437.60 287.00" role="img" aria-label="O5 — Removing them from one club">
+<title>O5 — Removing them from one club</title>
+<style>
+  :root {
+    --wf-bg: #ffffff;
+    --wf-panel: #fbfbfd;
+    --wf-stroke: #7a8394;
+    --wf-stroke-strong: #2f6feb;
+    --wf-text: #1a1f2b;
+    --wf-shade: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wf-bg: #14171d;
+      --wf-panel: #1b1f27;
+      --wf-stroke: #7d8798;
+      --wf-text: #e4e8ef;
+      --wf-stroke-strong: #6fa0ff;
+      --wf-shade: #6fa0ff;
+    }
+  }
+  .bg { fill: var(--wf-bg); }
+  .ln { stroke: var(--wf-stroke); stroke-width: 1.15; }
+  .ln.dbl { stroke: var(--wf-stroke-strong); stroke-width: 1.9; }
+  .tx {
+    fill: var(--wf-text);
+    font-size: 13.0px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, DejaVu Sans Mono, monospace;
+    white-space: pre;
+    dominant-baseline: middle;
+  }
+  .sh { fill: var(--wf-shade); }
+</style>
+<rect class="bg" x="0" y="0" width="437.60" height="287.00" rx="6"/>
+<path class="ln" fill="none" d="M19.9 24.5L409.9 24.5 M19.9 58.5L409.9 58.5 M43.3 143.5L409.9 143.5 M43.3 211.5L409.9 211.5 M19.9 262.5L409.9 262.5 M19.9 24.5L19.9 262.5 M43.3 143.5L43.3 211.5 M409.9 24.5L409.9 58.5 M409.9 143.5L409.9 211.5 M417.7 75.5L417.7 245.5"/>
+<text class="tx" x="23.80" y="41.50" textLength="382.20" lengthAdjust="spacingAndGlyphs">  Remove Ada Adams?                           ✕  </text>
+<text class="tx" x="23.80" y="92.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">  They will no longer administer Kildare Hunt     </text>
+<text class="tx" x="23.80" y="109.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">  Pony Club.                                      </text>
+<text class="tx" x="47.20" y="160.50" textLength="358.80" lengthAdjust="spacingAndGlyphs"> ℹ  Ada administers 2 other organisations.    </text>
+<text class="tx" x="47.20" y="177.50" textLength="358.80" lengthAdjust="spacingAndGlyphs">    Their account and sign-in details are     </text>
+<text class="tx" x="47.20" y="194.50" textLength="358.80" lengthAdjust="spacingAndGlyphs">    unaffected.                               </text>
+<text class="tx" x="23.80" y="245.50" textLength="390.00" lengthAdjust="spacingAndGlyphs">                    [ Cancel ]   [ Remove ]       </text>
+</svg>

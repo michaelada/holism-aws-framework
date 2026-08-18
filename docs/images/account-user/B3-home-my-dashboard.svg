@@ -32,7 +32,7 @@
   .sh { fill: var(--wf-shade); }
 </style>
 <rect class="bg" x="0" y="0" width="640.40" height="678.00" rx="6"/>
-<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 75.5L620.5 75.5 M43.3 143.5L253.9 143.5 M277.3 143.5L480.1 143.5 M43.3 347.5L253.9 347.5 M277.3 347.5L480.1 347.5 M43.3 381.5L253.9 381.5 M277.3 381.5L480.1 381.5 M43.3 500.5L253.9 500.5 M277.3 500.5L480.1 500.5 M121.3 534.5L581.5 534.5 M43.3 551.5L168.1 551.5 M183.7 551.5L308.5 551.5 M324.1 551.5L448.9 551.5 M464.5 551.5L581.5 551.5 M43.3 636.5L168.1 636.5 M183.7 636.5L308.5 636.5 M324.1 636.5L448.9 636.5 M464.5 636.5L581.5 636.5 M19.9 653.5L620.5 653.5 M19.9 24.5L19.9 653.5 M43.3 143.5L43.3 347.5 M43.3 381.5L43.3 500.5 M43.3 551.5L43.3 636.5 M168.1 551.5L168.1 636.5 M183.7 551.5L183.7 636.5 M253.9 143.5L253.9 347.5 M253.9 381.5L253.9 500.5 M277.3 143.5L277.3 347.5 M277.3 381.5L277.3 500.5 M308.5 551.5L308.5 636.5 M324.1 551.5L324.1 636.5 M448.9 551.5L448.9 636.5 M464.5 551.5L464.5 585.5 M464.5 619.5L464.5 636.5 M480.1 143.5L480.1 347.5 M480.1 381.5L480.1 500.5 M581.5 551.5L581.5 585.5 M581.5 619.5L581.5 636.5 M620.5 24.5L620.5 585.5 M620.5 619.5L620.5 653.5"/>
+<path class="ln" fill="none" d="M19.9 24.5L620.5 24.5 M19.9 75.5L620.5 75.5 M43.3 143.5L253.9 143.5 M277.3 143.5L480.1 143.5 M43.3 347.5L253.9 347.5 M277.3 347.5L480.1 347.5 M43.3 381.5L253.9 381.5 M43.3 500.5L253.9 500.5 M121.3 534.5L581.5 534.5 M43.3 551.5L168.1 551.5 M183.7 551.5L308.5 551.5 M324.1 551.5L448.9 551.5 M464.5 551.5L581.5 551.5 M43.3 636.5L168.1 636.5 M183.7 636.5L308.5 636.5 M324.1 636.5L448.9 636.5 M464.5 636.5L581.5 636.5 M19.9 653.5L620.5 653.5 M19.9 24.5L19.9 653.5 M43.3 143.5L43.3 347.5 M43.3 381.5L43.3 500.5 M43.3 551.5L43.3 636.5 M168.1 551.5L168.1 636.5 M183.7 551.5L183.7 636.5 M253.9 143.5L253.9 347.5 M253.9 381.5L253.9 500.5 M277.3 143.5L277.3 347.5 M308.5 551.5L308.5 636.5 M324.1 551.5L324.1 636.5 M448.9 551.5L448.9 636.5 M464.5 551.5L464.5 585.5 M464.5 619.5L464.5 636.5 M480.1 143.5L480.1 347.5 M581.5 551.5L581.5 585.5 M581.5 619.5L581.5 636.5 M620.5 24.5L620.5 585.5 M620.5 619.5L620.5 653.5"/>
 <text class="tx" x="23.80" y="41.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Welcome back, Michael                                                     </text>
 <text class="tx" x="23.80" y="58.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  Kildare Hunt Pony Club                                                    </text>
 <text class="tx" x="23.80" y="109.50" textLength="592.80" lengthAdjust="spacingAndGlyphs">  ⚠ Your Family Membership expires in 12 days (25 Feb 2026)   [ Renew ▸ ]   </text>
@@ -55,16 +55,9 @@
 <text class="tx" x="281.20" y="330.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> [ View ▸ ]  [ Renew ▸ ] </text>
 <text class="tx" x="55.00" y="398.50">🛒</text>
 <text class="tx" x="70.60" y="398.50" textLength="179.40" lengthAdjust="spacingAndGlyphs">  Your cart            </text>
-<text class="tx" x="289.00" y="398.50">💳</text>
-<text class="tx" x="304.60" y="398.50" textLength="171.60" lengthAdjust="spacingAndGlyphs">  Recent payments     </text>
 <text class="tx" x="47.20" y="432.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> 4 items · €288.45        </text>
-<text class="tx" x="281.20" y="432.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> 12 Jan  €45.00  Card ✓  </text>
 <text class="tx" x="47.20" y="449.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> incl. €1.45 handling     </text>
-<text class="tx" x="281.20" y="449.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> 03 Dec  €180.00 Offline </text>
-<text class="tx" x="351.40" y="466.50">⏳</text>
-<text class="tx" x="367.00" y="466.50" textLength="109.20" lengthAdjust="spacingAndGlyphs"> awaiting     </text>
 <text class="tx" x="47.20" y="483.50" textLength="202.80" lengthAdjust="spacingAndGlyphs"> [ Go to cart ▸ ]         </text>
-<text class="tx" x="281.20" y="483.50" textLength="195.00" lengthAdjust="spacingAndGlyphs"> [ All payments ▸ ]      </text>
 <text class="tx" x="23.80" y="534.50" textLength="93.60" lengthAdjust="spacingAndGlyphs">  What's on </text>
 <text class="tx" x="47.20" y="568.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Summer Camp   </text>
 <text class="tx" x="187.60" y="568.50" textLength="117.00" lengthAdjust="spacingAndGlyphs"> Club Polo     </text>

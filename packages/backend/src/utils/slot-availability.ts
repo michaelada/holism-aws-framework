@@ -88,6 +88,19 @@ export interface ExistingHold {
   places: number;
   /** True when this hold belongs to the member the calendar is being drawn for. */
   heldByViewer: boolean;
+  /**
+   * Whether the hold is still in force.
+   *
+   * A lapsed hold reserves nothing — the slot is genuinely back on sale — but
+   * the **viewer's own** lapsed line is still sitting in their basket, and the
+   * screen has to say so. A member whose hold has run out was being shown their
+   * own slot as free, invited to add it again, and then refused with "that slot
+   * is already in your basket".
+   *
+   * So a lapsed hold takes no places and blocks nobody, and is passed in only
+   * for the viewer's own lines, purely to mark them as theirs.
+   */
+  live: boolean;
   /** ISO instant the hold lapses, so the holder can be shown a countdown. */
   expiresAt: string;
 }
@@ -115,7 +128,22 @@ export interface AvailableSlot {
    * otherwise a member sees the slot they just chose greyed out and reads it as
    * having lost it.
    */
-  unavailableReason: 'full' | 'in-use' | 'held' | 'in-your-basket' | null;
+  unavailableReason:
+    | 'full'
+    | 'in-use'
+    | 'held'
+    | 'in-your-basket'
+    /**
+     * A *different* slot that overlaps one the member already has.
+     *
+     * A calendar offering several lengths from the same start — a three-hour
+     * morning and a four-hour extended morning — produces overlapping slots by
+     * design. Taking both is booking the same session twice, so it is refused;
+     * but it is not the slot in the basket, and saying "that slot is already in
+     * your basket" about a row the member can see is plainly untrue.
+     */
+    | 'clashes-with-basket'
+    | null;
   /**
    * When the viewer's own hold lapses; ISO, and null unless they hold it.
    *
@@ -255,6 +283,9 @@ export function calculateAvailableSlots(options: {
     duration: hold.duration,
     places: hold.places > 0 ? hold.places : 1,
     mine: hold.heldByViewer,
+    // Absent means in force, so a caller that predates the distinction keeps
+    // the old behaviour rather than silently freeing every slot.
+    live: hold.live !== false,
     expiresAt: hold.expiresAt,
   }));
 
@@ -352,28 +383,54 @@ export function calculateAvailableSlots(options: {
               !(hold.start === start && hold.duration === option.duration)
           );
 
-          const placesHeld = exactHolds.reduce((total, hold) => total + hold.places, 0);
+          /*
+           * Only a **live** hold takes places or blocks the time. A lapsed one
+           * reserves nothing: the slot really is back on sale, and pretending
+           * otherwise would keep it out of everybody's reach for ever.
+           */
+          const placesHeld = exactHolds
+            .filter((hold) => hold.live)
+            .reduce((total, hold) => total + hold.places, 0);
           const remaining = placesRemaining - placesHeld;
-          const heldOut = overlappingHolds.length > 0 || (placesHeld > 0 && remaining <= 0);
-
-          const mine = [...exactHolds, ...overlappingHolds].filter((hold) => hold.mine);
+          const liveOverlaps = overlappingHolds.filter((hold) => hold.live);
+          const heldOut = liveOverlaps.length > 0 || (placesHeld > 0 && remaining <= 0);
 
           /*
-           * The viewer's own hold outranks a stranger's when both exist: being
-           * told the slot is in your basket is actionable, being told somebody
-           * has it is not, and the member cannot add it twice either way.
+           * The viewer's own lines count whether or not the hold still stands.
+           *
+           * It is in their basket until they remove it or check out, and they
+           * cannot add it twice — the basket guard refuses regardless of the
+           * clock. Showing it as free was an invitation followed by "that slot
+           * is already in your basket", which is the screen contradicting
+           * itself.
+           *
+           * **This slot** and **a slot that overlaps it** are kept apart. A
+           * calendar with several duration options from one start time produces
+           * overlapping rows by design, and telling a member that the four-hour
+           * session is "already in your basket" when the three-hour one is,
+           * is a statement they can see is false.
+           */
+          const mineExactly = exactHolds.some((hold) => hold.mine);
+          const mineOverlapping = overlappingHolds.some((hold) => hold.mine);
+
+          /*
+           * The viewer's own line outranks a stranger's hold when both exist:
+           * being told the slot is in your basket is actionable, being told
+           * somebody has it is not, and they cannot add it twice either way.
            */
           const reason = onHold
             ? 'held'
             : inUse
               ? 'in-use'
-              : heldOut
-                ? mine.length > 0
-                  ? 'in-your-basket'
-                  : 'held'
-                : remaining <= 0
-                  ? 'full'
-                  : null;
+              : mineExactly
+                ? 'in-your-basket'
+                : mineOverlapping
+                  ? 'clashes-with-basket'
+                  : heldOut
+                    ? 'held'
+                    : remaining <= 0
+                      ? 'full'
+                      : null;
 
           slots.set(key, {
             date: dateKey,
@@ -388,10 +445,19 @@ export function calculateAvailableSlots(options: {
             unavailableReason: reason,
             // The longest of the viewer's own holds: with two, the slot is
             // theirs until the later one goes.
-            heldUntil:
-              mine.length > 0
-                ? mine.map((hold) => hold.expiresAt).sort().slice(-1)[0]
-                : null,
+            /*
+             * Only for the slot the member actually holds. A clashing row is
+             * not theirs and has no countdown of its own — showing one would
+             * imply it frees up when the clock runs out, which is not what it
+             * is waiting on.
+             */
+            heldUntil: mineExactly
+              ? exactHolds
+                  .filter((hold) => hold.mine)
+                  .map((hold) => hold.expiresAt)
+                  .sort()
+                  .slice(-1)[0]
+              : null,
           });
         }
       }

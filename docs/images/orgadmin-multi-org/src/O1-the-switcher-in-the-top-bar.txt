@@ -1,0 +1,13 @@
+┌────────────────────────────────────────────────────────────────────────────┐
+│  ☰  Kildare Hunt Pony Club  ▾                          🔔   Ada Adams  ▾  │
+├────────────────────────────────────────────────────────────────────────────┤
+│           ┌──────────────────────────────────────┐                         │
+│  Dashboard│  YOUR ORGANISATIONS                  │                         │
+│  Events   │                                      │                         │
+│  Members  │  ● Kildare Hunt Pony Club            │  Entries this week   34 │
+│  Shop     │    Laois Hunt Pony Club              │  Awaiting payment     7 │
+│  Calendars│    Ward Union Pony Club              │                         │
+│  Reports  │                                      │                         │
+│  Settings │  You administer 3 organisations.     │                         │
+│           └──────────────────────────────────────┘                         │
+└────────────────────────────────────────────────────────────────────────────┘

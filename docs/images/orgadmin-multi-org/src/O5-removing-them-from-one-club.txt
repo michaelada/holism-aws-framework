@@ -1,0 +1,15 @@
+┌─────────────────────────────────────────────────┐
+│  Remove Ada Adams?                           ✕  │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  They will no longer administer Kildare Hunt     │
+│  Pony Club.                                      │
+│                                                  │
+│  ┌──────────────────────────────────────────────┐│
+│  │ ℹ  Ada administers 2 other organisations.    ││
+│  │    Their account and sign-in details are     ││
+│  │    unaffected.                               ││
+│  └──────────────────────────────────────────────┘│
+│                                                  │
+│                    [ Cancel ]   [ Remove ]       │
+└─────────────────────────────────────────────────┘

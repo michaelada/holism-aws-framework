@@ -85,12 +85,16 @@ describe('CartService', () => {
 
   describe('getCart totals', () => {
     /**
-     * Cart load: find cart, load items, then name the methods each item could
-     * switch to (fees are mocked separately).
+     * Cart load: find cart, **drop any lapsed holds**, load items, then name
+     * the methods each item could switch to (fees are mocked separately).
+     *
+     * The delete comes second and returns what it removed — nothing here, since
+     * these cases are about the arithmetic rather than about expiry.
      */
     const withItems = (rows: any[]) => {
       mockDb.query
         .mockResolvedValueOnce({ rows: [openCartRow] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any)
         .mockResolvedValueOnce({ rows } as any)
         .mockResolvedValueOnce({
           rows: [
@@ -180,22 +184,63 @@ describe('CartService', () => {
       expect(cart.summary.layout).toBe('single_total');
     });
 
-    it('excludes an expired hold from the totals and warns about it', async () => {
-      const past = new Date(Date.now() - 60_000);
-      withItems([
-        itemRow({ id: 'live', fee: 6200 }),
-        itemRow({ id: 'lapsed', fee: 5000, expires_at: past }),
-      ]);
+    /**
+     * A lapsed hold is **removed**, not shown greyed out.
+     *
+     * It used to sit in the basket priced at nothing, blocking checkout until
+     * the member noticed and deleted it by hand — a basket claiming to hold
+     * something that went back on sale the moment the hold ran out.
+     */
+    it('removes a lapsed hold and says what went', async () => {
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [openCartRow] } as any)
+        // The delete, returning what it took out.
+        .mockResolvedValueOnce({ rows: [{ description: 'Court 1 — Saturday 09:00' }] } as any)
+        // `touch`, which only runs when something was actually removed.
+        .mockResolvedValueOnce({ rows: [] } as any)
+        // The reload: only the line that is still held.
+        .mockResolvedValueOnce({ rows: [itemRow({ id: 'live', fee: 6200 })] } as any)
+        .mockResolvedValueOnce({
+          rows: [
+            { id: '00000000-0000-4000-8000-00000000ca7d', name: 'stripe', display_name: 'Pay By Card' },
+          ],
+        } as any);
 
       const cart = await service.getCart(ORG, USER, 'EUR');
 
-      // An item the member can no longer buy must not inflate a total they are
-      // about to approve — but it is still shown, with an explanation.
+      expect(cart.items).toHaveLength(1);
       expect(cart.totals.feeBearingBase).toBe(6200);
-      expect(cart.items).toHaveLength(2);
       expect(cart.warnings).toEqual([
-        expect.objectContaining({ itemId: 'lapsed', code: 'HOLD_EXPIRED' }),
+        expect.objectContaining({
+          // Null: the row is gone, which is the point. The description is what
+          // stops the basket simply shrinking without explanation.
+          itemId: null,
+          code: 'HOLD_EXPIRED',
+          message: expect.stringContaining('Court 1 — Saturday 09:00'),
+        }),
       ]);
+    });
+
+    it('deletes only lines that were holding something', async () => {
+      // A membership or a jumper never held a place, and must not vanish from
+      // a basket for sitting in it.
+      withItems([itemRow({ id: 'live', fee: 6200 })]);
+
+      await service.getCart(ORG, USER, 'EUR');
+
+      const [sql] = mockDb.query.mock.calls.find(([text]) =>
+        String(text).includes('DELETE FROM cart_items')
+      )!;
+      expect(String(sql)).toContain('expires_at IS NOT NULL');
+      expect(String(sql)).toContain('expires_at <=');
+    });
+
+    it('says nothing when no hold has lapsed', async () => {
+      withItems([itemRow({ id: 'live', fee: 6200 })]);
+
+      const cart = await service.getCart(ORG, USER, 'EUR');
+
+      expect(cart.warnings).toEqual([]);
     });
 
     it('keeps an item whose hold has not yet lapsed', async () => {

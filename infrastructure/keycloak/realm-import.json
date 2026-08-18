@@ -1,0 +1,197 @@
+{
+  "realm": "aws-framework",
+  "enabled": true,
+  "displayName": "ItsPlainSailing",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": false,
+  "sslRequired": "external",
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Reaches /api/admin at all"
+      },
+      {
+        "name": "super-admin",
+        "description": "Platform administrator"
+      },
+      {
+        "name": "user",
+        "description": "Ordinary signed-in user"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "aws-framework-backend",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "secret": "BACKEND_SECRET_PLACEHOLDER"
+    },
+    {
+      "clientId": "account-app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "PUBLIC_URL_PLACEHOLDER/account",
+        "PUBLIC_URL_PLACEHOLDER/account/*"
+      ],
+      "webOrigins": [
+        "PUBLIC_URL_PLACEHOLDER"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/account##PUBLIC_URL_PLACEHOLDER/account/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "backend-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "aws-framework-backend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "orgadmin-client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "PUBLIC_URL_PLACEHOLDER/orgadmin",
+        "PUBLIC_URL_PLACEHOLDER/orgadmin/*"
+      ],
+      "webOrigins": [
+        "PUBLIC_URL_PLACEHOLDER"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/orgadmin##PUBLIC_URL_PLACEHOLDER/orgadmin/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "backend-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "aws-framework-backend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "aws-framework-admin",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "PUBLIC_URL_PLACEHOLDER/admin",
+        "PUBLIC_URL_PLACEHOLDER/admin/*"
+      ],
+      "webOrigins": [
+        "PUBLIC_URL_PLACEHOLDER"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/admin##PUBLIC_URL_PLACEHOLDER/admin/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "backend-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "aws-framework-backend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "aws-framework-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "PUBLIC_URL_PLACEHOLDER/metadata",
+        "PUBLIC_URL_PLACEHOLDER/metadata/*"
+      ],
+      "webOrigins": [
+        "PUBLIC_URL_PLACEHOLDER"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/metadata##PUBLIC_URL_PLACEHOLDER/metadata/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "backend-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "aws-framework-backend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "account-password-check",
+      "description": "Password verification for the account app",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "secret": "PASSWORD_CHECK_SECRET_PLACEHOLDER"
+    },
+    {
+      "clientId": "aws-framework-service-account",
+      "description": "Backend Admin API access",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "SERVICE_ACCOUNT_SECRET_PLACEHOLDER"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-aws-framework-service-account",
+      "enabled": true,
+      "serviceAccountClientId": "aws-framework-service-account",
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin"
+        ]
+      }
+    }
+  ]
+}

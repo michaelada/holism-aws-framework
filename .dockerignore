@@ -1,0 +1,66 @@
+# What Docker must not send to the daemon as build context.
+#
+# Without this the context is the whole 1.6 GB working tree — 745 MB of root
+# `node_modules`, another 30 MB per front-end package, the git history and every
+# build output. All of it is copied before the first instruction runs, and none
+# of it is used: the image installs its own dependencies from the lockfile and
+# builds from source.
+#
+# On the small instance this is meant to deploy to, that difference is minutes
+# per build and a good deal of disk.
+
+# Dependencies — reinstalled inside the image from package-lock.json
+node_modules
+packages/*/node_modules
+**/node_modules
+
+# Build output — rebuilt inside the image, and stale copies would be shipped
+dist
+build
+packages/*/dist
+packages/*/build
+coverage
+packages/*/coverage
+.vite
+**/.vite
+
+# Version control and editor state
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.swp
+
+# Local configuration and secrets. `.env.deploy` is generated on the box and
+# holds the Keycloak secrets; it must never end up inside an image.
+.env
+.env.*
+!.env.example
+!.env.deploy.example
+infrastructure/keycloak/realm-import.rendered.json
+.deploy
+
+# Infrastructure — not part of any application image
+terraform
+.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Documentation and project notes
+docs
+.claude
+.kiro
+*.md
+!README.md
+
+# Test artefacts and logs
+*.log
+logs
+test-results
+playwright-report
+
+# macOS
+.DS_Store
+**/.DS_Store

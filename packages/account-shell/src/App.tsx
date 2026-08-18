@@ -8,6 +8,7 @@ import { buildTheme } from './theme';
 import OrganisationRoute from './components/OrganisationRoute';
 import StaleDataProvider from './offline/StaleDataContext';
 import OrganisationDirectoryPage from './pages/OrganisationDirectoryPage';
+import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage';
 import OrganisationSwitcherPage from './pages/OrganisationSwitcherPage';
 import RegisterWithOrganisationPage from './pages/RegisterWithOrganisationPage';
 import AwaitingApprovalPage from './pages/AwaitingApprovalPage';
@@ -98,6 +99,24 @@ export const App: React.FC = () => (
           />
 
           <Route path="/switch" element={<SwitcherRoute />} />
+
+          {/*
+            P6 — the email-change link lands here.
+
+            Unbranded and outside `/:orgCode` on purpose: an address belongs to
+            the identity rather than to a club, and this is opened cold from a
+            mail client with no session and no organisation to resolve. It is
+            declared before the organisation routes so `confirm-email` is not
+            read as an organisation code.
+          */}
+          <Route
+            path="/confirm-email"
+            element={
+              <UnbrandedRoute>
+                <ConfirmEmailChangePage />
+              </UnbrandedRoute>
+            }
+          />
 
           {/*
           Registration and the pending screen sit inside OrganisationRoute so

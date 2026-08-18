@@ -16,6 +16,9 @@ describe('OrgAdminUserService', () => {
     // Create mock Keycloak client
     mockClient = {
       users: {
+        // Adopt-or-create looks the identity up first. Empty by default, so the
+        // cases below still describe a person who does not exist yet.
+        find: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
         update: jest.fn(),
         del: jest.fn(),
@@ -357,4 +360,156 @@ describe('OrgAdminUserService', () => {
       ).rejects.toThrow('Admin user not found');
     });
   });
+
+  /**
+   * One person, several clubs.
+   *
+   * `organization_users` is unique on `(organization_id, keycloak_user_id)`, so
+   * the schema has always allowed this — but a Keycloak username must be unique
+   * in the realm and this platform uses the email address as the username, so
+   * `users.create` was guaranteed to fail with a 409 for anybody who already
+   * had an account. The per-organisation duplicate check above never got to
+   * matter.
+   *
+   * See docs/ORGADMIN_MULTI_ORGANISATION.md.
+   */
+  describe('adding somebody who already has an account', () => {
+    const mockOrgData = { id: 'org-2', keycloak_group_id: 'kc-group-2', display_name: 'Laois Hunt' };
+    const mockAdminsGroup = { id: 'admins-group-2', name: 'admins' };
+
+    const userData = {
+      email: 'ada@example.com',
+      firstName: 'Ada',
+      lastName: 'Adams',
+    };
+
+    const arrange = () => {
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [mockOrgData] } as any)   // the organisation
+        .mockResolvedValueOnce({ rows: [] } as any)              // not already in THIS one
+        .mockResolvedValueOnce({                                  // the new membership row
+          rows: [{
+            id: 'ou-2', organization_id: 'org-2', keycloak_user_id: 'kc-existing',
+            email: userData.email, first_name: 'Ada', last_name: 'Adams',
+            status: 'active', created_at: new Date(), updated_at: new Date(),
+          }],
+        } as any)
+        .mockResolvedValue({ rows: [] } as any);
+
+      mockClient.users.find.mockResolvedValue([{ id: 'kc-existing', username: userData.email }]);
+      mockClient.groups.listSubGroups.mockResolvedValue([mockAdminsGroup]);
+    };
+
+    it('adopts the existing identity instead of creating a second one', async () => {
+      arrange();
+
+      await service.createAdminUser('org-2', userData, 'creator-1');
+
+      expect(mockClient.users.create).not.toHaveBeenCalled();
+      expect(mockClient.users.find).toHaveBeenCalledWith({
+        username: userData.email,
+        exact: true,
+      });
+    });
+
+    it('writes the membership against the identity they already had', async () => {
+      // One person, one password, one set of credential-change flows. Two
+      // Keycloak users sharing an address would be two passwords that drift.
+      arrange();
+
+      await service.createAdminUser('org-2', userData, 'creator-1');
+
+      const insert = mockDb.query.mock.calls.find(([sql]: any[]) =>
+        String(sql).includes('INSERT INTO organization_users')
+      );
+      expect(insert).toBeDefined();
+      expect(insert![1]).toEqual(expect.arrayContaining(['kc-existing', 'org-admin']));
+    });
+
+    it('adds them to the new organisation’s admins group', async () => {
+      arrange();
+
+      await service.createAdminUser('org-2', userData, 'creator-1');
+
+      expect(mockClient.users.addToGroup).toHaveBeenCalledWith({
+        id: 'kc-existing',
+        groupId: 'admins-group-2',
+      });
+    });
+
+    it('does not delete the existing identity when the insert fails', async () => {
+      /*
+       * The rollback exists to undo a *created* Keycloak user. Firing it for an
+       * adopted one would sign an administrator out of every club they belong
+       * to, over an error in an organisation that is not even theirs yet.
+       */
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [mockOrgData] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any)
+        .mockRejectedValueOnce(new Error('database is unhappy') as any);
+
+      mockClient.users.find.mockResolvedValue([{ id: 'kc-existing', username: userData.email }]);
+      mockClient.groups.listSubGroups.mockResolvedValue([mockAdminsGroup]);
+
+      await expect(service.createAdminUser('org-2', userData, 'creator-1')).rejects.toThrow();
+
+      expect(mockClient.users.del).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removing an administrator from one club', () => {
+    const row = (over: Record<string, any> = {}) => ({
+      rows: [{
+        id: 'ou-1', organization_id: 'org-1', keycloak_user_id: 'kc-1',
+        email: 'ada@example.com', first_name: 'Ada', last_name: 'Adams',
+        status: 'active', created_at: new Date(), updated_at: new Date(), ...over,
+      }],
+    });
+
+    it('keeps the identity when they still belong somewhere else', async () => {
+      // Removing somebody from one club must not sign them out of the others.
+      mockDb.query
+        .mockResolvedValueOnce(row() as any)                       // the row being removed
+        .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] } as any) // they are elsewhere
+        .mockResolvedValueOnce({ rows: [] } as any);               // the delete
+
+      await service.deleteAdminUser('ou-1');
+
+      expect(mockClient.users.del).not.toHaveBeenCalled();
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM organization_users'),
+        ['ou-1']
+      );
+    });
+
+    it('deletes the identity when that was their last row', async () => {
+      mockDb.query
+        .mockResolvedValueOnce(row() as any)
+        .mockResolvedValueOnce({ rows: [] } as any)   // nowhere else
+        .mockResolvedValueOnce({ rows: [] } as any);
+
+      await service.deleteAdminUser('ou-1');
+
+      expect(mockClient.users.del).toHaveBeenCalledWith({ id: 'kc-1' });
+    });
+
+    it('counts a membership of any kind, not just an administrator one', async () => {
+      /*
+       * An account-user row is the same person. Deleting the identity because
+       * their last *admin* row went would lock them out of the member app for a
+       * club they still belong to.
+       */
+      mockDb.query
+        .mockResolvedValueOnce(row() as any)
+        .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any);
+
+      await service.deleteAdminUser('ou-1');
+
+      const check = mockDb.query.mock.calls[1];
+      expect(String(check[0])).not.toContain('user_type');
+      expect(mockClient.users.del).not.toHaveBeenCalled();
+    });
+  });
+
 });

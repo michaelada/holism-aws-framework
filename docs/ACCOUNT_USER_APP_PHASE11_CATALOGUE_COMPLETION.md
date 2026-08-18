@@ -406,7 +406,9 @@ Details worth keeping:
 
 The placeholder is gone. Every card the design calls for now has a real endpoint behind it, because
 the areas above built them: coming up (entries + bookings), membership, basket, recent payments, and
-a "what's on" row across all four catalogues.
+a "what's on" row across all four catalogues. (The recent-payments card has since been removed, and
+the dashboard no longer reads payments at all — see
+[HOME_SCREEN_RECENT_PAYMENTS_REMOVED.md](HOME_SCREEN_RECENT_PAYMENTS_REMOVED.md).)
 
 **One request, assembled on the server.** `GET /:orgCode/dashboard`. A dashboard that fanned out over
 eight endpoints would make the first screen a member sees the slowest, and every one of those

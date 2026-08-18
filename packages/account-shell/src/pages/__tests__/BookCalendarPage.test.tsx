@@ -464,3 +464,99 @@ describe('BookCalendarPage — offline', () => {
     expect(screen.getByText('€12.00')).toBeInTheDocument();
   });
 });
+
+
+/**
+ * Two slots that cannot both be booked, offered side by side.
+ *
+ * A configuration with several duration options produces overlapping rows on
+ * purpose — Laois's cross-country schooling offers a three-hour morning and a
+ * four-hour extended morning, both from 10:00. They are two ways to book one
+ * session.
+ *
+ * Both were selectable, so a member picked both, the first went into the basket
+ * and the second was refused there — after the fact, and with a message about a
+ * row they could see was different.
+ */
+describe('BookCalendarPage — slots that clash with each other', () => {
+  const morning = () =>
+    slot({ startTime: '10:00', endTime: '13:00', duration: 180, price: 3500 });
+  const extended = () =>
+    slot({ startTime: '10:00', endTime: '14:00', duration: 240, price: 4500 });
+  const afternoon = () =>
+    slot({ startTime: '13:00', endTime: '16:00', duration: 180, price: 3500 });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+  });
+
+  it('swaps the choice rather than letting both be picked', async () => {
+    respond([morning(), extended()]);
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /10:00–13:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /10:00–14:00/ }));
+
+    // The later click wins: they are alternatives for the same session, and a
+    // member clicking "extended" after "morning" means the longer one.
+    expect(screen.getByRole('button', { name: /10:00–14:00/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: /10:00–13:00/ })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+  });
+
+  it('adds only the one that survived the swap', async () => {
+    respond([morning(), extended()]);
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /10:00–13:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /10:00–14:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add to basket' }));
+
+    await waitFor(() => {
+      const adds = mockExecute.mock.calls.filter(([r]) => r.method === 'POST');
+      expect(adds).toHaveLength(1);
+      expect(adds[0][0].data.contextRef.duration).toBe(240);
+    });
+  });
+
+  it('keeps two sessions that merely abut', async () => {
+    // 13:00 starts exactly where the morning ends. Touching is not
+    // overlapping, and a member may well want both.
+    respond([morning(), afternoon()]);
+    renderWithProviders(<BookCalendarPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /10:00–13:00/ }));
+    await userEvent.click(screen.getByRole('button', { name: /13:00–16:00/ }));
+
+    expect(screen.getByRole('button', { name: /10:00–13:00/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: /13:00–16:00/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  it('shows a clashing slot as a clash, not as already in the basket', async () => {
+    respond([
+      morning(),
+      slot({
+        startTime: '10:00',
+        endTime: '14:00',
+        duration: 240,
+        available: false,
+        unavailableReason: 'clashes-with-basket',
+      }),
+    ]);
+    renderWithProviders(<BookCalendarPage />);
+
+    expect(await screen.findByText('Overlaps one in your basket')).toBeInTheDocument();
+  });
+});

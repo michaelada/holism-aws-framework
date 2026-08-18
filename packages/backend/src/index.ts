@@ -78,7 +78,17 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
+  /*
+   * `X-Organisation-Id` is required, not optional.
+   *
+   * The org-admin app sends it on every call to say which organisation the
+   * administrator is working in — an administrator may belong to several. A
+   * header the browser has not been told is allowed fails the CORS *preflight*,
+   * so the real request is never sent: the console reports "Network Error" and
+   * the screen shows an authentication failure, neither of which points at a
+   * missing header.
+   */
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Organisation-Id']
 }));
 
 // Security middleware
@@ -244,23 +254,66 @@ app.use('/api/admin/organizations', organizationRoutes);
 app.use('/api/admin/organizations', organizationPaymentMethodRoutes);
 app.use('/api/admin/organizations', organizationUserRoutes);
 app.use('/api/admin/organizations', organizationRoleRoutes);
+/*
+ * Auth first, and never organisation-scoped: `/auth/me` is how an administrator
+ * finds out which organisations they have, so it cannot require one.
+ */
 app.use('/api/orgadmin', orgadminAuthRoutes);
 app.use('/api/orgadmin/organisation', orgadminOrganisationRoutes);
-app.use('/api/orgadmin', eventRoutes);
-app.use('/api/orgadmin', eventTypeRoutes);
-app.use('/api/orgadmin', venueRoutes);
-app.use('/api/orgadmin', discountRoutes);
-app.use('/api/orgadmin', membershipRoutes);
-app.use('/api/orgadmin', merchandiseRoutes);
-app.use('/api/orgadmin', calendarRoutes);
-app.use('/api/orgadmin', registrationRoutes);
-app.use('/api/orgadmin', ticketingRoutes);
-app.use('/api/orgadmin', applicationFormRoutes);
-app.use('/api/orgadmin', paymentRoutes);
-app.use('/api/orgadmin', reportingRoutes);
-app.use('/api/orgadmin/files', fileUploadRoutes);
 app.use('/api/orgadmin/users', userManagementRoutes);
-app.use('/api/orgadmin', userGroupRoutes);
+
+/*
+ * The data routers, mounted twice.
+ *
+ *   /api/orgadmin/organisations/:organisationId/events/:id   ← what clients send
+ *   /api/orgadmin/events/:id                                 ← still accepted
+ *
+ * The scoped form is the one the org-admin app now uses, and the one that shows
+ * up in a log: a request that says which club it is about is legible without
+ * cross-referencing a header against a session.
+ *
+ * Both are equally safe. Every route establishes and verifies its organisation
+ * for itself (`organisation-scope.middleware`), and where the path names one it
+ * must **agree** with the resource being acted on — so the prefix cannot be used
+ * to claim a club the resource does not belong to. The unscoped mounts remain
+ * because `/auth/*` and a handful of direct callers still use them; removing
+ * them is a deprecation, not a fix.
+ */
+const ORGADMIN_DATA_ROUTERS: [string, express.Router][] = [
+  ['', eventRoutes],
+  ['', eventTypeRoutes],
+  ['', venueRoutes],
+  ['', discountRoutes],
+  ['', membershipRoutes],
+  ['', merchandiseRoutes],
+  ['', calendarRoutes],
+  ['', registrationRoutes],
+  ['', ticketingRoutes],
+  ['', applicationFormRoutes],
+  ['', paymentRoutes],
+  ['', reportingRoutes],
+  ['', userGroupRoutes],
+  ['/files', fileUploadRoutes],
+];
+
+/*
+ * **Bare first, scoped second, and the order is load-bearing.**
+ *
+ * A router's own paths already include the scoped collections — discounts has
+ * `/organisations/:organisationId/discounts/:moduleType`. Mounting the scoped
+ * prefix first strips `/organisations/X` off and offers the remainder,
+ * `/discounts/events`, to the same router — where `/discounts/:id` matches it
+ * happily and reads "events" as a discount id. The request becomes a different
+ * request, and answers 400 instead of a list.
+ *
+ * Registering the bare mount first means the fully-specified route wins where
+ * one exists, and anything it does not match falls through to the scoped mount
+ * and has the prefix stripped as intended.
+ */
+for (const [suffix, routerToMount] of ORGADMIN_DATA_ROUTERS) {
+  app.use(`/api/orgadmin${suffix}`, routerToMount);
+  app.use(`/api/orgadmin/organisations/:organisationId${suffix}`, routerToMount);
+}
 app.use('/api/user-preferences', userPreferencesRoutes);
 
 // Account-user application. /api/public/* is deliberately unauthenticated —

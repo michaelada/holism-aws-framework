@@ -3,12 +3,33 @@ import { orgAdminUserService } from '../services/org-admin-user.service';
 import { accountUserService } from '../services/account-user.service';
 import { organizationAdminRoleService } from '../services/organization-admin-role.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { byParam, byResource } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 
 const router = Router();
 
-// Apply authentication middleware to all routes
+/*
+ * Authentication for every route here — and, from now on, an organisation check
+ * on every route as well.
+ *
+ * These are the credential routes: creating administrators, resetting their
+ * passwords, deleting them. They carried `authenticateToken()` and nothing
+ * else, so **any signed-in user of any club** could set any administrator's
+ * password in any organisation, or make themselves one. Authentication says who
+ * somebody is; it never said which club they may act in.
+ *
+ * Each route now declares what it is scoped by: `:organizationId` where the
+ * path already names one (American spelling here, unlike the newer routes), or
+ * the organisation that owns the person being acted on.
+ *
+ * See docs/ORGADMIN_MULTI_ORGANISATION.md §0.
+ */
 router.use(authenticateToken());
+
+/** The person in `:id` — an administrator or an account user — and their club. */
+const scopedToTheUser = byResource('organisationUser', 'id');
+/** The club named in the path. */
+const scopedToTheOrganisation = byParam('organizationId');
 
 /**
  * Org Admin Users Routes
@@ -19,7 +40,7 @@ router.use(authenticateToken());
  * GET /api/orgadmin/users/admins/:organizationId
  * Get all admin users for an organization
  */
-router.get('/admins/:organizationId', async (req: Request, res: Response): Promise<void> => {
+router.get('/admins/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
 
@@ -45,7 +66,7 @@ router.get('/admins/:organizationId', async (req: Request, res: Response): Promi
  * POST /api/orgadmin/users/admins/:organizationId
  * Create a new admin user
  */
-router.post('/admins/:organizationId', async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
     const { email, firstName, lastName, temporaryPassword, roleIds } = req.body;
@@ -87,7 +108,7 @@ router.post('/admins/:organizationId', async (req: Request, res: Response): Prom
  * PUT /api/orgadmin/users/admins/:id
  * Update an admin user
  */
-router.put('/admins/:id', async (req: Request, res: Response): Promise<void> => {
+router.put('/admins/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { firstName, lastName, status } = req.body;
@@ -117,7 +138,7 @@ router.put('/admins/:id', async (req: Request, res: Response): Promise<void> => 
  * DELETE /api/orgadmin/users/admins/:id
  * Delete an admin user
  */
-router.delete('/admins/:id', async (req: Request, res: Response): Promise<void> => {
+router.delete('/admins/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -142,7 +163,7 @@ router.delete('/admins/:id', async (req: Request, res: Response): Promise<void> 
  * POST /api/orgadmin/users/admins/:id/roles
  * Assign roles to an admin user
  */
-router.post('/admins/:id/roles', async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:id/roles', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { roleIds } = req.body;
@@ -178,7 +199,7 @@ router.post('/admins/:id/roles', async (req: Request, res: Response): Promise<vo
  * DELETE /api/orgadmin/users/admins/:id/roles/:roleId
  * Remove a role from an admin user
  */
-router.delete('/admins/:id/roles/:roleId', async (req: Request, res: Response): Promise<void> => {
+router.delete('/admins/:id/roles/:roleId', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id, roleId } = req.params;
 
@@ -203,7 +224,7 @@ router.delete('/admins/:id/roles/:roleId', async (req: Request, res: Response): 
  * POST /api/orgadmin/users/admins/:id/resend-invite
  * Resend invitation email to an admin user who hasn't activated
  */
-router.post('/admins/:id/resend-invite', async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:id/resend-invite', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -229,7 +250,7 @@ router.post('/admins/:id/resend-invite', async (req: Request, res: Response): Pr
  * POST /api/orgadmin/users/admins/:id/reset-password
  * Reset admin user password
  */
-router.post('/admins/:id/reset-password', async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:id/reset-password', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
@@ -268,7 +289,7 @@ router.post('/admins/:id/reset-password', async (req: Request, res: Response): P
  * GET /api/orgadmin/users/accounts/:organizationId
  * Get all account users for an organization
  */
-router.get('/accounts/:organizationId', async (req: Request, res: Response): Promise<void> => {
+router.get('/accounts/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
 
@@ -294,7 +315,7 @@ router.get('/accounts/:organizationId', async (req: Request, res: Response): Pro
  * POST /api/orgadmin/users/accounts/:organizationId
  * Create a new account user
  */
-router.post('/accounts/:organizationId', async (req: Request, res: Response): Promise<void> => {
+router.post('/accounts/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
     const { email, firstName, lastName, phone, temporaryPassword } = req.body;
@@ -335,7 +356,7 @@ router.post('/accounts/:organizationId', async (req: Request, res: Response): Pr
  * PUT /api/orgadmin/users/accounts/:id
  * Update an account user
  */
-router.put('/accounts/:id', async (req: Request, res: Response): Promise<void> => {
+router.put('/accounts/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { firstName, lastName, phone, status } = req.body;
@@ -366,7 +387,7 @@ router.put('/accounts/:id', async (req: Request, res: Response): Promise<void> =
  * DELETE /api/orgadmin/users/accounts/:id
  * Delete an account user
  */
-router.delete('/accounts/:id', async (req: Request, res: Response): Promise<void> => {
+router.delete('/accounts/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -391,7 +412,7 @@ router.delete('/accounts/:id', async (req: Request, res: Response): Promise<void
  * POST /api/orgadmin/users/accounts/:id/reset-password
  * Reset account user password
  */
-router.post('/accounts/:id/reset-password', async (req: Request, res: Response): Promise<void> => {
+router.post('/accounts/:id/reset-password', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
@@ -425,7 +446,7 @@ router.post('/accounts/:id/reset-password', async (req: Request, res: Response):
  * GET /api/orgadmin/users/roles/:organizationId
  * Get all admin roles for an organization (accessible by org admins)
  */
-router.get('/roles/:organizationId', async (req: Request, res: Response): Promise<void> => {
+router.get('/roles/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
 

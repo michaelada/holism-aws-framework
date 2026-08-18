@@ -2,10 +2,20 @@ import { Router, Request, Response } from 'express';
 import { applicationFormService } from '../services/application-form.service';
 import { formSubmissionService } from '../services/form-submission.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byCurrentOrganisation,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 // ============================================================================
 // Application Forms Routes
@@ -58,6 +68,7 @@ router.get(
 router.get(
   '/application-forms',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -111,6 +122,7 @@ router.get(
 router.get(
   '/application-forms/:id',
   authenticateToken(),
+  byResource('applicationForm', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -149,6 +161,7 @@ router.get(
 router.get(
   '/application-forms/:id/with-fields',
   authenticateToken(),
+  byResource('applicationForm', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -185,6 +198,7 @@ router.get(
 router.post(
   '/application-forms',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const form = await applicationFormService.createApplicationForm(req.body);
@@ -227,6 +241,7 @@ router.post(
 router.put(
   '/application-forms/:id',
   authenticateToken(),
+  byResource('applicationForm', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -264,6 +279,7 @@ router.put(
 router.delete(
   '/application-forms/:id',
   authenticateToken(),
+  byResource('applicationForm', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -297,6 +313,7 @@ router.delete(
 router.get(
   '/application-fields',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (_req: Request, res: Response) => {
     try {
       const fields = await applicationFormService.getAllApplicationFields();
@@ -327,6 +344,7 @@ router.get(
 router.post(
   '/application-fields',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       // Extract organisationId from request body
@@ -370,6 +388,7 @@ router.post(
 router.get(
   '/application-fields/:id',
   authenticateToken(),
+  byResource('applicationField', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -414,6 +433,7 @@ router.get(
 router.put(
   '/application-fields/:id',
   authenticateToken(),
+  byResource('applicationField', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -459,6 +479,7 @@ router.put(
 router.delete(
   '/application-fields/:id',
   authenticateToken(),
+  byResource('applicationField', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -504,6 +525,7 @@ router.delete(
 router.post(
   '/application-forms/:formId/fields',
   authenticateToken(),
+  byResource('applicationForm', 'formId'),
   async (req: Request, res: Response) => {
     try {
       const { formId } = req.params;
@@ -547,6 +569,7 @@ router.post(
 router.delete(
   '/application-forms/:formId/fields/:fieldId',
   authenticateToken(),
+  byResource('applicationForm', 'formId'),
   async (req: Request, res: Response) => {
     try {
       const { formId, fieldId } = req.params;
@@ -656,6 +679,7 @@ router.get(
 router.get(
   '/form-submissions/:id',
   authenticateToken(),
+  byResource('formSubmission', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -694,6 +718,7 @@ router.get(
 router.get(
   '/form-submissions/:id/with-files',
   authenticateToken(),
+  byResource('formSubmission', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -730,6 +755,7 @@ router.get(
 router.post(
   '/form-submissions',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const submission = await formSubmissionService.createSubmission(req.body);
@@ -772,6 +798,7 @@ router.post(
 router.put(
   '/form-submissions/:id',
   authenticateToken(),
+  byResource('formSubmission', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -815,6 +842,7 @@ router.put(
 router.patch(
   '/form-submissions/:id',
   authenticateToken(),
+  byResource('formSubmission', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -852,6 +880,7 @@ router.patch(
 router.delete(
   '/form-submissions/:id',
   authenticateToken(),
+  byResource('formSubmission', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -891,6 +920,7 @@ router.delete(
 router.get(
   '/form-submissions/:submissionId/files',
   authenticateToken(),
+  byResource('formSubmission', 'submissionId'),
   async (req: Request, res: Response) => {
     try {
       const { submissionId } = req.params;
@@ -922,6 +952,7 @@ router.get(
 router.post(
   '/form-submission-files',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const file = await formSubmissionService.createSubmissionFile(req.body);
@@ -958,6 +989,7 @@ router.post(
 router.get(
   '/form-submission-files/:id',
   authenticateToken(),
+  byResource('submissionFile', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -996,6 +1028,7 @@ router.get(
 router.delete(
   '/form-submission-files/:id',
   authenticateToken(),
+  byResource('submissionFile', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

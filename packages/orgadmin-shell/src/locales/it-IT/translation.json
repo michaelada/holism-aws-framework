@@ -2090,6 +2090,12 @@
       }
     }
   },
+  "organisationSwitcher": {
+    "heading": "Le tue organizzazioni",
+    "count_one": "Amministri {{count}} organizzazione.",
+    "count_other": "Amministri {{count}} organizzazioni.",
+    "current": "Stai amministrando {{name}}. Cambia organizzazione"
+  },
   "navigation": {
     "organisation": "Organizzazione",
     "loading": "Caricamento...",

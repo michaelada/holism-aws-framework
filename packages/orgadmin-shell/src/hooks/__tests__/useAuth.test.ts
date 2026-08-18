@@ -50,6 +50,15 @@ describe('useAuth', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    /*
+     * The hook remembers which organisation the administrator was last working
+     * in, so a reload does not flicker through the wrong club's branding.
+     * Without clearing it, one case's remembered choice becomes the next case's
+     * `X-Organisation-Id` header — a leak between tests rather than a fault in
+     * the behaviour.
+     */
+    window.localStorage.clear();
     
     // Reset environment variables
     import.meta.env.VITE_DISABLE_AUTH = 'false';
@@ -588,4 +597,128 @@ describe('useAuth', () => {
       unmount();
     });
   });
+
+  /**
+   * Administering more than one club.
+   *
+   * `organization_users` is unique on `(organization_id, keycloak_user_id)`, so
+   * one identity holding several rows is what the schema has always expected.
+   * What the shell has to do with that: offer the list, remember the choice,
+   * and send it on every subsequent call so the routes that do not name an
+   * organisation in their path act on the right one.
+   *
+   * See docs/ORGADMIN_MULTI_ORGANISATION.md.
+   */
+  describe('administering several organisations', () => {
+    const laois = { ...mockOrganisation, id: 'org-laois', displayName: 'Laois Hunt Pony Club' };
+
+    const withList = (organisation = mockOrganisation) => ({
+      ...mockUserData,
+      organisation,
+      organisations: [
+        { id: 'org-123', displayName: 'Test Organisation', urlCode: 'test', isCurrent: organisation.id === 'org-123' },
+        { id: 'org-laois', displayName: 'Laois Hunt Pony Club', urlCode: 'lhpc', isCurrent: organisation.id === 'org-laois' },
+      ],
+    });
+
+    it('exposes every organisation the administrator belongs to', async () => {
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get.mockResolvedValueOnce({ data: withList() });
+
+      const { result } = renderHook(() => useAuth(mockKeycloakConfig));
+
+      await waitFor(() => expect(result.current.organisations).toHaveLength(2));
+      expect(result.current.organisation?.id).toBe('org-123');
+    });
+
+    it('falls back to a list of one when the server sends none', async () => {
+      // Nothing should break for a deployment running an older backend.
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get.mockResolvedValueOnce({ data: mockUserData });
+
+      const { result } = renderHook(() => useAuth(mockKeycloakConfig));
+
+      await waitFor(() => expect(result.current.organisations).toHaveLength(1));
+    });
+
+    it('remembers where the administrator ended up', async () => {
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get.mockResolvedValueOnce({ data: withList() });
+
+      const { result } = renderHook(() => useAuth(mockKeycloakConfig));
+
+      await waitFor(() => expect(result.current.organisation).not.toBeNull());
+      expect(result.current.getOrganisationId()).toBe('org-123');
+    });
+
+    it('sends the remembered organisation on the next sign-in', async () => {
+      // So a reload does not flicker through the wrong club's branding and
+      // navigation while /auth/me is in flight.
+      window.localStorage.setItem('orgadmin.currentOrganisationId', 'org-laois');
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get.mockResolvedValueOnce({ data: withList(laois) });
+
+      renderHook(() => useAuth(mockKeycloakConfig));
+
+      await waitFor(() =>
+        expect(mockedAxios.get).toHaveBeenCalledWith(
+          '/api/orgadmin/auth/me',
+          expect.objectContaining({
+            headers: expect.objectContaining({ 'X-Organisation-Id': 'org-laois' }),
+          })
+        )
+      );
+    });
+
+    it('takes the current organisation from the answer, not from what it asked for', async () => {
+      /*
+       * The server decides. A client that assumed its request was honoured
+       * would show one club's name over another club's data the moment it was
+       * not — after a switch to a club the administrator has just been removed
+       * from, for instance.
+       */
+      window.localStorage.setItem('orgadmin.currentOrganisationId', 'org-gone');
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get.mockResolvedValueOnce({ data: withList() });
+
+      const { result } = renderHook(() => useAuth(mockKeycloakConfig));
+
+      await waitFor(() => expect(result.current.organisation?.id).toBe('org-123'));
+      expect(result.current.getOrganisationId()).toBe('org-123');
+    });
+
+    it('re-resolves everything when switching', async () => {
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get
+        .mockResolvedValueOnce({ data: withList() })
+        .mockResolvedValueOnce({
+          data: { ...withList(laois), capabilities: ['memberships'] },
+        });
+
+      const { result } = renderHook(() => useAuth(mockKeycloakConfig));
+      await waitFor(() => expect(result.current.organisation?.id).toBe('org-123'));
+
+      await result.current.switchOrganisation('org-laois');
+
+      // Not just the name: capabilities belong to the organisation, so the
+      // navigation itself differs between two clubs.
+      await waitFor(() => expect(result.current.organisation?.id).toBe('org-laois'));
+      expect(result.current.capabilities).toEqual(['memberships']);
+    });
+
+    it('does not leave the shell claiming a club it never reached', async () => {
+      mockKeycloakInstance.init.mockResolvedValueOnce(true);
+      mockedAxios.get
+        .mockResolvedValueOnce({ data: withList() })
+        .mockRejectedValueOnce(new Error('nope'));
+
+      const { result } = renderHook(() => useAuth(mockKeycloakConfig));
+      await waitFor(() => expect(result.current.organisation?.id).toBe('org-123'));
+
+      await result.current.switchOrganisation('org-laois').catch(() => undefined);
+
+      expect(result.current.getOrganisationId()).toBe('org-123');
+    });
+  });
+
 });

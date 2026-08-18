@@ -7,6 +7,7 @@
     "loading": "Cargando…",
     "retry": "Reintentar",
     "cancel": "Cancelar",
+    "done": "Hecho",
     "back": "Atrás",
     "close": "Cerrar",
     "signIn": "Iniciar sesión",
@@ -149,8 +150,6 @@
     "cartSummary": "{{count}} artículos · {{total}}",
     "cartHandling": "incl. {{fee}} de gestión",
     "goToCart": "Ir a la cesta",
-    "recentPayments": "Pagos recientes",
-    "allPayments": "Todos los pagos",
     "whatsOn": "Novedades",
     "upcomingEvents": "Próximos eventos",
     "viewAll": "Ver todo",
@@ -335,7 +334,8 @@
       "full": "Completo",
       "in-use": "Ocupado",
       "held": "Reservado por otra persona",
-      "in-your-basket": "En su cesta"
+      "in-your-basket": "En su cesta",
+      "clashes-with-basket": "Se solapa con uno de su cesta"
     }
   },
   "registrations": {
@@ -398,7 +398,7 @@
     "loadError": "No hemos podido cargar su cesta.",
     "remove": "Quitar {{item}}",
     "paymentMethodFor": "Método de pago para {{item}}",
-    "holdExpired": "Algunos artículos ya no están reservados y puede que no estén disponibles. Revise su cesta.",
+    "holdExpired": "Algunos art\u00edculos estaban reservados para usted, pero la reserva caduc\u00f3 y se han eliminado de su cesta. A\u00f1\u00e1dalos de nuevo si todav\u00eda los quiere.",
     "offlineSubtotal": "Pago directo al club (Offline)",
     "cardSubtotal": "Pago con tarjeta",
     "handlingFee": "Gastos de gestión",
@@ -495,6 +495,13 @@
       "cancelled": "Cancelado"
     }
   },
+  "confirmEmail": {
+    "doneTitle": "Dirección de correo cambiada",
+    "doneBody": "Ahora inicias sesión con {{email}}.",
+    "failedTitle": "Este enlace ya no es válido",
+    "failedBody": "Los enlaces duran una hora y pueden usarse una vez. Tu dirección de correo no ha cambiado: vuelve a empezar desde Perfil y ajustes.",
+    "goToSignIn": "Ir al inicio de sesión"
+  },
   "profile": {
     "title": "Perfil y ajustes",
     "loadFailed": "No se ha podido cargar su perfil. Inténtelo de nuevo.",
@@ -529,8 +536,26 @@
     "signInBlurb": "Su correo electrónico y su contraseña se gestionan en los ajustes de su cuenta, donde los cambios pueden verificarse de forma segura.",
     "changePassword": "Cambiar contraseña",
     "changeEmail": "Cambiar correo electrónico",
-    "leavingBlurb": "Le llevaremos a los ajustes de su cuenta para hacer este cambio y volverá aquí inmediatamente después.",
-    "continueToAccount": "Continuar",
+    "password": {
+      "current": "Contraseña actual",
+      "new": "Nueva contraseña",
+      "confirm": "Confirmar la nueva contraseña",
+      "mismatch": "No coinciden.",
+      "appliesEverywhere": "Esto cambia cómo inicias sesión en todos los clubes a los que perteneces.",
+      "failed": "No se pudo cambiar tu contraseña. Inténtalo de nuevo.",
+      "show": "Mostrar la contraseña",
+      "hide": "Ocultar la contraseña"
+    },
+    "email": {
+      "blurb": "Inicias sesión con esta dirección, así que enviaremos un enlace a la nueva para comprobar que te llega. No cambia nada hasta que lo sigas.",
+      "new": "Nueva dirección de correo electrónico",
+      "sameAsNow": "Esa ya es tu dirección de correo electrónico.",
+      "send": "Enviar el enlace",
+      "checkInbox": "Revisa tu bandeja de entrada",
+      "sentTo": "Hemos enviado un enlace a {{email}}.",
+      "sentBlurb": "Síguelo en una hora para completar el cambio. Hasta entonces inicias sesión con tu dirección actual como siempre.",
+      "failed": "No pudimos iniciar el cambio. Inténtalo de nuevo."
+    },
     "memberSince": "Miembro desde {{when}}",
     "lastSignIn": "Último acceso {{when}}"
   }

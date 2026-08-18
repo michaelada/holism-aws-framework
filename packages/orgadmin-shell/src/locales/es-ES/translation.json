@@ -2082,6 +2082,12 @@
       "expired": "Expirado"
     }
   },
+  "organisationSwitcher": {
+    "heading": "Tus organizaciones",
+    "count_one": "Administras {{count}} organización.",
+    "count_other": "Administras {{count}} organizaciones.",
+    "current": "Administrando {{name}}. Cambiar de organización"
+  },
   "navigation": {
     "organisation": "Organización",
     "loading": "Cargando...",

@@ -1,0 +1,194 @@
+# The whole platform on one machine.
+#
+# Distinct from `docker-compose.yml`, which is a *development* stack: that one
+# proxies the front ends to Vite dev servers running on the host and exposes
+# every port for debugging. This serves built bundles, exposes only 80 and 443,
+# and expects nothing on the host but Docker.
+#
+#   docker compose -f docker-compose.deploy.yml up -d
+#
+# See docs/DEPLOY_SINGLE_INSTANCE.md.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+      # Keycloak keeps its own database in the same server. A second container
+      # would double the memory for no benefit on a box this size.
+      POSTGRES_MULTIPLE_DATABASES: keycloak
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/10-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Not published. Everything that needs it is on this network; exposing 5432
+    # to the internet is the one mistake that turns a test box into an incident.
+    expose:
+      - "5432"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    restart: unless-stopped
+    # `start`, not `start-dev`: the development mode disables the hostname and
+    # proxy handling this deployment depends on. Not `--optimized` either —
+    # that requires an image pre-built with `kc.sh build`, and the augmentation
+    # this does on first boot takes seconds on a box that reboots rarely.
+    command: ["start", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${DATABASE_USER}
+      KC_DB_PASSWORD: ${DATABASE_PASSWORD}
+
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+
+      # Behind nginx, on a path.
+      #
+      # `KC_HOSTNAME` is what Keycloak puts in every issuer and redirect URL, and
+      # `KC_PROXY_HEADERS` is what makes it believe the `X-Forwarded-Proto: https`
+      # nginx sends. Without the second it advertises `http://` links from behind
+      # TLS and the sign-in loop never closes — the failure looks like a broken
+      # application rather than a misconfigured proxy.
+      KC_HOSTNAME: ${PUBLIC_HOST}
+      KC_HOSTNAME_PATH: /auth
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      # The *rendered* file: the template in git carries placeholders instead of
+      # secrets, and bootstrap.sh substitutes them before Keycloak first starts.
+      - ./infrastructure/keycloak/realm-import.rendered.json:/opt/keycloak/data/import/realm.json:ro
+      - ./infrastructure/keycloak/themes:/opt/keycloak/themes:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+    # The JVM is the largest thing on the box by some way. Capped so it cannot
+    # starve Postgres and the API under load.
+    mem_limit: ${KEYCLOAK_MEM_LIMIT:-1200m}
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+
+      # Reached over the internal network, so no TLS hop and no dependency on
+      # the public name resolving from inside the box.
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-aws-framework}
+      KEYCLOAK_CLIENT_ID: aws-framework-backend
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_BACKEND_SECRET}
+
+      KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080/auth
+      KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM:-aws-framework}
+      KEYCLOAK_ADMIN_CLIENT_ID: aws-framework-service-account
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET}
+
+      # Verifies a member's current password when they change it or their email
+      # address. Unset, every password check fails and members are told a
+      # correct password is wrong — see docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md.
+      KEYCLOAK_PASSWORD_CHECK_CLIENT_ID: account-password-check
+      KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET: ${KEYCLOAK_PASSWORD_CHECK_SECRET}
+
+      # Where the emails point people back to.
+      ACCOUNT_URL: ${PUBLIC_URL}/account
+      ORGADMIN_URL: ${PUBLIC_URL}/orgadmin
+
+      AWS_REGION: ${AWS_REGION:-eu-west-1}
+      SES_FROM_EMAIL: ${SES_FROM_EMAIL}
+
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        # Baked into the bundles: an image is specific to the hostname it was
+        # built for. Rebuild when PUBLIC_URL changes.
+        PUBLIC_URL: ${PUBLIC_URL}
+        KEYCLOAK_REALM: ${KEYCLOAK_REALM:-aws-framework}
+        STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+    restart: unless-stopped
+    ports:
+      # Port 80 on a machine with nothing else on it; the AWS instance sets
+      # `WEB_PUBLISH=127.0.0.1:8080` instead, because the host's nginx holds 80
+      # and 443 to terminate TLS. An env var rather than an override file, so
+      # this works on any version of the Compose plugin.
+      - "${WEB_PUBLISH:-80}:80"
+    depends_on:
+      - backend
+      - keycloak
+
+  # Migrations and seeding, run on demand — never as part of `up`.
+  #
+  # The production backend image installs `--only=production` and copies only
+  # `dist` and `migrations`, so it has neither `node-pg-migrate` (a
+  # devDependency) nor the seed scripts. This builds the toolchain stage of the
+  # same Dockerfile, so it shares the network, the database credentials and the
+  # Keycloak secrets without any of it being restated.
+  #
+  #   docker compose -f docker-compose.deploy.yml --profile tools run --rm tools \
+  #     npx node-pg-migrate up -m migrations
+  tools:
+    profiles: ["tools"]
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_URL: postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-aws-framework}
+      KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080/auth
+      KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_REALM:-aws-framework}
+      KEYCLOAK_ADMIN_CLIENT_ID: aws-framework-service-account
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET}
+      KEYCLOAK_PASSWORD_CHECK_CLIENT_ID: account-password-check
+      KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET: ${KEYCLOAK_PASSWORD_CHECK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

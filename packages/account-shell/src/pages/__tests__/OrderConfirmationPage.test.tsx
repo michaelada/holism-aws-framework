@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import OrderConfirmationPage from '../OrderConfirmationPage';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import { AccountApiError } from '../../hooks/useAccountApi';
+import { onCartChanged } from '../../cart/cartActivity';
 
 const mockExecute = vi.fn();
 const mockNavigate = vi.fn();
@@ -121,5 +122,50 @@ describe('OrderConfirmationPage (F3)', () => {
     render();
 
     expect(await screen.findByText('We could not find that order.')).toBeInTheDocument();
+  });
+});
+
+/**
+ * The basket count after a card payment.
+ *
+ * Reported as: a successful payment, an empty basket, and the badge in the
+ * navigation still showing the old number. The basket closes server-side once
+ * the webhook lands — after the checkout request returned — so nothing the
+ * client writes marks the change, and its only remaining call is a poll of the
+ * payment status, which is a read.
+ */
+describe('OrderConfirmationPage — telling the basket badge', () => {
+  beforeEach(() => {
+    mockExecute.mockReset();
+    mockNavigate.mockReset();
+  });
+
+  it('announces the emptied basket once the payment has settled', async () => {
+    const listener = vi.fn();
+    const off = onCartChanged(listener);
+    mockExecute.mockResolvedValue(payment({ status: 'paid' }));
+
+    render();
+    await screen.findByText('Order confirmed');
+
+    await waitFor(() => expect(listener).toHaveBeenCalled());
+    off();
+  });
+
+  it('stays quiet while the payment is still pending', async () => {
+    /*
+     * This page polls every couple of seconds while pending. Announcing that
+     * would refetch the cart on every tick to learn nothing — and the basket
+     * really has not changed yet, so the count is right as it stands.
+     */
+    const listener = vi.fn();
+    const off = onCartChanged(listener);
+    mockExecute.mockResolvedValue(payment({ status: 'pending' }));
+
+    render();
+    await screen.findByText('Confirming your order');
+
+    expect(listener).not.toHaveBeenCalled();
+    off();
   });
 });

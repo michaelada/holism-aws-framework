@@ -310,6 +310,12 @@ KEYCLOAK_REALM=aws-framework
 KEYCLOAK_CLIENT_ID=aws-framework-client
 KEYCLOAK_CLIENT_SECRET=<secret>
 
+# Lets the backend verify a member's CURRENT password when they change their
+# password or email address from the account app. Confidential, direct-grant
+# only. Unset, every password check fails — see ACCOUNT_APP_KEYCLOAK_SETUP.md.
+KEYCLOAK_PASSWORD_CHECK_CLIENT_ID=account-password-check
+KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET=<secret>
+
 # Application
 NODE_ENV=production
 API_PORT=3000

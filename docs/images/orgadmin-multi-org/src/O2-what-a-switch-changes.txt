@@ -1,0 +1,11 @@
+   Kildare (events, memberships,            Laois (memberships, calendars)
+   merchandise, calendars)
+   ┌───────────────┐                        ┌───────────────┐
+   │ Dashboard     │                        │ Dashboard     │
+   │ Events        │  ──── switch ───▶      │ Members       │
+   │ Members       │                        │ Calendars     │
+   │ Shop          │                        │ Reports       │
+   │ Calendars     │                        │ Settings      │
+   │ Reports       │                        └───────────────┘
+   │ Settings      │                         Events and Shop are gone —
+   └───────────────┘                         Laois does not have them

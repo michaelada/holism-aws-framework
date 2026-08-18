@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isCartMutation, notifyCartChanged, onCartChanged } from '../cartActivity';
+import {
+  isCartMutation,
+  notifyCartChanged,
+  notifyIfSettled,
+  onCartChanged,
+} from '../cartActivity';
 
 /**
  * The notification that keeps the basket count honest.
@@ -76,5 +81,48 @@ describe('cart change notifications', () => {
     expect(() => notifyCartChanged()).not.toThrow();
     expect(second).toHaveBeenCalledTimes(1);
     offSecond();
+  });
+});
+
+/**
+ * The settlement signal.
+ *
+ * A card payment empties the basket *after* the request that started checkout
+ * has returned — the browser confirms with Stripe and the cart only closes once
+ * the webhook lands, by which time the client is doing nothing but polling a
+ * status, which is a read. Without this the badge kept its pre-payment count.
+ */
+describe('notifyIfSettled', () => {
+  const withListener = (run: () => void) => {
+    const listener = vi.fn();
+    const off = onCartChanged(listener);
+    run();
+    off();
+    return listener;
+  };
+
+  /*
+   * `failed` belongs here with the other two. The basket stays open, but a
+   * declined payment drops its holds back to the browsing window, so a line may
+   * now be expired and out of the count.
+   */
+  it.each(['paid', 'awaiting_offline', 'failed'])('announces a %s payment', (status) => {
+    expect(withListener(() => notifyIfSettled(status))).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing while a payment is still pending', () => {
+    /*
+     * The confirmation screen polls this every couple of seconds. Announcing a
+     * pending status would refetch the cart on every tick to learn nothing —
+     * and the basket genuinely has not changed yet.
+     */
+    expect(withListener(() => notifyIfSettled('pending'))).not.toHaveBeenCalled();
+  });
+
+  it('says nothing when there is no status to read', () => {
+    // A failed or in-flight fetch, not an outcome.
+    expect(withListener(() => notifyIfSettled(null))).not.toHaveBeenCalled();
+    expect(withListener(() => notifyIfSettled(undefined))).not.toHaveBeenCalled();
+    expect(withListener(() => notifyIfSettled(''))).not.toHaveBeenCalled();
   });
 });

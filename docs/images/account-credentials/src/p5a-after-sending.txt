@@ -1,0 +1,13 @@
+┌─────────────────────────────────────────────────┐
+│  Check your inbox                            ✕  │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  ✉  We have sent a link to                      │
+│     michael.adams@example.com                    │
+│                                                  │
+│  Follow it within an hour to finish the change.  │
+│  Until then you sign in with your current        │
+│  address as usual.                               │
+│                                                  │
+│                                     [ Done ]     │
+└─────────────────────────────────────────────────┘

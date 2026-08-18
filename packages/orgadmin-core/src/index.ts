@@ -30,6 +30,6 @@ export * from './reporting';
 export * from './users';
 
 // Export AuthTokenContext for shell integration
-export { AuthTokenContext } from './hooks/useApi';
+export { AuthTokenContext, OrganisationIdContext, organisationScopedUrl } from './hooks/useApi';
 
 export const ORGADMIN_CORE_VERSION = '1.0.0';

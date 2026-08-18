@@ -7,7 +7,7 @@ import { cartService } from './cart.service';
  * The member's home screen (B3), assembled in one request.
  *
  * **One call, not eight.** A dashboard that fanned out over
- * entries, bookings, memberships, cart, payments and four catalogues would make
+ * entries, bookings, memberships, cart and four catalogues would make
  * the first screen a member sees the slowest, and every one of those requests
  * repeats the same authentication and membership resolution. `/me` is built the
  * same way and for the same reason.
@@ -25,7 +25,6 @@ import { cartService } from './cart.service';
 
 /** How much of each list a dashboard card can usefully show. */
 const COMING_UP_LIMIT = 3;
-const RECENT_PAYMENTS_LIMIT = 3;
 /**
  * One row's worth each.
  *
@@ -128,13 +127,6 @@ export interface AccountDashboard {
   }> | null;
   comingUp: DashboardComingUp[] | null;
   cart: { itemCount: number; total: number; handlingFee: number; currency: string } | null;
-  recentPayments: Array<{
-    id: string;
-    total: number;
-    status: string;
-    currency: string;
-    on: string;
-  }> | null;
   whatsOn: DashboardWhatsOn[];
 }
 
@@ -166,7 +158,7 @@ export class AccountDashboardService {
      * other, and a member on a phone waits for the slowest, not the sum. A
      * section the club has not enabled is not asked for at all.
      */
-    const [entries, bookings, memberships, cart, payments, whatsOn] = await Promise.all([
+    const [entries, bookings, memberships, cart, whatsOn] = await Promise.all([
       has('event-management')
         ? accountActivityService.listEntries(organisationId, organisationUserId, today)
         : null,
@@ -182,7 +174,6 @@ export class AccountDashboardService {
         logger.warn('Dashboard could not read the cart', { organisationId, error });
         return null;
       }),
-      accountActivityService.listPayments(organisationId, organisationUserId),
       this.buildWhatsOn(organisationId, organisationUserId, capabilities, today),
     ]);
 
@@ -197,16 +188,6 @@ export class AccountDashboardService {
               handlingFee: cart.totals.handlingFee.total,
               currency: cart.currency,
             }
-          : null,
-      recentPayments:
-        payments.length > 0
-          ? payments.slice(0, RECENT_PAYMENTS_LIMIT).map((payment) => ({
-              id: payment.id,
-              total: payment.total,
-              status: payment.status,
-              currency: payment.currency,
-              on: payment.paidOn ?? payment.createdAt,
-            }))
           : null,
       whatsOn,
     };

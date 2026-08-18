@@ -26,8 +26,8 @@ src/
 
 ## Startup sequence (`App.tsx`)
 
-1. `useAuth(keycloakConfig)` → Keycloak login, returning `user`, `organisation`, `capabilities`,
-   `isOrgAdmin`, `getToken`.
+1. `useAuth(keycloakConfig)` → Keycloak login, returning `user`, `organisation`, `organisations`,
+   `capabilities`, `isOrgAdmin`, `getToken`, `getOrganisationId`, `switchOrganisation`.
 2. Derive the locale: `organisation.language` → `organisationType.defaultLocale` → `en-GB`.
 3. `await initializeI18n(locale)` — nothing renders until this resolves.
 4. Filter `ALL_MODULES` down to modules with no `capability` or whose capability the organisation
@@ -43,6 +43,7 @@ org admin) → redirecting-to-login → the app.
 BrowserRouter basename="/orgadmin"
   LocaleProvider                (i18n + formatting)
     AuthTokenContext.Provider   (getToken, consumed by orgadmin-core's useApi)
+     OrganisationIdContext.Provider  (X-Organisation-Id on every call)
       OrganisationProvider      (current organisation)
         OnboardingProvider      (first-run dialogs and preferences)
           CapabilityProvider    (capability list for UI gating)
@@ -51,6 +52,28 @@ BrowserRouter basename="/orgadmin"
 
 Order matters — `useApi` cannot authenticate outside `AuthTokenContext`, and capability-aware
 components break outside `CapabilityProvider`.
+
+## One administrator, several clubs
+
+`organization_users` is unique on `(organization_id, keycloak_user_id)`, so an administrator may
+hold rows in several organisations. `/auth/me` returns `organisations[]` alongside the current one;
+`OrganisationSwitcher` renders in the AppBar and **shows a plain label rather than a menu when
+there is only one** — which falls out of the list's length, not a flag.
+
+**A switch is not a relabelling.** Capabilities belong to the organisation, so the navigation itself
+differs between two clubs. `switchOrganisation` re-fetches `/auth/me`, and `Layout` then navigates
+to the dashboard — half the time the open page is a module the other club does not have, and
+staying put lands the administrator on a capability-denied screen the instant they choose.
+
+The choice is sent as `X-Organisation-Id` on every API call, via `OrganisationIdContext` in
+orgadmin-core's `useApi`, for the routes that do not name an organisation in their path. It is read
+from a **ref**, not from state: a callback closing over state would send whichever organisation was
+current when it was last rebuilt, and a stale id acts on the wrong club. `localStorage` holds it
+across reloads so the shell does not flicker through the wrong branding, and the server remembers it
+too for a fresh session elsewhere — but the server verifies membership of whatever is named before
+acting on it, so neither store is trusted.
+
+Full record: [docs/ORGADMIN_MULTI_ORGANISATION.md](../../docs/ORGADMIN_MULTI_ORGANISATION.md).
 
 ## Module registry
 

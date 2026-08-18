@@ -10,7 +10,7 @@ capabilities, plus the hooks, contexts and utilities the capability modules buil
 ## Public surface (`src/index.ts`)
 
 ```ts
-export * from './hooks';        // useApi, AuthTokenContext
+export * from './hooks';        // useApi, AuthTokenContext, OrganisationIdContext
 export * from './utils';        // formatting + validation helpers
 export { OrganisationProvider, useOrganisation } from './context/OrganisationContext';
 export * from './dashboard';    // dashboardModule
@@ -39,7 +39,7 @@ Five of the six have their own summary — read that rather than this table when
 
 ## `useApi` — the API hook everything uses
 
-`src/hooks/useApi.ts` exports `useApi<T>()` and `AuthTokenContext`.
+`src/hooks/useApi.ts` exports `useApi<T>()`, `AuthTokenContext` and `OrganisationIdContext`.
 
 ```ts
 const { data, error, loading, execute, reset } = useApi<Event[]>();
@@ -47,6 +47,18 @@ await execute({ method: 'GET', url: '/api/orgadmin/events', retryCount: 3 });
 ```
 
 - Injects the bearer token supplied by the shell through `AuthTokenContext`.
+- Injects `X-Organisation-Id` from `OrganisationIdContext` — which organisation the administrator is
+  working in, for the org-admin routes that do not name one in their path. An administrator may
+  belong to several ([orgadmin-shell.md](orgadmin-shell.md)). A header rather than a value each
+  caller passes, for the same reason the token is one: a caller that has to remember is a caller
+  that will forget, and forgetting here means acting on the wrong club's data. A header the caller
+  set deliberately is never overwritten, and the server verifies membership regardless.
+- **Rewrites the URL to name the organisation** — `organisationScopedUrl` turns
+  `/api/orgadmin/events/:id` into `/api/orgadmin/organisations/<current>/events/:id`, so a request is
+  legible in a log without cross-referencing a header against a session. Done here rather than at
+  the ~240 call sites because half of them live in components with no organisation in scope.
+  `/api/orgadmin/auth/*` is exempt — `/auth/me` is how an administrator learns which organisations
+  they have. A URL that already names one is left alone.
 - Options extend Axios config with `showSuccessMessage`, `successMessage`, `showErrorMessage`,
   `onSuccess`, `onError`, `retryCount` (default 2), `retryDelay` (default 1000).
 - Returns loading/error state alongside the resolved data.

@@ -486,35 +486,16 @@ describe('AccountDashboardService', () => {
     });
   });
 
-  it('shows the three most recent payments', async () => {
-    activity.listPayments.mockResolvedValue([
-      { id: 'p1', total: 100, status: 'paid', currency: 'EUR', paidOn: '2026-08-01', createdAt: '' },
-      { id: 'p2', total: 200, status: 'paid', currency: 'EUR', paidOn: '2026-07-01', createdAt: '' },
-      { id: 'p3', total: 300, status: 'paid', currency: 'EUR', paidOn: '2026-06-01', createdAt: '' },
-      { id: 'p4', total: 400, status: 'paid', currency: 'EUR', paidOn: '2026-05-01', createdAt: '' },
-    ] as any);
+  /**
+   * The home screen no longer carries a recent-payments card, so the dashboard
+   * no longer reads payments. Worth pinning rather than leaving to the type: the
+   * list was fetched inside the `Promise.all`, where an unused branch costs
+   * every member a query on the first screen they see and nothing fails to say
+   * so. Payments have their own page, which is where they are asked for.
+   */
+  it('does not read payments at all', async () => {
+    await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
 
-    const payments = (await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).recentPayments;
-
-    expect(payments).toHaveLength(3);
-    expect(payments?.[0].id).toBe('p1');
-  });
-
-  /** An unpaid offline order has no payment date yet, but is still a payment. */
-  it('falls back to when a payment was created if it has no paid date', async () => {
-    activity.listPayments.mockResolvedValue([
-      {
-        id: 'p1',
-        total: 100,
-        status: 'awaiting_offline',
-        currency: 'EUR',
-        paidOn: null,
-        createdAt: '2026-08-02',
-      },
-    ] as any);
-
-    expect((await service.build(ORG, MEMBER, ALL, 'EUR', TODAY)).recentPayments?.[0].on).toBe(
-      '2026-08-02'
-    );
+    expect(activity.listPayments).not.toHaveBeenCalled();
   });
 });

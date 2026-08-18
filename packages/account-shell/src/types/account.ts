@@ -410,13 +410,6 @@ export interface AccountDashboard {
   }> | null;
   comingUp: DashboardComingUp[] | null;
   cart: { itemCount: number; total: number; handlingFee: number; currency: string } | null;
-  recentPayments: Array<{
-    id: string;
-    total: number;
-    status: string;
-    currency: string;
-    on: string;
-  }> | null;
   whatsOn: DashboardWhatsOn[];
 }
 
@@ -557,7 +550,14 @@ export interface AvailableSlot {
    * Why not: full, taken by a longer booking, held by another member's basket,
    * or already in the member's own.
    */
-  unavailableReason: 'full' | 'in-use' | 'held' | 'in-your-basket' | null;
+  unavailableReason:
+    | 'full'
+    | 'in-use'
+    | 'held'
+    | 'in-your-basket'
+    /** A different slot that overlaps one already in the member's basket. */
+    | 'clashes-with-basket'
+    | null;
   /**
    * When the member's own hold on this slot lapses; ISO, null unless it is
    * theirs. Never carries somebody else's expiry.
@@ -633,7 +633,11 @@ export interface CartView {
   items: CartItemView[];
   totals: CartTotals;
   /** Soft holds that lapsed while the member was elsewhere. */
-  warnings: Array<{ itemId: string; code: 'HOLD_EXPIRED'; message: string }>;
+  /**
+   * Lines removed because their hold lapsed. `itemId` is null — the row is
+   * already gone, and the warning is what stops the basket simply shrinking.
+   */
+  warnings: Array<{ itemId: string | null; code: 'HOLD_EXPIRED'; message: string }>;
 }
 
 /** `POST /api/account/:orgCode/checkout`. */

@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in.
+
+public_url     = "https://test.example.com"
+repository_url = "https://github.com/your-org/holism.git"
+branch         = "main"
+ses_from_email = "noreply@example.com"
+
+# Cheapest that builds comfortably. Drop to t4g.small (~$13/month) if you also
+# set KEYCLOAK_MEM_LIMIT lower and accept a slower build.
+instance_type = "t4g.medium"
+
+# Narrow this if the deployment does not need to be publicly reachable.
+# web_ingress_cidrs = ["203.0.113.0/24"]
+
+# SSH is closed by default; Session Manager is attached instead.
+# ssh_ingress_cidrs = ["203.0.113.5/32"]
+# ssh_key_name      = "my-key"
+
+seed_demo_data = true

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from './auth.middleware';
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
+import { OrganisationRequest, organisationOfRequest } from './capability.middleware';
 
 /**
  * Middleware to require specific organization admin role(s)
@@ -23,7 +23,7 @@ import { logger } from '../config/logger';
 export function requireOrgAdminRole(roles: string | string[]) {
   const requiredRoles = Array.isArray(roles) ? roles : [roles];
 
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: OrganisationRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({
@@ -44,6 +44,32 @@ export function requireOrgAdminRole(roles: string | string[]) {
        * check that succeeds for an inactive organisation would hand out
        * permissions for an organisation nobody should be able to reach.
        */
+      /*
+       * **Roles are held in an organisation, not on the platform.**
+       *
+       * This gathered every role name the identity had anywhere, with no
+       * organisation filter at all. With one organisation each that was the
+       * same answer; the moment somebody administers two it is a privilege
+       * escalation — a role held at one club would satisfy a role check for a
+       * request against the other.
+       *
+       * Scoped to the organisation the request is about, resolved the same way
+       * the capability check resolves it so the two can never disagree about
+       * which club they are talking about.
+       */
+      const organisationId = await organisationOfRequest(req);
+
+      if (!organisationId) {
+        logger.warn(`User ${keycloakUserId} has no organisation for this request`);
+        res.status(403).json({
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You do not administer this organisation'
+          }
+        });
+        return;
+      }
+
       const result = await db.query(
         `SELECT oar.name
          FROM organization_users ou
@@ -51,8 +77,9 @@ export function requireOrgAdminRole(roles: string | string[]) {
          INNER JOIN organization_user_roles our ON ou.id = our.organization_user_id
          INNER JOIN organization_admin_roles oar ON our.organization_admin_role_id = oar.id
          WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin'
-           AND ou.status = 'active' AND o.status = 'active'`,
-        [keycloakUserId]
+           AND ou.status = 'active' AND o.status = 'active'
+           AND ou.organization_id = $2::uuid`,
+        [keycloakUserId, organisationId]
       );
 
       if (result.rows.length === 0) {

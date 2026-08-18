@@ -6,11 +6,6 @@ import {
   Button,
   CircularProgress,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Divider,
   Grid,
   MenuItem,
@@ -19,13 +14,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { formatDisplayDate } from '@aws-web-framework/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { useAuthContext } from '../context/AuthContext';
 import { changeLocale, localeForLanguage } from '../i18n/config';
 import { AccountProfile } from '../types/account';
+import { ChangePasswordDialog } from '../components/ChangePasswordDialog';
+import { ChangeEmailDialog } from '../components/ChangeEmailDialog';
 
 /**
  * P1 — Profile & Settings. Route `/:orgCode/profile`.
@@ -36,11 +31,16 @@ import { AccountProfile } from '../types/account';
  * more than one, because a member correcting their mobile for one club would
  * otherwise be surprised.
  *
- * **Email and password are not edited here** (P2). Both need a verification
- * flow to be safe — an unverified email change locks a member out of the
- * address they sign in with — and Keycloak's account console already implements
- * both correctly. The buttons hand off there rather than reimplementing
- * verification, with an interstitial first so leaving the app is not a surprise.
+ * **Email and password are changed here too**, in dialogs (P4, P5), with
+ * Keycloak updated underneath. Both used to hand off to Keycloak's account
+ * console; being thrown onto a differently-branded site mid-task is
+ * disorienting, and the interstitial that warned about it was a symptom rather
+ * than a fix.
+ *
+ * What the console was doing for us still has to happen, and does — the current
+ * password is verified before either change, and a new address is proved by a
+ * link sent to it before it replaces the one the member signs in with.
+ * See docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md.
  */
 
 const LANGUAGES = [
@@ -55,7 +55,6 @@ const LANGUAGES = [
 export const ProfilePage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { orgCode, me } = useAccountOrganisation();
-  const { keycloak } = useAuthContext();
   const { execute } = useAccountApi<AccountProfile>();
 
   const [profile, setProfile] = useState<AccountProfile | null>(null);
@@ -69,7 +68,7 @@ export const ProfilePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [leaving, setLeaving] = useState<null | 'password' | 'email'>(null);
+  const [changing, setChanging] = useState<null | 'password' | 'email'>(null);
 
   const locale = i18n.language;
 
@@ -136,19 +135,6 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  /**
-   * Keycloak's account console, with a return URL so the member comes back to
-   * this page. `createAccountUrl` is used rather than a hand-built path so the
-   * console gets the referrer parameters that give it a "back to application"
-   * link of its own.
-   */
-  const openAccountConsole = () => {
-    const url = keycloak?.createAccountUrl({ redirectUri: window.location.href });
-    if (url) {
-      window.location.assign(url);
-    }
-    setLeaving(null);
-  };
 
   if (loading) {
     return (
@@ -256,18 +242,10 @@ export const ProfilePage: React.FC = () => {
             helperText={t('profile.fields.emailHelper')}
           />
           <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Button
-              variant="outlined"
-              endIcon={<OpenInNewIcon />}
-              onClick={() => setLeaving('password')}
-            >
+            <Button variant="outlined" onClick={() => setChanging('password')}>
               {t('profile.changePassword')}
             </Button>
-            <Button
-              variant="outlined"
-              endIcon={<OpenInNewIcon />}
-              onClick={() => setLeaving('email')}
-            >
+            <Button variant="outlined" onClick={() => setChanging('email')}>
               {t('profile.changeEmail')}
             </Button>
           </Stack>
@@ -296,24 +274,27 @@ export const ProfilePage: React.FC = () => {
       </Paper>
 
       {/*
-        P2 — the interstitial. Leaving the app for a different site mid-task is
-        disorienting without warning, and the member needs to know they will be
-        brought back.
+        P4 and P5. Dialogs rather than pages: both are short, both are finished
+        in one go, and the member is on this screen precisely because they came
+        to change something.
       */}
-      <Dialog open={leaving !== null} onClose={() => setLeaving(null)}>
-        <DialogTitle>
-          {leaving === 'email' ? t('profile.changeEmail') : t('profile.changePassword')}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>{t('profile.leavingBlurb')}</DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLeaving(null)}>{t('common.cancel')}</Button>
-          <Button variant="contained" onClick={openAccountConsole}>
-            {t('profile.continueToAccount')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Gated on `orgCode` like every other call on this page: the endpoints
+          are organisation-scoped even though the change is not. */}
+      <ChangePasswordDialog
+        open={changing === 'password' && Boolean(orgCode)}
+        orgCode={orgCode ?? ''}
+        onClose={() => setChanging(null)}
+        onChanged={() => {
+          setChanging(null);
+          setSaved(true);
+        }}
+      />
+      <ChangeEmailDialog
+        open={changing === 'email' && Boolean(orgCode)}
+        orgCode={orgCode ?? ''}
+        currentEmail={profile?.email ?? ''}
+        onClose={() => setChanging(null)}
+      />
     </Container>
   );
 };

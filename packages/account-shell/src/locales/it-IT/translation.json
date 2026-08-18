@@ -7,6 +7,7 @@
     "loading": "Caricamento…",
     "retry": "Riprova",
     "cancel": "Annulla",
+    "done": "Fatto",
     "back": "Indietro",
     "close": "Chiudi",
     "signIn": "Accedi",
@@ -149,8 +150,6 @@
     "cartSummary": "{{count}} articoli · {{total}}",
     "cartHandling": "incl. {{fee}} di gestione",
     "goToCart": "Vai al carrello",
-    "recentPayments": "Pagamenti recenti",
-    "allPayments": "Tutti i pagamenti",
     "whatsOn": "Novità",
     "upcomingEvents": "Prossimi eventi",
     "viewAll": "Vedi tutto",
@@ -335,7 +334,8 @@
       "full": "Al completo",
       "in-use": "Occupato",
       "held": "Riservato da un altro utente",
-      "in-your-basket": "Nel tuo carrello"
+      "in-your-basket": "Nel tuo carrello",
+      "clashes-with-basket": "Si sovrappone a uno nel carrello"
     }
   },
   "registrations": {
@@ -398,7 +398,7 @@
     "loadError": "Non è stato possibile caricare il tuo carrello.",
     "remove": "Rimuovi {{item}}",
     "paymentMethodFor": "Metodo di pagamento per {{item}}",
-    "holdExpired": "Alcuni articoli non sono più riservati e potrebbero non essere più disponibili. Controlla il carrello.",
+    "holdExpired": "Alcuni articoli erano riservati per te, ma la prenotazione \u00e8 scaduta e sono stati rimossi dal carrello. Aggiungili di nuovo se li vuoi ancora.",
     "offlineSubtotal": "Pagato direttamente al club (Offline)",
     "cardSubtotal": "Pagato con carta",
     "handlingFee": "Spese di gestione",
@@ -495,6 +495,13 @@
       "cancelled": "Annullato"
     }
   },
+  "confirmEmail": {
+    "doneTitle": "Indirizzo email modificato",
+    "doneBody": "Ora accedi con {{email}}.",
+    "failedTitle": "Questo link non è più valido",
+    "failedBody": "I link durano un'ora e possono essere usati una volta. Il tuo indirizzo email non è cambiato: ricomincia da Profilo e impostazioni.",
+    "goToSignIn": "Vai all'accesso"
+  },
   "profile": {
     "title": "Profilo e impostazioni",
     "loadFailed": "Non è stato possibile caricare il tuo profilo. Riprova.",
@@ -529,8 +536,26 @@
     "signInBlurb": "Il tuo indirizzo e-mail e la tua password sono gestiti nelle impostazioni del tuo account, dove le modifiche possono essere verificate in sicurezza.",
     "changePassword": "Cambia password",
     "changeEmail": "Cambia indirizzo e-mail",
-    "leavingBlurb": "Verrai portato alle impostazioni del tuo account per questa modifica e riportato subito qui.",
-    "continueToAccount": "Continua",
+    "password": {
+      "current": "Password attuale",
+      "new": "Nuova password",
+      "confirm": "Conferma la nuova password",
+      "mismatch": "Non corrispondono.",
+      "appliesEverywhere": "Questo cambia il modo in cui accedi a tutti i club a cui appartieni.",
+      "failed": "Non è stato possibile cambiare la password. Riprova.",
+      "show": "Mostra la password",
+      "hide": "Nascondi la password"
+    },
+    "email": {
+      "blurb": "Accedi con questo indirizzo, quindi invieremo un link a quello nuovo per verificare che ti raggiunga. Nulla cambia finché non lo segui.",
+      "new": "Nuovo indirizzo email",
+      "sameAsNow": "Questo è già il tuo indirizzo email.",
+      "send": "Invia il link",
+      "checkInbox": "Controlla la posta in arrivo",
+      "sentTo": "Abbiamo inviato un link a {{email}}.",
+      "sentBlurb": "Seguilo entro un'ora per completare il cambio. Fino ad allora accedi come sempre con il tuo indirizzo attuale.",
+      "failed": "Non è stato possibile avviare il cambio. Riprova."
+    },
     "memberSince": "Membro dal {{when}}",
     "lastSignIn": "Ultimo accesso {{when}}"
   }

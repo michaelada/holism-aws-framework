@@ -418,3 +418,26 @@ describe('StripeProvider — manual capture', () => {
     });
   });
 });
+
+
+/**
+ * Looking a provider up by a name that came from a row.
+ *
+ * `payments.payment_provider` is null until an intent is attached, and stays
+ * null for ever on an order paid directly to the club. Callers therefore hold a
+ * name they read rather than one they wrote, and `get` was doing
+ * `name.toLowerCase()` — so every such lookup became a 500 reading "Cannot read
+ * properties of null", which is what broke checkout for a basket with an
+ * earlier pending payment against it.
+ */
+describe('PaymentProviderRegistry.get', () => {
+  const registry = new PaymentProviderRegistry();
+
+  it.each([[null], [undefined], ['']])('treats %p as an unknown provider', (name) => {
+    expect(registry.get(name as any)).toBeNull();
+  });
+
+  it('still refuses a name it does not know', () => {
+    expect(registry.get('not-a-provider')).toBeNull();
+  });
+});

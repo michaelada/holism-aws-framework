@@ -58,18 +58,60 @@ A bare "3" beside "Basket" is not a sentence.
 
 New i18n key in all six locales: `nav.cartCount` / `nav.cartCount_other`.
 
+## A paid basket is an empty basket
+
+Reported as: a successful card payment, and the badge still carrying the count
+it had before.
+
+A basket write is what tells the badge to look again — and a card payment does
+not end in one. The sequence is:
+
+1. `POST /checkout` — a write, so the badge refetches. The cart is **still
+   full**: checkout only reserves the payment.
+2. The browser confirms the card with Stripe. Nothing goes through the account
+   API at all.
+3. Stripe's webhook reaches the server, and `confirmPayment` sets the cart to
+   `ordered`. **This is where the basket empties**, and it happens with no
+   client request involved.
+4. The client polls `GET /payments/:id` — a read, deliberately excluded, since
+   the count is refreshed *by* a read and treating one as a change would have
+   it fetch itself for ever.
+
+So the last thing the badge heard was step 1, where the basket was full, and
+that is the number it kept.
+
+Paying **offline** was unaffected, which is what made this look inconsistent:
+`markAwaitingOfflinePayment` closes the cart *during* the checkout request, so
+by the time that write returned the basket really was empty.
+
+The fix names the missing event rather than widening what counts as a write.
+`notifyIfSettled` announces a payment that has reached any status but `pending`,
+and the two screens that watch one resolve call it: the checkout page when its
+poll settles, and the confirmation page whenever it reads a settled payment.
+
+Both, not either — the confirmation can land after the checkout screen has given
+up waiting, and a member can reach the confirmation page directly, returning
+from a bank's 3-D Secure step or opening the link again days later.
+
+A `failed` payment is announced too. The basket stays open, but a decline drops
+its holds back to the browsing window, so a line may now be expired and out of
+the count.
+
 ## Where it lives
 
 | Concern | File |
 |---|---|
-| The notification, and what counts as a basket write | `src/cart/cartActivity.ts` |
+| The notification, what counts as a basket write, and settlement | `src/cart/cartActivity.ts` |
 | Fetching and counting | `src/cart/useCartCount.ts` |
 | The badge | `src/components/AppShell.tsx` |
+| Announcing a settled payment | `src/pages/CheckoutPage.tsx`, `src/pages/OrderConfirmationPage.tsx` |
 
 ## Verified
 
-Account-shell 542 passing. Live: the count moves from 0 → 1 → 2 as lines are
-added, and a line of quantity 3 counts as one.
+Account-shell 561 passing. Live: the count moves from 0 → 1 → 2 as lines are
+added, and a line of quantity 3 counts as one. The cart-closing update was
+traced to `confirmPayment`, reached only from the webhook — confirming there is
+no client write between checkout and an emptied basket.
 
 The 3 remaining failures are the pre-existing `packages/components` breakage
 described in [PHANTOM_CAPABILITIES.md](PHANTOM_CAPABILITIES.md), unrelated to

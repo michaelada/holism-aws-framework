@@ -2,10 +2,21 @@ import { Router, Request, Response } from 'express';
 import { eventService } from '../services/event.service';
 import { eventActivityService } from '../services/event-activity.service';
 import { eventEntryService } from '../services/event-entry.service';
-import { authenticateToken, requireOrgAdminCapability } from '../middleware';
+import {
+  authenticateToken,
+  byBodyOrCurrent,
+  byResource,
+  requireOrgAdminCapability,
+} from '../middleware';
 import { logger } from '../config/logger';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * @swagger
@@ -60,6 +71,7 @@ router.get(
 router.get(
   '/events/:id',
   authenticateToken(),
+  byResource('event', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -96,6 +108,7 @@ router.get(
 router.post(
   '/events',
   authenticateToken(),
+  byBodyOrCurrent(),
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
@@ -160,6 +173,7 @@ router.post(
 router.put(
   '/events/:id',
   authenticateToken(),
+  byResource('event', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -201,6 +215,7 @@ router.put(
 router.post(
   '/events/:id/clone',
   authenticateToken(),
+  byResource('event', 'id'),
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
@@ -239,6 +254,7 @@ router.post(
 router.delete(
   '/events/:id',
   authenticateToken(),
+  byResource('event', 'id'),
   ...requireOrgAdminCapability('event-management'),
   async (req: Request, res: Response) => {
     try {
@@ -286,6 +302,7 @@ router.delete(
 router.get(
   '/events/:eventId/activities',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -323,6 +340,7 @@ router.get(
 router.post(
   '/events/:eventId/activities',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -372,6 +390,7 @@ router.post(
 router.put(
   '/events/:eventId/activities/:activityId',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { activityId } = req.params;
@@ -414,6 +433,7 @@ router.put(
 router.delete(
   '/events/:eventId/activities/:activityId',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { activityId } = req.params;
@@ -463,6 +483,7 @@ router.delete(
 router.get(
   '/events/:eventId/entries',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -508,6 +529,7 @@ router.get(
 router.get(
   '/events/:eventId/entries/:entryId',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { entryId } = req.params;
@@ -549,6 +571,7 @@ router.get(
 router.get(
   '/events/:eventId/entries/export',
   authenticateToken(),
+  byResource('event', 'eventId'),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;

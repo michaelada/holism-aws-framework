@@ -30,6 +30,62 @@ export interface ApiCallOptions extends AxiosRequestConfig {
 export const AuthTokenContext = createContext<(() => string | null) | undefined>(undefined);
 
 /**
+ * Which organisation the administrator is currently working in.
+ *
+ * Sent as `X-Organisation-Id` on every call, for the org-admin routes that do
+ * not carry the organisation in their path — Settings, Users, Forms, uploads
+ * and most of Payments. The routes that *do* carry it are unaffected: the URL
+ * wins, because an address naming an organisation is unambiguous and a header
+ * quietly overriding it would make the same URL mean different things in
+ * different tabs.
+ *
+ * A header rather than a value each caller passes, for the same reason the
+ * token is a header: a caller that has to remember is a caller that will
+ * forget, and forgetting here means acting on the wrong club's data.
+ *
+ * Nothing is trusted client-side. The server verifies membership of whatever
+ * this names before it will act on it.
+ */
+export const OrganisationIdContext = createContext<(() => string | null) | undefined>(undefined);
+
+/**
+ * Paths that must never be organisation-scoped.
+ *
+ * `/auth/me` is how an administrator finds out which organisations they have,
+ * so requiring one would be circular; `/auth/capabilities` is asked in the same
+ * breath. Everything else under `/api/orgadmin` is about a particular club.
+ */
+const UNSCOPED_ORGADMIN_PATHS = ['/api/orgadmin/auth/'];
+
+/**
+ * Put the organisation in the URL, not only in a header.
+ *
+ * The org-admin data routers are mounted at
+ * `/api/orgadmin/organisations/:organisationId/...` as well as bare, and this is
+ * what makes the app use the scoped form. A request that says which club it is
+ * about is legible in a log without cross-referencing a header against a
+ * session, and cannot be read as being about the wrong one.
+ *
+ * Done here rather than at the ~240 call sites deliberately. Half of those live
+ * in components with no organisation in scope, so spelling it out everywhere
+ * would mean threading state through forty files to change what appears on the
+ * wire — forty chances to break a working screen, for a URL that this function
+ * can produce correctly every time.
+ *
+ * A URL that already names an organisation is left exactly as it is: the caller
+ * has been specific, and the server refuses any disagreement between the two
+ * anyway.
+ */
+export function organisationScopedUrl(url: string, organisationId: string | null): string {
+  if (!organisationId) return url;
+  if (!url.startsWith('/api/orgadmin/')) return url;
+  if (url.startsWith('/api/orgadmin/organisations/')) return url;
+  if (UNSCOPED_ORGADMIN_PATHS.some((prefix) => url.startsWith(prefix))) return url;
+
+  return url.replace('/api/orgadmin/', `/api/orgadmin/organisations/${organisationId}/`);
+}
+
+/**
  * Sleep utility for retry delays
  */
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -61,6 +117,7 @@ export function useApi<T = any>() {
 
   // Get authentication token provider from context if available
   const getToken = useContext(AuthTokenContext);
+  const getOrganisationId = useContext(OrganisationIdContext);
 
   /**
    * Execute an API call with retry logic
@@ -98,8 +155,19 @@ export function useApi<T = any>() {
           headers['Authorization'] = `Bearer ${token}`;
         }
 
+        /*
+         * Never overwrite one a caller set deliberately — a screen that needs to
+         * ask about a specific organisation has said so, and second-guessing it
+         * here would be the bug this header exists to prevent.
+         */
+        const organisationId = getOrganisationId?.();
+        if (organisationId && !headers['X-Organisation-Id']) {
+          headers['X-Organisation-Id'] = organisationId;
+        }
+
         const response = await axios({
           ...axiosOptions,
+          url: organisationScopedUrl(axiosOptions.url ?? '', organisationId ?? null),
           headers,
         });
 

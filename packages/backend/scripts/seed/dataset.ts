@@ -237,6 +237,24 @@ export const SUPER_ADMIN = {
   lastName: 'Platform',
 };
 
+/**
+ * Administrators who also administer somebody else's club.
+ *
+ * One person, several clubs — the same shape the account users have had all
+ * along. Kildare's administrator also runs Laois, so signing in as
+ * `admin@kildarehunt.test` exercises the switcher, the per-organisation
+ * capability resolution and the per-organisation role check, none of which an
+ * administrator of one club can demonstrate.
+ *
+ * Laois deliberately: its capabilities differ from Kildare's, so switching
+ * visibly changes the navigation rather than only the name in the bar.
+ *
+ * See docs/ORGADMIN_MULTI_ORGANISATION.md.
+ */
+export const ORG_ADMIN_ALSO_ADMINISTERS: Partial<Record<SeedOrg['key'], SeedOrg['key'][]>> = {
+  kildare: ['laois'],
+};
+
 export const ORG_ADMINS: Record<SeedOrg['key'], { email: string; firstName: string; lastName: string }> = {
   kildare: { email: 'admin@kildarehunt.test', firstName: 'Aoife', lastName: 'Byrne' },
   laois: { email: 'admin@laoishunt.test', firstName: 'Seán', lastName: 'Delaney' },

@@ -42,7 +42,6 @@ const empty = (): AccountDashboard => ({
   memberships: null,
   comingUp: null,
   cart: null,
-  recentPayments: null,
   whatsOn: [],
 });
 
@@ -80,9 +79,6 @@ const dashboard = (over: Partial<AccountDashboard> = {}): AccountDashboard => ({
     },
   ],
   cart: { itemCount: 4, total: 28845, handlingFee: 145, currency: 'EUR' },
-  recentPayments: [
-    { id: 'pay-1', total: 4500, status: 'paid', currency: 'EUR', on: '2026-01-12T00:00:00.000Z' },
-  ],
   whatsOn: [
     {
       kind: 'event',
@@ -209,11 +205,79 @@ describe('HomePage (B3)', () => {
     expect(screen.getByText(/incl\. €1\.45 handling/)).toBeInTheDocument();
   });
 
-  it('shows recent payments', async () => {
+  /*
+   * Removed as a card: payments have their own page, and a member's home screen
+   * is for what they can act on rather than a receipt they have already had.
+   */
+  it('does not carry a recent-payments card', async () => {
     renderWithProviders(<HomePage />);
 
-    expect(await screen.findByText('Recent payments')).toBeInTheDocument();
-    expect(screen.getByText('€45.00')).toBeInTheDocument();
+    await screen.findByText('Coming up');
+    expect(screen.queryByText('Recent payments')).not.toBeInTheDocument();
+  });
+
+  it('leads with what is on, then what the member already holds', async () => {
+    /*
+     * Order, asserted by document position rather than by reading the markup:
+     * "what is on" is what a member opens the home screen to find out, where a
+     * membership they already hold is reference. A reorder that undid this
+     * would otherwise pass every other case on the page.
+     */
+    renderWithProviders(<HomePage />);
+
+    const events = await screen.findByRole('heading', { name: 'Upcoming events' });
+    const memberships = screen.getByRole('heading', { name: 'Memberships' });
+
+    // eslint-disable-next-line no-bitwise
+    expect(events.compareDocumentPosition(memberships) & Node.DOCUMENT_POSITION_FOLLOWING).
+      toBeTruthy();
+  });
+
+  /**
+   * The basket card carries its own title, as its neighbours do.
+   *
+   * "Coming up" titles itself; lifting this one out made it the odd one of the
+   * pair. What made the block look indented
+   * was the grid — it was the second cell of a two-column row — and it has a
+   * row to itself now, so the card's edge lines up regardless.
+   */
+  describe('the basket block', () => {
+    it('titles the card from inside it, like the cards beside it', async () => {
+      renderWithProviders(<HomePage />);
+
+      const heading = await screen.findByRole('heading', { name: 'Your basket' });
+
+      expect(heading.closest('.MuiCard-root')).not.toBeNull();
+    });
+
+    it('marks it with the same orange as the basket count in the menu', async () => {
+      const { container } = renderWithProviders(<HomePage />);
+
+      await screen.findByRole('heading', { name: 'Your basket' });
+      expect(container.querySelector('[data-testid="ShoppingCartIcon"]')).toBeInTheDocument();
+    });
+
+    it('still shows what is in it, and the way to it', async () => {
+      renderWithProviders(<HomePage />);
+
+      expect(await screen.findByRole('heading', { name: 'Your basket' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Go to basket' })).toBeInTheDocument();
+    });
+
+    it('puts the button level with the figures, not under them', async () => {
+      /*
+       * A whole row off the card's height. Asserted structurally rather than by
+       * pixel: the two share a flex row, which is what keeps the button pinned
+       * right as the figures grow — a handling-fee line, a longer total.
+       */
+      renderWithProviders(<HomePage />);
+
+      const button = await screen.findByRole('button', { name: 'Go to basket' });
+      const row = button.parentElement!;
+
+      expect(row).toHaveStyle({ display: 'flex', justifyContent: 'space-between' });
+      expect(row).toHaveTextContent(/item/i);
+    });
   });
 
   /**
@@ -458,12 +522,11 @@ describe('HomePage (B3)', () => {
 
   describe('sections the club has not enabled', () => {
     it('renders no card at all rather than an empty one', async () => {
-      mockExecute.mockResolvedValue(dashboard({ cart: null, recentPayments: null }));
+      mockExecute.mockResolvedValue(dashboard({ cart: null }));
       renderWithProviders(<HomePage />);
 
       await screen.findByText('Coming up');
       expect(screen.queryByText('Your basket')).not.toBeInTheDocument();
-      expect(screen.queryByText('Recent payments')).not.toBeInTheDocument();
     });
 
     it('says something rather than showing a page of whitespace', async () => {

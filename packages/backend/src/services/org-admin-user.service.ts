@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { KeycloakAdminService } from './keycloak-admin.service';
-import { sendAdminInviteEmail } from './email.service';
+import { sendAdminAddedToOrganisationEmail, sendAdminInviteEmail } from './email.service';
 
 function generateTemporaryPassword(): string {
   return crypto.randomBytes(12).toString('base64url');
@@ -143,6 +143,12 @@ export class OrgAdminUserService {
     createdBy?: string
   ): Promise<OrgAdminUser> {
     let keycloakUserId: string | null = null;
+    /*
+     * Only set when *this* call created the identity, so the rollback below
+     * cannot delete an administrator who already existed and belongs to other
+     * organisations.
+     */
+    let createdKeycloakUserId: string | null = null;
 
     try {
       // Verify organization exists and get Keycloak group ID
@@ -180,30 +186,60 @@ export class OrgAdminUserService {
       // Generate a temporary password if not provided
       const temporaryPassword = data.temporaryPassword || generateTemporaryPassword();
 
-      const kcUser = await client.users.create({
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        enabled: true,
-        emailVerified: false,
-        username: data.email,
-        credentials: [{
-          type: 'password',
-          value: temporaryPassword,
-          temporary: true
-        }]
-      });
+      /*
+       * Adopt the identity if it already exists; only create when it does not.
+       *
+       * A Keycloak username must be unique in the realm and this platform uses
+       * the email address as the username, so somebody who already administers
+       * one club — or is a member of one — cannot be given a second Keycloak
+       * user. `users.create` was called unconditionally, which meant adding an
+       * existing person to a second organisation failed at Keycloak with a 409
+       * and the per-organisation duplicate check above never got to matter.
+       *
+       * Adopting is also the *right* answer rather than a workaround: it is one
+       * person, and they keep one password, one email address and one set of
+       * credential-change flows. Two Keycloak users sharing an address would be
+       * two passwords that drift apart.
+       *
+       * The seed has always done this (`upsertUser`); this is the same idea in
+       * the path administrators actually use.
+       */
+      const existingKeycloak = await client.users.find({ username: data.email, exact: true });
+      const adopted = existingKeycloak.length > 0;
 
-      if (!kcUser.id) {
-        throw new Error('Failed to create user in Keycloak');
+      if (adopted) {
+        keycloakUserId = existingKeycloak[0].id!;
+        logger.info('Adopting an existing Keycloak identity for a second organisation', {
+          keycloakUserId,
+          organizationId,
+        });
+      } else {
+        const kcUser = await client.users.create({
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          enabled: true,
+          emailVerified: false,
+          username: data.email,
+          credentials: [{
+            type: 'password',
+            value: temporaryPassword,
+            temporary: true
+          }]
+        });
+
+        if (!kcUser.id) {
+          throw new Error('Failed to create user in Keycloak');
+        }
+
+        keycloakUserId = kcUser.id;
+        createdKeycloakUserId = kcUser.id;
+
+        logger.info('Keycloak admin user created', { 
+          keycloakUserId,
+          email: data.email 
+        });
       }
-
-      keycloakUserId = kcUser.id;
-
-      logger.info('Keycloak admin user created', { 
-        keycloakUserId,
-        email: data.email 
-      });
 
       // Add user to organization's admins group
       logger.debug('Adding user to organization admins group', { 
@@ -251,6 +287,33 @@ export class OrgAdminUserService {
 
       const user = await this.rowToOrgAdminUser(dbResult.rows[0]);
 
+      /*
+       * Which mail to send, decided once rather than at each of the two exits.
+       *
+       * An adopted identity must not be sent a temporary password: they have a
+       * password, and the invitation email's whole shape — "here are your
+       * credentials, you will be asked to change them" — is wrong for somebody
+       * who has been signing in for a year. Non-blocking either way; the
+       * administrator exists whether or not the mail lands.
+       */
+      const announce = () => {
+        if (adopted) {
+          sendAdminAddedToOrganisationEmail({
+            toEmail: data.email,
+            firstName: data.firstName,
+            organizationName,
+          });
+        } else {
+          sendAdminInviteEmail({
+            toEmail: data.email,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            organizationName,
+            temporaryPassword,
+          });
+        }
+      };
+
       // Assign roles if provided
       if (data.roleIds && data.roleIds.length > 0) {
         logger.debug('Assigning roles to admin user', { 
@@ -269,26 +332,12 @@ export class OrgAdminUserService {
         );
         const updatedUser = await this.rowToOrgAdminUser(updatedResult.rows[0]);
 
-        // Send invitation email (non-blocking)
-        sendAdminInviteEmail({
-          toEmail: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          organizationName,
-          temporaryPassword,
-        });
+        announce();
 
         return updatedUser;
       }
 
-      // Send invitation email (non-blocking)
-      sendAdminInviteEmail({
-        toEmail: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        organizationName,
-        temporaryPassword,
-      });
+      announce();
 
       logger.info('Admin user created successfully', { 
         id: user.id,
@@ -303,16 +352,23 @@ export class OrgAdminUserService {
         error: error instanceof Error ? error.message : String(error)
       });
 
-      // Rollback Keycloak user if database fails
-      if (keycloakUserId) {
+      /*
+       * Roll back only what this call created.
+       *
+       * `keycloakUserId` may now be an identity that already existed and
+       * administers other organisations — deleting it because *this*
+       * organisation's insert failed would sign them out of every club they
+       * belong to, over an error that had nothing to do with them.
+       */
+      if (createdKeycloakUserId) {
         try {
           await this.kcAdmin.ensureAuthenticated();
           const client = this.kcAdmin.getClient();
-          await client.users.del({ id: keycloakUserId });
-          logger.info('Rolled back Keycloak user', { userId: keycloakUserId });
+          await client.users.del({ id: createdKeycloakUserId });
+          logger.info('Rolled back Keycloak user', { userId: createdKeycloakUserId });
         } catch (rollbackError) {
           logger.error('Failed to rollback Keycloak user', { 
-            userId: keycloakUserId,
+            userId: createdKeycloakUserId,
             error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
           });
         }
@@ -437,19 +493,44 @@ export class OrgAdminUserService {
 
       const user = result.rows[0];
 
-      // Delete from Keycloak
-      try {
-        await this.kcAdmin.ensureAuthenticated();
-        const client = this.kcAdmin.getClient();
-        await client.users.del({ id: user.keycloak_user_id });
-        logger.info('Keycloak user deleted', { 
-          keycloakUserId: user.keycloak_user_id 
-        });
-      } catch (kcError) {
-        logger.warn('Failed to delete user from Keycloak', { 
+      /*
+       * The identity survives unless this was its last row.
+       *
+       * Removing somebody from one club must not sign them out of the others.
+       * The Keycloak user is the person; the `organization_users` row is their
+       * membership of *this* organisation, and deleting the first because the
+       * second went would lock an administrator out of every club they belong
+       * to — and, if they are also a member somewhere, out of the member app.
+       *
+       * Counted across `user_type` deliberately: an account-user row is the
+       * same person, and their membership of a club is reason enough to keep
+       * the identity alive.
+       */
+      const elsewhere = await db.query(
+        `SELECT 1 FROM organization_users
+          WHERE keycloak_user_id = $1::text AND id <> $2::uuid
+          LIMIT 1`,
+        [user.keycloak_user_id, id]
+      );
+
+      if (elsewhere.rows.length > 0) {
+        logger.info('Keeping the Keycloak identity; it is used elsewhere', {
           keycloakUserId: user.keycloak_user_id,
-          error: kcError instanceof Error ? kcError.message : String(kcError)
         });
+      } else {
+        try {
+          await this.kcAdmin.ensureAuthenticated();
+          const client = this.kcAdmin.getClient();
+          await client.users.del({ id: user.keycloak_user_id });
+          logger.info('Keycloak user deleted', { 
+            keycloakUserId: user.keycloak_user_id 
+          });
+        } catch (kcError) {
+          logger.warn('Failed to delete user from Keycloak', { 
+            keycloakUserId: user.keycloak_user_id,
+            error: kcError instanceof Error ? kcError.message : String(kcError)
+          });
+        }
       }
 
       // Delete from database (cascade will handle role assignments)

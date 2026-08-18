@@ -1,0 +1,20 @@
+┌─────────────────────────────────────────────────┐
+│  Change email address                        ✕  │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  You sign in with this address, so we will send  │
+│  a link to the new one to check it reaches you.  │
+│  Nothing changes until you follow it.            │
+│                                                  │
+│  New email address                               │
+│  ┌────────────────────────────────────────────┐ │
+│  │ michael.adams@example.com                   │ │
+│  └────────────────────────────────────────────┘ │
+│                                                  │
+│  Current password                                │
+│  ┌────────────────────────────────────┐  ┌────┐ │
+│  │ ••••••••••                          │  │ 👁 │ │
+│  └────────────────────────────────────┘  └────┘ │
+│                                                  │
+│              [ Cancel ]   [ Send the link ]      │
+└─────────────────────────────────────────────────┘

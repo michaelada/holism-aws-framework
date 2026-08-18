@@ -26,6 +26,7 @@ import {
   capabilitiesFor,
   ORGS,
   ORG_ADMINS,
+  ORG_ADMIN_ALSO_ADMINISTERS,
   ORG_TYPE,
   SUPER_ADMIN,
   SeedOrg,
@@ -476,6 +477,49 @@ export async function seedDatabase(
       [orgAdminRowIds[org.key], roleResult.rows[0].id]
     );
     bump('organization_user_roles');
+  }
+
+  /*
+   * A second club for one administrator, so the switcher has something to show.
+   *
+   * Reuses the **same Keycloak identity** — which is the whole point, and what
+   * `createAdminUser` now does for real when an address already exists. Given
+   * the full-administrator role of the club being joined, not of their own:
+   * roles are held in an organisation, and granting one club's permissions in
+   * another is the escalation the role middleware was fixed to prevent.
+   */
+  for (const [adminKey, alsoAdministers] of Object.entries(ORG_ADMIN_ALSO_ADMINISTERS)) {
+    const admin = ORG_ADMINS[adminKey as SeedOrg['key']];
+
+    for (const targetKey of alsoAdministers ?? []) {
+      const membership = await client.query(
+        `INSERT INTO organization_users
+           (organization_id, keycloak_user_id, user_type, email, first_name, last_name, status)
+         VALUES ($1,$2,'org-admin',$3,$4,$5,'active')
+         RETURNING id`,
+        [
+          orgIds[targetKey],
+          keycloak.orgAdminIds[adminKey as SeedOrg['key']],
+          admin.email,
+          admin.firstName,
+          admin.lastName,
+        ]
+      );
+      bump('organization_users');
+
+      const targetRole = await client.query(
+        `SELECT id FROM organization_admin_roles
+          WHERE organization_id = $1 AND name = 'full-administrator'`,
+        [orgIds[targetKey]]
+      );
+
+      await client.query(
+        `INSERT INTO organization_user_roles (organization_user_id, organization_admin_role_id)
+         VALUES ($1,$2)`,
+        [membership.rows[0].id, targetRole.rows[0].id]
+      );
+      bump('organization_user_roles');
+    }
   }
 
   // Keyed by organisation then email: a member row points at the person's

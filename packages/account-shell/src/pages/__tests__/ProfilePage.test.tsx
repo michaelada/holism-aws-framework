@@ -182,26 +182,34 @@ describe('ProfilePage', () => {
    * P2 — leaving the app mid-task is disorienting without warning, so the
    * handoff is confirmed first.
    */
-  it('confirms before sending the member to their account settings', async () => {
+  /*
+   * Both credential changes used to hand off to Keycloak's account console,
+   * behind an interstitial warning the member they were about to leave. They
+   * are dialogs in the app now (P4/P5), so the console is never opened and the
+   * warning has nothing left to warn about.
+   */
+  it('changes the password in the app rather than on Keycloak’s pages', async () => {
     renderWithProviders(<ProfilePage />);
 
     await screen.findByDisplayValue('Ada');
     await userEvent.click(screen.getByRole('button', { name: /change password/i }));
 
-    expect(await screen.findByText(/brought straight back/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/^current password/i)).toBeInTheDocument();
     expect(mockCreateAccountUrl).not.toHaveBeenCalled();
+    expect(screen.queryByText(/brought straight back/i)).not.toBeInTheDocument();
   });
 
-  it('returns the member here after visiting their account settings', async () => {
+  it('changes the email address in the app too, and says nothing moves yet', async () => {
     renderWithProviders(<ProfilePage />);
 
     await screen.findByDisplayValue('Ada');
-    await userEvent.click(screen.getByRole('button', { name: /change password/i }));
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await userEvent.click(screen.getByRole('button', { name: /change email address/i }));
 
-    expect(mockCreateAccountUrl).toHaveBeenCalledWith(
-      expect.objectContaining({ redirectUri: expect.any(String) })
-    );
+    expect(await screen.findByLabelText(/^new email address/i)).toBeInTheDocument();
+    // The member signs in with this address, so the dialog must not imply the
+    // change has already happened.
+    expect(screen.getByText(/Nothing changes until you follow it/i)).toBeInTheDocument();
+    expect(mockCreateAccountUrl).not.toHaveBeenCalled();
   });
 
   it('reports a failure to load', async () => {

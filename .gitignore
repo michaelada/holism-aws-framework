@@ -30,3 +30,15 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
+
+# Single-instance deployment: generated on the box, never committed
+.env.deploy
+infrastructure/keycloak/realm-import.rendered.json
+.deploy/
+.deploy-source
+
+# OpenTofu/Terraform working directory. Holds provider binaries — the AWS
+# provider alone is ~650 MB, which GitHub refuses outright (100 MB limit).
+# `.terraform.lock.hcl` is deliberately NOT ignored: it pins provider versions
+# and belongs in the repository.
+.terraform/

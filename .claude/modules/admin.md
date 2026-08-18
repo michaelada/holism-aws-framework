@@ -7,6 +7,18 @@ roles and users that the org-admin app then operates within.
 - **Tests:** Vitest — `npm run test:admin` (~23 test files).
 - **Talks to** `/api/admin/*` on the backend.
 
+
+## Hold windows are set per organisation
+
+The organisation edit page carries **Basket hold** and **Payment hold**, in minutes, written to
+`settings.holds` ([docs/CONFIGURABLE_HOLD_WINDOWS.md](../../docs/CONFIGURABLE_HOLD_WINDOWS.md)).
+Defaults 3 and 15; ranges 1–60 and 5–180, validated server-side and echoed in the helper text. An
+empty box means "use the platform default" and is sent as `undefined`, not 0 — which the server
+would read as a hold of no time at all.
+
+`settings` is merged rather than replaced on update, so saving these cannot wipe `stripeConnect`
+stored beside them.
+
 ## Layout
 
 ```

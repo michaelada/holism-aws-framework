@@ -1,0 +1,75 @@
+# The four front ends, built and served by nginx.
+#
+# One image rather than four, because they are one site: a single origin serving
+# `/account`, `/orgadmin`, `/admin` and `/metadata`, with `/api` and `/auth`
+# proxied to the backend and Keycloak beside it. Same-origin means no CORS to
+# configure and no second certificate to obtain.
+#
+# **The Vite variables are baked in at build time**, not read at run time — they
+# end up inside the bundle. An image is therefore specific to the hostname it was
+# built for, which is why `build-args` are required rather than defaulted to
+# something that would silently produce a broken bundle.
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS build
+
+# Where this deployment lives. The bundles hard-code these.
+ARG PUBLIC_URL
+ARG KEYCLOAK_REALM=aws-framework
+# BuildKit warns about this (SecretsUsedInArgOrEnv) and the warning is wrong
+# here: a Stripe *publishable* key is designed to be public and has to reach the
+# browser to mount the card form at all. The secret key never appears in this
+# file — it is read by the backend at run time.
+ARG STRIPE_PUBLISHABLE_KEY=
+
+WORKDIR /src
+
+# The whole workspace, because the shells alias the shared packages to their
+# *source* rather than to a built artefact — Vite compiles them as part of each
+# app. That is also why nothing here runs a package build first.
+COPY package.json package-lock.json ./
+COPY packages ./packages
+
+RUN npm ci --no-audit --no-fund
+
+# `vite build` directly, not `npm run build`.
+#
+# The build scripts are `tsc && vite build`, and `tsc` currently fails in this
+# repository for reasons that have nothing to do with deploying it — pre-existing
+# errors in test files, and one package whose declarations are stale. Type
+# checking belongs in CI, where those can be seen and fixed; gating the
+# deployment on them would mean an unrelated test-file error stops a release.
+ENV VITE_API_BASE_URL=""
+ENV VITE_KEYCLOAK_URL="${PUBLIC_URL}/auth"
+ENV VITE_KEYCLOAK_REALM="${KEYCLOAK_REALM}"
+ENV VITE_STRIPE_PUBLISHABLE_KEY="${STRIPE_PUBLISHABLE_KEY}"
+
+# `base` is set in each app's vite.config for these two, and their routers agree.
+RUN cd packages/account-shell  && VITE_KEYCLOAK_CLIENT_ID=account-app          npx vite build
+RUN cd packages/orgadmin-shell && VITE_KEYCLOAK_CLIENT_ID=orgadmin-client      npx vite build
+
+# These two have no `base` of their own, so it is passed here. Their routers
+# read it back through `import.meta.env.BASE_URL`.
+RUN cd packages/admin    && VITE_KEYCLOAK_CLIENT_ID=aws-framework-admin    npx vite build --base=/admin/
+RUN cd packages/frontend && VITE_KEYCLOAK_CLIENT_ID=aws-framework-frontend npx vite build --base=/metadata/
+
+# ---------------------------------------------------------------------------
+# Serve
+# ---------------------------------------------------------------------------
+FROM nginx:alpine
+
+COPY infrastructure/nginx/deploy.conf /etc/nginx/conf.d/default.conf
+
+COPY --from=build /src/packages/account-shell/dist  /usr/share/nginx/html/account
+COPY --from=build /src/packages/orgadmin-shell/dist /usr/share/nginx/html/orgadmin
+COPY --from=build /src/packages/admin/dist          /usr/share/nginx/html/admin
+COPY --from=build /src/packages/frontend/dist       /usr/share/nginx/html/metadata
+
+# A landing page, so the bare hostname is not a 404 while somebody is working
+# out which application they wanted.
+COPY infrastructure/nginx/index.html /usr/share/nginx/html/index.html
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+  CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1

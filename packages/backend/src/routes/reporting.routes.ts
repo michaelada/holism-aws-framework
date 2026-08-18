@@ -3,7 +3,13 @@ import { reportingService } from '../services/reporting.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * @swagger

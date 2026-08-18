@@ -8915,3 +8915,1820 @@ Everything is as the seed defines it — password `Passw0rd!` for every login:
 Your test data from this session — the Hunt Ball entry, the shop orders, the offline bookings — is gone, which is what a reset means. All the fixes from today are in the code, so re-running any of those flows should now behave correctly first time.
 
 ---
+
+
+## 2026-08-17 16:05:12 — Prompt
+
+I have 2 group lessons slots in by basket, however when I lookat the calendar booking listing, it is not showing thoe slots as highlighted in a red shade, and unclickable?
+
+### Assistant
+
+Let me look at the actual state of your basket.
+
+Found it. Your hold lapsed 15 seconds ago, and the availability query only counts holds where `expires_at > NOW()` — so the slot reads as free again, even though the line is still in your basket.
+
+That's a flaw in what I built. It also contradicts the duplicate guard, which checks the basket directly and would refuse the re-add with "already in your basket" while the grid says it's available. Let me fix the distinction:
+
+Now the query must fetch the viewer's own lines regardless of expiry:
+
+Now the existing tests need the new field, and I should pin the new behaviour:
+
+My earlier tests need the new column and parameter. Let me update them and cover the new case:
+
+Now let me verify with your actual basket state — a lapsed hold:
+
+Both your slots now read `in-your-basket` — so red and unclickable — while `placesRemaining: 4` correctly says the places are genuinely free again. Let me confirm another member sees that:
+
+The screen and the guard now agree. Let me clean up and document:
+
+Your hold had lapsed — that's the whole cause. Backend 2798 passing.
+
+## What was happening
+
+The availability query counted only holds where `expires_at > NOW()`. Your two-minute hold ran out, so your own slots read as free again.
+
+Worse, that contradicted the add guard, which checks the **basket** rather than the clock: the grid said "available", and trying to add it said *"That slot is already in your basket"*. The screen was arguing with itself.
+
+## The distinction I'd missed
+
+Two different questions were being answered by one query:
+
+| | Counts while the hold is live | Counts until removed or checked out |
+|---|---|---|
+| Someone else's basket | ✅ | — |
+| **Your own basket** | for reserving places | ✅ for saying it's yours |
+
+A lapsed line now:
+
+- **reserves nothing** — the places really are free, and another member sees the slot as available, which is the entire point of an expiry;
+- **still shows as `in-your-basket`** — red and unclickable — because it *is* still in your basket and you can't add it twice.
+
+Verified against your actual basket: both slots now return `in-your-basket` with `placesRemaining: 4`, while Bríd sees the same slots as available with 4 places. And the guard still refuses you a second copy — consistently with what the screen now shows.
+
+One nice side effect: `heldUntil` is in the past, so the countdown beneath reads **"Hold expired"**. That's the honest description — yours, in your basket, no longer reserved — and it tells you why checkout will ask you to review the basket.
+
+`ExistingHold.live` carries the distinction into the calculator, defaulting to in-force when absent so nothing that predates it silently frees every slot.
+
+The 3 account-shell failures are unchanged — still the `packages/components` breakage.
+
+Documented in [docs/BASKET_SOFT_HOLDS.md](docs/BASKET_SOFT_HOLDS.md), with [account-shell.md](.claude/modules/account-shell.md) updated.
+
+---
+
+
+## 2026-08-17 16:15:21 — Prompt
+
+The Your Basket card that displays on the home page, is not left aligned properly, it has a margin which pushes it further to the right than the rows below it?
+
+Also, when hold items expire they should be removed from my basket automatically and the person should have to select it again, also can you make the hold time configurable in the Platform Admin for each Orgabnisation, with the default hold tme changing from 2 to 3 minutes. Also can you make the 15 minute hold time for a payment be configurable for each organisation with the default value always 15.
+
+### Assistant
+
+Four things, one of them substantial. Let me track it.
+
+Now I can see it. The basket card is the *second* item in a two-column grid, so it sits in the right-hand column while every row below starts at the left edge — that's the "margin".
+
+Let me give it its own row, left-aligned like the rest:
+
+Indentation drifted and the gutter comment is now orphaned. Let me tidy:
+
+Now the auto-removal. Let me see how the cart reports expired lines today:
+
+The basket page's message should now say things were removed, not that they need reviewing:
+
+Now the configurable hold times. Let me see how per-organisation settings are edited today:
+
+Settings are merged rather than replaced, so this is safe. Let me start with the defaults and the resolver:
+
+Now a reader, and wiring it into the two places that set holds:
+
+`holdMinutes` is now only a yes/no, so let me make it say that:
+
+Now validation on save, and cache invalidation so an edit takes effect:
+
+Now the Platform Admin fields:
+
+The anchor didn't match — `STATUSES` is typed. Let me insert properly:
+
+Both expected: the hold default changed, and `getCart` now issues an extra query. Let me fix the tests:
+
+That test pins the old behaviour. Let me rewrite it for removal:
+
+The `touch` after a deletion consumes a response. Let me account for it:
+
+Now the holds tests, for the new default and the resolver:
+
+Let me verify the whole thing live — the new default, a per-club override, and auto-removal:
+
+Both windows take effect immediately, and the settings merge preserved `stripeConnect`. Now validation and auto-removal:
+
+My earlier checkout actually booked that slot, so the add was refused. Let me clear and retest cleanly:
+
+All four behaviours confirmed. Let me reset Meath's override, clean up, and finish:
+
+That's `RolesPage`, one of the pre-existing admin failures — not my file. Let me confirm and document:
+
+The backend.md anchor didn't match. Let me find it:
+
+All four done. Backend 2809 passing, account-shell 545.
+
+## The basket card
+
+It was the second cell of a two-column grid, so with "Coming up" beside it the card sat in the right-hand half while every row below started at the left — which reads as a margin rather than a column. It now has a row of its own at the left edge, and comes first: a basket with something in it is the most actionable thing on that page.
+
+## Expired items are removed
+
+`getCart` now deletes lapsed lines and tells you what went:
+
+> *"Indoor arena — Saturday 17:00" was held for you, but the hold ran out and it has been removed*
+
+Deleted on read rather than by a sweeper, which keeps the property that's made this design work throughout: **nothing runs on a timer**. Only lines that were actually holding something are touched — a membership never held a place and shouldn't vanish for sitting in a basket. The warning carries a description rather than an id, because the row is already gone; that's the point, so the basket doesn't just silently shrink.
+
+## Both windows are configurable
+
+| | Default | Range | Was |
+|---|---|---|---|
+| Basket hold | **3 min** | 1–60 | fixed at 2 |
+| Payment hold | **15 min** | 5–180 | fixed at 15 |
+
+Set on the organisation's page in the Platform Admin, stored in `settings.holds`.
+
+Reading is deliberately **forgiving** — anything missing, zero, negative or out of range falls back or clamps, because it's asked while a member is adding to a basket and refusing *that* over a mistyped setting would be far worse. Writing is deliberately **strict** — someone who types 500 is told the limit rather than silently given 180.
+
+Two things I checked specifically: `settings` is merged rather than replaced, so saving hold windows can't wipe `stripeConnect` beside it (verified); and the 30-second cache is dropped on save, so an edit applies to the very next basket — an 8-minute window took effect immediately.
+
+Verified live end to end: default 3.0 min → Meath set to 8/40 → basket 8.0, extended to 40.0 at checkout → out-of-range refused with the limit named and the stored value untouched → lapsed hold removed with the warning and no row left.
+
+I reset Meath's override afterwards, so all four clubs are back on the defaults and the database is clean.
+
+Three tests pinned the old behaviour and were corrected: the cart's "expired item stays visible" case, its query sequence, and the two-minute default.
+
+The 3 account-shell failures and one admin `RolesPage` failure are the pre-existing `packages/components` breakage — untouched.
+
+Written up in [docs/CONFIGURABLE_HOLD_WINDOWS.md](docs/CONFIGURABLE_HOLD_WINDOWS.md), with [backend.md](.claude/modules/backend.md) and [admin.md](.claude/modules/admin.md) updated.
+
+---
+
+
+## 2026-08-17 16:44:15 — Prompt
+
+The basket is not left aligned with the Membersjips, Upcoming events etc, it is intended slightly. Also can you add a coloured (orange) shopping cart icon to the card heading.
+
+### Assistant
+
+That makes sense — the other rows put their heading *outside* the card, at the container edge, while "Your basket" sits inside the card and is inset by its padding. Let me match the pattern and add the icon:
+
+Now the closing tags and indentation of the body:
+
+The structure now matches the rows below exactly. Let me check the tests:
+
+Fixed, and my previous attempt only got half of it. Account-shell 548 passing.
+
+## The real cause
+
+There were **two** things pushing it right, and I only fixed one last time.
+
+The grid position was the first — I moved it to its own row. But the heading was still **inside** the card, and every other row on the page puts its heading *outside*, at the container edge. So "Your basket" was inset by the card's own padding while "Memberships" and "Upcoming events" sat flush left.
+
+The heading is what the eye lines up on, so the whole block read as indented even though the card edges were already aligned. That's the "slight" part — it was one padding width, not a whole column.
+
+The heading now sits outside the card, structurally identical to the rows below.
+
+## The icon
+
+A shopping-cart mark beside the heading in `warning.main` — deliberately the **same orange as the basket count in the navigation**, so the badge that tells you there's something in the basket and the block that shows it read as one thing rather than two unrelated oranges.
+
+Three tests added: that the heading is outside the card (asserted by `closest('.MuiCard-root')` being null — the alignment property itself, not just that the text exists), that the icon renders, and that the summary and button still work.
+
+The 3 remaining failures are the unchanged `packages/components` breakage.
+
+[docs/CONFIGURABLE_HOLD_WINDOWS.md](docs/CONFIGURABLE_HOLD_WINDOWS.md) and [account-shell.md](.claude/modules/account-shell.md) both updated to record the heading-placement rule, since it's the kind of thing that gets undone by accident.
+
+---
+
+
+## 2026-08-17 16:48:07 — Prompt
+
+Can oyy put the icon Your Basket hading inside the card as the title of the card rather than it being outside it?
+
+### Assistant
+
+Now the test that asserted the opposite:
+
+Done. The title and the orange cart icon are back inside the card, as the card's own heading.
+
+That's the more consistent choice anyway — "Coming up" and "Recent payments" sit beside it and both title themselves, so lifting this one out to the container edge had made it the odd card of the three.
+
+The alignment holds regardless, because the fix for that was the earlier one: the card had been the second cell of a two-column grid, so it sat in the right-hand half. It has a row to itself now, so its left edge lines up with the teasers below whether the title is inside it or not. The title just inherits the card's padding, like every other card's does.
+
+I also dropped the icon to `1.25rem` so it sits with the heading rather than looming over it.
+
+The test that asserted the heading was *outside* the card now asserts it's inside — it was pinning the previous arrangement, so it needed inverting rather than deleting.
+
+Account-shell 548 passing; the 3 failures are the unchanged `packages/components` breakage. Both docs updated so the reasoning matches what the code now does.
+
+---
+
+
+## 2026-08-17 16:50:03 — Prompt
+
+And can you put the "Go To Basket" to the right, justified alirned right of the rows that indicates the number of items and price, so that the row is more compact height wise.
+
+### Assistant
+
+Done. The button now sits level with the figures, right-aligned, which takes a whole row off the card's height.
+
+Two details worth noting:
+
+**`space-between` rather than a left margin.** The figures grow — a handling-fee line appears, a total gets longer — and with `space-between` the button stays pinned to the right edge regardless. A margin would have to be re-guessed every time the content changed.
+
+**The button never shrinks** (`flexShrink: 0`). On a narrow screen a flex row will happily squeeze a button until "Go to basket" wraps to two lines, which looks broken; better to let the figures elide instead.
+
+The summary lines are wrapped in a `Box` so they stack as a unit on the left while the button centres against them vertically.
+
+I added a test that pins the arrangement structurally — that the button and the figures share a flex row with `space-between` — rather than asserting pixels, since it's the layout relationship that matters and it's the thing a later edit would quietly undo.
+
+Account-shell 549 passing; the 3 failures remain the unchanged `packages/components` breakage.
+
+---
+
+
+## 2026-08-17 16:52:03 — Prompt
+
+can you swop the order on the home page so that "Upcomoing events" is listed before "Memberships"
+
+### Assistant
+
+Order swapped. Let me confirm the tests still pass and pin the order:
+
+The summary states the old order — let me correct it:
+
+Swapped. The home screen now runs: basket → **Upcoming events** → Memberships → bookings → shop → registrations.
+
+It's the better order anyway — what's on is what a member opens the home screen to find out, whereas a membership they already hold changes a couple of times a year and is reference rather than news.
+
+Two things I did alongside the move:
+
+**Pinned the order in a test**, using `compareDocumentPosition` rather than reading the markup. A reorder would otherwise pass every other case on the page, since both headings still render either way.
+
+**Corrected the module summary**, which said "Memberships first — what the member already holds — then Upcoming events". A stale summary is worse than none, because it gets trusted without being checked.
+
+The comment explaining the old rationale has been replaced rather than left contradicting the code.
+
+Account-shell 550 passing; the 3 failures remain the unchanged `packages/components` breakage.
+
+---
+
+
+## 2026-08-17 16:57:57 — Prompt
+
+When I select two booking items for Cross-country schooling in Laois Hunt Pony Club, and add them to my basket, it onnly adds the first 1, displays both in red on the calendar booking page and displays the error "That slot is already in your basket"
+
+### Assistant
+
+Let me look at that calendar's actual slots rather than guess.
+
+Found it. Cross-country schooling has **one configuration with two duration options** — 180 and 240 minutes, both from 10:00 — so the grid offers 10:00–13:00 *and* 10:00–14:00, which overlap. You picked two that clash.
+
+Refusing is right, but three things are wrong about how it's handled. Let me fix them:
+
+Now the messages, in both places that report it:
+
+Now the third part — the page let you pick two clashing slots in one go, before either was in the basket. Let me see the toggle:
+
+Let me verify the whole thing against the real calendar:
+
+The overlap is exactly as expected. Let me add the first and see what the second now reports:
+
+All four cases now report accurately, and 13:00–16:00 still adds. Let me add tests:
+
+My assertion was wrong, not the code — a stranger's overlapping hold correctly reads `held`. The point is that it isn't *mine*:
+
+That's the known unseeded-generator flake (§3.3) — passes in isolation. Now the front-end test for the selection swap:
+
+The label has been shortened to "Your details (3)" since I wrote that test — my assertion pinned the old wording. Let me make it about the count, not the phrasing:
+
+A regression I introduced with the publishable key. Let me look:
+
+`payment_provider` is null until an intent is attached, and `get` assumed a string. Let me fix both the lookup and my call site:
+
+Let me reproduce your exact situation to confirm — a pending payment with no provider:
+
+Two orphaned `pending` payments with no provider but a **card amount due** — they never got an intent attached, so they're unusable. Reusing one would hand back a checkout with no card form. Let me treat that as stale too:
+
+No more 500 — now a clean refusal. But LHPC should have a Connect account; let me check:
+
+All four now read `false`, though they were `true` after the reseed. Let me ask Stripe directly:
+
+Stripe says all four are enabled — the stored flag is a stale snapshot. Let me see which condition actually refused:
+
+The guard reads a **cached** snapshot of Stripe's state, refreshed only when someone opens Payment Settings. That's why I've had to hand-patch this twice. Let me make it ask Stripe before refusing:
+
+Checkout works, and LHPC's stale flag corrected itself on use. Let me add tests and run everything:
+
+One earlier fixture represents a payment that reached the provider but omits the client secret. Let me make it accurate:
+
+Both problems fixed. Backend 2823 passing, account-shell 554.
+
+## The clashing slots
+
+Cross-country schooling has **one configuration with two duration options** — 180 and 240 minutes, both from 10:00 — so the grid offers 10:00–13:00 *and* 10:00–14:00. Those overlap: they're two ways to book one morning, not two mornings. Refusing the second was right; everything about how it was refused was wrong.
+
+- The calculator conflated **your slot** with **a slot overlapping yours**, so both went red and the error claimed a different row was "already in your basket" — something you could see was false. They're now separate reasons, with *"Overlaps one in your basket"* on the calendar and *"That overlaps a slot already in your basket"* on the add.
+- The clashing row no longer gets a countdown; it isn't waiting on a clock, it's waiting on you removing the other line.
+- The page no longer lets both be selected. The later click wins and the clashing one visibly deselects — clicking "extended morning" after "morning" means the longer one.
+
+Slots that merely **abut** are untouched: 13:00 starts exactly where the morning ends, and you may well want both. Verified live against the real calendar.
+
+## The checkout 500
+
+Mine, from the publishable-key work: `registry.get(row.payment_provider)` where `payment_provider` is **null** until an intent is attached. `name.toLowerCase()` then threw.
+
+Fixing the crash exposed two more:
+
+**Your two orphaned pending payments** had a card amount but no client secret — `createPayment` writes the row before asking the provider, so a failure between the two leaves something that can't be confirmed. Returning it would have given you a checkout page with no card form. Those are now discarded and replaced.
+
+**`chargesEnabled` is a cache of Stripe's answer**, refreshed only when someone opens Payment Settings. All four clubs read `false` while Stripe said `true` for all four — so checkout refused a club that could take payments perfectly well. That's why I'd already hand-patched this twice. A `false` is now re-checked against Stripe before it's believed, on that branch only. LHPC corrected itself the moment you checked out.
+
+Two test fixtures pinned superseded behaviour and were corrected rather than worked around.
+
+Documented in [docs/BASKET_SOFT_HOLDS.md](docs/BASKET_SOFT_HOLDS.md) and [backend.md](.claude/modules/backend.md). The 3 account-shell failures remain the unchanged `packages/components` breakage.
+
+---
+
+
+## 2026-08-17 17:42:36 — Prompt
+
+That worked thank you.
+
+### Assistant
+
+Good to hear.
+
+One thing still outstanding, worth flagging at a natural stopping point: `packages/components` doesn't compile. Its working tree is 66 lines *behind* HEAD — `FieldDatatype.PHONE` and the `MultiSelectRenderer` checkbox rendering were removed while `applicationField.ts`, `TextRenderer`, `FieldRenderer` and `validator.ts` all still reference them. That's what the 3 persistent `EntryFormPage` failures are, and it looks like an accidental partial revert rather than in-progress work, since there's only one added line (a comment) against all those deletions.
+
+If it is accidental, this restores it:
+
+```
+git checkout HEAD -- packages/components/src/types/metadata.types.ts \
+                     packages/components/src/components/FieldRenderer/renderers/MultiSelectRenderer.tsx
+```
+
+I've left it alone rather than risk overwriting something deliberate — your call.
+
+---
+
+
+## 2026-08-17 17:45:34 — Prompt
+
+When I make a successful payment from by cart, the "Basket" menu option still shows the red label with the number of items in my basket, even though the basket is now empty.
+
+### Assistant
+
+Confirmed the shape of it. Let me check the notifier and the count hook.
+
+Now let me see the full checkout page and the order page it lands on.
+
+The gap is clear. Let me read the exact regions before editing.
+
+Now the fix. First the shared signal:
+
+Now the two screens that watch a payment resolve:
+
+Now tests. Let me see what exists:
+
+That last test duplicates the `it.each` case. Folding its rationale in instead:
+
+Now a page-level test proving the reported behaviour. Let me see the existing setup:
+
+My guessed wording. Let me use what the page actually renders:
+
+561 passing, +7 new. The 3 failures are the unchanged `packages/components` breakage. Let me verify the diagnosis holds server-side:
+
+Confirmed exactly. The offline path closes the cart at line 973 **during** the POST — which is why offline cleared the badge and card didn't. Now the docs:
+
+Fixed. Type-clean, 561 account-shell tests passing (+7 new).
+
+## Why it happened
+
+The badge refreshes when something **writes** to the basket. A card payment never does one:
+
+| | |
+|---|---|
+| `POST /checkout` | a write — badge refetches, but the cart is **still full**; checkout only reserves the payment |
+| Browser confirms the card with Stripe | doesn't touch the account API at all |
+| Stripe's webhook → `confirmPayment` | **the basket empties here** — server-side, no client request involved |
+| Client polls `GET /payments/:id` | a read, deliberately excluded, or the count would fetch itself forever |
+
+So the last thing the badge heard was step 1, where the basket was full — and that's the number it kept.
+
+Paying **offline** was unaffected, which is what made this look arbitrary: that path closes the cart *during* the checkout request ([checkout.service.ts:973](packages/backend/src/services/checkout.service.ts#L973)), so by the time the write returned the basket really was empty. The card path closes it at [line 867](packages/backend/src/services/checkout.service.ts#L867), reached only from the webhook. I traced the callers to confirm there is no client write in between.
+
+## The fix
+
+I named the missing event rather than loosening what counts as a write — treating the status poll as a change would make the count refetch on every tick of a poll that runs every couple of seconds.
+
+`notifyIfSettled` announces a payment that reaches any status but `pending`, and the two screens that watch one resolve call it — the checkout page when its poll settles, and the confirmation page whenever it reads a settled payment. **Both**, because the confirmation can land after the checkout screen's 20-second wait gives up, and because a member can arrive at that page directly: returning from a bank's 3-D Secure step, or opening the link again later.
+
+A declined payment is announced too. The basket stays open, but a decline drops its holds back to the browsing window, so a line may now be expired and out of the count.
+
+Documented in [BASKET_COUNT_BADGE.md](docs/BASKET_COUNT_BADGE.md) and [account-shell.md](.claude/modules/account-shell.md).
+
+One note on your wording: the badge is **orange** (`warning.main`), chosen because primary is already the selected state of that same menu. If you'd rather it were actually red, say so and I'll change it.
+
+---
+
+
+## 2026-08-17 18:06:31 — Prompt
+
+You can remove the "Recent Payments" card from the home page, it is not needed.
+
+### Assistant
+
+Now the removal:
+
+Now the comment that names the removed card:
+
+The card's data is used nowhere else. Let me see what the backend does for it:
+
+Removing it end to end — the query exists only for this card:
+
+Now the tests that reference it:
+
+Now the orphaned i18n keys:
+
+Now the full suites, both sides:
+
+Both suites green. Now the docs:
+
+Now the wireframe — let me see how it's built:
+
+The Read tool is being intercepted; using bash to see the file exactly:
+
+Character count isn't display width — the emoji are double-wide. Padding by rendered width instead:
+
+Now regenerate the SVG:
+
+Only the one SVG changed. Now the wireframe doc's prose:
+
+That cross-reference points at the wrong doc. The API shape changed, which is worth its own record:
+
+One claim in that doc is backwards — let me check it rather than leave it.
+
+Final verification across both suites:
+
+Removed. Backend 2822 passing, account-shell 561, both type-clean; the 3 failures are the unchanged `packages/components` breakage.
+
+I took it out all the way down rather than just hiding the card, because the card was the only thing that field existed for:
+
+```ts
+const [entries, bookings, memberships, cart, payments, whatsOn] = await Promise.all([
+  ...
+  accountActivityService.listPayments(organisationId, organisationUserId),   // gone
+```
+
+Left in place, that would have cost every member a payments query on the first screen they see, for data nothing renders — and nothing would ever have failed to say so. A test pins it (`expect(activity.listPayments).not.toHaveBeenCalled()`), since a type can't catch a query whose result is discarded.
+
+So the change spans:
+
+- the card and the now-dead conjunct in the empty-page check ([HomePage.tsx](packages/account-shell/src/pages/HomePage.tsx))
+- `recentPayments` and `RECENT_PAYMENTS_LIMIT` from [account-dashboard.service.ts](packages/backend/src/services/account-dashboard.service.ts), and the matching front-end type
+- `home.recentPayments` / `home.allPayments` from all six locales — the parity test still passes
+- the B3 wireframe: source edited and re-rendered with `ascii_to_svg.py build`, which changed only that one SVG
+
+Recorded in [HOME_SCREEN_RECENT_PAYMENTS_REMOVED.md](docs/HOME_SCREEN_RECENT_PAYMENTS_REMOVED.md), with pointers from the phase-11 record and [account-shell.md](.claude/modules/account-shell.md).
+
+Two things worth knowing:
+
+**This is a response-shape change** to `GET /api/account/:orgCode/dashboard`. The account app is its only consumer, so nothing else needed reconciling.
+
+**"Coming up" now sits alone** in what was a two-column row — a half-width card left-aligned, matching the basket card above it. If you'd rather it went full-width now that nothing sits beside it, say so.
+
+---
+
+
+## 2026-08-17 18:26:45 — Prompt
+
+When I click Change password or Change email address on the Profile & Settings page, I don’t want to be redirected to the Keycloak pages, is it possible to provide the change password and change email functionality from within the Account Web App without having to redirect to Keycloak, and have any Keycloak updates occurring under the hood.
+
+### Assistant
+
+I'll investigate what's there before answering — the security details matter here.
+
+I have what I need. Everything required already exists — the admin client, `users.resetPassword`, `users.update`, and `account-profile.service` already writes to Keycloak. Two findings shape the design, and both need your call.
+
+**Account users log in with their email as the Keycloak username** ([keycloak.ts:138](packages/backend/scripts/seed/keycloak.ts#L138)). So changing the email changes the login itself — a typo doesn't just misdirect mail, it can lock someone out.
+
+**Keycloak has no "check this password" admin endpoint.** Setting a password is easy; *verifying the current one* needs a direct access grant, which is a realm change.
+
+Both recommended. Let me find where Keycloak clients are provisioned and how anonymous routes are mounted.
+
+Everything I need is confirmed. Let me set up tracking and start.
+
+Starting with the spec, as §1.3 requires.
+
+Now the wireframes:
+
+Now the three emails. The verification one must not fail silently, so `send` needs a strict mode:
+
+Now the core service:
+
+Now the anonymous confirmation route:
+
+Now the deployment artefacts (§1.6):
+
+Now the two dialogs:
+
+Now the confirmation page:
+
+Now rewiring ProfilePage to drop the Keycloak hand-off:
+
+Now the route and the component exports:
+
+Mock implementations leaking between tests — `clearAllMocks` doesn't reset them:
+
+All 25 pass. Now the front-end tests:
+
+Two tests assert the hand-off I removed. Let me replace them with the new behaviour:
+
+Now the full suites both sides:
+
+Backend 2847 (+25), account-shell 581 (+20); only the pre-existing 3 remain. Now let me verify it live.
+
+Now the Keycloak client. Let me create it with the function I added:
+
+Let me check that type error and confirm the secret actually took:
+
+Client is exactly as specified. Now the direct-grant check against a real member:
+
+Direct grant behaves correctly, including refusing without the secret. Now the service against the live database:
+
+The pool needs initialising first — and note that first "✓" was a false pass, refusing for the wrong reason:
+
+`adminRoutes` is imported first in the app, so the singleton is the admin one; my script created it with the wrong config. Mirroring the app's order:
+
+The correct password was then refused — let me check whether Keycloak locked the account after one failed attempt:
+
+Brute force is off and the password works. Let me instrument to see what the service actually resolves:
+
+Found it: the client secret isn't in the local `.env`, so the grant was refused and every correct password would read as wrong. That must fail loudly, not silently:
+
+Everything works end to end, and the test account is restored exactly. Now the HTTP layer:
+
+The password-check client's token is rejected by the API — worth confirming why:
+
+That's the right behaviour — the middleware pins the audience, so the password-check client can't be used to get an API session. Cleaning up and re-running the suites:
+
+Let me pin the misconfiguration guard I added, then finish the docs:
+
+Now rendering the wireframes to SVG, as the repo does:
+
+Now the module summaries and the Keycloak setup doc:
+
+Now the backend module summary:
+
+Now the infrastructure summary and the Keycloak setup docs:
+
+Final full verification across everything:
+
+Yes, and it's built. Backend **2848 passing** (+26), account-shell **581** (+20), both type-clean; the 3 failures are the unchanged `packages/components` breakage.
+
+## Two facts drove the design
+
+**A member's Keycloak username *is* their email address** ([keycloak.ts:138](packages/backend/scripts/seed/keycloak.ts#L138)). Changing it changes the credential they sign in with, so a typo isn't a misdirected newsletter — it's a login they don't own and a password reset that can never reach them. Hence: a link goes to the new address and **nothing moves until it's followed**. Until then they sign in exactly as before.
+
+**Keycloak can set a password but cannot check one.** There's no "is this the current password?" in the Admin API, so the check is a direct-grant login against `account-password-check` — a confidential client the seed creates, with no browser flow, no service account and no redirect URIs. The tokens are discarded, and the auth middleware pins the audience, so a token from it can't be used to call the API. I verified that: it returns 401 against every endpoint.
+
+## What a member sees
+
+Two dialogs on Profile & Settings, no redirect and no interstitial. Password policy is never duplicated in the client — Keycloak's own complaint shows verbatim, so a tightened realm policy needs no front-end change. The emailed link lands on `/confirm-email`, unbranded and anonymous, because it's opened cold from a mail client.
+
+Three emails: the link to the new address, an alarm to the **old** address naming the new one while the old still works, and a password-changed notice. The email request answers identically whether or not an address is taken — otherwise it becomes a way to test which addresses are registered — so a clash is reported by mail to the address itself.
+
+## Live verification found a real trap
+
+Testing against your running Keycloak, correct passwords were being rejected. The cause: **Keycloak answers a confidential client presenting no secret with the same 401 it uses for a bad password.** With `KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET` unset, every member would be told the password they just typed correctly was wrong, with nothing in the logs saying why. The service now refuses to run and names the missing variable. That's pinned by a test.
+
+I added the two variables to `packages/backend/.env` so it works locally — same values as `.env.example` and `docker-compose.yml`.
+
+Then the full flow ran clean: wrong password refused, password changed and the old one stopped working, link applied `email` **and** `username` together across all `organization_users` rows, the new address became the login, token single-use, expired link refused. **I put the test account back exactly** — address, password, and no leftover rows.
+
+## Files
+
+Spec and wireframes: [ACCOUNT_SELF_SERVICE_CREDENTIALS.md](docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md), [wireframes](docs/ACCOUNT_SELF_SERVICE_CREDENTIALS_WIREFRAMES.md) (6 diagrams rendered with the repo's `ascii_to_svg.py`). Migration `1709000000028`, `account-credentials.service.ts`, three routes, four emails, the seed's `ensurePasswordCheckClient`, two dialogs, `ConfirmEmailChangePage`, and 21 new keys across all six locales — the two obsolete hand-off keys removed, parity test passing. Deployment vars in `docker-compose.yml`, `.env.example` and `DEPLOYMENT.md`; setup in [ACCOUNT_APP_KEYCLOAK_SETUP.md](docs/ACCOUNT_APP_KEYCLOAK_SETUP.md).
+
+**One thing to decide:** I left org-admin users on the console link, since their identities are managed by club administrators rather than by themselves. If you want this for them too, the presentational half of the dialogs should move to `packages/components` — I kept it out for now partly because that package doesn't currently compile.
+
+---
+
+
+## 2026-08-17 19:05:51 — Prompt
+
+That’s ok
+
+### Assistant
+
+Good. Nothing for you to do locally — the migration is applied, the Keycloak client exists in your realm, and the backend `.env` has the secret, so the flow works on your dev stack as it stands. `npm run seed` will reconcile the client rather than duplicate it.
+
+The only carry-over is the deployed environment, which needs its own `KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET` on both the client and the backend — the seed's default is development-only and it refuses to run against a non-local Keycloak.
+
+---
+
+
+## 2026-08-17 19:07:16 — Prompt
+
+Is it possible to have the one email address and use it to login to more than one org admin, ie. Be an administrator in more than one organisation ?
+
+### Assistant
+
+Let me check how org-admin identities actually work rather than assume.
+
+The data model allows it — the unique key is `(organization_id, keycloak_user_id)`, not email. The real questions are the creation path and how the shell picks an organisation:
+
+Found the crux. The duplicate check is **per organisation**, but the Keycloak create that follows is unconditional. Let me compare with the account-user path, which demonstrably does span organisations:
+
+The shell expects a single `organisation` from `/api/orgadmin/auth/me`. That endpoint decides everything:
+
+**The database already allows it; the application doesn't.** Three specific things block it, and none is architectural.
+
+The unique key on `organization_users` is `(organization_id, keycloak_user_id)` — not email — so one identity holding rows in several organisations is exactly what the schema expects. Account users already do it: `cillian.murphy@example.test` is one Keycloak identity (`kc=4adb937e`) across three clubs. Your four org admins have one organisation each, which is a fact about the seed rather than a rule.
+
+**1. You can't create the second one.** [org-admin-user.service.ts:161](packages/backend/src/services/org-admin-user.service.ts#L161) checks for a duplicate *within the organisation*:
+
+```sql
+SELECT id FROM organization_users WHERE organization_id = $1 AND email = $2
+```
+
+so a second organisation passes — and then line 183 calls `client.users.create({ username: data.email, … })` unconditionally, which Keycloak refuses because that username already exists in the realm. There's no catch and no adopt-existing path. Compare the seed's `upsertUser`, which "creates a user, or adopts one that already exists with the same username" — that's the missing half.
+
+**2. Sign-in would pick an organisation arbitrarily.** [orgadmin-auth.routes.ts:35](packages/backend/src/routes/orgadmin-auth.routes.ts#L35):
+
+```sql
+WHERE ou.keycloak_user_id = $1 AND ou.user_type = 'org-admin' AND ou.status = 'active'
+LIMIT 1
+```
+
+`LIMIT 1` with **no `ORDER BY`**. With two rows you'd land in whichever one Postgres happened to return, and nothing guarantees that's stable between requests. The same pattern repeats at line 165.
+
+**3. There's no switcher, and nowhere to put one.** The account app carries the organisation in the URL (`/:orgCode`) and has A7 to move between them. The org-admin shell takes a single `organisation` object from `/auth/me` and has no concept of a second — the organisation is implicit in the identity, not in the route.
+
+## What it would take
+
+Roughly: adopt-or-create in the org-admin path (mirroring `upsertUser`), return a *list* from `/auth/me` with a chosen current organisation, add a switcher and persist the choice, and thread the organisation through the org-admin API — which today infers it from the token rather than the URL. That last part is the real work; the rest is small.
+
+Want me to spec it? It's the same shape as the account app's A7, and the account side is a working precedent for every piece except the routing change.
+
+---
+
+
+## 2026-08-17 19:12:01 — Prompt
+
+Yes
+
+### Assistant
+
+Let me understand how the org-admin API infers the organisation today — that's the crux of the work.
+
+Important: that role check gathers roles across **all** the identity's rows with no organisation filter. Let me check the capability middleware and how a data route actually scopes:
+
+The data routes already carry `/organisations/:organisationId/` in the path. The crucial question is what verifies that id belongs to the caller:
+
+This looks like a live security hole, independent of the multi-org question — the handler uses `req.params.organisationId` while the middleware resolves a *different* organisation from the token, and nothing compares them. Let me verify rather than assert it:
+
+Reproduced: the Kildare admin passes the whole chain for a Laois URL, and the handler would hand back Laois's 4 events. Let me size it:
+
+30 routes across 12 files, all exposed. Let me see which org-admin routes *don't* carry the id, since those need a different answer:
+
+Enough to specify it properly. Two distinct families of route, and one is worse than the multi-org question.
+
+Spec written: [ORGADMIN_MULTI_ORGANISATION.md](docs/ORGADMIN_MULTI_ORGANISATION.md) and [five wireframes](docs/ORGADMIN_MULTI_ORGANISATION_WIREFRAMES.md).
+
+## First, something I found while specifying it
+
+**An org admin can already read and write another organisation's data.** Today, with one organisation each, no multi-org involved.
+
+The data routes take the organisation from the URL, and `requireOrgAdminCapability` checks the capability against the caller's *own* organisation, resolved from the token — then the handler uses `req.params.organisationId` instead. **Nothing compares them.**
+
+I reproduced it against your running stack, driving the real middleware chain with the Kildare administrator's identity and Laois's id in the URL:
+
+```
+own org      -> allowed
+ANOTHER org  -> allowed
+  middleware resolved organisationId = eae60fd0…  (Kildare)
+  but the URL said                    3752a3be…  (Laois)
+  Laois events the handler would return: 4
+```
+
+**30 routes across 12 files** are shaped this way — events, memberships, merchandise, calendars, discounts, registrations, ticketing, venues, payments, reporting, event types, application forms. A third problem compounds it: [orgadmin-role.middleware.ts](packages/backend/src/middleware/orgadmin-role.middleware.ts#L47) gathers role names across *all* an identity's rows with no organisation filter.
+
+Tasks 1–3 in the spec are that fix, ordered to ship first and alone. They're worth doing whatever you decide about multi-org.
+
+## The feature
+
+The useful part is that **the fix and the feature are the same change**. Once the guard asks "does the caller administer *the organisation named in this URL*?", the question stops being "what is this administrator's organisation?" and becomes "is this one of them?" — and multi-org falls out for all 30 routes without further work.
+
+That leaves three real pieces:
+
+- **Adopt-or-create.** `create` refuses at Keycloak because the username exists. The seed's `upsertUser` already has the adopt path; this is the missing half. Knock-ons: no temporary-password email for someone who already has one, and deleting the Keycloak user only when the *last* row goes.
+- **`/auth/me` returns a list** plus a deterministic current organisation — the `LIMIT 1` with no `ORDER BY` goes. An administrator of one sees no difference, because that falls out of the list having one entry.
+- **The ~60 routes with no organisation in the URL** (Settings, Users, Forms, uploads, most of Payments). Safe today, ambiguous under multi-org. I recommend a header first — one interceptor, one middleware — then migrating them under `/organisations/:organisationId/` afterwards, which is mechanical and testable route by route. I'd avoid a server-side "current organisation" column: two tabs on two clubs has no good outcome.
+
+The switcher follows the account app's A7 rather than inventing an idiom. The one genuine difference is that switching changes *capabilities*, so the navigation itself changes — which is why a switch must land on the dashboard rather than trying to hold the current page.
+
+Say the word and I'll implement it. If you want the security fix separately and first, that's tasks 1–3 and I'd do those on their own.
+
+---
+
+
+## 2026-08-17 19:29:12 — Prompt
+
+Implement it
+
+### Assistant
+
+The fix and the header resolution are one function. Let me check the preference store I referenced:
+
+`user_onboarding_preferences` is about onboarding, not tenancy — overloading it would be wrong. A small dedicated table:
+
+Now the core fix — one resolver serving both families:
+
+Now task 2 — the role middleware gathering roles across every organisation:
+
+Both middlewares must resolve the organisation identically. Let me extract the shared resolution:
+
+Let me apply the migration and re-run the probe that demonstrated the hole:
+
+Capability chain is fixed. The role chain refuses both — I need to check whether that's my change or just wrong role names in my probe:
+
+Both fixed and verified. Now the regression tests:
+
+Existing tests that mock a single query — the middleware now resolves the organisation first. Let me look:
+
+Cleaner to say the organisation is already established than to make the fixtures hybrid rows:
+
+Likely the test database hasn't got the new table. Let me check:
+
+Both were the un-migrated test database. Full suite:
+
+The security fix is complete and green — 2864 passing. Tasks 1–3 done.
+
+The capabilities endpoint has the same `LIMIT 1`. Both should use the shared resolver:
+
+Now the response shape and the endpoint that records the choice:
+
+I've made the Kildare admin an administrator of Laois in your dev database — I'll fold that into the seed so it's intentional. Now tests for the new `/auth/me`:
+
+Good pattern to follow. Writing the `/auth/me` tests:
+
+My assertion matched the `LEFT JOIN`, not the write:
+
+Now adopt-or-create. Let me see the full creation path and the delete:
+
+Critical detail: the rollback deletes the Keycloak user, which must never fire for an adopted identity.
+
+Now the two different emails — an adopted identity already has a password:
+
+Now the delete path — it must not delete a Keycloak identity that still administers elsewhere:
+
+The test's Keycloak mock has no `users.find`. Adding it, defaulting to "no existing identity" so the existing cases keep their meaning:
+
+Now tests for the new adopt/delete behaviour itself:
+
+Backend done. Now the shell — first the API layer that must send the header on every call:
+
+Now the shell: `useAuth` must carry the list and a switch, and the axios call must send the header:
+
+Now the switch itself and the return value:
+
+Pre-existing: `orgadmin-events` has no `dist`, and I haven't touched that App.tsx. The dev server and tests use Vite aliases to `src` (§3.5). Now the switcher UI:
+
+Now the switcher component:
+
+Now wiring it through App.tsx, including the context that sends the header:
+
+Task 8 — the switch must also land on the dashboard, since the other club may not have the current module:
+
+Now the i18n keys across all six locales:
+
+Now a test for the switcher, then the full suites:
+
+Both mine: MUI sets `aria-selected` only for `role="option"`, and the button carries the same text as the item.
+
+Now the seed, so the feature is demonstrable:
+
+One failure: my `localStorage` write leaks between cases in `useAuth.test.ts`.
+
+Now let me add coverage for the new `useAuth` behaviour itself:
+
+All green: orgadmin-core 699, orgadmin-shell 686, backend 2881. Let me verify the switcher live against your stack:
+
+My stub was applied after the route modules had already captured it. Patching before they load:
+
+Verified end to end. Now the documentation:
+
+Final verification across everything:
+
+Implemented, tasks 1–10. Backend **2881**, orgadmin-core **699**, orgadmin-shell **686** — all green. account-shell's 3 failures are the unchanged `packages/components` breakage.
+
+## The security fix, first
+
+`loadOrganisationCapabilities` now resolves the organisation from the **request** and verifies membership of *that* one before attaching anything. Verified through the real HTTP stack as an administrator of Kildare and Laois but not Ward Union:
+
+```
+events @ Kildare     -> 200  6 events
+events @ Laois       -> 200  4 events
+events @ Ward Union  -> 403  You do not administer this organisation
+events @ garbage id  -> 403  (no query issued)
+```
+
+One condition in one middleware covers all 30 routes, because they share the chain. The role middleware is scoped through the same resolver, so the two can't disagree about which club a request means. A malformed id is a 403 rather than a 500 — `$2::uuid` would otherwise tell the caller their id was the wrong *shape*.
+
+Three existing test suites broke and each was worth the look: two were the **test database being un-migrated** (both new tables), and one was a property suite whose single mocked query now had two callers. None was a real regression.
+
+## Multi-organisation
+
+**The fix *is* the feature.** Once the guard asks "is this one of theirs?", nothing further was needed for those 30 routes.
+
+The rest:
+
+- **`/auth/me` returns `organisations[]`** and a deterministic current one — the header, then where they were last, then first by name. The unordered `LIMIT 1` is gone from all three places it appeared.
+- **Adopt-or-create.** `users.create` was unconditional, so anyone with an existing account failed at Keycloak with a 409. It now adopts. Two consequences handled: the rollback only deletes an identity *this call* created — otherwise a failed insert would sign someone out of every club — and the delete path keeps the identity unless that was its last row, counted across `user_type` so an account-user membership also keeps it alive.
+- **A different email** for an adopted person: "you now administer X", not a temporary password they don't need.
+- **The switcher** shows a plain label rather than a menu when there's one organisation — from the list's length, not a flag. `X-Organisation-Id` rides on every call via `OrganisationIdContext`, read from a **ref** rather than state, since a callback closing over state would send a stale id and act on the wrong club.
+- **A switch navigates to the dashboard**, because capabilities are per-organisation and half the time the open page is a module the other club doesn't have.
+
+## Two things you should know
+
+**I changed data in your dev database** while testing, then folded it into the seed properly: Kildare's administrator (`admin@kildarehunt.test`) now also administers Laois, via `ORG_ADMIN_ALSO_ADMINISTERS`. Sign in as them to see the switcher — Laois has different capabilities, so the navigation visibly changes. I cleaned up the `org_admin_last_organisation` row afterwards.
+
+**Task 11 remains**, as designed: moving the ~60 header-scoped routes under `/organisations/:organisationId/`. They're correctly scoped today — that migration buys self-describing URLs, not safety. Say the word and I'll do it.
+
+---
+
+
+## 2026-08-17 20:05:56 — Prompt
+
+Do it
+
+### Assistant
+
+Let me scope it precisely before touching anything.
+
+The picture is more nuanced than my spec assumed — most routers are *mixed*. Let me check what the non-collection routes do:
+
+`GET /events/:id` has **only** `authenticateToken()` — no capability check, no organisation check at all. Let me scan systematically before drawing conclusions:
+
+160 of 189 is a big claim — let me check for router-level guards and other patterns my scan would have missed:
+
+Let me verify this the same way — empirically, as a user with no admin rights at all:
+
+That PUT returned 200 — it wrote. Restoring immediately:
+
+Restored fully — the update was partial, name only. This is much larger than task 11 and task 11 would not have fixed it. Let me classify accurately:
+
+Let me be certain about the most severe ones before I report:
+
+I've stopped before making changes, because investigating task 11 turned up something much worse — and it means **I got a claim in my own spec wrong**.
+
+I wrote that the routes without an organisation in their URL were *"safe today, ambiguous under multi-org"*. That was based on assuming they resolved the organisation from the token. **127 of them resolve nothing at all.**
+
+## What's actually there
+
+Classifying all 189 org-admin routes:
+
+| | |
+|---|---|
+| Organisation in the URL, membership verified | 30 (fixed earlier today) |
+| Scoped via `withOrganisation` | 23 |
+| Has a capability or role guard | 9 |
+| **No organisation check of any kind** | **127** |
+
+Those 127 have `authenticateToken()` and nothing else. Verified live, signed in as an **ordinary account user with no org-admin row anywhere**:
+
+```
+caller is an org-admin anywhere? false
+GET  /events/:id            -> 200  "Spring Show Jumping League"  (Kildare)
+PUT  /events/:id            -> 200        ← it wrote
+GET  /events/:id/entries    -> 200
+GET  /membership-types/:id  -> 200  "Junior Member"              (Kildare)
+```
+
+The PUT did write. I restored the name immediately and confirmed the rest of the row was untouched — the update was partial. No residue anywhere.
+
+I did **not** test these, having read the code instead, because running them would do real damage:
+
+- `POST /users/admins/:id/reset-password` — set any administrator's password, any club
+- `POST /users/admins/:organizationId` — create an administrator in any organisation
+- `POST /payments/:id/refund`
+- `DELETE` on events, calendars, forms, merchandise, registration types
+
+`user-management.routes.ts` applies `router.use(authenticateToken())` and no other guard on any of its 14 routes.
+
+## Why task 11 doesn't fix it
+
+Moving these under `/organisations/:organisationId/` would make the *collection* routes safe, since my resolver verifies membership of a URL-named organisation. But most of the 127 are keyed on a **resource** id — `/events/:id`, `/discounts/:id`, `/tickets/:ticketId`. For those the question is "does this resource belong to an organisation you administer?", which needs a lookup per resource type. It isn't one mechanical change; it's roughly a dozen small ones plus a shared guard.
+
+Done as specified, task 11 would move URLs around and leave the hole open while *looking* like it had been closed. That's why I stopped rather than proceeding.
+
+## What I'd do
+
+A `requireResourceOrganisation('event')` guard that resolves the owning organisation from the resource id and runs it through the same membership check the other 30 routes now use — one guard, a small per-resource-type map of table and column, applied across the 127. Plus a test that enumerates every org-admin route and fails if one has no organisation guard, so this can't regress quietly.
+
+That's a bigger piece of work than what you approved, and it touches every org-admin module, so I'd rather you chose:
+
+1. **The whole remediation** — all 127, the enumerating test, then task 11's URL move on top.
+2. **The severe subset first** — user-management's 14 routes (password resets, creating admins) plus payments refunds, today; the rest after.
+3. **Task 11 exactly as written**, hole left open, and I document it prominently.
+
+I'd recommend 2 then 1 — the credential routes are the ones where a curious member does real damage. Everything from tasks 1–10 is committed to the working tree and green; nothing is half-changed.
+
+---
+
+
+## 2026-08-17 20:17:23 — Prompt
+
+Ok yes
+
+### Assistant
+
+Taking that as: severe subset first, then the full remediation. Let me start with the facts I need — the owning-organisation column for each resource:
+
+Now the scope middleware:
+
+Now phase 2 — the credential routes. Let me see all 14:
+
+Now the payment routes:
+
+The refund handler still uses the body's `organisationId`. Let me make it use the verified one:
+
+Now let me verify the severe subset live — the same probe that succeeded before:
+
+The severe subset is closed: the member gets 403 everywhere, the Kildare admin gets 403 at Ward Union and 200 at Kildare. Now the remaining routes, file by file:
+
+Nothing was written. Let me see how `event` and `discount` import it:
+
+Now the remaining four files:
+
+These are `form_submission_files` — my `submissionFile` lookup covers them; the one-line form just escaped the regex:
+
+Every org-admin route is now guarded. The enumerating test, so it can't regress:
+
+Let me confirm that test actually fails when a guard goes — otherwise it's decoration:
+
+It fails by name with the offending route, and passes again when restored. Now behavioural tests for the new middleware, then the full suites:
+
+My fixture ids aren't UUIDs, so they were refused for the wrong reason — including in two tests that "passed":
+
+Now the full backend suite, to see what the guards break:
+
+That suite mocks the capability middleware but not the new one, so the real guard runs. Same treatment:
+
+All green — 2899 passing. Now the live re-verification of the original hole:
+
+The admin's PUT succeeded, so I've renamed that event again. Restoring:
+
+Restored to match the seed exactly. One thing I must check — the `byBody()` guards assume creates send `organisationId`:
+
+`POST /events` doesn't send `organisationId` — my `byBody()` would break event creation. Let me see how the create works today:
+
+The handler already uses `req.organisationId` and ignores the body — so `byBody()` is both redundant and would break creation. Let me check every create I guarded that way:
+
+Mixed — some read the body, some don't. The guard should handle both, and every path should populate the request fully:
+
+The structural test caught the rename — exactly its job. Updating both markers:
+
+Passes alone — so it's cross-suite interference. Let me get the actual failure:
+
+Stable across three runs: **2900 passing**. Now the docs, including correcting my own wrong claim:
+
+Final verification across every package:
+
+Done. Final state:
+
+| | |
+|---|---|
+| backend | **2900 passing**, stable over three runs, type-clean |
+| orgadmin-core | 699 passing |
+| orgadmin-shell | 686 passing |
+| account-shell | 581 passing, 3 pre-existing `packages/components` failures |
+| admin | 244 passing, 11 pre-existing failures in `RoleForm` / `organization-type-locale` — files I never touched |
+
+## First, a correction to my own spec
+
+I wrote that the org-admin routes without an organisation in their URL were *"safe today, ambiguous under multi-org"*. **That was wrong**, and it's now corrected in the document with the reasoning. I'd assumed they resolved the organisation from the token. 127 of them resolved nothing at all.
+
+## What was actually there
+
+Those 127 routes had `authenticateToken()` and nothing else. Verified live as an **ordinary member with no administrator rights anywhere** — reading another club's events, membership types, forms and entries, and a `PUT` that wrote. Read from the code rather than run, because running them does damage: `POST /users/admins/:id/reset-password` set any administrator's password in any club, and `POST /users/admins/:organizationId` made you an administrator of one.
+
+It was invisible because **authentication answers *who*, and never answered *where***. A route with a guard in its declaration looks guarded. The 30 I fixed earlier were the visible half — they *named* an organisation and failed to check it. These named a resource, so there was nothing to notice.
+
+## The fix
+
+One middleware with four sources, sharing the membership check the other routes already use: `byResource` (owner of the thing acted on), `byParam`, `byBodyOrCurrent`, `byCurrentOrganisation`.
+
+Three decisions worth knowing:
+
+- **Ownership resolves by joining**, not a copied column — a booking through its calendar, a ticket through its event — so it stays true if a resource moves.
+- **`byBodyOrCurrent` falls back rather than demanding the field.** `POST /events` has always let the server decide; insisting on a body field would have broken creating an event, and a guard that breaks what it protects gets removed.
+- **The refund route is scoped by the payment, not the body's `organisationId`** — which the handler used to trust. Supplying both would otherwise refund another club's payment by naming your own.
+
+## What stops it returning
+
+A structural test enumerates every org-admin route and fails by name on any scoped by authentication alone — because the failure mode is *omission*, which no behavioural test catches. I verified it works by deleting a real guard and watching it fail, then restoring.
+
+Verified live afterwards: the member gets **403 everywhere**, the Kildare administrator gets 403 at Ward Union and 200 at their own club. Test data I touched — two event names — was restored against the seed, with no rows left behind.
+
+Recorded in [ORGADMIN_ROUTE_TENANCY.md](docs/ORGADMIN_ROUTE_TENANCY.md).
+
+**One thing genuinely left**, and now genuinely cosmetic: putting the organisation id in the path of the resource-keyed routes too. It would make URLs self-describing in a log; it would not change what any of them allow.
+
+---
+
+
+## 2026-08-17 20:46:35 — Prompt
+
+Do it
+
+### Assistant
+
+Let me measure the real cost first — the front-end call sites are the bulk of this.
+
+243 source occurrences across 81 files. Before churning those, let me check how the calls are actually made:
+
+Two things change the picture: 40 of the 81 files have no organisation in scope, and `discount.service.ts` bypasses `useApi` with its own axios instance. Rewriting 243 literals would mean threading state into 40 files for a cosmetic gain.
+
+I'll do the move where it actually takes effect — on the wire — rather than at 243 call sites. Server first:
+
+Now the consistency check — a path-named organisation must agree with the resource:
+
+Now the client — one place instead of 243:
+
+Those tsc errors are pre-existing in files I haven't touched (`FormBuilderPage`, `payments/*`). Now the axios client that bypasses `useApi`:
+
+`discount.service.ts` already takes `organisationId` as a parameter — so it can build scoped URLs directly:
+
+This service also never sends the organisation header — a real gap, not just a URL one. Let me fix both at its interceptor:
+
+The `orgadmin-core` build is stale — `AuthTokenContext` resolves but my new exports don't. Let me rebuild it:
+
+`useOrganisation` is already in the built types. Using that instead of the new export keeps `orgadmin-events` dependency-clean:
+
+All 14 remaining errors are in files I never touched. Now a test for the URL rule:
+
+113 failures needs checking — `useOrganisation()` may throw outside its provider, which would be my doing:
+
+`useOrganisation()` throws outside its provider — that breakage is mine. The service must degrade rather than throw:
+
+Let me establish whether those pre-date my change, using a read-only `git show` baseline:
+
+Baseline 112, mine 113 — one extra. Let me find exactly which:
+
+Identical failure sets — the ±1 was flake in an existing test. Now orgadmin-core's one failure:
+
+orgadmin-core is 706 passing — that was flake too. Now live verification of both URL forms against the real app:
+
+Exactly as designed — note the mismatch case: path says Kildare, event belongs to Laois, both administered by the caller, and it's still refused. Full backend suite:
+
+A real collision my dual-mount introduced: `/organisations/X/discounts/events` was being read as "discount with id `events`". Registration order fixes it:
+
+All nine correct, including the module-type route that the ordering bug had broken. Full suites:
+
+Final verification across every package:
+
+Done.
+
+| | |
+|---|---|
+| backend | **2902 passing**, type-clean |
+| orgadmin-core | **706 passing** (+7) |
+| orgadmin-shell | **686 passing** |
+| orgadmin-events | 112 failures — **identical set to the pre-change baseline**, verified by swapping my two files against `git show HEAD:` and diffing failure names |
+| account-shell | 581 passing, 3 pre-existing |
+
+## What I did differently, and why
+
+You asked to move the routes under `/organisations/:organisationId/`. I put the organisation in the URL **on the wire** rather than editing 243 literals, because measuring first changed the picture: those 243 URLs span 81 files, and **40 of them have no organisation in scope**. Spelling it out at each call site meant threading state through forty files to change what a request looks like — forty chances to break a working screen for a string one function produces correctly every time.
+
+So: every org-admin data router is mounted twice, and `organisationScopedUrl` in `useApi` rewrites outgoing URLs from the organisation the shell already resolved. `/auth/*` is exempt — `/auth/me` is how you discover your organisations, so requiring one to ask would be circular.
+
+## Three things worth knowing
+
+**A prefix that can lie is worse than no prefix.** The path and the subject must agree. Without that check an administrator of two clubs could put club A in the path and club B's event id after it — each check passes alone, and the URL describes something the request didn't do. Verified: `/organisations/<kildare>/events/<laois event>` → **403**, even though the caller administers both.
+
+**Mount order is load-bearing, and a test caught it.** Registering the scoped mount first broke discount filtering: `/organisations/X/discounts/events` had its prefix stripped, was re-offered to the same router, and `/discounts/:id` matched it — reading "events" as a discount id and answering 400. The bare mount now goes first so fully-specified routes win.
+
+**One genuine bug fell out.** `orgadmin-events`' `discount.service.ts` keeps its own axios instance and so never sent the organisation header at all — fine for an administrator of one club, ambiguous for one with several. Its interceptor now sends it. My first attempt there used `useOrganisation()`, which throws outside its provider and broke component tests; it now degrades instead.
+
+Recorded in [ORGADMIN_ROUTE_TENANCY.md](docs/ORGADMIN_ROUTE_TENANCY.md), with the module summaries updated.
+
+**Still open, and now genuinely minor:** removing the bare mounts. Nothing in the app needs them except `/auth/*`, which is exempt by design — but a few direct callers remain and both forms are equally checked, so there's no reason to rush it.
+
+---
+
+
+## 2026-08-17 21:11:01 — Prompt
+
+If I want to deploy this solution to AWS for testing, can you recommend the cheapest deployment option, e.g. trying to run everything on a limited number of ec2 instances, even 1 if possible?
+I think I asked you to do this before and you produced a solution and associated terraform scripts to deploy it, can you check and let me know if this is the case.
+
+### Assistant
+
+Let me check what's actually in the repo.
+
+There is — including a `COST_ESTIMATE.md` for staging. Let me read what it actually provisions:
+
+Yes — this exists. Let me confirm its provenance and see exactly what it stands up:
+
+Yes — you did, and it's still there. But it predates most of what the product now is, so I'd not deploy from it as-is.
+
+## What exists
+
+[terraform/](terraform/) — `staging` and `production` environments over five modules (networking, secrets, database, monitoring, compute), a test harness (`validate.sh`, `plan.sh`, `syntax-check.sh`), and [COST_ESTIMATE.md](terraform/environments/staging/COST_ESTIMATE.md) putting staging at **~$145/month**: ALB + RDS `db.t3.small` + an ASG app instance + a *second* EC2 just for Prometheus/Grafana + a NAT gateway.
+
+Git history shows three commits touching it, the middle one literally *"before adding the org admin ui"*.
+
+## Why I wouldn't deploy it as-is
+
+Four concrete gaps, not stylistic quibbles:
+
+- **It never deploys the application.** [user_data.sh:40](terraform/modules/compute/user_data.sh#L40) installs Docker, writes a `.env`, and then: `# This is a placeholder for the actual deployment process` / `echo "Application deployment complete"`. You'd get running instances with an empty `/opt/app`.
+- **Keycloak isn't provisioned at all.** `keycloak_url` defaults to `http://keycloak:8080` — a docker-compose hostname. Nothing in AWS would answer it, and the whole auth model depends on it.
+- **The ALB targets ports 5173 and 5174** — the metadata UI and super-admin. It knows nothing about orgadmin (5175) or account (5176), which are the two apps all of this month's work has been in. The nginx config has the same gap.
+- **No front-end hosting** — no S3, no CloudFront, and nothing builds the Vite bundles.
+
+One smaller thing: the cost estimate is headed *"Region: eu-west-1 (US East - N. Virginia)"* and uses us-east-1 prices. Ireland is roughly 10% dearer than the figures in it.
+
+## Cheapest option: one instance, and it's genuinely viable
+
+Your [docker-compose.yml](docker-compose.yml) already runs the entire system — Postgres, Keycloak, backend, nginx on 80/443, Prometheus, Grafana. One EC2 box running that is the cheapest sensible thing, and it drops nearly everything expensive:
+
+| Dropped | Replaced by | Saving |
+|---|---|---|
+| NAT gateway | public subnet + public IP | ~$33 |
+| RDS | the `postgres:16-alpine` container | ~$35 |
+| ALB | nginx, already in the stack | ~$22 |
+| Monitoring instance | same compose file | ~$15 |
+| CloudWatch metrics/alarms | container logs | ~$19 |
+
+**Sizing is bound by memory, not CPU** — Keycloak's JVM alone wants ~1 GB, plus ~250 MB Postgres, ~200 MB Node, ~300 MB for Prometheus and Grafana.
+
+- **`t4g.small`** (2 GB) — works if you drop Prometheus/Grafana and add swap.
+- **`t4g.medium`** (4 GB) — comfortable, and leaves room to build images on the box. This is what I'd pick.
+
+Graviton is safe here: every image in the stack is multi-arch, and the backend builds from `node:20-alpine`.
+
+Indicative eu-west-1, worth re-checking against current pricing:
+
+| | t4g.small | t4g.medium |
+|---|---|---|
+| Instance | ~$13 | ~$27 |
+| 30 GB gp3 | ~$2.60 | ~$2.60 |
+| Public IPv4 | ~$3.60 | ~$3.60 |
+| **Total** | **~$19/mo** | **~$33/mo** |
+
+Stopped between test sessions you'd pay only storage and the IP — about **$6/month**.
+
+## The real work isn't the Terraform
+
+Standing up one instance is maybe 150 lines. What's actually missing is the deployment: building four front ends and serving them as static bundles (the current nginx proxies to *dev servers*), a Keycloak that works on a real hostname with the four clients and the `account-password-check` client the credential flows now need, running migrations, and TLS.
+
+I'd suggest a `terraform/environments/testing/` alongside the existing two rather than editing them, plus a `docker-compose.deploy.yml` that serves built bundles instead of proxying to Vite.
+
+Want me to build that? I'd do the single-instance Terraform, the deploy compose file, and a bootstrap script, and I'd leave the existing staging/production alone.
+
+---
+
+
+## 2026-08-17 21:17:01 — Prompt
+
+Yes build it for me
+
+### Assistant
+
+Let me gather what the front ends need at build time — base paths and env vars.
+
+Everything I need. `admin` and `frontend` have no router basename, so they can't be served under a path prefix — I'll fix that with Vite's own `BASE_URL` so local dev is unchanged.
+
+The deploy build must not be gated on pre-existing type errors in test files. Let me verify `vite build` alone works — the riskiest is orgadmin-shell with six source aliases:
+
+All four build. Now the web image:
+
+Two errors in that file — a stray character and a C-style comment nginx won't parse:
+
+The regex cache blocks would steal asset requests from the `alias` locations and 404 them. Let me fix that properly and syntax-check:
+
+Config is valid. Now the landing page and the Keycloak realm import — the piece that makes this actually sign people in:
+
+Now the compose file for the box:
+
+Several fixes needed. Let me check the backend Dockerfile's expected build context first:
+
+Now the postgres init script and the env template:
+
+Now the bootstrap script — secrets, realm substitution, migrations, TLS:
+
+Three problems with my bootstrap: `node-pg-migrate` is a devDependency, the production image has no `scripts/`, and there's no `seed` script. Let me find the real commands:
+
+The network extraction is fragile, and I mounted the *template* rather than the rendered realm. Both fixed by a `tools` service:
+
+Now the Terraform — one instance, no NAT, no ALB, no RDS:
+
+Now the instance's `user_data`, including TLS:
+
+An em-dash isn't in AWS's permitted charset for descriptions:
+
+`!override` needs Compose 2.24+; an env var is version-proof and removes the override file entirely:
+
+Now the deployment guide, and verifying nothing I changed broke the suites:
+
+Build is running. Meanwhile, the suites for the two apps I changed:
+
+The image build is still running (`npm ci` over the whole workspace takes a while). Let me wait on it:
+
+While that runs — the tenancy work from earlier still needs its final check across the backend:
+
+The build is slow — let me check whether the context is the problem:
+
+A 1.6 GB build context with no `.dockerignore` — that's the slowness, and it would hurt every deploy:
+
+Let me restart the build now that the context is 1.6 GB smaller:
+
+That's the old build I killed. Let me wait for the new one:
+
+Here's where things stand.
+
+## Yes, you'd asked before — and it's stale
+
+[terraform/](terraform/) has `staging` and `production` over five modules, with a [cost estimate](terraform/environments/staging/COST_ESTIMATE.md) of **~$145/month**. But it predates most of the product, and I wouldn't deploy from it:
+
+- **It never deploys the app** — [user_data.sh:40](terraform/modules/compute/user_data.sh#L40) installs Docker, writes a `.env`, then `# This is a placeholder` and `echo "Application deployment complete"`.
+- **No Keycloak anywhere**; `keycloak_url` defaults to a docker-compose hostname.
+- **No front-end hosting**, and the ALB targets ports 5173/5174 — the metadata UI and super-admin, not orgadmin or account.
+
+I've noted that plainly at the top of [terraform/README.md](terraform/README.md) rather than leaving the next person to find it.
+
+## What I built
+
+A `testing` environment: **one instance, ~$20–33/month**, or ~$6 when stopped. The saving is architecture, not capacity — no NAT (~$33), no RDS (~$35), no ALB (~$22), no monitoring box (~$15).
+
+| | |
+|---|---|
+| [terraform/environments/testing/](terraform/environments/testing/) | VPC, one public subnet, `t4g.medium`, elastic IP, SSM instead of open SSH, TLS via certbot with a self-signed fallback |
+| [docker-compose.deploy.yml](docker-compose.deploy.yml) | The real stack — distinct from the dev one, which proxies to Vite servers on the host |
+| [Dockerfile.web](Dockerfile.web) | Builds all four front ends, serves them from nginx |
+| [deploy.conf](infrastructure/nginx/deploy.conf) | One origin: `/account`, `/orgadmin`, `/admin`, `/metadata`, `/api`, `/auth` |
+| [realm-import.json](infrastructure/keycloak/realm-import.json) | Realm, seven clients, audience mappers, and the `account-password-check` client the credential flows need |
+| [bootstrap.sh](scripts/deploy/bootstrap.sh) | Secrets once, realm rendered, migrations, optional seed |
+| [DEPLOY_SINGLE_INSTANCE.md](docs/DEPLOY_SINGLE_INSTANCE.md) | The guide |
+
+## Four things I had to fix to make it deployable
+
+**`admin` and `frontend` had no router basename** — they literally could not be served under a path prefix. Now `basename={import.meta.env.BASE_URL}`, so dev is unchanged and `--base=/admin/` works. Their suites are unaffected (frontend 16 passing; admin's 11 failures are the pre-existing set).
+
+**No `.dockerignore`** — the build context was the whole 1.6 GB tree including 745 MB of `node_modules`. That's why the first image build crawled. Added; it would have cost minutes on every deploy.
+
+**`node-pg-migrate` is a devDependency and there's no `seed` script** (it's `seed:demo`), and the production image copies only `dist` and `migrations`. Hence a `tools` service on a Compose profile, built from the toolchain stage.
+
+**The realm is imported once and ignored after** — so regenerating secrets later would leave Keycloak holding one set and the backend another, presenting as "sign-in works, every API call is 401". `bootstrap.sh` generates them once and refuses to re-render.
+
+## Verified so far
+
+`tofu validate` passes (it caught an em-dash AWS rejects in a security-group description), `nginx -t` passes, `docker compose config` is valid across all five services, all four front ends build individually, and the backend suite is **2902 passing**.
+
+**Still running:** the full `Dockerfile.web` build end to end. I restarted it after adding `.dockerignore` and I'll tell you when it lands — that's the one claim I can't yet make.
+
+---
+
+
+## 2026-08-17 21:54:21 — Prompt
+
+What does this test deployment have running?
+
+### Assistant
+
+Build's still going (buildkit buffers its log). Here's what the box runs.
+
+## Five containers, four of them always up
+
+| | Image | Exposed |
+|---|---|---|
+| **postgres** | `postgres:16-alpine` | internal only |
+| **keycloak** | `quay.io/keycloak/keycloak:23.0` | internal only |
+| **backend** | built from `packages/backend`, production stage | internal only |
+| **web** | nginx + the four built bundles | `127.0.0.1:8080` |
+| **tools** | toolchain stage — **not running** | — |
+
+`tools` sits behind a Compose profile so `up` never starts it. It exists because the production backend image installs `--only=production` and copies only `dist` and `migrations`, so it has neither `node-pg-migrate` nor the seed scripts. You invoke it for migrations and seeding.
+
+**One Postgres, two databases** — `aws_framework` and `keycloak`. A second Postgres container would double the memory for no benefit at this size.
+
+## On the host, outside Docker
+
+- **nginx** — terminates TLS on 443, redirects 80, proxies to `127.0.0.1:8080`
+- **certbot** + its renewal timer
+- **2 GB swapfile** — the front-end build is the memory peak, not anything at run time
+- **SSM agent**, so SSH can stay closed
+
+## What's reachable from outside
+
+Only **80 and 443**, and only to the host nginx. Postgres, Keycloak and the API use `expose:` rather than `ports:`, so they're on the compose network and nothing else — publishing 5432 is the one mistake that turns a test box into an incident.
+
+Everything is one origin: `/account`, `/orgadmin`, `/admin`, `/metadata` served as static bundles, `/api` to the backend, `/auth` to Keycloak. No CORS, one certificate.
+
+## What is *not* running
+
+**No Prometheus and no Grafana.** They're in the development compose file; I left them out of the deploy stack entirely. That's ~300–400 MB of RAM on a 4 GB box, and for "does the product work?" they earn nothing. My comment in the Terraform describing them as "optional" overstates it — they aren't wired in at all, so adding them means copying those two services across from `docker-compose.yml`. Also absent: CloudWatch, any log shipping, and any backup beyond an EBS snapshot you take yourself.
+
+## Roughly what it costs in memory
+
+Keycloak's JVM ~1 GB (capped at 1200m), Postgres ~250 MB, the API ~200 MB, nginx ~20 MB — about **1.5 GB steady** on a 4 GB `t4g.medium`, with the rest as headroom for builds. On a 2 GB `t4g.small` it fits only with the swap and a lower `KEYCLOAK_MEM_LIMIT`.
+
+With `seed_demo_data = true` you also get four pony clubs, members, events and a shop — including an administrator who runs two clubs, which is what exercises the organisation switcher. Password `Passw0rd!`.
+
+---
+
+
+## 2026-08-18 07:04:42 — Prompt
+
+<task-notification>
+<task-id>bn4vnevdp</task-id>
+<tool-use-id>toolu_012BhvA3gX7TD1Pnka9JgHtV</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-michaeladams-Work-Esker-Development-AI-Holism/8a23f114-f7aa-43cf-8571-411d0252a0b5/tasks/bn4vnevdp.output</output-file>
+<status>completed</status>
+<summary>Background command "until docker images -q holism-web:verify 2&gt;/dev/null | grep -q . || ! pgrep -f "[d]ocker build" &gt;/dev/null; do sleep 20; done; echo "build finished or stopped"" completed (exit code 0)</summary>
+</task-notification>
+
+### Assistant
+
+Build succeeded — 127 MB. Let me verify it actually serves what it should:
+
+All four are built for their correct base paths. Now that it actually serves them:
+
+The container won't start: nginx resolves upstreams at boot and `backend`/`keycloak` don't exist standalone. That also means a backend restart could wedge it — and it exposed a second bug:
+
+Everything verified. Let me address the build warning about the Stripe key, which is a false positive worth explaining:
+
+The image builds and serves. Verified against a running container:
+
+```
+/health                 200      /account/khpc/profile   200 → account bundle
+/ (landing)             200      /orgadmin/events/new    200
+/account/               200      /admin/organizations    200 → admin bundle
+/account (bare)         301      /api/health             502 (no backend present)
+/orgadmin/ /admin/
+/metadata/              200      assets   immutable, gzipped
+                                 index    no-store
+```
+
+127 MB image. Deep links return the *right* app's index, which is the thing that breaks when base paths and router basenames disagree.
+
+## Two bugs the verification caught
+
+**Keycloak would have received every request one level too high.** I had `proxy_pass http://keycloak/;` — the trailing slash strips the matched prefix. But Keycloak runs with `KC_HTTP_RELATIVE_PATH: /auth`, so it serves *under* `/auth` itself. Stripping it would have sent `/auth/realms/...` to `/realms/...` and nothing would have signed in. Now the prefix is preserved.
+
+**The web container couldn't start on its own.** nginx resolves `upstream` names once, at boot, so it refused to start without `backend` and `keycloak` already resolvable — and would have kept a stale address if either were replaced. Now they resolve per request through Docker's DNS, so the container comes up regardless, serves the static bundles, and answers 502 for proxied paths until the rest is there. That's why `/api/health` returning 502 above is the correct result.
+
+Neither would have shown up in a config syntax check. Both would have shown up as "the deployment is broken" on the instance.
+
+I also added a `.dockerignore` — the build context was the entire 1.6 GB tree, including 745 MB of `node_modules`. That was the first build crawling, and it would have cost minutes on every deploy.
+
+## Where it stands
+
+| | |
+|---|---|
+| `tofu validate` | passes |
+| `nginx -t` | passes |
+| `docker compose config` | valid, 5 services |
+| `Dockerfile.web` | builds, serves, verified end to end |
+| backend | 2902 passing |
+| orgadmin-core / shell | 706 / 686 passing |
+| frontend / admin | 16 passing / 244 passing (11 pre-existing failures, untouched files) |
+
+The one thing I haven't proved is a real `tofu apply` — that needs your AWS account. Everything up to it is verified locally.
+
+To deploy: set `public_url`, `repository_url` and `ses_from_email` in `terraform.tfvars`, `tofu apply`, then point DNS at the elastic IP. Roughly 15–20 minutes of first boot, most of it building those four bundles.
+
+---
+
+
+## 2026-08-18 07:12:36 — Prompt
+
+I am goiing to deploy it to aws in test mode, and I am ging to point the domain itsps.org at it, does nginx need too be configured to accept this domain  mapping ?
+
+### Assistant
+
+Good question to ask before applying. Let me check what's actually generated rather than answer from memory.
+
+**No — you don't configure nginx by hand.** Both layers take the domain from one variable:
+
+```hcl
+public_url = "https://itsps.org"
+```
+
+The host nginx gets `server_name itsps.org` generated from it ([user_data.sh:14](terraform/environments/testing/user_data.sh#L14)), and the container's nginx is `server_name _;` — a catch-all that accepts whatever the host passes it. Nothing else to edit.
+
+That one variable also drives four other things that must all agree, which is the real reason to get it right first time:
+
+| | |
+|---|---|
+| The four bundles | `VITE_KEYCLOAK_URL=https://itsps.org/auth`, **compiled in** |
+| Keycloak | `KC_HOSTNAME=itsps.org` |
+| The realm's redirect URIs | `https://itsps.org/account/*`, `/orgadmin/*`, `/admin/*`, `/metadata/*` and web origins |
+| Emails | links back to `https://itsps.org/account` |
+
+## Three things to know before you apply
+
+**Point DNS first.** Certbot runs at the end of first boot and needs `itsps.org` already resolving to the elastic IP. It won't fail the deploy if it isn't — you get a self-signed certificate and a browser warning — but you'd then re-run it by hand. The chicken-and-egg is real: the EIP only exists after `apply`. Either `tofu apply` and add the A record while it builds (you have ~15 minutes), or apply, set DNS, then `sudo certbot certonly --webroot -w /var/www/certbot -d itsps.org && sudo systemctl reload nginx`.
+
+Apex domains can't be CNAMEs, but that's fine — it's an A record to a fixed EIP.
+
+**`www.itsps.org` is not covered.** Certbot requests `itsps.org` only. A visitor to `www` would still reach the box (it's the only server block) but get a certificate warning. If you want www, say so — it's a small addition, but it has to be opt-in: certbot fails *entirely* if you ask for a name that doesn't resolve, so defaulting it on would break issuance for anyone who only pointed the apex.
+
+**Changing the domain later is expensive.** The bundles need rebuilding, and the Keycloak realm is imported *once* — a later change means editing the clients in the Keycloak console rather than re-running the import.
+
+One unrelated thing: set `ses_from_email` to something on a domain you've verified in SES. If you use `noreply@itsps.org` you'll need to verify `itsps.org` there, and a new SES account is sandboxed — it only delivers to verified recipients, so registration and password emails will appear to send and never arrive.
+
+---
+
+
+## 2026-08-18 07:21:13 — Prompt
+
+Yes I want www also. Can you create a .env.deploy for me with the necessary values to use itsps.org and ses_from_email set to info@eskersoft.com - or does one exsts akready ?
+
+### Assistant
+
+Neither exists. First, www support — done as a canonical redirect so Keycloak only ever sees one origin:
+
+That empty `server_name` is my simulation dropping the `ALL_NAMES` line — let me redo it properly:
+
+The config parses fully — it only fails on the missing certificate (no openssl in that image). Let me confirm properly:
+
+Valid. Now the files — and the answer to "does one exist" is no, neither does.
+
+Both done. **Neither file existed** — I've created them.
+
+## www
+
+Added as an opt-in `extra_domains`, implemented as a **canonical redirect** rather than a second origin:
+
+```
+:80   itsps.org www.itsps.org    → ACME challenge, else 301 to https
+:443  www.itsps.org              → 301 https://itsps.org$request_uri
+:443  itsps.org                  → the application
+certbot -d itsps.org -d www.itsps.org
+```
+
+Redirecting rather than serving both matters: Keycloak's clients list redirect URIs and web origins for **one** host. A sign-in that began on `www` would come back to a URI the realm doesn't list and fail. This way www works without duplicating any of that.
+
+I verified the generated config through a real `nginx -t`.
+
+## `.env.deploy`
+
+Written with real generated secrets, `chmod 600`, `PUBLIC_URL=https://itsps.org`, `SES_FROM_EMAIL=info@eskersoft.com`.
+
+**You probably won't need it for the AWS deploy.** It's gitignored, so the instance's `git clone` can't bring it — `bootstrap.sh` writes its own on the box, with fresh secrets and the `public_url`/`ses_from_email` from your tfvars. Use mine only if you want *these* secrets, in which case copy it over before first boot finishes:
+
+```
+scp .env.deploy ec2-user@<ip>:/opt/holism/.env.deploy
+```
+
+`bootstrap.sh` leaves an existing file alone.
+
+I also wrote `terraform/environments/testing/terraform.tfvars` with your values. **One thing to fill in:** `repository_url` is `CHANGE_ME` — the instance clones from it, so it needs a URL the box can reach. If the repo is private you'll need a deploy key or a token in the URL; say the word and I'll add that to the bootstrap.
+
+Two cautions on ordering:
+
+- **`terraform.tfvars` is not gitignored here.** Nothing secret is in the one I wrote, and the deployment's secrets are generated on the instance — but don't add any.
+- **If `www.itsps.org` doesn't resolve yet, empty `extra_domains` for the first apply.** Certbot requests both names together and fails entirely if either doesn't validate — you'd end up with a self-signed cert on the apex too.
+
+---
+
+
+## 2026-08-18 07:28:55 — Prompt
+
+it looks like the ...testing/terraform.tfvars doesn't open ssh to the deployed test server in AWS, - if I want to connect to the server backend, how can I do this ?
+
+### Assistant
+
+Correct — SSH is deliberately shut, and you don't need it. **Session Manager is already attached**, so you get a shell with no inbound ports open at all.
+
+## The shell
+
+```bash
+tofu output shell_command          # prints the exact command
+aws ssm start-session --target i-0abc123... --region eu-west-1
+```
+
+That works because three things are already in place: the `AmazonSSMManagedInstanceCore` policy on the instance role, open egress (the agent dials *out* to SSM on 443), and a public subnet with a route to the internet gateway. The agent ships with Amazon Linux 2023.
+
+**The one prerequisite is local**, and it's the thing people trip on — the AWS CLI needs the Session Manager plugin, which is a separate install:
+
+```bash
+brew install --cask session-manager-plugin
+```
+
+Without it you get `SessionManagerPlugin is not found` and it looks like a permissions problem.
+
+## Once you're on
+
+You land as `ssm-user`, which isn't in the `docker` group:
+
+```bash
+sudo su - ec2-user
+cd /opt/holism
+
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+$C ps
+$C logs -f backend
+$C exec postgres psql -U framework_user -d aws_framework
+$C restart backend
+
+sudo tail -f /var/log/holism-bootstrap.log     # first-boot output
+sudo cat /opt/holism/.env.deploy               # the generated secrets
+```
+
+## Reaching a port from your laptop
+
+Session Manager will tunnel, so you can use a local `psql` or Postico without opening anything:
+
+```bash
+# on the box: publish Postgres on loopback only, temporarily
+docker compose -f docker-compose.deploy.yml --env-file .env.deploy \
+  run -d --rm -p 127.0.0.1:5432:5432 postgres
+
+# locally
+aws ssm start-session --target i-0abc123... --region eu-west-1 \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["5432"],"localPortNumber":["15432"]}'
+```
+
+Then connect to `localhost:15432`. Same trick reaches the backend on 3000 or Keycloak on 8080 if you ever narrow `web_ingress_cidrs` and lose browser access.
+
+## If you'd rather have real SSH
+
+Two variables, and the security-group rule only appears when you set them:
+
+```hcl
+ssh_ingress_cidrs = ["203.0.113.5/32"]   # your address, not 0.0.0.0/0
+ssh_key_name      = "my-existing-keypair"
+```
+
+`tofu apply` adds the rule in place — no instance replacement. I'd still use Session Manager: it needs no key to manage, no open port, and every session is logged in CloudTrail.
+
+---
+
+
+## 2026-08-18 07:34:11 — Prompt
+
+I am testing locally on my computer, and now when I try to login to the orgadmin I get "Authentication Error" and the "Return to Login" button.
+If I look at the browser console I see the following errors:
+
+[KEYCLOAK] Estimated time difference between browser and server is 0 seconds
+useAuth.ts:236 Keycloak initialized. Authenticated: true
+orgadmin:1 Access to XMLHttpRequest at 'http://localhost:3000/api/orgadmin/auth/me' from origin 'http://localhost:5175' has been blocked by CORS policy: Request header field x-organisation-id is not allowed by Access-Control-Allow-Headers in preflight response.
+installHook.js:1 Error fetching organisation: AxiosError: Network Error
+    at XMLHttpRequest.handleError (axios.js?v=74f5de15:1647:19)
+    at Axios.request (axios.js?v=74f5de15:2233:41)
+    at async fetchOrganisation (useAuth.ts:116:24)
+    at async useAuth.ts:247:13
+overrideMethod @ installHook.js:1
+(anonymous) @ useAuth.ts:164
+await in (anonymous)
+(anonymous) @ useAuth.ts:247
+Promise.then
+(anonymous) @ useAuth.ts:235
+commitHookEffectListMount @ chunk-OTGXDCXC.js?v=74f5de15:16915
+commitPassiveMountOnFiber @ chunk-OTGXDCXC.js?v=74f5de15:18156
+commitPassiveMountEffects_complete @ chunk-OTGXDCXC.js?v=74f5de15:18129
+commitPassiveMountEffects_begin @ chunk-OTGXDCXC.js?v=74f5de15:18119
+commitPassiveMountEffects @ chunk-OTGXDCXC.js?v=74f5de15:18109
+flushPassiveEffectsImpl @ chunk-OTGXDCXC.js?v=74f5de15:19490
+flushPassiveEffects @ chunk-OTGXDCXC.js?v=74f5de15:19447
+(anonymous) @ chunk-OTGXDCXC.js?v=74f5de15:19328
+workLoop @ chunk-OTGXDCXC.js?v=74f5de15:197
+flushWork @ chunk-OTGXDCXC.js?v=74f5de15:176
+performWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:384
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:407
+performWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:387
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:407
+requestHostCallback @ chunk-OTGXDCXC.js?v=74f5de15:418
+unstable_scheduleCallback @ chunk-OTGXDCXC.js?v=74f5de15:330
+scheduleCallback$1 @ chunk-OTGXDCXC.js?v=74f5de15:19826
+ensureRootIsScheduled @ chunk-OTGXDCXC.js?v=74f5de15:18652
+scheduleUpdateOnFiber @ chunk-OTGXDCXC.js?v=74f5de15:18562
+updateContainer @ chunk-OTGXDCXC.js?v=74f5de15:20776
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-OTGXDCXC.js?v=74f5de15:21116
+(anonymous) @ main.tsx:14
+installHook.js:1 Authentication error: Network Error
+overrideMethod @ installHook.js:1
+(anonymous) @ useAuth.ts:252
+Promise.then
+(anonymous) @ useAuth.ts:235
+commitHookEffectListMount @ chunk-OTGXDCXC.js?v=74f5de15:16915
+commitPassiveMountOnFiber @ chunk-OTGXDCXC.js?v=74f5de15:18156
+commitPassiveMountEffects_complete @ chunk-OTGXDCXC.js?v=74f5de15:18129
+commitPassiveMountEffects_begin @ chunk-OTGXDCXC.js?v=74f5de15:18119
+commitPassiveMountEffects @ chunk-OTGXDCXC.js?v=74f5de15:18109
+flushPassiveEffectsImpl @ chunk-OTGXDCXC.js?v=74f5de15:19490
+flushPassiveEffects @ chunk-OTGXDCXC.js?v=74f5de15:19447
+(anonymous) @ chunk-OTGXDCXC.js?v=74f5de15:19328
+workLoop @ chunk-OTGXDCXC.js?v=74f5de15:197
+flushWork @ chunk-OTGXDCXC.js?v=74f5de15:176
+performWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:384
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:407
+performWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:387
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:407
+requestHostCallback @ chunk-OTGXDCXC.js?v=74f5de15:418
+unstable_scheduleCallback @ chunk-OTGXDCXC.js?v=74f5de15:330
+scheduleCallback$1 @ chunk-OTGXDCXC.js?v=74f5de15:19826
+ensureRootIsScheduled @ chunk-OTGXDCXC.js?v=74f5de15:18652
+scheduleUpdateOnFiber @ chunk-OTGXDCXC.js?v=74f5de15:18562
+updateContainer @ chunk-OTGXDCXC.js?v=74f5de15:20776
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-OTGXDCXC.js?v=74f5de15:21116
+(anonymous) @ main.tsx:14
+useAuth.ts:116  GET http://localhost:3000/api/orgadmin/auth/me net::ERR_FAILED
+dispatchXhrRequest @ axios.js?v=74f5de15:1706
+xhr @ axios.js?v=74f5de15:1583
+dispatchRequest @ axios.js?v=74f5de15:2117
+_request @ axios.js?v=74f5de15:2337
+request @ axios.js?v=74f5de15:2229
+Axios.<computed> @ axios.js?v=74f5de15:2356
+wrap @ axios.js?v=74f5de15:8
+(anonymous) @ useAuth.ts:116
+(anonymous) @ useAuth.ts:247
+Promise.then
+(anonymous) @ useAuth.ts:235
+commitHookEffectListMount @ chunk-OTGXDCXC.js?v=74f5de15:16915
+commitPassiveMountOnFiber @ chunk-OTGXDCXC.js?v=74f5de15:18156
+commitPassiveMountEffects_complete @ chunk-OTGXDCXC.js?v=74f5de15:18129
+commitPassiveMountEffects_begin @ chunk-OTGXDCXC.js?v=74f5de15:18119
+commitPassiveMountEffects @ chunk-OTGXDCXC.js?v=74f5de15:18109
+flushPassiveEffectsImpl @ chunk-OTGXDCXC.js?v=74f5de15:19490
+flushPassiveEffects @ chunk-OTGXDCXC.js?v=74f5de15:19447
+(anonymous) @ chunk-OTGXDCXC.js?v=74f5de15:19328
+workLoop @ chunk-OTGXDCXC.js?v=74f5de15:197
+flushWork @ chunk-OTGXDCXC.js?v=74f5de15:176
+performWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:384
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:407
+performWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:387
+postMessage
+schedulePerformWorkUntilDeadline @ chunk-OTGXDCXC.js?v=74f5de15:407
+requestHostCallback @ chunk-OTGXDCXC.js?v=74f5de15:418
+unstable_scheduleCallback @ chunk-OTGXDCXC.js?v=74f5de15:330
+scheduleCallback$1 @ chunk-OTGXDCXC.js?v=74f5de15:19826
+ensureRootIsScheduled @ chunk-OTGXDCXC.js?v=74f5de15:18652
+scheduleUpdateOnFiber @ chunk-OTGXDCXC.js?v=74f5de15:18562
+updateContainer @ chunk-OTGXDCXC.js?v=74f5de15:20776
+ReactDOMHydrationRoot.render.ReactDOMRoot.render @ chunk-OTGXDCXC.js?v=74f5de15:21116
+(anonymous) @ main.tsx:14
+App.tsx:250 Initializing i18n with locale: en-GB
+config.ts:131 🌐 i18next is maintained with support from Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙
+
+### Assistant
+
+That's my bug — I added the `X-Organisation-Id` header but never allowed it through CORS.
+
+Let me verify the preflight actually passes now, against your running backend:
+
+Your dev server hot-reloaded the moment I saved — the preflight now allows it. Let me make sure nothing else regressed:
+
+Fixed — reload the org-admin page and it should sign in. Your `tsx watch` picked the change up as soon as I saved, and the preflight now answers:
+
+```
+Access-Control-Allow-Headers: Content-Type,Authorization,X-CSRF-Token,X-Organisation-Id
+```
+
+Backend still 2902 passing.
+
+## What I got wrong
+
+I added `X-Organisation-Id` to every org-admin request — that's what tells the API which club a multi-org administrator is working in — but I never added it to the CORS allow-list in [index.ts:91](packages/backend/src/index.ts#L91). The browser refuses to *send* a request carrying a header the server hasn't approved in the preflight, so the real call never left the browser. Hence "Network Error" and an authentication failure: nothing in either message points at a header.
+
+## Why it appeared now rather than immediately
+
+The header is only sent once the shell knows which organisation you're in, and that's remembered in `localStorage` under `orgadmin.currentOrganisationId`. So the very first sign-in after my change worked — no remembered value, no header — and it wrote the value. Every load *after* that sent the header and failed.
+
+That's a horrible shape for a bug: it works once, then breaks permanently, and clearing site data appears to fix it until you sign in again.
+
+Two things follow from that:
+
+- **The deployed stack was never affected.** Everything there is same-origin behind one nginx — `/api` and `/auth` on the same host as the bundles — so there's no preflight at all. This is purely the local split-origin setup (`:5175` → `:3000`).
+- **If you had a tab open, hard-reload it.** The failed preflight may be cached briefly.
+
+I should have caught this when I added the header — the account app doesn't send it, so nothing in my testing exercised the cross-origin path.
+
+---
+
+
+## 2026-08-18 07:37:17 — Prompt
+
+I see that the terraform.tfvars has a variable repository_url - should I point this at my github repo for this project ? Does the deployment script actually use this information
+
+### Assistant
+
+Both good questions. Let me verify rather than assert — the second one has a catch.
+
+**Yes to both — and there's a catch that would have bitten you.**
+
+## It's used
+
+[user_data.sh:50](terraform/environments/testing/user_data.sh#L50):
+
+```bash
+sudo -u ec2-user git clone --branch "${branch}" --depth 1 "${repository_url}" /opt/holism
+```
+
+That clone *is* the deployment. The instance builds everything from source — there's no image registry, no artefact upload. So point it at your GitHub repo, yes.
+
+## The catch: none of the deployment files are committed
+
+Every file I wrote is untracked in your working tree:
+
+```
+UNTRACKED: Dockerfile.web
+UNTRACKED: docker-compose.deploy.yml
+UNTRACKED: scripts/deploy/bootstrap.sh
+UNTRACKED: infrastructure/nginx/deploy.conf
+UNTRACKED: infrastructure/keycloak/realm-import.json
+UNTRACKED: .dockerignore
+```
+
+A clone from GitHub gets none of them. `user_data` runs `set -euxo pipefail`, so it would abort at `./scripts/deploy/bootstrap.sh: No such file` — and since that happens on first boot, the only sign is a line in `/var/log/holism-bootstrap.log` on a box you'd then have to SSM into to read.
+
+So: **commit and push these before you apply.** Along with the changes to `packages/admin/src/App.tsx` and `packages/frontend/src/App.tsx` (the router basenames) and `packages/backend/src/index.ts` (the CORS header) — without those the deployed apps won't route or sign in.
+
+I haven't committed anything, per your standing rule. Say the word and I will.
+
+## Two more things about that URL
+
+**A private repo will fail the clone.** The instance authenticates as nobody. Options, roughly in order of preference: a fine-grained GitHub PAT in the URL (`https://x-access-token:<token>@github.com/...`), a deploy key placed on the instance, or making the repo public. The Terraform doesn't handle any of these yet — tell me which you want and I'll wire it in, keeping the token out of `terraform.tfvars`, which isn't gitignored here.
+
+**`branch` matters too.** It's `"main"` in the tfvars. If you commit this work to `work/august-batch` instead, set `branch` to match or the box will clone a `main` without it.
+
+---
+
+
+## 2026-08-18 07:39:51 — Prompt
+
+I can't make the repo public, so can you help with this?
+
+### Assistant
+
+Yes. The right way is to keep the token out of Terraform entirely — out of state, out of `terraform.tfvars`, and out of `user_data` (which is readable from the instance metadata service).
+
+Now the clone itself — the token must never reach the log or stay on disk:
+
+Now an update path, since the remote is deliberately left tokenless:
+
+**Yes, point it at your repo — it's the mechanism, not decoration.** [user_data.sh:50](terraform/environments/testing/user_data.sh#L50) clones it, and the instance builds everything from source. There's no registry and no artefact upload.
+
+I've added private-repo support.
+
+## How it works
+
+The token stays out of Terraform completely. You create the parameter yourself, once:
+
+```bash
+aws ssm put-parameter --name /holism/testing/github-token \
+  --type SecureString --value ghp_xxx --region eu-west-1
+```
+
+and name it in `terraform.tfvars` (already filled in):
+
+```hcl
+github_token_ssm_parameter = "/holism/testing/github-token"
+```
+
+Terraform only ever knows the **name**. A variable holding the token would be written to the state file in plain text; passing it through `user_data` would put it where anything on the box can read it via the instance metadata service.
+
+A **fine-grained** token with `Contents: Read-only` on that one repo is enough — it never needs write.
+
+## Three details that matter
+
+**The IAM grant is scoped to that exact parameter**, not a prefix. This box is internet-facing; a role that can read every parameter in the account is far more than the one secret it needs.
+
+**Tracing is disabled around the fetch.** `user_data` runs under `set -x`, so fetching a token normally would echo it into both `/var/log/holism-bootstrap.log` and the cloud-init log, in plain text. `set +x` goes on before, `set -x` after.
+
+**The token is scrubbed from the remote.** After cloning, the origin URL is reset to the plain HTTPS one, so it isn't left sitting in `.git/config`.
+
+## Consequence: `git pull` won't work on the box
+
+That's deliberate, but it means updating needs a path. I added [scripts/deploy/update.sh](scripts/deploy/update.sh) — fetches the token the same way, pulls, rebuilds, migrates, restarts. It leaves the database and the Keycloak realm alone:
+
+```bash
+cd /opt/holism && ./scripts/deploy/update.sh
+```
+
+The instance writes `.deploy-source` at first boot recording the parameter *name*, repo and branch so the script knows where to look.
+
+---
+
+Still true from before: **none of this is committed yet**, so a clone would get a repo without any of the deployment files. That's the one thing standing between you and an apply. Want me to commit and push it? I'd need you to say so explicitly — and tell me whether it goes on `main` or a branch.
+
+---

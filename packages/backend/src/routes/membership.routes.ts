@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { membershipService } from '../services/membership.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byCurrentOrganisation,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { requireOrgAdmin } from '../middleware/orgadmin-role.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
@@ -9,7 +13,13 @@ import validator from 'validator';
 import DOMPurify from 'isomorphic-dompurify';
 import { richTextConfig } from '../middleware/xss-protection.middleware';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * Restore rich text HTML that was escaped by the global sanitizeBody middleware.
@@ -87,6 +97,7 @@ async function requireMembershipsCapability(
 router.get(
   '/membership-types',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -169,6 +180,7 @@ router.get(
 router.get(
   '/membership-types/:id',
   authenticateToken(),
+  byResource('membershipType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -210,6 +222,7 @@ router.get(
 router.post(
   '/membership-types',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -298,6 +311,7 @@ router.post(
 router.put(
   '/membership-types/:id',
   authenticateToken(),
+  byResource('membershipType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -340,6 +354,7 @@ router.put(
 router.delete(
   '/membership-types/:id',
   authenticateToken(),
+  byResource('membershipType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -412,6 +427,7 @@ router.get(
 router.get(
   '/members',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -462,6 +478,7 @@ router.get(
 router.get(
   '/members/:id',
   authenticateToken(),
+  byResource('member', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -516,6 +533,7 @@ router.get(
 router.patch(
   '/members/:id',
   authenticateToken(),
+  byResource('member', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -576,6 +594,7 @@ router.patch(
 router.post(
   '/members/batch',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { memberIds, operation, labels } = req.body;
@@ -706,6 +725,7 @@ router.post(
 router.post(
   '/members',
   authenticateToken(),
+  byCurrentOrganisation(),
   requireOrgAdmin(),
   requireMembershipsCapability,
   async (req: Request, res: Response) => {
@@ -745,6 +765,7 @@ router.post(
 router.get(
   '/member-filters',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -790,6 +811,7 @@ router.get(
 router.get(
   '/payment-methods',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;

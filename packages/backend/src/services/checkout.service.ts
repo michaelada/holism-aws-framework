@@ -10,7 +10,9 @@ import {
 } from './payment-providers';
 import { calculateApplicationFee, ApplicationFeeConfig } from '../utils/handling-fee';
 import { fulfilmentService } from './fulfilment.service';
-import { BASKET_HOLD_MINUTES, CHECKOUT_HOLD_MINUTES } from '../utils/holds';
+import { DEFAULT_HOLD_WINDOWS } from '../utils/holds';
+import { holdWindowsService } from './hold-windows.service';
+import { stripeConnectService } from './stripe-connect.service';
 import { orderAvailabilityService } from './order-availability.service';
 
 /**
@@ -169,7 +171,8 @@ export class CheckoutService {
      * Committing to pay is the moment that deserves the longer window, so it
      * is taken here rather than by making the browsing hold generous.
      */
-    await this.extendHolds(cart.id, CHECKOUT_HOLD_MINUTES);
+    const { checkoutMinutes } = await holdWindowsService.forOrganisation(organisationId);
+    await this.extendHolds(cart.id, checkoutMinutes);
 
     /*
      * Read back rather than computed from the cart in hand: `getCart` ran
@@ -238,8 +241,11 @@ export class CheckoutService {
    * holds back to the browsing window returns them almost at once while still
    * giving a member who is retrying a moment to do so.
    */
-  private async releaseHolds(cartId: string): Promise<void> {
-    await this.extendHolds(cartId, BASKET_HOLD_MINUTES);
+  private async releaseHolds(cartId: string, organisationId?: string): Promise<void> {
+    const { basketMinutes } = organisationId
+      ? await holdWindowsService.forOrganisation(organisationId)
+      : DEFAULT_HOLD_WINDOWS;
+    await this.extendHolds(cartId, basketMinutes);
   }
 
   /**
@@ -427,11 +433,37 @@ export class CheckoutService {
       return null;
     }
 
+    /*
+     * A card charge is due but no intent was ever attached.
+     *
+     * `createPayment` writes the `payments` row first and asks the provider
+     * second, so a failure between the two leaves a `pending` row with no
+     * provider and no client secret. It cannot be resumed — there is nothing
+     * for the browser to confirm — and handing it back gives the member a
+     * checkout page with no card form and no explanation.
+     *
+     * Retired and replaced, which is what `createPayment` will do next.
+     */
+    if ((row.card_amount ?? 0) > 0 && !row.metadata?.clientSecret) {
+      logger.info('Discarding a pending payment that never reached the provider', {
+        paymentId: row.id,
+      });
+      await this.retireStalePayment(row.id, row.payment_provider, row.provider_transaction_id);
+      return null;
+    }
+
     return {
       paymentId: row.id,
       clientSecret: row.metadata?.clientSecret ?? null,
       provider: row.payment_provider ?? null,
-      publishableKey: this.providers.get(row.payment_provider)?.publishableKey ?? null,
+      /*
+       * Null until an intent is attached, and null for ever on an order paid
+       * directly to the club — there is no card form to mount, so there is no
+       * key to mount it with.
+       */
+      publishableKey: row.payment_provider
+        ? (this.providers.get(row.payment_provider)?.publishableKey ?? null)
+        : null,
       amountDue: row.card_amount ?? 0,
       handlingFee: row.handling_fee ?? 0,
       offlineAmount: row.offline_amount ?? 0,
@@ -674,7 +706,28 @@ export class CheckoutService {
      * setup problem it is. The message below already existed for exactly this
      * situation; it just was not reachable.
      */
-    if (!connected.chargesEnabled) {
+    /*
+     * The stored flag is a **cache of Stripe's answer**, not the answer.
+     *
+     * It is written when the account is created and refreshed when somebody
+     * opens the club's Payment Settings or a webhook arrives. Stripe's identity
+     * verification is asynchronous and can take a minute or several, so a club
+     * whose account finished verifying after the last refresh is recorded as
+     * unable to take payments — and stays that way until a human happens to
+     * open a screen. Every member checking out in the meantime is refused for a
+     * problem that no longer exists.
+     *
+     * So a `false` is checked against Stripe before it is believed. Only on the
+     * failing branch, and this path is about to call Stripe anyway, so the
+     * ordinary case costs nothing.
+     */
+    let ableToCharge = connected.chargesEnabled;
+    if (!ableToCharge) {
+      const refreshed = await stripeConnectService.refreshState(organisationId);
+      ableToCharge = refreshed.chargesEnabled;
+    }
+
+    if (!ableToCharge) {
       throw new ValidationError(
         'This organisation has not finished connecting its payment account'
       );
@@ -835,15 +888,15 @@ export class CheckoutService {
            metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{failureMessage}', to_jsonb($2::text)),
            updated_at = NOW()
        WHERE id = $1 AND payment_status <> 'paid'
-       RETURNING cart_id`,
+       RETURNING cart_id, organisation_id`,
       [paymentId, reason ?? 'Payment failed']
     );
 
     // The payment window is over, so the slots go back rather than sitting out
     // the rest of it. A retry re-extends them.
-    const cartId = result.rows[0]?.cart_id;
-    if (cartId) {
-      await this.releaseHolds(cartId);
+    const row = result.rows[0];
+    if (row?.cart_id) {
+      await this.releaseHolds(row.cart_id, row.organisation_id);
     }
   }
 

@@ -1,4 +1,5 @@
 import {
+  AvailableSlot,
   calculateAvailableSlots,
   SlotConfiguration,
   BlockedPeriod,
@@ -367,6 +368,7 @@ describe('calculateAvailableSlots — basket holds', () => {
     duration: 60,
     places: 1,
     heldByViewer: false,
+    live: true,
     expiresAt: '2026-08-01T10:02:00.000Z',
     ...over,
   });
@@ -513,5 +515,214 @@ describe('calculateAvailableSlots — basket holds', () => {
     const slot = at(run({ holds: [hold({ places: 0 })] }), '09:00');
 
     expect(slot.unavailableReason).toBe('held');
+  });
+});
+
+
+/**
+ * A basket line whose hold has lapsed.
+ *
+ * The two halves pull apart here, and conflating them is what produced the
+ * report: the member had two slots in their basket, the two-minute hold had run
+ * out, and the calendar showed them as free — while the add guard, which reads
+ * the basket rather than the clock, refused a second copy. The screen
+ * contradicted itself.
+ *
+ * A lapsed hold reserves nothing. The viewer's own lapsed *line* is still in
+ * their basket.
+ */
+describe('calculateAvailableSlots — a hold that has lapsed', () => {
+  const TODAY = new Date(2026, 7, 1);
+
+  const config = (over: Partial<SlotConfiguration> = {}): SlotConfiguration => ({
+    daysOfWeek: [6],
+    startTime: '09:00',
+    effectiveDateStart: null,
+    effectiveDateEnd: null,
+    recurrenceWeeks: 1,
+    placesAvailable: 1,
+    minPlacesRequired: null,
+    durationOptions: [{ duration: 60, price: 1000 }],
+    ...over,
+  });
+
+  const lapsed = (over: Partial<ExistingHold> = {}): ExistingHold => ({
+    slotDate: '2026-08-08',
+    startTime: '09:00',
+    duration: 60,
+    places: 1,
+    heldByViewer: false,
+    live: false,
+    expiresAt: '2026-08-01T09:00:00.000Z',
+    ...over,
+  });
+
+  /** The same slot, still held. `hold` in the block above is scoped to it. */
+  const inForce = (over: Partial<ExistingHold> = {}): ExistingHold =>
+    lapsed({ live: true, expiresAt: '2026-08-01T10:02:00.000Z', ...over });
+
+  const run = (holds: ExistingHold[], over: Partial<SlotConfiguration> = {}) =>
+    calculateAvailableSlots({
+      configurations: [config(over)],
+      blockedPeriods: [],
+      bookings: [],
+      reservations: [],
+      holds,
+      from: '2026-08-08',
+      to: '2026-08-08',
+      minDaysInAdvance: 0,
+      maxDaysInAdvance: 90,
+      today: TODAY,
+    }).find((slot) => slot.startTime === '09:00')!;
+
+  it('puts a stranger’s lapsed hold back on sale', () => {
+    // The whole point of an expiry: an abandoned basket must not keep a court
+    // out of circulation.
+    expect(run([lapsed()])).toMatchObject({ available: true, unavailableReason: null });
+  });
+
+  it('still shows the viewer their own lapsed line as theirs', () => {
+    /*
+     * It is in their basket until they remove it or check out, and the add
+     * guard refuses a second copy regardless of the clock. Showing it as free
+     * is an invitation followed by a refusal.
+     */
+    expect(run([lapsed({ heldByViewer: true })])).toMatchObject({
+      available: false,
+      unavailableReason: 'in-your-basket',
+    });
+  });
+
+  it('does not let the viewer’s lapsed line reserve a place', () => {
+    // Their hold is gone. The slot is genuinely available to everybody else,
+    // and the count has to say so or the club loses a bookable place.
+    expect(run([lapsed({ heldByViewer: true })]).placesRemaining).toBe(1);
+  });
+
+  it('lets a stranger take a place the viewer’s lapsed line no longer holds', () => {
+    const slot = run(
+      [lapsed({ heldByViewer: true }), inForce({ places: 1 })],
+      { placesAvailable: 2 }
+    );
+
+    // One place taken by the live hold, one still free — the lapsed line takes
+    // nothing — but it is still the viewer's own basket line.
+    expect(slot.placesRemaining).toBe(1);
+    expect(slot.unavailableReason).toBe('in-your-basket');
+  });
+
+  it('counts a live hold exactly as before', () => {
+    expect(run([inForce()])).toMatchObject({
+      available: false,
+      unavailableReason: 'held',
+      placesRemaining: 0,
+    });
+  });
+
+  it('treats a hold with no live flag as in force', () => {
+    // A caller that predates the distinction keeps the old behaviour rather
+    // than silently freeing every slot.
+    const { live, ...withoutFlag } = lapsed();
+    expect(run([withoutFlag as ExistingHold]).unavailableReason).toBe('held');
+  });
+});
+
+
+/**
+ * Two slots that cannot both be taken, on a calendar that offers both.
+ *
+ * A configuration with several duration options produces **overlapping rows by
+ * design**: Laois's cross-country schooling offers a three-hour morning and a
+ * four-hour extended morning, both from 10:00. They are two ways to book one
+ * session, not two sessions.
+ *
+ * Reported as: picking both added the first and refused the second with "that
+ * slot is already in your basket" — about a row the member could see was a
+ * different one — while the grid painted both as theirs.
+ */
+describe('calculateAvailableSlots — a slot that clashes with the basket', () => {
+  const TODAY = new Date(2026, 7, 1);
+
+  /** 10:00, offered at three hours and at four. */
+  const config = (duration: number): SlotConfiguration => ({
+    daysOfWeek: [6],
+    startTime: '10:00',
+    effectiveDateStart: null,
+    effectiveDateEnd: null,
+    recurrenceWeeks: 1,
+    placesAvailable: 4,
+    minPlacesRequired: null,
+    durationOptions: [{ duration, price: 3500 }],
+  });
+
+  const mine = (duration: number): ExistingHold => ({
+    slotDate: '2026-08-08',
+    startTime: '10:00',
+    duration,
+    places: 1,
+    heldByViewer: true,
+    live: true,
+    expiresAt: '2026-08-01T10:03:00.000Z',
+  });
+
+  const run = (holds: ExistingHold[]) =>
+    calculateAvailableSlots({
+      configurations: [config(180), config(240)],
+      blockedPeriods: [],
+      bookings: [],
+      reservations: [],
+      holds,
+      from: '2026-08-08',
+      to: '2026-08-08',
+      minDaysInAdvance: 0,
+      maxDaysInAdvance: 90,
+      today: TODAY,
+    });
+
+  const at = (slots: AvailableSlot[], startTime: string, duration: number) =>
+    slots.find((slot) => slot.startTime === startTime && slot.duration === duration)!;
+
+  it('calls the one in the basket what it is', () => {
+    expect(at(run([mine(180)]), '10:00', 180)).toMatchObject({
+      available: false,
+      unavailableReason: 'in-your-basket',
+    });
+  });
+
+  it('calls the overlapping one a clash, not a duplicate', () => {
+    // The member can see it is a different row; saying it is "already in your
+    // basket" is a statement they know to be false.
+    expect(at(run([mine(180)]), '10:00', 240)).toMatchObject({
+      available: false,
+      unavailableReason: 'clashes-with-basket',
+    });
+  });
+
+  it('gives the clashing row no countdown of its own', () => {
+    // A countdown implies it frees up when the clock runs out, which is not
+    // what it is waiting on — it waits on the basket line being removed.
+    expect(at(run([mine(180)]), '10:00', 240).heldUntil).toBeNull();
+    expect(at(run([mine(180)]), '10:00', 180).heldUntil).not.toBeNull();
+  });
+
+  it('leaves a session that merely abuts alone', () => {
+    // 13:00 starts exactly where the three-hour morning ends. Touching is not
+    // overlapping, and a member may well want both.
+    expect(at(run([mine(180)]), '13:00', 180)).toMatchObject({
+      available: true,
+      unavailableReason: null,
+    });
+  });
+
+  it('is about the viewer, not about anybody else', () => {
+    /*
+     * A stranger's overlapping hold still blocks the row — the resource is in
+     * use, which is the same rule a confirmed booking of a different length
+     * follows. What must not happen is calling it a *clash with your basket*,
+     * which would send the member looking for something they never added.
+     */
+    const someoneElse = { ...mine(180), heldByViewer: false };
+
+    expect(at(run([someoneElse]), '10:00', 240).unavailableReason).toBe('held');
   });
 });

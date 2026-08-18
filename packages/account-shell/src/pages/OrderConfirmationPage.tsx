@@ -14,6 +14,7 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { formatCurrency } from '@aws-web-framework/components';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
+import { notifyIfSettled } from '../cart/cartActivity';
 import { PaymentStatus } from '../types/account';
 
 /**
@@ -41,8 +42,16 @@ export const OrderConfirmationPage: React.FC = () => {
   const load = useCallback(async () => {
     if (!orgCode || !paymentId) return;
     try {
-      setPayment(await execute({ url: `/api/account/${orgCode}/payments/${paymentId}` }));
+      const status = await execute({ url: `/api/account/${orgCode}/payments/${paymentId}` });
+      setPayment(status);
       setNotFound(false);
+      /*
+       * Also announced here, and not only from the checkout screen, because the
+       * confirmation can arrive after that screen gave up waiting — and because
+       * a member can reach this page directly, returning from a bank's 3-D
+       * Secure step or opening the link again later.
+       */
+      notifyIfSettled(status?.status);
     } catch (error) {
       if (error instanceof AccountApiError && error.status === 404) setNotFound(true);
     } finally {

@@ -23,6 +23,7 @@ import {
 import { formatCurrency } from '@aws-web-framework/components';
 import { HoldCountdown } from '../components/HoldCountdown';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
+import { notifyIfSettled } from '../cart/cartActivity';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { CheckoutResult, PaymentStatus } from '../types/account';
 
@@ -278,7 +279,12 @@ const PaymentForm: React.FC<{
         const status = await execute({
           url: `/api/account/${orgCode}/payments/${paymentId}`,
         });
-        if (status.status === 'paid' || status.status === 'failed') return;
+        if (status.status === 'paid' || status.status === 'failed') {
+          // The basket emptied server-side while this was polling; the badge in
+          // the navigation has no other way to hear about it.
+          notifyIfSettled(status.status);
+          return;
+        }
       } catch {
         // Transient — keep waiting rather than failing the whole checkout.
       }

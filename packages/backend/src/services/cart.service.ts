@@ -128,8 +128,14 @@ export interface CartView {
   items: CartItemView[];
   totals: CartTotals;
   summary: ReturnType<typeof describeCartSummary>;
-  /** Items whose soft hold lapsed while the member was elsewhere. */
-  warnings: Array<{ itemId: string; code: 'HOLD_EXPIRED'; message: string }>;
+  /**
+   * Lines removed because their hold lapsed while the member was elsewhere.
+   *
+   * `itemId` is null: the row is already gone by the time this is read, which
+   * is the point — the warning exists so the basket does not simply shrink
+   * without explanation.
+   */
+  warnings: Array<{ itemId: string | null; code: 'HOLD_EXPIRED'; message: string }>;
 }
 
 const EMPTY_TOTALS: CartTotals = {
@@ -316,6 +322,21 @@ export class CartService {
       currency
     );
 
+    /*
+     * Lines whose hold has run out are **removed**, not shown expired.
+     *
+     * They used to sit in the basket greyed out, priced at nothing, blocking
+     * checkout until the member noticed and deleted them by hand. That is a
+     * basket that lies about what it holds: the slot went back on sale the
+     * moment the hold lapsed, and anybody could have taken it since.
+     *
+     * Removed here rather than by a sweeper, which keeps the design's one good
+     * property — nothing runs on a timer, and an abandoned basket needs no
+     * tidying. The member is told what went, and picks it again if they still
+     * want it.
+     */
+    const removed = await this.dropLapsedHolds(cart.id, now);
+
     const rows = await this.loadItems(cart.id);
     const [methodsById, formSummaries, calendarsById] = await Promise.all([
       this.paymentMethodsFor(rows),
@@ -353,14 +374,45 @@ export class CartService {
       items,
       totals,
       summary: describeCartSummary(totals),
-      warnings: items
-        .filter((item) => item.expired)
-        .map((item) => ({
-          itemId: item.id,
-          code: 'HOLD_EXPIRED' as const,
-          message: `"${item.description}" was held for you but the hold has expired`,
-        })),
+      /*
+       * What was taken out from under the member, so the basket does not just
+       * quietly shrink. The line is gone by the time this is read — the warning
+       * carries its description because there is no longer a row to point at.
+       */
+      warnings: removed.map((description) => ({
+        itemId: null,
+        code: 'HOLD_EXPIRED' as const,
+        message: `"${description}" was held for you, but the hold ran out and it has been removed`,
+      })),
     };
+  }
+
+  /**
+   * Delete basket lines whose hold has lapsed, returning what they were.
+   *
+   * Only lines that actually held something: `expires_at IS NOT NULL` leaves a
+   * membership or a jumper alone, since neither was ever holding a place and
+   * neither should vanish from a basket for sitting there.
+   */
+  private async dropLapsedHolds(cartId: string, now: Date): Promise<string[]> {
+    const result = await db.query(
+      `DELETE FROM cart_items
+       WHERE cart_id = $1
+         AND expires_at IS NOT NULL
+         AND expires_at <= $2
+       RETURNING description`,
+      [cartId, now]
+    );
+
+    if (result.rows.length > 0) {
+      await this.touch(cartId);
+      logger.info('Removed basket lines whose hold had lapsed', {
+        cartId,
+        removed: result.rows.length,
+      });
+    }
+
+    return result.rows.map((row: { description: string }) => row.description);
   }
 
   /**

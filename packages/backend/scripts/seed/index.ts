@@ -79,6 +79,7 @@ import {
   ensureOrgGroups,
   ensureRealmRole,
   keycloakConfigFromEnv,
+  ensurePasswordCheckClient,
   purgeSeededKeycloak,
   upsertUser,
 } from './keycloak';
@@ -107,6 +108,18 @@ const RESET_ONLY = args.includes('--reset-only');
 const NO_STRIPE = args.includes('--no-stripe');
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', 'postgres', 'keycloak', 'host.docker.internal']);
+
+/**
+ * The secret for the password-verification client.
+ *
+ * A fixed development value when nothing is set, because the backend and
+ * Keycloak both have to know it and a generated one would be printed once and
+ * lost. The seed refuses to run against a non-local Keycloak, so this default
+ * can only ever reach a development realm; a deployed environment sets
+ * `KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET` and gets its own.
+ */
+const PASSWORD_CHECK_SECRET =
+  process.env.KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET || 'account-password-check-dev-secret';
 
 const log = (msg: string) => process.stdout.write(`${msg}\n`);
 const fail = (msg: string): never => {
@@ -269,6 +282,18 @@ async function main(): Promise<void> {
       log(`  reset: ${purged.usersDeleted} Keycloak users, ${purged.groupsDeleted} group trees removed`);
       log('');
     }
+
+    /* --- The client that lets the backend verify a member's password ----- */
+    const passwordCheck = await ensurePasswordCheckClient(
+      keycloak,
+      process.env.KEYCLOAK_PASSWORD_CHECK_CLIENT_ID || 'account-password-check',
+      PASSWORD_CHECK_SECRET
+    );
+    log(
+      `  ${passwordCheck.created ? 'created' : 'reconciled'} Keycloak client ` +
+        `"${process.env.KEYCLOAK_PASSWORD_CHECK_CLIENT_ID || 'account-password-check'}"`
+    );
+    log('');
 
     /* --- Keycloak users: the database needs the ids they hand back ------- */
     const superAdminId = await upsertUser(keycloak, SUPER_ADMIN);

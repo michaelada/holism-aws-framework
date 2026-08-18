@@ -946,8 +946,16 @@ describe('CheckoutService — a basket that changed under a pending payment', ()
               handling_fee: 88,
               payment_provider: 'stripe',
               provider_transaction_id: 'pi_old',
+              /*
+               * A client secret as well as a fingerprint: this payment reached
+               * the provider, which is what makes it resumable at all. Without
+               * one it is an orphan and is replaced — covered by its own case
+               * below.
+               */
               metadata:
-                storedFingerprint === undefined ? {} : { cartFingerprint: storedFingerprint },
+                storedFingerprint === undefined
+                  ? { clientSecret: 'pi_old_secret' }
+                  : { cartFingerprint: storedFingerprint, clientSecret: 'pi_old_secret' },
             },
           ],
           rowCount: 1,
@@ -1162,5 +1170,123 @@ describe('CheckoutService — placing an offline order', () => {
     const result = await service.startCheckout(ORG, MEMBER, 'EUR');
 
     expect(result).toMatchObject({ completed: true, amountDue: 0, offlineAmount: 2500 });
+  });
+});
+
+
+/**
+ * Pending payments that cannot be resumed.
+ *
+ * `createPayment` writes the `payments` row first and asks the provider second,
+ * so a failure between the two leaves a `pending` row with no provider and no
+ * client secret. Two of those against one basket turned every later checkout
+ * into a 500 — the registry was asked for a provider called `null` — and even
+ * once that stopped throwing, handing the row back would have given the member
+ * a checkout page with no card form and nothing to explain it.
+ */
+describe('CheckoutService — a pending payment that never reached the provider', () => {
+  const provider = {
+    name: 'stripe',
+    isConfigured: () => true,
+    createPaymentIntent: jest.fn().mockResolvedValue({
+      providerTransactionId: 'pi_new',
+      clientSecret: 'pi_new_secret',
+      destinationAccountId: ACCOUNT,
+    }),
+    capturePayment: jest.fn(),
+    cancelPayment: jest.fn().mockResolvedValue(undefined),
+  };
+
+  let service: CheckoutService;
+
+  const withOrphan = (over: Record<string, unknown> = {}) => {
+    mockDb.query.mockImplementation((sql: string) => {
+      const text = String(sql);
+      if (text.includes('FROM payments') && text.includes("payment_status = 'pending'")) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: 'pay-orphan',
+              currency: 'EUR',
+              card_amount: 8145,
+              offline_amount: 0,
+              handling_fee: 145,
+              // Never attached: this is the state the fault came from.
+              payment_provider: null,
+              provider_transaction_id: null,
+              metadata: { cartFingerprint: cartFingerprint(cart() as any) },
+              ...over,
+            },
+          ],
+          rowCount: 1,
+        } as any);
+      }
+      if (text.includes('stripeConnect')) {
+        return Promise.resolve({
+          rows: [{ account_id: ACCOUNT, charges_enabled: true }],
+          rowCount: 1,
+        } as any);
+      }
+      if (text.includes('MIN(expires_at)')) {
+        return Promise.resolve({ rows: [{ expires_at: null }], rowCount: 1 } as any);
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 } as any);
+    });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new CheckoutService({ forCardPayment: () => provider, get: () => provider } as any);
+    mockCart.getCart.mockResolvedValue(cart() as any);
+  });
+
+  it('does not fall over asking for a provider called null', async () => {
+    withOrphan();
+
+    await expect(service.startCheckout(ORG, MEMBER, 'EUR')).resolves.toBeDefined();
+  });
+
+  it('replaces it rather than handing back a checkout with no card form', async () => {
+    withOrphan();
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).not.toBe('pay-orphan');
+    expect(result.clientSecret).toBe('pi_new_secret');
+  });
+
+  it('retires the orphan, so it cannot be found again', async () => {
+    withOrphan();
+
+    await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(
+      mockDb.query.mock.calls.some(([sql]) => String(sql).includes("payment_status = 'abandoned'"))
+    ).toBe(true);
+  });
+
+  it('still resumes one that did reach the provider', async () => {
+    // The idempotency that stops a reload charging twice must survive the fix.
+    withOrphan({
+      payment_provider: 'stripe',
+      provider_transaction_id: 'pi_1',
+      metadata: {
+        cartFingerprint: cartFingerprint(cart() as any),
+        clientSecret: 'pi_1_secret',
+      },
+    });
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).toBe('pay-orphan');
+    expect(provider.createPaymentIntent).not.toHaveBeenCalled();
+  });
+
+  it('leaves an offline order alone — it has no card charge to resume', async () => {
+    withOrphan({ card_amount: 0, offline_amount: 2500 });
+
+    const result = await service.startCheckout(ORG, MEMBER, 'EUR');
+
+    expect(result.paymentId).toBe('pay-orphan');
   });
 });

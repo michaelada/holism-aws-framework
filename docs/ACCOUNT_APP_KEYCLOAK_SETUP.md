@@ -176,3 +176,56 @@ Redirect URIs, web origins and post-logout URIs are all absolute. A deployed env
 own values added to the same client — or its own client — and `VITE_KEYCLOAK_URL`,
 `VITE_KEYCLOAK_REALM` and `VITE_KEYCLOAK_CLIENT_ID` set to match
 ([`.env.example`](../packages/account-shell/.env.example)).
+
+## The second client: `account-password-check`
+
+Members change their password and email address inside the app rather than on Keycloak's own pages
+([ACCOUNT_SELF_SERVICE_CREDENTIALS.md](ACCOUNT_SELF_SERVICE_CREDENTIALS.md)). Both changes require
+the member's **current** password, and Keycloak's Admin API can set a password but cannot verify
+one — the only way to check is to attempt a login, which needs a client with direct access grants.
+
+**`npm run seed` creates it**, so a development machine needs nothing done by hand. Unlike the four
+clients above, it is also *reconciled* on every run: a client whose direct grants were switched off,
+or whose secret drifted, fails at the worst possible moment — a member typing their correct password
+and being told it is wrong.
+
+| Setting | Value | Why |
+|---|---|---|
+| Client authentication | **On** (confidential) | The whole point. A public client needs no secret, so direct grants there would let anyone post username-and-password pairs at the token endpoint |
+| Direct access grants | **On** | The password check |
+| Standard flow | **Off** | It must not be able to sign anyone in |
+| Implicit flow | **Off** | " |
+| Service accounts | **Off** | It needs no rights of its own; the Admin API work is done by the admin client |
+| Redirect URIs | *none* | Nothing ever redirects to it |
+
+Do **not** enable direct access grants on `account-app` instead. It is public by necessity — a
+browser cannot keep a secret — and the grant would then be open to anyone.
+
+### The backend needs the secret
+
+```bash
+KEYCLOAK_PASSWORD_CHECK_CLIENT_ID=account-password-check
+KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET=<the client's secret>
+```
+
+**Unset, every password check fails.** Keycloak answers a confidential client presenting no secret
+with the same `401` it uses for a wrong password, so the symptom is every member being told the
+password they just typed correctly is wrong. The service refuses to run without it and logs the
+missing variable by name rather than letting that happen.
+
+The seed's development default is `account-password-check-dev-secret`, and it refuses to run against
+a non-local Keycloak. **A deployed environment must set its own secret** on both the client and the
+backend.
+
+### Checking it
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -X POST "$KEYCLOAK_URL/realms/aws-framework/protocol/openid-connect/token" \
+  -d grant_type=password -d client_id=account-password-check \
+  -d client_secret="$KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET" \
+  -d username=<a member's email> -d password=<their password> -d scope=openid
+```
+
+`200` with the correct password, `401` with a wrong one — and `401` if the secret is missing, which
+is exactly why the backend checks for it rather than trusting the status code.

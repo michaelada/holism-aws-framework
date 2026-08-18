@@ -1,13 +1,24 @@
 import { Router, Request, Response } from 'express';
 import { registrationService } from '../services/registration.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byBodyOrCurrent,
+  byCurrentOrganisation,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 import validator from 'validator';
 import DOMPurify from 'isomorphic-dompurify';
 import { richTextConfig } from '../middleware/xss-protection.middleware';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 /**
  * Restore rich text HTML that was escaped by the global sanitizeBody middleware.
@@ -125,6 +136,7 @@ router.get(
 router.get(
   '/registration-types/:id',
   authenticateToken(),
+  byResource('registrationType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -166,6 +178,7 @@ router.get(
 router.post(
   '/registration-types',
   authenticateToken(),
+  byBodyOrCurrent(),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -254,6 +267,7 @@ router.post(
 router.put(
   '/registration-types/:id',
   authenticateToken(),
+  byResource('registrationType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -296,6 +310,7 @@ router.put(
 router.delete(
   '/registration-types/:id',
   authenticateToken(),
+  byResource('registrationType', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -505,6 +520,7 @@ router.post(
 router.get(
   '/registrations/:id',
   authenticateToken(),
+  byResource('registration', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -553,6 +569,7 @@ router.get(
 router.put(
   '/registrations/:id/status',
   authenticateToken(),
+  byResource('registration', 'id'),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -606,6 +623,7 @@ router.put(
 router.post(
   '/registrations/batch/add-labels',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds, labels } = req.body;
@@ -651,6 +669,7 @@ router.post(
 router.post(
   '/registrations/batch/remove-labels',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds, labels } = req.body;
@@ -692,6 +711,7 @@ router.post(
 router.post(
   '/registrations/batch/mark-processed',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds } = req.body;
@@ -733,6 +753,7 @@ router.post(
 router.post(
   '/registrations/batch/mark-unprocessed',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds } = req.body;
@@ -912,6 +933,7 @@ router.get(
 router.post(
   '/registrations/filters',
   authenticateToken(),
+  byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
       const filter = await registrationService.saveCustomFilter(req.body);

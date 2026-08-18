@@ -33,7 +33,16 @@ function App() {
   return (
     <ThemeProvider theme={defaultTheme}>
       <CssBaseline />
-      <BrowserRouter>
+      {/*
+        `basename` from Vite's own `base`, so the app works wherever it is
+        served from. In development that is `/` and nothing changes; a build
+        made with `--base=/admin/` gets a router that agrees with it.
+
+        Without this the app cannot be served under a path prefix at all —
+        React Router would try to match `/admin/organizations` against a route
+        declared as `/organizations`, and every link would 404.
+      */}
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AuthProvider keycloakConfig={keycloakConfig}>
           <AppContent />
         </AuthProvider>

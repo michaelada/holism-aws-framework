@@ -263,7 +263,12 @@ describe('MyMembershipsPage — the details behind a membership', () => {
     mockExecute.mockResolvedValue([withAnswers()]);
     renderWithProviders(<MyMembershipsPage />);
 
-    expect(await screen.findByText('Your details (3 answers)')).toBeInTheDocument();
+    /*
+     * The count, not the exact phrasing. What matters is that the label says
+     * how much is behind it; the wording around the number is copy and has
+     * already been shortened once.
+     */
+    expect(await screen.findByText(/Your details \(3\b/)).toBeInTheDocument();
   });
 
   it('shows no expander at all when the club asked nothing', async () => {

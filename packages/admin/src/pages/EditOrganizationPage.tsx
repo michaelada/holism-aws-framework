@@ -54,6 +54,19 @@ import {
  * 'active'` — so it was a severity the UI implied and the backend never
  * implemented. See docs/ORGANISATION_STATUS_AND_DEACTIVATION.md.
  */
+/**
+ * Mirrors `packages/backend/src/utils/holds.ts`.
+ *
+ * Duplicated rather than imported: the backend is not a front-end dependency,
+ * and the server validates these anyway — this is what the boxes suggest, not
+ * what the rule is.
+ */
+const DEFAULT_HOLDS = { basketMinutes: 3, checkoutMinutes: 15 };
+const HOLD_LIMITS = {
+  basketMinutes: { min: 1, max: 60 },
+  checkoutMinutes: { min: 5, max: 180 },
+};
+
 const STATUSES: Array<{ value: string; label: string; help: string }> = [
   { value: 'active', label: 'Active', help: 'Members and administrators can sign in as normal.' },
   {
@@ -111,6 +124,7 @@ export const EditOrganizationPage: React.FC = () => {
       country: 'Ireland',
       phone: '',
       website: '',
+      holds: { basketMinutes: DEFAULT_HOLDS.basketMinutes, checkoutMinutes: DEFAULT_HOLDS.checkoutMinutes },
     },
   });
 
@@ -197,6 +211,13 @@ export const EditOrganizationPage: React.FC = () => {
           country: orgData.settings?.country || 'Ireland',
           phone: orgData.settings?.phone || '',
           website: orgData.settings?.website || '',
+          // Absent means the club has never set them and takes the platform's.
+          holds: {
+            basketMinutes:
+              orgData.settings?.holds?.basketMinutes ?? DEFAULT_HOLDS.basketMinutes,
+            checkoutMinutes:
+              orgData.settings?.holds?.checkoutMinutes ?? DEFAULT_HOLDS.checkoutMinutes,
+          },
         },
       });
     } catch (error) {
@@ -290,6 +311,26 @@ export const EditOrganizationPage: React.FC = () => {
       settings: {
         ...prev.settings,
         [field]: value,
+      },
+    }));
+  };
+
+  /**
+   * A hold window, kept as a number.
+   *
+   * An empty box means "use the platform default", so it is stored as
+   * `undefined` rather than as 0 — which the server would otherwise read as a
+   * hold of no time at all.
+   */
+  const handleHoldChange = (field: 'basketMinutes' | 'checkoutMinutes', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        holds: {
+          ...prev.settings?.holds,
+          [field]: value === '' ? undefined : Number(value),
+        },
       },
     }));
   };
@@ -480,6 +521,40 @@ export const EditOrganizationPage: React.FC = () => {
                 value={formData.settings?.website || ''}
                 onChange={(e) => handleSettingsChange('website', e.target.value)}
                 placeholder="https://example.com"
+                fullWidth
+              />
+
+              {/*
+                How long this club holds a contended thing — a court slot, a
+                place in a capped class — while it sits in a member's basket.
+
+                Per club because the right answer is a property of the club: a
+                riding school taking bookings all day wants a short basket hold
+                so slots come back quickly, while a club selling a handful of
+                entries a season does not care. Both were stuck with the
+                platform's number before this.
+              */}
+              <Typography variant="subtitle2" sx={{ mt: 1 }}>
+                Basket holds
+              </Typography>
+
+              <TextField
+                label="Basket hold (minutes)"
+                type="number"
+                value={formData.settings?.holds?.basketMinutes ?? ''}
+                onChange={(e) => handleHoldChange('basketMinutes', e.target.value)}
+                inputProps={{ min: HOLD_LIMITS.basketMinutes.min, max: HOLD_LIMITS.basketMinutes.max }}
+                helperText={`How long a slot stays reserved while it sits in a basket. ${HOLD_LIMITS.basketMinutes.min}–${HOLD_LIMITS.basketMinutes.max}; the platform default is ${DEFAULT_HOLDS.basketMinutes}.`}
+                fullWidth
+              />
+
+              <TextField
+                label="Payment hold (minutes)"
+                type="number"
+                value={formData.settings?.holds?.checkoutMinutes ?? ''}
+                onChange={(e) => handleHoldChange('checkoutMinutes', e.target.value)}
+                inputProps={{ min: HOLD_LIMITS.checkoutMinutes.min, max: HOLD_LIMITS.checkoutMinutes.max }}
+                helperText={`Extended to this once a member starts paying, so a card form and a 3-D Secure step fit inside it. ${HOLD_LIMITS.checkoutMinutes.min}–${HOLD_LIMITS.checkoutMinutes.max}; the platform default is ${DEFAULT_HOLDS.checkoutMinutes}.`}
                 fullWidth
               />
 

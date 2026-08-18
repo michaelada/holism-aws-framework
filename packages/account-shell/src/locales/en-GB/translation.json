@@ -7,6 +7,7 @@
     "loading": "Loading…",
     "retry": "Try again",
     "cancel": "Cancel",
+    "done": "Done",
     "back": "Back",
     "close": "Close",
     "signIn": "Sign in",
@@ -152,8 +153,6 @@
     "cartSummary": "{{count}} items · {{total}}",
     "cartHandling": "incl. {{fee}} handling",
     "goToCart": "Go to basket",
-    "recentPayments": "Recent payments",
-    "allPayments": "All payments",
     "whatsOn": "What’s on",
     "shop": "Shop",
     "free": "Free",
@@ -203,19 +202,19 @@
     "cancelFailed": "We could not cancel that booking."
   },
   "entry": {
-    "title": "Entry detail",
+    "title": "Provided detail",
     "backToEntries": "Back to my entries",
     "entrant": "Entrant",
     "reference": "Entry made",
-    "yourAnswers": "Your answers",
+    "yourAnswers": "Entry Details",
     "noAnswers": "This entry had no form to fill in.",
     "noCancel": "Entries cannot be cancelled here. Please contact the club if you need to withdraw.",
     "notFound": "We could not find that entry.",
     "loadError": "We could not load your entry."
   },
   "memberships": {
-    "yourDetails_other": "Your details ({{count}} answers)",
-    "yourDetails": "Your details (1 answer)",
+    "yourDetails_other": "Your details ({{count}})",
+    "yourDetails": "Your details (1)",
     "title": "My memberships",
     "empty": "You have no memberships yet.",
     "emptyHint": "Memberships you apply for will appear here.",
@@ -333,6 +332,7 @@
     "addFailed": "We could not book that slot.",
     "reason": {
       "in-your-basket": "In your basket",
+      "clashes-with-basket": "Overlaps one in your basket",
       "full": "Full",
       "in-use": "Taken",
       "held": "Held by someone else"
@@ -393,7 +393,7 @@
   },
   "cart": {
     "changePaymentMethod": "Change Payment Method",
-    "editAnswersTitle": "Change your answers",
+    "editAnswersTitle": "Change provided details",
     "editAnswers": "Change answers",
     "yourAnswers_other": "Click to see your {{count}} entry form values",
     "yourAnswers": "Click to see your entry form value",
@@ -404,7 +404,7 @@
     "browse": "Find something to enter or join",
     "loadError": "We could not load your basket.",
     "remove": "Remove {{item}}",
-    "holdExpired": "Some items are no longer held and may no longer be available. Please review your basket.",
+    "holdExpired": "Some items were held for you, but the hold ran out and they have been removed from your basket. Please add them again if you still want them.",
     "offlineSubtotal": "Paying the club directly (Offline)",
     "cardSubtotal": "Paying by card",
     "handlingFee": "Handling fee",
@@ -494,6 +494,13 @@
       "cancelled": "Cancelled"
     }
   },
+  "confirmEmail": {
+    "doneTitle": "Email address changed",
+    "doneBody": "You now sign in with {{email}}.",
+    "failedTitle": "This link is no longer valid",
+    "failedBody": "Links last an hour and can be used once. Your email address has not changed — start again from Profile & settings.",
+    "goToSignIn": "Go to sign in"
+  },
   "profile": {
     "title": "Profile & settings",
     "loadFailed": "Your profile could not be loaded. Please try again.",
@@ -528,8 +535,26 @@
     "signInBlurb": "Your email address and password are managed in your account settings, where changes can be verified securely.",
     "changePassword": "Change password",
     "changeEmail": "Change email address",
-    "leavingBlurb": "You will be taken to your account settings to make this change, and brought straight back here afterwards.",
-    "continueToAccount": "Continue",
+    "password": {
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "mismatch": "These do not match.",
+      "appliesEverywhere": "This changes how you sign in to every club you belong to.",
+      "failed": "Your password could not be changed. Please try again.",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "email": {
+      "blurb": "You sign in with this address, so we'll send a link to the new one to check it reaches you. Nothing changes until you follow it.",
+      "new": "New email address",
+      "sameAsNow": "That is already your email address.",
+      "send": "Send the link",
+      "checkInbox": "Check your inbox",
+      "sentTo": "We've sent a link to {{email}}.",
+      "sentBlurb": "Follow it within an hour to finish the change. Until then you sign in with your current address as usual.",
+      "failed": "We could not start the change. Please try again."
+    },
     "memberSince": "Member since {{when}}",
     "lastSignIn": "Last signed in {{when}}"
   }

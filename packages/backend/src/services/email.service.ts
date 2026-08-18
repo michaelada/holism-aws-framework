@@ -211,7 +211,20 @@ async function send(
   subject: string,
   htmlBody: string,
   textBody: string,
-  description: string
+  description: string,
+  /*
+   * Whether a failure to send is the caller's problem.
+   *
+   * Almost every mail here is a courtesy alongside something that has already
+   * happened — a registration approved, an invitation issued — and failing the
+   * operation because SES blipped would be the worse outcome. Those swallow.
+   *
+   * A mail that *carries* the operation is different. An email-change link is
+   * the only way the change can complete, so a member told "check your inbox"
+   * when nothing was sent is left waiting for something that will never arrive.
+   * Those pass `strict` and get an exception instead.
+   */
+  strict = false
 ): Promise<void> {
   if (toAddresses.length === 0) return;
 
@@ -233,6 +246,7 @@ async function send(
       to: toAddresses,
       error: error instanceof Error ? error.message : String(error),
     });
+    if (strict) throw error;
   }
 }
 
@@ -350,5 +364,170 @@ export async function sendNewRegistrationNotification(
     buildEmailShell('A registration needs your approval', body),
     `${applicantName} (${applicantEmail}) has registered with ${organizationName} and is waiting for approval. ${pendingCount} waiting in total.`,
     'new registration notification'
+  );
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Credential changes (P4–P6)
+ *
+ * An account user's Keycloak username *is* their email address, so these three
+ * mails are about the credential someone signs in with rather than about a
+ * club. They carry no organisation branding for that reason: the change applies
+ * to every club the member belongs to, and dressing it as one club's mail would
+ * misrepresent what it does.
+ *
+ * See docs/ACCOUNT_SELF_SERVICE_CREDENTIALS.md.
+ * ---------------------------------------------------------------------------
+ */
+
+interface EmailChangeParams {
+  toEmail: string;
+  firstName: string;
+  confirmUrl: string;
+  /** How long the member has, in whole hours, so the mail and the row agree. */
+  expiresInHours: number;
+}
+
+/**
+ * The link that actually performs the change.
+ *
+ * Sent `strict`: this mail *is* the mechanism, and a member told to check their
+ * inbox when nothing was sent waits for something that will never arrive.
+ */
+export async function sendEmailChangeVerification(params: EmailChangeParams): Promise<void> {
+  const { toEmail, firstName, confirmUrl, expiresInHours } = params;
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">You asked to start signing in with this address. Follow the link below to confirm it, and we'll make the change.</p>
+    ${buildButton('Confirm this address', confirmUrl)}
+    <p style="font-size: 15px;">The link lasts ${expiresInHours} hour${expiresInHours === 1 ? '' : 's'} and can be used once. <strong>Nothing changes until you follow it</strong> — until then you sign in with your current address as usual.</p>
+    <p style="font-size: 12px; color: #64748B;">If you didn't ask for this, you can ignore this email. Without the link, nothing will happen.</p>`;
+
+  await send(
+    [toEmail],
+    'Confirm your new email address',
+    buildEmailShell('Confirm your new email address', body),
+    `Hi ${firstName},\n\nYou asked to start signing in with this address. Confirm it here:\n\n${confirmUrl}\n\nThe link lasts ${expiresInHours} hour(s) and can be used once. Nothing changes until you follow it.\n\nIf you didn't ask for this, ignore this email.`,
+    'email change verification',
+    true
+  );
+}
+
+/**
+ * The alarm, to the address that is about to lose control of the account.
+ *
+ * Sent to the **old** address, while it still works, and it names the new one.
+ * Somebody who has taken over a session can request a change; this is how the
+ * real owner finds out in time to do something about it. A warning that arrives
+ * after the address has moved would be no use, which is why it goes at request
+ * time rather than on confirmation.
+ */
+export async function sendEmailChangeRequestedAlert(params: {
+  toEmail: string;
+  firstName: string;
+  newEmail: string;
+}): Promise<void> {
+  const { toEmail, firstName, newEmail } = params;
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">Someone asked to change the email address on your account to <strong>${newEmail}</strong>.</p>
+    <p style="font-size: 15px;"><strong>This has not happened yet.</strong> It only takes effect if that address is confirmed from a link we've sent to it.</p>
+    <p style="font-size: 15px;">If that was you, there's nothing to do here. <strong>If it wasn't</strong>, change your password now — someone else may be signed in to your account.</p>
+    ${buildButton('Go to your account', ACCOUNT_URL)}`;
+
+  await send(
+    [toEmail],
+    'Someone asked to change your email address',
+    buildEmailShell('A change was requested on your account', body),
+    `Hi ${firstName},\n\nSomeone asked to change the email address on your account to ${newEmail}.\n\nThis has not happened yet — it only takes effect if that address is confirmed.\n\nIf it wasn't you, change your password now: ${ACCOUNT_URL}`,
+    'email change requested alert'
+  );
+}
+
+/**
+ * Why an address that is already in use is told by mail rather than on screen.
+ *
+ * Answering "that address is taken" in the response would turn the endpoint
+ * into a way of testing which addresses are registered with the platform, using
+ * nothing but one's own password. The address itself is the one place the
+ * answer is safe to send: whoever owns it is entitled to know somebody tried.
+ */
+export async function sendEmailChangeAddressInUse(params: {
+  toEmail: string;
+  firstName: string;
+}): Promise<void> {
+  const { toEmail, firstName } = params;
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">Someone asked to start using this address to sign in, but it already belongs to an account.</p>
+    <p style="font-size: 15px;">Nothing has changed. If that was you, sign in with this address as usual — or reset your password if you've forgotten it.</p>
+    ${buildButton('Go to your account', ACCOUNT_URL)}`;
+
+  await send(
+    [toEmail],
+    'That address is already registered',
+    buildEmailShell('This address is already in use', body),
+    `Hi ${firstName},\n\nSomeone asked to start using this address to sign in, but it already belongs to an account. Nothing has changed.\n\n${ACCOUNT_URL}`,
+    'email change address-in-use notice'
+  );
+}
+
+/** The same alarm as above, for the other credential. */
+export async function sendPasswordChangedAlert(params: {
+  toEmail: string;
+  firstName: string;
+}): Promise<void> {
+  const { toEmail, firstName } = params;
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">Your password was just changed. It applies everywhere you sign in, across every club you belong to.</p>
+    <p style="font-size: 15px;">If that was you, there's nothing to do. <strong>If it wasn't</strong>, reset your password straight away and contact your club.</p>
+    ${buildButton('Go to your account', ACCOUNT_URL)}`;
+
+  await send(
+    [toEmail],
+    'Your password was changed',
+    buildEmailShell('Your password was changed', body),
+    `Hi ${firstName},\n\nYour password was just changed. If that wasn't you, reset it straight away: ${ACCOUNT_URL}`,
+    'password changed alert'
+  );
+}
+
+/**
+ * Somebody who already has an account now administers another organisation.
+ *
+ * Not the invitation email: they have a password, and sending them a temporary
+ * one would either be a lie or would break the sign-in they already use. What
+ * they need to know is that something new has appeared in their switcher.
+ *
+ * The alternative — saying nothing — is the support call. An administrator adds
+ * a colleague, no mail arrives, and both assume it failed.
+ */
+export async function sendAdminAddedToOrganisationEmail(params: {
+  toEmail: string;
+  firstName: string;
+  organizationName: string;
+  loginUrl?: string;
+}): Promise<void> {
+  const { toEmail, firstName, organizationName, loginUrl = ORGADMIN_URL } = params;
+
+  const body = `
+    <p style="font-size: 15px;">Hi ${firstName},</p>
+    <p style="font-size: 15px;">You have been made an administrator of <strong>${organizationName}</strong>.</p>
+    <p style="font-size: 15px;"><strong>Sign in exactly as you do now</strong> — same email address, same password. ${organizationName} will appear alongside your other organisations, and you can move between them from the menu at the top of the page.</p>
+    ${buildButton('Sign in', loginUrl)}
+    <p style="font-size: 12px; color: #64748B;">If you did not expect this, please contact ${organizationName}.</p>`;
+
+  await send(
+    [toEmail],
+    `You now administer ${organizationName}`,
+    buildEmailShell(`Welcome to ${organizationName}`, body),
+    `Hi ${firstName},\n\nYou have been made an administrator of ${organizationName}.\n\nSign in exactly as you do now — same email address, same password. ${organizationName} will appear alongside your other organisations.\n\n${loginUrl}`,
+    'admin added to organisation email'
   );
 }

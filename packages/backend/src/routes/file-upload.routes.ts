@@ -2,11 +2,21 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { fileUploadService } from '../services/file-upload.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  byCurrentOrganisation,
+  byResource,
+} from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
 import { S3_BUCKET_NAME } from '../config/aws.config';
 
-const router = Router();
+/*
+ * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
+ * `/api/orgadmin/organisations/:organisationId`. Without it the parent's
+ * `:organisationId` is invisible here, and the guards would see a request that
+ * names no organisation at all.
+ */
+const router = Router({ mergeParams: true });
 
 // Configure multer for memory storage
 const upload = multer({
@@ -58,6 +68,7 @@ const upload = multer({
 router.post(
   '/upload',
   authenticateToken(),
+  byCurrentOrganisation(),
   upload.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -171,6 +182,7 @@ router.post(
 router.post(
   '/branding-logo',
   authenticateToken(),
+  byCurrentOrganisation(),
   upload.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -241,7 +253,14 @@ router.post(
  *       500:
  *         description: Server error
  */
-router.get('/:fileId', authenticateToken(), async (req: Request, res: Response): Promise<void> => {
+router.get(
+  '/:fileId',
+  authenticateToken(),
+  // An uploaded file belongs to the submission it was attached to, and that
+  // submission belongs to a club. Downloading or deleting one is acting on
+  // that club's data.
+  byResource('submissionFile', 'fileId'),
+  async (req: Request, res: Response): Promise<void> => {
   try {
     const { fileId } = req.params;
 
@@ -306,7 +325,14 @@ router.get('/:fileId', authenticateToken(), async (req: Request, res: Response):
  *       500:
  *         description: Server error
  */
-router.delete('/:fileId', authenticateToken(), async (req: Request, res: Response): Promise<void> => {
+router.delete(
+  '/:fileId',
+  authenticateToken(),
+  // An uploaded file belongs to the submission it was attached to, and that
+  // submission belongs to a club. Downloading or deleting one is acting on
+  // that club's data.
+  byResource('submissionFile', 'fileId'),
+  async (req: Request, res: Response): Promise<void> => {
   try {
     const { fileId } = req.params;
 
