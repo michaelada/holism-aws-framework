@@ -18,8 +18,12 @@ EXTRA_DOMAINS="${extra_domains}"
 dnf update -y
 dnf install -y docker git nginx openssl
 
-# Neither Docker CLI plugin is in the Amazon Linux repositories: the `docker`
-# package there is the daemon and the base CLI only.
+# Docker's CLI plugins.
+#
+# Amazon Linux's `docker` package is the daemon and base CLI; it brings no
+# compose plugin at all, and a buildx that is too old to be useful. Both are
+# installed here into /usr/local/lib/docker/cli-plugins, which takes precedence
+# over anything the distribution provides.
 DOCKER_PLUGINS=/usr/local/lib/docker/cli-plugins
 mkdir -p "$DOCKER_PLUGINS"
 
@@ -29,34 +33,31 @@ curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-co
   -o "$DOCKER_PLUGINS/docker-compose"
 chmod +x "$DOCKER_PLUGINS/docker-compose"
 
-# buildx, and it is **not optional**: `docker compose build` delegates to it and
-# fails outright with "compose build requires buildx 0.17.0 or later" when it is
-# missing. Nothing is built, nothing starts, and `docker ps` is simply empty —
-# a failure with no running thing left to inspect.
+# buildx, and it is **not optional**: `docker compose build` delegates to it
+# and fails with "compose build requires buildx 0.17.0 or later" when it is too
+# old. Amazon Linux ships 0.12.1, which is exactly too old — so this replaces
+# it rather than installing something missing. A plugin in
+# /usr/local/lib/docker/cli-plugins takes precedence over the packaged one.
 #
-# Its assets use `arm64`/`amd64` rather than `uname -m`, and carry the version
-# in the filename, so the tag has to be resolved rather than using
-# `latest/download` as Compose allows.
+# The version is **pinned, not discovered**. Resolving "latest" from the GitHub
+# API cost a whole boot: `curl | grep -m1` makes curl die of EPIPE when grep
+# stops reading, and under `set -e` with `pipefail` that failing pipeline ends
+# the script — silently, three lines before Docker is even started. A pinned
+# version has no network dependency beyond the download itself, no rate limit,
+# and builds the same box every time. Bump it deliberately.
+BUILDX_VERSION="v0.36.1"
 BUILDX_ARCH=$([ "$ARCH" = "aarch64" ] && echo arm64 || echo amd64)
-BUILDX_VERSION="$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest \
-  | grep -m1 '"tag_name"' | cut -d'"' -f4)"
-# Pinned fallback, so a GitHub API rate limit does not fail the whole boot.
-#
-# The doubled dollar below is not a typo. This file is a Terraform template, so
-# a single dollar-brace is an interpolation Terraform tries to resolve itself —
-# and it rejects shell default-value syntax inside one. Doubling escapes it.
-# The same applies to comments: they are template text too, which is why this
-# one describes the syntax rather than showing it.
-BUILDX_VERSION="$${BUILDX_VERSION:-v0.36.1}"
+
 curl -fsSL "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-$BUILDX_ARCH" \
   -o "$DOCKER_PLUGINS/docker-buildx"
 chmod +x "$DOCKER_PLUGINS/docker-buildx"
 
-# Fail here rather than three minutes later inside a build.
-docker buildx version >/dev/null || { echo "buildx did not install" >&2; exit 1; }
-
 systemctl enable --now docker
 usermod -aG docker ec2-user
+
+# Fail here, loudly, rather than three minutes later inside a build.
+docker compose version
+docker buildx version
 
 # Swap.
 #

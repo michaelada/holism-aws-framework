@@ -11075,3 +11075,100 @@ If it stalls again, that same log is where the reason is — both failures so fa
 **`.terraform.tfstate.lock.info` is tracked in git.** It's a transient file that exists only during an apply. It isn't on disk now so it won't block you, but if a future `git checkout` restores it you'll get "Error acquiring the state lock" on something that isn't actually locked. Worth `git rm --cached`-ing it and adding to `.gitignore` at some point — not urgent, and I'd leave it until after this apply rather than touch the repo mid-deploy.
 
 ---
+
+
+## 2026-08-18 08:59:45 — Prompt
+
+The tofu apply was working, however after it completd the local installs, the holism-bootstrap.log file shows the following near the end of the file:
+
+Installed:
+  container-selinux-4:2.245.0-1.amzn2023.noarch                                 
+  containerd-2.2.5-1.amzn2023.0.2.aarch64                                       
+  docker-25.0.16-1.amzn2023.0.4.aarch64                                         
+  generic-logos-httpd-18.0.0-12.amzn2023.0.3.noarch                             
+  git-2.50.1-1.amzn2023.0.1.aarch64                                             
+  git-core-2.50.1-1.amzn2023.0.1.aarch64                                        
+  git-core-doc-2.50.1-1.amzn2023.0.1.noarch                                     
+  gperftools-libs-2.9.1-1.amzn2023.0.3.aarch64                                  
+  iptables-libs-1.8.8-3.amzn2023.0.2.aarch64                                    
+  iptables-nft-1.8.8-3.amzn2023.0.2.aarch64                                     
+  libcgroup-3.0-1.amzn2023.0.1.aarch64                                          
+  libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.aarch64                           
+  libnfnetlink-1.0.1-19.amzn2023.0.2.aarch64                                    
+  libnftnl-1.2.2-2.amzn2023.0.2.aarch64                                         
+  libunwind-1.4.0-5.amzn2023.0.3.aarch64                                        
+  nginx-1:1.30.4-1.amzn2023.0.1.aarch64                                         
+  nginx-core-1:1.30.4-1.amzn2023.0.1.aarch64                                    
+  nginx-filesystem-1:1.30.4-1.amzn2023.0.1.noarch                               
+  nginx-mimetypes-2.1.49-3.amzn2023.0.3.noarch                                  
+  perl-Error-1:0.17030-2.amzn2023.0.1.noarch                                    
+  perl-File-Find-1.37-477.amzn2023.0.9.noarch                                   
+  perl-Git-2.50.1-1.amzn2023.0.1.noarch                                         
+  perl-TermReadKey-2.38-9.amzn2023.0.3.aarch64                                  
+  perl-lib-0.65-477.amzn2023.0.9.aarch64                                        
+  pigz-2.5-1.amzn2023.0.4.aarch64                                               
+  runc-1.3.5-1.amzn2023.0.2.aarch64                                             
+
+Complete!
++ DOCKER_PLUGINS=/usr/local/lib/docker/cli-plugins
++ mkdir -p /usr/local/lib/docker/cli-plugins
+++ uname -m
++ ARCH=aarch64
++ curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/local/lib/docker/cli-plugins/docker-compose
++ chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+++ '[' aarch64 = aarch64 ']'
+++ echo arm64
++ BUILDX_ARCH=arm64
+++ curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest
+++ grep -m1 '"tag_name"'
+++ cut '-d"' -f4
+curl: (23) Failure writing output to destination, passed 1370 returned 1131
++ BUILDX_VERSION=v0.36.1
+
+### Assistant
+
+That `curl: (23)` is `grep -m1` closing the pipe early — harmless in itself, and the fallback did its job. But with `set -e` and `pipefail` the failing pipeline may have killed the script. Let me check the instance rather than guess:
+
+Definitive: `cloud-init status: error`, the log stops at exactly that line, and Docker never started (`systemctl enable --now docker` comes after). The failing pipeline killed the script via `set -e` + `pipefail`.
+
+Also telling: `docker buildx version` reports **0.12.1** — Amazon Linux *does* ship a buildx, just one too old for compose. My download never ran.
+
+The fix is to drop the API call entirely:
+
+Let me correct that now-inaccurate comment and scan for any other pipeline that could die the same way:
+
+No other pipelines remain, and the pinned download resolves for both architectures.
+
+## What killed it
+
+My own "robustness" did. Resolving the latest buildx tag from the GitHub API:
+
+```bash
+BUILDX_VERSION="$(curl -fsSL https://api.github.com/... | grep -m1 '"tag_name"' | cut -d'"' -f4)"
+```
+
+`grep -m1` stops reading after the first match, curl dies of EPIPE with exit 23, and under `set -e` with `pipefail` that failing pipeline **ends the script** — three lines before Docker is even started. The fallback value was assigned and then nothing else ran, which is why the log stops mid-sentence and `cloud-init status` is `error`.
+
+The instance got as far as installing packages. No Docker daemon, no repo clone, nothing built.
+
+One thing the diagnosis turned up that I had wrong: **Amazon Linux does ship buildx — version 0.12.1** — which is just too old for compose's 0.17 floor. So this replaces an old plugin rather than installing a missing one.
+
+## The fix
+
+Pinned the version and deleted the API call. No network dependency beyond the download, no rate limit, no EPIPE, and the same box every time. I also moved the `docker compose version` / `docker buildx version` checks to *after* the daemon starts, so a bad install fails immediately and visibly rather than three minutes into a build.
+
+## To pick it up
+
+```bash
+git add -A && git commit -m "fix(deploy): pin buildx, drop the API lookup that killed first boot"
+git push
+cd terraform/environments/testing && tofu apply
+```
+
+The push isn't strictly needed for `user_data` — Terraform reads it locally — but the instance clones the repo for everything else, and you don't want the two drifting.
+
+Nothing on the current box is worth keeping; it never got past package installs.
+
+I'd rather this had gone differently — that's the third AL2023 assumption I got wrong in this script (certbot packaging, buildx presence, and now this). The pinned version removes the whole class: no discovery, no fallback, no pipeline.
+
+---
