@@ -11655,3 +11655,52 @@ cd /opt/holism && sudo ./scripts/deploy/update.sh
 One thing — **"ips5"** on its own didn't tell me anything I could act on. If that's the name for this instance, say the word and I'll set the `Name` tag (currently `holism-testing`); if it meant something else, let me know.
 
 ---
+
+
+## 2026-08-18 09:44:43 — Prompt
+
+The deployment worked and I can see the test page, however the sl cert is not installed, what command sholud I run on the instance to fix this ?
+
+### Assistant
+
+Let me check the instance rather than guess at which step failed:
+
+Certbot was never installed, and the log shows why: `user_data` died inside `bootstrap.sh` (the `npm ci` failure) and **everything after it — including the whole certbot section — never ran**. Your manual `update.sh` brought the stack up but doesn't do TLS.
+
+Run this on the instance:
+
+Now fixing the ordering that caused this — TLS shouldn't depend on the application build succeeding:
+
+Order is right now: nginx (216) → certificate (249) → application build (294).
+
+## Why it wasn't installed
+
+`user_data` died inside `bootstrap.sh` at the `npm ci` failure. Under `set -e` that ends the script — and the entire certbot section came *after* it, so it never ran. Your manual `update.sh` fixed the application but doesn't touch TLS.
+
+The log shows it precisely: the last certbot-related line is `mkdir -p /var/www/certbot`, and then nothing.
+
+## The design flaw behind it
+
+I had certbot running last, so a failed build cost you the certificate too — two problems from one cause, and the second only discoverable after fixing the first. That's what just happened to you.
+
+Certbot now runs **before** the build. Nothing about it needs the application: the ACME challenge is answered by nginx, which is already up, from a directory on disk. So a build that fails now still leaves you with working TLS. It stays non-fatal in the other direction too.
+
+## After you run the commands
+
+```bash
+curl -sI https://itsps.org/ | head -1
+echo | openssl s_client -connect itsps.org:443 -servername itsps.org 2>/dev/null \
+  | openssl x509 -noout -issuer -dates
+```
+
+Issuer should read Let's Encrypt rather than `CN=itsps.org`, which is the self-signed one you're on now.
+
+Worth committing the reorder so a future rebuild doesn't repeat it:
+
+```bash
+git add terraform/environments/testing/user_data.sh
+git commit -m "fix(deploy): obtain the certificate before building, not after"
+git push
+```
+
+---

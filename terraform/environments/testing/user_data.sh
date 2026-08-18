@@ -216,36 +216,16 @@ rm -f /etc/nginx/conf.d/default.conf
 systemctl enable --now nginx
 
 # ---------------------------------------------------------------------------
-# Bring the stack up
+# A real certificate, before the application is built
 # ---------------------------------------------------------------------------
-# The container publishes on 8080 and only on the loopback, because the host's
-# nginx holds 80 and 443 to terminate TLS. Nothing reaches the container except
-# through that, so the application is never served without TLS.
-# Recorded so scripts/deploy/update.sh can fetch the token the same way when
-# pulling a new version. The *name*, never the token.
-cat > /opt/holism/.deploy-source <<SOURCE
-GITHUB_TOKEN_PARAMETER=$GITHUB_TOKEN_PARAMETER
-REPOSITORY_URL=$REPO_URL
-BRANCH=${branch}
-AWS_REGION=${aws_region}
-SOURCE
-chown ec2-user:ec2-user /opt/holism/.deploy-source
-
-cd /opt/holism
-WEB_PUBLISH="127.0.0.1:8080" \
-PUBLIC_URL="$PUBLIC_URL" \
-PUBLIC_HOST="$PUBLIC_HOST" \
-SES_FROM_EMAIL="${ses_from_email}" \
-AWS_REGION="${aws_region}" \
-SEED_DEMO_DATA="${seed_demo_data}" \
-  ./scripts/deploy/bootstrap.sh
-
-# ---------------------------------------------------------------------------
-# A real certificate, once DNS resolves here
-# ---------------------------------------------------------------------------
-# Deliberately last and deliberately non-fatal: the stack should be up whether
-# or not the DNS record has been pointed at this address yet. Re-run
-# `certbot certonly` by hand afterwards if it did not.
+# Deliberately ahead of the build, which is the slow and failure-prone part.
+#
+# It used to run last, and an instance whose build failed got no certificate
+# either — two problems from one cause, and the second only discovered after
+# the first was fixed by hand. Nothing here needs the application: the ACME
+# challenge is answered by nginx, which is already up, from a directory on disk.
+#
+# Still non-fatal. A missing certificate should not stop the deployment.
 # certbot is **not** in the Amazon Linux 2023 repositories.
 #
 # `dnf install -y certbot` fails there — AL2023 dropped EPEL and certbot was
@@ -287,5 +267,31 @@ else
   echo "!! does not. Retry with:" >&2
   echo "!!   sudo certbot certonly --webroot -w /var/www/certbot $CERT_ARGS" >&2
 fi
+
+# ---------------------------------------------------------------------------
+# Bring the stack up
+# ---------------------------------------------------------------------------
+# The container publishes on 8080 and only on the loopback, because the host's
+# nginx holds 80 and 443 to terminate TLS. Nothing reaches the container except
+# through that, so the application is never served without TLS.
+# Recorded so scripts/deploy/update.sh can fetch the token the same way when
+# pulling a new version. The *name*, never the token.
+cat > /opt/holism/.deploy-source <<SOURCE
+GITHUB_TOKEN_PARAMETER=$GITHUB_TOKEN_PARAMETER
+REPOSITORY_URL=$REPO_URL
+BRANCH=${branch}
+AWS_REGION=${aws_region}
+SOURCE
+chown ec2-user:ec2-user /opt/holism/.deploy-source
+
+cd /opt/holism
+WEB_PUBLISH="127.0.0.1:8080" \
+PUBLIC_URL="$PUBLIC_URL" \
+PUBLIC_HOST="$PUBLIC_HOST" \
+SES_FROM_EMAIL="${ses_from_email}" \
+AWS_REGION="${aws_region}" \
+SEED_DEMO_DATA="${seed_demo_data}" \
+  ./scripts/deploy/bootstrap.sh
+
 
 echo "Bootstrap finished. Application at $PUBLIC_URL"
