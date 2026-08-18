@@ -244,4 +244,24 @@ sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy \
 Tail webhooks
 ```sh
 sudo tail -f /var/log/nginx/access.log | grep webhooks
+
+# live tail on the instance
+sudo docker logs -f "$(sudo docker ps -qf name=backend)" 2>&1 \
+  | grep --line-buffered -E 'Webhook|"path":"/stripe"'
+
+# or Readable, if you have jq:
+sudo docker logs -f "$(sudo docker ps -qf name=backend)" 2>&1 \
+  | grep --line-buffered -E 'Webhook|"path":"/stripe"' \
+  | jq -c '{t:.timestamp, msg:.message, type:.type, payment:.paymentId, status:.statusCode}'
+
+# greping for a specific payment id
+sudo docker logs "$(sudo docker ps -qf name=backend)" 2>&1 | grep 'pay-<id>'
+
+# checking stripe account setup
+echo "select name, settings->'stripeConnect'->>'accountId' as account_id,
+             settings->'stripeConnect'->>'chargesEnabled' as charges
+      from organizations order by name;" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+
 ```

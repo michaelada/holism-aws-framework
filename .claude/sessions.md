@@ -13856,3 +13856,201 @@ Seeded password is `Passw0rd!`. `admin@kildarehunt.test` deliberately administer
 The seed refuses to run if `NODE_ENV=production`, or against a non-local database or Keycloak — the containers are `postgres` and `keycloak` on the internal network, so it works here and can't be aimed anywhere else.
 
 ---
+
+
+## 2026-08-18 16:41:26 — Prompt
+
+I have setup the webhook for stripe on my main account, but the events don't seem to be coming in, can you check my setup for me?
+
+### Assistant
+
+Let me test the endpoint from the outside and check what sits in front of it:
+
+The endpoint is healthy — reachable, and mounted *before* the JSON parser, sanitisers and rate limiter, which is what a signature check needs. Let me confirm the body and the wiring:
+
+Everything on the server is confirmed working:
+
+- reachable → `{"error":"Missing signature"}`
+- signature verification running → `{"error":"Invalid signature"}` for a bogus one
+- `STRIPE_WEBHOOK_SECRET` wired into the container
+
+So the fault is in the Stripe-side configuration. Let me get you the exact event list the code actually handles:
+
+Your server side is fine — I verified it end to end from outside:
+
+| Check | Result |
+|---|---|
+| Endpoint reachable | `{"error":"Missing signature"}` — a 400 from the app, not nginx |
+| Signature verification running | bogus signature → `{"error":"Invalid signature"}` |
+| Secret wired into the container | `STRIPE_WEBHOOK_SECRET` present in compose |
+| Middleware order | webhook mounted **before** the JSON parser, sanitisers and rate limiter, so the raw body survives for signing |
+
+So Stripe isn't sending, or is sending somewhere else. Three things to check, most likely first.
+
+## 1. Test mode vs live mode (most likely)
+
+Your keys are `sk_test_…`, so payments are **test mode**. A webhook endpoint created while the Dashboard was in **live mode** never receives test events — and shows an empty delivery list, which matches exactly what you're seeing.
+
+Check the **test mode** toggle in the Dashboard, then confirm the endpoint appears under **Developers → Webhooks** *with that toggle on*. If it only exists in live mode, recreate it in test mode — and take the **new** `whsec_…`, because each endpoint has its own.
+
+## 2. The URL
+
+Must be exactly:
+
+```
+https://itsps.org/api/webhooks/stripe
+```
+
+## 3. Two kinds of event, and you need both
+
+This is the part that's easy to miss. The code handles five events, and they don't all fire on the same account:
+
+**Your account** (destination charges are created on the platform, so these fire on it):
+- `payment_intent.succeeded`
+- `payment_intent.amount_capturable_updated` — **essential**, you're on manual capture; without it an authorised payment never settles
+- `payment_intent.payment_failed`
+- `payment_intent.canceled`
+
+**Connected accounts** — needs a second endpoint, or the same one with *"Listen to events on connected accounts"* enabled:
+- `account.updated` — this is what flips `chargesEnabled`, the thing that was blocking your card checkout earlier
+
+If you only added a plain endpoint on the main account, `account.updated` will never arrive.
+
+## Telling the two failure modes apart
+
+If the Dashboard's delivery list is **empty**, Stripe isn't sending — it's mode or URL. If it shows deliveries with **400** responses, they are arriving and the secret is wrong: `STRIPE_WEBHOOK_SECRET` in `.env.deploy` must be the `whsec_…` belonging to *that specific endpoint*. Confirm with:
+
+```bash
+sudo docker logs --tail 200 "$(sudo docker ps -qf name=backend)" 2>&1 | grep -i "signature"
+```
+
+`Rejected a Stripe webhook with an invalid signature` means arriving-but-mismatched. Silence means nothing is arriving at all.
+
+One caveat on that last check: the arrival logging I added earlier hasn't been deployed yet, so a *successful* webhook still logs nothing. The rejection line above does work today.
+
+---
+
+
+## 2026-08-18 16:44:09 — Prompt
+
+I see the 
+
+{"environment":"production","level":"warn","message":"Rejected a Stripe webhook with an invalid signature","service":"aws-web-framework-backend","timestamp":"2026-08-18T15:42:24.638Z"}
+
+### Assistant
+
+That's my probe, not Stripe. I sent a request with `stripe-signature: t=1,v1=deadbeef` at 15:42 to prove verification was running — the first curl in that batch returned `Date: 15:42:06`, and your log line is 15:42:24. Don't change the signing secret on the strength of it.
+
+Confirm by counting:
+
+```bash
+sudo docker logs "$(sudo docker ps -qf name=backend)" 2>&1 | grep -c "invalid signature"
+```
+
+**1** means it's only mine and nothing from Stripe has arrived at all — so you're in the "empty delivery list" case: test/live mode or the URL, not the secret. More than one, at times matching your own payment attempts, means real deliveries are being rejected and the secret is wrong.
+
+The authoritative view is still **Developers → Webhooks → your endpoint → Recent deliveries**, with the Dashboard's **test mode** toggle on. If that list is empty, Stripe has never attempted a delivery, and no amount of server-side checking will show anything.
+
+Sorry for the noise in your logs — I should have flagged that my probe would leave exactly that line.
+
+---
+
+
+## 2026-08-18 16:50:38 — Prompt
+
+When I look at the Stripe dashboard in test mode, with the webhook added correctly. There is a mesage which says "Requires Setup" and when I hover over it it says "Finish Stripe Connect onboarding to receive events from connected accounts" 
+
+Do you know what this means ?
+
+### Assistant
+
+Yes. That's about your **platform account**, not the endpoint.
+
+You've ticked *"Listen to events on connected accounts"* on the webhook. Stripe won't deliver connected-account events until the platform itself has completed its **Connect platform profile** — the business/platform details under Connect. Until that's done, that half of the endpoint stays inert, which is what "Requires Setup" is reporting.
+
+Let me check what this actually blocks in your case:
+
+Here's what it means and what it does — and doesn't — break.
+
+## What Stripe is telling you
+
+The endpoint is fine. Your **platform account** hasn't finished its Connect platform profile, and Stripe won't forward connected-account events until it has. Complete it under **Settings → Connect** (or the "Get started with Connect" prompt) with the test-mode toggle on — it's a short form in test mode.
+
+## What it blocks
+
+Only **`account.updated`**. That's the one connected-account event this platform uses, and [webhook.service.ts:113](packages/backend/src/services/webhook.service.ts#L113) explains why it matters:
+
+> *"the only prompt we get — without acting on it a club stays marked as unable to take payments until somebody happens to open the settings screen."*
+
+So this is very likely the same root cause as the `chargesEnabled` problem you hit earlier: the seed created the connected accounts, Stripe activated them, and nothing ever told your database.
+
+## What it does *not* block
+
+Your four `payment_intent.*` events. Those are **destination charges** — the PaymentIntent is created on the platform account, so those events fire on your account and are delivered regardless of Connect setup.
+
+Which gives a useful split:
+
+- **No events at all arriving** → not this. That's test/live mode or the URL, and this message is a red herring.
+- **`payment_intent.*` arriving but clubs stuck as unable to take payments** → exactly this.
+
+## After you complete it
+
+There's no replay of events missed while it was inert, so re-sync once:
+
+```bash
+echo "select name, settings->'stripeConnect'->>'accountId' as account_id,
+             settings->'stripeConnect'->>'chargesEnabled' as charges
+      from organizations order by name;" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+If `charges` is still false with a valid `acct_…`, re-running the seed reset will recreate the accounts and pick up the fresh `account.updated` events now that delivery works.
+
+One thing I can't verify from here: whether an incomplete platform profile also prevented `accounts.create` from succeeding in the first place. If `account_id` comes back null for every club even with `STRIPE_SECRET_KEY` set, that's the answer — and completing the profile then re-seeding fixes both at once.
+
+---
+
+
+## 2026-08-18 17:03:27 — Prompt
+
+withi the stripe cli, how can I delete a local listener
+
+### Assistant
+
+Stripe CLI 1.45.1 is here, so let me check the actual commands rather than guess:
+
+There's no dedicated "delete listener" command — a local listener is just a webhook endpoint, so you remove it like any other.
+
+**Stop the process first.** `stripe listen` registers the listener while it runs and deregisters on exit, so `Ctrl-C` in that terminal is usually all it takes. If it's orphaned:
+
+```bash
+pkill -f "stripe listen"
+```
+
+**Then remove any stale entry.** Find it and delete it by id:
+
+```bash
+stripe webhook_endpoints list
+stripe webhook_endpoints delete we_xxxxxxxxxxxx
+```
+
+Both take `--api-key sk_test_…` if you'd rather not rely on the stored login. Or do it in the Dashboard: **Developers → Webhooks**, test mode on, find it under **Local listeners**, delete.
+
+I'd flag one thing, though. A local listener isn't what your itsps.org setup needs, and having one around can mislead you:
+
+- `stripe listen` mints **its own** `whsec_…`, unrelated to `STRIPE_WEBHOOK_SECRET` in `.env.deploy`. Events it forwards to the deployed endpoint would be rejected as invalid signatures.
+- It forwards to a **local** address. It can't deliver to `https://itsps.org` in any useful way.
+
+For the deployed instance you want the ordinary endpoint you've already created at `https://itsps.org/api/webhooks/stripe`, and nothing running locally. The CLI is still useful read-only:
+
+```bash
+stripe events tail          # watch what Stripe is emitting, forwards nothing
+stripe trigger payment_intent.succeeded
+```
+
+`stripe trigger` fires a real test event, so it will reach your deployed endpoint through the configured webhook and is a clean way to prove delivery works independently of a checkout.
+
+Note your CLI is 1.45.1 and 1.50.1 is out — not related to any of this, just what it reported.
+
+---
