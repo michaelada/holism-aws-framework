@@ -11432,3 +11432,226 @@ git push
 ```
 
 ---
+
+
+## 2026-08-18 09:20:55 — Prompt
+
+The command finishes with errors, below is the output:
+
+
+sh-5.2$ cd /opt/holism && sudo ./scripts/deploy/update.sh
+
+==> Fetching main
+remote: Enumerating objects: 21, done.
+remote: Counting objects: 100% (21/21), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 11 (delta 8), reused 11 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (11/11), 2.65 KiB | 100.00 KiB/s, done.
+From https://github.com/michaelada/holism-aws-framework
+ * branch            main       -> FETCH_HEAD
+HEAD is now at 2312458 fixing build issues
+  now at 2312458 — fixing build issues
+
+==> Rebuilding
+[+] Building 10.0s (23/36)                                                                                              
+ => [internal] load local bake definitions                                                                         0.0s
+ => => reading from stdin 1.06kB                                                                                   0.0s
+ => [backend internal] load build definition from Dockerfile                                                       0.0s
+ => => transferring dockerfile: 1.19kB                                                                             0.0s
+ => [backend internal] load metadata for docker.io/library/node:20-alpine                                          0.2s
+ => [web internal] load build definition from Dockerfile.web                                                       0.0s
+ => => transferring dockerfile: 3.81kB                                                                             0.0s
+ => [web internal] load metadata for docker.io/library/nginx:alpine                                                0.2s
+ => [backend internal] load .dockerignore                                                                          0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => [web internal] load .dockerignore                                                                              0.0s
+ => => transferring context: 1.52kB                                                                                0.0s
+ => [backend internal] load build context                                                                          0.0s
+ => => transferring context: 49.35kB                                                                               0.0s
+ => [web base 1/7] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0f  0.0s
+ => [web internal] load build context                                                                              0.1s
+ => => transferring context: 203.81kB                                                                              0.1s
+ => [web stage-1 1/7] FROM docker.io/library/nginx:alpine@sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3a  0.0s
+ => CACHED [backend production 2/6] WORKDIR /app                                                                   0.0s
+ => CACHED [backend production 3/6] COPY package*.json ./                                                          0.0s
+ => ERROR [backend production 4/6] RUN npm ci --only=production                                                    9.4s
+ => CACHED [backend base 2/7] RUN apk add --no-cache python3 make g++                                              0.0s
+ => CACHED [backend base 3/7] WORKDIR /app                                                                         0.0s
+ => CACHED [backend base 4/7] COPY package*.json ./                                                                0.0s
+ => CANCELED [backend base 5/7] RUN npm install                                                                    9.5s
+ => CACHED [web stage-1 2/7] COPY infrastructure/nginx/deploy.conf /etc/nginx/conf.d/default.conf                  0.0s
+ => CACHED [web build 2/9] WORKDIR /src                                                                            0.0s
+ => CACHED [web build 3/9] COPY package.json package-lock.json ./                                                  0.0s
+ => CACHED [web build 4/9] COPY packages ./packages                                                                0.0s
+ => CANCELED [web build 5/9] RUN npm ci --no-audit --no-fund                                                       9.6s
+------
+ > [backend production 4/6] RUN npm ci --only=production:
+0.791 npm warn config only Use `--omit=dev` to omit dev dependencies from the install.
+9.183 npm error code EUSAGE
+9.184 npm error
+9.184 npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+9.184 npm error
+9.184 npm error Missing: @aws-sdk/client-ses@3.1112.0 from lock file
+9.184 npm error Missing: @types/cookie-parser@1.4.10 from lock file
+9.184 npm error Missing: @types/validator@13.15.10 from lock file
+9.184 npm error Missing: cookie-parser@1.4.7 from lock file
+9.184 npm error Missing: isomorphic-dompurify@2.36.0 from lock file
+9.184 npm error Missing: stripe@22.5.0 from lock file
+9.184 npm error Invalid: lock file's @aws-sdk/core@3.973.8 does not satisfy @aws-sdk/core@3.977.8
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-node@3.972.7 does not satisfy @aws-sdk/credential-provider-node@3.972.80
+9.184 npm error Invalid: lock file's @aws-sdk/types@3.973.1 does not satisfy @aws-sdk/types@3.974.4
+9.184 npm error Invalid: lock file's @smithy/core@3.23.0 does not satisfy @smithy/core@3.33.2
+9.184 npm error Invalid: lock file's @smithy/fetch-http-handler@5.3.9 does not satisfy @smithy/fetch-http-handler@5.7.2
+9.184 npm error Invalid: lock file's @smithy/node-http-handler@4.4.10 does not satisfy @smithy/node-http-handler@4.11.2
+9.184 npm error Invalid: lock file's @smithy/types@4.12.0 does not satisfy @smithy/types@4.17.2
+9.184 npm error Invalid: lock file's @aws-sdk/xml-builder@3.972.4 does not satisfy @aws-sdk/xml-builder@3.972.39
+9.184 npm error Missing: @aws/lambda-invoke-store@0.3.0 from lock file
+9.184 npm error Invalid: lock file's @smithy/signature-v4@5.3.8 does not satisfy @smithy/signature-v4@5.7.2
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-env@3.972.6 does not satisfy @aws-sdk/credential-provider-env@3.972.69
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-http@3.972.8 does not satisfy @aws-sdk/credential-provider-http@3.972.71
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-ini@3.972.6 does not satisfy @aws-sdk/credential-provider-ini@3.973.14
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-process@3.972.6 does not satisfy @aws-sdk/credential-provider-process@3.972.69
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-sso@3.972.6 does not satisfy @aws-sdk/credential-provider-sso@3.973.13
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-web-identity@3.972.6 does not satisfy @aws-sdk/credential-provider-web-identity@3.972.75
+9.184 npm error Invalid: lock file's @smithy/credential-provider-imds@4.2.8 does not satisfy @smithy/credential-provider-imds@4.5.2
+9.184 npm error Invalid: lock file's @aws-sdk/credential-provider-login@3.972.6 does not satisfy @aws-sdk/credential-provider-login@3.972.76
+9.184 npm error Invalid: lock file's @aws-sdk/nested-clients@3.988.0 does not satisfy @aws-sdk/nested-clients@3.997.43
+9.184 npm error Invalid: lock file's @aws-sdk/token-providers@3.988.0 does not satisfy @aws-sdk/token-providers@3.1111.0
+9.184 npm error Missing: @aws-sdk/signature-v4-multi-region@3.996.45 from lock file
+9.184 npm error Missing: cookie-signature@1.0.6 from lock file
+9.184 npm error Missing: dompurify@3.4.13 from lock file
+9.184 npm error Missing: jsdom@28.1.0 from lock file
+9.184 npm error Missing: @types/trusted-types@2.0.7 from lock file
+9.184 npm error Missing: @acemir/cssom@0.9.31 from lock file
+9.184 npm error Missing: @asamuzakjp/dom-selector@6.8.1 from lock file
+9.184 npm error Missing: @bramus/specificity@2.4.2 from lock file
+9.184 npm error Missing: @exodus/bytes@1.15.1 from lock file
+9.184 npm error Missing: cssstyle@6.2.0 from lock file
+9.184 npm error Missing: data-urls@7.0.0 from lock file
+9.184 npm error Missing: decimal.js@10.6.0 from lock file
+9.184 npm error Missing: html-encoding-sniffer@6.0.0 from lock file
+9.184 npm error Missing: http-proxy-agent@7.0.2 from lock file
+9.184 npm error Missing: https-proxy-agent@7.0.6 from lock file
+9.184 npm error Missing: is-potential-custom-element-name@1.0.1 from lock file
+9.184 npm error Missing: parse5@8.0.1 from lock file
+9.184 npm error Missing: saxes@6.0.0 from lock file
+9.184 npm error Missing: symbol-tree@3.2.4 from lock file
+9.184 npm error Missing: tough-cookie@6.0.2 from lock file
+9.184 npm error Missing: undici@7.29.0 from lock file
+9.184 npm error Missing: w3c-xmlserializer@5.0.0 from lock file
+9.184 npm error Missing: webidl-conversions@8.0.1 from lock file
+9.184 npm error Missing: whatwg-mimetype@5.0.0 from lock file
+9.184 npm error Missing: whatwg-url@16.0.1 from lock file
+9.184 npm error Missing: xml-name-validator@5.0.0 from lock file
+9.184 npm error Missing: @asamuzakjp/nwsapi@2.3.9 from lock file
+9.184 npm error Missing: bidi-js@1.0.3 from lock file
+9.184 npm error Missing: css-tree@3.2.1 from lock file
+9.184 npm error Missing: lru-cache@11.5.2 from lock file
+9.184 npm error Missing: require-from-string@2.0.2 from lock file
+9.184 npm error Missing: mdn-data@2.27.1 from lock file
+9.184 npm error Missing: source-map-js@1.2.1 from lock file
+9.184 npm error Missing: @asamuzakjp/css-color@5.1.11 from lock file
+9.184 npm error Missing: @csstools/css-syntax-patches-for-csstree@1.1.8 from lock file
+9.184 npm error Missing: lru-cache@11.5.2 from lock file
+9.184 npm error Missing: @asamuzakjp/generational-cache@1.0.1 from lock file
+9.184 npm error Missing: @csstools/css-calc@3.3.0 from lock file
+9.184 npm error Missing: @csstools/css-parser-algorithms@4.0.0 from lock file
+9.184 npm error Missing: @csstools/css-tokenizer@4.0.0 from lock file
+9.184 npm error Missing: @csstools/css-color-parser@4.2.0 from lock file
+9.184 npm error Missing: @csstools/color-helpers@6.1.1 from lock file
+9.184 npm error Missing: agent-base@7.1.4 from lock file
+9.184 npm error Missing: debug@4.4.3 from lock file
+9.184 npm error Missing: debug@4.4.3 from lock file
+9.184 npm error Missing: entities@8.0.0 from lock file
+9.184 npm error Missing: tldts@7.4.10 from lock file
+9.184 npm error Missing: tldts-core@7.4.10 from lock file
+9.184 npm error Missing: tr46@6.0.0 from lock file
+9.184 npm error Missing: punycode@2.3.1 from lock file
+9.184 npm error Missing: ms@2.1.3 from lock file
+9.184 npm error Missing: ms@2.1.3 from lock file
+9.184 npm error
+9.184 npm error Clean install a project
+9.184 npm error
+9.184 npm error Usage:
+9.184 npm error npm ci
+9.184 npm error
+9.184 npm error Options:
+9.184 npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+9.184 npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+9.184 npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+9.184 npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+9.184 npm error [--no-bin-links] [--no-fund] [--dry-run]
+9.184 npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+9.184 npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+9.184 npm error
+9.184 npm error aliases: clean-install, ic, install-clean, isntall-clean
+9.184 npm error
+9.184 npm error Run "npm help ci" for more info
+9.194 npm notice
+9.194 npm notice New major version of npm available! 10.8.2 -> 12.0.2
+9.194 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+9.194 npm notice To update run: npm install -g npm@12.0.2
+9.194 npm notice
+9.195 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-08-18T08_20_09_723Z-debug-0.log
+------
+[+] build 0/2
+ ⠙ Image holism-web     Building                                                                                   10.1s
+ ⠙ Image holism-backend Building                                                                                   10.1s
+Dockerfile:31
+
+--------------------
+
+  29 |     
+
+  30 |     # Install production dependencies only
+
+  31 | >>> RUN npm ci --only=production
+
+  32 |     
+
+  33 |     # Copy built application from base stage
+
+--------------------
+
+target backend: failed to solve: process "/bin/sh -c npm ci --only=production" did not complete successfully: exit code: 1
+
+### Assistant
+
+That's a stale lockfile — and my earlier check was invalid. Running `npm ci --dry-run` *inside* the workspace uses the **root** lockfile; the Docker build has only `packages/backend` as its context, so it uses the stale one there. I verified the wrong thing.
+
+No workspace siblings, so it can be regenerated standalone. Doing that in an isolated directory so npm can't reach for the root lockfile:
+
+That's the real check — isolated, exactly as the Docker build sees it. Installing it:
+
+Found the root cause. `packages/backend/package.json` **doesn't declare TypeScript at all** — it's been building with 5.9.3 hoisted from the workspace root. Resolved standalone, as Docker does, it pulled **6.0.3**, which turns that deprecation into an error.
+
+5.9.3 — matching what you build with locally. Now the decisive test, the full backend image:
+
+Both images now build, and the backend suite is unaffected — 2902 passing, tsc clean.
+
+## What was actually wrong
+
+Two layered problems, and I got the diagnosis of the first one wrong.
+
+**The backend lockfile was stale** — missing `@aws-sdk/client-ses`, `stripe`, `cookie-parser`, `isomorphic-dompurify`. Nobody maintained it because it was gitignored.
+
+**My verification of it was invalid.** I ran `npm ci --dry-run` *inside* the workspace, where npm walks up and uses the **root** lockfile. The Docker build has only `packages/backend` as its context, so it uses the stale one. I checked the wrong thing and told you it was fine. I've since verified in an isolated directory, which is what the container actually sees.
+
+**Then the deeper one:** `packages/backend/package.json` never declared TypeScript. It's been compiling with 5.9.3 hoisted from the workspace root. Resolved standalone, npm picked **6.0.3**, which turns `moduleResolution: "node"` from a warning into `error TS5107`.
+
+That's the same class of bug as the lockfile: the package builds only because of something outside it. In the workspace that's invisible; in a container it's fatal. TypeScript is now declared at `^5.3.3` and pins to 5.9.3 — the version you actually build and test with.
+
+## To pick it up
+
+```bash
+git add packages/backend/package.json packages/backend/package-lock.json
+git commit -m "fix(backend): declare typescript and refresh the lockfile for standalone builds"
+git push
+cd /opt/holism && sudo ./scripts/deploy/update.sh
+```
+
+---
+
+One thing — **"ips5"** on its own didn't tell me anything I could act on. If that's the name for this instance, say the word and I'll set the `Name` tag (currently `holism-testing`); if it meant something else, let me know.
+
+---
