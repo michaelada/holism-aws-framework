@@ -11039,3 +11039,39 @@ If you rebuild, push these first, since the instance clones from GitHub.
 ## 2026-08-18 08:28:24 — Prompt
 
 I will run tofu apply again
+
+### Assistant
+
+Before you do — let me check whether anything the *instance clones* has changed since the push:
+
+Everything's already pushed and in sync — the remote `user_data.sh` has the buildx fix. **You're clear to apply.**
+
+One thing I want to check, since a commit is titled "storing terraform state":
+
+You're clear to apply. Everything's committed and pushed, and the remote `user_data.sh` has the buildx fix — which matters, because the instance clones from GitHub.
+
+```bash
+cd terraform/environments/testing
+tofu apply
+```
+
+Expect `2 to add, 1 to change, 2 to destroy` — the instance and its EIP association. Your elastic IP is reattached, not reallocated, so `itsps.org` and `www.itsps.org` keep resolving with no DNS change.
+
+Watch it, because a first-boot failure is otherwise silent:
+
+```bash
+aws ssm start-session --target $(tofu output -raw instance_id) --region eu-west-1
+sudo tail -f /var/log/holism-bootstrap.log
+```
+
+Roughly 20 minutes. This time it should install buildx, build the four bundles, run migrations, seed the demo data, and obtain a real certificate without you touching it.
+
+If it stalls again, that same log is where the reason is — both failures so far were plain text in it (`compose build requires buildx…`, `certbot: command not found`).
+
+## Two notes on what you committed
+
+**No secrets in the state file** — I checked all 17 resources. That holds because the GitHub token lives in SSM with only its *name* in Terraform, and the Keycloak and database secrets are generated on the instance. Worth re-checking if you ever add a variable that takes a secret directly, since state stores those in plaintext.
+
+**`.terraform.tfstate.lock.info` is tracked in git.** It's a transient file that exists only during an apply. It isn't on disk now so it won't block you, but if a future `git checkout` restores it you'll get "Error acquiring the state lock" on something that isn't actually locked. Worth `git rm --cached`-ing it and adding to `.gitignore` at some point — not urgent, and I'd leave it until after this apply rather than touch the repo mid-deploy.
+
+---
