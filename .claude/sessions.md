@@ -13177,3 +13177,302 @@ Tests: parametrised over both spellings of the base in each package; I confirmed
 Same deployment path as before — these need pushing, then `sudo ./scripts/deploy/update.sh` on the instance.
 
 ---
+
+
+## 2026-08-18 14:38:19 — Prompt
+
+When it login to tsps.org/orgadmin it works, however I am seeing a lot of 404 errors in the console log because localhost is still being used in certain cases, for example:
+
+http://localhost:3000/api/orgadmin/organisations/d92186c3-b34b-4117-8df7-9da5eea568d1/discounts/6eda9aa6-c35b-49b8-93cd-015e75e1d1df?organisationId=d92186c3-b34b-4117-8df7-9da5eea568d1
+http://localhost:3000/api/orgadmin/organisations/d92186c3-b34b-4117-8df7-9da5eea568d1/discounts/ee73662f-e459-4724-877d-b7cf8603ec81?organisationId=d92186c3-b34b-4117-8df7-9da5eea568d1
+
+
+I am also getting a 500 error for the url: https://itsps.org/api/user-preferences/onboarding
+
+I also clicked edit Discount, and got a 403 forbidden of the following url:
+https://itsps.org/api/orgadmin/organisations/d92186c3-b34b-4117-8df7-9da5eea568d1/discounts/0dd4261d-36b1-4851-a0f1-d2ba2b32d525?organisationId=d92186c3-b34b-4117-8df7-9da5eea568d1
+
+### Assistant
+
+Three separate things. Let me look at all of them:
+
+Found #1: [discount.service.ts:62](packages/orgadmin-events/src/services/discount.service.ts#L62) reads `VITE_API_URL`, but the build sets `VITE_API_BASE_URL`. Let me check the other two before fixing:
+
+`user_preferences` has no migration at all — that's the 500. Let me confirm, and read the rest of the scope middleware for the 403:
+
+Both tables may be missing. Let me find where these tables are actually created:
+
+Both tables do have migrations, so I was wrong about the cause of the 500. Let me look at the actual handler:
+
+The 500's message is returned in the response body, which helps. Let me check how this service connects — it uses its own pool:
+
+Columns are all correct, so #2 and #3 need server-side evidence. Let me fix what's proven first — the `localhost` one:
+
+Confirmed — `orgadmin-events` is the only package reading `VITE_API_URL`, which the image never sets. Let me see it in context:
+
+All dev servers proxy `/api`, so relative is correct everywhere. Fixing the other two instances of the same fallback:
+
+Now a test for the discount client's base URL:
+
+Now — the 403 refuses **without logging anything** when the resource lookup comes back empty, which is why it's undiagnosable. Let me close that gap:
+
+Those are the known pre-existing `MultiSelectRenderer` / `PHONE` failures — nothing to do with the api client. Now the other two packages:
+
+112 failures there — I need to check whether those pre-date my change rather than assume. Baselining against the original sources:
+
+Baselined: 113 failures before my change, 112 after (my 4 new tests pass; one flaky property test didn't recur). No new failures.
+
+## 1. `localhost:3000` — fixed, cause proven
+
+[discount.service.ts](packages/orgadmin-events/src/services/discount.service.ts#L62) read `import.meta.env.VITE_API_URL || 'http://localhost:3000'`. Nothing sets `VITE_API_URL` — every other client in the repo reads `VITE_API_BASE_URL`, which [Dockerfile.web:44](Dockerfile.web#L44) sets to `""` so requests stay same-origin. So the discount screens alone told your browser to call port 3000 **on your own machine**.
+
+It survived because it's correct on a dev machine, where something usually is listening there.
+
+Now `VITE_API_URL || VITE_API_BASE_URL || ''`. I swept for the same pattern and fixed two more: [components/src/api/client.ts](packages/components/src/api/client.ts#L131) (used by the metadata hooks) and [frontend/src/App.tsx](packages/frontend/src/App.tsx#L36). All four dev servers proxy `/api`, so relative is right in development too.
+
+Four tests; I confirmed three fail against the old line.
+
+## 2 & 3 — not diagnosed, and I won't guess
+
+I checked the obvious candidates and ruled them out: `user_onboarding_preferences` and `discounts` both have migrations, both have the column names the code expects, and the preferences service uses the shared pool, so it isn't a connection problem.
+
+What I did fix is that **the 403 was untraceable**. In [organisation-scope.middleware.ts](packages/backend/src/middleware/organisation-scope.middleware.ts), when the resource lookup returns nothing the request is refused with no log at all — deliberate for the response (so the endpoint can't be used to probe which ids exist), but it meant "no such row" and "another club's row" were indistinguishable in the log too. Both now log distinctly. Two tests.
+
+To actually resolve these, on the instance:
+
+```bash
+cd /opt/holism
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+
+# 3 — is the discount there, and whose is it?
+$C exec postgres psql -U "$DATABASE_USER" -d "$DATABASE_NAME" -c \
+  "select id, organisation_id from discounts where id='0dd4261d-36b1-4851-a0f1-d2ba2b32d525';"
+
+# 2 — the real error behind the 500
+$C logs backend --tail 200 | grep -A5 "onboarding preferences"
+```
+
+For the 500 you can also just read the response body in the Network tab — that route returns the underlying `error.message` verbatim.
+
+If the discount row's `organisation_id` is `d92186c3…`, the refusal is the membership check and I'll look there next; if the row is missing or the org differs, the list and the detail fetch disagree and the bug is upstream.
+
+Same deployment path: push, then `sudo ./scripts/deploy/update.sh`.
+
+---
+
+
+## 2026-08-18 14:53:12 — Prompt
+
+those first commands failed with open /opt/holism/.env.deploy: permission denied and other pemrission errors
+
+### Assistant
+
+`.env.deploy` is `chmod 600` and root-owned — it holds every generated secret, so that's working as intended. Two consequences: you need `sudo`, and `$DATABASE_USER`/`$DATABASE_NAME` were never set in your shell because they live in that unreadable file.
+
+You can sidestep it entirely — the postgres container already carries its own credentials in its environment, so `docker exec` needs no env file at all:
+
+```bash
+# 3 — is the discount there, and whose is it?
+echo "select id, organisation_id from discounts where id = '0dd4261d-36b1-4851-a0f1-d2ba2b32d525';" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+```bash
+# 2 — the real error behind the 500
+sudo docker logs --tail 300 "$(sudo docker ps -qf name=backend)" 2>&1 | grep -i -B2 -A8 onboarding
+```
+
+Piping the SQL in through stdin is what keeps the quoting sane — the statement's `'…'` would otherwise collide with the shell quoting around `$POSTGRES_USER`.
+
+If you'd rather stay with compose, every invocation needs `sudo` so root can read the env file:
+
+```bash
+cd /opt/holism
+sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy logs backend --tail 300
+```
+
+While you're there, this is worth knowing whose organisation you're actually in — it tells us whether the 403 is the resource lookup or the membership check:
+
+```bash
+echo "select o.id, o.name from organizations o
+      join organization_users ou on ou.organization_id = o.id
+      where ou.keycloak_user_id = (select keycloak_user_id from organization_users
+                                   where email = 'admin@kildarehunt.test' limit 1)
+        and ou.user_type = 'org-admin';" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+Send me the output of the first two and I'll take it from there. If the discount's `organisation_id` comes back as `d92186c3…` then the row is fine and the refusal is downstream in the membership check; if it's a different org or no row at all, the list and the detail fetch disagree and the bug is upstream of the middleware.
+
+---
+
+
+## 2026-08-18 14:56:13 — Prompt
+
+I am getting the following errors 
+
+PUT https://itsps.org/api/user-preferences/onboarding - gives a 500 (Internal Server Error) 
+
+In the logs I think the error message is as follows:
+
+{"duration":"3ms","environment":"production","level":"info","message":"Request completed","method":"GET","path":"/onboarding","service":"aws-web-framework-backend","statusCode":200,"timestamp":"2026-08-18T13:54:12.094Z","userId":"b00af48d-6dbd-4cad-b0a6-f9b3a45cb030"}
+{"environment":"production","error":"CORS: origin https://itsps.org not allowed","level":"error","message":"Unexpected error","method":"PUT","name":"Error","path":"/api/user-preferences/onboarding","requestId":"req_1787061254419_8v7jdj236","service":"aws-web-framework-backend","stack":"Error: CORS: origin https://itsps.org not allowed\n    at origin (/app/dist/index.js:72:25)\n    at /app/node_modules/cors/lib/index.js:219:13\n    at optionsCallback (/app/node_modules/cors/lib/index.js:199:9)\n    at corsMiddleware (/app/node_modules/cors/lib/index.js:204:7)\n    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)\n    at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)\n    at /app/node_modules/express/lib/router/index.js:286:9\n    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)\n    at next (/app/node_modules/express/lib/router/index.js:280:10)\n    at expressInit (/app/node_modules/express/lib/middleware/init.js:40:5)\n    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)\n    at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)\n    at /app/node_modules/express/lib/router/index.js:286:9\n    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)\n    at next (/app/node_modules/express/lib/router/index.js:280:10)\n    at query (/app/node_modules/express/lib/middleware/query.js:45:5)","timestamp":"2026-08-18T13:54:14.419Z"}
+{"duration":"1ms","environment":"p
+
+### Assistant
+
+That's the answer — and it's bigger than onboarding. Let me look:
+
+Root cause found, and it's not specific to onboarding. `ALLOWED_ORIGINS` is unset in the deployment, so it defaults to `['http://localhost:3000']` and `https://itsps.org` is refused.
+
+The reason only writes fail: browsers omit `Origin` on same-origin **GET**, but send it on PUT/POST/DELETE. `if (!origin) return callback(null, true)` lets every read through — so **every write in every app is currently 500ing**, not just this one.
+
+`www` 301-redirects to the apex, so only `PUBLIC_URL`'s origin needs trusting. Rather than add another variable an operator must remember, let me derive it from the one that already exists:
+
+Your logs confirm it exactly, and they also settle the discount question: the row **does** belong to `d92186c3…`, the same org as the path. So that 403 isn't the scope check — it's the capability check further down the handler.
+
+Let me finish the CORS fix first, then chase that:
+
+That maps `events` discounts to the **`entry-discounts`** capability. And note the list endpoint only runs that check when a `moduleType` filter is passed — which is why the list works and the detail 403s:
+
+`entry-discounts` is a legitimate capability, so the question is just whether that club has it enabled. Let me finish the CORS fix, then give you the query.
+
+Now tests for the origin logic — this is the bug that made the whole site unwritable:
+
+The revert broke compilation (unused function), so that proved nothing. Redoing it properly:
+
+4 fail without the fix, all 19 pass with it. Let me check nothing else depended on the old behaviour:
+
+Now documenting — this one cost the most time to find:
+
+Fixed, tested, documented. Here's where everything stands.
+
+## The 500 — root cause confirmed by your logs
+
+`ALLOWED_ORIGINS` was never set in the deployment, so [allowed-origins.ts](packages/backend/src/utils/allowed-origins.ts) fell back to `['http://localhost:3000']` and the site **refused its own origin**.
+
+This is much wider than onboarding. Browsers omit `Origin` on a same-origin GET and send it on PUT/POST/DELETE — which is exactly the pattern in your logs: every GET 200, every PUT 500. The site has been fully readable and **completely unwritable** in every app. The same list also governs the open-redirect check, so email and payment return links were affected too.
+
+Rather than add another variable to remember, `allowedOrigins()` now always includes the origin of `PUBLIC_URL`, which the deployment already sets everywhere. `ALLOWED_ORIGINS` remains for trusting anything *else*. `PUBLIC_URL` and `ALLOWED_ORIGINS` are now passed to the backend in [docker-compose.deploy.yml](docker-compose.deploy.yml).
+
+I also made a refused origin a `ForbiddenError` → **403 naming the origin**, instead of the bare `Error` that surfaced as `"Unexpected error"` / 500. Still refused rather than merely un-headered — `callback(null, false)` would let the write execute and only block the browser from reading the response.
+
+7 new tests; I confirmed 4 fail against the old code. 392 backend util/middleware tests pass.
+
+Note this can't be hot-patched by editing `.env.deploy` alone — the old compose file doesn't pass the variable through to the container, and the backend source changed. It needs push + `sudo ./scripts/deploy/update.sh`.
+
+## The discount 403 — your query ruled out my first theory
+
+The row belongs to `d92186c3…`, the same org as the path, so the scope middleware isn't refusing it. The refusal is further down the handler: [discount.routes.ts:24](packages/backend/src/routes/discount.routes.ts#L24) maps an `events` discount to the **`entry-discounts`** capability and runs a capability check after fetching the row. The list endpoint only runs that check when a `moduleType` filter is passed — which is precisely why the list works and the detail doesn't.
+
+```bash
+echo "select o.name, o.enabled_capabilities from organizations o
+      where o.id = 'd92186c3-b34b-4117-8df7-9da5eea568d1';
+      select id, module_type from discounts
+      where id = '0dd4261d-36b1-4851-a0f1-d2ba2b32d525';" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+If `enabled_capabilities` lacks `entry-discounts` while `module_type` is `events`, that's the whole answer and the fix is seed/capability data, not code. I'll wait for that before changing anything there.
+
+I haven't touched git — push, then `sudo ./scripts/deploy/update.sh`.
+
+---
+
+
+## 2026-08-18 15:08:29 — Prompt
+
+sh-5.2$ echo "select o.name, o.enabled_capabilities from organizations o
+      where o.id = 'd92186c3-b34b-4117-8df7-9da5eea568d1';
+      select id, module_type from discounts
+      where id = '0dd4261d-36b1-4851-a0f1-d2ba2b32d525';" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+          name          |                                                                                       enabled_capabilities                                                                                        
+------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ kildare-hunt-pony-club | ["event-management", "event-types", "venues", "entry-discounts", "memberships", "membership-discounts", "payment-processing", "reporting", "public-search", "document-management", "merchandise"]
+(1 row)
+
+                  id                  | module_type 
+--------------------------------------+-------------
+ 0dd4261d-36b1-4851-a0f1-d2ba2b32d525 | memberships
+(1 row)
+
+### Assistant
+
+The org has `membership-discounts` and the discount **is** a `memberships` discount — so the capability it needs is enabled. My theory was wrong. Let me read what actually runs:
+
+The refusal message would name the capability. Let me see how `req.capabilities` gets populated at that point:
+
+`discount.routes.ts` isn't in that list, so it does have `mergeParams`. Let me confirm and check the dual mount:
+
+`mergeParams` is set — so that's not it either. But look at the mount-order comment: the **bare mount is registered first**. Let me check what that route actually is:
+
+**Found it.** The bare mount is registered first, and this route:
+
+```
+/organisations/:organisationId/discounts/:moduleType
+```
+
+matches your URL `/api/orgadmin/organisations/d92186c3…/discounts/0dd4261d…` with **`moduleType = "0dd4261d-36b1-4851-a0f1-d2ba2b32d525"`**. It's declared before `/discounts/:id`, so it wins. Then `getCapabilityForModule` returns `undefined` for that "module", and `requireCapability(undefined)` can never match → 403.
+
+The same mount-ordering fix that repaired `/discounts/events` created this. Let me verify the collision and check Express's version:
+
+Reproduced exactly — the id is read as a module type. Let me verify the fix works before applying it:
+
+That's the fix. Applying it:
+
+A thrown `BadRequestError` would be swallowed by the handlers' `catch` and become a 500. Let me check:
+
+15 catch blocks all collapse to 500, so throwing there would swap one wrong code for another. The only user-supplied module type left after the route constraint is the query parameter, so let me validate it explicitly there:
+
+The create route takes `moduleType` from the body and only checks it's present. Let me make that a proper 400, and keep the lookup's throw for genuinely corrupt stored data:
+
+Now a test that pins the routing collision, since that's the actual bug:
+
+All pass, including the one that keeps the regression executable. Let me check whether other dual-mounted routers have the same collision:
+
+No other router has that shape. Let me run the broader backend suite to check for regressions:
+
+Your query disproved my theory and pointed at the real cause. The capability *was* enabled — the request was never reaching the route I assumed.
+
+## The 403: a route collision, not a permissions problem
+
+`discount.routes.ts` declares its own scoped path:
+
+```
+/organisations/:organisationId/discounts/:moduleType
+```
+
+The routers are mounted twice with the **bare mount first** — the ordering I added earlier to fix `/discounts/events`. So your URL `.../organisations/d92186c3…/discounts/0dd4261d…` matched that route on the bare mount, binding the **discount id to `moduleType`**. I reproduced it in isolation:
+
+```
+{"matched":"moduleType","value":"0dd4261d-36b1-4851-a0f1-d2ba2b32d525"}
+```
+
+`getCapabilityForModule("0dd4261d…")` then returned `undefined`, and `requireCapability(undefined)` refused a capability it couldn't name — the message would have read `Access denied. Required capability: ` with nothing after the colon.
+
+This also explains the asymmetry you saw: the list route has `organisationId` in its *own* path, so it was never ambiguous.
+
+Fixed by constraining the parameter to the five module names, so a uuid falls through to `/discounts/:id`. Verified all six cases route correctly. I also made `getCapabilityForModule` throw instead of returning `undefined`, and gave the create route a real 400 for an unknown `moduleType` in the body rather than letting it become a 500.
+
+I swept the other 13 dual-mounted routers for the same shape — **none have it**.
+
+8 tests, including one that keeps the broken form executable so the collision can't silently return. 539 backend route/middleware/util tests pass.
+
+## Where the three issues stand
+
+| | |
+|---|---|
+| `localhost:3000` 404s | fixed — `VITE_API_URL` was never set |
+| PUT → 500 | fixed — deployment refused its own origin; **all writes everywhere** were failing |
+| Edit discount → 403 | fixed — route collision binding the id as a module type |
+
+One correction to what I told you earlier: I said the 403 was "the capability check further down the handler". It was a capability check, but in a different handler than I named — the request never reached `/discounts/:id`.
+
+Still needs push, then `sudo ./scripts/deploy/update.sh`. The CORS fix can't be applied by editing `.env.deploy` alone — the deployed compose file doesn't pass the variable into the container.
+
+---

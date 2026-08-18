@@ -7,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 import { db } from './database/pool';
 import { logger } from './config/logger';
 import { secretsManager } from './config/secrets';
+import { ForbiddenError } from './middleware/errors';
 import {
   errorHandler,
   requestLogger,
@@ -74,7 +75,24 @@ app.use(cors({
     if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost')) {
       return callback(null, true);
     }
-    return callback(new Error(`CORS: origin ${origin} not allowed`));
+    /*
+     * A refusal, not a fault. Thrown as a plain Error this became a 500
+     * "Unexpected error", which is what made the real cause invisible: the
+     * deployment refused its own origin, every write in every application
+     * failed, and the browser saw a server error with no explanation. A 403
+     * naming the origin says what happened.
+     *
+     * Still refused rather than merely un-headered. `callback(null, false)`
+     * would let the request reach the handler and be executed — the browser
+     * would block only the *response*, so a cross-site write would already
+     * have happened.
+     */
+    logger.warn('Refused a request from an untrusted origin', {
+      origin,
+      allowedOrigins,
+      hint: 'Set PUBLIC_URL to the origin this deployment is served from.',
+    });
+    return callback(new ForbiddenError(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

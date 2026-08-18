@@ -59,7 +59,24 @@ class DiscountService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+      /*
+       * Relative by default, so calls go to whatever origin served the app.
+       *
+       * This read `VITE_API_URL || 'http://localhost:3000'`, and nothing sets
+       * `VITE_API_URL` — every other client in the repo uses
+       * `VITE_API_BASE_URL`, which the deployment build defines as the empty
+       * string precisely so requests stay same-origin. So these screens alone
+       * addressed `http://localhost:3000` from a browser on itsps.org: every
+       * discount request failed, visibly in the console and silently in the UI,
+       * while everything around them worked.
+       *
+       * An absolute default cannot be right here. There is no fallback host
+       * that is correct in production, and a relative base is already correct
+       * in development, where the Vite dev server proxies `/api` to the
+       * backend. `VITE_API_URL` stays honoured for anyone who sets it.
+       */
+      baseURL:
+        import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '',
       headers: {
         'Content-Type': 'application/json',
       },

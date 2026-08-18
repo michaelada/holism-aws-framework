@@ -8,13 +8,51 @@
  * cannot see.
  */
 
-/** `ALLOWED_ORIGINS`, comma-separated. */
+/**
+ * The origin this deployment is served from, taken from `PUBLIC_URL`.
+ *
+ * Always trusted, and not something an operator should have to remember to
+ * repeat: the browser is *on* this origin, so refusing it refuses the
+ * application itself.
+ */
+function ownOrigin(): string | null {
+  const publicUrl = process.env.PUBLIC_URL;
+  if (!publicUrl) return null;
+  try {
+    return new URL(publicUrl).origin;
+  } catch {
+    // Misconfigured rather than absent. Fall back to the explicit list.
+    return null;
+  }
+}
+
+/**
+ * `ALLOWED_ORIGINS`, comma-separated, plus the deployment's own origin.
+ *
+ * Deriving the latter is what stops the failure this was written for. Only
+ * `PUBLIC_URL` was set on the single-instance deployment, so this returned the
+ * `http://localhost:3000` fallback and every request carrying an `Origin`
+ * header was refused — which meant **every write in every application**, while
+ * reads kept working, because browsers omit `Origin` on a same-origin GET but
+ * send it on PUT, POST and DELETE.
+ *
+ * That asymmetry is why it looked like a bug in one endpoint. It was not: the
+ * site was readable and entirely unwritable, and the only clue was a 500 whose
+ * message never reached the browser.
+ *
+ * `ALLOWED_ORIGINS` remains the way to trust anything *else* — a separately
+ * hosted front end, another domain pointed at the same API.
+ */
 export function allowedOrigins(): string[] {
-  return (
+  const configured =
     process.env.ALLOWED_ORIGINS?.split(',')
       .map((origin) => origin.trim())
-      .filter(Boolean) || ['http://localhost:3000']
-  );
+      .filter(Boolean) ?? [];
+
+  const own = ownOrigin();
+  const origins = own && !configured.includes(own) ? [...configured, own] : configured;
+
+  return origins.length > 0 ? origins : ['http://localhost:3000'];
 }
 
 /**

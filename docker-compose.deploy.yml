@@ -106,6 +106,14 @@ services:
 
       # Reached over the internal network, so no TLS hop and no dependency on
       # the public name resolving from inside the box.
+      # Where the browser is. CORS and the open-redirect check both trust this
+      # origin — without it the site is readable and completely unwritable,
+      # because browsers send `Origin` on PUT/POST/DELETE but not on a
+      # same-origin GET. Add anything *else* you want trusted to
+      # ALLOWED_ORIGINS.
+      PUBLIC_URL: ${PUBLIC_URL}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+
       KEYCLOAK_URL: http://keycloak:8080/auth
       # ...but tokens are issued to a browser, so they claim the *public* name.
       # Verifying `iss` against the internal URL rejects every one of them: the

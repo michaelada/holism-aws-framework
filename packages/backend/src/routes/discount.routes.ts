@@ -21,15 +21,59 @@ import { ModuleType } from '../types/discount.types';
 const router = Router({ mergeParams: true });
 
 // Helper function to get capability based on module type
+const CAPABILITY_BY_MODULE: Record<ModuleType, string> = {
+  events: 'entry-discounts',
+  memberships: 'membership-discounts',
+  calendar: 'calendar-discounts',
+  merchandise: 'merchandise-discounts',
+  registrations: 'registration-discounts',
+};
+
+/**
+ * The module names a discount can belong to, as a routing pattern.
+ *
+ * `:moduleType` **must** be constrained to these. Unconstrained it also matches
+ * a discount id, and this router is mounted twice — so
+ *
+ *   /api/orgadmin/organisations/:organisationId/discounts/:id
+ *
+ * arriving at the bare `/api/orgadmin` mount matched
+ * `/organisations/:organisationId/discounts/:moduleType` with the *id* as the
+ * module. `getCapabilityForModule` then returned `undefined` for it and the
+ * request was refused with "Access denied. Required capability: " — a 403 that
+ * named nothing, on a discount the caller was perfectly entitled to read.
+ *
+ * The bare mount is registered first on purpose (see index.ts), so this route
+ * gets first refusal on that URL and the collision is decided here.
+ */
+const MODULE_TYPE_PATTERN = Object.keys(CAPABILITY_BY_MODULE).join('|');
+
+/** Whether a client-supplied value names a module discounts can belong to. */
+function isModuleType(value: unknown): value is ModuleType {
+  return typeof value === 'string' && Object.hasOwn(CAPABILITY_BY_MODULE, value);
+}
+
+/**
+ * The capability a discount in this module requires.
+ *
+ * Throws rather than returning `undefined`. The previous lookup returned
+ * `undefined` for an unrecognised module, and that flowed into
+ * `requireCapability(undefined)`, which no capability can satisfy — producing
+ * "Access denied. Required capability: " with nothing after the colon. The
+ * request read as forbidden when it was nothing of the kind.
+ *
+ * Every caller now passes either a route parameter constrained to
+ * `MODULE_TYPE_PATTERN` or a value already checked by `isModuleType`, so
+ * reaching this throw means a stored discount holds a module the code does not
+ * know. That is a server-side fault and the surrounding handler is right to
+ * answer 500 — what it must not do is answer 403.
+ */
 function getCapabilityForModule(moduleType: ModuleType): string {
-  const capabilityMap: Record<ModuleType, string> = {
-    events: 'entry-discounts',
-    memberships: 'membership-discounts',
-    calendar: 'calendar-discounts',
-    merchandise: 'merchandise-discounts',
-    registrations: 'registration-discounts',
-  };
-  return capabilityMap[moduleType];
+  const capability = CAPABILITY_BY_MODULE[moduleType];
+  if (!capability) {
+    throw new Error(`Discount module type "${moduleType}" has no capability mapping`);
+  }
+  return capability;
 }
 
 /**
@@ -62,7 +106,7 @@ router.get(
  * Get discounts for a specific module type
  */
 router.get(
-  '/organisations/:organisationId/discounts/:moduleType',
+  `/organisations/:organisationId/discounts/:moduleType(${MODULE_TYPE_PATTERN})`,
   authenticateToken(),
   async (req: Request, res: Response) => {
     try {
@@ -111,6 +155,14 @@ router.post(
 
       if (!moduleType) {
         return res.status(400).json({ error: 'Module type is required' });
+      }
+
+      // Checked here rather than left to the capability lookup, which would
+      // throw and be answered as a 500 for what is a malformed request.
+      if (!isModuleType(moduleType)) {
+        return res.status(400).json({
+          error: `Module type must be one of: ${MODULE_TYPE_PATTERN}`,
+        });
       }
 
       // Check capability for this module

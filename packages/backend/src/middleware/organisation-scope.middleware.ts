@@ -148,8 +148,33 @@ export function scopeToOrganisation(source: OrganisationSource) {
       switch (source.from) {
         case 'resource': {
           const id = (req.params as Record<string, string>)?.[source.param];
-          if (!id) return void refuse(res);
+          if (!id) {
+            logger.warn('Refused a request whose path carries no resource id to scope by', {
+              kind: source.kind,
+              param: source.param,
+              path: req.originalUrl,
+            });
+            return void refuse(res);
+          }
           organisationId = await ownerOf(source.kind, id);
+          /*
+           * A resource that does not exist is refused rather than reported as
+           * missing, so this cannot be used to discover which ids are real.
+           *
+           * That is the right response and a poor diagnosis: "no such row" and
+           * "belongs to another club" become the same opaque 403, with nothing
+           * in the log to tell them apart. Say which it was here — the client
+           * still learns nothing.
+           */
+          if (!organisationId) {
+            logger.warn('Refused a request for a resource that no organisation owns', {
+              kind: source.kind,
+              resourceId: id,
+              keycloakUserId: req.user.userId,
+              path: req.originalUrl,
+            });
+            return void refuse(res);
+          }
           break;
         }
         case 'param':

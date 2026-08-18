@@ -127,10 +127,18 @@ export class ApiClient {
   }
 }
 
-// Default API client instance
-// Use environment variable or fallback to localhost:3000
+/*
+ * Default API client instance.
+ *
+ * Relative when nothing overrides it, so requests go to whatever origin served
+ * the page. The previous fallback was `http://localhost:3000`, which is wrong
+ * anywhere the app is actually deployed — a browser on itsps.org was told to
+ * call a port on the *user's own machine*, so every request failed while the
+ * rest of the page worked. There is no absolute default that could be right;
+ * relative already is, because each dev server proxies `/api` to the backend.
+ */
 const defaultBaseUrl = typeof window !== 'undefined' && (window as any).__API_BASE_URL__
   ? (window as any).__API_BASE_URL__
-  : 'http://localhost:3000';
+  : '';
 
 export const defaultApiClient = new ApiClient(defaultBaseUrl);

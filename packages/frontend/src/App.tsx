@@ -32,11 +32,14 @@ const customTheme = createTheme({
 function AppContent() {
   const { getToken, logout, userName } = useAuth();
 
-  // Memoize apiBaseURL to prevent unnecessary re-renders
-  const apiBaseURL = useMemo(() => 
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
-    []
-  );
+  /*
+   * Memoised to prevent unnecessary re-renders.
+   *
+   * Empty means relative, which is what the deployment build sets and what the
+   * dev server's `/api` proxy expects. The old `|| 'http://localhost:3000'`
+   * fallback pointed a deployed browser at a port on its own machine.
+   */
+  const apiBaseURL = useMemo(() => import.meta.env.VITE_API_BASE_URL || '', []);
 
   return (
     <ApiProvider

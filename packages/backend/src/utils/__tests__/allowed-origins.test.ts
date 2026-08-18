@@ -2,6 +2,13 @@ import { allowedOrigins, isAllowedOrigin, isAllowedRedirectUrl } from '../allowe
 
 const ORIGINAL = { ...process.env };
 
+beforeEach(() => {
+  // Both are read by `allowedOrigins`; leaving either set makes the case under
+  // test depend on the machine it runs on.
+  delete process.env.ALLOWED_ORIGINS;
+  delete process.env.PUBLIC_URL;
+});
+
 afterEach(() => {
   process.env = { ...ORIGINAL };
 });
@@ -18,8 +25,69 @@ describe('allowedOrigins', () => {
   });
 
   it('falls back when nothing is configured', () => {
-    delete process.env.ALLOWED_ORIGINS;
     expect(allowedOrigins()).toEqual(['http://localhost:3000']);
+  });
+
+  /*
+   * The deployment sets PUBLIC_URL and nothing else, so before this the list
+   * was the localhost fallback and the site refused its own origin.
+   *
+   * The damage was hidden by which requests carry an `Origin` header at all:
+   * browsers omit it on a same-origin GET and send it on PUT, POST and DELETE.
+   * So every page loaded and nothing could be saved — and the refusal surfaced
+   * as a 500 whose message never left the server.
+   */
+  describe('the deployment’s own origin', () => {
+    it('is trusted without having to be listed twice', () => {
+      process.env.PUBLIC_URL = 'https://itsps.org';
+
+      expect(allowedOrigins()).toContain('https://itsps.org');
+    });
+
+    it('is the origin only — a path in PUBLIC_URL must not leak into it', () => {
+      process.env.PUBLIC_URL = 'https://itsps.org/orgadmin';
+
+      // An Origin header is scheme+host+port and never carries a path, so a
+      // list entry with one could never match anything.
+      expect(allowedOrigins()).toEqual(['https://itsps.org']);
+    });
+
+    it('joins anything else the operator has listed', () => {
+      process.env.PUBLIC_URL = 'https://itsps.org';
+      process.env.ALLOWED_ORIGINS = 'https://admin.example.test';
+
+      expect(allowedOrigins()).toEqual([
+        'https://admin.example.test',
+        'https://itsps.org',
+      ]);
+    });
+
+    it('is not repeated when the operator has listed it as well', () => {
+      process.env.PUBLIC_URL = 'https://itsps.org';
+      process.env.ALLOWED_ORIGINS = 'https://itsps.org';
+
+      expect(allowedOrigins()).toEqual(['https://itsps.org']);
+    });
+
+    it('is ignored when PUBLIC_URL is not a URL, rather than poisoning the list', () => {
+      process.env.PUBLIC_URL = 'itsps.org';
+      process.env.ALLOWED_ORIGINS = 'https://admin.example.test';
+
+      expect(allowedOrigins()).toEqual(['https://admin.example.test']);
+    });
+
+    it('lets the browser write, which is the whole point', () => {
+      process.env.PUBLIC_URL = 'https://itsps.org';
+
+      // The exact refusal from the deployed logs.
+      expect(isAllowedOrigin('https://itsps.org')).toBe(true);
+    });
+
+    it('still refuses an origin nobody configured', () => {
+      process.env.PUBLIC_URL = 'https://itsps.org';
+
+      expect(isAllowedOrigin('https://not-itsps.org')).toBe(false);
+    });
   });
 });
 

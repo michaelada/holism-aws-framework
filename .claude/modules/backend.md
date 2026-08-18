@@ -96,6 +96,24 @@ same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/A
 | `request-logger.middleware`, `metrics.middleware` | Observability |
 | `error-handler.middleware`, `errors.ts` | Typed errors → HTTP responses |
 
+**Dual mounting makes a `:param` in the last segment ambiguous.** Every data router is mounted at
+both `/api/orgadmin` and `/api/orgadmin/organisations/:organisationId`, bare first. A router that
+also declares its own `/organisations/:organisationId/<thing>/:something` therefore matches the
+*scoped* form of `/<thing>/:id` on the bare mount, binding the id to the wrong parameter. That is
+what made `GET .../discounts/:id` answer 403 on a discount the caller owned: it reached
+`/discounts/:moduleType` with a uuid as the module, so the capability lookup returned `undefined`
+and `requireCapability(undefined)` refused a capability it could not name. Constrain such a
+parameter to its known values — `:moduleType(events|memberships|…)` — and never let a capability
+lookup return `undefined`. `discount-route-collision.test.ts` pins both halves.
+
+**The trusted-origin list comes from `PUBLIC_URL`, not only `ALLOWED_ORIGINS`.** `utils/allowed-origins`
+is the single definition used by both CORS and the open-redirect check. It always includes the origin
+of `PUBLIC_URL`, because the browser is on that origin and refusing it refuses the application;
+`ALLOWED_ORIGINS` adds anything else. Getting this wrong is not obviously fatal — browsers omit
+`Origin` on a same-origin GET and send it on PUT/POST/DELETE, so the symptom is a site that reads
+perfectly and cannot save anything. A refused origin is a `ForbiddenError` (403) naming the origin,
+not the bare `Error` that used to surface as an opaque 500.
+
 **Token validation reads two Keycloak addresses, and behind a proxy they differ.** `KEYCLOAK_URL` is
 how this process *reaches* Keycloak, and is what the signing keys are fetched from.
 `KEYCLOAK_ISSUER_URL` is what a valid token must claim in `iss` — the hostname the **browser** used.

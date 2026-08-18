@@ -6,6 +6,8 @@ import { db } from '../../database/pool';
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 
+import { logger } from '../../config/logger';
+
 const mockDb = db as jest.Mocked<typeof db>;
 
 /**
@@ -85,6 +87,39 @@ describe('scoping an org-admin request to an organisation', () => {
       expect(res.json).toHaveBeenCalledWith({
         error: { code: 'FORBIDDEN', message: 'You do not administer this organisation' },
       });
+    });
+
+    /*
+     * Identical responses are correct and made the two cases indistinguishable
+     * from outside *and* from the log, which turned a real 403 on the deployed
+     * site into a dead end. The client still learns nothing; the operator can
+     * now tell "no such row" from "another club's row".
+     */
+    it('records which of the two refusals it was, since the response cannot', async () => {
+      owns(null);
+      req.params = { id: '33333333-3333-4333-8333-333333333333' };
+
+      await byResource('discount', 'id')(req as OrganisationRequest, res as Response, next);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Refused a request for a resource that no organisation owns',
+        expect.objectContaining({
+          kind: 'discount',
+          resourceId: '33333333-3333-4333-8333-333333333333',
+        })
+      );
+    });
+
+    it('distinguishes that from a resource owned by another organisation', async () => {
+      owns(THEIRS, false);
+      req.params = { id: RESOURCE };
+
+      await byResource('discount', 'id')(req as OrganisationRequest, res as Response, next);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Refused an org-admin request for an organisation the caller does not administer',
+        expect.objectContaining({ organisationId: THEIRS })
+      );
     });
 
     it('refuses a malformed id without reaching the database', async () => {

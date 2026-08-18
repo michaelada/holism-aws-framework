@@ -214,6 +214,20 @@ KEYCLOAK_ISSUER_URL: ${PUBLIC_URL}/auth          # what the token will claim
 `KEYCLOAK_ISSUER_URL` defaults to `KEYCLOAK_URL`, so development — where the two
 genuinely are the same — needs nothing set.
 
+**The site can be perfectly readable and completely unwritable.** CORS decides
+this, and it fails asymmetrically: browsers omit the `Origin` header on a
+same-origin GET but send it on PUT, POST and DELETE. So an origin the API does
+not trust gives you an application where every page loads, nothing saves, and
+the only evidence is a 500 on the server whose message never reaches the
+browser.
+
+That is what happened here. Only `PUBLIC_URL` was set, `ALLOWED_ORIGINS` was
+not, so the allowlist was its `http://localhost:3000` default and the deployment
+refused *its own origin*. The backend now derives the origin from `PUBLIC_URL`
+and always trusts it — `ALLOWED_ORIGINS` is for trusting anything **else**. The
+same list governs the open-redirect check, so this broke email and payment
+return links too.
+
 **Nothing is served from the root, so no asset may be referenced from it.** Each
 app sits under a prefix. Vite rewrites absolute paths in `index.html` — which is
 why favicons work and mask the problem — but not string literals in components,
