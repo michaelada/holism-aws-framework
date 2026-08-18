@@ -16,7 +16,7 @@ extra_domains = ["www.itsps.org"]
 
 ses_from_email = "info@eskersoft.com"
 
-repository_url = "https://github.com/YOUR-ORG/YOUR-REPO.git"
+repository_url = "https://github.com/michaelada/holism-aws-framework.git"
 branch         = "main"
 
 # Private repository.

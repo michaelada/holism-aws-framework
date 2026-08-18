@@ -10732,3 +10732,117 @@ The instance writes `.deploy-source` at first boot recording the parameter *name
 Still true from before: **none of this is committed yet**, so a clone would get a repo without any of the deployment files. That's the one thing standing between you and an apply. Want me to commit and push it? I'd need you to say so explicitly — and tell me whether it goes on `main` or a branch.
 
 ---
+
+
+## 2026-08-18 07:46:21 — Prompt
+
+I just commited the changes, but push them to github seems to be failing, can you investigate.
+
+### Assistant
+
+Let me look — read-only first.
+
+Found it — and it's my fault. Let me confirm the details:
+
+Found it, and it's my doing.
+
+## The cause
+
+Your commits contain a **649 MB file**:
+
+```
+terraform/environments/testing/.terraform/providers/.../terraform-provider-aws   648.93 MB
+```
+
+GitHub rejects any single file over **100 MB**, outright — so the push fails no matter how many times you retry.
+
+That directory exists because **I ran `tofu init` in `terraform/environments/testing`** to validate the config I wrote. It downloaded the AWS provider binary into `.terraform/`, and I never added `.terraform/` to `.gitignore` — so your `git add` swept it up. The other environments were never `init`ed locally, which is why the repo has never hit this before.
+
+It's in both unpushed commits (`0a199c9` and `04ed6bc`), so it needs the commits rewritten rather than a new commit on top — deleting it in a third commit leaves the blob in history and the push still fails.
+
+Nothing is pushed yet, so rewriting is clean.
+
+## The fix
+
+```bash
+cd /Users/michaeladams/Work/Esker/Development/AI/Holism
+
+# 1. Ignore it. Note .terraform.lock.hcl is deliberately NOT ignored —
+#    it pins provider versions and belongs in the repo.
+cat >> .gitignore <<'EOF'
+
+# OpenTofu/Terraform working directory — provider binaries, hundreds of MB
+.terraform/
+EOF
+
+# 2. Undo the two commits, keeping all your work staged
+git reset --soft origin/main
+
+# 3. Drop the provider directory from the index (it stays on disk)
+git rm -r --cached --quiet terraform/environments/testing/.terraform
+
+# 4. Recommit and push
+git add .gitignore
+git commit -m "feat(deploy): single-instance AWS test deployment"
+git push
+```
+
+That collapses your two commits into one. If you'd rather keep them separate, `git reset --mixed origin/main` instead and stage in two batches — more fiddly, same outcome.
+
+Afterwards `git count-objects -vH` will still show the big blob locally; it's unreferenced and won't be pushed. `git gc --prune=now` reclaims the disk when you care.
+
+**Want me to run this?** I haven't, since it rewrites history — your call, and I'd want you to confirm given step 2 moves your branch pointer.
+
+One thing worth checking while you're there: `git ls-files | grep -c '\.terraform/'` should return `0` before you push.
+
+---
+
+
+## 2026-08-18 07:48:18 — Prompt
+
+yes run this please
+
+### Assistant
+
+Running it. First, a recovery point in case anything goes wrong:
+
+Expected — `.gitignore` doesn't apply to already-tracked files. That resolves once they're untracked. Now the reset:
+
+Clean. Now the commit — let me check what's actually in it so the message is accurate:
+
+Pushed. `main` is at `bd9deb1` and in sync with `origin/main`.
+
+```
+d242a85..bd9deb1  main -> main
+```
+
+## What I did
+
+Added `.terraform/` to `.gitignore` (keeping `.terraform.lock.hcl`, which pins provider versions and belongs in the repo), soft-reset to `origin/main`, dropped the five `.terraform` files from the index, and recommitted. Your two commits are now one — `git reset --hard 04ed6bcd` still recovers the originals from the reflog if you want them back.
+
+The 649 MB provider binary is **still on disk**, so `tofu` keeps working without re-downloading; it's just untracked now.
+
+## Verified on the remote
+
+All nine deployment files are there — `Dockerfile.web`, the compose file, both deploy scripts, the nginx config, the realm import, `.dockerignore`, and the Terraform. So are the three code changes the deployment depends on: the two router basenames and the CORS fix.
+
+And nothing sensitive went up: `.env.deploy` and the rendered realm are both absent from `origin/main`, as intended.
+
+Largest object in the push was 0.68 MB.
+
+## Two things left before you apply
+
+**`repository_url` in `terraform.tfvars` is a placeholder** — `https://github.com/YOUR-ORG/YOUR-REPO.git`. Yours is `https://github.com/michaelada/holism-aws-framework.git`.
+
+**The SSM parameter needs creating**, since the repo is private:
+
+```bash
+aws ssm put-parameter --name /holism/testing/github-token \
+  --type SecureString --value ghp_xxx --region eu-west-1
+```
+
+A fine-grained token with `Contents: Read-only` on that one repo is enough.
+
+Your local `.claude/sessions.md` edit is still uncommitted — I left it alone, as it wasn't part of this.
+
+---
