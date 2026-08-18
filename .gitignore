@@ -1,6 +1,20 @@
 # Dependencies
 node_modules/
-package-lock.json
+
+# Lockfiles are NOT ignored, and this matters.
+#
+# They were, and it broke deployment: the instance clones this repository and
+# builds from source, so a lockfile that exists only on a developer's machine
+# is a lockfile the build cannot see. `npm ci` — used by both images — requires
+# one and fails outright without it.
+#
+# Committing them is also the point of having them. An application's build
+# should resolve the same dependency versions everywhere; ignoring the lockfile
+# means the deployed bundle can be built from different packages than the ones
+# that were tested. (Libraries sometimes omit them. This is not a library.)
+#
+# yarn/pnpm stay ignored — this workspace uses npm, and a stray lockfile from
+# another package manager would only confuse.
 yarn.lock
 pnpm-lock.yaml
 

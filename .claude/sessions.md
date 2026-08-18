@@ -11172,3 +11172,209 @@ Nothing on the current box is worth keeping; it never got past package installs.
 I'd rather this had gone differently — that's the third AL2023 assumption I got wrong in this script (certbot packaging, buildx presence, and now this). The pinned version removes the whole class: no discovery, no fallback, no pipeline.
 
 ---
+
+
+## 2026-08-18 09:08:51 — Prompt
+
+It looks like it failed again, at a later stage, the tail end of the log file is as follows:
+
+
+Cloning into '/opt/holism'...
++ echo 'Cloned the private repository; the token is not stored on disk.'
+Cloned the private repository; the token is not stored on disk.
++ mkdir -p /etc/nginx/tls
++ '[' '!' -f /etc/nginx/tls/fullchain.pem ']'
++ openssl req -x509 -nodes -newkey rsa:2048 -days 365 -keyout /etc/nginx/tls/privkey.pem -out /etc/nginx/tls/fullchain.pem -subj /CN=itsps.org
+..+..................+++++++++++++++++++++++++++++++++++++++*..+.....+................+.........+..+....+.........+++++++++++++++++++++++++++++++++++++++*.+......+.....+.+...+..+....+....................+.+.....+.+........+....+...+..................+..............+...+..........+...+..+...+.........+.+.....+......+.+...+..+...+.+........+.......+...+......+..............+...+....+...+......+..............+...............+.+...........+.+...+.....+................+.........+.....+....+..+...+...+....+...+........+....+...............+......+..+.+.....+......+.+.....+....++++++
+....+...+.........+...+++++++++++++++++++++++++++++++++++++++*...+.........+...+...............+.....+.+++++++++++++++++++++++++++++++++++++++*.....+...........+...+......+.......+..+.......+......+...+.....+....+..+.+..+.+...........+.........+.........+...+...+......+.+..+......+.+...........+...++++++
+-----
++ ALL_NAMES='itsps.org www.itsps.org'
++ cat
++ '[' -n www.itsps.org ']'
++ cat
++ cat
++ mkdir -p /var/www/certbot
++ rm -f /etc/nginx/conf.d/default.conf
++ systemctl enable --now nginx
+Created symlink /etc/systemd/system/multi-user.target.wants/nginx.service → /usr/lib/systemd/system/nginx.service.
++ cat
++ chown ec2-user:ec2-user /opt/holism/.deploy-source
++ cd /opt/holism
++ WEB_PUBLISH=127.0.0.1:8080
++ PUBLIC_URL=https://itsps.org
++ PUBLIC_HOST=itsps.org
++ SES_FROM_EMAIL=info@eskersoft.com
++ AWS_REGION=eu-west-1
++ SEED_DEMO_DATA=true
++ ./scripts/deploy/bootstrap.sh
+
+==> Checking prerequisites
+
+==> Creating /opt/holism/.env.deploy
+  secrets generated; /opt/holism/.env.deploy is readable only by root
+
+==> Rendering the Keycloak realm
+  rendered for https://itsps.org
+
+==> Building images (a few minutes on a small instance)
+ Image holism-backend Building 
+ Image holism-web Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.06kB done
+#1 DONE 0.0s
+
+#2 [web internal] load build definition from Dockerfile.web
+#2 transferring dockerfile: 3.81kB done
+#2 DONE 0.0s
+
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.19kB done
+#3 DONE 0.0s
+
+#4 [web internal] load metadata for docker.io/library/node:20-alpine
+#4 DONE 0.9s
+
+#5 [web internal] load metadata for docker.io/library/nginx:alpine
+#5 DONE 0.9s
+
+#6 [backend internal] load .dockerignore
+#6 transferring context: 2B done
+#6 DONE 0.0s
+
+#7 [web internal] load .dockerignore
+#7 transferring context: 1.52kB done
+#7 DONE 0.0s
+
+#8 [web base 1/7] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#8 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+#8 sha256:bda5d7ef971f8ede8ea80002d2ac886ef6807fe32cfe46c38704a7ba0429475d 0B / 43.55MB 0.1s
+#8 sha256:13e45b12880fbbfe3554ecf6b70131ace701d0c2fd3e2fb9abb842ba2494cd40 0B / 1.26MB 0.1s
+#8 sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 7.67kB / 7.67kB done
+#8 sha256:d63c387675b0ec5d7ef0c15b03691ac9f82803a8b30c87de3ce8a16960831cbc 1.72kB / 1.72kB done
+#8 sha256:cd266ddf7e80183cbac3cb23b49e90ab83a06f14f95d28681d8468f89dc00615 6.54kB / 6.54kB done
+#8 sha256:d17f077ada118cc762df373ff803592abf2dfa3ddafaa7381e364dd27a88fca7 0B / 4.20MB 0.1s
+#8 sha256:13e45b12880fbbfe3554ecf6b70131ace701d0c2fd3e2fb9abb842ba2494cd40 1.26MB / 1.26MB 0.1s done
+#8 sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 7.67kB / 7.67kB done
+#8 sha256:d63c387675b0ec5d7ef0c15b03691ac9f82803a8b30c87de3ce8a16960831cbc 1.72kB / 1.72kB done
+#8 sha256:cd266ddf7e80183cbac3cb23b49e90ab83a06f14f95d28681d8468f89dc00615 6.54kB / 6.54kB done
+#8 sha256:d17f077ada118cc762df373ff803592abf2dfa3ddafaa7381e364dd27a88fca7 1.05MB / 4.20MB 0.2s
+#8 sha256:cd322d0ddd02673e6c24a2158d1f12f6ec7c6fd9c0dc67123244d0f0eb0f8806 0B / 443B 0.2s
+#8 sha256:bda5d7ef971f8ede8ea80002d2ac886ef6807fe32cfe46c38704a7ba0429475d 17.83MB / 43.55MB 0.3s
+#8 sha256:13e45b12880fbbfe3554ecf6b70131ace701d0c2fd3e2fb9abb842ba2494cd40 1.26MB / 1.26MB 0.1s done
+#8 sha256:d17f077ada118cc762df373ff803592abf2dfa3ddafaa7381e364dd27a88fca7 4.20MB / 4.20MB 0.2s done
+#8 extracting sha256:d17f077ada118cc762df373ff803592abf2dfa3ddafaa7381e364dd27a88fca7
+#8 sha256:bda5d7ef971f8ede8ea80002d2ac886ef6807fe32cfe46c38704a7ba0429475d 40.89MB / 43.55MB 0.4s
+#8 sha256:d17f077ada118cc762df373ff803592abf2dfa3ddafaa7381e364dd27a88fca7 4.20MB / 4.20MB 0.2s done
+#8 sha256:cd322d0ddd02673e6c24a2158d1f12f6ec7c6fd9c0dc67123244d0f0eb0f8806 443B / 443B 0.4s done
+#8 ...
+
+#9 [backend internal] load build context
+#9 transferring context: 4.83MB 0.5s done
+#9 DONE 0.5s
+
+#8 [web base 1/7] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#8 sha256:bda5d7ef971f8ede8ea80002d2ac886ef6807fe32cfe46c38704a7ba0429475d 43.55MB / 43.55MB 0.5s
+#8 sha256:bda5d7ef971f8ede8ea80002d2ac886ef6807fe32cfe46c38704a7ba0429475d 43.55MB / 43.55MB 0.5s done
+#8 ...
+
+#10 [web internal] load build context
+#10 transferring context: 12.03MB 0.7s done
+#10 DONE 0.7s
+
+#11 [web build 2/9] WORKDIR /src
+#11 CACHED
+
+#12 [web build 3/9] COPY package.json package-lock.json ./
+#12 ERROR: failed to calculate checksum of ref 82802f62-a1eb-4420-b35c-862b67237c2e::w1qstm3msh6lm2uvxro344hyh: "/package-lock.json": not found
+
+#13 [web stage-1 1/7] FROM docker.io/library/nginx:alpine@sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752
+#13 resolve docker.io/library/nginx:alpine@sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752 0.1s done
+#13 sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752 10.33kB / 10.33kB done
+#13 sha256:1dd3048a04f4b76ebd706c1bbb9df7d9d53b4f8253b32ce14467088c9b5ada0f 2.50kB / 2.50kB done
+#13 sha256:28c4e91555d001bb0f6b2796e565bfa75302711a0d6e67c5562eb2f7d54d2483 12.34kB / 12.34kB done
+#13 sha256:5de55e5ef9c033997441461efe7ba23a986db059c0bb78b38f84ee0d72b99167 4.18MB / 4.18MB 0.4s done
+#13 sha256:7b1fb50ff9dc606dba8c8c0e8eb4e98c650c5b289506f01724309ebf71a69d45 1.91MB / 1.91MB 0.4s done
+#13 sha256:e42993d4c6ecb26b388e945cbe5f03be1f7858226750c1f8375883db2aae1243 626B / 626B 0.5s done
+#13 extracting sha256:5de55e5ef9c033997441461efe7ba23a986db059c0bb78b38f84ee0d72b99167 0.1s
+#13 sha256:c4a042f5cf717d2e64d2176a41624344a2f1ad0475f6ac6dae092aefbbd07b37 0B / 405B 0.6s
+#13 sha256:d0e9565ba4ff139c848073b3358bb2c9b31a93cb9b744a5b0903b22f5a3ddc0f 956B / 956B 0.6s done
+#13 sha256:e1f13a453c9dd406f331a3efefeb846cd18b068d73177c0d57c6f3d5169eacb4 0B / 1.21kB 0.6s
+#13 sha256:ba4be3b26f08037fa63337d7a425d3253b887bff559447733e71759f65b0f8c8 0B / 1.40kB 0.6s
+#13 ...
+
+#8 [backend base 1/7] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+------
+ > [web build 3/9] COPY package.json package-lock.json ./:
+------
+WARNING: current commit information was not captured by the build: failed to read current commit information with git rev-parse --is-inside-work-tree
+
+Dockerfile.web:32
+
+--------------------
+
+  30 |     # *source* rather than to a built artefact — Vite compiles them as part of each
+
+  31 |     # app. That is also why nothing here runs a package build first.
+
+  32 | >>> COPY package.json package-lock.json ./
+
+  33 |     COPY packages ./packages
+
+  34 |     
+
+--------------------
+
+target web: failed to solve: failed to compute cache key: failed to calculate checksum of ref 82802f62-a1eb-4420-b35c-862b67237c2e::w1qstm3msh6lm2uvxro344hyh: "/package-lock.json": not found
+
+### Assistant
+
+Found it: **`package-lock.json` is gitignored** (`.gitignore` line 3), so it's not in the repo and the instance's clone doesn't have it. It builds on your machine because the file is there locally.
+
+This will bite twice — the backend image also runs `npm ci`, which *requires* a lockfile:
+
+Both lockfiles are needed — the backend image builds from `packages/backend` and runs `npm ci` there too. Ignoring lockfiles is the root cause:
+
+Let me verify `npm ci` will actually succeed with these lockfiles before you spend another 20 minutes finding out on the instance:
+
+Both lockfiles resolve cleanly. Let me confirm the whole web build works from a *clean* context, the way the instance sees it:
+
+Verified from a clone-equivalent context — the image builds, all four bundles present. That's the failure reproduced and fixed before you spend another 20 minutes on it.
+
+## What went wrong
+
+`package-lock.json` was **gitignored** — `.gitignore` line 3, along with `yarn.lock` and `pnpm-lock.yaml`. So it exists on your machine and not in the repo, and the instance clones the repo. `COPY package.json package-lock.json ./` had nothing to copy.
+
+It would have failed twice: the backend image runs `npm ci --only=production`, which also requires a lockfile. You'd have fixed `web` and hit the same thing again.
+
+I should have caught this. I tested the image build locally, where the file is present — the whole point of the clone-equivalent test I just ran.
+
+## The fix
+
+Lockfiles are no longer ignored. I've left the reasoning in `.gitignore` because someone will be tempted to re-add it:
+
+> An application's build should resolve the same dependency versions everywhere; ignoring the lockfile means the deployed bundle can be built from different packages than the ones that were tested. (Libraries sometimes omit them. This is not a library.)
+
+`yarn.lock` and `pnpm-lock.yaml` stay ignored — this is an npm workspace, and a stray lockfile from another manager only confuses.
+
+I checked both lockfiles resolve cleanly against their `package.json` before relying on them: root is `up to date`, backend's production install resolves too. `npm ci` is strict about that, so a drifted lockfile would have been a third failure.
+
+## Next
+
+```bash
+git add .gitignore package-lock.json packages/backend/package-lock.json
+git commit -m "fix(deploy): commit lockfiles — npm ci needs them and the instance builds from a clone"
+git push
+cd terraform/environments/testing && tofu apply
+```
+
+About 1.4 MB of lockfile. You may also want `packages/admin/` and `packages/orgadmin-memberships/` — they have their own lockfiles too, though nothing in the deployment builds from those directories, so they're not blocking.
+
+This `apply` won't replace the instance: `user_data.sh` hasn't changed since the last one, so there's nothing to force a rebuild. You'll want to re-run the bootstrap on the existing box instead:
+
+```bash
+cd /opt/holism && sudo git pull && sudo ./scripts/deploy/bootstrap.sh
+```
+
+Except `git pull` won't work there — the remote is stored without credentials on purpose. Use `sudo ./scripts/deploy/update.sh`, which fetches the token from SSM and does the pull, rebuild, migrate and restart in one go.
+
+---
