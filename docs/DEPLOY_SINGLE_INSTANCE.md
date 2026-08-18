@@ -83,6 +83,22 @@ cd /opt/holism && ./scripts/deploy/update.sh
 That rebuilds, migrates and restarts. It leaves the database and the Keycloak
 realm alone.
 
+## Test the first-boot script before applying
+
+```bash
+./scripts/deploy/test-user-data.sh
+```
+
+Renders the Terraform template and runs it inside `amazonlinux:2023` **with no
+`HOME`**, exactly as cloud-init does, stubbing only what cannot run in a
+container. It asserts the script completes, that the certificate is obtained
+*before* the build, and that a failed certificate does not stop the deployment.
+
+Worth the thirty seconds: five separate first-boot failures reached a real
+instance before this existed, each costing a rebuild and twice a Let's Encrypt
+certificate. Its own header lists what it does not cover — chiefly anything
+inside `bootstrap.sh`, which `docker build` is the check for.
+
 ## Deploying
 
 ```bash

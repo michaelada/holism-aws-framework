@@ -29,16 +29,17 @@ die() { printf '\033[31m\n  ✖ %s\n\n\033[0m' "$*" >&2; exit 1; }
 # Git refuses to touch a repository owned by somebody else — and this one is
 # owned by ec2-user while this script is normally run with sudo, so every git
 # command here would fail with "detected dubious ownership". Declaring it safe
-# is the documented fix.
+# is the documented fix. `--system` rather than `--global`, so it works whether
+# or not HOME is set — cloud-init sets none, and that broke a boot.
 #
 # Written without a pipeline on purpose. `git config --get-all` exits non-zero
 # when the key is unset, and `grep -q` closes the pipe early; under
 # `set -e`/`pipefail` that combination is exactly what killed a boot earlier in
 # this deployment. A variable and a `case` cannot fail.
-SAFE_DIRS="$(git config --global --get-all safe.directory 2>/dev/null || true)"
+SAFE_DIRS="$(git config --system --get-all safe.directory 2>/dev/null || true)"
 case "$SAFE_DIRS" in
   *"$ROOT"*) ;;
-  *) git config --global --add safe.directory "$ROOT" ;;
+  *) git config --system --add safe.directory "$ROOT" ;;
 esac
 
 # ---------------------------------------------------------------------------

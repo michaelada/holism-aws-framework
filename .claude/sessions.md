@@ -12114,3 +12114,379 @@ git push
 ```
 
 ---
+
+
+## 2026-08-18 10:12:11 — Prompt
+
+what do I need to do now to deploy these fixes
+
+### Assistant
+
+Only `sessions.md` is uncommitted — you've already committed the rest. Let me confirm it's pushed:
+
+All four fixes are already on `origin/main` (metadata count of `0` is right — the entry is gone). Nothing to push.
+
+So it's all on the instance side. One block:
+
+````
+sudo bash -s <<'EOF'
+set -e
+cd /opt/holism
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+
+# 1. Pull the fixes, rebuild, restart. `up -d` recreates Keycloak because its
+#    environment changed (KC_PROXY), and rebuilds web for the landing page.
+./scripts/deploy/update.sh
+
+# 2. The rendered realm must stay readable by Keycloak (uid 1000, gid 0)
+chmod 640 infrastructure/keycloak/realm-import.rendered.json
+$C up -d --force-recreate keycloak
+
+echo "waiting for Keycloak..."
+for i in $(seq 1 60); do curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1 && break || true; sleep 3; done
+
+# 3. Login themes. The realm was imported before they were in the import file,
+#    so they go on through the admin API rather than a re-import.
+set -a; . ./.env.deploy; set +a
+TOKEN=$(curl -s -X POST "http://127.0.0.1:8080/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
+  -d grant_type=client_credentials -d client_id=aws-framework-service-account \
+  -d client_secret="${KEYCLOAK_SERVICE_ACCOUNT_SECRET}" \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+
+set_theme () {
+  ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
+    "http://127.0.0.1:8080/auth/admin/realms/${KEYCLOAK_REALM}/clients?clientId=$1" \
+    | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d[0]["id"] if d else "")')
+  [ -n "$ID" ] || { echo "  !! $1 not found"; return; }
+  curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    "http://127.0.0.1:8080/auth/admin/realms/${KEYCLOAK_REALM}/clients/$ID" \
+    -d "{\"clientId\":\"$1\",\"attributes\":{\"login_theme\":\"$2\"}}"
+  echo "  $1 -> $2"
+}
+set_theme aws-framework-admin    super-admin
+set_theme orgadmin-client        org-admin
+set_theme account-app            account-user
+set_theme aws-framework-frontend aws-framework
+
+# 4. Seed — this is why no clubs are listed
+$C --profile tools run --rm tools npm run seed:demo -- --reset --no-stripe
+
+echo "done"
+EOF
+````
+
+Then check from your laptop that the port is gone from the issuer — that's the one that mattered:
+
+```
+curl -s https://itsps.org/auth/realms/aws-framework/.well-known/openid-configuration \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["issuer"])'
+```
+
+It should read `https://itsps.org/auth/realms/aws-framework` with **no `:8443`**. If it still shows the port, Keycloak didn't pick up `KC_PROXY` and nothing else will work.
+
+**No `tofu apply`.** The Terraform changes (certbot ordering, systemd timer) only affect a future rebuild, and applying now would destroy this instance.
+
+---
+
+
+## 2026-08-18 10:14:28 — Prompt
+
+I get the following with that last command:
+
+PRI00001:.ssh michaeladams$ curl -s https://itsps.org/auth/realms/aws-framework/.well-known/openid-configuration \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["issuer"])'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import sys,json;print(json.load(sys.stdin)["issuer"])
+                          ~~~~~~~~~^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+PRI00001:.ssh michaeladams$
+
+### Assistant
+
+Empty or non-JSON response — Keycloak is likely down again. Let me look at the raw response and the container:
+
+That was a timing issue — Keycloak was mid-restart when you ran it. **It's correct now:**
+
+```
+"issuer":"https://itsps.org/auth/realms/aws-framework"
+```
+
+No `:8443`. The `KC_PROXY` fix worked. Let me verify the rest end to end:
+
+Three of four are done. Login themes are on — "Sign in to ItsPlainSailing" is your theme; Keycloak's default says "Sign in to your account". But **the seed still hasn't run**. Let me find out why:
+
+The seed has now run — that output is it completing successfully. Let me confirm from outside:
+
+All four are fixed and verified from outside.
+
+| | |
+|---|---|
+| **Club Administration blank** | Fixed — issuer is now `https://itsps.org/auth/...` with no `:8443` |
+| **Default Keycloak theme** | Fixed — all three clients return *"Sign in to ItsPlainSailing"* (Keycloak's default says "Sign in to your account") |
+| **No clubs listed** | Fixed — Kildare, Laois, Meath and Ward Union are in the directory |
+| **Metadata repository** | Removed from the landing page |
+
+The seed hadn't run when you executed the block — it ran just now as part of my diagnostic, and completed: four clubs with events, memberships, bookings, a shop, registrations, tickets and discounts.
+
+Your earlier `curl` failing was just timing: Keycloak was still restarting, nginx returned a 502 page, and `json.load` choked on HTML.
+
+## Try it now
+
+- **https://itsps.org/account/** — the four clubs should be listed
+- **https://itsps.org/orgadmin/** — should redirect to a themed login instead of hanging
+- **https://itsps.org/admin/** — themed login
+
+Seeded password is `Passw0rd!`. Sign in to org-admin as **`admin@kildarehunt.test`** — that account administers two clubs, so you'll see the organisation switcher in the top bar, and switching to Laois should change the available modules.
+
+## The cause worth remembering
+
+`KC_PROXY_HEADERS` is Keycloak 24+; you're on 23.0, where it's `KC_PROXY`. Keycloak didn't complain — it just logged `Proxied: false` and invented a URL on port 8443. The application looked broken while the configuration was the problem, which is why the browser console had nothing useful in it.
+
+All the fixes are on `origin/main`, so a future rebuild picks them up. One thing still only in your working tree: `.claude/sessions.md`.
+
+---
+
+
+## 2026-08-18 10:20:12 — Prompt
+
+I still don't see the ItsPlainSailing theme when redirected to Keycloak, and ging to https://itsps.org/orgadmin/ still does not work, I am having the same problem.
+
+### Assistant
+
+My theme check was wrong — "Sign in to ItsPlainSailing" comes from the realm's `displayName`, which I set, not from the theme. Let me check properly:
+
+Serving `/login/**keycloak**/` — the default theme. So `login_theme` didn't take. Let me check both the attribute and whether Keycloak can even see the themes:
+
+Themes are mounted and complete, but the client has **no `login_theme` attribute** — only `post.logout.redirect.uris`. So that step never applied. Let me do it properly, merging rather than replacing (a bare PUT would wipe the logout URIs):
+
+JSON-encoding collapsed it to one line with literal `\n`. Base64 avoids the quoting entirely:
+
+All four themes set, and the redirect URIs survived the merge. Let me confirm the login page actually changed, then dig into orgadmin:
+
+Theme fixed — now `/login/org-admin/`. orgadmin's HTML and assets are all 200, so it's failing at runtime. Let me check what's baked into the bundle:
+
+Both bundles carry identical, correct Keycloak config — so that's not it. One more possibility worth ruling out:
+
+orgadmin loads translations via a **dynamic import** — a separate chunk fetched at runtime. If that 404s, i18n never initialises and `App` returns `null`: a blank screen with no redirect. Let me check:
+
+Everything orgadmin needs is serving correctly — HTML, JS, CSS, the locale chunks, and the API returning a clean `401` rather than a 502.
+
+## Where things stand
+
+| | |
+|---|---|
+| **Theme** | **Fixed** — now serving `/auth/resources/…/login/**org-admin**/` |
+| **Keycloak issuer** | Fixed — no `:8443` |
+| **Clubs** | Seeded — four in the directory |
+| **Metadata entry** | Removed |
+
+The theme genuinely wasn't applied when you last looked: the client had no `login_theme` attribute at all, only `post.logout.redirect.uris`. The earlier attempt hadn't taken. I've now set all four through the admin API, merging into the full client representation — a bare `PUT` of just the attribute would have wiped the redirect URIs, which is presumably what a naive retry would have done. Redirect URIs verified intact afterwards.
+
+My earlier "themes are on" claim was wrong, and I should have caught it: I checked the page *title*, which reads "Sign in to ItsPlainSailing" because I set the realm's `displayName` — nothing to do with the theme. The resource paths are the real test.
+
+## orgadmin
+
+I can't find anything broken server-side. Your last test was before both the issuer and theme fixes landed, so **please try https://itsps.org/orgadmin/ again** — ideally in a private window, since a stale Keycloak session or a cached redirect from the `:8443` era could keep reproducing the old failure.
+
+If it's still blank, the thing I need is the browser's **Network** tab rather than the console — specifically whether a request goes out to `/auth/realms/aws-framework/protocol/openid-connect/auth` at all, and what any red entries say. A blank screen with a silent failure points at i18n: orgadmin gates all rendering on `initializeI18n` resolving, so a rejected locale chunk would look exactly like this. The chunks serve fine when I fetch them, so if it is that, the failure is happening somewhere I can't see from outside.
+
+---
+
+
+## 2026-08-18 10:27:20 — Prompt
+
+Would it be a better idea to run tofu apply again, I don't mind if it takes time ?
+
+### Assistant
+
+Yes — I think it's the better move, for a reason beyond convenience.
+
+Let me verify everything needed is actually on `origin/main` first:
+
+Everything's on `origin/main`, and the certificate step is now at line 249 — before the bootstrap at 326.
+
+**Yes, rebuild.** The reason isn't time, it's that your current box has been hand-patched six ways — certbot installed manually, `KC_PROXY` applied by restart, themes set through the admin API, the seed run separately, permissions fixed by hand. It works, but **nothing has ever proved the code produces a working system unattended.** That's the actual deliverable, and a rebuild is the only way to find out.
+
+It also gets you a realm imported *with* the login themes already in it, rather than patched in afterwards.
+
+```bash
+cd terraform/environments/testing
+tofu apply
+```
+
+Expect `2 to add, 2 to destroy` — the instance and its EIP association. Your elastic IP reattaches, so DNS is untouched.
+
+## What to watch
+
+```bash
+aws ssm start-session --target $(tofu output -raw instance_id) --region eu-west-1
+sudo tail -f /var/log/holism-bootstrap.log
+```
+
+The sequence should now be: packages → compose + buildx (with `docker buildx version` printed) → clone → nginx → **certificate** → build → migrate → seed. If it stops early, that log says where — every failure so far has been plain text in it.
+
+## Two things worth knowing
+
+**Let's Encrypt allows 5 identical certificates per week.** You've used one. This rebuild makes two. Not a concern now, but if you end up rebuilding repeatedly today, you could hit it — and the symptom is a self-signed certificate with a rate-limit message in the log.
+
+**Test orgadmin first on the rebuilt box, in a private window.** If it works, it was residue from the `:8443` era. If it's blank again on a completely fresh instance, that's genuinely useful — it rules out accumulated state and means something real in the build, and the Network tab will tell us which request never completes.
+
+Afterwards you shouldn't need any manual steps at all. If you do, that's a bug in the code and I'd want to fix it there rather than on the box.
+
+---
+
+
+## 2026-08-18 10:35:54 — Prompt
+
+I got the following error on the server when I tailed the log file:
+
+
+aws_instance.main: Creation complete after 13s [id=i-0a8a1369c282b3d1c]
+aws_eip_association.existing[0]: Creating...
+aws_eip_association.existing[0]: Creation complete after 1s [id=eipassoc-0dfd64ce40277b768]
+
+Apply complete! Resources: 2 added, 0 changed, 2 destroyed.
+
+Outputs:
+
+estimated_monthly_cost = {
+  "instance" = "t4g.medium"
+  "note" = "t4g.medium ~$27, t4g.small ~$13, plus ~$2.60 disk and ~$3.60 for the elastic IP"
+  "when_stopped" = "~$6/month — the volume and the address only"
+}
+instance_id = "i-0a8a1369c282b3d1c"
+public_ip = "63.32.80.204"
+shell_command = "aws ssm start-session --target i-0a8a1369c282b3d1c --region eu-west-1"
+urls = {
+  "club_admin" = "https://itsps.org/orgadmin"
+  "keycloak_console" = "https://itsps.org/auth/admin/"
+  "member_portal" = "https://itsps.org/account"
+  "metadata" = "https://itsps.org/metadata"
+  "platform_admin" = "https://itsps.org/admin"
+}
+PRI00001:testing michaeladams$ aws ssm start-session --target $(tofu output -raw instance_id) --region eu-west-1
+
+Starting session with SessionId: root-nt4is3xyb66rb5x6jctzyn2iru
+sh-5.2$ sudo tail -f /var/log/holism-bootstrap.log
++ install -d -o ec2-user -g ec2-user /opt/holism
++ GITHUB_TOKEN_PARAMETER=/holism/testing/github-token
++ REPO_URL=https://github.com/michaelada/holism-aws-framework.git
++ '[' -n /holism/testing/github-token ']'
++ set +x
+Cloning into '/opt/holism'...
++ echo 'Cloned the private repository; the token is not stored on disk.'
+Cloned the private repository; the token is not stored on disk.
++ git config --global --add safe.directory /opt/holism
+fatal: $HOME not set
+
+### Assistant
+
+`fatal: $HOME not set` — cloud-init runs `user_data` with no `HOME`, and `git config --global` needs it to know where to write. My bug.
+
+`--system` needs no `HOME` and covers every user, which is what's wanted here:
+
+Reproduced and fixed: `--global` without `HOME` exits **128**, `--system` exits 1 (key simply unset). That 128 under `set -e` ended the boot.
+
+## What to do
+
+```bash
+git add -A && git commit -m "fix(deploy): git config --system, cloud-init sets no HOME"
+git push
+cd terraform/environments/testing && tofu apply
+```
+
+Another rebuild, since `user_data` changed again.
+
+## Where the boot got to
+
+It cloned the repo and died on the very next line. So that instance has nothing running — no Docker containers, no certificate, no seed. Nothing to preserve.
+
+## One thing to keep an eye on
+
+This will be your **third Let's Encrypt certificate this week** for `itsps.org` + `www.itsps.org`. The limit is 5 identical certificates per week. Two rebuilds left before you'd get a rate-limit message and a self-signed certificate instead — recoverable, but you'd have to wait it out.
+
+If we burn another attempt after this one, I'd suggest temporarily setting `extra_domains = []` and issuing for the apex only, which counts as a different certificate and so has its own allowance.
+
+## On the pattern here
+
+That's five distinct first-boot failures — buildx, lockfiles, TypeScript, cron, and now `HOME` — each found only by running it. They share a shape: the script assumes an environment richer than the one cloud-init actually provides, and `set -e` turns each into a silent stop.
+
+What would have caught them cheaply is running the rendered script in a container that mimics the instance — Amazon Linux, no `HOME`, nothing preinstalled. I can build that as a test if you'd like, so the next change to `user_data` is checked before it costs twenty minutes and a certificate.
+
+---
+
+
+## 2026-08-18 10:38:30 — Prompt
+
+yes please do
+
+### Assistant
+
+Good — a test that would have caught all five. Let me build it to run the *rendered* script inside Amazon Linux with the same impoverished environment cloud-init provides:
+
+The harness is working — it stopped at a gap in my own stub: `dd` doesn't create the swapfile, so `chmod` fails. That's the harness's fault, not the script's:
+
+Now `ec2-user` doesn't exist in the base image — again the harness, not the script. The container needs to look like the AMI:
+
+The fake clone makes a directory but not a repo, so `git remote set-url` fails. Making it a real repo:
+
+The harness has drifted from reality: my `sudo` stub drops the `-u ec2-user`, so root touches a repo owned by ec2-user. Real `sudo` switches user. Making it faithful:
+
+All 11 pass. Now the important question — does it actually *catch* the bug it was built for? Let me reintroduce it:
+
+Confirmed — it fails with exit 128 and names the assertion. Let me be honest in the file about what it can't catch:
+
+Built and proven. `./scripts/deploy/test-user-data.sh` — 11 assertions, ~30 seconds.
+
+It renders the Terraform template and runs the result **inside `amazonlinux:2023` with `HOME` unset**, which is precisely the environment cloud-init provides and the one my script kept assuming was richer.
+
+```
+Rendering the template
+  ✓ template rendered
+  ✓ rendered script is valid bash
+
+Running first boot in amazonlinux:2023 (no HOME)
+  ✓ first boot ran to completion
+
+Checking what it did, and in what order
+  ✓ buildx is verified, not assumed
+  ✓ safe.directory set with --system (works without HOME)
+  ✓ a certificate is requested
+  ✓ the application bootstrap is invoked
+  ✓ certificate obtained BEFORE the build, so a failed build still leaves TLS
+  ✓ buildx is present before anything tries to build
+  ✓ no 'git config --global'
+
+Checking the certificate failure path
+  ✓ a failed certificate is survivable — the application still deploys
+```
+
+**I verified it catches the real bug**: putting `--global` back produces `first boot exited 128` and fails the named assertion. A test that passes both before and after a fix is worthless, so that check mattered more than the green run.
+
+## Two things I got wrong while building it
+
+The stubs kept diverging from reality, and each divergence produced a *false* failure — which is worse than no test. The instructive one: my `sudo` stub ignored `-u ec2-user` and exec'd as root, so the harness reported "detected dubious ownership" for a situation that cannot occur, because the real clone runs as the user who owns the directory. It now switches user properly via `runuser`. Real `git`, `bash` and coreutils are used throughout — stubbing `git config` would have passed the very bug this exists to catch.
+
+## What it deliberately doesn't cover
+
+I've written this into the file's header so a pass isn't mistaken for a guarantee: `bootstrap.sh` is stubbed, so the lockfile and TypeScript failures live beyond its boundary — `docker build` is the check for those. `dnf install` is stubbed, so a package that doesn't exist on Amazon Linux (certbot, cron) still passes; those are now guarded by assertions instead. Nothing is downloaded, so a moved release URL goes unnoticed.
+
+It covers the class that actually kept recurring.
+
+Run it before your next `tofu apply`, along with the `git push` of the `--system` fix.
+
+---

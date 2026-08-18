@@ -120,8 +120,14 @@ fi
 
 # The repository belongs to ec2-user, but bootstrap.sh and update.sh are run
 # with sudo. Git refuses to operate on a repository owned by another user
-# ("detected dubious ownership"), so root is told this one is expected.
-git config --global --add safe.directory /opt/holism
+# ("detected dubious ownership"), so it is told this one is expected.
+#
+# `--system`, not `--global`. cloud-init runs this script with no HOME set, and
+# `git config --global` has nowhere to write without one — it fails with
+# "fatal: $HOME not set" and, under `set -e`, takes the whole boot with it.
+# The system file needs no HOME and covers every user, which is what is wanted:
+# both root and ec2-user touch this repository.
+git config --system --add safe.directory /opt/holism
 
 # ---------------------------------------------------------------------------
 # TLS
