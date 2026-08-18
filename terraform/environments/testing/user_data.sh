@@ -253,11 +253,43 @@ if certbot certonly --webroot -w /var/www/certbot \
   ln -sf "/etc/letsencrypt/live/$PUBLIC_HOST/privkey.pem"   /etc/nginx/tls/privkey.pem
   nginx -t && systemctl reload nginx
 
-  # A pip-installed certbot brings no systemd timer, so renewal is a cron entry.
-  # Twice daily is what certbot recommends; it exits quietly when nothing is
-  # near expiry.
-  echo "0 0,12 * * * root /opt/certbot/bin/certbot renew -q --deploy-hook 'systemctl reload nginx'" \
-    > /etc/cron.d/certbot-renew
+  # Renewal, as a systemd timer.
+  #
+  # Not a cron entry: Amazon Linux 2023 does not install cron at all, so there
+  # is no /etc/cron.d to write into — an earlier version of this script failed
+  # there with "No such file or directory" and left a certificate that would
+  # simply expire in ninety days. systemd is what this distribution actually
+  # has.
+  #
+  # Twice daily is certbot's own recommendation; it exits quietly when nothing
+  # is near expiry. The randomised delay keeps every instance from hitting
+  # Let's Encrypt on the same second.
+  cat > /etc/systemd/system/certbot-renew.service <<'UNIT'
+[Unit]
+Description=Renew Let's Encrypt certificates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/certbot/bin/certbot renew --quiet --deploy-hook "systemctl reload nginx"
+UNIT
+
+  cat > /etc/systemd/system/certbot-renew.timer <<'UNIT'
+[Unit]
+Description=Run certbot renew twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+  systemctl daemon-reload
+  systemctl enable --now certbot-renew.timer
   echo "Certificate obtained for: $CERT_ARGS"
 else
   # Non-fatal on purpose — the application should be up whether or not a

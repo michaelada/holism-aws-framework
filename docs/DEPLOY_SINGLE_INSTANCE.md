@@ -129,9 +129,15 @@ sudo /opt/certbot/bin/pip install --upgrade pip
 sudo /opt/certbot/bin/pip install certbot certbot-nginx
 sudo ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
 
-# and renewal, since a pip install brings no systemd timer
-echo "0 0,12 * * * root /opt/certbot/bin/certbot renew -q --deploy-hook 'systemctl reload nginx'" \
-  | sudo tee /etc/cron.d/certbot-renew
+```
+
+Renewal is a **systemd timer, not a cron entry** — Amazon Linux 2023 does not
+install cron, so there is no `/etc/cron.d` to write into:
+
+```bash
+sudo systemctl enable --now certbot-renew.timer
+systemctl list-timers certbot-renew.timer
+sudo certbot renew --dry-run          # proves renewal works before it matters
 ```
 
 New instances do this themselves.
