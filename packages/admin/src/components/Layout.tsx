@@ -28,6 +28,22 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const RAIL_WIDTH = 248;
 
+/*
+ * This application is not served from the root. It sits under `/admin/` in the
+ * deployment, so a literal `src="/logo.png"` resolves to `https://host/logo.png`
+ * — a 404, and a missing mark in the bar after sign-in.
+ *
+ * Vite rewrites absolute paths it finds in `index.html`, which is why the
+ * favicon is unaffected; it does not rewrite string literals in components.
+ * `BASE_URL` is what the app was built with: `/` in development, `/admin/` once
+ * built with `--base=/admin/`.
+ *
+ * The trailing slash is forced rather than assumed, because `BASE_URL` is that
+ * setting verbatim — a base written without one yields `/adminlogo.png`, a 404
+ * that no test running at the default `/` would show.
+ */
+const LOGO_SRC = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}logo.png`;
+
 interface NavItem {
   label: string;
   path: string;
@@ -111,7 +127,7 @@ export function Layout({ children, onLogout, userName }: LayoutProps) {
           keeps it crisp on 2x displays.
         */}
         <img
-          src="/logo.png"
+          src={LOGO_SRC}
           alt=""
           width={28}
           height={32}
@@ -231,7 +247,7 @@ export function Layout({ children, onLogout, userName }: LayoutProps) {
                   sits beside it here to say the name.
                 */}
                 <img
-                  src="/logo.png"
+                  src={LOGO_SRC}
                   alt="Its Plain Sailing"
                   width={21}
                   height={24}

@@ -111,4 +111,39 @@ describe('Layout branding', () => {
     expect(container.querySelector('img[src="/logo.png"]')).toHaveAttribute('alt', '');
     expect(screen.queryByRole('img', { name: /Its Plain Sailing/ })).not.toBeInTheDocument();
   });
+
+  /*
+   * This application is served from `/admin/`, not from the root. A literal
+   * `src="/logo.png"` therefore 404s in the deployment while working perfectly
+   * everywhere else — which is exactly how it shipped, and why the assertions
+   * above cannot catch it: `BASE_URL` is `/` under Vitest, so both the right
+   * and the wrong implementation produce `/logo.png` there.
+   *
+   * The module has to be re-imported after the stub, because the source is
+   * computed once when it loads.
+   */
+  it.each([
+    ['with a trailing slash', '/admin/'],
+    // `BASE_URL` is the configured `base` verbatim, and two apps in this repo
+    // were written without the slash — which yields `/adminlogo.png`.
+    ['without one', '/admin'],
+  ])('resolves the mark against the base path the app was built for (%s)', async (_name, base) => {
+    vi.resetModules();
+    vi.stubEnv('BASE_URL', base);
+
+    const { Layout: BasedLayout } = await import('../Layout');
+    const { container } = render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <ThemeProvider theme={defaultTheme}>
+          <BasedLayout onLogout={() => {}}>content</BasedLayout>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    expect(container.querySelector('img[src="/admin/logo.png"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src="/logo.png"]')).not.toBeInTheDocument();
+
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
 });

@@ -16,7 +16,11 @@ export default defineConfig({
   ],
   
   // Base path for the application
-  base: '/orgadmin',
+  // Trailing slash required. Vite exposes this verbatim as
+  // `import.meta.env.BASE_URL`, so without it `${BASE_URL}favicon.png`
+  // resolves to `/orgadminfavicon.png` — asset URLs in index.html are joined
+  // correctly either way, which is what hides the mistake.
+  base: '/orgadmin/',
   
   // Path resolution
   resolve: {

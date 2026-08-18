@@ -1,7 +1,20 @@
 import { useEffect } from 'react';
 
-/** What `index.html` ships with, and what we put back on the way out. */
-const DEFAULT_ICON = '/favicon.png';
+/**
+ * What `index.html` ships with, and what we put back on the way out.
+ *
+ * Resolved against `BASE_URL`, because this application is served from
+ * `/account/` rather than the root. Vite rewrites the absolute path in
+ * `index.html` to match, so a literal `/favicon.png` here would not restore
+ * what the page started with — it would 404 and leave the previous club's mark
+ * flying on the directory.
+ *
+ * The trailing slash is forced rather than assumed. `BASE_URL` is whatever
+ * `base` was set to, verbatim: configured as `/account` it yields
+ * `/accountfavicon.png`, which is a 404 that no test relying on the default
+ * `/` would ever show.
+ */
+const DEFAULT_ICON = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}favicon.png`;
 
 /** Only the tab icon. `apple-touch-icon` is baked into a homescreen shortcut at
  * install time, so rewriting it mid-session changes nothing a user can see. */

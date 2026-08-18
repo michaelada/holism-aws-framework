@@ -214,6 +214,13 @@ KEYCLOAK_ISSUER_URL: ${PUBLIC_URL}/auth          # what the token will claim
 `KEYCLOAK_ISSUER_URL` defaults to `KEYCLOAK_URL`, so development — where the two
 genuinely are the same — needs nothing set.
 
+**Nothing is served from the root, so no asset may be referenced from it.** Each
+app sits under a prefix. Vite rewrites absolute paths in `index.html` — which is
+why favicons work and mask the problem — but not string literals in components,
+so `src="/logo.png"` 404s here and nowhere else. Use
+`import.meta.env.BASE_URL`, and note it is the configured `base` verbatim: set
+without a trailing slash it yields `/adminlogo.png`.
+
 **A front end can build cleanly and still be a blank page.** `manualChunks` in
 `vite.config.ts` can put mutually-dependent modules into two different chunks;
 Rollup emits that without complaint, the browser evaluates one before the other

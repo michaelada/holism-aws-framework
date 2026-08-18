@@ -86,7 +86,11 @@ export default defineConfig({
 
   // The account app is served under /account, matching the routes in
   // docs/ACCOUNT_USER_APP_WIREFRAMES.md (A1 is /account, A2 is /account/:orgCode).
-  base: '/account',
+  // Trailing slash required. Vite exposes this verbatim as
+  // `import.meta.env.BASE_URL`, so without it `${BASE_URL}favicon.png`
+  // resolves to `/accountfavicon.png` — asset URLs in index.html are joined
+  // correctly either way, which is what hides the mistake.
+  base: '/account/',
 
   resolve: {
     alias: {

@@ -127,6 +127,21 @@ Things that reliably go wrong here — every one of them has actually happened:
 `admin` and `frontend` gained `basename={import.meta.env.BASE_URL}` so they can be served under a
 path prefix at all — in development that is `/` and nothing changes.
 
+**No front end is served from the root, so no asset may be referenced from it.** All four sit under
+a prefix (`/account/`, `/orgadmin/`, `/admin/`, `/metadata/`). Vite rewrites absolute paths it finds
+in `index.html`, which is why favicons declared there work and hide the problem; it does **not**
+rewrite string literals in components. A `src="/logo.png"` in a component therefore 404s in the
+deployment and nowhere else. Build asset paths from `import.meta.env.BASE_URL`.
+
+Two traps in that value, both of which have bitten:
+
+- It is the configured `base` **verbatim**. `account-shell` and `orgadmin-shell` were written as
+  `base: '/account'`, so `` `${BASE_URL}favicon.png` `` produced `/accountfavicon.png`. All four are
+  now normalised to a trailing slash, and the two call sites force one anyway.
+- Under Vitest, `BASE_URL` is whatever that package's `vite.config` says — `/` for `admin`, but
+  `/account/` for `account-shell`. A test written against the default passes for both the correct
+  and the incorrect implementation, so cover the deployed base explicitly with `vi.stubEnv`.
+
 ## OpenTofu (`terraform/`)
 
 ```

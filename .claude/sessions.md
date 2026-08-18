@@ -13099,3 +13099,81 @@ sudo ./scripts/deploy/update.sh     # on the instance — rebuilds backend and w
 Also corrected a claim in [docs/DEPLOY_SINGLE_INSTANCE.md](docs/DEPLOY_SINGLE_INSTANCE.md) that this session disproved: it said `KC_PROXY_HEADERS` is required, but the pinned Keycloak 23.0 needs `KC_PROXY: edge` — `KC_PROXY_HEADERS` is 24+ and silently ignored on 23.
 
 ---
+
+
+## 2026-08-18 14:10:59 — Prompt
+
+Platofrm Admin is now loading, however it is not showing the logo in the top right window after I login - under the hood it is getting a 404 for this https://itsps.org/logo.png
+
+### Assistant
+
+Same class of bug as the router basename: an absolute path that ignores the base. Let me check the full extent:
+
+Only the two runtime refs are broken — Vite rewrites `index.html` itself, which is why the favicon works. Let me look:
+
+The bulk replace hit the comment too. Fixing that:
+
+Now a test that actually guards this — the existing ones pass either way since `BASE_URL` is `/` under Vitest:
+
+Let me check whether the same literal-path bug exists anywhere else, since all four apps are served under a prefix:
+
+One more, in account-shell. Let me confirm it's real:
+
+Real bug — and the comment even claims it matches `index.html`, which Vite rewrote to `/account/favicon.png`. So restoring the default breaks the tab icon:
+
+Important — that's not a test artefact. `BASE_URL` here is `/account`, with no trailing slash. Let me check what the real builds produce:
+
+Confirmed in the real bundle: `BASE_URL` is `/account` with no trailing slash, so my template produced `/accountfavicon.png`. Good thing the test caught it. Let me check what reads `BASE_URL` before deciding the fix:
+
+`admin`/`frontend` get `--base=/admin/` with a slash; `account`/`orgadmin` are configured without one. Let me check nothing depends on that before normalising:
+
+Routers use hardcoded basenames, and the PWA config already uses `/account/` — the top-level `base` is the odd one out. Normalising both, and making the join defensive so this can't silently produce `/accountfavicon.png` again:
+
+Now the defensive join in both consumers:
+
+The pre-existing tests assert the default icon, which is now correctly base-aware. Updating them to production reality:
+
+Now rebuild everything and verify the emitted paths are actually right this time:
+
+The strings are now composed at runtime, so they're no longer single literals. Let me verify properly:
+
+Both correct: `"/account/".replace(...)` → `/account/favicon.png`, `"/admin/"` → `/admin/logo.png`. Now checking for regressions across the touched packages:
+
+None of those touch `Layout` — they're `RoleForm`, `RolesPage` and `organization-type-locale`, the pre-existing failures §3.3 warns about. Let me confirm and check account-shell:
+
+The 3 are the known `packages/components` failures (`FieldDatatype.PHONE`, `MultiSelectRenderer`) — unrelated. Now documenting:
+
+Fixed, plus a second instance of the same bug that would have bitten next.
+
+## The logo
+
+[Layout.tsx](packages/admin/src/components/Layout.tsx) had `src="/logo.png"` in two places. The admin app is served from `/admin/`, so that resolves to `https://itsps.org/logo.png` — 404. Confirmed live: `/logo.png` → 404, `/admin/logo.png` → 200.
+
+Vite rewrites absolute paths in `index.html` but not string literals in components — which is exactly why the favicon worked and the logo didn't, and why nothing looked wrong locally.
+
+## The same bug in account-shell
+
+Sweeping for the pattern found [useOrganisationFavicon.ts](packages/account-shell/src/hooks/useOrganisationFavicon.ts): `const DEFAULT_ICON = '/favicon.png'`, whose comment claimed it matched `index.html`. It didn't — Vite had rewritten that to `/account/favicon.png`. So leaving a club page restored an icon that 404s. Confirmed live the same way.
+
+## A trap the first fix walked into
+
+My initial `` `${import.meta.env.BASE_URL}favicon.png` `` produced **`/accountfavicon.png`** — verified in the actual production bundle, not assumed. `BASE_URL` is the configured `base` verbatim, and `account-shell`/`orgadmin-shell` were written as `base: '/account'` with no trailing slash. (`admin`/`frontend` were fine — `Dockerfile.web` passes `--base=/admin/`.)
+
+The new test caught it, because it stubs the deployed base rather than relying on Vitest's default. So:
+
+- both bases normalised to a trailing slash, matching Vite's docs and the PWA config in the same file, which already used `/account/`
+- both call sites force the slash regardless: `BASE_URL.replace(/\/?$/, '/')`
+
+Verified in the emitted bundles: `"/account/".replace(/\/?$/,"/")` + `favicon.png`, and `"/admin/"` + `logo.png`.
+
+Tests: parametrised over both spellings of the base in each package; I confirmed the admin one fails against the old literal. Routers use hardcoded `basename="/account"`, so the base change doesn't affect them.
+
+## Regressions
+
+- admin: 11 failures, all in `RoleForm`, `RolesPage`, `organization-type-locale` — none import `Layout`. Pre-existing (§3.3).
+- account-shell: 3 failures, all `EntryFormPage` — the known `packages/components` breakage.
+- Chunk-cycle check still clean on all four.
+
+Same deployment path as before — these need pushing, then `sudo ./scripts/deploy/update.sh` on the instance.
+
+---
