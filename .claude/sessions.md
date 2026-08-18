@@ -11704,3 +11704,413 @@ git push
 ```
 
 ---
+
+
+## 2026-08-18 09:49:26 — Prompt
+
+Do I need to rn the tofu aply again or what ?
+
+### Assistant
+
+No — and importantly, **don't**. Let me confirm what apply would do:
+
+Confirmed — `tofu apply` would **destroy and rebuild your working instance**. `user_data_replace_on_change` is set, and I just edited `user_data.sh`, so Terraform sees a different script and replaces the box: another 20-minute build, and a fresh database and realm.
+
+**Just run the certbot commands on the instance.** That's the whole fix. Nothing in Terraform needs to change to get you a certificate.
+
+## Why the two are separate
+
+- `user_data` runs **once**, at first boot. Editing it changes nothing on a running instance — it only affects the *next* one.
+- My reorder (certificate before build, so a failed build doesn't also cost you TLS) is insurance for future rebuilds. It's not something you apply to this box.
+
+So: SSM in, run the block, done. Roughly a minute, most of it `pip install`.
+
+## When you would apply again
+
+Only when you actually want a fresh instance — a clean rebuild, or a change to the instance type or disk. At that point the reordering and all the other fixes come along automatically.
+
+If you do, snapshot the volume first *if* by then you care about the data. Right now you don't.
+
+One thing worth doing whenever convenient, since it's cheap and stops the drift: commit and push the `user_data.sh` reorder. It won't affect the running box, but it means the repo describes what a new instance would do.
+
+---
+
+
+## 2026-08-18 09:50:15 — Prompt
+
+What certbot commands ?
+
+### Assistant
+
+Run this on the instance (SSM or SSH), as one block:
+
+````
+sudo bash -s <<'EOF'
+set -e
+
+# certbot is not packaged for Amazon Linux 2023 — install it into its own venv
+dnf install -y python3 python3-pip augeas-libs
+python3 -m venv /opt/certbot
+/opt/certbot/bin/pip install --upgrade pip -q
+/opt/certbot/bin/pip install certbot certbot-nginx -q
+ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
+
+# one certificate covering both names
+certbot certonly --webroot -w /var/www/certbot \
+  -d itsps.org -d www.itsps.org \
+  --non-interactive --agree-tos --register-unsafely-without-email
+
+# point nginx at it — it is currently using the self-signed pair
+ln -sf /etc/letsencrypt/live/itsps.org/fullchain.pem /etc/nginx/tls/fullchain.pem
+ln -sf /etc/letsencrypt/live/itsps.org/privkey.pem   /etc/nginx/tls/privkey.pem
+nginx -t && systemctl reload nginx
+
+# renewal — a pip-installed certbot brings no systemd timer
+echo "0 0,12 * * * root /opt/certbot/bin/certbot renew -q --deploy-hook 'systemctl reload nginx'" \
+  > /etc/cron.d/certbot-renew
+
+echo "done"
+EOF
+````
+
+To get on the instance:
+
+```
+aws ssm start-session --target i-08c5e66145092fcdb --region eu-west-1
+```
+
+Then check it worked from your laptop:
+
+```
+echo | openssl s_client -connect itsps.org:443 -servername itsps.org 2>/dev/null \
+  | openssl x509 -noout -issuer -dates
+```
+
+The issuer should say Let's Encrypt. Right now it reads `CN=itsps.org`, which is the self-signed certificate.
+
+---
+
+
+## 2026-08-18 09:51:37 — Prompt
+
+I ran this command and this is what I got, is it ok ?
+
+
+Installed:
+  augeas-libs-1.13.0-1.amzn2023.0.2.aarch64                  python3-pip-21.3.1-2.amzn2023.0.20.noarch                 
+
+Complete!
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Python 3.9 support will be dropped in the next planned release of Certbot - please upgrade your Python version.
+Account registered.
+Requesting a certificate for itsps.org and www.itsps.org
+
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/itsps.org/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/itsps.org/privkey.pem
+This certificate expires on 2026-11-16.
+These files will be updated when the certificate renews.
+
+NEXT STEPS:
+- The certificate will need to be renewed before it expires. Certbot can automatically renew the certificate in the background, but you may need to take steps to enable that functionality. See https://certbot.org/renewal-setup for instructions.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+If you like Certbot, please consider supporting our work by:
+ * Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+ * Donating to EFF:                    https://eff.org/donate-le
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/holism.conf:13
+nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/holism.conf:23
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+bash: line 21: /etc/cron.d/certbot-renew: No such file or directory
+
+### Assistant
+
+Certificate is installed and nginx reloaded — let me confirm from outside:
+
+**Yes — it worked.** The only failure was the last line, and it's fixable in a minute.
+
+Live now, verified from outside:
+
+```
+issuer=C=US, O=Let's Encrypt, CN=YE2       expires 16 Nov 2026
+SAN: DNS:itsps.org, DNS:www.itsps.org
+/  /account/  /orgadmin/  /admin/   → 200
+www.itsps.org → 301 → https://itsps.org/
+```
+
+The nginx `http2` lines are warnings, not errors — `listen ... http2` still works, it's just the older spelling.
+
+## The one real failure
+
+```
+bash: line 21: /etc/cron.d/certbot-renew: No such file or directory
+```
+
+**Amazon Linux 2023 doesn't install cron** — it uses systemd timers. So there's no `/etc/cron.d/`, and your certificate currently has **no automatic renewal**. It expires 16 November.
+
+That's my error again — I wrote a cron entry for a distro without cron. A timer is the native fix:
+
+Now the same fix in `user_data.sh`, so a rebuilt instance doesn't repeat it:
+
+**Yes, it's fine — the certificate is live and correct.** Only the last line failed.
+
+Verified from outside:
+
+```
+issuer=C=US, O=Let's Encrypt, CN=YE2     expires 16 Nov 2026
+SAN: DNS:itsps.org, DNS:www.itsps.org
+/  /account/  /orgadmin/  /admin/        → 200
+/api/public/organisations                → 200   (the API is live through the proxy)
+www.itsps.org                            → 301 → https://itsps.org/
+```
+
+The `http2` messages are warnings about older spelling, not errors. And the `/api/health` 404 I mentioned is expected — the backend's health endpoint is `/health`, not `/api/health`; nginx answers `/health` itself, and the real API responds fine.
+
+## The one thing that failed, and it matters
+
+```
+bash: line 21: /etc/cron.d/certbot-renew: No such file or directory
+```
+
+**Amazon Linux 2023 doesn't install cron.** There is no `/etc/cron.d`, so nothing was written — your certificate has no automatic renewal and would simply expire on 16 November.
+
+That's the fourth AL2023 assumption I've got wrong in this deployment (certbot packaging, buildx, and now cron). Run the systemd timer block above; `certbot renew --dry-run` at the end proves renewal works now rather than in ninety days.
+
+I've made the same change in `user_data.sh` and the deployment guide, so a rebuilt instance sets up the timer itself.
+
+## Worth pushing when convenient
+
+```bash
+git add terraform/environments/testing/user_data.sh docs/DEPLOY_SINGLE_INSTANCE.md \
+        packages/backend/package.json packages/backend/package-lock.json
+git commit -m "fix(deploy): systemd timer for renewal, certificate before build, declare typescript"
+git push
+```
+
+None of it affects the running box — it's all for the next rebuild. **Don't run `tofu apply`**: it would still replace the instance, since `user_data` has changed again.
+
+Your test system is up at **https://itsps.org** with valid TLS.
+
+---
+
+
+## 2026-08-18 09:55:22 — Prompt
+
+do I need to install crontab and set up the certbot renew automatically?
+
+### Assistant
+
+Let me check whether the timer is already in place before telling you what to do:
+
+**No — don't install cron.** Use a systemd timer, which is what Amazon Linux 2023 uses natively. Installing `cronie` would work but adds a package for something the OS already does.
+
+And yes, **you still need to set this up.** I checked the instance:
+
+```
+certbot-renew.timer   → No such file or directory
+cronie                → not installed
+/etc/cron.d           → does not exist
+```
+
+So there's currently **no renewal at all**. Your certificate is valid until 16 November and would then simply stop working.
+
+Run this on the instance:
+
+````
+sudo bash -s <<'EOF'
+set -e
+cat > /etc/systemd/system/certbot-renew.service <<'UNIT'
+[Unit]
+Description=Renew Let's Encrypt certificates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/certbot/bin/certbot renew --quiet --deploy-hook "systemctl reload nginx"
+UNIT
+
+cat > /etc/systemd/system/certbot-renew.timer <<'UNIT'
+[Unit]
+Description=Run certbot renew twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now certbot-renew.timer
+systemctl list-timers certbot-renew.timer --no-pager
+certbot renew --dry-run
+EOF
+````
+
+Two things in there worth knowing:
+
+**`certbot renew --dry-run` at the end** goes through the whole renewal against Let's Encrypt's staging service. It proves renewal works *now* rather than you finding out in November. That's the check I'd care most about.
+
+**`--deploy-hook "systemctl reload nginx"`** matters because nginx reads the certificate at startup. Renewal replaces the file; without the reload, nginx keeps serving the expired one from memory — a failure that appears months after the thing that caused it.
+
+`Persistent=true` also means a missed run (instance stopped over a weekend) fires on next boot rather than being skipped.
+
+I've already put the same timer into `user_data.sh`, so a rebuilt instance does this itself — this block is only to fix the box you have.
+
+---
+
+
+## 2026-08-18 09:59:10 — Prompt
+
+On the new test erver, when I click on Platform Admin, I get 502 Bad gateway, and the url shown in the browser is:
+
+https://itsps.org/auth/realms/aws-framework/protocol/openid-connect/auth?client_id=aws-framework-admin&redirect_uri=https%3A%2F%2Fitsps.org%2Fadmin%2F&state=8beb9f48-5968-41f0-831c-47cc5159b4aa&response_mode=fragment&response_type=code&scope=openid&nonce=eff4a572-d10b-4fe2-8359-8671f827d445&code_challenge=B4kq3Os1tpHp2OTvzPJrsUPzSmu1CBSIBR7R9p4Zk28&code_challenge_method=S256
+
+### Assistant
+
+Found it — Keycloak is crash-looping:
+
+```
+ERROR: java.nio.file.AccessDeniedException: /opt/keycloak/bin/../data/import/realm.json
+```
+
+My `bootstrap.sh` does `chmod 600` on the rendered realm to protect the secrets in it. That file is owned by root, but Keycloak runs as a non-root user inside its container, so it can't read it. Let me confirm the uid:
+
+Both are the same bug — every `/auth/*` request 502s because Keycloak is down. The member portal isn't a separate problem.
+
+And the uid line gives a clean fix: Keycloak runs as **uid 1000 but gid 0**, so making the file group-readable is enough — no chown needed:
+
+Run this on the instance — it's a one-line permission fix plus a restart:
+
+Both 502s are the same cause: **Keycloak has been crash-looping since it started**, so every `/auth/*` URL fails. The member portal and platform admin are the same bug, not two.
+
+```
+ERROR: java.nio.file.AccessDeniedException: /opt/keycloak/bin/../data/import/realm.json
+keycloak  running  Up Less than a second        ← restarting over and over
+```
+
+## My bug
+
+`bootstrap.sh` renders the realm file with the Keycloak client secrets in it and does `chmod 600` to protect them. That file is owned by root — and Keycloak runs as **uid 1000** inside its container, so it can't read it. Keycloak refuses to start without the import file it was told to load.
+
+Checking the image gave the tidy fix: its gid is **0**. So `chmod 640` is enough — Keycloak can read it via the root group, and no ordinary user on the host can. No `chown`, no weakening to world-readable.
+
+`bootstrap.sh` now writes 640, with the reasoning recorded so nobody tightens it back to 600.
+
+## What to expect
+
+First successful start also **imports the realm** — the clients, the audience mappers, the `account-password-check` client — so it takes a minute longer than a normal boot. Look for `Listening on` and no `AccessDeniedException`.
+
+Then both portals should load their sign-in pages. Seeded logins use `Passw0rd!`; `admin@kildarehunt.test` administers two clubs, which is what shows the organisation switcher.
+
+If Keycloak starts but the realm looks empty, tell me — that would mean the failed import left a partial realm behind, and it's easier to drop and re-import than to patch.
+
+---
+
+
+## 2026-08-18 10:01:42 — Prompt
+
+what do I need to do to fix this ?
+
+### Assistant
+
+Two commands on the instance:
+
+```
+sudo chmod 640 /opt/holism/infrastructure/keycloak/realm-import.rendered.json
+
+cd /opt/holism && sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy up -d --force-recreate keycloak
+```
+
+To get on the instance if you're not already there:
+
+```
+aws ssm start-session --target i-08c5e66145092fcdb --region eu-west-1
+```
+
+Then watch it start — the first successful boot also imports the realm, so give it a minute:
+
+```
+cd /opt/holism && sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy logs -f --tail=20 keycloak
+```
+
+You want to see `Listening on` and **no** `AccessDeniedException`. Ctrl-C to stop following.
+
+Then reload https://itsps.org/admin/ — the sign-in page should appear instead of the 502.
+
+---
+
+
+## 2026-08-18 10:08:31 — Prompt
+
+When I click on the "Club Administration" i see a blank screen and the broowser URL is "https://itsps.org/orgadmin/"
+
+There are no errors in the browser console and no redirect to keycloak.
+
+When I click Platform Admi nit redirects me to the Keycloak login page, however it is not using my custom theme, it seems to be showing the default keycloak one.
+
+And when I click on Members Portal is see the Find my club page, but there are no clubs listed.
+
+Finally, can you remove the “Metadata repository” option from the list of options shown in the ItsPlainSailing test deployment home page.
+
+### Assistant
+
+Four separate things. Let me gather facts on the first three.
+
+Themes are per-client, and my realm import sets none — that's #2. Let me check #1 and #3 directly:
+
+**Found the big one.** The issuer is wrong:
+
+```
+issuer: https://itsps.org:8443/auth/realms/aws-framework
+```
+
+That `:8443` shouldn't be there. Keycloak's own log said `Proxied: false` — it's ignoring my proxy setting, because **`KC_PROXY_HEADERS` is a Keycloak 24+ option and you're on 23.0**, where it's `KC_PROXY`:
+
+Now removing the metadata entry from the landing page:
+
+Now the fix script for the running instance — proxy mode, client themes, and the missing seed data:
+
+All four diagnosed. Three share a root cause you couldn't have seen from the browser.
+
+## The big one: Keycloak is publishing the wrong URLs
+
+```
+issuer: https://itsps.org:8443/auth/realms/aws-framework
+```
+
+That `:8443` is fatal — nothing listens there. Keycloak's own log said `Proxied: false`: it ignored my proxy setting, concluded it must be reachable on the default HTTPS port itself, and published that.
+
+Because **`KC_PROXY_HEADERS` is a Keycloak 24+ option and you're running 23.0**, where it's `KC_PROXY`. Not an error, just silently ignored — the worst kind. It's `KC_PROXY: edge` now.
+
+That explains **Club Administration going blank with no redirect**: orgadmin uses `login-required`, so keycloak-js resolves the OIDC configuration *before* redirecting. It gets endpoints on `:8443`, the request hangs, and the app never leaves its loading state — no error to log. Platform Admin appeared to work because keycloak-js builds the initial auth URL from its own config; it would have failed at the token exchange.
+
+## Default theme
+
+You have four custom themes (`super-admin`, `org-admin`, `account-user`, `aws-framework`) and they're assigned **per client**, per your own `KEYCLOAK_MULTIPLE_LOGIN_THEMES.md`. My realm import set none, so every client fell back to Keycloak's default. Now set in the import — and since your realm is already imported, the script applies them through the admin API.
+
+## No clubs
+
+**The seed never ran.** It's the last step of `bootstrap.sh`, and that died at the `npm ci` failure; `update.sh` deliberately doesn't seed. So the database is migrated and empty. Step 3 fixes it — four clubs, members, events, and the administrator who runs two of them.
+
+## Metadata repository
+
+Removed from the landing page. The `/metadata/` route still works if you go there directly — say the word if you'd rather I drop the bundle from the image entirely.
+
+---
+
+The script does all four and rebuilds `web` for the landing-page change. After it, Club Administration should reach a themed login, and Member Portal should list the clubs.
+
+Worth pushing the source changes too, so a rebuild doesn't reintroduce any of it:
+
+```bash
+git add -A && git commit -m "fix(deploy): KC_PROXY for Keycloak 23, per-client login themes, drop metadata from landing"
+git push
+```
+
+---

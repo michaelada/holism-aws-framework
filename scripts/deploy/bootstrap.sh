@@ -111,7 +111,18 @@ if [ ! -f "$REALM_STAMP" ]; then
       "$REALM_TEMPLATE" > "$RENDERED"
 
   grep -q PLACEHOLDER "$RENDERED" && die "A placeholder survived rendering — check $RENDERED."
-  chmod 600 "$RENDERED"
+
+  # 0640, not 0600.
+  #
+  # This file holds client secrets, so it must not be world-readable — but
+  # Keycloak has to *read* it, and it runs as uid 1000 inside its container.
+  # At 0600 owned by root the container gets AccessDeniedException on it and
+  # crash-loops, which presents as every /auth/* request returning 502 and
+  # nothing on the box looking wrong.
+  #
+  # The container's gid is 0, so group-readable is exactly enough: Keycloak can
+  # read it, and no ordinary user on the host can.
+  chmod 640 "$RENDERED"
   touch "$REALM_STAMP"
   echo "  rendered for $PUBLIC_URL"
 else

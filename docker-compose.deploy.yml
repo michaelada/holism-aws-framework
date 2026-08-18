@@ -53,14 +53,24 @@ services:
       # Behind nginx, on a path.
       #
       # `KC_HOSTNAME` is what Keycloak puts in every issuer and redirect URL, and
-      # `KC_PROXY_HEADERS` is what makes it believe the `X-Forwarded-Proto: https`
-      # nginx sends. Without the second it advertises `http://` links from behind
-      # TLS and the sign-in loop never closes — the failure looks like a broken
-      # application rather than a misconfigured proxy.
+      # the proxy setting below is what makes it trust the `X-Forwarded-*`
+      # headers nginx sends. Without that it advertises URLs of its own
+      # invention from behind TLS, and the sign-in loop never closes — a failure
+      # that looks like a broken application rather than a misconfigured proxy.
       KC_HOSTNAME: ${PUBLIC_HOST}
       KC_HOSTNAME_PATH: /auth
       KC_HTTP_RELATIVE_PATH: /auth
-      KC_PROXY_HEADERS: xforwarded
+      # `KC_PROXY`, not `KC_PROXY_HEADERS`.
+      #
+      # `--proxy-headers` arrived in Keycloak 24; this is 23.0, where it is
+      # silently ignored. The symptom is not an error but a wrong URL: Keycloak
+      # logs `Proxied: false`, decides it must be reachable on the default HTTPS
+      # port itself, and publishes an issuer of `https://host:8443/auth/...`.
+      # Sign-in then fails on a port nothing listens on.
+      #
+      # `edge` is the right mode here: TLS is terminated by nginx in front, and
+      # the hop to this container is plain HTTP on a private network.
+      KC_PROXY: edge
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
     volumes:

@@ -52,7 +52,8 @@
         "PUBLIC_URL_PLACEHOLDER"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/account##PUBLIC_URL_PLACEHOLDER/account/*"
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/account##PUBLIC_URL_PLACEHOLDER/account/*",
+        "login_theme": "account-user"
       },
       "protocolMappers": [
         {
@@ -83,7 +84,8 @@
         "PUBLIC_URL_PLACEHOLDER"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/orgadmin##PUBLIC_URL_PLACEHOLDER/orgadmin/*"
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/orgadmin##PUBLIC_URL_PLACEHOLDER/orgadmin/*",
+        "login_theme": "org-admin"
       },
       "protocolMappers": [
         {
@@ -114,7 +116,8 @@
         "PUBLIC_URL_PLACEHOLDER"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/admin##PUBLIC_URL_PLACEHOLDER/admin/*"
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/admin##PUBLIC_URL_PLACEHOLDER/admin/*",
+        "login_theme": "super-admin"
       },
       "protocolMappers": [
         {
@@ -145,7 +148,8 @@
         "PUBLIC_URL_PLACEHOLDER"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/metadata##PUBLIC_URL_PLACEHOLDER/metadata/*"
+        "post.logout.redirect.uris": "PUBLIC_URL_PLACEHOLDER/metadata##PUBLIC_URL_PLACEHOLDER/metadata/*",
+        "login_theme": "aws-framework"
       },
       "protocolMappers": [
         {
