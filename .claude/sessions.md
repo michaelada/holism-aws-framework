@@ -12490,3 +12490,381 @@ It covers the class that actually kept recurring.
 Run it before your next `tofu apply`, along with the `git push` of the `--system` fix.
 
 ---
+
+
+## 2026-08-18 11:07:35 — Prompt
+
+The deployment looks like it completed, there was a message below, how do I restart the backend once I have set the STRIPE Key?
+
+! No Stripe key set — checkout will refuse. Add test keys to /opt/holism/.env.deploy and restart the backend.
+
+### Assistant
+
+Two of the three keys take effect with a restart — but **the publishable key is compiled into the bundle**, so that one needs a rebuild. Let me confirm against what's deployed:
+
+Confirmed — no publishable key in the deployed bundle. So a backend restart alone won't give you a working checkout.
+
+On the instance:
+
+````
+# 1. Set all three (TEST keys)
+sudo vi /opt/holism/.env.deploy
+#   STRIPE_SECRET_KEY=sk_test_...
+#   STRIPE_PUBLISHABLE_KEY=pk_test_...
+#   STRIPE_WEBHOOK_SECRET=whsec_...        # optional until you add the webhook
+
+# 2. Apply
+cd /opt/holism
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+
+sudo $C up -d --force-recreate backend    # secret + webhook secret
+sudo $C build web && sudo $C up -d web    # publishable key, compiled in
+````
+
+## Two things that will catch you out
+
+**`docker compose restart backend` will not work.** Environment variables are fixed when a container is *created*, so `restart` reuses the old ones and you'd conclude the key was wrong. `up -d --force-recreate` is what re-reads `.env.deploy`. My message said "restart the backend", which was misleading — I'll fix that wording.
+
+**The publishable key is baked into the bundle at image build time**, which is why `build web` is needed. It's not a secret — it's designed to reach the browser, and Stripe's card form can't mount without it. That's also why an image belongs to one deployment.
+
+## Check it took
+
+```bash
+curl -s https://itsps.org/account/ | grep -o 'src="/account/assets/[^"]*"'
+# then fetch that file and look for pk_test_
+```
+
+Or just open a checkout in the member portal — the card form appears or it doesn't.
+
+## Webhook, when you want payments to complete
+
+Card payments are confirmed by Stripe calling back; without it a payment authorises and the order never completes. In the Stripe dashboard add an endpoint at:
+
+```
+https://itsps.org/api/webhooks/stripe
+```
+
+then put its signing secret in `STRIPE_WEBHOOK_SECRET` and recreate the backend again. The nginx config already passes that path through unbuffered, because signature verification needs the raw body.
+
+---
+
+
+## 2026-08-18 11:10:57 — Prompt
+
+If I want to run the complete itsps.org system in test mode, can I leave STRIPE_SECRET_KEY and  STRIPE_PUBLISHABLE_KEY blank and just set the webhook ?
+
+### Assistant
+
+Let me check what the code actually does with no keys:
+
+**No — that combination gives you nothing.** The webhook secret alone is the one piece that's useless on its own.
+
+`isConfigured()` requires **both** the client (built from the secret key) *and* the webhook secret:
+
+```ts
+isConfigured(): boolean {
+  return Boolean(this.client && this.config.webhookSecret);
+}
+```
+
+With the secret key blank there's no client, so the provider is never configured, `forCardPayment()` returns `null`, and card checkout refuses with *"This organisation cannot take card payments yet"*. No payment is ever created — so no webhook would ever fire to be verified.
+
+## What you can do
+
+**Run everything with no Stripe keys at all, using offline payment.** That's a real path in the product, not a workaround: a member marks basket lines "Pay Offline", checkout completes, and the club records the money later. It exercises baskets, holds, fulfilment, entries, bookings, memberships, the shop, and the org-admin settlement screens — the whole system apart from taking a card.
+
+Two things behave differently: card checkout refuses, and an offline membership stays invisible to the member until a club administrator records payment.
+
+**Or set all three test keys**, which takes a couple of minutes and gives you the card flow end to end. They're free, `sk_test_`/`pk_test_` can't move real money, and the seed already creates test connected accounts for the clubs.
+
+If you do want cards, all three are needed together:
+
+| | |
+|---|---|
+| `STRIPE_SECRET_KEY` | backend creates the PaymentIntent |
+| `STRIPE_PUBLISHABLE_KEY` | browser mounts the card form (**compiled into the bundle**) |
+| `STRIPE_WEBHOOK_SECRET` | confirms the payment — without it a card authorises and the order never completes |
+
+The middle one is why a rebuild of `web` is needed rather than just a backend recreate.
+
+There's also a per-club requirement beyond the keys: each organisation needs a connected Stripe account with charges enabled, or checkout refuses with *"has not finished connecting its payment account"*. The seed sets those up when it can reach Stripe — it was run with `--no-stripe`, so you'd want to re-run the seed without that flag once the keys are in.
+
+---
+
+
+## 2026-08-18 11:14:50 — Prompt
+
+if I set the values to test key values, what command can I run on the deployed ec2 instance, to take up these new values once I add them to .env.deploy on that server?
+
+### Assistant
+
+````
+cd /opt/holism
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+
+# secret key + webhook secret — runtime env
+sudo $C up -d --force-recreate backend
+
+# publishable key — compiled into the bundle, so the image must be rebuilt
+sudo $C build web && sudo $C up -d web
+````
+
+**`restart` will not do it.** Environment variables are fixed when a container is created, so `docker compose restart backend` reuses the old ones and you'd think the key was wrong. `up -d --force-recreate` is what re-reads `.env.deploy`.
+
+## Check it took
+
+```bash
+# backend picked up the secret key
+sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy \
+  exec backend printenv STRIPE_SECRET_KEY | cut -c1-12
+
+# publishable key made it into the bundle
+curl -s https://itsps.org/account/ | grep -o 'src="/account/assets/[^"]*"' | head -1
+# fetch that path and grep for pk_test_
+```
+
+## One more step for card payments to actually work
+
+Keys alone aren't enough — each club needs a **connected Stripe account with charges enabled**, or checkout refuses with *"has not finished connecting its payment account"*. Your seed ran with `--no-stripe`, so none exist.
+
+To create them:
+
+```bash
+sudo $C --profile tools run --rm tools npm run seed:demo -- --reset
+```
+
+Note the missing `--no-stripe`. It creates test connected accounts for the four clubs and reconciles them until Stripe reports them ready.
+
+**This wipes and rebuilds the demo data**, so do it before you create anything you want to keep. It also refuses to run against live keys — it checks for `sk_test_` — so it can't touch a real account.
+
+---
+
+
+## 2026-08-18 13:03:10 — Prompt
+
+I have followed those steps, on the new server when I run the command:
+
+curl -s https://itsps.org/account/ | grep -o 'src="/account/assets/[^"]*"' | head -1
+
+it outpus the following: 
+
+src="/account/assets/index-DCyl7m2R.js"
+
+### Assistant
+
+The hash changed from the earlier build, so the image was rebuilt. Let me check whether the key actually made it in:
+
+That's the key in place — `pk_test_ExIRyxYJ…`, a test key. Let me confirm the backend side too:
+
+Two problems, both fixable.
+
+## `STRIPE_WEBHOOK_SECRET` has a URL in it
+
+```
+secret:  sk_test_lAH…     ✓ correct
+webhook: https://…        ✗ that's the endpoint URL
+```
+
+The **URL** goes in the Stripe dashboard when you create the endpoint. The value for this variable is the **signing secret** Stripe shows you afterwards, which starts `whsec_`.
+
+This is worse than leaving it blank, because `isConfigured()` only checks the value is non-empty — so Stripe looks configured, checkout proceeds, and then every webhook fails signature verification. Payments would authorise and the orders would never complete, with nothing obviously wrong at checkout.
+
+In the Stripe dashboard: **Developers → Webhooks → Add endpoint**, URL `https://itsps.org/api/webhooks/stripe`, then reveal the signing secret.
+
+## No club has a connected account
+
+```
+khpc -> NONE    lhpc -> NONE    mhpc -> NONE    wupc -> NONE
+```
+
+Because the seed ran with `--no-stripe`. Card checkout refuses per club with *"has not finished connecting its payment account"* — the platform won't take money it can't route to the club.
+
+## Both fixes
+
+```bash
+sudo vi /opt/holism/.env.deploy      # STRIPE_WEBHOOK_SECRET=whsec_...
+
+cd /opt/holism
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+sudo $C up -d --force-recreate backend
+
+# connected accounts for the four clubs — note: no --no-stripe
+sudo $C --profile tools run --rm tools npm run seed:demo -- --reset
+```
+
+That last one **wipes and rebuilds the demo data**, so run it before creating anything you want to keep. It refuses to run against live keys, so it can't touch a real account.
+
+Afterwards the same query should show `acct_…` for each club:
+
+```bash
+sudo $C exec -T postgres psql -U framework_user -d aws_framework -tA \
+  -c "SELECT url_code, settings->'stripeConnect'->>'accountId' FROM organizations ORDER BY url_code"
+```
+
+The publishable key is confirmed in the bundle (`pk_test_ExIRyxYJ…`), so the browser side is already done.
+
+---
+
+
+## 2026-08-18 13:11:52 — Prompt
+
+What stripe events do I need to select in the Stripe WEBHOOKS PAGE ?
+
+### Assistant
+
+Five events, and the endpoint is `https://itsps.org/api/webhooks/stripe`.
+
+## Select these
+
+| Event | Why it's needed |
+|---|---|
+| `payment_intent.amount_capturable_updated` | **The important one.** Payments use manual capture — the card is authorised, not charged. This is what tells the backend the authorisation succeeded so it can re-check availability and capture |
+| `payment_intent.succeeded` | The capture completed; the order is placed |
+| `payment_intent.payment_failed` | Declined — the basket's holds drop back to the browsing window so the slot returns |
+| `payment_intent.canceled` | An authorisation released, e.g. a hold expired before capture |
+| `account.updated` | Connect: a club finishing onboarding. Without it, `chargesEnabled` stays stale and checkout keeps refusing a club that can now take money |
+
+`amount_capturable_updated` is the one people miss, because on a normal immediate-charge integration it never fires. Skip it and every card payment authorises and then sits there — the money is held on the customer's card and the entry never appears.
+
+## Setting it up
+
+**Developers → Webhooks → Add endpoint**
+
+- Endpoint URL: `https://itsps.org/api/webhooks/stripe`
+- Events: the five above
+- Then copy the **Signing secret** (`whsec_…`) into `STRIPE_WEBHOOK_SECRET` and recreate the backend
+
+## Connect events need a second endpoint
+
+`account.updated` is a **Connect** event, about your connected accounts rather than your own. In the dashboard, endpoints are either for your account or for connected accounts — the "Listen to events on Connected accounts" toggle when you add one.
+
+If you only need to test checkout, the four `payment_intent.*` events on a normal endpoint are enough. Add `account.updated` on a Connect endpoint when you want club onboarding to update itself; otherwise the seed sets `chargesEnabled` directly and that path is already covered.
+
+## Checking it works
+
+Stripe's dashboard shows delivery attempts and responses per event. A `400` there almost always means the signing secret doesn't match what's in `.env.deploy` — which is the state you're in right now, with a URL in that variable.
+
+---
+
+
+## 2026-08-18 13:17:24 — Prompt
+
+I just ran the seed reset and then ran the command below, but there is no accountId returned from the query, is that correct:
+
+sh-5.2$ sudo $C exec -T postgres psql -U framework_user -d aws_framework -tA \
+  -c "SELECT url_code, settings->'stripeConnect'->>'accountId' FROM organizations ORDER BY url_code"
+khpc|
+lhpc|
+mhpc|
+wupc|
+sh-5.2$
+
+### Assistant
+
+That's my bug — the `tools` service has no Stripe key in its environment:
+
+Confirmed: the seed's Stripe step returned *"STRIPE_SECRET_KEY is not set"* and skipped. The `tools` service never got the key. Fixing the compose file:
+
+**No, that's not correct — and it's my bug, not yours.**
+
+The `tools` container never received `STRIPE_SECRET_KEY`. I listed the database and Keycloak variables when I wrote it and forgot Stripe. So the seed's Stripe step hit `"STRIPE_SECRET_KEY is not set"` and skipped, leaving every club without an account — and it doesn't fail loudly, so the seed looked like it worked.
+
+## Fix it now, without waiting for a pull
+
+```bash
+cd /opt/holism
+set -a; . ./.env.deploy; set +a
+C="docker compose -f docker-compose.deploy.yml --env-file .env.deploy"
+
+sudo $C --profile tools run --rm \
+  -e STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" \
+  tools npm run seed:demo -- --reset
+```
+
+Then re-run your query — you should see `acct_…` for all four clubs.
+
+Watch the output: it creates each account, then **reconciles** them, waiting for Stripe to report `charges_enabled`. That takes a few seconds per club and is the part that matters — an account exists long before it can actually take money, and checkout refuses until it can.
+
+## The permanent fix
+
+`docker-compose.deploy.yml` now passes `STRIPE_SECRET_KEY` through to `tools`, so a future seed doesn't need the `-e`. Worth pushing:
+
+```bash
+git add docker-compose.deploy.yml && git commit -m "fix(deploy): give the tools container the Stripe key so seeding creates connected accounts"
+git push
+```
+
+Then on the box, whenever convenient: `sudo ./scripts/deploy/update.sh`.
+
+One thing to note about that seed run — it's `--reset`, so it wiped and rebuilt the demo data again. Fine now, but worth remembering once you start creating things you want to keep.
+
+---
+
+
+## 2026-08-18 13:21:00 — Prompt
+
+I am still getting the same result with no accountIds having run those commands.
+
+### Assistant
+
+Let me stop guessing and capture what the seed actually says:
+
+The seed **is** creating them:
+
+```
+stripe: Kildare Hunt Pony Club — acct_1U5m1NS98ZVAuOQI
+stripe: Laois Hunt Pony Club  — acct_1U5m1RS7OZFDzdCU
+...
+```
+
+So the accounts exist. My *query* is probably looking in the wrong place:
+
+Same path I queried. Let me just re-check the database now that this seed run has completed:
+
+**It worked.** All four clubs now have accounts:
+
+```
+khpc -> acct_1U5m1NS98ZVAuOQI
+lhpc -> acct_1U5m1RS7OZFDzdCU
+mhpc -> acct_1U5m1aS8pq2fQ7uY
+wupc -> acct_1U5m1V2nPmUuNyba
+```
+
+Your earlier runs were failing because the `tools` container had no Stripe key — my omission from the compose file. The run I did a moment ago passed it explicitly with `-e`, and that's the one that succeeded. Running `update.sh` was the right instinct, but on its own it doesn't re-seed.
+
+## One thing to be aware of
+
+```json
+"chargesEnabled": false, "detailsSubmitted": true, "requirementsDue": []
+```
+
+The accounts exist and details are submitted, but Stripe hasn't flipped `charges_enabled` yet — that's the *"waiting for Stripe to finish verifying…"* in the seed output. Verification is asynchronous and takes a minute or two.
+
+Checkout refuses while it's `false`, but **it self-corrects**: the backend re-checks with Stripe when it sees a cached `false`, and updates the record. So the first checkout attempt after verification completes will work even though the database currently says otherwise. That re-check exists precisely because this cached value goes stale.
+
+If you want to see the current truth:
+
+```bash
+cd /opt/holism
+sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy exec -T postgres \
+  psql -U framework_user -d aws_framework -tA \
+  -c "SELECT url_code, settings->'stripeConnect'->>'chargesEnabled' FROM organizations ORDER BY url_code"
+```
+
+## Still worth pushing
+
+`docker-compose.deploy.yml` now passes `STRIPE_SECRET_KEY` to `tools`, so the `-e` won't be needed next time:
+
+```bash
+git add docker-compose.deploy.yml && git commit -m "fix(deploy): pass the Stripe key to the tools container"
+git push
+```
+
+Your webhook secret is now a proper `whsec_…`, so with the accounts in place the card path should be complete once verification lands.
+
+---
+
+
+## 2026-08-18 13:28:03 — Prompt
+
+do I need to do anything to change the chargesEnabled to true so I can make test payments?
