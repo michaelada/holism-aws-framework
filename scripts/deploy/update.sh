@@ -26,6 +26,21 @@ die() { printf '\033[31m\n  ✖ %s\n\n\033[0m' "$*" >&2; exit 1; }
 
 [ -f "$ENV_FILE" ] || die "No $ENV_FILE — has this instance been bootstrapped?"
 
+# Git refuses to touch a repository owned by somebody else — and this one is
+# owned by ec2-user while this script is normally run with sudo, so every git
+# command here would fail with "detected dubious ownership". Declaring it safe
+# is the documented fix.
+#
+# Written without a pipeline on purpose. `git config --get-all` exits non-zero
+# when the key is unset, and `grep -q` closes the pipe early; under
+# `set -e`/`pipefail` that combination is exactly what killed a boot earlier in
+# this deployment. A variable and a `case` cannot fail.
+SAFE_DIRS="$(git config --global --get-all safe.directory 2>/dev/null || true)"
+case "$SAFE_DIRS" in
+  *"$ROOT"*) ;;
+  *) git config --global --add safe.directory "$ROOT" ;;
+esac
+
 # ---------------------------------------------------------------------------
 # Fetch
 # ---------------------------------------------------------------------------

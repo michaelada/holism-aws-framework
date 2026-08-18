@@ -118,6 +118,11 @@ else
   sudo -u ec2-user git clone --branch "${branch}" --depth 1 "$REPO_URL" /opt/holism
 fi
 
+# The repository belongs to ec2-user, but bootstrap.sh and update.sh are run
+# with sudo. Git refuses to operate on a repository owned by another user
+# ("detected dubious ownership"), so root is told this one is expected.
+git config --global --add safe.directory /opt/holism
+
 # ---------------------------------------------------------------------------
 # TLS
 # ---------------------------------------------------------------------------

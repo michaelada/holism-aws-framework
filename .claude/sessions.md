@@ -11378,3 +11378,57 @@ cd /opt/holism && sudo git pull && sudo ./scripts/deploy/bootstrap.sh
 Except `git pull` won't work there — the remote is stored without credentials on purpose. Use `sudo ./scripts/deploy/update.sh`, which fetches the token from SSM and does the pull, rebuild, migrate and restart in one go.
 
 ---
+
+
+## 2026-08-18 09:17:33 — Prompt
+
+When I run the commands on the ec2 instance:
+cd /opt/holism && sudo git pull && sudo ./scripts/deploy/bootstrap.sh
+
+I get the following errors:
+
+fatal: detected dubious ownership in repository at '/opt/holism'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /opt/holism
+
+### Assistant
+
+That's git refusing because `/opt/holism` is owned by `ec2-user` but you're running as root under `sudo`. Two things to fix — and `git pull` won't work there anyway, since the remote is deliberately stored without credentials.
+
+Immediate:
+
+Now fixing both scripts so this doesn't recur:
+
+One flaw in what I just wrote — it's the same pipeline trap that killed the boot. Let me not repeat it:
+
+Fixed, and verified it survives `set -euo pipefail` when the key is unset.
+
+## What the error means
+
+`/opt/holism` is owned by `ec2-user` — the clone runs as that user — but `sudo git pull` runs as root. Git refuses to operate on a repository owned by someone else, since a repo you don't own can execute hooks and config on your behalf.
+
+## Two things to run on the box
+
+```bash
+sudo git config --global --add safe.directory /opt/holism
+cd /opt/holism && sudo ./scripts/deploy/update.sh
+```
+
+**Use `update.sh`, not `git pull`.** The remote is deliberately stored without credentials — the token is scrubbed after cloning so it isn't left in `.git/config` — so `git pull` on a private repo just waits for a password. `update.sh` fetches the token from SSM for the duration of the fetch, then rebuilds, migrates and restarts.
+
+## What I changed
+
+- **`user_data.sh`** sets `safe.directory` at provision time, so a fresh instance never hits this.
+- **`update.sh`** sets it defensively too, which is what makes it work on the box you already have.
+
+I wrote that check as a pipeline first — `git config --get-all ... | grep -q` — and then caught myself: `--get-all` exits non-zero when the key is unset, `grep -q` closes the pipe early, and under `set -e` with `pipefail` that's precisely the combination that killed the earlier boot. It's a variable and a `case` now, which can't fail.
+
+Commit and push these before running `update.sh`, or it'll pull a copy without them:
+
+```bash
+git add -A && git commit -m "fix(deploy): commit lockfiles, declare /opt/holism safe for root git"
+git push
+```
+
+---
