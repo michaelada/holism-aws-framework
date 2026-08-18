@@ -51,6 +51,27 @@ export class WebhookService {
   ) {}
 
   async process(provider: string, event: WebhookEvent): Promise<WebhookProcessResult> {
+    /*
+     * Logged on arrival, before anything can go wrong with it.
+     *
+     * Nothing recorded a webhook that *worked* — only duplicates, warnings and
+     * failures — so a tail of the logs during a payment showed a bare request
+     * line and nothing about which event it carried or what it concerned. That
+     * is precisely the case being diagnosed when someone goes looking: a
+     * payment that stays pending because the event never arrived is
+     * indistinguishable, in the log, from one that arrived and did nothing.
+     *
+     * `paymentId` is the join back to this platform's own records, so a single
+     * grep follows one payment from Stripe's event to the row it settles.
+     */
+    logger.info('Webhook received', {
+      provider,
+      eventId: event.id,
+      type: event.type,
+      outcome: event.outcome,
+      paymentId: event.paymentId,
+    });
+
     const claimed = await this.claim(provider, event);
     if (!claimed) {
       logger.info('Webhook already processed', { provider, eventId: event.id });

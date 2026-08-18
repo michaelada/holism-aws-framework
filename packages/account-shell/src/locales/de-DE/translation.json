@@ -13,7 +13,8 @@
     "signIn": "Anmelden",
     "signOut": "Abmelden",
     "search": "Suchen",
-    "error": "Etwas ist schiefgelaufen"
+    "error": "Etwas ist schiefgelaufen",
+    "signInAsSomeoneElse": "Als jemand anderes anmelden"
   },
   "offline": {
     "banner": "Sie sind offline. Zuletzt geladene Inhalte sind weiter sichtbar, aber Sie können nichts kaufen, buchen oder ändern.",

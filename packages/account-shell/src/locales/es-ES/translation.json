@@ -13,7 +13,8 @@
     "signIn": "Iniciar sesión",
     "signOut": "Cerrar sesión",
     "search": "Buscar",
-    "error": "Algo ha salido mal"
+    "error": "Algo ha salido mal",
+    "signInAsSomeoneElse": "Iniciar sesión como otra persona"
   },
   "offline": {
     "banner": "Está sin conexión. Puede ver lo último cargado, pero no puede comprar, reservar ni cambiar nada.",

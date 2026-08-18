@@ -13,7 +13,8 @@
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
     "search": "Rechercher",
-    "error": "Une erreur est survenue"
+    "error": "Une erreur est survenue",
+    "signInAsSomeoneElse": "Se connecter avec un autre compte"
   },
   "offline": {
     "banner": "Vous êtes hors ligne. Vous voyez toujours les dernières données chargées, mais vous ne pouvez rien acheter, réserver ni modifier.",

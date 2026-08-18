@@ -30,6 +30,37 @@ describe('NotConnectedPage (A6)', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/khpc/register');
   });
 
+  /*
+   * The reported fault. A member signs out of one club, opens another, and is
+   * still whoever Keycloak's realm-wide session says they are — so they arrive
+   * here and are offered enrolment under an identity they had already left.
+   *
+   * This screen renders outside `AppShell`, so it has no navigation and no
+   * sign-out: before this there was no way to become anybody else from here at
+   * all.
+   */
+  it('offers to sign in as somebody else', async () => {
+    const signInAsSomeoneElse = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<NotConnectedPage />, { auth: { signInAsSomeoneElse } });
+
+    await user.click(screen.getByRole('button', { name: /sign in as someone else/i }));
+
+    // Returned to this club, so a member who does belong under their other
+    // identity lands where they were trying to go.
+    expect(signInAsSomeoneElse).toHaveBeenCalledWith('khpc');
+  });
+
+  it('offers to sign out, as wireframe A6 specifies', async () => {
+    const logout = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<NotConnectedPage />, { auth: { logout } });
+
+    await user.click(screen.getByRole('button', { name: /sign out/i }));
+
+    expect(logout).toHaveBeenCalled();
+  });
+
   it('offers a way to a club the member already belongs to', async () => {
     const user = userEvent.setup();
     renderWithProviders(<NotConnectedPage />);

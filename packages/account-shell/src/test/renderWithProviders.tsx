@@ -1,4 +1,5 @@
 import React from 'react';
+import { vi } from 'vitest';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
@@ -12,6 +13,8 @@ import {
   OrganisationState,
 } from '../context/AccountOrganisationContext';
 import { AccountMe, PublicOrganisationDetail } from '../types/account';
+import { AuthContext } from '../context/AuthContext';
+import { UseAuthReturn } from '../hooks/useAuth';
 
 /**
  * Test harness for this package.
@@ -94,27 +97,60 @@ export function makeOrganisationContext(
   return { ...base, ...overrides, capabilities };
 }
 
+/**
+ * A signed-in session, with every action a spy.
+ *
+ * Supplied by default because pages outside `AppShell` — the not-connected and
+ * awaiting-approval screens — read the session to offer signing in as somebody
+ * else. Without a provider they throw, which reads as a broken page rather than
+ * a missing harness.
+ */
+export function makeAuthContext(overrides: Partial<UseAuthReturn> = {}): UseAuthReturn {
+  const base = {
+    keycloak: null,
+    authenticated: true,
+    loading: false,
+    error: null,
+    token: 'test-token',
+    user: { id: TEST_ME.user.id, email: TEST_ME.user.email },
+    login: vi.fn(),
+    signInAsSomeoneElse: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    getToken: () => 'test-token',
+  } as unknown as UseAuthReturn;
+
+  return { ...base, ...overrides };
+}
+
 export interface RenderOpts extends Omit<RenderOptions, 'wrapper'> {
   /** Initial URL; use when a page reads `useParams`. */
   route?: string;
   /** Route pattern the component is mounted at, e.g. `/:orgCode/pending`. */
   path?: string;
+  /** Session overrides; pass the spies a test needs to assert on. */
+  auth?: Partial<UseAuthReturn>;
 }
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  { route = '/khpc', path = '/:orgCode', ...options }: RenderOpts = {}
+  { route = '/khpc', path = '/:orgCode', auth, ...options }: RenderOpts = {}
 ): RenderResult {
   const instance = setupI18n();
+  // Built once per render, so the value keeps a stable identity for the whole
+  // tree's lifetime (CLAUDE.md §3.4).
+  const authValue = makeAuthContext(auth);
 
   return render(
     <I18nextProvider i18n={instance}>
       <ThemeProvider theme={buildTheme(null)}>
-        <MemoryRouter initialEntries={[route]}>
-          <Routes>
-            <Route path={path} element={ui} />
-          </Routes>
-        </MemoryRouter>
+        <AuthContext.Provider value={authValue}>
+          <MemoryRouter initialEntries={[route]}>
+            <Routes>
+              <Route path={path} element={ui} />
+            </Routes>
+          </MemoryRouter>
+        </AuthContext.Provider>
       </ThemeProvider>
     </I18nextProvider>,
     options

@@ -8,7 +8,13 @@ import { useAuth, UseAuthReturn, KeycloakConfig } from '../hooks/useAuth';
  * hook from several components would start several inits and the later ones
  * reject. Everything therefore reads the session from here.
  */
-const AuthContext = createContext<UseAuthReturn | null>(null);
+/*
+ * Exported so a test can supply a session directly. `AuthProvider` calls
+ * `useAuth`, which initialises Keycloak — not something a page test can or
+ * should do, and the alternative is mocking this module in every suite that
+ * renders a page reading the session.
+ */
+export const AuthContext = createContext<UseAuthReturn | null>(null);
 
 export const AuthProvider: React.FC<{
   keycloakConfig: KeycloakConfig;

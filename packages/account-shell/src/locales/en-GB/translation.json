@@ -13,7 +13,8 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "search": "Search",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "signInAsSomeoneElse": "Sign in as someone else"
   },
   "offline": {
     "banner": "You are offline. You can still see what was last loaded, but you cannot buy, book or change anything.",

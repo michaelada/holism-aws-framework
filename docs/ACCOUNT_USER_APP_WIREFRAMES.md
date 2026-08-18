@@ -611,6 +611,16 @@ the "otherwise they should be redirected to a registration page" branch.
 
 A `status = 'pending'` row shows a third variant: "Your request is awaiting approval."
 
+**Notes**
+- **Sign out and "Sign in as someone else" both have to be here.** This screen renders outside the
+  app shell, so it carries no navigation of its own — without them a member who opened a club they
+  do not belong to has no way to become anybody else, and no way to leave.
+- Signing in again as the *same* member returns here, which is why the primary offer is to request
+  a connection. Signing in as a **different** member does not — but an ordinary sign-in cannot do
+  it. The Keycloak session is realm-wide (see [A7](#a7--organisation-switcher-)), so it returns
+  immediately as whoever is already signed in, drawing no form. "Sign in as someone else" therefore
+  sends `prompt=login`, which forces re-authentication whatever session exists.
+
 ---
 
 ### A7 — Organisation switcher ✳
@@ -656,6 +666,10 @@ capabilities yet, so the shell renders this instead of the app.
 - The rejection message deliberately gives no reason. Whatever the admin recorded in
   [I3](#i3--org-admin-pending-registrations) is internal — surfacing it invites arguments the
   platform cannot adjudicate.
+- Like [A6](#a6--not-connected-to-this-organisation), this renders outside the app shell and so must
+  carry its own sign-out and "Sign in as someone else". The latter sends `prompt=login`, because the
+  realm-wide Keycloak session means an ordinary sign-in returns the same member without ever
+  drawing a form.
 
 ---
 

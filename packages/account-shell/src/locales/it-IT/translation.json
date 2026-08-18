@@ -13,7 +13,8 @@
     "signIn": "Accedi",
     "signOut": "Esci",
     "search": "Cerca",
-    "error": "Si è verificato un errore"
+    "error": "Si è verificato un errore",
+    "signInAsSomeoneElse": "Accedi come un altro utente"
   },
   "offline": {
     "banner": "Sei offline. Puoi ancora vedere l’ultimo caricamento, ma non puoi acquistare, prenotare o modificare nulla.",

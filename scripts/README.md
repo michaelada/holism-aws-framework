@@ -209,7 +209,8 @@ Email	Organisation
 admin@kildarehunt.test	Kildare Hunt Pony Club
 admin@laoishunt.test	Laois Hunt Pony Club
 admin@wardunion.test	Ward Union Pony Club
-Members — http://localhost:5176/account/`<code>(codes:khpc, lhpc, wupc`)
+admin@meathhunt.test	Meath Hunt Pony Club
+
 
 Email	Organisations
 niamh.walsh@example.test	all three
@@ -220,6 +221,27 @@ fionn.doyle@example.test	khpc, wupc
 saoirse.brennan@example.test	khpc
 ruairi.kelly@example.test	lhpc
 tadhg.nolan@example.test	wupc — awaiting approval
+
 Separately, the Keycloak admin console (http://localhost:8080) uses admin / admin by default, from KEYCLOAK_ADMIN_PASSWORD.
 
+Members — http://localhost:5176/account/`<code>(codes:khpc, lhpc, wupc`)
+
 The seed prints all of this at the end of a run, so npm run seed:demo will re-list it. One caveat: the users table was empty when I looked earlier, so these accounts may not currently be seeded into this database — the Keycloak side is what matters for login, but if any are missing, a re-run will restore them.
+
+Run reset seed data on test env in AWS
+
+```sh
+cd /Users/michaeladams/Work/Esker/Development/AI/Holism/terraform/environments/testing
+aws ssm start-session --target $(tofu output -raw instance_id) --region eu-west-1
+
+
+cd /opt/holism
+sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy \
+  --profile tools run --rm tools npm run seed:demo -- --reset
+
+```
+
+Tail webhooks
+```sh
+sudo tail -f /var/log/nginx/access.log | grep webhooks
+```

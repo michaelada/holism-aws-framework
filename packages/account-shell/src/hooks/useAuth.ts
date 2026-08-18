@@ -19,6 +19,14 @@ export interface UseAuthReturn {
   user: AccountUser | null;
   /** Send the user to Keycloak. `orgCode` brands the login page and is returned to afterwards. */
   login: (orgCode?: string) => void;
+  /**
+   * Sign in as somebody else, discarding the current session first.
+   *
+   * Distinct from `login` because an ordinary `login()` is a no-op for a member
+   * who is already signed in: Keycloak holds a realm session cookie and
+   * answers immediately as whoever that is, without ever drawing a form.
+   */
+  signInAsSomeoneElse: (orgCode?: string) => void;
   register: (orgCode?: string) => void;
   logout: () => void;
   getToken: () => string | null;
@@ -158,6 +166,32 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
     [keycloak]
   );
 
+  /**
+   * Hand the session to a different member.
+   *
+   * `prompt: 'login'` is the entire point. Keycloak's session lives in a cookie
+   * for the whole realm, so a member who signs out of one club and opens
+   * another is still authenticated as themselves — an ordinary `login()` there
+   * round-trips to Keycloak and back with no form shown, and the application
+   * reports that they are not a member of the club they just tried to join.
+   * The effect is a portal that appears to refuse a valid sign-in while
+   * offering to enrol the wrong person.
+   *
+   * Asking Keycloak to re-authenticate makes "sign in as someone else" mean
+   * what it says, whatever session already exists.
+   *
+   * The cached responses go first, for the same reason they do on sign-out: a
+   * shared club device must not carry one member's entries into the next
+   * member's session.
+   */
+  const signInAsSomeoneElse = useCallback(
+    (orgCode?: string) => {
+      forgetResponses();
+      keycloak?.login({ redirectUri: redirectFor(orgCode), prompt: 'login' });
+    },
+    [keycloak]
+  );
+
   const register = useCallback(
     (orgCode?: string) => {
       keycloak?.register({ redirectUri: redirectFor(orgCode) });
@@ -193,6 +227,7 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
     user,
     login,
     register,
+    signInAsSomeoneElse,
     logout,
     getToken,
   };

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -37,6 +38,7 @@ export const AwaitingApprovalPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { orgCode } = useParams<{ orgCode: string }>();
+  const { signInAsSomeoneElse, logout } = useAuthContext();
   const { state, refresh } = useAccountOrganisation();
   const { execute } = useAccountApi<AccountMembership[]>();
 
@@ -115,6 +117,21 @@ export const AwaitingApprovalPage: React.FC = () => {
             </Button>
           </>
         )}
+
+        {/*
+          * Rendered outside `AppShell`, so this screen has no navigation and no
+          * sign-out of its own. Without this a member waiting on one club's
+          * approval could not become anybody else — and because Keycloak's
+          * session is realm-wide, signing in again returned them here
+          * unchanged.
+          */}
+        <Box sx={{ mt: 3 }}>
+          <Button onClick={() => signInAsSomeoneElse(orgCode)}>
+            {t('common.signInAsSomeoneElse')}
+          </Button>
+          {/* Specified by wireframe A8 and never implemented. */}
+          <Button onClick={logout}>{t('common.signOut')}</Button>
+        </Box>
 
         {others.length > 0 && (
           <Box sx={{ mt: 4 }}>

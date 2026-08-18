@@ -1,6 +1,7 @@
 import { WebhookService } from '../webhook.service';
 import { db } from '../../database/pool';
 import { WebhookEvent } from '../payment-providers';
+import { logger } from '../../config/logger';
 
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
@@ -191,6 +192,28 @@ describe('WebhookService', () => {
   it('propagates a database error that is not a duplicate claim', async () => {
     mockDb.query.mockRejectedValueOnce(new Error('connection refused'));
     await expect(service.process('stripe', event())).rejects.toThrow('connection refused');
+  });
+
+  /*
+   * Only duplicates, warnings and failures were ever logged, so tailing the
+   * logs through a payment said nothing about the events that worked — and a
+   * webhook that never arrived looked exactly like one that arrived and did
+   * nothing. `paymentId` is the join back to this platform's own records.
+   */
+  it('records every event on arrival, so a tail shows what came in', async () => {
+    const arrived = event({ id: 'evt_arrived', type: 'payment_intent.succeeded' });
+
+    await service.process('stripe', arrived);
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'Webhook received',
+      expect.objectContaining({
+        provider: 'stripe',
+        eventId: 'evt_arrived',
+        type: 'payment_intent.succeeded',
+        paymentId: 'pay-1',
+      })
+    );
   });
 });
 

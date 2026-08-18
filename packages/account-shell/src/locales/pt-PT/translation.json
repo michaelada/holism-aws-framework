@@ -13,7 +13,8 @@
     "signIn": "Iniciar sessão",
     "signOut": "Terminar sessão",
     "search": "Pesquisar",
-    "error": "Ocorreu um erro"
+    "error": "Ocorreu um erro",
+    "signInAsSomeoneElse": "Iniciar sessão com outra conta"
   },
   "offline": {
     "banner": "Está offline. Continua a ver o que foi carregado por último, mas não pode comprar, reservar nem alterar nada.",

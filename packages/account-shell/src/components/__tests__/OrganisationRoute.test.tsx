@@ -24,7 +24,11 @@ vi.mock('../../hooks/useAccountApi', async () => {
   };
 });
 
-vi.mock('../../context/AuthContext', () => ({
+// Partial: `AuthContext` itself must survive, or the shared test
+// harness has no provider to render and every page using the session
+// throws.
+vi.mock('../../context/AuthContext', async () => ({
+  ...(await vi.importActual<typeof import('../../context/AuthContext')>('../../context/AuthContext')),
   useAuthContext: () => authState,
 }));
 

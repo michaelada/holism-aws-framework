@@ -13615,3 +13615,244 @@ The last two are worth a click-through to confirm end to end — dismissing the 
 Uncommitted on `work/august-batch`: the `hint` refinement plus whatever else you haven't pushed. Say the word if you want me to commit and push.
 
 ---
+
+
+## 2026-08-18 15:25:16 — Prompt
+
+BTW I am not on a branch, eveythig I do is on main
+
+### Assistant
+
+Confirmed — `main`, tracking `origin/main`, nothing unpushed. My branch warning was based on the snapshot taken at the start of this session, which said `work/august-batch`; that's stale, and I should have checked rather than repeated it. Disregard it — there's no branch mismatch with `.deploy-source`.
+
+So the flow is simply: commit → push → `sudo ./scripts/deploy/update.sh`.
+
+The only thing still outstanding is the uncommitted work in the tree, which is the `hint` refinement plus everything else from this session (CORS, issuer, route collision, chunk cycles, base paths, discount base URL, the tests and docs). Since you've already deployed once, the earlier fixes clearly went out — so what's left uncommitted is whatever you've changed since.
+
+---
+
+
+## 2026-08-18 15:55:27 — Prompt
+
+the deployment is working now, however I have a strange issue where if I log to the members portal to org 1, logout and try to login to another org2, the browser seems to think that I am still logged into the original org1, and asks me if I want to join the second org2, but in fact I just want to log in with a different set of credentials to a different org?
+
+### Assistant
+
+That's a Keycloak SSO session outliving the app's logout. Let me look:
+
+`keycloak.logout()` does call the end-session endpoint, so let me check whether Keycloak actually accepts that logout redirect:
+
+Keycloak's logout config is correct — it accepts the redirect and 302s to `/account`. So the SSO end-session isn't obviously broken. Let me look at what the app itself persists across a logout:
+
+No org or user state survives logout beyond the response cache, which it clears. So let me find the screen the user is actually seeing and what drives it:
+
+That comment is the crux: *"signing in again would land in exactly the same place"* — true if you're the same person, but the user wants to be a **different** person, and this page offers no way to do that. Let me see the states:
+
+Found it. `AppShell` — which holds the Logout button — is only rendered in the `connected` state. So when you're signed in but not a member of the club you're viewing, you land on `NotConnectedPage` with **no way to sign out at all**. Its only options are "Register" and "Switch organisation".
+
+Let me confirm the other dead-end screens and check the login signature:
+
+Both dead-end pages trap you. Let me check the account app's locales before implementing:
+
+Now the fix — a forced re-authentication, since an ordinary `login()` with a live SSO cookie silently returns the same person:
+
+Now surface it on both dead-end pages:
+
+Now the translation key in all six locales:
+
+§3.2 requires a minimal JSON diff — let me check I haven't reformatted the files:
+
+Some files changed more than one line. Let me see what else moved:
+
+My `ensure_ascii=False` silently un-escaped pre-existing `\uXXXX` sequences across those files — semantically identical, but it's exactly the whole-file reformat §3.2 forbids. Let me redo it as a pure text insertion:
+
+Two lines per file now (the added key plus the trailing comma). Now tests:
+
+The harness provides no `AuthProvider`, so my change likely breaks these tests. Let me check:
+
+Confirmed — 14 failures from the missing provider. The harness already supplies the organisation and theme contexts, so auth belongs there too:
+
+The provider calls `useAuth`, which initialises Keycloak — no good in tests. Let me export the context and give the harness an injectable auth value:
+
+Now tests for the new behaviour:
+
+Now the core mechanism — `prompt: 'login'` — needs its own test:
+
+Three pass; the cache test used a prefix I guessed. Let me use the real one:
+
+Let me run the full account-shell suite and check the baseline hasn't moved:
+
+That's a regression I introduced — 50 failures. Suites that partially mock `../context/AuthContext` now get `undefined` for my new `AuthContext` export. Let me look:
+
+Six suites replace the whole module, dropping the other exports — a latent trap that my new export just triggered. The correct fix is to make those mocks partial, the pattern the same files already use for the organisation context:
+
+Back to baseline: 3 failures, all the known `EntryFormPage` / `packages/components` ones. 589 passing, up from 583. Let me check the one file my script skipped:
+
+`ProfilePage` already used the partial pattern — that's why it passed and my script skipped it. Nothing to do there. Now the docs:
+
+The A7 note already documents the realm-wide token. Let me update A6/A8 — and the wireframes are generated from ASCII source, so let me check whether I can regenerate them properly:
+
+The wireframe already specifies a **`[ Sign out ]`** button on A6 — so this is an implementation gap against the design, not just my judgement. Let me add that too, and check the regeneration script works:
+
+Both A6 and A8 specify a `[ Sign out ]` the implementation never had. Let me add it alongside:
+
+Now the wireframe sources and their regenerated SVGs:
+
+Only the three changed diagrams differ. Now the wireframe notes and module summary:
+
+Diagnosed and fixed. It wasn't a stale login — it was a dead-end screen.
+
+## What's actually happening
+
+There's one Keycloak realm and the session lives in a **realm-wide cookie**. When you open a club you don't belong to, `OrganisationRoute` renders `NotConnectedPage`. And `AppShell` — which holds the Logout button — is only rendered in the `connected` state.
+
+So that screen had **no sign-out at all**. Its only options were "Request to join" and "Go to one of your organisations". You were signed in as person A, looking at club B, with no way to become person B. Same trap on `AwaitingApprovalPage`.
+
+Its own code comment shows the reasoning that led there — *"signing in again would land in exactly the same place"* — which is true for the same person and wrong for a different one.
+
+Both wireframes **already specify a `[ Sign out ]` button** that was never implemented, so this is a gap against the design, not a judgement call on my part.
+
+## The fix
+
+Two actions on both dead-end screens:
+
+- **Sign out** — what A6/A8 specified all along.
+- **Sign in as someone else** — new `useAuth().signInAsSomeoneElse()`, which sends **`prompt: 'login'`**. This is the part that matters: an ordinary `login()` with a live realm session round-trips to Keycloak and back without ever drawing a form, returning you as the same person. `prompt=login` forces re-authentication and lands you back on the club you were trying to open. It also clears the offline response cache first, for the same privacy reason sign-out does.
+
+Your Keycloak logout config is fine, incidentally — I checked the end-session endpoint live and it 302s correctly, so `keycloak.logout()` works. The problem was purely that you couldn't reach it.
+
+**Two things I had to correct along the way.** My first pass at the translations un-escaped pre-existing `\uXXXX` sequences across all six locales — a whole-file reformat, which §3.2 forbids. Redone as a text insertion: two lines per file. And exporting `AuthContext` for the test harness broke 50 tests in six suites that mock the module wholesale; I made those mocks partial, which is what they should have been.
+
+Tests: 8 new (4 on the hook, pinning `prompt: 'login'`, the redirect, that ordinary `login` is unaffected, and the cache clearing). 591 passing, 3 failing — the same pre-existing `EntryFormPage` failures. Wireframe ASCII sources updated and the three affected SVGs regenerated; docs and `account-shell.md` updated.
+
+Needs push + `update.sh` like the rest.
+
+---
+
+
+## 2026-08-18 16:19:54 — Prompt
+
+is there a way I can tail the incomeing web hook from Stripe to see what is happening when we make payments ?
+
+### Assistant
+
+The endpoint is `POST /api/webhooks/stripe`. Let me check what it logs on the *success* path:
+
+On success it logs nothing — you'd see the HTTP line and failures, but not which event arrived or what it did. Let me check the event shape so I can close that gap:
+
+The event carries everything useful. Let me add a single arrival log so a tail actually tells you something:
+
+My test landed in the wrong `describe` — the last one has its own helpers. Let me move it into the first, which has the `event()` builder:
+
+Yes — several ways, best combined. Here's what to run.
+
+## 1. Stripe's own delivery log (start here)
+
+**Dashboard → Developers → Webhooks → your endpoint → Recent deliveries.** It shows every attempt, the full payload, your response code and body, and retries. It's the only view that distinguishes *"Stripe never sent it"* from *"we returned 500"* — which the server logs can't tell you.
+
+## 2. Live tail on the instance
+
+```bash
+sudo docker logs -f "$(sudo docker ps -qf name=backend)" 2>&1 \
+  | grep --line-buffered -E 'Webhook|"path":"/stripe"'
+```
+
+Readable, if you have `jq`:
+
+```bash
+sudo docker logs -f "$(sudo docker ps -qf name=backend)" 2>&1 \
+  | grep --line-buffered -E 'Webhook|"path":"/stripe"' \
+  | jq -c '{t:.timestamp, msg:.message, type:.type, payment:.paymentId, status:.statusCode}'
+```
+
+## 3. Did the request even arrive?
+
+If nothing shows above, it never reached the app — check the host nginx:
+
+```bash
+sudo tail -f /var/log/nginx/access.log | grep webhooks
+```
+
+## 4. Read-only event stream from Stripe
+
+```bash
+stripe events tail          # needs the Stripe CLI, logged in to the same account
+```
+
+Don't use `stripe listen` against the deployed endpoint — it mints its own signing secret and forwards to a local port, so signatures won't match `STRIPE_WEBHOOK_SECRET`.
+
+---
+
+**One gap worth knowing about:** the backend logged *nothing* for a webhook that succeeded — only duplicates, warnings and failures. So a tail during a payment showed a bare HTTP line and nothing about which event arrived or what it concerned. A webhook that never arrived looked identical, in the log, to one that arrived and did nothing.
+
+I've added an arrival log carrying the event id, type, outcome and **`paymentId`** — so a single grep follows one payment from Stripe's event to the row it settles:
+
+```bash
+sudo docker logs "$(sudo docker ps -qf name=backend)" 2>&1 | grep 'pay-<id>'
+```
+
+One test, confirmed failing without it. That needs a deploy to take effect; items 1–4 work right now.
+
+Two things to check first if payments are stalling: `STRIPE_WEBHOOK_SECRET` must be the `whsec_…` value for *this* endpoint (a mismatch gives `Rejected a Stripe webhook with an invalid signature`), and the endpoint must be subscribed to `payment_intent.amount_capturable_updated` — you're on manual capture, so without it an authorised payment never settles.
+
+---
+
+
+## 2026-08-18 16:24:07 — Prompt
+
+how can I rerun the seed data and reset the test database in aws itsps.org ?
+
+### Assistant
+
+`tools` doesn't set `NODE_ENV`, and `postgres`/`keycloak` count as local hosts, so the guards pass. Here's the command — note it needs `sudo`, since `.env.deploy` is root-only:
+
+Here's the full procedure.
+
+## Reset and re-seed
+
+```bash
+cd /opt/holism
+sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy \
+  --profile tools run --rm tools npm run seed:demo -- --reset
+```
+
+**`sudo` is required** — `.env.deploy` is `chmod 600` and root-owned, which is what bit you earlier.
+
+**Note there's no `--no-stripe`.** You used that flag before because the `tools` container had no `STRIPE_SECRET_KEY` and the step failed silently — which is why every club came back with no `accountId` and card checkout refused. That's fixed and deployed, so dropping the flag now creates the test connected accounts properly. Keep `--no-stripe` only if `STRIPE_SECRET_KEY` is blank in `.env.deploy`.
+
+## What it destroys
+
+Every organisation, member, event, membership, form, discount, payment and order — **and the Keycloak users**. It keeps the schema, the migrations, and the Keycloak realm and clients.
+
+Variants:
+
+```bash
+... npm run seed:demo -- --reset-only    # wipe and stop, no demo data
+... npm run seed:demo -- --reset --no-stripe
+```
+
+## Afterwards
+
+Any browser session is now holding a token for a Keycloak user that no longer exists, which presents as odd 401s and 403s rather than a clean sign-out. **Use a fresh incognito window**, or sign out first.
+
+Then verify the connected accounts actually landed — this is the check that failed last time:
+
+```bash
+echo "select name, settings->'stripeConnect'->>'accountId' as account_id,
+             settings->'stripeConnect'->>'chargesEnabled' as charges
+      from organizations order by name;" \
+  | sudo docker exec -i "$(sudo docker ps -qf name=postgres)" \
+      sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+Four rows with `acct_…` values means it worked. Nulls mean the Stripe step skipped — check `STRIPE_SECRET_KEY` is a `sk_test_…` in `.env.deploy` and that the deployed compose file passes it to `tools`:
+
+```bash
+sudo grep -A2 'STRIPE_SECRET_KEY' /opt/holism/docker-compose.deploy.yml | tail -3
+```
+
+Seeded password is `Passw0rd!`. `admin@kildarehunt.test` deliberately administers two clubs, which is what exercises the organisation switcher.
+
+The seed refuses to run if `NODE_ENV=production`, or against a non-local database or Keycloak — the containers are `postgres` and `keycloak` on the internal network, so it works here and can't be aimed anywhere else.
+
+---

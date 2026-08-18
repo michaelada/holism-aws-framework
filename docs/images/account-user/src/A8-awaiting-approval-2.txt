@@ -7,5 +7,5 @@
 │   Please contact the club directly if you think this is a mistake.    │
 │   secretary@khpc.ie  ·  045 123 456                                   │
 │                                                                       │
-│              [ Go to my organisations ]   [ Sign out ]                │
+│ [ Go to my organisations ] [ Sign in as someone else ] [ Sign out ]   │
 └──────────────────────────────────────────────────────────────────────┘

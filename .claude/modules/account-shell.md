@@ -100,6 +100,18 @@ several capabilities shows if **any** is enabled.
 **Is switching organisations a re-login?** No. The Keycloak token is realm-wide, so A7 navigates to
 `/:newOrgCode` and the context re-resolves capabilities, theme and locale.
 
+**How does a member sign in as somebody else?** `useAuth().signInAsSomeoneElse(orgCode)`, never
+`login()`. The realm-wide session is a cookie, so `login()` for an already-authenticated member
+round-trips to Keycloak and back with no form drawn — the member appears to be refused and is
+offered enrolment under the identity they had just left. `signInAsSomeoneElse` sends
+`prompt: 'login'` to force re-authentication, and clears the offline response cache first for the
+same reason sign-out does.
+
+**Which screens must carry their own sign-out?** Every one rendered outside `AppShell` —
+`NotConnectedPage` (A6) and `AwaitingApprovalPage` (A8). `OrganisationRoute` only renders the shell
+in the `connected` state, so these screens have no navigation of their own; both wireframes specify
+a sign-out and neither had one, which left a member signed in as the wrong person with no way out.
+
 ---
 
 ## Testing notes

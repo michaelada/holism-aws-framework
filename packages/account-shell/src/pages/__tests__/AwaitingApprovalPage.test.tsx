@@ -184,4 +184,29 @@ describe('AwaitingApprovalPage (A8)', () => {
     await waitFor(() => expect(mockExecute).toHaveBeenCalled());
     expect(screen.queryByText(/meanwhile, you can go to/i)).not.toBeInTheDocument();
   });
+
+  /*
+   * Same trap as the not-connected screen: rendered outside `AppShell`, so a
+   * member waiting on approval had no sign-out and, because Keycloak's session
+   * is realm-wide, no way to arrive as anybody else.
+   */
+  it('offers to sign in as somebody else', async () => {
+    const signInAsSomeoneElse = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<AwaitingApprovalPage />, { auth: { signInAsSomeoneElse } });
+
+    await user.click(await screen.findByRole('button', { name: /sign in as someone else/i }));
+
+    expect(signInAsSomeoneElse).toHaveBeenCalledWith('khpc');
+  });
+
+  it('offers to sign out, as wireframe A8 specifies', async () => {
+    const logout = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<AwaitingApprovalPage />, { auth: { logout } });
+
+    await user.click(await screen.findByRole('button', { name: /sign out/i }));
+
+    expect(logout).toHaveBeenCalled();
+  });
 });
