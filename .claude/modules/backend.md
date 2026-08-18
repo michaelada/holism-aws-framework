@@ -96,6 +96,15 @@ same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/A
 | `request-logger.middleware`, `metrics.middleware` | Observability |
 | `error-handler.middleware`, `errors.ts` | Typed errors → HTTP responses |
 
+**Token validation reads two Keycloak addresses, and behind a proxy they differ.** `KEYCLOAK_URL` is
+how this process *reaches* Keycloak, and is what the signing keys are fetched from.
+`KEYCLOAK_ISSUER_URL` is what a valid token must claim in `iss` — the hostname the **browser** used.
+It defaults to `KEYCLOAK_URL`, so a direct-to-Keycloak setup needs nothing set; behind nginx the two
+are `http://keycloak:8080/auth` and `https://itsps.org/auth` respectively. Setting only the first
+rejects every token as untrusted, which presents as *sign-in succeeds and then every API call is
+401* — a whole-system outage that looks like an application bug. Audience is separate and pinned to
+`KEYCLOAK_CLIENT_ID`; each front-end client carries an audience mapper for it.
+
 ## Database
 
 Raw SQL through `db` (`src/database/pool.ts`). Schema is defined solely by `migrations/`. Tables:

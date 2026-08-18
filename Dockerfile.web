@@ -55,6 +55,23 @@ RUN cd packages/orgadmin-shell && VITE_KEYCLOAK_CLIENT_ID=orgadmin-client      n
 RUN cd packages/admin    && VITE_KEYCLOAK_CLIENT_ID=aws-framework-admin    npx vite build --base=/admin/
 RUN cd packages/frontend && VITE_KEYCLOAK_CLIENT_ID=aws-framework-frontend npx vite build --base=/metadata/
 
+# Refuse to ship a bundle whose chunks import each other in a cycle.
+#
+# `/orgadmin` was deployed as a blank page for exactly this reason: a
+# `manualChunks` rule matched `node_modules/react` as a substring, dragged MUI's
+# and i18next's dependencies into `vendor-react`, and the resulting cycle left
+# `hoist-non-react-statics` reading `ForwardRef` from an uninitialised chunk. It
+# built cleanly, passed every test, and only failed in a browser.
+#
+# The artefact is what has to be checked — the fault does not exist in the
+# sources, and a development server never splits chunks at all.
+COPY scripts/check-chunk-cycles.mjs ./scripts/
+RUN node scripts/check-chunk-cycles.mjs \
+      packages/account-shell/dist \
+      packages/orgadmin-shell/dist \
+      packages/admin/dist \
+      packages/frontend/dist
+
 # ---------------------------------------------------------------------------
 # Serve
 # ---------------------------------------------------------------------------

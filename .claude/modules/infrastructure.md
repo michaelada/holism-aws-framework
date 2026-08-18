@@ -102,13 +102,24 @@ The pieces, and why each exists:
 | `infrastructure/keycloak/realm-import.json` | The realm, all seven clients and their audience mappers, held with placeholders instead of secrets |
 | `scripts/deploy/bootstrap.sh` | Generates secrets **once**, renders the realm, migrates, starts, optionally seeds |
 
-Three things reliably go wrong here:
+Things that reliably go wrong here — every one of them has actually happened:
 
 - **The realm is imported once and ignored afterwards.** Regenerating secrets later leaves the realm
   holding one set and the backend using another — which presents as "sign-in works, every API call
   is 401". `bootstrap.sh` is idempotent for exactly this reason.
-- **`KC_PROXY_HEADERS: xforwarded` is not optional** behind the TLS-terminating nginx. Without it
-  Keycloak advertises `http://` redirect URLs and the sign-in loop never closes.
+- **Keycloak must be told it is behind the TLS-terminating nginx**, and the variable depends on the
+  version. The image pinned here is **23.0**, which reads `KC_PROXY: edge`; `KC_PROXY_HEADERS` was
+  introduced in **24** and on 23 is silently ignored. Get it wrong and Keycloak advertises URLs for
+  the address it was reached on — `https://itsps.org:8443/...` — and the sign-in loop never closes.
+- **`KEYCLOAK_ISSUER_URL` is a second, different variable from `KEYCLOAK_URL`.** The backend reaches
+  Keycloak internally but must verify `iss` against the *public* name the browser was issued a token
+  for. Set only `KEYCLOAK_URL` and you get the other "sign-in works, every API call is 401" — see
+  [backend.md](backend.md).
+- **A front end can build cleanly and still be a blank page.** A `manualChunks` rule that splits
+  mutually-dependent modules across chunks produces an import cycle; the browser evaluates one side
+  before the other has initialised. `Dockerfile.web` runs `scripts/check-chunk-cycles.mjs` over all
+  four `dist` directories and fails the image rather than shipping it. `npm run check:chunks` is the
+  same check locally. Match chunk rules on the **package name**, never a path substring.
 - **The front-end build is the memory peak**, not anything at run time. The `user_data` adds 2 GB of
   swap before the first build, because on a 2 GB instance it is otherwise killed with an error that
   blames esbuild.

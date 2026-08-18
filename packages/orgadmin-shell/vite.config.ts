@@ -155,45 +155,68 @@ export default defineConfig({
     // Code splitting configuration for optimal bundle sizes
     rollupOptions: {
       output: {
-        // Manual chunks for better code splitting
+        /*
+         * Which chunk each module belongs in.
+         *
+         * Matched on the **package name**, never on a substring of the path.
+         * The substring form is what broke this application in production:
+         * `id.includes('node_modules/react')` also matches
+         * `react-transition-group`, `react-i18next`, `react-hook-form` and
+         * every other `react-*` package. Those depend on MUI, i18next and
+         * emotion, which depend on React — so the chunks imported each other
+         * in a cycle:
+         *
+         *   vendor-react -> vendor-emotion  -> vendor-react
+         *   vendor-react -> vendor-mui-core -> vendor-react
+         *   vendor-react -> vendor-utils    -> vendor-react
+         *
+         * ES modules in a cycle are evaluated with one side's bindings still
+         * uninitialised. `hoist-non-react-statics` reads `ReactIs.ForwardRef`
+         * at module scope, got `undefined`, and threw before anything
+         * rendered:
+         *
+         *   Cannot read properties of undefined (reading 'ForwardRef')
+         *
+         * A blank page with one console error — and only in a production
+         * build, because development does not split chunks at all.
+         *
+         * Anything not named below is deliberately left to Rollup, which
+         * places it with whatever imports it and so cannot introduce a cycle.
+         * Naming packages by hand can. Add to these lists sparingly, and if
+         * you do, re-run the cycle check in `scripts/check-chunk-cycles.mjs`.
+         */
         manualChunks: (id) => {
-          // Vendor chunk for React and related libraries
-          if (id.includes('node_modules/react') || 
-              id.includes('node_modules/react-dom') || 
-              id.includes('node_modules/react-router-dom') ||
-              id.includes('node_modules/scheduler')) {
-            return 'vendor-react';
+          const marker = 'node_modules/';
+          const at = id.lastIndexOf(marker);
+
+          if (at !== -1) {
+            const parts = id.slice(at + marker.length).split('/');
+            const pkg = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0];
+
+            // React, and the packages that reach into it as they initialise —
+            // these must share a chunk with it, not merely load after it.
+            if (pkg === 'react' || pkg === 'react-dom' || pkg === 'scheduler' ||
+                pkg === 'react-is' || pkg === 'object-assign' ||
+                pkg === 'prop-types' || pkg === 'hoist-non-react-statics' ||
+                pkg === 'use-sync-external-store' ||
+                pkg === 'react-router' || pkg === 'react-router-dom') {
+              return 'vendor-react';
+            }
+
+            if (pkg === '@mui/icons-material') return 'vendor-mui-icons';
+            if (pkg === '@mui/x-date-pickers') return 'vendor-mui-pickers';
+            if (pkg === '@mui/material' || pkg === '@mui/system' || pkg === '@mui/base') {
+              return 'vendor-mui-core';
+            }
+            if (parts[0] === '@emotion') return 'vendor-emotion';
+            if (pkg === 'axios' || pkg === 'date-fns' || pkg === 'keycloak-js') {
+              return 'vendor-utils';
+            }
+
+            // Everything else in node_modules: Rollup's call.
+            return undefined;
           }
-          
-          // Vendor chunk for Material-UI core
-          if (id.includes('node_modules/@mui/material') ||
-              id.includes('node_modules/@mui/system') ||
-              id.includes('node_modules/@mui/base')) {
-            return 'vendor-mui-core';
-          }
-          
-          // Vendor chunk for Material-UI icons (separate to allow lazy loading)
-          if (id.includes('node_modules/@mui/icons-material')) {
-            return 'vendor-mui-icons';
-          }
-          
-          // Vendor chunk for Material-UI date pickers
-          if (id.includes('node_modules/@mui/x-date-pickers')) {
-            return 'vendor-mui-pickers';
-          }
-          
-          // Vendor chunk for Emotion styling
-          if (id.includes('node_modules/@emotion')) {
-            return 'vendor-emotion';
-          }
-          
-          // Vendor chunk for utilities
-          if (id.includes('node_modules/axios') ||
-              id.includes('node_modules/date-fns') ||
-              id.includes('node_modules/keycloak-js')) {
-            return 'vendor-utils';
-          }
-          
+
           // Core modules chunk
           if (id.includes('orgadmin-core')) {
             return 'orgadmin-core';

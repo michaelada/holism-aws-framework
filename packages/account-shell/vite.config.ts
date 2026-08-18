@@ -152,7 +152,20 @@ export default defineConfig({
           if (id.includes('node_modules/@mui/') || id.includes('node_modules/@emotion/')) {
             return 'vendor-mui';
           }
-          if (/node_modules\/(keycloak-js|axios|i18next|react-i18next|date-fns)\//.test(id)) {
+          /*
+           * `date-fns` is deliberately NOT listed. It is the date pickers'
+           * dependency, and naming it here splits MUI's own graph across two
+           * manual chunks, which leaves them importing each other:
+           *
+           *     vendor-utils -> vendor-mui -> vendor-utils
+           *
+           * Chunks in a cycle are evaluated with one side uninitialised, and a
+           * module reading the other's export at module scope then sees
+           * `undefined`. That is what turned `/orgadmin` into a blank page.
+           * Rollup places it correctly when left alone — see
+           * `scripts/check-chunk-cycles.mjs`.
+           */
+          if (/node_modules\/(keycloak-js|axios|i18next|react-i18next)\//.test(id)) {
             return 'vendor-utils';
           }
           return undefined;

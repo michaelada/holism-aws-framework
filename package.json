@@ -61,6 +61,7 @@
     "test:orgadmin-calendar": "npm run test --workspace=packages/orgadmin-calendar",
     "test:orgadmin-registrations": "npm run test --workspace=packages/orgadmin-registrations",
     "test:orgadmin-ticketing": "npm run test --workspace=packages/orgadmin-ticketing",
+    "check:chunks": "node scripts/check-chunk-cycles.mjs packages/account-shell/dist packages/orgadmin-shell/dist packages/admin/dist packages/frontend/dist",
     "lint": "npm run lint --workspaces",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "docker:up": "docker-compose up -d",

@@ -107,6 +107,11 @@ services:
       # Reached over the internal network, so no TLS hop and no dependency on
       # the public name resolving from inside the box.
       KEYCLOAK_URL: http://keycloak:8080/auth
+      # ...but tokens are issued to a browser, so they claim the *public* name.
+      # Verifying `iss` against the internal URL rejects every one of them: the
+      # sign-in completes and then every API call returns 401. These two must
+      # both be set, and they are not the same string.
+      KEYCLOAK_ISSUER_URL: ${PUBLIC_URL}/auth
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-aws-framework}
       KEYCLOAK_CLIENT_ID: aws-framework-backend
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_BACKEND_SECRET}

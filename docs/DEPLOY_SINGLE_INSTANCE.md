@@ -193,9 +193,41 @@ realm holding one set and the backend using another, which presents as *"sign-in
 works but every API call is 401"*. `bootstrap.sh` therefore generates them once
 and refuses to re-render.
 
-**`KC_PROXY_HEADERS` is not optional.** Without it Keycloak builds `http://`
-redirect URLs from behind TLS and the sign-in loop never closes — a failure that
-looks like a broken application rather than a misconfigured proxy.
+**Keycloak must be told it is behind a proxy** — on the **23.0** image pinned
+here that is `KC_PROXY: edge`, *not* `KC_PROXY_HEADERS`, which only exists from
+Keycloak 24. Set the wrong one and it is silently ignored: Keycloak then builds
+its URLs from the address it was reached on, issuing tokens and redirects for
+`https://itsps.org:8443/...`, and the sign-in loop never closes.
+
+**The backend validates the issuer, and the issuer is the *browser's* hostname.**
+The API reaches Keycloak internally at `http://keycloak:8080/auth`, but tokens
+are minted for `https://itsps.org/auth`. Checking `iss` against our own address
+rejects every token, so **sign-in succeeds and then every API call returns 401** —
+which reads as a broken application rather than a misconfigured one. Hence two
+variables that are not the same string:
+
+```yaml
+KEYCLOAK_URL:        http://keycloak:8080/auth   # how we reach it (signing keys)
+KEYCLOAK_ISSUER_URL: ${PUBLIC_URL}/auth          # what the token will claim
+```
+
+`KEYCLOAK_ISSUER_URL` defaults to `KEYCLOAK_URL`, so development — where the two
+genuinely are the same — needs nothing set.
+
+**A front end can build cleanly and still be a blank page.** `manualChunks` in
+`vite.config.ts` can put mutually-dependent modules into two different chunks;
+Rollup emits that without complaint, the browser evaluates one before the other
+has initialised, and a module reading the other's export at module scope gets
+`undefined`. `/orgadmin` shipped this way — one console error
+(`Cannot read properties of undefined (reading 'ForwardRef')`) and nothing
+rendered. The cause was a rule matching `node_modules/react` as a *substring*,
+which also catches `react-transition-group` and `react-i18next` and so dragged
+MUI's dependencies into `vendor-react`.
+
+No test caught it because the fault is not in the sources and a dev server never
+splits chunks. `Dockerfile.web` now refuses to build an image with such a cycle;
+run it against local builds with `npm run check:chunks`. Match chunk rules on the
+**package name**, never on a path substring.
 
 **SES starts in the sandbox.** A new account only delivers to *verified*
 addresses, so registration and credential emails appear to send and never

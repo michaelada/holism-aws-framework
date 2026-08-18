@@ -45,10 +45,76 @@ describe('Authentication Middleware', () => {
     process.env.KEYCLOAK_CLIENT_ID = 'test-client';
     // Ensure auth is not disabled for these tests
     delete process.env.DISABLE_AUTH;
+    // Not set by default: most deployments reach Keycloak at the same address
+    // the browser does. Left over from another test it would mask a regression.
+    delete process.env.KEYCLOAK_ISSUER_URL;
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  /*
+   * Behind a reverse proxy the address we use to reach Keycloak is not the
+   * address Keycloak puts in the token. Getting this wrong is silent and total:
+   * sign-in succeeds, then every single API call returns 401, which reads as a
+   * broken application rather than a misconfigured one. It is what took the
+   * whole of itsps.org down after the first deployment.
+   */
+  describe('which issuer a token must claim', () => {
+    const verifyOptionsFor = async (): Promise<jwt.VerifyOptions> => {
+      let options: jwt.VerifyOptions = {};
+      (jwt.verify as jest.Mock).mockImplementation((_t, _k, opts, callback) => {
+        options = opts;
+        callback(null, { sub: 'user-1', preferred_username: 'someone' });
+      });
+
+      mockRequest.headers = { authorization: 'Bearer a.b.c' };
+      await authenticateToken()(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response,
+        nextFunction
+      );
+      return options;
+    };
+
+    it('defaults to KEYCLOAK_URL when no separate issuer is configured', async () => {
+      const options = await verifyOptionsFor();
+
+      expect(options.issuer).toBe('http://localhost:8080/realms/test-realm');
+    });
+
+    it('uses KEYCLOAK_ISSUER_URL when Keycloak is reached through a proxy', async () => {
+      // The shape of the single-instance deployment: internal address for us,
+      // public address in the token.
+      process.env.KEYCLOAK_URL = 'http://keycloak:8080/auth';
+      process.env.KEYCLOAK_ISSUER_URL = 'https://itsps.org/auth';
+
+      const options = await verifyOptionsFor();
+
+      expect(options.issuer).toBe('https://itsps.org/auth/realms/test-realm');
+      expect(options.issuer).not.toContain('keycloak:8080');
+    });
+
+    it('applies the same issuer to optionally-authenticated requests', async () => {
+      process.env.KEYCLOAK_URL = 'http://keycloak:8080/auth';
+      process.env.KEYCLOAK_ISSUER_URL = 'https://itsps.org/auth';
+
+      let options: jwt.VerifyOptions = {};
+      (jwt.verify as jest.Mock).mockImplementation((_t, _k, opts, callback) => {
+        options = opts;
+        callback(null, { sub: 'user-1' });
+      });
+
+      mockRequest.headers = { authorization: 'Bearer a.b.c' };
+      await optionalAuth()(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response,
+        nextFunction
+      );
+
+      expect(options.issuer).toBe('https://itsps.org/auth/realms/test-realm');
+    });
   });
 
   describe('authenticateToken', () => {

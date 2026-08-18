@@ -32,7 +32,22 @@ export interface AuthenticatedRequest extends Request {
  * Keycloak configuration
  */
 interface KeycloakConfig {
+  /** How this process reaches Keycloak. Used to fetch signing keys. */
   url: string;
+  /**
+   * The hostname Keycloak puts in the `iss` claim — which is the *browser's*
+   * hostname, not ours.
+   *
+   * Behind a reverse proxy the two differ: we reach Keycloak at
+   * `http://keycloak:8080/auth` while it issues tokens claiming
+   * `https://itsps.org/auth`. Verifying against our own URL then rejects every
+   * token as untrusted, so sign-in appears to succeed and every subsequent API
+   * call returns 401 — which is exactly how this presented in the single-
+   * instance deployment.
+   *
+   * Defaults to `url`, so a direct-to-Keycloak setup needs nothing set.
+   */
+  issuerUrl: string;
   realm: string;
   clientId: string;
 }
@@ -49,7 +64,10 @@ function getKeycloakConfig(): KeycloakConfig {
     throw new Error('Keycloak configuration is incomplete. Check KEYCLOAK_URL, KEYCLOAK_REALM, and KEYCLOAK_CLIENT_ID environment variables.');
   }
 
-  return { url, realm, clientId };
+  // Only the public *origin* matters; the path is Keycloak's own.
+  const issuerUrl = process.env.KEYCLOAK_ISSUER_URL || url;
+
+  return { url, issuerUrl, realm, clientId };
 }
 
 /**
@@ -159,7 +177,7 @@ export function authenticateToken() {
 
   const config = getKeycloakConfig();
   const client = createJwksClient(config.url, config.realm);
-  const issuer = `${config.url}/realms/${config.realm}`;
+  const issuer = `${config.issuerUrl}/realms/${config.realm}`;
 
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
@@ -328,7 +346,7 @@ export function requireAllRoles(roles: string[]) {
 export function optionalAuth() {
   const config = getKeycloakConfig();
   const client = createJwksClient(config.url, config.realm);
-  const issuer = `${config.url}/realms/${config.realm}`;
+  const issuer = `${config.issuerUrl}/realms/${config.realm}`;
 
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
     try {

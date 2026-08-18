@@ -12991,3 +12991,111 @@ git push
 Try it now. Its blank screen was very likely this too: orgadmin uses `login-required`, so it resolves the OIDC configuration *before* redirecting — a 502 there leaves the app stuck with nothing rendered and nothing logged, which matches what you saw. If it's still blank after this, that's genuinely something else and the Network tab will show which request fails.
 
 ---
+
+
+## 2026-08-18 13:41:48 — Prompt
+
+The orgadmin still shows a blank scren, under the hood in the console log I see the following:
+
+hoist-non-react-statics.cjs.js:47 Uncaught TypeError: Cannot read properties of undefined (reading 'ForwardRef')
+(anonymous)	@	hoist-non-react-statics.cjs.js:47
+
+### Assistant
+
+Confirmed the 401 — and it isn't an admin problem, it's every authenticated call. Let me read the middleware and confirm the audience too:
+
+Two independent bugs. Let me confirm the audience side and re-check the chunk fix (my earlier grep loop was broken):
+
+Audience is fine. So the 401 is purely the issuer. Let me fix that:
+
+Now the fix — separate the issuer the token must claim from the URL used to reach Keycloak:
+
+Now let me prove the chunk fix actually cures the blank screen, by loading both builds in a real browser:
+
+My diagnosis needs checking against the actual failing artefact rather than a local rebuild. Let me fetch what's really deployed:
+
+Local "broken" build matches the deployed hashes exactly (`vendor-react-BfJeBtoy`, `vendor-emotion-CJMNRF1B`) — so I can reproduce it. Let me get the real import graph:
+
+Found it — and it's not what I first guessed. There's a genuine **circular chunk dependency**:
+
+```
+vendor-react → vendor-emotion → vendor-react
+vendor-react → vendor-mui-core → vendor-react
+vendor-react → vendor-utils → vendor-react
+```
+
+Let me see the whole rule set:
+
+Now the real fix — match on package **name**, not a path substring:
+
+Now a check so this can't come back — the comment promises it, so it has to exist:
+
+The checker works (3 cycles → 0), but its labels are unreadable — the hash regex eats too much. Let me fix that and check the other three front ends for the same bug:
+
+account-shell has a latent one too. Let me find the actual back-edge before touching it:
+
+Both clean. Let me confirm the other two pass before I gate the image build on this:
+
+All four pass. Now gate the image build on it, so this can't ship again:
+
+Now a test for the issuer fix. Let me see how the existing auth tests are set up:
+
+All pass. Let me prove the new tests actually have teeth:
+
+Both tests fail without the fix and pass with it. Now the docs and an npm script:
+
+Now the docs — including correcting a claim in there that this session already disproved:
+
+Both bugs are fixed and verified. They were unrelated.
+
+## 1. Platform Admin 401 — the issuer, and it affected every app
+
+The backend built the expected `iss` from the address *it* uses to reach Keycloak:
+
+```
+expects  http://keycloak:8080/auth/realms/aws-framework
+tokens   https://itsps.org/auth/realms/aws-framework      ← confirmed live
+```
+
+Every token was rejected as untrusted, so sign-in worked and every authenticated call returned 401. Not admin-specific — the audience mappers were fine.
+
+[auth.middleware.ts](packages/backend/src/middleware/auth.middleware.ts) now separates the two: `KEYCLOAK_URL` fetches signing keys, new `KEYCLOAK_ISSUER_URL` is what a token must claim. It defaults to `KEYCLOAK_URL`, so local dev is unchanged. Wired up in [docker-compose.deploy.yml:109](docker-compose.deploy.yml#L109) as `${PUBLIC_URL}/auth`.
+
+Three tests added; I reverted the fix to confirm two of them fail without it, then restored it.
+
+## 2. orgadmin blank screen — a circular chunk dependency
+
+My first guess (co-locating `hoist-non-react-statics` with `react-is`) was wrong — I checked, and they were already in the same chunk. The real graph, from the deployed bundle:
+
+```
+vendor-react -> vendor-emotion  -> vendor-react
+vendor-react -> vendor-mui-core -> vendor-react
+vendor-react -> vendor-utils    -> vendor-react
+```
+
+`id.includes('node_modules/react')` is a substring match, so it also caught `react-transition-group`, `react-i18next` and friends, dragging MUI's and i18next's dependencies into `vendor-react`. Chunks in an ESM cycle evaluate with one side uninitialised; `hoist-non-react-statics` reads `ReactIs.ForwardRef` at module scope, got `undefined`, and threw before React rendered.
+
+[vite.config.ts](packages/orgadmin-shell/vite.config.ts) now matches on package *name*. 3 cycles → 0.
+
+I checked the other three front ends: `account-shell` had a latent `vendor-utils ↔ vendor-mui` cycle (from naming `date-fns`, the pickers' dependency) — fixed; `admin` and `frontend` have no `manualChunks` and are clean.
+
+[scripts/check-chunk-cycles.mjs](scripts/check-chunk-cycles.mjs) is new and [Dockerfile.web](Dockerfile.web) now fails the image build on a cycle — nothing else could have caught this, since the fault exists only in the built artefact and dev never splits chunks. `npm run check:chunks` locally.
+
+I confirmed my local "broken" build reproduced the deployed chunk hashes exactly (`vendor-react-BfJeBtoy`, `vendor-emotion-CJMNRF1B`), so this is the artefact that's failing, not an approximation.
+
+**Caveat on evidence:** the sandbox blocks listening sockets, so I couldn't load the fixed bundle in a browser — the proof is the cycle graph, not a rendered page. The browser check happens when you deploy.
+
+Tests: 154 middleware tests pass, both front-end configs still load under Vitest.
+
+## Deploying
+
+I haven't touched git. These need to be on `main` before the instance can pull them:
+
+```bash
+# after you commit and push
+sudo ./scripts/deploy/update.sh     # on the instance — rebuilds backend and web
+```
+
+Also corrected a claim in [docs/DEPLOY_SINGLE_INSTANCE.md](docs/DEPLOY_SINGLE_INSTANCE.md) that this session disproved: it said `KC_PROXY_HEADERS` is required, but the pinned Keycloak 23.0 needs `KC_PROXY: edge` — `KC_PROXY_HEADERS` is 24+ and silently ignored on 23.
+
+---
