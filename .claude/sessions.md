@@ -10919,3 +10919,123 @@ sudo systemctl reload nginx
 One thing to know before you apply: **state is local**, in that directory. Don't lose it, or Terraform forgets what it created.
 
 ---
+
+
+## 2026-08-18 08:19:03 — Prompt
+
+When I run "sudo certbot certonly --webroot -w /var/www/certbot -d itsps.org -d www.itsps.org" on the new server I get the error 
+
+sudo: certbot: command not found
+
+### Assistant
+
+That's my bug: **certbot isn't in the Amazon Linux 2023 repositories**, and my `dnf install -y certbot ... || true` swallowed the failure silently.
+
+Here's the fix to run on the box now:
+
+Now fixing `user_data.sh` so the next instance doesn't hit this:
+
+The CERT_ARGS block sits between them. Two targeted replacements:
+
+**Important: don't run `tofu apply` right now.** My `user_data` fix would **destroy and rebuild your running instance** — `user_data_replace_on_change` is set, so editing that script replaces the box, taking the database and Keycloak realm with it.
+
+Fix the running instance by hand with the commands above. The `user_data` change is for the *next* one.
+
+## What went wrong
+
+`certbot` isn't in the Amazon Linux 2023 repositories — AL2023 dropped EPEL and certbot was never packaged for it. So `dnf install -y certbot` failed, and my `|| true` swallowed the failure. Worse, I'd sent certbot's own stderr to `/dev/null`, so the log that exists to explain this said nothing useful.
+
+## What I changed for future instances
+
+- Installs certbot into a virtualenv (`/opt/certbot`), the route AWS documents, and symlinks it onto the path.
+- Renewal via `/etc/cron.d/certbot-renew` — a pip install brings no systemd timer, so my old `systemctl enable certbot-renew.timer` was doing nothing either.
+- Stopped discarding stderr, and the failure branch now prints the retry command instead of a shrug.
+- `nginx -t` before the reload, so a bad config doesn't take the site down.
+
+Documented in [DEPLOY_SINGLE_INSTANCE.md](docs/DEPLOY_SINGLE_INSTANCE.md) under "If the certificate did not issue", including the `command not found` case for an instance that predates the fix.
+
+## When you do want to rebuild
+
+The plan is `2 to add, 1 to change, 2 to destroy` — the instance and the EIP association. Before that, snapshot the volume, or you lose the database and the realm:
+
+```bash
+aws ec2 describe-instances --instance-ids i-0a55e0bceb040e9f1 --region eu-west-1 \
+  --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text
+aws ec2 create-snapshot --volume-id vol-xxx --description "before rebuild" --region eu-west-1
+```
+
+Your elastic IP is safe either way — Terraform associates it but doesn't own it, so a rebuild reattaches the same address and DNS keeps working.
+
+---
+
+
+## 2026-08-18 08:22:11 — Prompt
+
+I don't care about a backup, I have done nothing with the realm or database, is that ok to ignore the create-snapshot command ?
+
+### Assistant
+
+Yes — skip it. Nothing to lose: the seed recreates the demo data and the realm re-imports from scratch on a new box.
+
+Let me check what's actually live before you decide how to proceed:
+
+Everything's **502** — the host nginx is up and terminating TLS, but the application container isn't answering. So the stack didn't finish coming up. Let me look:
+
+Found it — and it explains the empty `docker ps`. The bootstrap died before starting anything:
+
+```
+==> Building images (a few minutes on a small instance)
+compose build requires buildx 0.17.0 or later
+```
+
+My `user_data` installs the **compose** plugin but not **buildx**, which `docker compose build` now delegates to. Amazon Linux 2023's `docker` package ships neither.
+
+Here's the fix for the running box — this also installs certbot, so it clears both problems in one go:
+
+Now fixing `user_data.sh` so a fresh instance works unattended:
+
+The comment wording differs from my match string. Redoing:
+
+`${BUILDX_VERSION:-...}` is shell syntax that Terraform tries to interpolate. Let me find every such case:
+
+The `${...}` inside my *comment* is itself template text. Rephrasing it:
+
+**Yes, skip the snapshot** — nothing in that database or realm is yours yet, and a rebuild recreates both from the seed.
+
+## Why `docker ps` is empty
+
+The bootstrap died before starting anything:
+
+```
+==> Building images (a few minutes on a small instance)
+compose build requires buildx 0.17.0 or later
+```
+
+My `user_data` installed the **compose** plugin but not **buildx**. Amazon Linux 2023's `docker` package is the daemon and base CLI only, and `docker compose build` delegates to buildx. So nothing was built, nothing started — a failure with no container left behind to inspect, which is why `docker ps` shows nothing rather than something broken.
+
+That's two AL2023 packaging assumptions I got wrong in the same script: certbot and buildx.
+
+## Your two options
+
+**Fix in place** — run the block I printed above. It installs buildx and certbot, re-runs `bootstrap.sh` (idempotent: it keeps the `.env.deploy` and realm already generated), and gets the real certificate. Takes about as long as the build.
+
+**Or rebuild** — `tofu apply` now picks up the fixed `user_data` and does all of it unattended. Costs a full rebuild (~20 min) and gets you a box that matches the code exactly. Given you've nothing to preserve, this is the cleaner choice, and it also *tests* the fix rather than leaving the instance diverged from what's in git.
+
+Either way your elastic IP reattaches, so DNS keeps working.
+
+## What I changed in `user_data.sh`
+
+- Installs buildx, resolving the tag from the GitHub API with a pinned fallback so a rate limit can't fail the boot. Its assets use `arm64`/`amd64`, unlike compose which uses `uname -m`.
+- `docker buildx version` immediately after, so a bad install fails there rather than three minutes into a build.
+- Certbot into a virtualenv, with cron-based renewal, and no longer discarding its stderr.
+
+Two Terraform-template traps I hit while writing it, both now commented: shell `${VAR:-default}` needs `$${...}`, and **comments are template text too** — my explanatory comment containing `${...}` broke `tofu validate` on its own.
+
+If you rebuild, push these first, since the instance clones from GitHub.
+
+---
+
+
+## 2026-08-18 08:28:24 — Prompt
+
+I will run tofu apply again

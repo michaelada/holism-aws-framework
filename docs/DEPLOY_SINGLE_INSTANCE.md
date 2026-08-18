@@ -102,16 +102,39 @@ sudo tail -f /var/log/holism-bootstrap.log
 Fifteen to twenty minutes on a `t4g.medium`, most of it building four Vite
 bundles.
 
-### If DNS was not ready
+### If the certificate did not issue
 
 The certificate step is deliberately last and deliberately non-fatal: the stack
-comes up on a self-signed certificate and you get a browser warning. Once DNS
-resolves:
+comes up on a self-signed certificate and you get a browser warning. The usual
+cause is DNS not yet resolving to the instance — or a name in `extra_domains`
+that does not, since certbot fails the whole request if any one of them cannot
+be validated.
 
 ```bash
-sudo certbot certonly --webroot -w /var/www/certbot -d <your host>
-sudo systemctl reload nginx
+sudo certbot certonly --webroot -w /var/www/certbot -d itsps.org -d www.itsps.org
+sudo ln -sf /etc/letsencrypt/live/itsps.org/fullchain.pem /etc/nginx/tls/fullchain.pem
+sudo ln -sf /etc/letsencrypt/live/itsps.org/privkey.pem   /etc/nginx/tls/privkey.pem
+sudo nginx -t && sudo systemctl reload nginx
 ```
+
+**`certbot: command not found`** means the instance predates the fix below.
+certbot is not in the Amazon Linux 2023 repositories — AL2023 dropped EPEL and
+certbot was never packaged for it, so `dnf install certbot` fails. Install it
+into a virtualenv, which is the route AWS documents:
+
+```bash
+sudo dnf install -y python3 python3-pip augeas-libs
+sudo python3 -m venv /opt/certbot
+sudo /opt/certbot/bin/pip install --upgrade pip
+sudo /opt/certbot/bin/pip install certbot certbot-nginx
+sudo ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
+
+# and renewal, since a pip install brings no systemd timer
+echo "0 0,12 * * * root /opt/certbot/bin/certbot renew -q --deploy-hook 'systemctl reload nginx'" \
+  | sudo tee /etc/cron.d/certbot-renew
+```
+
+New instances do this themselves.
 
 ## How it fits together
 

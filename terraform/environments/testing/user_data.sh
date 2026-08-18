@@ -18,13 +18,42 @@ EXTRA_DOMAINS="${extra_domains}"
 dnf update -y
 dnf install -y docker git nginx openssl
 
-# The Compose plugin is not in the Amazon Linux repositories.
+# Neither Docker CLI plugin is in the Amazon Linux repositories: the `docker`
+# package there is the daemon and the base CLI only.
 DOCKER_PLUGINS=/usr/local/lib/docker/cli-plugins
 mkdir -p "$DOCKER_PLUGINS"
+
+# Compose. Its assets are named by `uname -m` — `aarch64`, not `arm64`.
 ARCH="$(uname -m)"
 curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$ARCH" \
   -o "$DOCKER_PLUGINS/docker-compose"
 chmod +x "$DOCKER_PLUGINS/docker-compose"
+
+# buildx, and it is **not optional**: `docker compose build` delegates to it and
+# fails outright with "compose build requires buildx 0.17.0 or later" when it is
+# missing. Nothing is built, nothing starts, and `docker ps` is simply empty —
+# a failure with no running thing left to inspect.
+#
+# Its assets use `arm64`/`amd64` rather than `uname -m`, and carry the version
+# in the filename, so the tag has to be resolved rather than using
+# `latest/download` as Compose allows.
+BUILDX_ARCH=$([ "$ARCH" = "aarch64" ] && echo arm64 || echo amd64)
+BUILDX_VERSION="$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest \
+  | grep -m1 '"tag_name"' | cut -d'"' -f4)"
+# Pinned fallback, so a GitHub API rate limit does not fail the whole boot.
+#
+# The doubled dollar below is not a typo. This file is a Terraform template, so
+# a single dollar-brace is an interpolation Terraform tries to resolve itself —
+# and it rejects shell default-value syntax inside one. Doubling escapes it.
+# The same applies to comments: they are template text too, which is why this
+# one describes the syntax rather than showing it.
+BUILDX_VERSION="$${BUILDX_VERSION:-v0.36.1}"
+curl -fsSL "https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-$BUILDX_ARCH" \
+  -o "$DOCKER_PLUGINS/docker-buildx"
+chmod +x "$DOCKER_PLUGINS/docker-buildx"
+
+# Fail here rather than three minutes later inside a build.
+docker buildx version >/dev/null || { echo "buildx did not install" >&2; exit 1; }
 
 systemctl enable --now docker
 usermod -aG docker ec2-user
@@ -211,22 +240,46 @@ SEED_DEMO_DATA="${seed_demo_data}" \
 # Deliberately last and deliberately non-fatal: the stack should be up whether
 # or not the DNS record has been pointed at this address yet. Re-run
 # `certbot certonly` by hand afterwards if it did not.
-dnf install -y certbot python3-certbot-nginx || true
+# certbot is **not** in the Amazon Linux 2023 repositories.
+#
+# `dnf install -y certbot` fails there — AL2023 dropped EPEL and certbot was
+# never packaged for it. Installed into its own virtualenv, the route AWS
+# documents. Getting this wrong is silent: the stack comes up, the site serves
+# on a self-signed certificate, and the only clue is `certbot: command not
+# found` when somebody tries to fix it by hand.
+dnf install -y python3 python3-pip augeas-libs
+python3 -m venv /opt/certbot
+/opt/certbot/bin/pip install --upgrade pip
+/opt/certbot/bin/pip install certbot certbot-nginx
+ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
 # One certificate covering every name. Certbot fails the whole request if any
 # one of them does not validate, so a name listed here must already resolve to
 # this instance.
 CERT_ARGS="-d $PUBLIC_HOST"
 for d in $EXTRA_DOMAINS; do CERT_ARGS="$CERT_ARGS -d $d"; done
 
+# Errors are no longer sent to /dev/null: a failure here used to be invisible
+# in the log that exists to explain it.
 if certbot certonly --webroot -w /var/www/certbot \
      $CERT_ARGS --non-interactive --agree-tos \
-     --register-unsafely-without-email 2>/dev/null; then
+     --register-unsafely-without-email; then
   ln -sf "/etc/letsencrypt/live/$PUBLIC_HOST/fullchain.pem" /etc/nginx/tls/fullchain.pem
   ln -sf "/etc/letsencrypt/live/$PUBLIC_HOST/privkey.pem"   /etc/nginx/tls/privkey.pem
-  systemctl reload nginx
-  systemctl enable --now certbot-renew.timer || true
+  nginx -t && systemctl reload nginx
+
+  # A pip-installed certbot brings no systemd timer, so renewal is a cron entry.
+  # Twice daily is what certbot recommends; it exits quietly when nothing is
+  # near expiry.
+  echo "0 0,12 * * * root /opt/certbot/bin/certbot renew -q --deploy-hook 'systemctl reload nginx'" \
+    > /etc/cron.d/certbot-renew
+  echo "Certificate obtained for: $CERT_ARGS"
 else
-  echo "No certificate yet — DNS is probably not pointing here. The self-signed one is in use."
+  # Non-fatal on purpose — the application should be up whether or not a
+  # certificate could be issued — but no longer silent.
+  echo "!! No certificate. The self-signed one is in use and browsers will warn." >&2
+  echo "!! Usually DNS not yet resolving here, or a name in extra_domains that" >&2
+  echo "!! does not. Retry with:" >&2
+  echo "!!   sudo certbot certonly --webroot -w /var/www/certbot $CERT_ARGS" >&2
 fi
 
 echo "Bootstrap finished. Application at $PUBLIC_URL"
