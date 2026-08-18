@@ -13476,3 +13476,142 @@ One correction to what I told you earlier: I said the 403 was "the capability ch
 Still needs push, then `sudo ./scripts/deploy/update.sh`. The CORS fix can't be applied by editing `.env.deploy` alone — the deployed compose file doesn't pass the variable into the container.
 
 ---
+
+
+## 2026-08-18 15:17:39 — Prompt
+
+what do i have to do to fix this ? do I have to do something with .env.deploy ?
+
+### Assistant
+
+No — `.env.deploy` needs no changes. `PUBLIC_URL` is already in it (bootstrap writes it), and the fix derives the origin from that. Let me verify that end-to-end:
+
+Confirmed working: `ALLOWED_ORIGINS` resolves to empty without complaint, `PUBLIC_URL` reaches the backend container, and the backend compiles clean.
+
+## What you need to do
+
+**Nothing in `.env.deploy`.** The fix reads `PUBLIC_URL`, which is already there. `ALLOWED_ORIGINS` stays optional — it's only for trusting origins *other* than your own.
+
+Two steps:
+
+**1. Commit and push.** I haven't touched git. `update.sh` does `git fetch` + `git reset --hard FETCH_HEAD`, so the changes have to be on the branch the instance tracks.
+
+⚠️ You're on `work/august-batch` locally, and the instance most likely tracks `main`. Check before pushing:
+
+```bash
+sudo cat /opt/holism/.deploy-source     # shows BRANCH=...
+```
+
+If it says `main`, these need to reach `main`, not just `work/august-batch`.
+
+**2. On the instance:**
+
+```bash
+cd /opt/holism && sudo ./scripts/deploy/update.sh
+```
+
+That rebuilds both images — the backend (CORS, issuer, route collision) and the web bundles (orgadmin chunking, admin logo, discount base URL). The database and Keycloak realm are untouched.
+
+Note the image build now fails outright if the front-end chunks contain an import cycle, so a recurrence of the blank orgadmin page stops the deploy rather than shipping.
+
+## Verifying it worked
+
+```bash
+# the backend actually received them
+sudo docker exec "$(sudo docker ps -qf name=backend)" printenv \
+  | grep -E 'PUBLIC_URL|ALLOWED_ORIGINS|KEYCLOAK_ISSUER_URL'
+```
+
+Then in the browser: dismiss the onboarding banner (that's the PUT that was 500ing) and edit a discount. If either still fails:
+
+```bash
+sudo docker logs --tail 100 "$(sudo docker ps -qf name=backend)" 2>&1 | grep -i "origin\|FORBIDDEN"
+```
+
+A refused origin is now a **403 naming the origin**, not an opaque 500 — so the log will say plainly what was rejected rather than "Unexpected error".
+
+If you'd like me to commit and push, say so and I will — I've left everything in the working tree.
+
+---
+
+
+## 2026-08-18 15:21:49 — Prompt
+
+is this correct for that command:
+
+sh-5.2$ # the backend actually received them
+sudo docker exec "$(sudo docker ps -qf name=backend)" printenv \
+  | grep -E 'PUBLIC_URL|ALLOWED_ORIGINS|KEYCLOAK_ISSUER_URL'
+KEYCLOAK_ISSUER_URL=https://itsps.org/auth
+PUBLIC_URL=https://itsps.org
+ALLOWED_ORIGINS=
+sh-5.2$
+
+### Assistant
+
+That's exactly right — all three present, and `ALLOWED_ORIGINS` empty is correct since the origin is derived from `PUBLIC_URL`. So you've already deployed. Let me verify it from the outside:
+
+Both confirmed live: your origin gets `access-control-allow-origin: https://itsps.org`, and an untrusted origin now returns **403** rather than the opaque 500. Writes should work. Let me verify the front-end fixes shipped too:
+
+Deployed orgadmin bundle: new hashes, **15 chunks, no import cycles** — verified against the live artefact, not a local build. Let me confirm the admin logo reference:
+
+Everything is live and verified against the deployed artefacts:
+
+| Fix | Evidence from itsps.org |
+|---|---|
+| CORS / all writes | preflight returns `access-control-allow-origin: https://itsps.org`; untrusted origin now **403**, not 500 |
+| Keycloak issuer | `KEYCLOAK_ISSUER_URL=https://itsps.org/auth` in the container |
+| orgadmin blank page | 15 chunks, **no import cycles** in the deployed bundle |
+| admin logo | `"/admin/".replace(/\/?$/,"/")` + `logo.png`, and `/admin/logo.png` → 200 |
+| account favicon | `"/account/"` + `favicon.png` |
+
+The discount route collision and the `localhost:3000` base URL are in the same images, but both need a signed-in session to exercise — worth clicking **Edit** on that discount and dismissing the onboarding banner to confirm.
+
+Two things worth noting:
+
+The `ALLOWED_ORIGINS=` being empty is the intended state, not a gap. The trusted origin is derived from `PUBLIC_URL`, so there's nothing to maintain. You'd only populate it if you later serve a front end from a *different* host.
+
+And you can now tell a CORS refusal apart from a real fault at a glance — a rejected origin logs `Refused a request from an untrusted origin` with the origin and the current allowlist, and returns 403. The 500 that sent us looking at the database is gone.
+
+The working tree still has all of this uncommitted on `work/august-batch`; since the instance is already running it, you've clearly pushed something — if you want me to commit and push the remainder, say the word.
+
+---
+
+
+## 2026-08-18 15:23:26 — Prompt
+
+sh-5.2$ sudo docker logs --tail 100 "$(sudo docker ps -qf name=backend)" 2>&1 | grep -i "origin\|FORBIDDEN"
+{"allowedOrigins":["https://itsps.org"],"environment":"production","hint":"Set PUBLIC_URL to the origin this deployment is served from.","level":"warn","message":"Refused a request from an untrusted origin","origin":"https://evil.example","service":"aws-web-framework-backend","timestamp":"2026-08-18T14:22:03.276Z"}
+{"environment":"production","error":"CORS: origin https://evil.example not allowed","level":"warn","message":"Authentication/Authorization error","method":"OPTIONS","path":"/api/user-preferences/onboarding","requestId":"req_1787062923279_nb5izf8om","service":"aws-web-framework-backend","statusCode":403,"timestamp":"2026-08-18T14:22:03.279Z"}
+sh-5.2$
+
+### Assistant
+
+That's my own `evil.example` probe from a few minutes ago — timestamp `14:22:03` matches the curl exactly. It's the only refusal in the log, so nothing real is being rejected. It confirms three things: the allowlist is `["https://itsps.org"]`, the refusal is a `warn` rather than an `error`, and it's a 403.
+
+One flaw there is mine, though. That `hint` is wrong in this case — `PUBLIC_URL` **is** set correctly; the origin was simply a stranger. It should only appear when the allowlist actually looks unconfigured:
+
+The deployment is healthy. Everything checks out:
+
+- allowlist resolved to `["https://itsps.org"]` — exactly what should be there
+- the refusal path works and is a 403
+- no genuine origin refusals in the log
+
+The `hint` change is a small correctness fix to my own work, not something you need to redeploy for — it only affects a log line, and only in the case that's already fixed. It'll ride along with the next `update.sh`. 539 backend tests still pass.
+
+That closes out all five issues from this stretch:
+
+| | Status |
+|---|---|
+| orgadmin blank page | fixed, verified live (no chunk cycles in the deployed bundle) |
+| Platform Admin 401 | fixed, verified (`KEYCLOAK_ISSUER_URL` in container) |
+| Admin logo 404 | fixed, verified (`/admin/logo.png` → 200) |
+| `localhost:3000` calls | fixed, in the deployed image |
+| PUT → 500 (all writes) | fixed, verified live via preflight |
+| Edit discount → 403 | fixed, in the deployed image |
+
+The last two are worth a click-through to confirm end to end — dismissing the onboarding banner exercises the PUT, and opening that discount exercises the route collision. Both need a session, so I can't check them from here.
+
+Uncommitted on `work/august-batch`: the `hint` refinement plus whatever else you haven't pushed. Say the word if you want me to commit and push.
+
+---

@@ -87,10 +87,22 @@ app.use(cors({
      * would block only the *response*, so a cross-site write would already
      * have happened.
      */
+    /*
+     * The hint is advice, so it only appears when it is actually the likely
+     * cause. Printing it on every refusal told an operator to set a variable
+     * that was already set correctly, next to a stranger's origin that was
+     * refused exactly as intended — advice that is wrong more often than right
+     * is worse than none, because it is read during an incident.
+     */
+    const stillOnTheDevelopmentDefault =
+      allowedOrigins.length === 1 && allowedOrigins[0] === 'http://localhost:3000';
+
     logger.warn('Refused a request from an untrusted origin', {
       origin,
       allowedOrigins,
-      hint: 'Set PUBLIC_URL to the origin this deployment is served from.',
+      ...(stillOnTheDevelopmentDefault && {
+        hint: 'The allowlist is the development default, so PUBLIC_URL is unset or unparseable. Every write from a browser will fail until it names this deployment’s origin.',
+      }),
     });
     return callback(new ForbiddenError(`CORS: origin ${origin} not allowed`));
   },
