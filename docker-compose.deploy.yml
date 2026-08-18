@@ -196,6 +196,16 @@ services:
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET}
       KEYCLOAK_PASSWORD_CHECK_CLIENT_ID: account-password-check
       KEYCLOAK_PASSWORD_CHECK_CLIENT_SECRET: ${KEYCLOAK_PASSWORD_CHECK_SECRET}
+
+      # The seed creates a test connected Stripe account per club, so it needs
+      # the key. Without it that step reports "STRIPE_SECRET_KEY is not set" and
+      # skips — leaving every club with no `accountId` and card checkout
+      # refusing with "has not finished connecting its payment account", which
+      # reads like a Stripe problem rather than a missing variable here.
+      #
+      # The seed refuses anything but a test key, so this cannot touch a live
+      # account.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
