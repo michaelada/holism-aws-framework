@@ -12868,3 +12868,126 @@ Your webhook secret is now a proper `whsec_…`, so with the accounts in place t
 ## 2026-08-18 13:28:03 — Prompt
 
 do I need to do anything to change the chargesEnabled to true so I can make test payments?
+
+### Assistant
+
+Let me check what Stripe actually says right now, rather than what the cached record says:
+
+`charges=None` means the field isn't in the response at all — not that it's false. Let me see what Stripe is actually returning:
+
+That's the answer — **the accounts are already active**:
+
+```
+capabilities: {'card_payments': 'active', 'platform_payments': 'active'}
+details_submitted: True
+```
+
+Note the response has `charge_enabled` (singular, an old API version), not `charges_enabled` — which is why my check printed `None`.
+
+**No — you don't need to do anything.** The accounts are already active, and the stale `false` corrects itself.
+
+Stripe reports `card_payments: active` and `platform_payments: active` for all four clubs. The `chargesEnabled: false` in the database is just a cache, written while Stripe was still verifying — the seed waited, gave up, and recorded what it saw at that moment.
+
+The backend handles exactly this. On checkout:
+
+```ts
+let ableToCharge = connected.chargesEnabled;
+if (!ableToCharge) {
+  const refreshed = await stripeConnectService.refreshState(organisationId);
+  ableToCharge = refreshed.chargesEnabled;
+}
+```
+
+A cached `false` is never believed without asking Stripe again — and the refresh writes the corrected value back. So the first checkout you attempt will re-check, find the account active, update the record, and proceed.
+
+That re-check exists because of this exact problem: earlier in this project the cached flag went stale and blocked clubs that could take money perfectly well.
+
+Incidentally, the backend reads through the SDK with a pinned API version, so it sees `charges_enabled` properly — my raw `curl` had no version pinned and got the account's older default with `charge_enabled` singular. That was my check being wrong, not the account.
+
+## Just go and test a payment
+
+Add something to a basket in the member portal and check out. Stripe's test card:
+
+```
+4242 4242 4242 4242    any future expiry, any CVC, any postcode
+```
+
+If you'd rather see the flag flip first, opening **Payment Settings** in org-admin calls the same refresh.
+
+## The one thing that would still bite
+
+Your webhook needs `payment_intent.amount_capturable_updated` selected. Payments here are authorised then captured, so without that event the card is authorised and the order never completes — the money sits held on the card and no entry appears. It's the event a normal immediate-charge integration never needs, so it's easy to miss when ticking boxes.
+
+---
+
+
+## 2026-08-18 13:35:03 — Prompt
+
+Ok, I am going to itsps.org in a new inognito window, I can see the list of 3 applicagtions, however when I click on Club Administation it goes to https://itsps.org/orgadmin and shows a blank scree.
+WHen I go to Platform Admin it shows 502 Bad Gateway awhen redirected to the following url:
+
+https://itsps.org/auth/realms/aws-framework/protocol/openid-connect/auth?client_id=aws-framework-admin&redirect_uri=https%3A%2F%2Fitsps.org%2Fadmin%2F&state=484cd407-0040-4693-8544-78c5e53bec72&response_mode=fragment&response_type=code&scope=openid&nonce=9fd8d024-eefc-449f-8532-41f2a0388e0c&code_challenge=HM7X-itoL0h2bWbqUqm-bq_eGFoIt5CC4kC7gMlvlrE&code_challenge_method=S256
+
+
+And when I try to login to Members Portal, it shows me the list fo 4 organisations, but when I try to login to one of them I either see the login screen and then a "502 Bad Gateway" on https://itsps.org/auth/realms/aws-framework/protocol/openid-connect/auth?client_id=account-app&redirect_uri=https%3A%2F%2Fitsps.org%2Faccount%2Fmhpc&state=7cbfb2e6-f301-43ec-99e1-f8e919b0ceb0&response_mode=fragment&response_type=code&scope=openid&nonce=81deeb7e-0c11-40af-a7c8-125ed1ba13c8&code_challenge=JO0ZMmnciKPxGzAXbhqxzM_nn47avTaPh3QC0TB1PJ4&code_challenge_method=S256 
+
+or it brings me to the 502 Bad Gateway straight away
+
+### Assistant
+
+502 on `/auth/*` means Keycloak is down again. Let me look:
+
+Keycloak's been up 3 hours with no errors or restarts — so the 502 is between nginx and Keycloak. Let me read nginx's error log:
+
+Everything answers 200 from inside — web→keycloak, host→web, Keycloak itself. The 502 must come from the **host** nginx, which I hadn't checked. Let me look at its log and test from outside:
+
+**Found it.** Not Keycloak at all — the host nginx:
+
+```
+[error] upstream sent too big header while reading response header from upstream
+```
+
+Keycloak's auth response sets several large cookies (`AUTH_SESSION_ID`, `KC_RESTART`, `KEYCLOAK_SESSION`). The host nginx's default proxy buffer is 4–8 KB, the headers exceed it, and nginx answers **502**.
+
+This is why it looked intermittent — and why my `curl` checks all passed: curl sends no cookies, so the response headers stay small. A browser mid-flow carries them, and it fails.
+
+I set generous buffers in the *container's* nginx but never in the host's. Fixing both:
+
+Now applying it to the running box — the host nginx is the one that matters right now:
+
+Fixed and reloaded. Reproducing your exact condition — carrying cookies through the flow — now returns 200 across repeated requests, where it previously 502'd.
+
+**Try the site again in a fresh incognito window.**
+
+## What it was
+
+Not Keycloak. The **host nginx**:
+
+```
+[error] upstream sent too big header while reading response header from upstream
+```
+
+Keycloak's authorisation response sets several large cookies — `AUTH_SESSION_ID`, `KC_RESTART`, `KEYCLOAK_SESSION` — and they exceed nginx's default 4–8 KB header buffer. nginx gives up and returns 502.
+
+I'd set generous buffers in the **container's** nginx (`deploy.conf`) and never in the host's, which sits in front of it terminating TLS. Both now use 16k.
+
+## Why I kept missing it
+
+Every check I ran passed, because **`curl` sends no cookies**. A first request has small response headers and succeeds; a browser mid-flow carries the session and fails. That's exactly the "sometimes it 502s straight away, sometimes after the login screen" you described — and it's why "Keycloak is up, 200 from inside" was true and useless at the same time.
+
+I also spent two rounds checking the container's nginx logs without checking the host's, even though the request path is browser → host nginx → container → Keycloak. The error was sitting in `/var/log/nginx/error.log` the whole time.
+
+## Both fixed in source
+
+`user_data.sh` for new instances, `deploy.conf` for the container. Worth pushing:
+
+```bash
+git add -A && git commit -m "fix(deploy): raise nginx proxy buffers — Keycloak's cookies overflow the default and 502"
+git push
+```
+
+## On orgadmin
+
+Try it now. Its blank screen was very likely this too: orgadmin uses `login-required`, so it resolves the OIDC configuration *before* redirecting — a 502 there leaves the app stuck with nothing rendered and nothing logged, which matches what you saw. If it's still blank after this, that's genuinely something else and the Network tab will show which request fails.
+
+---

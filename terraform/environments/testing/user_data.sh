@@ -201,6 +201,19 @@ server {
 
     client_max_body_size 25M;
 
+    # Keycloak's authorisation responses carry several large cookies —
+    # AUTH_SESSION_ID, KC_RESTART, KEYCLOAK_SESSION — and easily exceed nginx's
+    # default 4-8k header buffer. The result is "upstream sent too big header"
+    # and a 502 that looks like the identity provider is down.
+    #
+    # It presents as intermittent, which is what makes it hard to place: a
+    # first visit with no cookies fits and succeeds, and every subsequent
+    # request in the flow fails. `curl` never reproduces it for the same
+    # reason.
+    proxy_buffer_size       16k;
+    proxy_buffers           8 16k;
+    proxy_busy_buffers_size 32k;
+
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
