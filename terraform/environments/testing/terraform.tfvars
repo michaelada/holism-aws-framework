@@ -6,6 +6,12 @@
 
 public_url = "https://itsps.org"
 
+# The elastic IP you already hold, which both itsps.org and www.itsps.org
+# already resolve to. Attaching it means no DNS change and no propagation wait,
+# and it is cheaper than allocating a second address alongside one that is
+# already being charged for sitting idle.
+existing_elastic_ip = "63.32.80.204"
+
 # Redirected to public_url, so Keycloak only ever sees one origin.
 #
 # This name must already resolve to the instance before the certificate is
@@ -45,6 +51,10 @@ seed_demo_data = true
 web_ingress_cidrs = ["0.0.0.0/0"]
 
 # SSH stays shut; Session Manager is attached to the instance role instead.
+# NOTE: 203.0.113.0/24 is the RFC 5737 documentation range — it was a
+# placeholder in my example and matches no real address, so this rule lets
+# nobody in. Put your own address here, or delete both lines and use
+# Session Manager (`aws ssm start-session`), which needs no open port.
 ssh_ingress_cidrs = ["203.0.113.5/32"]
 ssh_key_name      = "ips-ec2-server"
 

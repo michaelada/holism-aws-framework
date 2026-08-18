@@ -31,6 +31,26 @@ variable "use_graviton" {
   default     = true
 }
 
+variable "existing_elastic_ip" {
+  description = <<-EOT
+    An elastic IP you already hold, to attach to this instance instead of
+    allocating a new one.
+
+    Worth using when DNS already points at it: the deployment comes up on the
+    right name with no record to change and no propagation to wait for, and
+    certbot can validate immediately. An unattached elastic IP is also charged
+    for doing nothing, so attaching one you already have costs less than
+    allocating another.
+
+    Given as the address itself, e.g. "63.32.80.204". Empty allocates a new one.
+
+    Terraform associates it but does not manage it: destroying this environment
+    releases the association and leaves the address in your account.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "disk_size_gb" {
   description = "Root volume. Holds the database, the images and the build cache."
   type        = number

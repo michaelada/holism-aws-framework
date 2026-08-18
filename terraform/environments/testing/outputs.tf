@@ -1,6 +1,6 @@
 output "public_ip" {
-  description = "Point your DNS A record here, then re-run the bootstrap if the name changed."
-  value       = aws_eip.main.public_ip
+  description = "Point your DNS A record here, unless it already points at an address you reused."
+  value       = local.public_ip
 }
 
 output "instance_id" {

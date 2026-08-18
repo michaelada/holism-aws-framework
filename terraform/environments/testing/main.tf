@@ -289,9 +289,31 @@ resource "aws_instance" "main" {
 # A stable address, so the DNS record and the Keycloak hostname survive a stop
 # and start. Charged whether or not it is attached — about $3.60/month — which
 # is the price of not re-pointing DNS every time the instance is restarted.
+#
+# Either an address you already hold, or a new one. Reusing an existing address
+# that DNS already points at means the deployment comes up on the right name
+# with nothing to change and nothing to propagate.
+data "aws_eip" "existing" {
+  count     = var.existing_elastic_ip == "" ? 0 : 1
+  public_ip = var.existing_elastic_ip
+}
+
+resource "aws_eip_association" "existing" {
+  count = var.existing_elastic_ip == "" ? 0 : 1
+
+  allocation_id = data.aws_eip.existing[0].id
+  instance_id   = aws_instance.main.id
+}
+
 resource "aws_eip" "main" {
+  count = var.existing_elastic_ip == "" ? 1 : 0
+
   instance = aws_instance.main.id
   domain   = "vpc"
 
   tags = { Name = "holism-testing" }
+}
+
+locals {
+  public_ip = var.existing_elastic_ip != "" ? var.existing_elastic_ip : aws_eip.main[0].public_ip
 }

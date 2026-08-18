@@ -10846,3 +10846,76 @@ A fine-grained token with `Contents: Read-only` on that one repo is enough.
 Your local `.claude/sessions.md` edit is still uncommitted — I left it alone, as it wasn't part of this.
 
 ---
+
+
+## 2026-08-18 07:52:48 — Prompt
+
+I updated the repositor_url and I ran the aws ssm put-parameter command, what do I do now to deploy the test system to itsps.org ?
+
+### Assistant
+
+Let me check your tfvars and pre-flight it before you spend 20 minutes on a build.
+
+Two things worth pausing on — `itsps.org` already resolves somewhere:
+
+Good question, and the DNS picture makes it a better idea than you might realise. Let me pin down the current records first — they looked contradictory:
+
+That changes the picture — and corrects something I told you a moment ago.
+
+**Authoritative DNS says both names already point at `63.32.80.204`:**
+
+```
+itsps.org      A     -> 63.32.80.204
+www.itsps.org  CNAME -> itsps.org  -> 63.32.80.204
+```
+
+My earlier lookup returned `52.17.22.240` from a **stale local cache**, which is why I flagged a live site at risk. That was wrong — the apex no longer points at the `IPS4` instance. Both public and authoritative resolvers agree.
+
+So yes: use that EIP, and **you need no DNS change at all**. Let me wire it in:
+
+**Plan is clean: 13 to add, 0 to change, 0 to destroy — and `public_ip = 63.32.80.204`.** Your existing address gets attached, so DNS needs no change at all.
+
+## Pre-flight, all verified against your account
+
+| | |
+|---|---|
+| AWS credentials | account `195810096194` |
+| SSM parameter | exists, `SecureString` |
+| Key pair `ips-ec2-server` | exists in eu-west-1 |
+| SES `info@eskersoft.com` | verified, and **production access enabled** — not sandboxed, so mail reaches anyone |
+| `itsps.org` / `www.itsps.org` | both already resolve to `63.32.80.204` |
+
+## Deploy
+
+```bash
+cd terraform/environments/testing
+tofu apply
+```
+
+Then, while it builds (~15–20 min, mostly the four Vite bundles):
+
+```bash
+aws ssm start-session --target $(tofu output -raw instance_id) --region eu-west-1
+sudo tail -f /var/log/holism-bootstrap.log
+```
+
+When it finishes, `https://itsps.org/orgadmin` and `/account`, with `www` redirecting to the apex. Seeded logins use `Passw0rd!`; `admin@kildarehunt.test` administers two clubs, which is what shows the organisation switcher.
+
+## Two corrections to what I said earlier
+
+**The apex is not serving a live site.** I said it pointed at your running `IPS4` instance — that was a stale cached lookup on my machine. Authoritative DNS says `63.32.80.204`, which is the unattached address. Nothing gets taken down.
+
+**Your `ssh_ingress_cidrs` is my example verbatim** — `203.0.113.5/32` is the RFC 5737 documentation range and matches no real address, so that rule admits nobody. Harmless, but pointless. Either put your own address there or drop both SSH lines and use Session Manager, which is already attached and needs no open port. I've left a note in the file rather than changing your value.
+
+## If certbot doesn't get a certificate first time
+
+It runs last and is deliberately non-fatal — you'd get a self-signed cert and a browser warning. Since DNS already resolves, it should succeed; if not:
+
+```bash
+sudo certbot certonly --webroot -w /var/www/certbot -d itsps.org -d www.itsps.org
+sudo systemctl reload nginx
+```
+
+One thing to know before you apply: **state is local**, in that directory. Don't lose it, or Terraform forgets what it created.
+
+---
