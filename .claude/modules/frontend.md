@@ -19,7 +19,7 @@ src/
   components/        Layout, ProtectedRoute, ErrorBoundary
   context/           AuthContext, ApiContext, NotificationContext
   api/               client, metadata.api, instances.api
-  theme/
+  theme/                 MUI theme — `warmTheme`, copied from `admin`; was neumorphic until 18 Aug 2026
 ```
 
 ## Routes

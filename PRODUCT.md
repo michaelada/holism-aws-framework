@@ -16,6 +16,11 @@ buyer and the daily operator, and their success defines the product. They are us
 often doing this alongside another job, and frequently working in short bursts rather than a
 sustained session.
 
+A minority administer **more than one organisation** on the same credentials and switch between
+them. This is supported and must be correct — every request is scoped to the organisation being
+worked in, and no data may cross between clubs — but it is not the common case. Design for the
+administrator of one club; make the switch available without letting it shape the interface.
+
 **Secondary — the club member.** The person who joins, enters events, renews, buys from the shop,
 books a facility and holds a ticket, working in `account-shell` at `/account/:orgCode`. A real
 audience with a real surface, but their app exists to serve what the administrator has set up.
@@ -67,6 +72,14 @@ combination:
   lodgements and offline payment settlement are all live product surface, not future work.
 - **Seasonal rhythm.** Membership renewal and event-entry opening produce sharp load and support
   peaks; most of the year is quieter.
+- **The administrator works at a desk; the phone is a fallback, not a second design.** Org-admin is
+  designed for a laptop, where the dense tables, bulk actions and multi-step configuration belong.
+  On a phone every function must remain reachable and nothing may break, but those surfaces are not
+  optimised for it and should not be compromised to suit it. This is the opposite of the member app,
+  which is phone-first by default.
+- **First contact is unaccompanied.** There is no implementation project, so the administrator's
+  first session happens with nobody to ask. Whatever a new club needs to understand has to be
+  carried by the product at the moment it is needed.
 
 ## Capabilities and Constraints
 
@@ -102,6 +115,14 @@ merchandise and orders, bookings, registrations, payments, profile and dashboard
   disagree.
 - Currency and handling-fee arithmetic are centralised; a design must never imply a per-organisation
   currency choice, because currency follows organisation type.
+- **Guided first run is committed product surface, not decoration.** A new administrator is taught
+  by the product because nobody else will teach them. What exists today — a welcome dialog, per-
+  module introductions, and per-user "seen" state persisted server-side rather than in the browser
+  — is the commitment, not the design; it may be replaced by something better, never removed. Server
+  persistence is deliberate: guidance follows the person to whatever device they next use.
+- **Every org-admin screen belongs to exactly one organisation, and the product must be able to say
+  which.** An administrator of several clubs is uncommon but real, so the answer can never be
+  inferred from the identity alone. This is a correctness rule before it is a design one.
 
 **Undecided / not established.**
 
@@ -130,6 +151,12 @@ merchandise and orders, bookings, registrations, payments, profile and dashboard
   in any user-facing string.
 - `.claude/sessions.md` records the mark as an unresolved placeholder. That note is **superseded**;
   see the confirmation above.
+- **The warm world is the one, and the neumorphic theme is gone.** An earlier teal-and-grey
+  neumorphic look shipped beside it and was removed from every package on 18 August 2026: it is not
+  a supported alternative and nothing may be designed against it, offered as a choice, or revived.
+  Each front end now exports exactly one theme. The specification of that theme is a visual-world
+  question and belongs in DESIGN.md, not here; the only durable fact is that the choice is settled
+  and is not a runtime option.
 
 ## Evidence on Hand
 
@@ -159,7 +186,9 @@ merchandise and orders, bookings, registrations, payments, profile and dashboard
 ## Product Principles
 
 1. **Effortless is the promise, and the name is the contract.** If a screen makes an unpaid
-   volunteer feel like they need training, it has failed regardless of how it looks.
+   volunteer feel like they need training, it has failed regardless of how it looks. The product
+   teaches itself in place, at the moment the question arises — which is a commitment to good
+   first-run design, not a licence to explain a confusing interface instead of fixing it.
 2. **The administrator's time is the scarce resource.** Optimise for the interrupted session:
    recoverable state, obvious next action, nothing that must be completed in one sitting.
 3. **Design for a product that is never fully installed.** Capability gating means missing modules

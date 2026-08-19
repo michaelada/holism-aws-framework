@@ -1,0 +1,526 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "title": "Design System: Its Plain Sailing",
+  "extensions": {
+    "colorMeta": {
+      "orange-flare": {
+        "role": "primary",
+        "displayName": "Flare Orange",
+        "canonical": "#FF9800",
+        "contrastOnWhite": "2.16:1",
+        "purpose": "Decoration only — tints, washes, borders, 24px+ display. Never carries text.",
+        "tonalRamp": [
+          "#4D2E00",
+          "#854F00",
+          "#BD7000",
+          "#F59200",
+          "#FFAB2E",
+          "#FFC166",
+          "#FFDAA3",
+          "#FFF3E0"
+        ]
+      },
+      "orange-signal": {
+        "role": "primary",
+        "displayName": "Signal Orange",
+        "canonical": "#D24400",
+        "contrastOnWhite": "4.6:1",
+        "purpose": "The working accent. Contained fills, active nav, orange text, meaningful icons.",
+        "tonalRamp": [
+          "#4D1900",
+          "#852B00",
+          "#BD3D00",
+          "#F54F00",
+          "#FF722E",
+          "#FF9866",
+          "#FFC1A3",
+          "#FFEAE0"
+        ]
+      },
+      "orange-deep": {
+        "role": "primary",
+        "displayName": "Deep Orange",
+        "canonical": "#BF360C",
+        "contrastOnWhite": "5.6:1",
+        "purpose": "Gradient terminus and the hover state of Signal Orange.",
+        "tonalRamp": [
+          "#481405",
+          "#7D2308",
+          "#B2320B",
+          "#E6410E",
+          "#F3663A",
+          "#F68F6F",
+          "#FABCA9",
+          "#FDE9E2"
+        ]
+      },
+      "orange-ember": {
+        "role": "primary",
+        "displayName": "Ember",
+        "canonical": "#9A3412",
+        "contrastOnWhite": "7.31:1",
+        "purpose": "Pressed states and the hover gradient terminus.",
+        "tonalRamp": [
+          "#441708",
+          "#77280E",
+          "#A93914",
+          "#DB4A1A",
+          "#E96D44",
+          "#EF9476",
+          "#F5BFAD",
+          "#FCEAE4"
+        ]
+      },
+      "gold-flare": {
+        "role": "secondary",
+        "displayName": "Flare Gold",
+        "canonical": "#FFC107",
+        "contrastOnWhite": "1.63:1",
+        "purpose": "Decoration only. The lowest-contrast value in the system.",
+        "tonalRamp": [
+          "#4D3900",
+          "#856300",
+          "#BD8E00",
+          "#F5B800",
+          "#FFCB2E",
+          "#FFD966",
+          "#FFE8A3",
+          "#FFF7E0"
+        ]
+      },
+      "gold-signal": {
+        "role": "secondary",
+        "displayName": "Signal Gold",
+        "canonical": "#A15C00",
+        "contrastOnWhite": "5.19:1",
+        "purpose": "Gold when it must carry text or read as a status.",
+        "tonalRamp": [
+          "#4D2C00",
+          "#854C00",
+          "#BD6C00",
+          "#F58C00",
+          "#FFA52E",
+          "#FFBD66",
+          "#FFD8A3",
+          "#FFF2E0"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1E293B",
+        "contrastOnWhite": "14.63:1",
+        "purpose": "All primary text, headings, and the outlined button stroke.",
+        "tonalRamp": [
+          "#1A2333",
+          "#2D3D58",
+          "#40577D",
+          "#5371A2",
+          "#748EB9",
+          "#9AACCB",
+          "#C2CDE0",
+          "#EBEEF5"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#64748B",
+        "contrastOnWhite": "4.76:1",
+        "purpose": "Body copy, captions, resting text-button label. No headroom below this.",
+        "tonalRamp": [
+          "#20252C",
+          "#37404D",
+          "#4F5C6E",
+          "#66778E",
+          "#8593A8",
+          "#A6B0BF",
+          "#CAD0D9",
+          "#EDEFF2"
+        ]
+      },
+      "charcoal": {
+        "role": "neutral",
+        "displayName": "Charcoal",
+        "canonical": "#1A1E2E",
+        "contrastOnWhite": "16.55:1",
+        "purpose": "Tooltips only — the one near-black surface.",
+        "tonalRamp": [
+          "#1C2031",
+          "#303755",
+          "#444F79",
+          "#58669C",
+          "#7985B3",
+          "#9DA6C8",
+          "#C4C9DE",
+          "#EBEDF4"
+        ]
+      },
+      "paper-warm": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#FAF8F5",
+        "contrastOnWhite": "1.06:1",
+        "purpose": "Table headers and section grounds that separate without a border.",
+        "tonalRamp": [
+          "#33291A",
+          "#58472C",
+          "#7E653F",
+          "#A38352",
+          "#B99D74",
+          "#CCB899",
+          "#E0D4C2",
+          "#F5F1EB"
+        ]
+      },
+      "paper-warm-deep": {
+        "role": "neutral",
+        "displayName": "Deep Warm Paper",
+        "canonical": "#F1EDE8",
+        "contrastOnWhite": "1.17:1",
+        "purpose": "Chip and badge grounds.",
+        "tonalRamp": [
+          "#30271D",
+          "#524432",
+          "#756147",
+          "#987E5D",
+          "#B0997D",
+          "#C5B5A0",
+          "#DCD2C6",
+          "#F3F0EC"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Danger",
+        "canonical": "#D32F2F",
+        "contrastOnWhite": "4.98:1",
+        "purpose": "Error state only. Never decorative.",
+        "tonalRamp": [
+          "#3F0D0D",
+          "#6D1717",
+          "#9C2121",
+          "#CA2B2B",
+          "#DA5252",
+          "#E48181",
+          "#EFB3B3",
+          "#FAE6E6"
+        ]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Success",
+        "canonical": "#15803D",
+        "contrastOnWhite": "5.02:1",
+        "purpose": "Confirmed state only.",
+        "tonalRamp": [
+          "#0B421F",
+          "#137236",
+          "#1BA24D",
+          "#23D264",
+          "#4BE284",
+          "#7CE9A5",
+          "#B0F2C9",
+          "#E5FBED"
+        ]
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Info",
+        "canonical": "#1D4ED8",
+        "contrastOnWhite": "6.7:1",
+        "purpose": "Neutral information only.",
+        "tonalRamp": [
+          "#091843",
+          "#102A75",
+          "#163CA6",
+          "#1D4ED8",
+          "#4770E6",
+          "#7897ED",
+          "#AEC0F4",
+          "#E4EAFB"
+        ]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Warning",
+        "canonical": "#A15C00",
+        "contrastOnWhite": "5.19:1",
+        "purpose": "Caution short of failure.",
+        "tonalRamp": [
+          "#4D2C00",
+          "#854C00",
+          "#BD6C00",
+          "#F58C00",
+          "#FFA52E",
+          "#FFBD66",
+          "#FFD8A3",
+          "#FFF2E0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page-owning titles and whole-screen empty states. Rare in the administrator's tools, common on welcome and first-run surfaces."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section openers and dialog titles that need to feel like an announcement."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Page titles in the working interface. Fixed steps at 1.5/1.25/1.1rem sit below it for nested headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text, in Muted Ink. The 1.7 line height is what makes a dense settings page readable in a hurry."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, table headers, form labels and chips. Sentence case, never uppercased by transform."
+      }
+    },
+    "shadows": [
+      {
+        "name": "rest",
+        "value": "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+        "purpose": "Paper at rest — a surface that does not ask for attention."
+      },
+      {
+        "name": "raised",
+        "value": "0 4px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)",
+        "purpose": "Cards, popovers and menus at rest."
+      },
+      {
+        "name": "lifted",
+        "value": "0 10px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)",
+        "purpose": "Hover state of a card or menu, and modal dialogs."
+      },
+      {
+        "name": "action-glow",
+        "value": "0 8px 30px rgba(255,152,0,0.25)",
+        "purpose": "Warm halo under the primary button. One per screen region — it is how the primary action is identified."
+      },
+      {
+        "name": "action-glow-hover",
+        "value": "0 12px 35px rgba(255,152,0,0.35)",
+        "purpose": "The same halo, strengthened on hover."
+      },
+      {
+        "name": "bar",
+        "value": "0 1px 30px rgba(0,0,0,0.06)",
+        "purpose": "App bar, paired with backdrop-filter: blur(20px) over 95% white."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Every state transition in the system."
+      },
+      {
+        "name": "duration-state",
+        "value": "0.3s",
+        "purpose": "Buttons, cards, inputs — anything that lifts or changes colour."
+      },
+      {
+        "name": "duration-nav",
+        "value": "0.2s",
+        "purpose": "Navigation items, which are traversed quickly and should not feel syrupy."
+      },
+      {
+        "name": "lift-button",
+        "value": "translateY(-2px)",
+        "purpose": "Primary and outlined button hover."
+      },
+      {
+        "name": "lift-card",
+        "value": "translateY(-4px)",
+        "purpose": "Card hover. Nothing lifts unless the cursor is on it."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "600px"
+      },
+      {
+        "name": "md",
+        "value": "900px",
+        "purpose": "The rail/drawer switch, and the boundary of desktop-first design."
+      },
+      {
+        "name": "lg",
+        "value": "1200px"
+      },
+      {
+        "name": "xl",
+        "value": "1536px"
+      }
+    ],
+    "layout": [
+      {
+        "name": "rail-width",
+        "value": "248px",
+        "purpose": "Permanent navigation rail from md upward; a temporary drawer below it."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action a screen region is asking for. Carries the Action Glow — never more than one per region.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { background: linear-gradient(135deg, #D24400, #BF360C); color: #FFFFFF; font-family: Sora, Roboto, Helvetica, Arial, sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.01em; padding: 0.85rem 2rem; border: none; border-radius: 60px; cursor: pointer; box-shadow: 0 8px 30px rgba(255,152,0,0.25); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: linear-gradient(135deg, #BF360C, #9A3412); transform: translateY(-2px); box-shadow: 0 12px 35px rgba(255,152,0,0.35); } .ds-btn-primary:focus-visible { outline: 3px solid rgba(210,68,0,0.4); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(0); }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "The considered alternative to the primary action. Inverts to ink on hover rather than tinting.",
+      "html": "<button class=\"ds-btn-outlined\">Cancel</button>",
+      "css": ".ds-btn-outlined { background: #FFFFFF; color: #1E293B; font-family: Sora, Roboto, Helvetica, Arial, sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.01em; padding: 0.85rem 2rem; border: 2px solid #1E293B; border-radius: 60px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outlined:hover { background: #1E293B; color: #FFFFFF; transform: translateY(-2px); } .ds-btn-outlined:focus-visible { outline: 3px solid rgba(210,68,0,0.4); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Low-commitment actions inside dense screens. Resting in Muted Ink; becomes Signal Orange on hover.",
+      "html": "<button class=\"ds-btn-text\">View details</button>",
+      "css": ".ds-btn-text { background: transparent; color: #64748B; font-family: Sora, Roboto, Helvetica, Arial, sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.01em; padding: 0.85rem 1.25rem; border: none; border-radius: 60px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-text:hover { background: rgba(255,152,0,0.08); color: #D24400; } .ds-btn-text:focus-visible { outline: 3px solid rgba(210,68,0,0.4); outline-offset: 2px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The system's primary surface. Rises 4px under the cursor; separated from the page by light, not by a line.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Spring Open Day</h3><p class=\"ds-card-body\">42 entries · closes 14 March</p></div>",
+      "css": ".ds-card { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.04); border-radius: 20px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .ds-card:hover { transform: translateY(-4px); box-shadow: 0 10px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04); } .ds-card-title { font-family: Sora, Roboto, sans-serif; font-size: 1.25rem; font-weight: 600; line-height: 1.3; color: #1E293B; margin: 0 0 8px; } .ds-card-body { font-family: Sora, Roboto, sans-serif; font-size: 1rem; line-height: 1.7; color: #64748B; margin: 0; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Carries a deliberately heavy 2px stroke — a hairline field on white is one a hurried volunteer will miss.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Member name\" aria-label=\"Member name\" />",
+      "css": ".ds-input { background: #FFFFFF; color: #1E293B; font-family: Sora, Roboto, Helvetica, Arial, sans-serif; font-size: 1rem; padding: 14px 16px; border: 2px solid rgba(0,0,0,0.08); border-radius: 12px; outline: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .ds-input::placeholder { color: #64748B; } .ds-input:hover { border-color: #FF9800; } .ds-input:focus { border-color: #FF9800; box-shadow: 0 0 0 4px rgba(255,152,0,0.1); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Reads as a label rather than a control — 8px radius, no border, warm ground.",
+      "html": "<span class=\"ds-chip\">Paid</span> <span class=\"ds-chip ds-chip-selected\">Events</span>",
+      "css": ".ds-chip { display: inline-block; background: #F1EDE8; color: #1E293B; font-family: Sora, Roboto, sans-serif; font-size: 0.85rem; font-weight: 500; padding: 4px 10px; border-radius: 8px; } .ds-chip-selected { background: rgba(255,152,0,0.12); color: #D24400; }"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-item-selected",
+      "description": "Selection is carried by ground and colour together, never by colour alone.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item\" href=\"#\">Members</a><a class=\"ds-nav-item ds-nav-item-selected\" href=\"#\">Events</a><a class=\"ds-nav-item\" href=\"#\">Payments</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; width: 248px; background: #FFFFFF; border-right: 1px solid rgba(0,0,0,0.06); padding: 8px 0; } .ds-nav-item { display: block; font-family: Sora, Roboto, sans-serif; font-size: 0.95rem; font-weight: 400; color: #64748B; text-decoration: none; padding: 8px 12px; margin: 2px 8px; border-radius: 8px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); } .ds-nav-item:hover { background: rgba(255,152,0,0.08); } .ds-nav-item-selected { background: rgba(255,152,0,0.12); color: #D24400; font-weight: 600; }"
+    },
+    {
+      "name": "Table Header",
+      "kind": "custom",
+      "refersTo": "table-head",
+      "description": "The one place a warm ground does structural work. Hairline rules only — no zebra striping, no vertical rules.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Member</th><th>Status</th></tr></thead><tbody><tr><td>Niamh Walsh</td><td>Active</td></tr><tr><td>Cillian Murphy</td><td>Pending</td></tr></tbody></table>",
+      "css": ".ds-table { border-collapse: collapse; width: 100%; font-family: Sora, Roboto, sans-serif; } .ds-table th { background: #FAF8F5; color: #1E293B; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.01em; text-align: left; padding: 12px 16px; border-bottom: 1px solid rgba(0,0,0,0.06); } .ds-table td { color: #64748B; font-size: 1rem; padding: 12px 16px; border-bottom: 1px solid rgba(0,0,0,0.06); } .ds-table tbody tr { transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1); } .ds-table tbody tr:hover { background: rgba(255,152,0,0.08); }"
+    },
+    {
+      "name": "Alert",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The tint carries the meaning and the icon confirms it, so the alert still reads without colour vision.",
+      "html": "<div class=\"ds-alert ds-alert-success\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg><span>Payment recorded.</span></div>",
+      "css": ".ds-alert { display: flex; align-items: center; gap: 12px; font-family: Sora, Roboto, sans-serif; font-size: 1rem; padding: 12px 16px; border-radius: 12px; } .ds-alert-success { background: #F0FDF4; color: #166534; }"
+    },
+    {
+      "name": "Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "The only near-black surface in the product.",
+      "html": "<span class=\"ds-tooltip\">Only the club can change this</span>",
+      "css": ".ds-tooltip { display: inline-block; background: #1A1E2E; color: #FFFFFF; font-family: Sora, Roboto, sans-serif; font-size: 0.85rem; padding: 8px 12px; border-radius: 8px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Bright Morning",
+    "overview": "The product is named for a promise — that this will be easy — and the interface has to pay it before a word is read. The Bright Morning is what that looks like: warm daylight on white paper, generous air, orange and gold used the way early sun falls across a desk rather than the way a warning light blinks. Nothing here is nocturnal, dense, or severe.\n\nDaylight is a colour, not a mood: it is bright but it is not loud, and it is never the same thing as an alarm. Orange announces where a decision is being asked for, gold warms a surface, and the moment something is genuinely wrong the interface reaches for red — a colour the brand otherwise never uses.\n\nThe form language is confident and slightly generous: fully rounded buttons, soft cards that lift under the cursor, a warm shadow under the primary action. That expressiveness is inherited from the marketing site and deliberately kept. What it is not allowed to do is cost legibility.",
+    "keyCharacteristics": [
+      "Warm white ground, never grey — paper-warm (#FAF8F5) is the coolest the background ever gets",
+      "One accent family, orange to gold, on a strict two-role split between decoration and speech",
+      "Fully rounded buttons against gently rounded everything else",
+      "Depth by soft ambient shadow and hover lift, never by borders or hard rules",
+      "Sora throughout, at a fluid display scale and a fixed scale everywhere else",
+      "Red, green and blue exist only to report state, never to decorate"
+    ],
+    "rules": [
+      {
+        "name": "The Two Oranges Rule",
+        "body": "Every orange is either flare or signal. Flare decorates and can never be read; signal speaks and always passes 4.5:1. Before using an orange, answer which one it is — if the answer is 'both', the design is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Daylight Rule",
+        "body": "Orange is daylight, never an alarm. It marks where attention is invited, not where something has gone wrong. The instant orange means danger, the product loses the only vocabulary it has for danger.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured Value Rule",
+        "body": "No colour enters this system on the strength of a comment. The incumbent code claimed 4.6:1 for a colour that measures 3.79:1, and that claim shipped. Measure, then write the number down.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Fluid Sizes Rule",
+        "body": "Only Display and Headline use clamp(). Everything below is a fixed rem step — fluid sizing at body level makes tables reflow for no reason.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "Nothing is uppercased by transform. Six locales run through this interface, and German and Portuguese are long enough already.",
+        "section": "typography"
+      },
+      {
+        "name": "The Reachable Not Optimised Rule",
+        "body": "On a phone an administrator must be able to complete any task and must never be blocked. They are not entitled to the same efficiency.",
+        "section": "layout"
+      },
+      {
+        "name": "The Glow Belongs To Action Rule",
+        "body": "The orange glow means exactly one thing: this is the primary action. One per screen region. A screen with three glowing things has no primary action at all.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pill Is A Promise Rule",
+        "body": "60px full rounding belongs to buttons and nothing else. When anything else goes fully round, the button stops being the most clickable shape on the page.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do decide which orange you are using before you use it. orange-flare (#FF9800) decorates; orange-signal (#D24400) speaks and clears 4.5:1.",
+      "Do put the Action Glow under exactly one button per screen region.",
+      "Do carry state in ground and colour together — a selected navigation item changes both.",
+      "Do keep body text at ink-muted (#64748B) or darker. It measures 4.76:1 and has no headroom.",
+      "Do let operational screens tighten to 16px while configuration screens stay at 24px.",
+      "Do measure any new colour against its real background and write the ratio next to it.",
+      "Do design tables to become stacked rows below md, not horizontally scrolling grids."
+    ],
+    "donts": [
+      "Don't put white text on orange-flare or gold-flare. They measure 2.16:1 and 1.63:1; this is the single most common way to break this system.",
+      "Don't use orange to mean danger, or red to mean anything else. Status colours are not palette.",
+      "Don't fully round anything that is not a button.",
+      "Don't apply clamp() below Headline.",
+      "Don't uppercase labels by transform — six locales, and German and Portuguese are long already.",
+      "Don't add borders to create separation. This system separates with light and warm ground.",
+      "Don't lift an element that the cursor is not on. Depth here is a response, not a property.",
+      "Don't hard-code a club's colour into a shared component. The member app themes per club at runtime from an arbitrary hex."
+    ]
+  }
+}

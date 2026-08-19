@@ -14,7 +14,7 @@ This directory contains all project documentation files.
 ## Features & Design
 
 - [KEYCLOAK_ADMIN_INTEGRATION_DESIGN.md](KEYCLOAK_ADMIN_INTEGRATION_DESIGN.md) - Keycloak admin integration design
-- [NEUMORPHIC_THEME.md](NEUMORPHIC_THEME.md) - Neumorphic theme documentation
+- [NEUMORPHIC_THEME.md](NEUMORPHIC_THEME.md) - The retired neumorphic theme, kept as a record
 - [EXCEL_EXPORT_FEATURE.md](EXCEL_EXPORT_FEATURE.md) - Excel export feature
 - [FIELD_GROUPS_WIZARD_UI_FEATURE.md](FIELD_GROUPS_WIZARD_UI_FEATURE.md) - Field groups wizard UI
 - [NUMBER_FIELD_PRECISION_FEATURE.md](NUMBER_FIELD_PRECISION_FEATURE.md) - Number field precision feature

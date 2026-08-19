@@ -70,7 +70,7 @@ Keycloak themes load the Sora font via CSS @import in the warm.css files.
 
 ### 6. Created Documentation
 
-- `docs/THEME_SWITCHING_GUIDE.md`: Complete guide on how to switch between themes in applications
+- `docs/THEME_SWITCHING_GUIDE.md`: Why application theme switching was removed, and the one theme that remains
 - `docs/KEYCLOAK_THEME_SWITCHING.md`: Complete guide on how to switch between Keycloak login themes
 - `docs/WARM_THEME_IMPLEMENTATION.md`: This summary document
 
@@ -153,7 +153,8 @@ To switch from neumorphic to warm theme in Keycloak:
 
 4. Clear browser cache and refresh
 
-See `docs/THEME_SWITCHING_GUIDE.md` and `docs/KEYCLOAK_THEME_SWITCHING.md` for detailed instructions.
+Application theme switching no longer exists — see `docs/THEME_SWITCHING_GUIDE.md`. Keycloak login
+themes are a separate mechanism and still switch per client; see `docs/KEYCLOAK_THEME_SWITCHING.md`.
 
 ## Testing
 

@@ -1,4 +1,16 @@
-# Neumorphic Theme Implementation
+# Neumorphic theme (removed)
+
+> **Superseded.** The neumorphic theme was removed from every package on 18 August 2026 and is not a
+> supported alternative. The product has one visual system, the warm theme, recorded as a brand
+> commitment in [PRODUCT.md](../PRODUCT.md). See
+> [THEME_SWITCHING_GUIDE.md](THEME_SWITCHING_GUIDE.md) for the removal and what replaced it.
+>
+> This file is kept as the record of what was built and why, because several documents link to it
+> and because the rationale below explains decisions still visible in older screens. **Nothing here
+> describes current behaviour.** Do not design against it, and do not treat it as a theme that could
+> be switched back on.
+
+---
 
 ## Overview
 The application now uses a custom neumorphic (soft UI) theme that provides a modern, elegant look with soft shadows and smooth animations.

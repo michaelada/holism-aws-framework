@@ -19,7 +19,7 @@ src/
   pages/                 DashboardPage
   i18n/config.ts         i18next initialisation
   locales/<locale>/      translation.json × 6 locales  ← all org-admin strings live here
-  theme/                 MUI theme
+  theme/                 MUI theme — `warmTheme` only; the neumorphic alternative was removed
   utils/                 currencyFormatting, dateFormatting, pageMapping, performance
   types/                 module.types
 ```

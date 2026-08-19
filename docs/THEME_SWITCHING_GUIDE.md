@@ -1,113 +1,61 @@
-# Theme Switching Guide
+# Theme switching (removed)
 
-This guide explains how to switch between the available themes in both the Super Admin and Org Admin applications.
+**There is no application theme switching, and there is no longer a second theme to switch to.**
+Removed 18 August 2026. This file remains because four other documents link to it; what it used to
+describe no longer exists.
 
-## Available Themes
+## What was here
 
-### 1. Neumorphic Theme (Default)
-- Original design with teal/gray colors
-- Soft neumorphic shadows and effects
-- Clean, modern aesthetic
+A guide to swapping each front end between two complete MUI themes — a teal-and-grey *neumorphic*
+theme and the orange-and-gold *warm* theme — by editing which export in `src/theme/index.ts` was
+aliased to `defaultTheme`, with the other left commented out one line above.
 
-### 2. Warm Theme
-- Inspired by the ItsPlainSailing marketing site
-- Orange (#FF9800) to Amber (#E65100) gradient colors
-- Gold accent (#FFC107)
-- Sora font family
-- Modern, warm aesthetic with rounded buttons and smooth transitions
+## Why it went
 
-## How to Switch Themes
+It was never a feature. Nothing read a preference, no user could reach it, and no environment
+selected it. It was two designs kept in the tree at once, with a comment inviting the next person to
+flip between them.
 
-### Super Admin Application (`packages/admin`)
+The cost was not the dead code. It was that the product's visual system looked like an open
+question. `packages/admin` had already removed its copy; `packages/orgadmin-shell` exported a
+neumorphic theme that nothing imported; and `packages/frontend` still *rendered* the neumorphic one,
+which made the metadata repository the only surface in the platform that did not look like the
+product.
 
-1. Open `packages/admin/src/theme/index.ts`
-2. Find the "Default theme" section at the bottom
-3. To use the **neumorphic theme** (current default):
-   ```typescript
-   export { neumorphicTheme as defaultTheme } from '../../../frontend/src/theme/neumorphicTheme';
-   ```
+## What is true now
 
-4. To use the **warm theme**:
-   ```typescript
-   // Comment out the neumorphic theme line
-   // export { neumorphicTheme as defaultTheme } from '../../../frontend/src/theme/neumorphicTheme';
-   
-   // Uncomment the warm theme line
-   export { warmTheme as defaultTheme } from './warmTheme';
-   ```
+Each front end exports exactly one theme:
 
-### Org Admin Application (`packages/orgadmin-shell`)
+| Package | Theme |
+|---|---|
+| `packages/orgadmin-shell` | `warmTheme` |
+| `packages/admin` | `warmTheme` |
+| `packages/frontend` | `warmTheme` |
+| `packages/account-shell` | its own, built per club from the organisation's primary colour |
 
-1. Open `packages/orgadmin-shell/src/theme/index.ts`
-2. Find the "Default theme" section at the bottom
-3. To use the **neumorphic theme** (current default):
-   ```typescript
-   export { neumorphicTheme as defaultTheme } from './neumorphicTheme';
-   ```
+`account-shell` is deliberately different: a member sees their club's identity, not the platform's,
+so its theme is constructed at runtime from the organisation's branding rather than fixed.
 
-4. To use the **warm theme**:
-   ```typescript
-   // Comment out the neumorphic theme line
-   // export { neumorphicTheme as defaultTheme } from './neumorphicTheme';
-   
-   // Uncomment the warm theme line
-   export { warmTheme as defaultTheme } from './warmTheme';
-   ```
+The warm theme is recorded as a settled brand commitment in [PRODUCT.md](../PRODUCT.md). It is not a
+default awaiting an alternative.
 
-## After Switching
+## If you want to change how the product looks
 
-After changing the theme in either application:
+Change `warmTheme`, or replace it — but replace it everywhere, and update the brand commitment. Do
+not reintroduce a second theme and a switch. See [WARM_THEME_IMPLEMENTATION.md](WARM_THEME_IMPLEMENTATION.md)
+for what the warm theme is, and [NEUMORPHIC_THEME.md](NEUMORPHIC_THEME.md) for the record of what was
+removed.
 
-1. Save the file
-2. The development server will automatically reload (if running)
-3. Refresh your browser to see the new theme
+**Keycloak login themes are a separate mechanism and still switch per client** — four bespoke login
+themes are selected by `login_theme` on each Keycloak client. Nothing here affects them; see
+[KEYCLOAK_THEME_SWITCHING.md](KEYCLOAK_THEME_SWITCHING.md).
 
-## Font Requirements
+## Files removed
 
-The warm theme uses the **Sora** font family, which is loaded from Google Fonts. Both HTML files have been updated to include this font:
+- `packages/orgadmin-shell/src/theme/neumorphicTheme.ts` (248 lines, imported by nothing)
+- `packages/frontend/src/theme/neumorphicTheme.ts` (rendered by `App.tsx` until this change)
 
-- `packages/admin/index.html`
-- `packages/orgadmin-shell/index.html`
-
-If you're using the neumorphic theme, the Sora font will still be loaded but won't be used.
-
-## Theme Customization
-
-Both themes are fully customizable. To modify a theme:
-
-1. Locate the theme file:
-   - Neumorphic: `packages/frontend/src/theme/neumorphicTheme.ts`
-   - Warm (Admin): `packages/admin/src/theme/warmTheme.ts`
-   - Warm (Org Admin): `packages/orgadmin-shell/src/theme/warmTheme.ts`
-
-2. Modify the theme properties:
-   - `palette`: Colors for primary, secondary, background, text, etc.
-   - `typography`: Font families, sizes, weights
-   - `shape`: Border radius
-   - `shadows`: Shadow definitions
-   - `components`: Component-specific styling overrides
-
-3. Save the file and the changes will be reflected immediately in development mode
-
-## Creating a New Theme
-
-To create a new theme:
-
-1. Create a new theme file (e.g., `myTheme.ts`) in the appropriate theme directory
-2. Use the existing themes as a template
-3. Export the theme from the `index.ts` file
-4. Update the default export to use your new theme
-
-Example:
-```typescript
-// In packages/admin/src/theme/myTheme.ts
-import { createTheme } from '@mui/material/styles';
-
-export const myTheme = createTheme({
-  // Your theme configuration
-});
-
-// In packages/admin/src/theme/index.ts
-export { myTheme } from './myTheme';
-export { myTheme as defaultTheme } from './myTheme';
-```
+`packages/frontend` gained `src/theme/warmTheme.ts`, copied from `packages/admin`, matching the
+pattern the other front ends already use. That makes three near-identical copies of one theme — the
+standing argument for moving it into `packages/components`, which this change deliberately did not
+attempt.

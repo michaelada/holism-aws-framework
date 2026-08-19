@@ -56,3 +56,5 @@ infrastructure/keycloak/realm-import.rendered.json
 # `.terraform.lock.hcl` is deliberately NOT ignored: it pins provider versions
 # and belongs in the repository.
 .terraform/
+
+.playwright-mcp

@@ -1,33 +1,10 @@
-import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
+import { ThemeProvider, CssBaseline } from '@mui/material';
 import { BrowserRouter } from 'react-router-dom';
 import { useMemo } from 'react';
 import { ApiProvider, AuthProvider, NotificationProvider, useAuth } from './context';
 import { AppRoutes } from './routes';
 import { Layout, ErrorBoundary } from './components';
-import { neumorphicTheme } from './theme/neumorphicTheme';
-
-const customTheme = createTheme({
-  ...neumorphicTheme,
-  // palette: {
-  //   ...neumorphicTheme.palette,
-  //   primary: {
-  //     main: '#ff5722', // Override primary color
-  //   },
-  // },
-  // components: {
-  //   MuiInputLabel: {
-  //     styleOverrides: {
-  //       root: {
-  //         formControl: {
-  //       "label + &": {
-  //         marginTop: "15px"
-  //       }
-  //     }
-  //     }
-  //   }
-  // }
-  // }
-});
+import { defaultTheme } from './theme';
 
 function AppContent() {
   const { getToken, logout, userName } = useAuth();
@@ -70,7 +47,7 @@ function App() {
   }), []);
 
   return (
-    <ThemeProvider theme={customTheme}>
+    <ThemeProvider theme={defaultTheme}>
       <CssBaseline />
       {/*
         `basename` from Vite's own `base`, so the app works wherever it is
