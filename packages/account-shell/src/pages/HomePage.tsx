@@ -6,7 +6,9 @@ import {
   Box,
   Button,
   Card,
+  CardActions,
   CardContent,
+  Chip,
   CircularProgress,
   Container,
   Divider,
@@ -81,6 +83,7 @@ export const HomePage: React.FC = () => {
   const eventWhatsOn = dashboard?.whatsOn.filter((item) => item.kind === 'event') ?? [];
   const registrationWhatsOn =
     dashboard?.whatsOn.filter((item) => item.kind === 'registration') ?? [];
+  const externalEvents = dashboard?.externalEvents ?? [];
 
   /** Where each teaser leads — the screen that can actually do the thing. */
   const whatsOnTarget = (item: DashboardWhatsOn): string => {
@@ -318,6 +321,73 @@ export const HomePage: React.FC = () => {
                         showKind={false}
                         onOpen={() => navigate(whatsOnTarget(item))}
                       />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {/*
+              Events another branch is running.
+
+              Kept in its own section, below the club's own, and labelled with
+              the organising club on every row. A member glancing at the home
+              page must never mistake one of these for something their own club
+              is putting on — the date, the entry rules and the money are all
+              somebody else's.
+            */}
+            {externalEvents.length > 0 && (
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
+                  {t('home.externalEvents')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {/*
+                    Named rather than described. "Organisations of the same
+                    type" is how the platform thinks about it; "Irish Pony
+                    Clubs" is what the member belongs to, and is the only form
+                    of the sentence they can check against what they know.
+                  */}
+                  {t('home.externalEventsHint', {
+                    organisationType: dashboard?.organisationTypeName ?? '',
+                  })}
+                </Typography>
+                <Grid container spacing={2}>
+                  {externalEvents.map((event) => (
+                    <Grid item xs={12} sm={6} md={3} key={event.id}>
+                      <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <CardContent sx={{ flexGrow: 1 }}>
+                          <Chip
+                            size="small"
+                            label={t('home.externalEventBadge')}
+                            sx={{ mb: 1 }}
+                          />
+                          <Typography variant="subtitle1">{event.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {event.organisationName}
+                          </Typography>
+                          {event.startDate && (
+                            <Typography variant="body2" color="text.secondary">
+                              {formatDisplayDate(event.startDate, locale)}
+                            </Typography>
+                          )}
+                        </CardContent>
+                        <CardActions>
+                          {/*
+                            Two different invitations. Being asked to join
+                            something you already belong to reads as the
+                            software not knowing you.
+                          */}
+                          <Button
+                            size="small"
+                            onClick={() => navigate(`/${event.organisationCode}`)}
+                          >
+                            {event.alreadyJoined
+                              ? t('home.externalEventOpen', { organisation: event.organisationName })
+                              : t('home.externalEventJoin', { organisation: event.organisationName })}
+                          </Button>
+                        </CardActions>
+                      </Card>
                     </Grid>
                   ))}
                 </Grid>

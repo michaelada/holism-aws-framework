@@ -26,6 +26,12 @@ export type UnavailableReason =
   | 'event-full'
   | 'activity-full'
   | 'already-entered'
+  /** Open to the club's members, and this login holds no active membership. */
+  | 'members-only'
+  /** Members-only, and every membership this login holds is already entered. */
+  | 'members-all-entered'
+  /** Open across the organisation type, and this person is a member of none of it. */
+  | 'org-members-only'
   | 'not-open-for-applications'
   | 'already-a-member'
   | 'not-on-sale'
@@ -35,6 +41,116 @@ export type UnavailableReason =
   | 'held-by-others'
   /** The member already has this in their own basket. */
   | 'in-your-basket';
+
+/**
+ * One membership this login holds, reduced to what an entry decision needs.
+ *
+ * Exported because the cart enforces the same rule the catalogue displays, and
+ * two definitions of "may this person enter" is one more than can stay true.
+ */
+export interface ActiveMembership {
+  id: string;
+  name: string;
+  membershipTypeName: string;
+  membershipNumber: string;
+  /** The club it is with, when that is not the club running the event. */
+  organisationName?: string | null;
+}
+
+/**
+ * Every membership this login currently holds in this organisation.
+ *
+ * Several is normal, not exceptional: a parent holds their children's, which is
+ * why the account dashboard shows a card per membership rather than the soonest
+ * to expire.
+ *
+ * "Active" is `status = 'active'`, the same test the dashboard applies, **and**
+ * a `valid_until` that has not passed. The column and the status can disagree —
+ * nothing flips a row to `elapsed` at midnight — and the date is the honest
+ * answer, so an expired membership cannot let someone into a members-only
+ * event on the strength of a status nobody has run a job to update.
+ */
+export async function activeMembershipsFor(
+  organisationId: string,
+  organisationUserId: string,
+  today: Date = new Date()
+): Promise<ActiveMembership[]> {
+  const result = await db.query(
+    `SELECT m.id, m.first_name, m.last_name, m.membership_number,
+            mt.name AS membership_type_name
+       FROM members m
+       JOIN membership_types mt ON mt.id = m.membership_type_id
+      WHERE m.user_id = $1
+        AND m.organisation_id = $2
+        AND m.status = 'active'
+        AND m.valid_until >= $3
+      ORDER BY m.first_name, m.last_name`,
+    [organisationUserId, organisationId, today]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    name: [row.first_name, row.last_name].filter(Boolean).join(' '),
+    membershipTypeName: row.membership_type_name,
+    membershipNumber: row.membership_number,
+  }));
+}
+
+/**
+ * Every membership this **person** holds across the whole organisation type.
+ *
+ * For activities open to members of any club in a federation. The awkwardness
+ * is that `members.user_id` points at `organization_users`, which is *per
+ * organisation* — the same human is a different row in every club they belong
+ * to — so their memberships elsewhere cannot be reached from the row we have.
+ *
+ * The join therefore goes out through `keycloak_user_id`, which is the one
+ * identifier that is the same person everywhere. Email would have been the
+ * obvious alternative and is the wrong choice: it can be changed, can be shared
+ * by a family, and is not what anything else in this system treats as identity.
+ *
+ * Scoped to the organisation type of the club whose event this is, so a
+ * federation opens up to itself and no further.
+ */
+export async function activeMembershipsAcrossType(
+  organisationId: string,
+  organisationUserId: string,
+  today: Date = new Date()
+): Promise<ActiveMembership[]> {
+  const result = await db.query(
+    `SELECT m.id, m.first_name, m.last_name, m.membership_number,
+            mt.name AS membership_type_name,
+            o.display_name AS organisation_name,
+            o.id AS organisation_id
+       FROM organization_users me
+       JOIN organization_users mine ON mine.keycloak_user_id = me.keycloak_user_id
+       JOIN members m ON m.user_id = mine.id
+       JOIN membership_types mt ON mt.id = m.membership_type_id
+       JOIN organizations o ON o.id = m.organisation_id
+      WHERE me.id = $1
+        AND o.organization_type_id = (
+              SELECT organization_type_id FROM organizations WHERE id = $2
+            )
+        AND m.status = 'active'
+        AND m.valid_until >= $3
+      ORDER BY m.first_name, m.last_name`,
+    [organisationUserId, organisationId, today]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    name: [row.first_name, row.last_name].filter(Boolean).join(' '),
+    membershipTypeName: row.membership_type_name,
+    membershipNumber: row.membership_number,
+    /*
+     * Which club the membership is with. Shown on the entry form only when it
+     * is not the club running the event — "Junior Member · Ward Union Pony
+     * Club" answers a question a member entering another branch's rally will
+     * otherwise ask.
+     */
+    organisationName: row.organisation_id === organisationId ? null : row.organisation_name,
+  }));
+}
 
 export interface CatalogueActivity {
   id: string;
@@ -64,6 +180,43 @@ export interface CatalogueActivity {
   termsAndConditions: string | null;
   available: boolean;
   unavailableReason: UnavailableReason | null;
+  /**
+   * Whether this activity is restricted to the club's members.
+   *
+   * Sent even when the caller *is* eligible, because the entry form needs to
+   * know to ask which member — availability alone cannot distinguish "open to
+   * everyone" from "open to you".
+   */
+  membersOnly: boolean;
+  /**
+   * Which restriction applies, when one does.
+   *
+   * `membersOnly` alone cannot distinguish "this club's members" from "any club
+   * in the federation", and the two need different words on a refusal and a
+   * different remedy offered with it.
+   */
+  entryEligibility: 'all' | 'members' | 'org-type-members';
+  /**
+   * The caller's own active memberships, and whether each is already entered.
+   *
+   * Populated only for a members-only activity, and only ever with memberships
+   * this login holds — it is the answer to "who may I enter?", asked of the
+   * person asking. Empty for an open activity, where there is no member to
+   * choose.
+   */
+  eligibleMembers: EligibleMember[];
+}
+
+/** One membership the caller holds, as an option on the entry form. */
+export interface EligibleMember {
+  id: string;
+  name: string;
+  membershipTypeName: string;
+  membershipNumber: string;
+  /** The club it is with, when that is not the club running the event. */
+  organisationName?: string | null;
+  /** Already entered in this activity — offered but disabled, never hidden. */
+  alreadyEntered: boolean;
 }
 
 export interface CatalogueEvent {
@@ -326,6 +479,7 @@ export class AccountCatalogueService {
                 a.allow_specify_quantity, a.supported_payment_methods,
                 a.limit_applicants, a.applicants_limit,
                 a.use_terms_and_conditions, a.terms_and_conditions,
+                a.entry_eligibility,
                 (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_activity_id = a.id)
                   AS entry_count,
                 (SELECT COUNT(*) FROM event_entries ee
@@ -336,6 +490,63 @@ export class AccountCatalogueService {
          ORDER BY a.created_at ASC`,
         [eventIds, organisationUserId]
       );
+
+      /*
+       * Who this login could enter as, loaded once for the whole catalogue.
+       *
+       * Only when something actually restricts entry — most clubs restrict
+       * nothing, and a page of open events should not pay for a membership
+       * lookup it will not read.
+       */
+      const ownOnly = activities.rows.some((row) => row.entry_eligibility === 'members');
+      const acrossType = activities.rows.some(
+        (row) => row.entry_eligibility === 'org-type-members'
+      );
+
+      /*
+       * Two sets, because the two restrictions ask different questions.
+       *
+       * The wider set is a superset of the narrower — every membership of this
+       * club is also a membership within its type — but they cannot be merged:
+       * a "members only" activity must not be opened by a membership of a
+       * different branch, which is exactly what using the wider set for both
+       * would do.
+       *
+       * Loaded only when something actually restricts entry. Most clubs
+       * restrict nothing, and a page of open events should not pay for a
+       * membership lookup it will not read.
+       */
+      const myMembers = ownOnly
+        ? await activeMembershipsFor(organisationId, organisationUserId, today)
+        : [];
+      const myTypeMembers = acrossType
+        ? await activeMembershipsAcrossType(organisationId, organisationUserId, today)
+        : [];
+
+      /*
+       * Which of those are already entered, per activity.
+       *
+       * Per member rather than per login: a parent may enter each child once,
+       * so the account-level `mine` count cannot answer this.
+       */
+      const enteredByActivity = new Map<string, Set<string>>();
+      const allMyMemberIds = [
+        ...new Set([...myMembers, ...myTypeMembers].map((member) => member.id)),
+      ];
+      if (allMyMemberIds.length > 0) {
+        const entered = await db.query(
+          `SELECT event_activity_id, member_id
+             FROM event_entries
+            WHERE event_activity_id = ANY($1::uuid[])
+              AND member_id = ANY($2::uuid[])`,
+          [activities.rows.map((row) => row.id), allMyMemberIds]
+        );
+        for (const row of entered.rows) {
+          const set = enteredByActivity.get(row.event_activity_id) ?? new Set<string>();
+          set.add(row.member_id);
+          enteredByActivity.set(row.event_activity_id, set);
+        }
+      }
 
       const byEvent = new Map<string, any[]>();
       for (const row of activities.rows) {
@@ -412,7 +623,9 @@ export class AccountCatalogueService {
             this.toActivity(
               activity,
               eventReason,
-              heldByActivity.get(activity.id) ?? { total: 0, mine: 0 }
+              heldByActivity.get(activity.id) ?? { total: 0, mine: 0 },
+              activity.entry_eligibility === 'org-type-members' ? myTypeMembers : myMembers,
+              enteredByActivity.get(activity.id) ?? new Set<string>()
             )
           ),
         };
@@ -460,7 +673,9 @@ export class AccountCatalogueService {
   private toActivity(
     row: any,
     eventReason: UnavailableReason | null,
-    held: { total: number; mine: number } = { total: 0, mine: 0 }
+    held: { total: number; mine: number } = { total: 0, mine: 0 },
+    myMembers: ActiveMembership[] = [],
+    enteredMemberIds: Set<string> = new Set()
   ): CatalogueActivity {
     const capped = row.limit_applicants && row.applicants_limit !== null;
     const taken = Number(row.entry_count);
@@ -472,8 +687,49 @@ export class AccountCatalogueService {
      * event is still not enterable, and saying "3 places left" beside a button
      * that refuses would be worse than saying nothing.
      */
+    const eligibility: 'all' | 'members' | 'org-type-members' =
+      row.entry_eligibility === 'members' || row.entry_eligibility === 'org-type-members'
+        ? row.entry_eligibility
+        : 'all';
+    const membersOnly = eligibility !== 'all';
+    const acrossType = eligibility === 'org-type-members';
+    const eligibleMembers: EligibleMember[] = membersOnly
+      ? myMembers.map((member) => ({
+          id: member.id,
+          name: member.name,
+          membershipTypeName: member.membershipTypeName,
+          membershipNumber: member.membershipNumber,
+          organisationName: member.organisationName ?? null,
+          alreadyEntered: enteredMemberIds.has(member.id),
+        }))
+      : [];
+
     let reason: UnavailableReason | null = eventReason;
-    if (!reason && Number(row.mine) > 0) reason = 'already-entered';
+
+    /*
+     * Placed above the account-level "already entered" on purpose. Not holding
+     * a membership is the more fundamental fact, and reporting it first tells
+     * someone whose membership lapsed why the activity closed to them, rather
+     * than a capacity message that would send them looking for a place that
+     * exists.
+     */
+    if (!reason && membersOnly && eligibleMembers.length === 0) {
+      // Different words for a different remedy: one is "renew here", the other
+      // is "join any club in the federation".
+      reason = acrossType ? 'org-members-only' : 'members-only';
+    }
+    if (!reason && membersOnly && eligibleMembers.every((member) => member.alreadyEntered)) {
+      reason = 'members-all-entered';
+    }
+
+    /*
+     * The account-level duplicate check applies to open activities only.
+     *
+     * On a members-only activity the question is per member — a parent must be
+     * able to enter each child once — and that is answered above. Keeping this
+     * here as well would block the second child on the strength of the first.
+     */
+    if (!reason && !membersOnly && Number(row.mine) > 0) reason = 'already-entered';
     /*
      * A member's own hold is called what it is. They cannot enter twice, but
      * "in your basket" sends them to the basket, where "full" would send them
@@ -512,6 +768,10 @@ export class AccountCatalogueService {
       termsAndConditions: row.use_terms_and_conditions ? row.terms_and_conditions ?? null : null,
       available: reason === null,
       unavailableReason: reason,
+      membersOnly,
+      /** Which restriction, for a screen that must word the refusal correctly. */
+      entryEligibility: eligibility,
+      eligibleMembers,
     };
   }
 
@@ -1265,6 +1525,9 @@ export class AccountCatalogueService {
       termsAndConditions: null,
       available: false,
       unavailableReason: 'entries-closed',
+      membersOnly: false,
+      entryEligibility: 'all',
+      eligibleMembers: [],
     };
   }
 }

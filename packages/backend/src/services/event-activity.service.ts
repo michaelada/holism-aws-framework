@@ -14,6 +14,12 @@ export interface EventActivity {
   limitApplicants: boolean;
   applicantsLimit?: number;
   allowSpecifyQuantity: boolean;
+  /**
+   * Who may enter. `'all'` — the default and the previous behaviour — or
+   * `'members'`, meaning the account user must hold an active membership of
+   * this organisation. See docs/MEMBERS_ONLY_ENTRIES.md.
+   */
+  entryEligibility: 'all' | 'members';
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
@@ -37,6 +43,7 @@ export interface CreateEventActivityDto {
   limitApplicants?: boolean;
   applicantsLimit?: number;
   allowSpecifyQuantity?: boolean;
+  entryEligibility?: 'all' | 'members';
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   fee?: number;
@@ -64,6 +71,10 @@ export class EventActivityService {
       limitApplicants: row.limit_applicants,
       applicantsLimit: row.applicants_limit,
       allowSpecifyQuantity: row.allow_specify_quantity,
+      // Defaulted on read as well as in the column: a row selected before the
+      // migration ran, or by a query that does not name it, must still be a
+      // valid activity rather than one with an undefined entry rule.
+      entryEligibility: row.entry_eligibility === 'members' ? 'members' : 'all',
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
       fee: parseFloat(row.fee),
@@ -128,8 +139,9 @@ export class EventActivityService {
          (event_id, name, description, show_publicly, application_form_id,
           limit_applicants, applicants_limit, allow_specify_quantity,
           use_terms_and_conditions, terms_and_conditions, fee,
-          supported_payment_methods, handling_fee_included, cheque_payment_instructions, discount_ids)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          supported_payment_methods, handling_fee_included, cheque_payment_instructions, discount_ids,
+          entry_eligibility)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          RETURNING *`,
         [
           data.eventId,
@@ -147,6 +159,9 @@ export class EventActivityService {
           data.handlingFeeIncluded || false,
           data.chequePaymentInstructions || null,
           JSON.stringify(data.discountIds || []),
+          // Anything but the one opt-in value is 'all'. A typo in a payload
+          // must not silently lock a club's members out of their own event.
+          data.entryEligibility === 'members' ? 'members' : 'all',
         ]
       );
 
@@ -190,6 +205,10 @@ export class EventActivityService {
         if (data.applicantsLimit !== undefined) {
           updates.push(`applicants_limit = $${paramCount++}`);
           values.push(data.applicantsLimit || null);
+        }
+        if (data.entryEligibility !== undefined) {
+          updates.push(`entry_eligibility = $${paramCount++}`);
+          values.push(data.entryEligibility === 'members' ? 'members' : 'all');
         }
         if (data.allowSpecifyQuantity !== undefined) {
           updates.push(`allow_specify_quantity = $${paramCount++}`);

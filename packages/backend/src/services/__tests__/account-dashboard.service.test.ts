@@ -2,6 +2,7 @@ import { AccountDashboardService } from '../account-dashboard.service';
 import { accountActivityService } from '../account-activity.service';
 import { accountCatalogueService } from '../account-catalogue.service';
 import { cartService } from '../cart.service';
+import { db } from '../../database/pool';
 
 jest.mock('../../config/logger');
 jest.mock('../account-activity.service', () => ({
@@ -21,10 +22,12 @@ jest.mock('../account-catalogue.service', () => ({
   },
 }));
 jest.mock('../cart.service', () => ({ cartService: { getCart: jest.fn() } }));
+jest.mock('../../database/pool', () => ({ db: { query: jest.fn() } }));
 
 const activity = accountActivityService as jest.Mocked<typeof accountActivityService>;
 const catalogue = accountCatalogueService as jest.Mocked<typeof accountCatalogueService>;
 const cart = cartService as jest.Mocked<typeof cartService>;
+const mockDb = db as jest.Mocked<typeof db>;
 
 /**
  * B3, assembled server-side.
@@ -497,5 +500,121 @@ describe('AccountDashboardService', () => {
     await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
 
     expect(activity.listPayments).not.toHaveBeenCalled();
+  });
+});
+
+
+/**
+ * Events another branch is running.
+ *
+ * The federation case: an activity opened across the organisation type has to
+ * become visible to the other branches, or nobody it was opened to will ever
+ * know it exists.
+ *
+ * See docs/MEMBERS_ONLY_ENTRIES.md §7.
+ */
+describe('AccountDashboardService — events at other organisations', () => {
+  const ORG = 'org-1';
+  const MEMBER = 'ou-1';
+  const TODAY = new Date(2026, 7, 12);
+
+  const service = () => new AccountDashboardService();
+
+  const externalRow = (over: Record<string, any> = {}) => ({
+    id: 'ev-9',
+    name: 'Ward Union Open Show',
+    start_date: new Date('2026-09-05'),
+    end_date: new Date('2026-09-05'),
+    entries_closing_date: new Date('2026-09-01'),
+    organisation_name: 'Ward Union Pony Club',
+    organisation_type_name: 'Irish Pony Clubs',
+    url_code: 'wupc',
+    already_joined: false,
+    ...over,
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    activity.listEntries.mockResolvedValue([]);
+    activity.listBookings.mockResolvedValue([]);
+    activity.listMemberships.mockResolvedValue([]);
+    catalogue.listEvents.mockResolvedValue([]);
+    catalogue.listMerchandise.mockResolvedValue([]);
+    catalogue.listCalendars.mockResolvedValue([]);
+    catalogue.listRegistrationTypes.mockResolvedValue([]);
+    cart.getCart.mockResolvedValue(null as any);
+    mockDb.query = jest.fn().mockResolvedValue({ rows: [] });
+  });
+
+  const build = () => service().build(ORG, MEMBER, ['event-management'], 'EUR', TODAY);
+
+  it('lists an event another branch has opened across the type', async () => {
+    mockDb.query = jest.fn().mockResolvedValue({ rows: [externalRow()] });
+
+    const dashboard = await build();
+
+    expect(dashboard.externalEvents).toHaveLength(1);
+    expect(dashboard.externalEvents[0].organisationName).toBe('Ward Union Pony Club');
+    expect(dashboard.externalEvents[0].organisationCode).toBe('wupc');
+  });
+
+  it('keeps them out of "what\'s on"', async () => {
+    /*
+     * Nothing here can be entered from this club. Folding them into `whatsOn`
+     * would leave every consumer of that list to rediscover the difference, and
+     * the first to forget would offer an "Enter" button that leads nowhere.
+     */
+    mockDb.query = jest.fn().mockResolvedValue({ rows: [externalRow()] });
+
+    const dashboard = await build();
+
+    expect(dashboard.whatsOn).toEqual([]);
+  });
+
+  it('names the federation, for the section label', async () => {
+    /*
+     * The label reads "open to all members of Irish Pony Clubs". "Organisations
+     * of the same type" is how the platform thinks about it; the type's own
+     * name is the only form of the sentence a member can check against what
+     * they know they belong to.
+     */
+    mockDb.query = jest.fn().mockResolvedValue({ rows: [externalRow()] });
+
+    expect((await build()).organisationTypeName).toBe('Irish Pony Clubs');
+  });
+
+  it('leaves the federation unnamed when there is nothing to label', async () => {
+    // Null rather than a lookup no dashboard without external events will read.
+    expect((await build()).organisationTypeName).toBeNull();
+  });
+
+  it('says whether the member already belongs to the organising club', async () => {
+    // Being asked to join something you already belong to reads as the software
+    // not knowing you.
+    mockDb.query = jest.fn().mockResolvedValue({ rows: [externalRow({ already_joined: true })] });
+
+    expect((await build()).externalEvents[0].alreadyJoined).toBe(true);
+  });
+
+  it('asks only for other clubs of the same type, with the option actually set', async () => {
+    await build();
+
+    const sql = String((mockDb.query as jest.Mock).mock.calls[0][0]);
+
+    expect(sql).toContain('organization_type_id');
+    expect(sql).toContain('o.id <> $1');
+    expect(sql).toContain("a.entry_eligibility = 'org-type-members'");
+    // An activity the organiser has hidden is not other branches' business.
+    expect(sql).toContain('a.show_publicly = TRUE');
+  });
+
+  it('does not fail the dashboard when the lookup fails', async () => {
+    // A cross-club courtesy is not worth failing a member's home page over.
+    mockDb.query = jest.fn().mockRejectedValue(new Error('nope'));
+
+    const dashboard = await build();
+
+    expect(dashboard.externalEvents).toEqual([]);
+    expect(dashboard.whatsOn).toEqual([]);
   });
 });

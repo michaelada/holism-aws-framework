@@ -132,6 +132,11 @@
     "orders": "Meine Bestellungen"
   },
   "home": {
+    "externalEvents": "Veranstaltungen anderer Organisationen",
+    "externalEventsHint": "Von einer anderen Organisation durchgeführt, aber offen für alle Mitglieder von {{organisationType}}",
+    "externalEventBadge": "Externe Veranstaltung",
+    "externalEventOpen": "Zu {{organisation}}",
+    "externalEventJoin": "{{organisation}} beitreten, um teilzunehmen",
     "welcome": "Willkommen zurück, {{name}}",
     "welcomeAnonymous": "Willkommen zurück",
     "comingSoon": "Ihr Dashboard für {{organisation}} erscheint hier.",
@@ -228,6 +233,8 @@
     "yourDetails_other": "Ihre Angaben ({{count}} Antworten)"
   },
   "browse": {
+    "expandAll": "Alle ausklappen",
+    "collapseAll": "Alle einklappen",
     "loadError": "Das Angebot konnte nicht geladen werden.",
     "noEvents": "Derzeit sind keine Veranstaltungen geöffnet.",
     "noMembershipTypes": "Derzeit sind keine Mitgliedschaften geöffnet.",
@@ -239,6 +246,9 @@
     "placesRemaining_one": "Noch {{count}} Platz",
     "placesRemaining_other": "Noch {{count}} Plätze",
     "reason": {
+      "org-members-only": "Nur Mitglieder einer Zweigstelle",
+      "members-only": "Nur für Mitglieder",
+      "members-all-entered": "Alle Ihre Mitglieder sind angemeldet",
       "unavailable": "Nicht verfügbar",
       "entries-not-open": "Anmeldung noch nicht geöffnet",
       "entries-closed": "Anmeldung geschlossen",
@@ -447,6 +457,14 @@
     "home": "Startseite"
   },
   "form": {
+    "membersOnly": {
+      "notAMember": "Diese Aktivität steht nur Mitgliedern von {{organisation}} offen, und Sie haben keine aktive Mitgliedschaft.",
+      "viewMemberships": "Mitgliedschaften ansehen",
+      "entryFor": "Diese Anmeldung ist für {{name}}",
+      "whoIsThisFor": "Für wen ist diese Anmeldung?",
+      "whoIsThisForHint": "Sie haben mehrere Mitgliedschaften. Wählen Sie das Mitglied aus, das Sie anmelden.",
+      "optionAlreadyEntered": "{{name}} — bereits angemeldet"
+    },
     "submit": "Speichern und in den Warenkorb",
     "saving": "Wird gespeichert…",
     "loadFailed": "Dieses Anmeldeformular konnte nicht geladen werden.",

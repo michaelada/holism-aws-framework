@@ -20,10 +20,10 @@ groups, roles).
 
 | | |
 |---|---|
-| Organisation type | **Irish Pony Clubs** — EUR, en-GB, 13 capabilities, handling fee €0.25 + 1.5%, platform share €0.30 + 1.5% |
+| Organisation type | **Irish Pony Clubs** — EUR, en-GB, 20 capabilities, handling fee €0.25 + 1.5%, platform share €0.30 + 1.5% |
 | Organisations | **Kildare Hunt** (`khpc`), **Laois Hunt** (`lhpc`), **Ward Union** (`wupc`) |
 | Logins | 1 super admin, 3 organisation admins, 16 account users across 24 club affiliations |
-| Events | 13, with 29 activities |
+| Events | 18, with 41 activities |
 | Forms | 6 forms per club (18), built from 26 fields per club (78) covering 13 field types |
 | Memberships | 5 membership types per club (13 in total), with 22 members for this season |
 | Shop | 8 products at Kildare Hunt, each with a generated image, plus 10 option groups and 30 option values |
@@ -57,6 +57,42 @@ Eight people, fifteen memberships, five in each club:
 Tadhg is left **pending**, so the awaiting-approval screen (A8) has a subject. Five unrelated people
 per club would leave the organisation switcher and the "which club am I acting as" resolution
 untested.
+
+### Two events cover the members-only entry rules
+
+Both run by Kildare, both wide open in their entry window — what is being demonstrated is *who* may
+enter, so nothing else should be in the way. They are the only seeded activities with an
+`entryEligibility`; every other one is `all`, exactly as before.
+
+| Event | Activity | Who can enter |
+|---|---|---|
+| **Kildare Members' Cup** | Members' Championship | Kildare members only |
+| | Open Warm-up Round | anyone — a restricted and an open row side by side |
+| **Inter-Branch Championship** | Inter-Branch Team Class | members of **any** Irish Pony Club branch |
+| | Host Club Class | Kildare members only |
+
+The second event is the interesting one. Its team class is what makes it appear under *Events at
+other organisations* on the home page of Laois, Ward Union and Meath account users, and its host
+club class sits beside it restricted to Kildare — so the difference between the second and third
+options is visible in a single list.
+
+**Nobody holds an active membership in more than one club.** A person belongs to a club; a login at
+several clubs is a different thing, and `ACCOUNT_USERS` still overlaps heavily to exercise the
+organisation switcher. The distinction is load-bearing here: a member of one branch entering
+another's event is the whole case, and it cannot be shown by someone who is a member of both.
+
+**Every club gets `organisation-level-members`**, rather than one club opting in. The federation
+option is only interesting when more than one club has it: one club opens an event, and the others'
+account users are the ones who have to see it.
+
+Ready-made subjects:
+
+| Login | Why |
+|---|---|
+| `niamh.walsh@example.test` | **the main subject.** A login at all four clubs, a member of **Laois only**. In Kildare's catalogue the team class is open to her *as her Laois membership*, and both Kildare-members-only classes are refused |
+| `ruairi.kelly@example.test` | Laois member with no Kildare account — sees the Inter-Branch Championship on the Laois home page and is prompted to join Kildare |
+| `eoin.brady@example.test` | belongs to Ward Union only, one membership — the same path from a different branch |
+| `sinead.gallagher@example.test` | holds four memberships on one login — the parent case, for the "which member?" selector |
 
 ### Events cover every entry-window state
 

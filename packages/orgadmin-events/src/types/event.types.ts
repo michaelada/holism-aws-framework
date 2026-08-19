@@ -32,6 +32,12 @@ export interface EventActivity {
   description: string;                 // Activity-specific details
   showPublicly: boolean;               // Show Publicly toggle
   applicationFormId?: string;          // Link to Form Builder form
+  /**
+   * Who may enter. `'all'` is the default and the previous behaviour;
+   * `'members'` requires an active membership of this organisation.
+   * See docs/MEMBERS_ONLY_ENTRIES.md.
+   */
+  entryEligibility: 'all' | 'members' | 'org-type-members';
   limitApplicants: boolean;            // Limit Number of Applicants
   applicantsLimit?: number;            // Limit if limitApplicants is true
   allowSpecifyQuantity: boolean;       // Allow ordering multiple entries
@@ -96,6 +102,7 @@ export interface EventActivityFormData {
   description: string;
   showPublicly: boolean;
   applicationFormId?: string;
+  entryEligibility?: 'all' | 'members' | 'org-type-members';
   limitApplicants: boolean;
   applicantsLimit?: number;
   allowSpecifyQuantity: boolean;

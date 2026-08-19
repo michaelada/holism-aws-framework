@@ -15533,3 +15533,753 @@ No interactive element under 44×44 on any of them. **695 shell + 727 core** tes
 Remaining from the critique: **`/impeccable polish`** for the theme values and the eight-hue accessible module palette you chose — the last P1, and the one that closes most of the divergence table.
 
 ---
+
+
+## 2026-08-19 11:36:19 — Prompt
+
+In the orgadmin under the payments section/ module, can you add a menu option on the left called Offline Payments where the org admin can see all orders that used a Paid Offline option, and where they can mark the payment as received and record who marked it and when automatically, and also unmarked it as received in case it was done in error.
+
+### Assistant
+
+A runaway polling loop on the page I'm shipping — that needs fixing before anything else.
+
+Root cause found — and it's not in my page. The shell's `useTranslation` builds a **new `t` function on every render**:
+
+That's the loop: `load` depends on `t`, `t` is new every render, so the effect re-fires forever. It's a platform-wide trap, not just my page — every module gets `t` from here. Fixing both ends.
+
+Now the page end — an error message shouldn't be baked at fetch time anyway, since it then can't follow a language change:
+
+A raw key would render as-is, so the load failure needs its own state rather than sharing the display-string one:
+
+Now a test in orgadmin-shell that fails loudly if anyone unmemoises this again:
+
+The result object churns because it keys on the whole `i18n` container. Keying on what it actually uses is both stabler and more honest:
+
+Now the full suites — this hook touches every module:
+
+700/700 in orgadmin-shell (was 695, plus my 5). Now orgadmin-core and the typechecks:
+
+Pre-existing errors only (deep-path imports, an unused import, `ImportMeta`) — none in the files I touched. Now the core suite:
+
+The mock's `t` was stable — production's was not. That's precisely why no test caught it. Adding a page-level guard that renders against the *unstable* `t` production actually had:
+
+A green test proves nothing unless it can fail. Mutating the page back to the broken dependency:
+
+It fails — the page never settles, which is exactly the spinner the user saw. Restoring the fix:
+
+Guard fails with "expected 6 to be 1" and a clear message; file restored. Now the browser:
+
+Credentials are pre-filled:
+
+2 errors, down from 29. Checking both the errors and the actual request count:
+
+Loop gone — 2 requests (React StrictMode's double-invoke), not hundreds. But a 404 now. Checking the route registration:
+
+`orgadminOrganisationRoutes` is mounted only at the bare path — the scoped form doesn't exist. Checking how the front end rewrites URLs:
+
+A clean discriminator: an unmounted path hits the 404 handler, a mounted one hits auth and returns 401.
+
+Confirmed unmounted — and it's not just offline payments: branding-settings 404s too. Checking whether this is mine or pre-existing:
+
+Not mine — `index.ts` and `useApi.ts` are unmodified. The router was simply never added to the dual-mount list, so **all** of Settings 404s through `useApi` too. Checking it can accept the scoped param:
+
+This router resolves the org from the *user*, not the path — so mounting it scoped would let the URL claim one club while the handler used another. The front-end exclusion is both safer and what §1.7 prescribes. First, confirming the blast radius:
+
+All six Settings tabs and Registrations, not just my page. Verifying live rather than inferring:
+
+Settings renders because its first tab reads from context. Clicking a tab that actually calls the router:
+
+Confirmed live: Payment Settings and Stripe Connect 404 in the browser. This is a pre-existing, platform-wide defect. The one-line front-end fix:
+
+Now the live check — Payment Settings and the offline list:
+
+404 → 200, zero console errors. Now the feature itself:
+
+Rail, breadcrumb, and page all correct. Checking the Recorded tab, where the "who marked it" chip lives:
+
+Both empty states are correct, but the dev database has no offline payments — so the "who marked it" chip has never actually rendered. That's the heart of the request, so let me create a row and exercise it:
+
+Row created. Now the full round trip in the browser:
+
+Empty — but `withOrganisation` resolves the org from the *user*, and this admin has rows in two organisations. Checking which one it picks:
+
+`LIMIT 1` with no `ORDER BY` and two org-admin rows — the router ignores which club the administrator actually selected. Confirming which it picks:
+
+Confirmed — it resolves to **Laois**, while the administrator is working in **Kildare**. So this router serves the wrong club's data entirely: my test row is invisible because the list is Laois's. Reading the wrapper:
+
+The fix: honour the organisation the request names, and refuse rather than silently substitute another.
+
+Now tests for the resolution rules:
+
+The harness's canned first row overrides the lookup. Making that test mock what the real query would return:
+
+Now the live proof — the test row is in Kildare, which the administrator has open:
+
+The right club's data now appears. Marking it received:
+
+FK fix proven: it stored a real `organization_users` row, in the **correct** organisation. Now the chip:
+
+A partial-fulfilment warning fired — correct behaviour for my synthetic row, and it proves that path renders. Now the Recorded tab:
+
+Exactly what was asked: "Recorded by Aoife Byrne on 19 Aug 2026". Testing Undo:
+
+Full round trip verified. One defect the screenshot exposes though: a partial failure is announced with a green tick and a success icon — "could not be created" dressed as good news.
+
+Adding a test that pins the severity, since the wrong icon is exactly what gets skimmed past:
+
+Now the full suites across the three affected packages:
+
+Cleaning up the synthetic row I created:
+
+Undo succeeded, and the service refuses undo once fulfilment records exist — so nothing was orphaned. Now the documentation (§1.4, §3.6):
+
+Now the feature doc:
+
+Final verification across everything I touched:
+
+Done. Everything green: **orgadmin-shell 700**, **orgadmin-core 731**, **backend offline-payment suites 39**. All six locales carry the four new keys.
+
+## What you asked for
+
+The **Offline payments** item now sits under Payments in the left rail, alongside a new *All payments*. The screen lists every order awaiting an offline payment, marks one received — recording who and when automatically — and undoes it. Verified end to end in a browser, then the test row removed:
+
+1. Outstanding tab lists the payment with member, lines and amount
+2. **Mark received** → status `paid`, `offline_received_at` set, `offline_received_by` pointing at a real org-user row **in the right club**
+3. Recorded tab reads *"Recorded by Aoife Byrne on 19 Aug 2026"*
+4. **Undo** → back to `awaiting_offline`, both audit columns `NULL`
+
+## Four defects in the feature itself
+
+- **The menu never rendered.** `subMenuItems` was nested inside `menuItem`, where it isn't part of the type — a pre-existing `TS2353`.
+- **"Who" was written but never read back.** The list query selected the timestamp and nothing about the person, so the screen could say when but not by whom — the half that matters when it was marked in error.
+- **The wrong id went into the foreign key.** `offline_received_by` references `organization_users(id)`; the route passed the Keycloak id. Your test admin has one row *per club* for the same Keycloak id, so this was wrong in two ways at once. The existing test had asserted the buggy value, which is why nothing caught it.
+- **The page fetched in an unbounded loop** — requests until the API answered 429 and Chrome ran out of sockets. The page's own code was correct; `orgadmin-shell`'s `useTranslation` rebuilt `t` on every render, so `useCallback(load, [… t])` was rebuilt every render too. That wrapper feeds every module. No test saw it because **the test double was more correct than production** — it returns a stable `t` from module scope. Fixed on both sides and guarded on both sides.
+
+## Two pre-existing defects found while verifying, wider than this screen
+
+Neither is mine — `index.ts` and `useApi.ts` are unmodified in git — but both broke the feature, so I fixed them.
+
+- **Every screen served by `orgadmin-organisation.routes` was 404ing.** `useApi` rewrites to the organisation-scoped form, but that router is mounted once, bare. Confirmed in the browser: opening Settings → Payment Settings fired four requests, got four 404s. That's **all six Settings tabs**, registrations, and offline payments. Fixed in the front end rather than by adding a scoped mount — that router takes its scope from the user and has no check that a path id agrees, so a scoped URL there could name one club while the handler worked on another.
+
+- **It served the wrong club to a two-club administrator.** `LIMIT 1` with no `ORDER BY`, ignoring the `X-Organisation-Id` the app already sends. Signed in to **Kildare**, it resolved to **Laois** — so payment settings, branding, email templates and Stripe Connect were reading *and writing* against a club you hadn't opened, with nothing on screen to say so. This is how it surfaced: a payment I inserted for Kildare didn't appear on Kildare's screen. The header is now honoured and verified against your own admin rows; a club you don't administer is refused with 403 rather than quietly served from another.
+
+One UX fix on the way past: a partial fulfilment ("Recorded, but 1 item(s) could not be created") was rendering in a green success alert with a tick. It's a warning now.
+
+Each regression guard was checked by mutating the fix back and confirming failure — the loop guard reports `expected 6 to be 1`.
+
+Docs: [OFFLINE_PAYMENTS_MENU_AND_AUDIT.md](docs/OFFLINE_PAYMENTS_MENU_AND_AUDIT.md), plus [core-payments.md](.claude/modules/core-payments.md), [core-settings.md](.claude/modules/core-settings.md) and [orgadmin-shell.md](.claude/modules/orgadmin-shell.md).
+
+Everything is in the working tree — nothing committed. Worth knowing that the two wider fixes change behaviour well outside Payments, so they deserve a look before this goes anywhere near itsps.org.
+
+---
+
+
+## 2026-08-19 13:28:24 — Prompt
+
+In the payments section/ module can you add a 3rd menu option called “Lodgements” which provides a tabular lists all stripe or helix-pay based lodgements that have happened, or are pending. This information should be available from the organisations Stripe account (and from Helix Pay when we integrate that). 
+Also, can you provide a drill down so that the Org user can see the exact payments that went into an individual lodgement, and for each payment see what the items were in the basket and how the overall charges add up to the final lodgement.
+
+### Assistant
+
+A `LodgementsPage` already exists at `payments/lodgements` — but it's a payment-method breakdown, not Stripe payouts. Let me see exactly what's there before designing on top of it.
+
+The existing "Lodgements" is a daily group-by over our own `payments` table — it has no connection to what Stripe actually paid into the club's bank. What you're describing is genuinely different data. Let me check what we hold to reach it.
+
+Destination charges — the charge sits on the platform, the club's account receives a transfer. That makes the payout→payment link non-trivial, so let me check what we store to bridge it.
+
+Worth knowing: nothing links to it, and the URL it calls doesn't match the backend route. Confirming:
+
+Three things are worth settling before I build, because they change the shape of the work materially.
+
+The existing `LodgementsPage` turns out to be unlinked from the rail, mislabelled (it's a daily group-by of our own `payments` table, not money reaching a bank), and broken — it calls `/api/orgadmin/payments/lodgements`, which becomes `/api/orgadmin/organisations/<id>/payments/lodgements`, and the only route registered is `/organisations/:id/lodgements`.
+
+All three recommendations taken. The one hard technical problem is linking a payout back to our payments — with destination charges the club's account sees a different charge object than the platform does. Let me find the cheapest place to capture that link.
+
+Confirmed the shape of the problem. One thing I need to get right before writing anything: under destination charges the platform pays Stripe's fee, so it does **not** reduce the club's lodgement — my preview above had that wrong, and showing it as a deduction would misstate the club's money. Let me verify against the fee doc.
+
+Now I have what I need. Under destination charges the platform's balance takes Stripe's fee; the club receives gross minus the application fee. That's the arithmetic I'll display.
+
+Writing the spec first, per §1.3:
+
+Spec written. Now the backend — starting with the migration:
+
+`packages/backend/migrations/` with node-pg-migrate is the live one. Following its style:
+
+Now the lodgement service. First let me see how the webhook resolves payments, so the new code matches:
+
+The resolver can be far cheaper than the spec assumed — `transfers.list({destination})` with an expand resolves a whole payout in one or two calls instead of one per payment. Let me check the pieces it needs:
+
+Now the service:
+
+Backend typechecks. Now the routes, beside the offline ones:
+
+Now removing the old, broken lodgements route and service method:
+
+My deletion left a stray brace:
+
+Clean. Now tests for the new service — the resolver chain is the part most worth pinning:
+
+19 passing. Now the front end — first the module registration:
+
+Now the list page — a full rewrite:
+
+Now the drill-down:
+
+Now the i18n keys across all six locales:
+
+A `payments.lodgements` block already exists for the old page — I'll replace it wholesale in each locale rather than leave dead keys:
+
+es-ES has no `lodgements` block at all — so it needs insertion, not replacement. Let me check which locales are in which state:
+
+Pre-existing gap in es-ES and fr-FR. Making the script handle insertion as well as replacement:
+
+Contained diffs, only the intended block. Now typecheck and test the front end:
+
+Now front-end tests for both pages:
+
+Three assertions are ambiguous because the same figure legitimately appears in both the summary and the row. Scoping them to the row:
+
+Now the full suites and the route tests:
+
+All 735 pass in orgadmin-core. Now the backend:
+
+Route is live, and Kildare has a real connected account — so this can be verified against actual Stripe test data:
+
+A 500 — and six requests, which is useApi's retry × StrictMode, not a loop. Let me see the actual error:
+
+Backend logs to its terminal. Let me reproduce the failure directly against Stripe:
+
+Working directory already persisted. Using absolute paths:
+
+The real cause: the local `STRIPE_SECRET_KEY` has no access to the account stored for this club — the dev database's connected account belongs to a different Stripe platform. That's dev-data drift, not a code bug, but it exposed a genuine weakness: my code turns it into a bare 500.
+
+Now surfacing that in the UI — it has the same remedy as "not connected", so it belongs in the same place:
+
+Adding the matching backend-side assertion, so the coupled wording is pinned at both ends:
+
+Now the live check — the revoked-connection path is exactly what this environment produces:
+
+The rail is right — three items, correct icons and breadcrumb. But the state is wrong: it says "No lodgements yet" while the console shows errors. That's precisely the "error rendered as no money" failure I was trying to avoid. Let me find out why my catch never ran:
+
+Found it — and it's bigger than this page. `execute` **returns `null`** on failure; it never throws. So every `try/catch` around it in this codebase is dead code, and a failed load renders as an empty list. The tests all pass because the mocks *reject*, which production never does.
+
+The hook does offer `onError`, which is the intended route:
+
+The same flaw is in the offline payments page I built earlier this session — its error path is equally dead:
+
+Now tests that reproduce what `execute` actually does, rather than what the mocks pretended:
+
+Passes in isolation — so it's cross-test leakage. `vi.clearAllMocks()` doesn't drain queued `mockResolvedValueOnce` values, so the paging test's leftovers fire in later tests:
+
+Those two are the older tests, which reject — and my refactor left the `catch` unable to classify. One classifier used by both paths is the right fix:
+
+One left. The offline page shows its error alert *and* "Nothing is waiting" — contradictory. Guarding the empty state:
+
+Now the live check again — this environment produces exactly the revoked-connection case:
+
+Correct actionable warning now. The populated states have never rendered in a browser though — let me verify them with an intercepted response (my rendering, not a claim about live Stripe):
+
+Matches the wireframe, zero console errors. Now the drill-down:
+
+Renders exactly as designed. Two small nav defects the nested route exposes though: on the detail page the breadcrumb stops at "Payments" and the rail no longer highlights "Lodgements" — the user loses their place when drilling in.
+
+Exact matching. A longest-prefix match fixes both — and also highlights "All payments" when viewing a single payment, which is currently unhighlighted too:
+
+A test for the nav behaviour, then the full sweep:
+
+Same harness quirk the responsive test documented — the onboarding modal `aria-hidden`s the document, so role queries find nothing. Querying the DOM instead:
+
+Confirming the fix in the browser, then the full sweep:
+
+Breadcrumb now reads "Payments › Lodgements" and the rail keeps Lodgements selected. Full sweep across all three packages:
+
+All green: shell 705, core 742, backend 1382. Cleaning up and correcting the spec where it describes something I didn't build:
+
+Now the module summaries (§3.6):
+
+Suites pass (76 and 174); the locale check just used a stale relative path:
+
+**Lodgements** is in, as the third item under Payments. All six locales at 41 keys, all suites green: **orgadmin-shell 705**, **orgadmin-core 742**, **backend 1382**.
+
+## What it does
+
+A lodgement here is money actually reaching the club's bank — a **payout on its connected Stripe account**, read live. The list shows date, amount, status, and destination account, with pending and in-transit payouts included, failure reasons inline, and money collected-but-not-yet-scheduled as a separate card (it has no date, so it isn't a lodgement). The drill-down lists every balance transaction in the payout; expanding a row shows that payment's basket and its fee build-up, and the lines sum to the payout total.
+
+Verified in a browser: the empty, revoked-connection, populated, and drilled-in states all render as designed, zero console errors. Spec and wireframes are in [LODGEMENTS.md](docs/LODGEMENTS.md) and [LODGEMENTS_WIREFRAMES.md](docs/LODGEMENTS_WIREFRAMES.md).
+
+## Two things worth your attention
+
+**The fee arithmetic.** My earlier mockup showed Stripe's processing fee coming off the club's total. That was wrong. You use **destination charges** without `on_behalf_of`, so Stripe bills its fee to the platform — it never touches the club's money. The club receives gross minus the application fee. Showing it as a deduction would understate what the club received and misname who paid it, so the screen states explicitly who pays it, since its absence from the sum is otherwise indistinguishable from an omission.
+
+**The old Lodgements page was replaced, and it was worse than unused.** Unlinked from the rail, calling a URL that doesn't exist (`/payments/lodgements` vs the registered `/organisations/:id/lodgements`), and summing our own `payments` table by day — which is what you charged, not what was banked. It, its endpoint, its interface and its tests are gone.
+
+## Three defects found on the way
+
+- **`useApi.execute` returns `null` on failure — it never throws.** Every `try/catch` around it in this codebase is dead code. On this screen the null rendered as *"No lodgements yet"*: an outage reported to a club as "no money reached your bank". The offline payments page I built earlier had the identical defect, showing "Nothing is waiting" when nobody could ask. Both now use the hook's `onError`, and both suppress the empty state on failure — an error plus a reassuring empty state is worse than either alone, because the reassuring one gets believed. **No suite could have caught this**: every mock rejects, which production never does. The new tests reproduce the real contract.
+
+- **Stripe errors arrived as bare 500s.** Your local key has no access to the account stored for Kildare (`StripePermissionError` / `account_invalid`) — dev-data drift, but the same shape as a club revoking access in production. Now translated: a revoked connection names itself and links to Payment Settings; a missing payout is a 404; an outage is a 502; non-Stripe errors pass through untouched so our own bugs aren't disguised.
+
+- **Rail selection broke on the first nested route.** `/payments/lodgements/:id` deselected the rail and truncated the breadcrumb to "Payments" — you lost your place by following a link in the navigation. Now a longest-prefix match, which also fixes `/payments/:id`, previously unhighlighted too.
+
+## Helix Pay
+
+`LodgementSource` with two methods, `StripeLodgementSource` real and `HelixPayLodgementSource` reporting "not available yet" rather than an empty list — "no money" and "not supported" must not look alike. Deliberately narrow, following the judgement already recorded in `stripe-connect.service.ts`.
+
+One thing I could not verify: **the happy path against live Stripe**, because that key/account mismatch blocks every call locally. The populated screenshots above came from intercepted responses — they prove my rendering, not the Stripe integration. The service's data handling is covered by 23 unit tests, but the first real payout should be eyeballed somewhere the key matches the connected account.
+
+There's a new migration (`1709000000030`), applied locally. Nothing committed — all in the working tree.
+
+---
+
+
+## 2026-08-19 14:23:18 — Prompt
+
+When it comes to Event Entries, for each activity, if an organisation is using the Membership functionality within ItsPlainSailing and if it actually has members in its database, then I would like the org administrator to be able to select who is allowed enter this event with the following options:
+
+- Entries Open To All - this is the default option that is always selected first
+- Entries Open to Our Members Only - with this option entries are only open to members of the current organisation, so first of all, if the logged in account user has no active members then they should not have the option to enter this activity an the event listing for this activity should show members only. If the account user has a single active membership, then in filling out the application for for this event activity the top of the form should show that this entry is for that active member. If the account user has more than one active membership in their account, then the top of the event entry application form should present them with an option to select which member they are entering.
+
+### Assistant
+
+Substantial feature, so per §1.3 I'll work requirements → design → tasks with wireframes. Let me start from the module summaries rather than the source.
+
+Good — there's an existing `listMemberships` and an established "every active membership this login holds" concept. Now the activity side:
+
+There's already a server-decided `unavailableReason` — exactly the hook "members only" needs. Let me read it:
+
+I have the shape of it. The existing `unavailableReason` mechanism and `listMemberships` give me most of the machinery. Two decisions genuinely change the work, so let me settle them before building.
+
+Both taken. Writing the spec first:
+
+`context_ref` jsonb is where the member choice can ride — no cart schema change needed. Checking its shape:
+
+Full picture now. Writing the spec:
+
+Now the migration:
+
+Now the backend. First persisting the setting on activities:
+
+Now the catalogue — the `members-only` reason and the caller's eligible members:
+
+Now the query and the gating logic:
+
+Now the shared `activeMembershipsFor` helper — one definition of "active", reusable by the cart:
+
+Now the enforcement that actually matters — the cart:
+
+`findActivity` already routes through the same availability logic, so the base gate works. But the *chosen member* needs validating too:
+
+`findActivity` reuses `listEvents`, so `eligibleMembers` comes through. Adding the member validation:
+
+Now fulfilment — the entry must carry the member's name and link:
+
+`context_ref` needs parsing here — the file already has a helper for exactly that:
+
+Backend typechecks. Now the "has members" endpoint the org-admin form needs:
+
+`byCurrentOrganisation()` already resolves scope correctly — this route just ignores it and re-derives. My new endpoint will use it properly:
+
+Now the org-admin activity form. Let me see where the field belongs:
+
+Now the gate that decides whether the field appears at all:
+
+`enabledCapabilities` is on the organisation, which the form already has. Correcting my invented hook:
+
+Those errors are pre-existing (DatePicker props, an unused state var I didn't add). Now the default for new activities:
+
+It reuses `createActivity`, so the field flows through. Now the account-shell entry form:
+
+Now the member selection in the entry form:
+
+It did apply — grep just matched the state line first. Now the type and the UI:
+
+The listing renders `browse.reason.<reason>` dynamically, so it needs only locale keys. Now the entry-form UI:
+
+Now the UI blocks — the refusal, the banner, and the selector:
+
+Now the i18n. Two locale sets — org-admin and account-shell:
+
+Contained. Now tests, starting with the backend gating logic:
+
+All 11 pass. Now the enforcement tests — the part that actually protects the club:
+
+I can extend the existing harness rather than build a new one:
+
+My assertion had the wrong arity — `addItem` takes four arguments. The behaviour is right:
+
+Now a fulfilment test — the entry must carry the member's name, which is the decision you made:
+
+65 pass. Verifying the key one can fail — mutating fulfilment back:
+
+Fails when mutated, passes when restored. Now the front-end tests and the full sweep:
+
+I'll finish the two-option work first, then take on the third option — it's a substantial addition and I want the foundation solid under it.
+
+Let me verify properly — original test *and* original page:
+
+Confirmed pre-existing (3 failures on unmodified sources — §3.3). Only one of mine fails; MUI's select and my button matcher:
+
+The button is "Add to basket"; my substitution over-narrowed it:
+
+The select *is* empty — jest-dom just rejects `toHaveTextContent('')`. Asserting the substantive thing instead:
+
+All 7 of my new tests pass; the 3 remaining failures are the pre-existing ones I verified on unmodified sources. The two-option feature is complete — now your third option.
+
+Now the design for the third option. The key structural fact: `members.user_id` is per-organisation, so cross-org membership must resolve through the underlying identity.
+
+Four clubs share one type — exactly the shape this needs. Migration first:
+
+No `organization_capabilities` table — capabilities live in a jsonb column. Correcting the migration:
+
+Now the cross-org membership resolution — the core of the third option:
+
+Now the gating logic for all three values:
+
+Now the cross-org discovery — external events surfaced to other clubs in the same type:
+
+Backend clean. Now the org-admin third radio option:
+
+That error is the pre-existing one. Now the account-shell external events section and its types:
+
+Now the i18n for both new option and the external-events section:
+
+Now tests for the third option:
+
+All 17 pass, including the one that would catch merging the two member sets. Now a dashboard test for the cross-org listing:
+
+Passing — my `.catch()` absorbs the unmocked pool. Let me mock it properly and test the behaviour:
+
+36 pass. Now the enforcement for the third option, and the full sweep:
+
+My insertion point closed the describe early. Let me look:
+
+My earlier insertion truncated part of this file. Let me see exactly what was lost:
+
+I destroyed a large block of that file with a bad insertion — five describes, ~19 tests. Restoring from HEAD and re-applying both additions properly:
+
+File restored intact — 39 tests. Now re-applying my additions with brace-matched insertion:
+
+46 = 39 original + 7 new. Verifying nothing else was lost:
+
+Nothing lost. Full sweep across all four packages:
+
+113 matches the pre-existing count I recorded earlier, but some failures name `CreateEventPage`, which renders the form I changed. Verifying properly:
+
+Identical 113 on unmodified sources — zero new failures from my changes. Now orgadmin-shell (locale changes) and the docs:
+
+Now the docs for the third option, and the module summaries:
+
+Now the module summaries (§3.6):
+
+Final verification — a live check that the third option gates correctly:
+
+First two show; the third correctly does not — Kildare lacks the capability. Granting it to prove the gate works, then reverting:
+
+The wizard didn't advance without the required fields. Retrying the full flow:
+
+All three options now render. Reverting the dev-data grant:
+
+Both features are in. Suites: **backend 1416**, **orgadmin-shell 705**, **account-shell 598 passing / 3 pre-existing**, **orgadmin-events 113 pre-existing (identical count on unmodified sources — zero new)**.
+
+## Option 1 & 2 — per-activity entry eligibility
+
+`entry_eligibility` on the activity, defaulting to **Entries open to all**, so every existing activity is unchanged. The radio group only appears when the club both uses memberships *and* has members — a setting whose only possible effect in an empty club is to lock everyone out isn't worth offering.
+
+On the member side: the listing shows *Members only* with no button; the entry form **states** the member when the login holds one and **asks** when it holds several, preselecting nothing. A parent who is entering Fionn and gets Saoirse by default has been handed a wrong answer that looks like their own. Already-entered memberships are listed but disabled, because a name simply missing reads as a bug.
+
+Your two decisions are both load-bearing:
+
+- **The entry carries the member's name**, and `event_entries.member_id` records which membership — so a parent's two entries are two children, not two identical rows.
+- **"Already entered" is now per member**, and only for restricted activities. Open activities keep the account-level rule, since there's no member to key on.
+
+Enforced in three places; the one that matters is the cart, since hiding a button stops nobody who can type a URL. Candidates come from the caller's *own* memberships, so supplying someone else's member id can't work.
+
+## Option 3 — across the organisation type
+
+`org-type-members`, gated on the new **Organisation Level Members** capability, seeded onto no organisation. Two independent switches: the capability decides whether the option is offered, the activity setting whether it's used. Verified live — the third option was absent for Kildare, appeared when I granted the capability, and I reverted the grant.
+
+Two things worth flagging:
+
+**Identity was the hard part.** `members.user_id` points at `organization_users`, which is per-organisation — the same person is a different row in every club — so their memberships elsewhere are unreachable from the row in hand. The join goes out through `keycloak_user_id`. Email would have been the obvious alternative and is wrong: it changes, families share it, and nothing else here treats it as identity.
+
+**The two member sets are kept apart deliberately.** The wider set is a superset of the narrower, and merging them would let a membership of another branch open an activity a club restricted to its own people. There's a test for exactly that — one event with both kinds of activity, and a member of another branch who gets into one and not the other.
+
+Cross-club discovery is `dashboard.externalEvents`: events other clubs of the same type have opened, in their own home-page section, badged, naming the organiser, linking to `/{urlCode}`. Not merged into `whatsOn` — nothing there can be entered from this club, and the first consumer to forget that would offer an "Enter" button leading nowhere. The wording splits on whether they've already joined.
+
+## One thing I broke and fixed
+
+A bad scripted insertion truncated `account-catalogue.routes.test.ts`, deleting five describes and about 19 tests. I caught it comparing against HEAD, restored the file, and re-applied my additions with brace-matched insertion — 39 original tests all present, 46 total now, and I diffed the test inventory against HEAD to confirm nothing was lost.
+
+Also worth knowing: the three `EntryFormPage` "application form" failures and the 113 in orgadmin-events are pre-existing. I verified both by running unmodified sources, not by assuming.
+
+Two new migrations (`…031`, `…032`), applied locally. Spec and wireframes in [MEMBERS_ONLY_ENTRIES.md](docs/MEMBERS_ONLY_ENTRIES.md) and [MEMBERS_ONLY_ENTRIES_WIREFRAMES.md](docs/MEMBERS_ONLY_ENTRIES_WIREFRAMES.md); summaries updated. Nothing committed.
+
+The gap I'd close next: I haven't exercised a real cross-club entry end to end — a member of Ward Union entering a Kildare activity — because it needs members and an event set up across two clubs. The logic is unit-tested at every layer, but that walkthrough is the one thing that would prove the federation path in a browser.
+
+---
+
+
+## 2026-08-19 15:42:10 — Prompt
+
+in the seed data generator can you give all pony clubs this new capability, and then set up 2 new events, one open to members of our organistion (option 2), and one open to all members of all organisations in the organistion type (option 3) so I can test it.
+
+### Assistant
+
+Let me find the seed generator.
+
+That's the metadata generator. The pony-club seed is elsewhere:
+
+Found it — `packages/backend/scripts/seed/`:
+
+Now the insert in `database.ts`, so I know what to extend:
+
+Now the changes. First the capability and the activity field:
+
+Now the two events. Let me see an existing one to match its shape:
+
+Now the two events:
+
+Now the insert has to write the new column:
+
+For option 3 to be testable, members of the *other* clubs must exist. Checking:
+
+My search matched `MEMBERSHIP_TYPES` first — same prefix:
+
+All four clubs already have active members — so option 3 is testable out of the box. Let me run the seed:
+
+18 events / 41 activities — up from 16/37. Before running it for real, let me check whether a non-reset run is additive or duplicating:
+
+The seed inserts organisations without conflict handling, so a non-reset run would duplicate every club — `--reset` is the only correct route, and it wipes the local database. Your local data is essentially the seed's own output, but there are 6 payments and 2 entries that may be your own testing.
+
+All four clubs have it. Now the end-to-end check I said was missing — a Laois member seeing Kildare's event:
+
+Cross-club discovery works. Now the decisive case — someone who *is* an account user of Kildare but holds their membership elsewhere:
+
+`niamh.walsh` is an account user of 4 clubs with memberships at three — the ideal subject:
+
+That's the whole feature working on real seeded data:
+
+- **Members' Championship** (option 2) — only her Kildare membership qualifies
+- **Open Warm-up Round** — no restriction, no member asked for
+- **Inter-Branch Team Class** (option 3) — all three memberships qualify, each labelled with its club
+- **Host Club Class** (option 2, in the *same* event) — back to Kildare only
+
+The last two are the pair that proves the two member sets don't bleed into each other.
+
+Now updating the seed doc so the fixture inventory stays accurate:
+
+Done. Both changes are in the generator, and I've reseeded your local environment.
+
+## What changed in the seed
+
+**All four pony clubs now hold `organisation-level-members`** — added to the type's `defaultCapabilities` and deliberately *not* to `optInCapabilities`, so every club gets it rather than one. The federation option is only interesting when more than one club has it: one club opens an event, and the others' account users are the ones who have to see it.
+
+**Two new Kildare events**, both wide open in their entry window so the only thing that can refuse an entry is the rule being demonstrated:
+
+| Event | Activity | Who can enter |
+|---|---|---|
+| **Kildare Members' Cup** | Members' Championship | Kildare members only *(option 2)* |
+| | Open Warm-up Round | anyone |
+| **Inter-Branch Championship** | Inter-Branch Team Class | members of any branch *(option 3)* |
+| | Host Club Class | Kildare members only |
+
+Each event deliberately pairs a restricted activity with a contrasting one in the same list — an open row beside a members-only row in the first, and options 2 and 3 side by side in the second. They're the only seeded activities carrying an `entryEligibility`; everything else stays `all`.
+
+## Verified against the reseeded data
+
+A Laois member (`ruairi.kelly@example.test`) sees on their **Laois** home page:
+
+```
+external: "Inter-Branch Championship" by Kildare Hunt Pony Club (/khpc) alreadyJoined=false
+```
+
+— so they get the "Join Kildare Hunt Pony Club to enter" wording.
+
+And `niamh.walsh@example.test`, who is an account user of four clubs with memberships at three, in **Kildare's** catalogue:
+
+```
+Inter-Branch Team Class   [org-type-members]  may enter as: Niamh Walsh [this club];
+                                              Niamh Walsh [Laois]; Niamh Walsh [Ward Union]
+Host Club Class           [members]           may enter as: Niamh Walsh [this club]
+```
+
+Two activities, one event, and the wider membership opens only the one it should. That's the "two member sets kept apart" property proven on real data rather than in a mock — which was the gap I flagged last time.
+
+Seed suite: 56 passing. Fixture inventory in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) updated (18 events / 41 activities, 20 capabilities) with a table of ready-made logins — including `sinead.gallagher@example.test`, who holds four memberships on one login, for the "which member?" selector.
+
+Worth knowing: the reset wiped the 6 payments and 2 entries that were in your local database, as flagged. Everything else is the seed's own output rebuilt.
+
+---
+
+
+## 2026-08-19 18:20:31 — Prompt
+
+In the seed data niamh walsh can only be a member of one organisation, she can't be a member of 3 in the case where this new capability is used.
+
+### Assistant
+
+Let me look at what the seed actually says about her.
+
+Good catch — and it matters beyond realism: her Kildare membership was masking the very thing the test should prove. Let me find everyone in the seed with active memberships in more than one club:
+
+Two people, both wrong. Let me see their rows before choosing what each keeps:
+
+Now it's clear. Two distinct violations:
+
+- **Niamh** — active at Kildare, Laois *and* Ward
+- **Darragh** — active at Meath (a family membership with his two children) *and* Ward
+
+Let me check nothing else in the seed leans on the rows I'd remove:
+
+The registration owner is an account user, not a member — no dependency there. Let me read `SeedMember` to see how a membership can belong to someone without a login:
+
+`email` is the *holder*'s login and `firstName`/`lastName` is who it's for — so the fix is to move those memberships to people who hold none. Let me find candidates:
+
+Noted both — I'll finish the seed fix first, then take them in turn.
+
+Tadhg is a `pending` account user (the awaiting-approval fixture), so he can't hold a membership. Ward needs two clean people to keep its type coverage:
+
+Now documenting the rule where the fixture lives, so it isn't reintroduced:
+
+Nobody now holds an active membership in more than one club. The demonstration this was masking:
+
+Now the demonstration is unambiguous — and it was invisible before, because her Kildare membership let her into everything. Updating the doc I'd written on the old assumption:
+
+Seed corrected. Now your two new items — first the sign-out error, since that's a bug:
+
+Found it — same trailing-slash class of bug as the favicon one earlier:
+
+`redirectFor` includes the slash; logout doesn't. Let me see if the base-URL guard I added earlier covers this:
+
+Two occurrences, both missing the slash. Fixing with the reason recorded:
+
+The constant landed between `useAuth`'s doc comment and the hook. Moving it above:
+
+The mutation never applied (first script ran from the wrong directory). Redoing it:
+
+Four of the five fail on the old value and all pass on the fix. Now your other question — the events page:
+
+Each event is an accordion with `defaultExpanded={event.available}` — so every enterable event starts open, which with 18 seeded events is a wall. Let me check whether that default was deliberate:
+
+No rationale — it's incidental, and with a real programme it makes the page unscannable. Making them controlled, collapsed by default, with a toggle:
+
+Now the expand/collapse-all control:
+
+Expected — those tests relied on the accordion being open. They now need to do what a user does:
+
+All 22 pass. Adding tests for the new behaviour itself:
+
+The control only renders with more than one event, and the fixture has one. That's correct behaviour — let me test both sides of it:
+
+Now the live check of both changes:
+
+Signed out (the reseed recreated Keycloak users). Let me sign in — which also lets me verify the sign-out fix:
+
+A scannable programme now, with **Expand all** top right — and both new events are there. Now the sign-out fix:
+
+Sign-out lands on `/account/` and the club directory, not the Vite error. Final sweep:
+
+The same three pre-existing failures I verified earlier on unmodified sources — 607 passing, up from 598 with my 9 new tests.
+
+## The seed fix
+
+You were right, and it mattered more than realism: **Niamh's Kildare membership was masking the very thing the fixture was built to show.** With it, she could enter everything, so the federation path proved nothing.
+
+Two people were wrong, not one:
+
+- **Niamh Walsh** — active at Kildare, Laois *and* Ward → now **Laois only**
+- **Darragh O'Toole** — active at Meath (a family membership with his two children) *and* Ward → now **Meath only**
+
+Ward would have lost its only senior and only associate members, so those rows moved to two new Ward-only people (`eoin.brady`, `maire.flynn`) rather than being deleted. Account-user overlap is untouched — Niamh still has logins at all four clubs, because that's what exercises the organisation switcher, and a login at a club is a different thing from a membership of it. I kept her *elapsed* Meath membership: that says she moved clubs, which is ordinary.
+
+The rule is now written at the top of `MEMBERS`, with the reason, so it doesn't get reintroduced. Verified: zero people hold an active membership in more than one club.
+
+And the demonstration now stands on its own:
+
+```
+Kildare Members' Cup
+  Members' Championship   members            available=false  members-only
+  Open Warm-up Round      all                available=true
+Inter-Branch Championship
+  Inter-Branch Team Class org-type-members   available=true   as: Niamh Walsh [Laois]
+  Host Club Class         members            available=false  members-only
+```
+
+## Sign-out
+
+A real bug: `keycloak.logout()` redirected to `/account` with no trailing slash, and the app's base is `/account/`. Signing *in* always worked because `redirectFor` had the slash — which is exactly why nobody noticed. Both now derive from `import.meta.env.BASE_URL`, so a deployment that moves the app can't leave a hard-coded path behind. Verified live: sign-out lands on the club directory. Five tests, four of which fail on the old value.
+
+## Events page
+
+They now start collapsed, with **Expand all / Collapse all** top right (shown only when there's more than one event). Every enterable event used to open by default — fine for three events, unreadable for eighteen, where the dates end up screenfuls apart. Collapsed, the page reads as a programme.
+
+That change broke five existing tests that relied on the accordions being open; they now open the event first, which is what a member does. Four new tests cover the behaviour itself.
+
+Worth flagging: **nothing enforces one-membership-per-person in the application** — I only corrected the seed. If a member could apply to a second club today, the system would let them, and `activeMembershipsAcrossType` would return both. The code handles it, but if that's a rule rather than a convention, it wants validation on membership creation. Say the word and I'll add it.
+
+---
+
+
+## 2026-08-19 18:42:18 — Prompt
+
+On the home page in the  “Events at other organisations” section where it says 
+“Run by other organisations of the same type, open to members.”, can you change this text to say “Run by another organisation but open to all members of {Organisation Type Name}”
+
+### Assistant
+
+Small copy change, but it needs the organisation type's name — let me check whether the account app already has it.
+
+Not there — so I need to supply it. The type name is the same for the caller and every external org (it's the join condition), so I can lift it from the query I already run:
+
+Now the copy in all six locales:
+
+Four-space indent, not six:
+
+Now updating the dashboard tests for the new return shape:
+
+Now the live check:
+
+Reading live on a Laois member's home page:
+
+> **Events at other organisations**
+> Run by another organisation but open to all members of **Irish Pony Clubs**
+>
+> *External event* · Inter-Branch Championship · Kildare Hunt Pony Club · 7 Oct 2026
+> **Join Kildare Hunt Pony Club to enter**
+
+Done. 607 passing in account-shell, 38 in the dashboard suite; the same three pre-existing `EntryFormPage` failures I verified earlier on unmodified sources.
+
+The text now reads:
+
+> Run by another organisation but open to all members of **Irish Pony Clubs**
+
+That needed the organisation type's name, which the account app didn't have. I added `organisationTypeName` to the dashboard payload rather than to the `me`/auth response — smaller blast radius, and it's only this one label that needs it. It comes from the query that already runs for external events, so there's no extra round trip, and it's `null` when there are no external events, since nothing would render it.
+
+Updated in all six locales, with the placeholder interpolated. Two new backend tests: one that the federation is named, one that it stays null when there's nothing to label.
+
+---
+
+
+## 2026-08-19 18:59:29 — Prompt
+
+I would like to introduce a new concept to the overall solution, the concept I have in mind is that, as well as requiring people to be signed into the account of an organisation in order to see the listing of their events, that the orgadmin for an organisation could set a field within the event definition called “Show Public” which works as follows:
+
+If it is set to No then the event listing behaves as today, it is only visible to logged in account users.
+
+If is is set to Yes, then the user can choose the following options:
+1 - show it on our public account page
+2 - show it on the overall its plain sailing event page
+
+The user should be able to select one or the other, or both.
+
+If 1 is selected then the event will be listed on a public page for that account e.g. account/<slug>/public or some similar path that works best for the implementation.
+
+If 2 is selected then the event will be listed on a new common public ItsPlainSailing page that is a searchable, filterable page of all events across all organisations where the orgadmin of that organisation has selected option 2 for the event.
+
+This common public ItsPlainSailing page should be nicely styled, with search, sort and filter options so the casual visitor to the page can filter, search and sort by Event Type, Venue, location (e.g. county/ address/ region), Date/ Time, organisation….
+
+The event listing on both the account public page and the common public page should show the event and listing of activities, opening/ closing dates and any event to activity entry limits. 
+
+Note: entries for the events must always still be made through the account login, however the user should be able to click on the event which should redirect them to that event within the specific account redirecting the user to login/ join if they are not already logged in.
+
+Please investigate this piece of work and propose a design for my review and please work on an advanced, professional design proposal for these public pages.

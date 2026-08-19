@@ -39,6 +39,18 @@ export interface KeycloakConfig {
 }
 
 /**
+ * Where the app lives, with its trailing slash.
+ *
+ * Taken from the build's own `base` rather than written out, so a deployment
+ * that moves the app cannot leave a hard-coded `/account` behind. `BASE_URL` is
+ * `/account/` here and `/` in a root-mounted build; both already end in a slash,
+ * and the guard covers a build that does not.
+ */
+const ACCOUNT_ROOT = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+
+/**
  * Keycloak for the account-user application.
  *
  * **This differs from the org-admin shell's hook in one decisive way**, and the
@@ -157,7 +169,7 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
    * separate realm per club.
    */
   const redirectFor = (orgCode?: string) =>
-    orgCode ? `${window.location.origin}/account/${orgCode}` : window.location.href;
+    orgCode ? `${window.location.origin}${ACCOUNT_ROOT}${orgCode}` : window.location.href;
 
   const login = useCallback(
     (orgCode?: string) => {
@@ -209,11 +221,23 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
      */
     forgetResponses();
 
+    /*
+     * The trailing slash is not cosmetic.
+     *
+     * The app is served under a base of `/account/`, and `/account` without it
+     * is a different path. Vite's dev server answers it with "The server is
+     * configured with a public base URL of /account/ — did you mean to visit
+     * /account/ instead?", so signing out landed on a developer error message
+     * rather than on the sign-in page.
+     *
+     * `redirectFor` above has always included it, which is why signing *in*
+     * worked and only signing out did not.
+     */
     if (authDisabled) {
-      window.location.href = '/account';
+      window.location.href = ACCOUNT_ROOT;
       return;
     }
-    keycloak?.logout({ redirectUri: `${window.location.origin}/account` });
+    keycloak?.logout({ redirectUri: `${window.location.origin}${ACCOUNT_ROOT}` });
   }, [keycloak, authDisabled]);
 
   const getToken = useCallback(() => keycloak?.token || null, [keycloak]);

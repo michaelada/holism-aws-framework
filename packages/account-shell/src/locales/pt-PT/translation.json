@@ -132,6 +132,11 @@
     "orders": "As minhas encomendas"
   },
   "home": {
+    "externalEvents": "Eventos noutras organizações",
+    "externalEventsHint": "Organizado por outra organização mas aberto a todos os membros de {{organisationType}}",
+    "externalEventBadge": "Evento externo",
+    "externalEventOpen": "Ir para {{organisation}}",
+    "externalEventJoin": "Junte-se a {{organisation}} para se inscrever",
     "welcome": "Bem-vindo de volta, {{name}}",
     "welcomeAnonymous": "Bem-vindo de volta",
     "comingSoon": "O seu painel de {{organisation}} aparecerá aqui.",
@@ -228,6 +233,8 @@
     "yourDetails_other": "Os seus dados ({{count}} respostas)"
   },
   "browse": {
+    "expandAll": "Expandir tudo",
+    "collapseAll": "Recolher tudo",
     "loadError": "Não foi possível carregar a oferta disponível.",
     "noEvents": "Não há eventos abertos de momento.",
     "noMembershipTypes": "Não há filiações abertas de momento.",
@@ -239,6 +246,9 @@
     "placesRemaining_one": "Resta {{count}} lugar",
     "placesRemaining_other": "Restam {{count}} lugares",
     "reason": {
+      "org-members-only": "Apenas membros de qualquer delegação",
+      "members-only": "Apenas membros",
+      "members-all-entered": "Todos os seus membros estão inscritos",
       "unavailable": "Indisponível",
       "entries-not-open": "Inscrições ainda não abertas",
       "entries-closed": "Inscrições encerradas",
@@ -447,6 +457,14 @@
     "home": "Início"
   },
   "form": {
+    "membersOnly": {
+      "notAMember": "Esta atividade está aberta apenas a membros de {{organisation}}, e não tem uma inscrição ativa.",
+      "viewMemberships": "Ver inscrições",
+      "entryFor": "Esta inscrição é para {{name}}",
+      "whoIsThisFor": "Para quem é esta inscrição?",
+      "whoIsThisForHint": "Tem mais do que uma inscrição. Escolha o membro que está a inscrever.",
+      "optionAlreadyEntered": "{{name}} — já inscrito"
+    },
     "submit": "Guardar e adicionar ao cesto",
     "saving": "A guardar…",
     "loadFailed": "Não foi possível carregar este formulário de inscrição.",

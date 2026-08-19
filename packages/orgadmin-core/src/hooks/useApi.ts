@@ -54,8 +54,26 @@ export const OrganisationIdContext = createContext<(() => string | null) | undef
  * `/auth/me` is how an administrator finds out which organisations they have,
  * so requiring one would be circular; `/auth/capabilities` is asked in the same
  * breath. Everything else under `/api/orgadmin` is about a particular club.
+ *
+ * `/api/orgadmin/organisation/` — singular — is the current organisation's own
+ * router: payment settings, branding, email templates, registration settings,
+ * Stripe Connect, registrations and offline payments. It is mounted **once**,
+ * bare, and is not one of the dual-mounted data routers, so rewriting it to
+ * `/api/orgadmin/organisations/<id>/organisation/…` produced a 404 on every one
+ * of those screens. Payment Settings and Stripe Connect answered 404 twice each
+ * on a single tab click.
+ *
+ * Excluding it here rather than adding a scoped mount is deliberate. That
+ * router resolves the organisation from the *signed-in user*, not from the
+ * path, and unlike the dual-mounted routers it has no check that the two agree
+ * — so a scoped mount would accept a URL naming one club while the handler
+ * worked on another. A URL that misreports its subject is worse than no URL
+ * scoping at all. The organisation still travels on `X-Organisation-Id`.
+ *
+ * The trailing slash is what keeps this from swallowing the plural
+ * `/api/orgadmin/organisations/…`, which is already handled above.
  */
-const UNSCOPED_ORGADMIN_PATHS = ['/api/orgadmin/auth/'];
+const UNSCOPED_ORGADMIN_PATHS = ['/api/orgadmin/auth/', '/api/orgadmin/organisation/'];
 
 /**
  * Put the organisation in the URL, not only in a header.

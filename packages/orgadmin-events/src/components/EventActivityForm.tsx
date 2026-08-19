@@ -6,16 +6,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  Alert,
   Box,
   Checkbox,
   Chip,
   FormControl,
   FormControlLabel,
   FormHelperText,
+  FormLabel,
   Grid,
   IconButton,
   InputLabel,
   MenuItem,
+  Radio,
+  RadioGroup,
   Select,
   TextField,
   Typography,
@@ -113,10 +117,68 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
     }
   }, [organisation?.id, execute]);
 
+  /**
+   * Whether to offer "members only" at all.
+   *
+   * Two conditions, and both matter. The capability alone is not enough: a club
+   * that has switched memberships on but has nobody on file would be offered a
+   * setting whose only possible effect is to lock every one of its members out
+   * of its own event — a foot-gun disguised as a feature.
+   *
+   * Starts `false` and turns on once the answer arrives, so the field never
+   * flickers in and out while the check is in flight.
+   */
+  const [hasMembers, setHasMembers] = useState(false);
+
+  // From the organisation itself — the same list the module registry gates on.
+  const usesMemberships = Boolean(organisation?.enabledCapabilities?.includes('memberships'));
+
+  const loadHasMembers = useCallback(async () => {
+    if (!usesMemberships) {
+      setHasMembers(false);
+      return;
+    }
+    try {
+      const response = await execute({
+        method: 'GET',
+        url: '/api/orgadmin/members/exists',
+      });
+      setHasMembers(Boolean(response?.hasMembers));
+    } catch {
+      /*
+       * Hide the field rather than guess. Showing it on a failed check risks
+       * a club setting a restriction we could not confirm it can satisfy;
+       * hiding it costs an administrator one reload.
+       */
+      setHasMembers(false);
+    }
+  }, [execute, usesMemberships]);
+
+  /**
+   * Whether entries may be opened across the whole organisation type.
+   *
+   * A separate capability, granted per club by a super admin, because it lets
+   * one club's event admit another club's members — a decision about the
+   * federation rather than about this event.
+   */
+  const usesOrgLevelMembers = Boolean(
+    organisation?.enabledCapabilities?.includes('organisation-level-members')
+  );
+
+  /*
+   * The group appears if *either* restriction is available. A club with the
+   * federation capability but no members of its own still has something worth
+   * choosing — it can open an event to the other branches — so gating the whole
+   * group on having members would hide the option it does have.
+   */
+  const showOwnMembersOption = usesMemberships && hasMembers;
+  const showEligibility = showOwnMembersOption || usesOrgLevelMembers;
+
   useEffect(() => {
     loadApplicationForms();
     loadDiscounts();
-  }, [loadApplicationForms, loadDiscounts]);
+    loadHasMembers();
+  }, [loadApplicationForms, loadDiscounts, loadHasMembers]);
 
   // An application form must always be selected; only flag it once the parent
   // has told us the user has attempted to save.
@@ -234,6 +296,99 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
               )}
             </FormControl>
           </Grid>
+
+          {/*
+            Who before how many.
+
+            Placed above the applicant limit deliberately: "who can enter" is
+            settled before "how many of them", and a club that restricts entry
+            to members is often sizing the field against that smaller group.
+
+            Absent altogether unless the club both uses memberships and has some
+            — see `showEligibility`.
+          */}
+          {showEligibility && (
+            <Grid item xs={12}>
+              <FormControl component="fieldset">
+                <FormLabel component="legend" sx={{ mb: 1 }}>
+                  {t('events.activities.activity.whoCanEnter')}
+                </FormLabel>
+                <RadioGroup
+                  value={activity.entryEligibility ?? 'all'}
+                  onChange={(e) =>
+                    handleChange('entryEligibility', e.target.value as 'all' | 'members')
+                  }
+                >
+                  <FormControlLabel
+                    value="all"
+                    control={<Radio />}
+                    label={
+                      <Box>
+                        <Typography variant="body2">
+                          {t('events.activities.activity.entriesOpenToAll')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('events.activities.activity.entriesOpenToAllHint')}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  {showOwnMembersOption && (
+                    <FormControlLabel
+                      value="members"
+                      control={<Radio />}
+                      label={
+                        <Box>
+                          <Typography variant="body2">
+                            {t('events.activities.activity.entriesMembersOnly')}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('events.activities.activity.entriesMembersOnlyHint')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  )}
+                  {usesOrgLevelMembers && (
+                    <FormControlLabel
+                      value="org-type-members"
+                      control={<Radio />}
+                      label={
+                        <Box>
+                          <Typography variant="body2">
+                            {t('events.activities.activity.entriesOrgTypeMembers')}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('events.activities.activity.entriesOrgTypeMembersHint')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  )}
+                </RadioGroup>
+
+                {/*
+                  Said before it is saved, not discovered afterwards by a member
+                  who cannot enter.
+                */}
+                {activity.entryEligibility === 'members' && (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    {t('events.activities.activity.entriesMembersOnlyNote')}
+                  </Alert>
+                )}
+                {/*
+                  Stated before saving, because this is the one option whose
+                  effect reaches outside the club: the event becomes visible to
+                  every other branch of the same type.
+                */}
+                {activity.entryEligibility === 'org-type-members' && (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    {t('events.activities.activity.entriesOrgTypeMembersNote')}
+                  </Alert>
+                )}
+              </FormControl>
+            </Grid>
+          )}
 
           <Grid item xs={12}>
             <FormControlLabel

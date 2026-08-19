@@ -132,6 +132,11 @@
     "orders": "Mis pedidos"
   },
   "home": {
+    "externalEvents": "Eventos en otras organizaciones",
+    "externalEventsHint": "Organizado por otra organización pero abierto a todos los miembros de {{organisationType}}",
+    "externalEventBadge": "Evento externo",
+    "externalEventOpen": "Ir a {{organisation}}",
+    "externalEventJoin": "Únase a {{organisation}} para inscribirse",
     "welcome": "Bienvenido de nuevo, {{name}}",
     "welcomeAnonymous": "Bienvenido de nuevo",
     "comingSoon": "Su panel de {{organisation}} aparecerá aquí.",
@@ -228,6 +233,8 @@
     "yourDetails_other": "Sus datos ({{count}} respuestas)"
   },
   "browse": {
+    "expandAll": "Expandir todo",
+    "collapseAll": "Contraer todo",
     "loadError": "No hemos podido cargar la oferta disponible.",
     "noEvents": "No hay eventos abiertos en este momento.",
     "noMembershipTypes": "No hay membresías abiertas en este momento.",
@@ -239,6 +246,9 @@
     "placesRemaining_one": "Queda {{count}} plaza",
     "placesRemaining_other": "Quedan {{count}} plazas",
     "reason": {
+      "org-members-only": "Solo miembros de cualquier sede",
+      "members-only": "Solo miembros",
+      "members-all-entered": "Todos sus miembros están inscritos",
       "unavailable": "No disponible",
       "entries-not-open": "Inscripciones aún no abiertas",
       "entries-closed": "Inscripciones cerradas",
@@ -447,6 +457,14 @@
     "home": "Inicio"
   },
   "form": {
+    "membersOnly": {
+      "notAMember": "Esta actividad está abierta solo a miembros de {{organisation}}, y usted no tiene una membresía activa.",
+      "viewMemberships": "Ver membresías",
+      "entryFor": "Esta inscripción es para {{name}}",
+      "whoIsThisFor": "¿Para quién es esta inscripción?",
+      "whoIsThisForHint": "Tiene más de una membresía. Elija el miembro que va a inscribir.",
+      "optionAlreadyEntered": "{{name}} — ya inscrito"
+    },
     "submit": "Guardar y añadir a la cesta",
     "saving": "Guardando…",
     "loadFailed": "No se ha podido cargar este formulario de inscripción.",

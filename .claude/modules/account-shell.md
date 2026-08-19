@@ -415,6 +415,24 @@ app (read on every organisation resolve, via `GET /me` → `user.preferredLangua
 `locale` attribute so the **login page** follows it too. `OrganisationRoute` prefers the member's
 language over the organisation's; null means "follow the organisation".
 
+## Members-only entries
+
+An activity may be restricted to a club's members (`members`) or to members of any club of the same
+organisation type (`org-type-members`). The catalogue answers with `membersOnly`, `entryEligibility`
+and `eligibleMembers` — **the caller's own active memberships** — and a reason wording the refusal
+for its remedy: `members-only` means renew here, `org-members-only` means join any club in the
+federation.
+
+`EntryFormPage` states the member when the login holds one, asks when it holds several (preselecting
+nothing — a parent who gets the wrong child by default has been handed a wrong answer that looks
+like their own), and refuses to render when it holds none. The server refuses independently; the
+screen is courtesy.
+
+`HomePage` shows `dashboard.externalEvents` in its own section: events other clubs of the same type
+have opened, badged, linking to `/{urlCode}` of the organiser. Deliberately not merged into
+`whatsOn`, because nothing there can be entered from this club. See
+[MEMBERS_ONLY_ENTRIES.md](../../docs/MEMBERS_ONLY_ENTRIES.md).
+
 ## Browse: entry windows, capacity and the date tile
 
 An event row answers two questions: *can I enter?* and *should I enter now?*

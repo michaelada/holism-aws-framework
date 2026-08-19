@@ -5,6 +5,7 @@ import { logger } from '../config/logger';
 import { AppError } from '../middleware/errors';
 import { organizationPaymentSettingsService } from '../services/organization-payment-settings.service';
 import { paymentService } from '../services/payment.service';
+import { lodgementService } from '../services/lodgement.service';
 import { stripeConnectService } from '../services/stripe-connect.service';
 import { isAllowedRedirectUrl } from '../utils/allowed-origins';
 import { organizationBrandingService } from '../services/organization-branding.service';
@@ -17,10 +18,64 @@ const router = Router();
  * Resolve the organisation that the authenticated org-admin belongs to.
  * Returns null if the user is not an active org-admin of any organisation.
  */
-async function resolveOrganisationId(keycloakUserId: string): Promise<string | null> {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** What the request says it is about, if anything. */
+function requestedOrganisationId(req: AuthenticatedRequest): string | null {
+  const header = req.headers['x-organisation-id'];
+  const value = Array.isArray(header) ? header[0] : header;
+  return value ? String(value) : null;
+}
+
+/**
+ * Which club this request is about.
+ *
+ * An administrator may run more than one — PRODUCT.md calls it uncommon, not
+ * unsupported — and this used to answer with `LIMIT 1` and no `ORDER BY`: an
+ * arbitrary row, chosen by the planner. The org-admin app sends the club the
+ * administrator actually selected in `X-Organisation-Id`, and this router was
+ * the one place that ignored it.
+ *
+ * It was not a subtle failure. Signed in to Kildare Hunt Pony Club, this
+ * resolved to Laois Hunt Pony Club, so the offline payments list showed the
+ * wrong club's money and Payment Settings, branding, email templates and Stripe
+ * Connect all read and *wrote* against a club the administrator had not opened.
+ * Nothing on screen said so; both clubs were legitimately theirs.
+ *
+ * So the header is honoured, and verified: it selects among the caller's own
+ * organisations and can never reach beyond them. A request naming a club the
+ * caller does not administer is refused outright rather than quietly served
+ * from a different one — silently substituting an organisation is the bug, and
+ * doing it on the error path would be the same bug.
+ */
+async function resolveOrganisationId(
+  keycloakUserId: string,
+  requested: string | null
+): Promise<string | null> {
+  if (requested) {
+    // Guarded before the cast: an unparseable id would otherwise raise a
+    // database error and surface as a 500 rather than a refusal.
+    if (!UUID.test(requested)) return null;
+
+    const owned = await db.query(
+      `SELECT organization_id FROM organization_users
+       WHERE keycloak_user_id = $1 AND organization_id = $2::uuid
+         AND user_type = 'org-admin' AND status = 'active'
+       LIMIT 1`,
+      [keycloakUserId, requested]
+    );
+    return owned.rows[0]?.organization_id ?? null;
+  }
+
+  /*
+   * No header — a direct caller, or a screen that has not resolved one yet.
+   * Ordered so that a caller who does not say which club they mean at least
+   * gets the same one every time, instead of whichever row the planner returned.
+   */
   const result = await db.query(
     `SELECT organization_id FROM organization_users
      WHERE keycloak_user_id = $1 AND user_type = 'org-admin' AND status = 'active'
+     ORDER BY created_at ASC, organization_id ASC
      LIMIT 1`,
     [keycloakUserId]
   );
@@ -45,8 +100,19 @@ function withOrganisation(
         return;
       }
 
-      const organisationId = await resolveOrganisationId(keycloakUserId);
+      const requested = requestedOrganisationId(req);
+      const organisationId = await resolveOrganisationId(keycloakUserId, requested);
       if (!organisationId) {
+        if (requested) {
+          logger.warn(
+            `Refused ${req.method} ${req.originalUrl}: caller does not administer the requested organisation`,
+            { requestedOrganisation: requested }
+          );
+          res
+            .status(403)
+            .json({ error: 'User is not an administrator of the requested organisation' });
+          return;
+        }
         res.status(403).json({ error: 'User is not an organization administrator' });
         return;
       }
@@ -63,6 +129,70 @@ function withOrganisation(
     }
   };
 }
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/payments/lodgements:
+ *   get:
+ *     summary: Money Stripe has paid into the club's bank account
+ *     description: >
+ *       Payouts on the club's connected account — what actually reached the
+ *       bank, as opposed to what was charged. The two differ by fees, refunds
+ *       and Stripe's payout schedule. Pending and in-transit payouts are
+ *       included; money collected but not yet scheduled is reported separately
+ *       because it has no date and is not a lodgement.
+ *     tags: [OrgAdmin]
+ *     parameters:
+ *       - in: query
+ *         name: cursor
+ *         schema: { type: string }
+ *         description: Stripe pagination cursor from a previous page
+ *     responses:
+ *       200:
+ *         description: A page of lodgements, most recent first
+ *       404:
+ *         description: The organisation is not connected to Stripe
+ */
+router.get(
+  '/payments/lodgements',
+  authenticateToken(),
+  withOrganisation('Failed to load lodgements', async (organisationId, req, res) => {
+    const cursor = (req.query as any).cursor;
+    const limit = Number((req.query as any).limit);
+
+    res.json(
+      await lodgementService.listLodgements(organisationId, {
+        cursor: typeof cursor === 'string' && cursor ? cursor : null,
+        limit: Number.isFinite(limit) ? limit : undefined,
+      })
+    );
+  })
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/payments/lodgements/{id}:
+ *   get:
+ *     summary: What made up one lodgement
+ *     description: >
+ *       Every balance transaction Stripe assigned to the payout, joined to the
+ *       payment and basket behind it where we hold one. Refunds and adjustments
+ *       are included: without them the lines would not add up to the payout
+ *       total, and a total that does not reconcile reads as a bug in the total.
+ *     tags: [OrgAdmin]
+ *     responses:
+ *       200:
+ *         description: The lodgement and its lines
+ *       404:
+ *         description: No such lodgement, or the organisation is not connected
+ */
+router.get(
+  '/payments/lodgements/:id',
+  authenticateToken(),
+  withOrganisation('Failed to load the lodgement', async (organisationId, req, res) => {
+    res.json(await lodgementService.getLodgement(organisationId, req.params.id));
+  })
+);
 
 /**
  * @openapi
@@ -93,6 +223,13 @@ router.get(
               p.offline_amount, p.card_amount, p.handling_fee,
               p.offline_received_at,
               ou.first_name, ou.last_name, ou.email,
+                -- Who recorded the settlement. The column was always written;
+                -- it was simply never read back, so the interface could say when
+                -- a payment was marked received but not by whom — the half that
+                -- matters when it was marked in error.
+                rb.first_name AS received_by_first_name,
+                rb.last_name  AS received_by_last_name,
+                rb.email      AS received_by_email,
               COALESCE(
                 json_agg(
                   json_build_object('description', pt.description, 'fee', pt.fee)
@@ -102,11 +239,13 @@ router.get(
               ) AS lines
        FROM payments p
        LEFT JOIN organization_users ou ON ou.id = p.user_id
+         LEFT JOIN organization_users rb ON rb.id = p.offline_received_by
        LEFT JOIN payment_transactions pt ON pt.payment_id = p.id
        WHERE p.organisation_id = $1
          AND ($2::boolean = TRUE OR p.payment_status = 'awaiting_offline')
          AND ($2::boolean = FALSE OR p.offline_received_at IS NOT NULL)
-       GROUP BY p.id, ou.first_name, ou.last_name, ou.email
+       GROUP BY p.id, ou.first_name, ou.last_name, ou.email,
+                  rb.first_name, rb.last_name, rb.email
        ORDER BY p.created_at ASC`,
       [organisationId, settled]
     );
@@ -120,6 +259,15 @@ router.get(
         status: row.payment_status,
         placedAt: row.created_at,
         receivedAt: row.offline_received_at ?? null,
+          /*
+           * Null when nobody has recorded it, and also when the administrator
+           * who did has since left the organisation — the payment stays settled
+           * either way, so the interface must cope with a date and no name.
+           */
+          receivedBy:
+            [row.received_by_first_name, row.received_by_last_name].filter(Boolean).join(' ') ||
+            row.received_by_email ||
+            null,
         /*
          * The figure to look for on the statement is what the member owes
          * offline, not the order total — a mixed order's card half has already

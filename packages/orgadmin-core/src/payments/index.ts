@@ -6,7 +6,11 @@
  */
 
 import { lazy } from 'react';
-import { Payment as PaymentIcon } from '@mui/icons-material';
+import {
+  Payment as PaymentIcon,
+  AccountBalance as BankIcon,
+  ReceiptLong as OfflineIcon,
+} from '@mui/icons-material';
 import type { ModuleRegistration } from '../types/module.types';
 
 export const paymentsModule: ModuleRegistration = {
@@ -37,6 +41,10 @@ export const paymentsModule: ModuleRegistration = {
       component: lazy(() => import('./pages/LodgementsPage')),
     },
     {
+      path: 'payments/lodgements/:id',
+      component: lazy(() => import('./pages/LodgementDetailPage')),
+    },
+    {
       path: 'payments/offline',
       component: lazy(() => import('./pages/OfflinePaymentsPage')),
     },
@@ -45,24 +53,50 @@ export const paymentsModule: ModuleRegistration = {
     label: 'modules.payments.name',
     path: '/payments',
     icon: PaymentIcon,
-    /*
-     * Offline settlements get their own entry rather than a filter on the list.
-     * They are a **task** — money to chase and record — not a view of history,
-     * and until one is recorded the member has nothing they paid for. A filter
-     * two clicks into a table is not where that belongs.
-     */
-    subMenuItems: [
-      {
-        label: 'payments.offline.menu',
-        path: '/payments/offline',
-        icon: PaymentIcon,
-      },
-    ],
   },
+  /*
+   * Module level, not nested inside `menuItem`.
+   *
+   * `MenuItem` has no `subMenuItems`; `ModuleRegistration` does. Nested there it
+   * was a type error the build reported and nobody acted on, and the practical
+   * effect was that this entry never rendered — the page and its route existed,
+   * reachable only by typing the URL.
+   *
+   * Offline settlements get their own entry rather than a filter on the list.
+   * They are a **task** — money to chase and record — not a view of history,
+   * and until one is recorded the member has nothing they paid for. A filter
+   * two clicks into a table is not where that belongs.
+   */
+  subMenuItems: [
+    {
+      // Named for what it shows, not for the module — the rail already says
+      // "Payments" one row above, and repeating it read as "Payments › Payments".
+      label: 'payments.allMenu',
+      path: '/payments',
+      icon: PaymentIcon,
+    },
+    {
+      label: 'payments.offline.menu',
+      path: '/payments/offline',
+      icon: OfflineIcon,
+    },
+    /*
+     * Third, and last, because it is the end of the money's journey: taken,
+     * then settled, then lodged. It answers a different question from the two
+     * above — not "what did we charge?" but "what actually reached the bank?",
+     * which is a different number on a different date.
+     */
+    {
+      label: 'payments.lodgements.menu',
+      path: '/payments/lodgements',
+      icon: BankIcon,
+    },
+  ],
 };
 
 // Export pages for direct use if needed
 export { default as PaymentsListPage } from './pages/PaymentsListPage';
 export { default as PaymentDetailsPage } from './pages/PaymentDetailsPage';
 export { default as LodgementsPage } from './pages/LodgementsPage';
+export { default as LodgementDetailPage } from './pages/LodgementDetailPage';
 export { default as OfflinePaymentsPage } from './pages/OfflinePaymentsPage';

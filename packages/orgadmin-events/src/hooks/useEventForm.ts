@@ -263,6 +263,9 @@ export function useEventForm(): UseEventFormReturn {
       description: '',
       showPublicly: true,
       applicationFormId: undefined,
+      // Always selected first. A new activity is open to everyone until a club
+      // deliberately says otherwise.
+      entryEligibility: 'all',
       limitApplicants: false,
       applicantsLimit: undefined,
       allowSpecifyQuantity: false,

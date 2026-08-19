@@ -228,6 +228,19 @@ Members — http://localhost:5176/account/`<code>(codes:khpc, lhpc, wupc`)
 
 The seed prints all of this at the end of a run, so npm run seed:demo will re-list it. One caveat: the users table was empty when I looked earlier, so these accounts may not currently be seeded into this database — the Keycloak side is what matters for login, but if any are missing, a re-run will restore them.
 
+A Laois member (ruairi.kelly@example.test) sees on their Laois home page:
+
+
+external: "Inter-Branch Championship" by Kildare Hunt Pony Club (/khpc) alreadyJoined=false
+— so they get the "Join Kildare Hunt Pony Club to enter" wording.
+
+And niamh.walsh@example.test, who is an account user of four clubs with memberships at three, in Kildare's catalogue:
+
+Inter-Branch Team Class   [org-type-members]  may enter as: Niamh Walsh [this club];
+                                              Niamh Walsh [Laois]; Niamh Walsh [Ward Union]
+Host Club Class           [members]           may enter as: Niamh Walsh [this club]
+
+
 Run reset seed data on test env in AWS
 
 ```sh

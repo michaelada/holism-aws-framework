@@ -50,6 +50,12 @@ interface OfflinePayment {
   status: string;
   placedAt: string;
   receivedAt: string | null;
+  /**
+   * The administrator who recorded it. Null when nobody has, and also when the
+   * one who did has since left the organisation — the settlement stands either
+   * way, so a date can arrive without a name.
+   */
+  receivedBy: string | null;
   /** What the member owes offline — not the order total. */
   offlineAmount: number;
   cardAmount: number;
@@ -72,24 +78,66 @@ const OfflinePaymentsPage: React.FC = () => {
   const [payments, setPayments] = useState<OfflinePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** A message already in the reader's language: a server refusal, or a translated action failure. */
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * The list failing is held as a flag, not a message, so `load` need not name
+   * `t` — see the comment in the catch below.
+   */
+  const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * What just happened, and how well. Recording a payment can half-succeed —
+   * the money is settled but a membership or ticket could not be created — and
+   * that must not be announced with a tick. It read "Recorded, but 1 item(s)
+   * could not be created" beside a green success icon, which is the one
+   * combination guaranteed to be skimmed past.
+   */
+  const [notice, setNotice] = useState<{ text: string; severity: 'success' | 'warning' } | null>(
+    null
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadFailed(false);
     setError(null);
+    /*
+     * `useApi.execute` returns null on failure rather than throwing, so the
+     * `catch` below never runs in a browser — only under a mock that rejects.
+     * Without `onError` a failed load fell through to `Array.isArray(null)` and
+     * rendered "Nothing is waiting on an offline payment", telling a club there
+     * was no money to chase when in fact nobody had been able to ask.
+     */
+    let errored = false;
+
     try {
       const response = await execute({
         method: 'GET',
         url: `/api/orgadmin/organisation/payments/offline?settled=${settled}`,
+        onError: () => {
+          errored = true;
+        },
       });
+
+      if (errored || response === null) {
+        setLoadFailed(true);
+        return;
+      }
       setPayments(Array.isArray(response) ? response : []);
     } catch {
-      setError(t('payments.offline.loadError'));
+      /*
+       * Record *that* it failed; the render decides what to say. Naming `t`
+       * here would put it in the dependency array below, and this page once
+       * looped on exactly that — a fresh `t` per render meant a fresh `load`
+       * per render, and the effect re-fired until the API answered 429 and then
+       * the browser ran out of sockets. The hook is fixed; this keeps the page
+       * correct regardless. Translating at render also means the message
+       * follows a language change instead of freezing at fetch time.
+       */
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
-  }, [execute, settled, t]);
+  }, [execute, settled]);
 
   useEffect(() => {
     void load();
@@ -115,11 +163,14 @@ const OfflinePaymentsPage: React.FC = () => {
        */
       setNotice(
         outcome && outcome.failed > 0
-          ? t('payments.offline.recordedWithFailures', {
-              name: payment.memberName,
-              failed: outcome.failed,
-            })
-          : t('payments.offline.recorded', { name: payment.memberName })
+          ? {
+              text: t('payments.offline.recordedWithFailures', {
+                name: payment.memberName,
+                failed: outcome.failed,
+              }),
+              severity: 'warning',
+            }
+          : { text: t('payments.offline.recorded', { name: payment.memberName }), severity: 'success' }
       );
 
       await load();
@@ -140,7 +191,10 @@ const OfflinePaymentsPage: React.FC = () => {
         method: 'DELETE',
         url: `/api/orgadmin/organisation/payments/${payment.id}/received`,
       });
-      setNotice(t('payments.offline.undone', { name: payment.memberName }));
+      setNotice({
+        text: t('payments.offline.undone', { name: payment.memberName }),
+        severity: 'success',
+      });
       await load();
     } catch (err) {
       // The refusal an administrator most needs to read: the receipt has
@@ -169,14 +223,21 @@ const OfflinePaymentsPage: React.FC = () => {
         <Tab value="settled" label={t('payments.offline.tabSettled')} />
       </Tabs>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
+      {(error || loadFailed) && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={() => {
+            setError(null);
+            setLoadFailed(false);
+          }}
+        >
+          {error ?? t('payments.offline.loadError')}
         </Alert>
       )}
       {notice && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
-          {notice}
+        <Alert severity={notice.severity} sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+          {notice.text}
         </Alert>
       )}
 
@@ -184,7 +245,13 @@ const OfflinePaymentsPage: React.FC = () => {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
           <CircularProgress aria-label={t('common.loading')} />
         </Box>
-      ) : payments.length === 0 ? (
+      ) : payments.length === 0 && !loadFailed ? (
+        /*
+         * `!loadFailed` matters. Without it a failed load showed the error
+         * alert *and* "Nothing is waiting on an offline payment" directly
+         * beneath it — two contradictory statements, of which the reassuring
+         * one is the one that gets believed.
+         */
         <Alert severity="info">
           {settled ? t('payments.offline.noneSettled') : t('payments.offline.noneOutstanding')}
         </Alert>
@@ -221,9 +288,23 @@ const OfflinePaymentsPage: React.FC = () => {
                       <Chip
                         size="small"
                         color="success"
-                        label={t('payments.offline.receivedOn', {
-                          date: formatDate(payment.receivedAt, 'PP', locale),
-                        })}
+                        /*
+                         * Who, not just when. The column was always written and
+                         * never read back, so an administrator could see that a
+                         * payment had been marked received but not by whom —
+                         * which is the half that matters when it was marked in
+                         * error and somebody has to ask.
+                         */
+                        label={
+                          payment.receivedBy
+                            ? t('payments.offline.receivedByOn', {
+                                name: payment.receivedBy,
+                                date: formatDate(payment.receivedAt, 'PP', locale),
+                              })
+                            : t('payments.offline.receivedByUnknownOn', {
+                                date: formatDate(payment.receivedAt, 'PP', locale),
+                              })
+                        }
                       />
                     ) : (
                       <Chip size="small" color="warning" label={t('payments.offline.awaiting')} />

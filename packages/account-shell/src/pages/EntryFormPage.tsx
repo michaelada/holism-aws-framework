@@ -10,8 +10,10 @@ import {
   Container,
   Divider,
   FormControlLabel,
+  MenuItem,
   Paper,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -27,7 +29,12 @@ import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { CatalogueEvent, CatalogueMembershipType, CartItemType } from '../types/account';
+import {
+  CatalogueEvent,
+  CatalogueMembershipType,
+  CartItemType,
+  EligibleMember,
+} from '../types/account';
 
 interface FormField {
   id: string;
@@ -102,6 +109,16 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const [form, setForm] = useState<ApplicationForm | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [agreed, setAgreed] = useState(false);
+  /**
+   * Which membership this entry is for.
+   *
+   * Only meaningful on a members-only activity. Preselected when the account
+   * holds exactly one — there is no choice to make, and a select with a single
+   * option is a question with one answer. Left empty when they hold several: a
+   * parent entering Fionn who gets Saoirse by default has been handed a wrong
+   * answer that looks like their own.
+   */
+  const [memberId, setMemberId] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -130,6 +147,12 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
         }
         setEvent(parent ?? null);
         setItem(activity);
+
+        // The only case with nothing to ask.
+        const selectable = (activity.eligibleMembers ?? []).filter((m) => !m.alreadyEntered);
+        if (activity.membersOnly && selectable.length === 1) {
+          setMemberId(selectable[0].id);
+        }
 
         if (activity.applicationFormId) {
           setForm(
@@ -261,7 +284,14 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
           kind === 'event'
             ? {
                 itemType: 'event_entry' satisfies CartItemType,
-                contextRef: { activityId: item.id, eventId: event?.id },
+                contextRef: {
+                  activityId: item.id,
+                  eventId: event?.id,
+                  // Only on a members-only activity; the server refuses the
+                  // line without it, and refuses a membership the caller does
+                  // not hold.
+                  ...(membersOnly ? { memberId } : {}),
+                },
                 description: `${event?.name ?? ''} — ${item.name}`,
                 unitFee: item.fee,
                 handlingFeeIncluded: item.handlingFeeIncluded,
@@ -308,11 +338,52 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
     );
   }
 
+  const membersOnlyItem = kind === 'event' && Boolean(item?.membersOnly);
+  if (membersOnlyItem && (item?.eligibleMembers ?? []).length === 0) {
+    /*
+     * The listing offers no button here, but a link can be pasted and a
+     * membership can lapse between opening the list and opening the form. The
+     * server refuses this too; this is so the member reads a sentence rather
+     * than a validation error after filling the whole thing in.
+     */
+    return (
+      <Container maxWidth="sm" sx={{ py: 4 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ mb: 2 }}>
+          {t('form.back')}
+        </Button>
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate(`/${orgCode}/memberships`)}>
+              {t('form.membersOnly.viewMemberships')}
+            </Button>
+          }
+        >
+          {t('form.membersOnly.notAMember', {
+            organisation: me?.organisation.displayName ?? '',
+          })}
+        </Alert>
+      </Container>
+    );
+  }
+
   const termsRequired = Boolean(terms);
+
+  /*
+   * Members-only handling, all derived rather than stored, so a reload cannot
+   * leave the page disagreeing with the catalogue about who may enter.
+   */
+  const membersOnly = kind === 'event' && Boolean(item?.membersOnly);
+  const eligibleMembers: EligibleMember[] = membersOnly ? item?.eligibleMembers ?? [] : [];
+  const selectableMembers = eligibleMembers.filter((member) => !member.alreadyEntered);
+
   const canSubmit =
     online &&
     !saving &&
     (!termsRequired || agreed) &&
+    // A required question like any other: nothing is preselected when there is
+    // a genuine choice, so it has to be answered before submitting.
+    (!membersOnly || Boolean(memberId)) &&
     outstanding.length === 0 &&
     badAnswers.length === 0;
 
@@ -354,6 +425,51 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
         <Alert severity="warning" sx={{ mb: 2 }}>
           {t('form.checkAnswers', { fields: invalid.join(', ') })}
         </Alert>
+      )}
+
+      {/*
+        Who the entry is for.
+
+        Stated when there is one membership and asked when there are several —
+        a select with a single option is a question with one answer, and a
+        sentence reads faster than a dropdown nobody can change.
+      */}
+      {membersOnly && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          {selectableMembers.length === 1 && eligibleMembers.length === 1 ? (
+            <>
+              <Typography variant="body1">
+                {t('form.membersOnly.entryFor', { name: eligibleMembers[0].name })}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {eligibleMembers[0].membershipTypeName} · {eligibleMembers[0].membershipNumber}
+              </Typography>
+            </>
+          ) : (
+            <TextField
+              select
+              fullWidth
+              required
+              label={t('form.membersOnly.whoIsThisFor')}
+              value={memberId}
+              onChange={(e) => setMemberId(e.target.value)}
+              helperText={t('form.membersOnly.whoIsThisForHint')}
+            >
+              {eligibleMembers.map((member) => (
+                /*
+                  An already-entered membership is listed and disabled rather
+                  than dropped. A name simply missing from the list reads as a
+                  bug; a disabled row with a reason answers the question.
+                */
+                <MenuItem key={member.id} value={member.id} disabled={member.alreadyEntered}>
+                  {member.alreadyEntered
+                    ? t('form.membersOnly.optionAlreadyEntered', { name: member.name })
+                    : `${member.name} — ${member.membershipTypeName} · ${member.membershipNumber}`}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+        </Paper>
       )}
 
       {form && (

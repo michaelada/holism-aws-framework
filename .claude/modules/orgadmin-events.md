@@ -81,11 +81,32 @@ Backend counterparts: `event.service`, `event-activity.service`, `event-entry.se
 ## Activities
 
 An activity is what someone actually enters. It carries name, description, public visibility, a
-**mandatory** application form, optional applicant limits and quantity, optional terms and
+**mandatory** application form, an **entry eligibility**, optional applicant limits and quantity, optional terms and
 conditions (rich text via `react-quill`), fee, supported payment methods, a handling-fee flag,
 cheque/offline instructions, and discount ids. Payment methods are classified by name — a method
 containing `card`, `stripe` or `helix` counts as a card method, which is what reveals the
 handling-fee option.
+
+## Documentation
+
+### Who can enter (`entryEligibility`)
+
+Three values, defaulting to `'all'` — which is the previous behaviour, so every existing activity is
+unchanged:
+
+| Value | Meaning | Offered when |
+|---|---|---|
+| `all` | anyone with an account | always |
+| `members` | an active membership of **this** club | `memberships` capability **and** the club has members |
+| `org-type-members` | an active membership of **any** club of the same organisation type | `organisation-level-members` capability |
+
+The two gates are independent: a club with the federation capability but no members of its own sees
+the third option and not the second. Nothing is offered at all when neither holds, and the field is
+not rendered — a setting whose only possible effect is to lock everyone out is worse than no setting.
+
+`organisation-level-members` also makes the event visible to account users of every **other** club of
+the same type, so choosing it reaches outside the organisation. See
+[MEMBERS_ONLY_ENTRIES.md](../../docs/MEMBERS_ONLY_ENTRIES.md).
 
 ## Documentation
 

@@ -236,7 +236,42 @@ export class FulfilmentService {
       throw new Error('The member could not be found');
     }
 
-    const { first_name, last_name, email } = member.rows[0];
+    let { first_name, last_name } = member.rows[0];
+    const { email } = member.rows[0];
+
+    /*
+     * Whose entry this actually is.
+     *
+     * On a members-only activity the basket line names the membership it was
+     * entered against, and that person's name goes on the entry — not the
+     * login's. A parent entering two children would otherwise produce two rows
+     * both reading "Aoife Byrne", and the club could not tell which child is in
+     * which class.
+     *
+     * The email stays the account holder's, deliberately: it is where the club
+     * writes about this entry, and a child's membership record may carry no
+     * address at all.
+     *
+     * Not re-validated here. Ownership was settled when the line went into the
+     * basket, against the caller's own memberships; re-deriving it at
+     * fulfilment would mean re-deciding eligibility after the money has moved,
+     * which can only turn a paid entry into a failed one.
+     */
+    // Through `parseContextRef` like every other reader in this file: the
+    // column comes back as a string under some drivers and an object under
+    // others, and `?.memberId` on a string is silently undefined.
+    const memberId: string | null =
+      (parseContextRef(line.context_ref) as { memberId?: string })?.memberId ?? null;
+    if (memberId) {
+      const record = await db.query(
+        `SELECT first_name, last_name FROM members WHERE id = $1`,
+        [memberId]
+      );
+      if (record.rows.length > 0) {
+        first_name = record.rows[0].first_name;
+        last_name = record.rows[0].last_name;
+      }
+    }
 
     /*
      * The entry records what is actually true of the money.
@@ -252,8 +287,8 @@ export class FulfilmentService {
       `INSERT INTO event_entries
          (event_id, event_activity_id, user_id, first_name, last_name, email,
           form_submission_id, quantity, payment_status, payment_method,
-          entry_date, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9, NOW(), NOW(), NOW())
+          member_id, entry_date, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, NOW(), NOW(), NOW())
        RETURNING id`,
       [
         activity.rows[0].event_id,
@@ -265,6 +300,7 @@ export class FulfilmentService {
         line.form_submission_id ?? null,
         paid ? 'paid' : 'pending',
         paid ? 'card' : 'offline',
+        memberId,
       ]
     );
 

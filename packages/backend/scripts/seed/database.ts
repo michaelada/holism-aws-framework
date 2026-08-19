@@ -825,8 +825,8 @@ export async function seedDatabase(
             limit_applicants, applicants_limit, allow_specify_quantity,
             use_terms_and_conditions, terms_and_conditions, fee,
             allowed_payment_method, handling_fee_included,
-            discount_ids, supported_payment_methods)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+            discount_ids, supported_payment_methods, entry_eligibility)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
          RETURNING id`,
         [
           eventId,
@@ -846,6 +846,9 @@ export async function seedDatabase(
           activity.handlingFeeIncluded ?? false,
           JSON.stringify(activityDiscountIds),
           JSON.stringify(methodIdsFor(effective)),
+          // Defaulted here rather than relying on the column default, so the
+          // seed states what it means for every row it writes.
+          activity.entryEligibility ?? 'all',
         ]
       );
       bump('event_activities');

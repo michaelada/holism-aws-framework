@@ -318,6 +318,161 @@ describe('POST /api/account/:orgCode/cart/items', () => {
     expect(mockedCatalogue.findActivity).not.toHaveBeenCalled();
     expect(mockedCatalogue.assertSlotAvailable).not.toHaveBeenCalled();
   });
+
+  /**
+   * Members-only entries — the check that actually protects the club.
+   *
+   * The listing hides the button and the entry form refuses to render, but
+   * neither has stopped anyone who can type a URL, and this decides who gets
+   * into a club's event. The candidates come from `eligibleMembers`, which the
+   * catalogue builds from *this* login's own active memberships — so a member
+   * id belonging to somebody else is simply not in the list.
+   *
+   * See docs/MEMBERS_ONLY_ENTRIES.md.
+   */
+  describe('members-only activities', () => {
+    const membersOnlyActivity = (members: any[], over: Record<string, any> = {}) => ({
+      event: { entriesLimit: null },
+      activity: {
+        available: true,
+        entriesLimit: null,
+        membersOnly: true,
+        entryEligibility: 'members',
+        eligibleMembers: members,
+        ...over,
+      },
+    });
+
+    const saoirse = {
+      id: 'mem-1',
+      name: 'Saoirse Byrne',
+      membershipTypeName: 'Junior Member',
+      membershipNumber: 'KHP-0241',
+      alreadyEntered: false,
+    };
+
+    const entry = (contextRef: Record<string, unknown>) => ({
+      itemType: 'event-entry',
+      contextRef: { activityId: 'act-1', ...contextRef },
+      unitFee: 2000,
+    });
+
+    it('refuses an entry that names no member', async () => {
+      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({}));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/Choose which member/);
+      expect(mockedCart.addItem).not.toHaveBeenCalled();
+    });
+
+    it('refuses a membership the caller does not hold', async () => {
+      /*
+       * The one that matters. Supplying somebody else's member id must not
+       * enter their child in a class — and cannot, because the candidate list
+       * was built from the caller's own memberships.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'somebody-elses-child' }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/not one you hold/);
+      expect(mockedCart.addItem).not.toHaveBeenCalled();
+    });
+
+    it('refuses a member already entered', async () => {
+      mockedCatalogue.findActivity.mockResolvedValue(
+        membersOnlyActivity([{ ...saoirse, alreadyEntered: true }]) as any
+      );
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'mem-1' }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/Saoirse Byrne is already entered/);
+    });
+
+    it('refuses the same member twice in one basket', async () => {
+      /*
+       * `alreadyEntered` reads `event_entries`, which nothing has written yet —
+       * both lines are still in the basket. Without this the parent pays twice
+       * for one child, and the club has one entry and one refund to make.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+      mockedDb.query.mockResolvedValueOnce({ rows: [{ exists: 1 }], rowCount: 1 } as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'mem-1' }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/already in your basket/);
+      expect(mockedCart.addItem).not.toHaveBeenCalled();
+    });
+
+    it('adds an entry for a member the caller does hold', async () => {
+      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'mem-1' }));
+
+      expect(response.status).toBe(201);
+      // The choice rides to fulfilment on the line itself.
+      expect(mockedCart.addItem).toHaveBeenCalledWith(
+        'org-1',
+        'ou-1',
+        'EUR',
+        expect.objectContaining({
+          contextRef: expect.objectContaining({ memberId: 'mem-1' }),
+        })
+      );
+    });
+
+    it('asks nothing of an open activity', async () => {
+      // No member, no question. The rule applies only where entry is restricted.
+      mockedCatalogue.findActivity.mockResolvedValue({
+        event: { entriesLimit: null },
+        activity: { available: true, entriesLimit: null, membersOnly: false, eligibleMembers: [] },
+      } as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({}));
+
+      expect(response.status).toBe(201);
+    });
+
+    it('applies the same member check across the organisation type', async () => {
+      /*
+       * The third option changes *which* memberships qualify, not whether the
+       * check runs. A member id from outside the caller's own set is still
+       * refused — the catalogue built that set, scoped to the federation.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(
+        membersOnlyActivity([{ ...saoirse, organisationName: 'Ward Union Pony Club' }], {
+          entryEligibility: 'org-type-members',
+        }) as any
+      );
+
+      const refused = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'another-branchs-member' }));
+      expect(refused.status).toBe(400);
+
+      const accepted = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'mem-1' }));
+      expect(accepted.status).toBe(201);
+    });
+  });
 });
 /**
  * Availability is per calendar and per range, and the work is proportional to

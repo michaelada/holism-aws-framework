@@ -69,6 +69,16 @@ export const ORG_TYPE = {
     'calendar-discounts',
     'merchandise-discounts',
     'multi-area-discounts',
+    /*
+     * Deliberately **not** in `optInCapabilities`, so every club in the type
+     * gets it.
+     *
+     * The federation entry option is only interesting when more than one club
+     * has it: one club opens an event, and the others' account users are the
+     * ones who have to see it. Giving it to a single club would seed a feature
+     * with nobody on the other side of it.
+     */
+    'organisation-level-members',
   ],
   /**
    * Permitted by the type but **not** switched on for every club.
@@ -306,6 +316,19 @@ export const ACCOUNT_USERS: SeedAccountUser[] = [
   { email: 'clodagh.moran@example.test', firstName: 'Clodagh', lastName: 'Moran', orgs: ['laois'] },
   { email: 'eoin.sheridan@example.test', firstName: 'Eoin', lastName: 'Sheridan', orgs: ['laois'] },
   { email: 'grainne.duffy@example.test', firstName: 'Gráinne', lastName: 'Duffy', orgs: ['ward'] },
+  /*
+   * Two people who belong to exactly one club and hold its membership.
+   *
+   * They took over the Ward senior and associate memberships from Niamh Walsh
+   * and Darragh O'Toole, who each held memberships in several clubs at once —
+   * which a person cannot do. See the note on `MEMBERS`.
+   *
+   * Single-club members are also the realistic subject for the federation entry
+   * option: someone whose one membership is at Ward Union, entering a Kildare
+   * event that is open across the type.
+   */
+  { email: 'eoin.brady@example.test', firstName: 'Eoin', lastName: 'Brady', orgs: ['ward'] },
+  { email: 'maire.flynn@example.test', firstName: 'Máire', lastName: 'Flynn', orgs: ['ward'] },
   { email: 'lorcan.hayes@example.test', firstName: 'Lorcán', lastName: 'Hayes', orgs: ['ward'] },
   /*
    * Meath-only members, and the owners of the registered horses below.
@@ -1097,6 +1120,11 @@ export interface SeedActivity {
   useTermsAndConditions?: boolean;
   showPublicly?: boolean;
   discounts?: string[];
+  /**
+   * Who may enter. Omitted means `'all'`, which is what every pre-existing
+   * seeded activity is and must remain.
+   */
+  entryEligibility?: 'all' | 'members' | 'org-type-members';
 }
 
 export interface SeedEvent {
@@ -1719,6 +1747,101 @@ export const EVENTS: SeedEvent[] = [
       },
     ],
   },
+  /* ------------------------------------------- Kildare, entry-restricted
+   *
+   * Two events for the members-only entry rules, both run by Kildare and both
+   * wide open in their entry window — the point of these is *who* may enter, so
+   * nothing else about them should be in the way.
+   *
+   * They are the only seeded activities with an `entryEligibility`; everything
+   * above stays `'all'`, which is what it has always been.
+   *
+   * See docs/MEMBERS_ONLY_ENTRIES.md.
+   */
+  {
+    key: 'khpc-members-cup',
+    org: 'kildare',
+    name: 'Kildare Members\u2019 Cup',
+    description:
+      'Club championship, open to Kildare Hunt Pony Club members only. Every activity requires an active membership of this club.',
+    eventType: 'Show Jumping',
+    venue: 'Craddockstown Equestrian',
+    startDays: 35,
+    endDays: 35,
+    openDays: -7,
+    closeDays: 28,
+    status: 'published',
+    activities: [
+      {
+        /*
+         * Uncapped and card-or-offline, so the only thing that can refuse an
+         * entry is the membership rule this event exists to demonstrate.
+         */
+        name: 'Members\u2019 Championship',
+        description: 'One round, members of this club only.',
+        fee: 20,
+        form: 'shortEntry',
+        payment: 'both',
+        entryEligibility: 'members',
+      },
+      {
+        /*
+         * An open activity beside a restricted one, in the same event and the
+         * same list. A non-member sees "Members only" on one row and an Enter
+         * button on the next, which is the comparison that shows the rule is
+         * per activity rather than per event.
+         */
+        name: 'Open Warm-up Round',
+        description: 'Unaffiliated warm-up, open to anyone with an account.',
+        fee: 10,
+        form: 'shortEntry',
+        payment: 'both',
+      },
+    ],
+  },
+  {
+    key: 'khpc-inter-branch',
+    org: 'kildare',
+    name: 'Inter-Branch Championship',
+    description:
+      'Run by Kildare Hunt Pony Club and open to members of every Irish Pony Club branch. Members of Laois, Ward Union and Meath may enter.',
+    eventType: 'Cross Country',
+    venue: 'Punchestown Event Centre',
+    startDays: 49,
+    endDays: 49,
+    openDays: -3,
+    closeDays: 42,
+    status: 'published',
+    activities: [
+      {
+        /*
+         * The activity that makes this event visible to the other three clubs'
+         * account users. Nothing else in the seed does, so this is the only
+         * subject the "Events at other organisations" section has.
+         */
+        name: 'Inter-Branch Team Class',
+        description: 'Teams of four, one branch each. Open to members of any branch.',
+        fee: 30,
+        form: 'fullEntry',
+        payment: 'both',
+        entryEligibility: 'org-type-members',
+      },
+      {
+        /*
+         * Restricted to Kildare's own members, in the same event as the
+         * federation-wide one. A Laois member sees the team class as enterable
+         * and this one as closed to them — the distinction between the second
+         * and third options, in a single list.
+         */
+        name: 'Host Club Class',
+        description: 'Kildare members only, run alongside the team class.',
+        fee: 25,
+        form: 'shortEntry',
+        payment: 'both',
+        entryEligibility: 'members',
+      },
+    ],
+  },
 ];
 
 /* ------------------------------------------------------ membership types */
@@ -1871,6 +1994,27 @@ export interface SeedMember {
 /**
  * Members for this season, across all five types and all three clubs.
  *
+ * ## One person, one club
+ *
+ * **Nobody here holds an active membership in more than one organisation.** A
+ * person belongs to a club; they do not belong to three at once, and seed data
+ * that says otherwise describes something the domain does not allow.
+ *
+ * It is worth stating because the seed *does* deliberately give people logins at
+ * several clubs — `ACCOUNT_USERS` overlaps heavily, to exercise the organisation
+ * switcher — and an account at a club is a different thing from a membership of
+ * it. Niamh Walsh has a login at all four and is a member of Laois.
+ *
+ * The distinction became load-bearing with the federation entry option: a member
+ * of one branch entering another branch's event is the whole case, and it cannot
+ * be tested by someone who happens to be a member of both. Niamh held Kildare,
+ * Laois and Ward memberships, and her Kildare one masked the very thing the
+ * fixture was meant to show.
+ *
+ * An **elapsed** membership at a different club is a different matter and is
+ * kept: it says the person moved clubs, which is ordinary. Niamh's elapsed Meath
+ * membership sits behind her active Laois one for exactly that reason.
+ *
  * The mix is deliberate rather than uniform: active members alongside a pending
  * application awaiting approval, an elapsed member from last season who has not
  * renewed, an unpaid membership, a refunded one, and two households on group
@@ -1879,7 +2023,6 @@ export interface SeedMember {
  */
 export const MEMBERS: SeedMember[] = [
   /* ------------------------------------------------------------ Kildare */
-  { email: 'niamh.walsh@example.test', org: 'kildare', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 120 },
   { email: 'cillian.murphy@example.test', org: 'kildare', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 96 },
   { email: 'orla.kavanagh@example.test', org: 'kildare', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 88 },
   { email: 'saoirse.brennan@example.test', org: 'kildare', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 61 },
@@ -1911,9 +2054,9 @@ export const MEMBERS: SeedMember[] = [
   { email: 'darragh.otoole@example.test', org: 'laois', type: 'senior', status: 'elapsed', paymentStatus: 'paid', payment: 'stripe', season: 'previous', renewedDaysAgo: 400 },
 
   /* --------------------------------------------------------------- Ward */
-  { email: 'niamh.walsh@example.test', org: 'ward', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 58 },
+  { email: 'eoin.brady@example.test', org: 'ward', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 58 },
   { email: 'grainne.duffy@example.test', org: 'ward', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 41 },
-  { email: 'darragh.otoole@example.test', org: 'ward', type: 'associate', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 15 },
+  { email: 'maire.flynn@example.test', org: 'ward', type: 'associate', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 15 },
   /*
    * A second parent, and the other renewal that is due. Lorcán holds two of his
    * children's memberships and nothing of his own, which is the case where a

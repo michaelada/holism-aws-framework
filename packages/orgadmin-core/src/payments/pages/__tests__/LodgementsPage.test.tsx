@@ -1,11 +1,15 @@
 /**
- * Unit tests for LodgementsPage component
- * Tests lodgement history rendering and breakdown by payment method
+ * Lodgements — what actually reached the bank.
+ *
+ * This screen replaced one that summed our own `payments` table by day. The
+ * assertions here are mostly about the difference between "no money" and other
+ * things that produce an empty table, because that distinction is what a club
+ * reads the screen for.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import LodgementsPage from '../LodgementsPage';
 import * as useApiModule from '../../../hooks/useApi';
 import { renderWithProviders } from '../../../test/renderWithProviders';
@@ -14,275 +18,248 @@ vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('
 vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
 vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
 vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
-
-// Shell hooks (translations, onboarding, page help, capabilities, locale)
-// are mocked rather than provided — see test/orgadminShellMock.
 vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
-// Mock the useApi hook
 vi.mock('../../../hooks/useApi');
 
-// Mock useNavigate
 const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual<typeof import('react-router-dom')>('react-router-dom')),
+  useNavigate: () => mockNavigate,
+}));
+
+const mockExecute = vi.fn();
+
+const lodgement = (over: Record<string, unknown> = {}) => ({
+  id: 'po_1',
+  arrivalDate: '2026-08-14T00:00:00.000Z',
+  amount: 210400,
+  currency: 'EUR',
+  status: 'paid',
+  failureMessage: null,
+  destination: 'AIB ····6789',
+  ...over,
 });
 
-const mockLodgements = [
-  {
-    id: '1',
-    date: '2024-01-15T10:00:00Z',
-    totalAmount: 500.00,
-    cardAmount: 300.00,
-    chequeAmount: 150.00,
-    offlineAmount: 50.00,
-    transactionCount: 10,
-    status: 'completed' as const,
-  },
-  {
-    id: '2',
-    date: '2024-01-20T10:00:00Z',
-    totalAmount: 750.00,
-    cardAmount: 500.00,
-    chequeAmount: 200.00,
-    offlineAmount: 50.00,
-    transactionCount: 15,
-    status: 'completed' as const,
-  },
-  {
-    id: '3',
-    date: '2024-01-25T10:00:00Z',
-    totalAmount: 400.00,
-    cardAmount: 250.00,
-    chequeAmount: 100.00,
-    offlineAmount: 50.00,
-    transactionCount: 8,
-    status: 'pending' as const,
-  },
-];
+const page = (over: Record<string, unknown> = {}) => ({
+  lodgements: [lodgement()],
+  nextCursor: null,
+  notYetPaidOut: null,
+  ...over,
+});
 
-/*
- * The club in this harness is EUR (`test/renderWithProviders`), and these
- * assertions used to read £ — the page hard-coded 'GBP' regardless of the
- * organisation, and the tests agreed with it. The currency now comes from the
- * organisation via `useCurrency()`, so the symbol follows the club.
- */
 describe('LodgementsPage', () => {
-  const mockExecute = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mockNavigate.mockClear();
-    
-    // Setup default mock implementation
+    /*
+     * `clearAllMocks` empties recorded calls but leaves queued
+     * `mockResolvedValueOnce` values in place. The paging test queues two, and
+     * any left unconsumed fire in whichever test runs next — which is how three
+     * tests here passed alone and failed in a suite. `mockReset` drains them.
+     */
+    mockExecute.mockReset();
+    mockExecute.mockResolvedValue(page());
     vi.mocked(useApiModule.useApi).mockReturnValue({
       execute: mockExecute,
-      data: null,
-      error: null,
       loading: false,
-      reset: vi.fn(),
+      error: null,
+    } as never);
+  });
+
+  it('lists what reached the bank, with the account it went to', async () => {
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText('AIB ····6789')).toBeInTheDocument();
+    expect(screen.getByText('€2,104.00')).toBeInTheDocument();
+  });
+
+  it('shows money not yet paid out as a card, never as a lodgement row', async () => {
+    /*
+     * It has no date and has not moved. A row would claim a lodgement that has
+     * not happened, and would not appear on any bank statement.
+     */
+    mockExecute.mockResolvedValue(
+      page({ notYetPaidOut: { amount: 41280, currency: 'EUR' } })
+    );
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText(/Not yet paid out/)).toBeInTheDocument();
+    // One row in the table, not two.
+    expect(screen.getAllByRole('row')).toHaveLength(2); // header + one lodgement
+  });
+
+  it('puts a failure reason on the row rather than behind a click', async () => {
+    // Somebody opening this screen is usually asking where money has got to.
+    mockExecute.mockResolvedValue(
+      page({
+        lodgements: [
+          lodgement({ status: 'failed', failureMessage: 'The bank account was rejected.' }),
+        ],
+      })
+    );
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText('The bank account was rejected.')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+  });
+
+  it('distinguishes "not connected" from "no lodgements", and offers the remedy', async () => {
+    /*
+     * The whole point of separating these. An empty table for an unconnected
+     * club reads as "no money has come in", which is alarming and wrong — the
+     * truth is that no money ever could until Stripe is connected.
+     */
+    mockExecute.mockRejectedValue(new Error('This organisation is not connected to Stripe'));
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText(/not connected to Stripe yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Payment Settings/i }));
+    expect(mockNavigate).toHaveBeenCalledWith('/settings?tab=payments');
+  });
+
+  it('tells a club whose Stripe access was revoked how to fix it', async () => {
+    /*
+     * Found in development, where the stored connected account belonged to a
+     * different Stripe platform than the key — which is the same shape as a club
+     * that disconnects in production. It used to surface as a bare 500 and a
+     * "could not load" message, which is true and useless.
+     *
+     * The match is on the backend's wording, so it is asserted on both sides:
+     * `useApi` surfaces only the message, not the error code.
+     */
+    mockExecute.mockRejectedValue(
+      new Error("This organisation's Stripe connection is no longer valid. Reconnect it in Payment Settings.")
+    );
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText(/no longer valid/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Payment Settings/i }));
+    expect(mockNavigate).toHaveBeenCalledWith('/settings?tab=payments');
+  });
+
+  it('says so plainly when a connected club simply has none yet', async () => {
+    mockExecute.mockResolvedValue(page({ lodgements: [] }));
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText(/No lodgements yet/)).toBeInTheDocument();
+  });
+
+  it('reports a real failure as a failure', async () => {
+    mockExecute.mockRejectedValue(new Error('network'));
+    renderWithProviders(<LodgementsPage />);
+
+    expect(await screen.findByText(/could not load your lodgements/)).toBeInTheDocument();
+  });
+
+  describe('the way useApi actually reports failure', () => {
+    /*
+     * `execute` **returns null**; it does not throw. Every test above that
+     * rejects is describing something a browser never does, and a page relying
+     * on `catch` alone shows its empty state instead of its error — which on
+     * this screen means telling a club that no money has reached its bank.
+     *
+     * These reproduce the real contract: resolve null, and call `onError`.
+     */
+    const failWith = (message: string) =>
+      mockExecute.mockImplementation(async (request: { onError?: (m: string) => void }) => {
+        request.onError?.(message);
+        return null;
+      });
+
+    it('does not report an outage as "no lodgements"', async () => {
+      failWith('Request failed with status code 500');
+      renderWithProviders(<LodgementsPage />);
+
+      expect(await screen.findByText(/could not load your lodgements/)).toBeInTheDocument();
+      expect(screen.queryByText(/No lodgements yet/)).not.toBeInTheDocument();
+    });
+
+    it('still recognises a club that has never connected', async () => {
+      failWith('This organisation is not connected to Stripe');
+      renderWithProviders(<LodgementsPage />);
+
+      expect(await screen.findByText(/not connected to Stripe yet/)).toBeInTheDocument();
+    });
+
+    it('still recognises a connection that has been revoked', async () => {
+      failWith("This organisation's Stripe connection is no longer valid. Reconnect it in Payment Settings.");
+      renderWithProviders(<LodgementsPage />);
+
+      expect(await screen.findByText(/no longer valid/)).toBeInTheDocument();
+    });
+
+    it('treats a bare null with no message as a failure, not an empty list', async () => {
+      // Belt and braces: if `onError` is never called, null alone still means
+      // the request did not succeed.
+      mockExecute.mockResolvedValue(null);
+      renderWithProviders(<LodgementsPage />);
+
+      expect(await screen.findByText(/could not load your lodgements/)).toBeInTheDocument();
     });
   });
 
-  const renderComponent = () => {
-    return renderWithProviders(<LodgementsPage />);
-  };
+  it('opens the drill-down when a lodgement is clicked', async () => {
+    renderWithProviders(<LodgementsPage />);
 
-  describe('Lodgements Rendering', () => {
-    it('should render the page title and back button', () => {
-      mockExecute.mockResolvedValue({ lodgements: [] });
-      renderComponent();
+    await userEvent.click(await screen.findByText('AIB ····6789'));
 
-      expect(screen.getByText('Lodgements')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/payments/lodgements/po_1');
+  });
+
+  describe('paging', () => {
+    it('offers more only when Stripe says there is more', async () => {
+      renderWithProviders(<LodgementsPage />);
+      await screen.findByText('AIB ····6789');
+
+      expect(screen.queryByRole('button', { name: /Show more/i })).not.toBeInTheDocument();
     });
 
-    it('should load and display lodgements on mount', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
+    it('appends the next page rather than replacing the list', async () => {
+      // Cursor paging with no total: replacing would lose everything above.
+      mockExecute
+        .mockResolvedValueOnce(page({ nextCursor: 'po_1' }))
+        .mockResolvedValueOnce(
+          page({ lodgements: [lodgement({ id: 'po_2', destination: 'BOI ····1234' })] })
+        );
+      renderWithProviders(<LodgementsPage />);
 
-      await waitFor(() => {
-        expect(mockExecute).toHaveBeenCalledWith({
-          method: 'GET',
-          url: '/api/orgadmin/payments/lodgements',
-        });
-      });
+      await userEvent.click(await screen.findByRole('button', { name: /Show more/i }));
 
-      await waitFor(() => {
-        expect(screen.getByText('15 Jan 2024')).toBeInTheDocument();
-        expect(screen.getByText('20 Jan 2024')).toBeInTheDocument();
-        expect(screen.getByText('25 Jan 2024')).toBeInTheDocument();
-      });
-    });
-
-    it('should display loading state while fetching lodgements', () => {
-      mockExecute.mockImplementation(() => new Promise(() => {})); // Never resolves
-      renderComponent();
-
-      expect(screen.getByText('Loading lodgements...')).toBeInTheDocument();
-    });
-
-    it('should display empty state when no lodgements exist', async () => {
-      mockExecute.mockResolvedValue({ lodgements: [] });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText(/no lodgements yet/i)).toBeInTheDocument();
-      });
-    });
-
-    it('should format currency correctly', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getAllByText('€500.00')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('€750.00')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('€400.00')[0]).toBeInTheDocument();
-      });
-    });
-
-    it('should display transaction counts', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText('10')).toBeInTheDocument();
-        expect(screen.getByText('15')).toBeInTheDocument();
-        expect(screen.getByText('8')).toBeInTheDocument();
-      });
-    });
-
-    it('should display lodgement status', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        const completedStatuses = screen.getAllByText('Completed');
-        const pendingStatuses = screen.getAllByText('Pending');
-        
-        expect(completedStatuses.length).toBeGreaterThan(0);
-        expect(pendingStatuses.length).toBeGreaterThan(0);
-      });
+      await waitFor(() => expect(screen.getByText('BOI ····1234')).toBeInTheDocument());
+      expect(screen.getByText('AIB ····6789')).toBeInTheDocument();
+      expect(mockExecute).toHaveBeenLastCalledWith(
+        expect.objectContaining({ url: expect.stringContaining('cursor=po_1') })
+      );
     });
   });
 
-  describe('Summary Cards', () => {
-    it('should display total lodged summary', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
+  it('reads the list once, whatever re-renders', async () => {
+    /*
+     * The failure that took the offline payments screen down: a loader keyed on
+     * something rebuilt every render fetches without end. Guarded here too,
+     * against the churning `t` production once had.
+     */
+    const shell = await import('../../../test/orgadminShellMock');
+    const stable = shell.useTranslation();
+    const churning = vi.spyOn(shell, 'useTranslation').mockImplementation(() => ({
+      ...stable,
+      t: (key: string, options?: Record<string, unknown>) => stable.t(key, options),
+    }));
 
-      await waitFor(() => {
-        expect(screen.getByText('Total Lodged')).toBeInTheDocument();
-        expect(screen.getAllByText('€1,650.00')[0]).toBeInTheDocument(); // 500 + 750 + 400
-        expect(screen.getByText('3 lodgements')).toBeInTheDocument();
-      });
-    });
+    const { rerender } = renderWithProviders(<LodgementsPage />);
+    rerender(<LodgementsPage />);
+    rerender(<LodgementsPage />);
 
-    it('should display card payments summary', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
+    await waitFor(() => expect(mockExecute).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
 
-      await waitFor(() => {
-        expect(screen.getByText('Card Payments')).toBeInTheDocument();
-        expect(screen.getAllByText('€1,050.00')[0]).toBeInTheDocument(); // 300 + 500 + 250
-      });
-    });
+    expect(
+      mockExecute.mock.calls.length,
+      'the list was re-read on render — something unstable is in the loader’s dependencies'
+    ).toBe(1);
 
-    it('should display cheque payments summary', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText('Cheque Payments')).toBeInTheDocument();
-        expect(screen.getAllByText('€450.00')[0]).toBeInTheDocument(); // 150 + 200 + 100
-      });
-    });
-
-    it('should display offline payments summary', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText('Offline Payments')).toBeInTheDocument();
-        expect(screen.getAllByText('€150.00')[0]).toBeInTheDocument(); // 50 + 50 + 50
-      });
-    });
-
-    it('should calculate percentages correctly', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        // Card: 1050/1650 = 63.6%
-        expect(screen.getByText('63.6% of total')).toBeInTheDocument();
-        // Cheque: 450/1650 = 27.3%
-        expect(screen.getByText('27.3% of total')).toBeInTheDocument();
-        // Offline: 150/1650 = 9.1%
-        expect(screen.getByText('9.1% of total')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle zero total gracefully', async () => {
-      mockExecute.mockResolvedValue({ lodgements: [] });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getAllByText('€0.00')[0]).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Payment Method Breakdown', () => {
-    it('should display breakdown for each lodgement', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        // First lodgement
-        expect(screen.getAllByText('€300.00')[0]).toBeInTheDocument(); // Card
-        expect(screen.getAllByText('€150.00')[0]).toBeInTheDocument(); // Cheque
-        expect(screen.getAllByText('€50.00')[0]).toBeInTheDocument(); // Offline
-      });
-    });
-
-    it('should show all payment methods in table headers', async () => {
-      mockExecute.mockResolvedValue({ lodgements: mockLodgements });
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText('Card')).toBeInTheDocument();
-        expect(screen.getByText('Cheque')).toBeInTheDocument();
-        expect(screen.getByText('Offline')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle API errors gracefully', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockExecute.mockRejectedValue(new Error('API Error'));
-      
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText(/no lodgements yet/i)).toBeInTheDocument();
-      });
-
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('should handle missing lodgements array', async () => {
-      mockExecute.mockResolvedValue({});
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByText(/no lodgements yet/i)).toBeInTheDocument();
-      });
-    });
+    churning.mockRestore();
   });
 });

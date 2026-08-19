@@ -5,9 +5,11 @@ import request from 'supertest';
 /**
  * The club's side of money paid outside the system (I1, I2).
  *
- * The organisation is resolved from the caller's token, never from the URL —
- * the rule every newer org-admin route follows, and the one that keeps an
- * administrator of one club from settling another's payments.
+ * The organisation is never taken from the URL. It is chosen from among the
+ * clubs the caller's token proves they administer — narrowed by the club the
+ * app says is open, when it says so — which is what keeps an administrator of
+ * one club from settling another's payments. See "choosing the organisation"
+ * at the foot of this file.
  */
 
 jest.mock('../../config/logger');
@@ -228,5 +230,146 @@ describe('DELETE /api/orgadmin/organisation/payments/:id/received', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error).toMatch(/Refund it or cancel those individually/);
+  });
+
+  /*
+   * The settlement is only auditable if it says who. `offline_received_by` was
+   * written from the first release and never read back, so the interface could
+   * report when a payment was marked received but not by whom — which is the
+   * half somebody needs when it turns out to have been marked in error.
+   */
+  it('reports who recorded a settlement, not only when', async () => {
+    respond([
+      paymentRow({
+        offline_received_at: new Date('2026-08-04'),
+        received_by_first_name: 'Peig',
+        received_by_last_name: 'Ni Bhriain',
+        received_by_email: 'peig@kildarehunt.test',
+      }),
+    ]);
+
+    const response = await request(app)
+      .get('/api/orgadmin/organisation/payments/offline?settled=true')
+      .expect(200);
+
+    expect(response.body[0].receivedBy).toBe('Peig Ni Bhriain');
+  });
+
+  it('falls back to the email when the recorder has no name on file', async () => {
+    respond([
+      paymentRow({
+        offline_received_at: new Date('2026-08-04'),
+        received_by_first_name: null,
+        received_by_last_name: null,
+        received_by_email: 'peig@kildarehunt.test',
+      }),
+    ]);
+
+    const response = await request(app)
+      .get('/api/orgadmin/organisation/payments/offline?settled=true')
+      .expect(200);
+
+    expect(response.body[0].receivedBy).toBe('peig@kildarehunt.test');
+  });
+
+  it('returns a settlement with no recorder rather than failing', async () => {
+    /*
+     * The administrator who recorded it may since have left the organisation.
+     * The money still arrived, so the row must still render — with a date and
+     * no name.
+     */
+    respond([paymentRow({ offline_received_at: new Date('2026-08-04') })]);
+
+    const response = await request(app)
+      .get('/api/orgadmin/organisation/payments/offline?settled=true')
+      .expect(200);
+
+    expect(response.body[0].receivedAt).toBeTruthy();
+    expect(response.body[0].receivedBy).toBeNull();
+  });
+});
+
+/**
+ * Which club the request is about.
+ *
+ * An administrator may run more than one. This router used to answer that with
+ * `SELECT … LIMIT 1` and no `ORDER BY` — an arbitrary row — while the org-admin
+ * app was already sending the club the administrator had actually opened in
+ * `X-Organisation-Id`. Signed in to one club, the API served another: the
+ * offline payments list showed the wrong club's money, and payment settings,
+ * branding and Stripe Connect read and wrote against a club that had not been
+ * opened. Both were legitimately theirs, so nothing looked wrong.
+ */
+describe('choosing the organisation', () => {
+  const OTHER = '3752a3be-6cb1-4f71-9d3d-2e6bfd23797c';
+
+  it('uses the organisation the request names', async () => {
+    /*
+     * Mocked here rather than through `respond`, which always answers the
+     * membership lookup with `org-1`. The real query is scoped to the club that
+     * was asked for, so it can only return that one — and the assertion below
+     * is that the listing then uses it.
+     */
+    mockDb.query = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ organization_id: OTHER }], rowCount: 1 })
+      .mockResolvedValue({ rows: [], rowCount: 0 });
+
+    await request(app)
+      .get('/api/orgadmin/organisation/payments/offline')
+      .set('X-Organisation-Id', OTHER)
+      .expect(200);
+
+    // The membership check is made against the club that was asked for...
+    const [lookupSql, lookupParams] = (mockDb.query as jest.Mock).mock.calls[0];
+    expect(lookupSql).toContain('organization_id = $2');
+    expect(lookupParams).toEqual(['kc-admin', OTHER]);
+
+    // ...and the listing is then read for that same club, not another.
+    const [, listParams] = (mockDb.query as jest.Mock).mock.calls[1];
+    expect(listParams[0]).toBe(OTHER);
+  });
+
+  it('refuses a club the caller does not administer, rather than serving a different one', async () => {
+    /*
+     * The important half. Falling back to one of the caller's own clubs here
+     * would reintroduce exactly the defect: a request about one club, answered
+     * with another's money.
+     */
+    mockDb.query = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+
+    const response = await request(app)
+      .get('/api/orgadmin/organisation/payments/offline')
+      .set('X-Organisation-Id', OTHER)
+      .expect(403);
+
+    expect(response.body.error).toMatch(/requested organisation/);
+    // Refused before any data was read.
+    expect(mockDb.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a malformed id without putting it near the database', async () => {
+    // `$2::uuid` on a non-uuid raises a database error, which would surface as
+    // a 500 — an invalid request answered as though the server were at fault.
+    mockDb.query = jest.fn();
+
+    await request(app)
+      .get('/api/orgadmin/organisation/payments/offline')
+      .set('X-Organisation-Id', 'not-a-uuid')
+      .expect(403);
+
+    expect(mockDb.query).not.toHaveBeenCalled();
+  });
+
+  it('picks deterministically when the request names no club', async () => {
+    // Direct callers still work. They simply must not get a different club on
+    // each request, which is what the unordered LIMIT 1 allowed.
+    respond([]);
+
+    await request(app).get('/api/orgadmin/organisation/payments/offline').expect(200);
+
+    const [lookupSql, lookupParams] = (mockDb.query as jest.Mock).mock.calls[0];
+    expect(lookupSql).toContain('ORDER BY');
+    expect(lookupParams).toEqual(['kc-admin']);
   });
 });

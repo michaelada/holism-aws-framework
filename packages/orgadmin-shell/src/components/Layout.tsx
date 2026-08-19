@@ -61,6 +61,17 @@ interface LayoutProps {
  * 
  * Requirements: 2.2.1, 3.4.1, 1.2
  */
+/**
+ * Is `pathname` at, or beneath, `path`?
+ *
+ * The `/` boundary is what stops `/payments` from claiming `/payments-report`
+ * — a prefix test without it matches any route whose name merely begins the
+ * same way, which is a navigation rail highlighting the wrong thing.
+ */
+function isUnderPath(pathname: string, path: string): boolean {
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
 export const Layout: React.FC<LayoutProps> = ({
   children,
   modules = [],
@@ -213,9 +224,22 @@ export const Layout: React.FC<LayoutProps> = ({
     [organisation?.enabledCapabilities]
   );
 
-  /** The sub-item the current route is on, for the breadcrumb's last step. */
+  /**
+   * The sub-item the current route is on — the *longest* one that matches.
+   *
+   * Exact equality was not enough once a sub-item gained a child route.
+   * Drilling from `/payments/lodgements` into `/payments/lodgements/po_2` left
+   * the rail with nothing selected and the breadcrumb stopping at "Payments":
+   * the reader lost their place in the navigation by following a link in it.
+   *
+   * Longest-match, because `/payments` is a prefix of `/payments/lodgements`
+   * and a plain `startsWith` would light up "All payments" on every page in the
+   * module. The `/` boundary keeps `/payments` from claiming `/payments-report`.
+   */
   const currentSubItem = currentModule
-    ? visibleSubItems(currentModule).find((subItem) => location.pathname === subItem.path)
+    ? visibleSubItems(currentModule)
+        .filter((subItem) => isUnderPath(location.pathname, subItem.path))
+        .sort((a, b) => b.path.length - a.path.length)[0]
     : undefined;
 
   /*
@@ -328,7 +352,9 @@ export const Layout: React.FC<LayoutProps> = ({
                     */}
                     {subItems.map((subItem) => {
                       const SubIcon = subItem.icon;
-                      const isActive = location.pathname === subItem.path;
+                      // The same longest-match the breadcrumb uses, so the two
+                      // never disagree about where the reader is.
+                      const isActive = currentSubItem?.path === subItem.path;
                       return (
                         <ListItem key={`${module.id}-${subItem.path}`} disablePadding>
                           <ListItemButton

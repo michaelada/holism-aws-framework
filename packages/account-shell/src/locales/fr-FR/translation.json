@@ -132,6 +132,11 @@
     "orders": "Mes commandes"
   },
   "home": {
+    "externalEvents": "Événements d’autres organisations",
+    "externalEventsHint": "Organisé par une autre organisation mais ouvert à tous les membres de {{organisationType}}",
+    "externalEventBadge": "Événement externe",
+    "externalEventOpen": "Aller à {{organisation}}",
+    "externalEventJoin": "Rejoindre {{organisation}} pour s’inscrire",
     "welcome": "Bon retour, {{name}}",
     "welcomeAnonymous": "Bon retour",
     "comingSoon": "Votre tableau de bord pour {{organisation}} apparaîtra ici.",
@@ -228,6 +233,8 @@
     "yourDetails_other": "Vos informations ({{count}} réponses)"
   },
   "browse": {
+    "expandAll": "Tout développer",
+    "collapseAll": "Tout réduire",
     "loadError": "Nous n'avons pas pu charger les offres disponibles.",
     "noEvents": "Aucun événement n'est ouvert pour le moment.",
     "noMembershipTypes": "Aucune adhésion n'est ouverte pour le moment.",
@@ -239,6 +246,9 @@
     "placesRemaining_one": "{{count}} place restante",
     "placesRemaining_other": "{{count}} places restantes",
     "reason": {
+      "org-members-only": "Réservé aux membres de toute section",
+      "members-only": "Réservé aux membres",
+      "members-all-entered": "Tous vos membres sont inscrits",
       "unavailable": "Non disponible",
       "entries-not-open": "Inscriptions pas encore ouvertes",
       "entries-closed": "Inscriptions closes",
@@ -447,6 +457,14 @@
     "home": "Accueil"
   },
   "form": {
+    "membersOnly": {
+      "notAMember": "Cette activité est réservée aux membres de {{organisation}}, et vous n'avez pas d'adhésion active.",
+      "viewMemberships": "Voir les adhésions",
+      "entryFor": "Cette inscription est pour {{name}}",
+      "whoIsThisFor": "Pour qui est cette inscription ?",
+      "whoIsThisForHint": "Vous avez plusieurs adhésions. Choisissez le membre que vous inscrivez.",
+      "optionAlreadyEntered": "{{name}} — déjà inscrit"
+    },
     "submit": "Enregistrer et ajouter au panier",
     "saving": "Enregistrement…",
     "loadFailed": "Ce formulaire d’inscription n’a pas pu être chargé.",

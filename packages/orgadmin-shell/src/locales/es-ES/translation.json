@@ -204,6 +204,15 @@
         "applicationFormRequired": "Todas las actividades deben tener un formulario de solicitud seleccionado"
       },
       "activity": {
+        "entriesOrgTypeMembers": "Inscripciones abiertas a miembros (todas las organizaciones/sedes)",
+        "entriesOrgTypeMembersHint": "Miembros de cualquier organización del mismo tipo que la suya.",
+        "entriesOrgTypeMembersNote": "Este evento aparecerá para los usuarios de cuenta de todas las demás organizaciones del mismo tipo, indicando que lo organiza su organización.",
+        "whoCanEnter": "Quién puede inscribirse",
+        "entriesOpenToAll": "Inscripciones abiertas a todos",
+        "entriesOpenToAllHint": "Cualquiera con una cuenta puede inscribirse.",
+        "entriesMembersOnly": "Inscripciones abiertas solo a nuestros miembros",
+        "entriesMembersOnlyHint": "Solo personas con una membresía activa de este club.",
+        "entriesMembersOnlyNote": "Las personas sin membresía activa verán esta actividad marcada como «Solo miembros» y no podrán inscribirse.",
         "untitled": "Actividad sin título",
         "activityNumber": "Actividad {{number}}",
         "name": "Nombre de la actividad",
@@ -2466,6 +2475,56 @@
     }
   },
   "payments": {
+    "lodgements": {
+      "menu": "Liquidaciones",
+      "title": "Liquidaciones",
+      "subtitle": "Dinero que Stripe ha ingresado en su cuenta bancaria.",
+      "notYetPaidOut": "Aún no liquidado",
+      "notYetPaidOutHint": "Cobrado pero aún no programado para una liquidación.",
+      "columnDate": "Fecha",
+      "columnAmount": "Importe",
+      "columnStatus": "Estado",
+      "columnAccount": "A la cuenta",
+      "columnMember": "Miembro",
+      "columnCharged": "Cobrado",
+      "columnIntoLodgement": "En esta liquidación",
+      "status": {
+        "paid": "Pagada",
+        "pending": "Pendiente",
+        "in_transit": "En tránsito",
+        "canceled": "Cancelada",
+        "failed": "Fallida"
+      },
+      "showMore": "Mostrar más",
+      "empty": "Aún no hay liquidaciones. Aparecerán aquí cuando Stripe ingrese dinero en su banco.",
+      "notConnected": "Todavía no está conectado a Stripe, por lo que no hay liquidaciones que mostrar.",
+      "connectionInvalid": "La conexión con Stripe de esta organización ya no es válida, por lo que no se pueden mostrar las liquidaciones. Vuelva a conectarla para recuperarlas.",
+      "goToSettings": "Ajustes de pago",
+      "loadError": "No se han podido cargar sus liquidaciones.",
+      "detailTitle": "Liquidación · {{date}}",
+      "detailLoadError": "No se ha podido cargar esta liquidación.",
+      "backToList": "Liquidaciones",
+      "howThisAddsUp": "Cómo se calcula",
+      "summaryCharged": "Cobrado a los miembros ({{count}} líneas)",
+      "summaryFees": "Comisiones de gestión retenidas por la plataforma",
+      "summaryRefunds": "Reembolsos",
+      "summaryIntoBank": "A su banco",
+      "stripeFeeNote": "La comisión de procesamiento de Stripe la paga la plataforma y no se descuenta de su liquidación.",
+      "paymentsIn": "Pagos en esta liquidación",
+      "inTheBasket": "En la cesta",
+      "chargedToMember": "Cobrado al miembro",
+      "platformFee": "Comisión de gestión retenida por la plataforma",
+      "intoThisLodgement": "En esta liquidación",
+      "viewPayment": "Ver pago",
+      "lineRefund": "Reembolso",
+      "lineAdjustment": "Ajuste",
+      "lineUnknown": "Otro",
+      "lineUnmatched": "Esto llegó a través de Stripe pero no tiene un registro correspondiente aquí.",
+      "expandLine": "Mostrar cesta",
+      "collapseLine": "Ocultar cesta",
+      "total": "Total"
+    },
+    "allMenu": "Todos los pagos",
     "offline": {
       "menu": "Pagos fuera de línea",
       "title": "Pagos fuera de línea",
@@ -2486,7 +2545,9 @@
       "recordFailed": "No hemos podido registrar ese pago.",
       "undo": "Deshacer",
       "undone": "El pago de {{name}} vuelve a estar pendiente.",
-      "undoFailed": "No hemos podido deshacer ese registro."
+      "undoFailed": "No hemos podido deshacer ese registro.",
+      "receivedByOn": "Registrado por {{name}} el {{date}}",
+      "receivedByUnknownOn": "Registrado por un administrador anterior el {{date}}"
     }
   },
   "venues": {

@@ -27,7 +27,10 @@ const mockFulfilment = fulfilmentService as jest.Mocked<typeof fulfilmentService
 describe('PaymentService — offline settlement', () => {
   const ORG = 'org-1';
   const PAYMENT = 'pay-1';
-  const ADMIN = 'admin-1';
+  /** What the token carries: a Keycloak subject. */
+const ADMIN_KEYCLOAK_ID = 'admin-1';
+/** What `organization_users.id` is — a different identifier entirely. */
+const ADMIN_ORG_USER_ID = 'ou-admin-1';
 
   const service = new PaymentService();
 
@@ -67,16 +70,59 @@ describe('PaymentService — offline settlement', () => {
 
   describe('marking it received', () => {
     it('records the money, who recorded it, and when', async () => {
-      respond([paymentRow(), paymentRow({ payment_status: 'paid' })]);
+      /*
+       * Look-up, actor resolution, update, then the re-read.
+       *
+       * `offline_received_by` references `organization_users(id)` while the
+       * token carries a **Keycloak** id. Writing the token's id straight in
+       * violated the foreign key, so recording a receipt failed outright — and
+       * this test previously asserted exactly that wrong value, which is why
+       * nothing caught it. The mocked database has no constraints, so only the
+       * argument can be checked.
+       */
+      respond([
+        paymentRow(),
+        { id: ADMIN_ORG_USER_ID },
+        paymentRow({ payment_status: 'paid' }),
+      ]);
 
-      await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN);
+      await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID);
 
       const update = mockDb.query.mock.calls.find((call) =>
         String(call[0]).includes('UPDATE payments')
       );
       expect(String(update?.[0])).toContain("payment_status = 'paid'");
       expect(String(update?.[0])).toContain('offline_received_at');
-      expect(update?.[1]).toEqual([PAYMENT, ORG, ADMIN]);
+      expect(update?.[1]).toEqual([PAYMENT, ORG, ADMIN_ORG_USER_ID]);
+      expect(update?.[1]).not.toContain(ADMIN_KEYCLOAK_ID);
+    });
+
+    it('resolves the recorder within the organisation whose money it is', async () => {
+      // An administrator of several clubs has one `organization_users` row per
+      // club, so the lookup must be scoped to both the person and the club.
+      respond([paymentRow(), { id: ADMIN_ORG_USER_ID }, paymentRow({ payment_status: 'paid' })]);
+
+      await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID);
+
+      const lookup = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('FROM organization_users')
+      );
+      expect(String(lookup?.[0])).toContain('keycloak_user_id');
+      expect(String(lookup?.[0])).toContain('organization_id');
+      expect(lookup?.[1]).toEqual([ADMIN_KEYCLOAK_ID, ORG]);
+    });
+
+    it('still records the money when the recorder cannot be resolved', async () => {
+      // Better a settlement with no name against it than money that cannot be
+      // marked as arrived at all.
+      respond([paymentRow(), null, paymentRow({ payment_status: 'paid' })]);
+
+      await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID);
+
+      const update = mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('UPDATE payments')
+      );
+      expect(update?.[1]).toEqual([PAYMENT, ORG, null]);
     });
 
     /**
@@ -86,7 +132,7 @@ describe('PaymentService — offline settlement', () => {
     it('runs the fulfilment that was waiting on the money', async () => {
       respond([paymentRow(), paymentRow({ payment_status: 'paid' })]);
 
-      const result = await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN);
+      const result = await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID);
 
       expect(mockFulfilment.fulfilPayment).toHaveBeenCalledWith(PAYMENT);
       // Returned so the screen can say what the money produced.
@@ -97,7 +143,7 @@ describe('PaymentService — offline settlement', () => {
       mockFulfilment.fulfilPayment.mockResolvedValue({ fulfilled: 1, failed: 1, complete: false });
       respond([paymentRow(), paymentRow({ payment_status: 'paid' })]);
 
-      const result = await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN);
+      const result = await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID);
 
       // The money arrived; a failing line carries its own reason, as a card
       // payment's would.
@@ -114,7 +160,7 @@ describe('PaymentService — offline settlement', () => {
         paymentRow({ payment_status: 'paid' }),
       ]);
 
-      await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN);
+      await service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID);
 
       const update = mockDb.query.mock.calls.find((call) =>
         String(call[0]).includes('UPDATE payments')
@@ -133,7 +179,7 @@ describe('PaymentService — offline settlement', () => {
       respond([paymentRow({ payment_status: 'paid', offline_received_at: null })]);
 
       await expect(
-        service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN)
+        service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID)
       ).rejects.toBeInstanceOf(ValidationError);
       expect(mockFulfilment.fulfilPayment).not.toHaveBeenCalled();
     });
@@ -142,7 +188,7 @@ describe('PaymentService — offline settlement', () => {
       respond([null]);
 
       await expect(
-        service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN)
+        service.markOfflinePaymentReceived(ORG, PAYMENT, ADMIN_KEYCLOAK_ID)
       ).rejects.toBeInstanceOf(NotFoundError);
     });
   });

@@ -80,6 +80,57 @@ async function assertAddable(
       if (!found || !found.activity.available) {
         throw new ValidationError('That activity can no longer be entered');
       }
+
+      /*
+       * Who the entry is for, on a members-only activity.
+       *
+       * This is the check that matters. The listing hides the button and the
+       * form refuses to render, but neither has stopped anyone who can type a
+       * URL — and this decides who gets into a club's event. The candidates
+       * come from `eligibleMembers`, which the catalogue built from *this*
+       * login's own active memberships, so a member id belonging to somebody
+       * else is not in the list and cannot be chosen by supplying it.
+       */
+      if (found.activity.membersOnly) {
+        const memberId = contextRef.memberId;
+        if (!memberId) {
+          throw new ValidationError('Choose which member this entry is for');
+        }
+
+        const member = found.activity.eligibleMembers.find((m) => m.id === memberId);
+        if (!member) {
+          throw new ValidationError('That membership is not one you hold');
+        }
+        if (member.alreadyEntered) {
+          throw new ValidationError(`${member.name} is already entered in this activity`);
+        }
+
+        /*
+         * The same member twice in one basket.
+         *
+         * `alreadyEntered` reads `event_entries`, which nothing has written
+         * yet — both lines are still in the basket. Without this the parent
+         * pays twice for one child and the club has one entry and one refund
+         * to make.
+         */
+        const duplicate = await db.query(
+          `SELECT 1
+             FROM cart_items ci
+             JOIN carts c ON c.id = ci.cart_id
+            WHERE c.organisation_id = $1
+              AND c.user_id = $2
+              AND c.status = 'open'
+              AND ci.item_type = 'event_entry'
+              AND ci.context_ref->>'activityId' = $3
+              AND ci.context_ref->>'memberId' = $4
+            LIMIT 1`,
+          [organisationId, organisationUserId, contextRef.activityId, memberId]
+        );
+        if (duplicate.rows.length > 0) {
+          throw new ValidationError(`${member.name} is already in your basket for this activity`);
+        }
+      }
+
       /*
        * An entry is only worth holding where places can run out. An uncapped
        * activity in an uncapped event has nothing for two members to contend

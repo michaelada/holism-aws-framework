@@ -132,6 +132,11 @@
     "orders": "I miei ordini"
   },
   "home": {
+    "externalEvents": "Eventi di altre organizzazioni",
+    "externalEventsHint": "Organizzato da un’altra organizzazione ma aperto a tutti i soci di {{organisationType}}",
+    "externalEventBadge": "Evento esterno",
+    "externalEventOpen": "Vai a {{organisation}}",
+    "externalEventJoin": "Iscrivetevi a {{organisation}} per partecipare",
     "welcome": "Bentornato, {{name}}",
     "welcomeAnonymous": "Bentornato",
     "comingSoon": "La tua dashboard per {{organisation}} apparirà qui.",
@@ -228,6 +233,8 @@
     "yourDetails_other": "I tuoi dati ({{count}} risposte)"
   },
   "browse": {
+    "expandAll": "Espandi tutto",
+    "collapseAll": "Comprimi tutto",
     "loadError": "Non è stato possibile caricare le offerte disponibili.",
     "noEvents": "Al momento non ci sono eventi aperti.",
     "noMembershipTypes": "Al momento non ci sono tesseramenti aperti.",
@@ -239,6 +246,9 @@
     "placesRemaining_one": "{{count}} posto rimasto",
     "placesRemaining_other": "{{count}} posti rimasti",
     "reason": {
+      "org-members-only": "Solo soci di qualsiasi sezione",
+      "members-only": "Solo soci",
+      "members-all-entered": "Tutti i vostri soci sono iscritti",
       "unavailable": "Non disponibile",
       "entries-not-open": "Iscrizioni non ancora aperte",
       "entries-closed": "Iscrizioni chiuse",
@@ -447,6 +457,14 @@
     "home": "Home"
   },
   "form": {
+    "membersOnly": {
+      "notAMember": "Questa attività è aperta solo ai soci di {{organisation}} e voi non avete un tesseramento attivo.",
+      "viewMemberships": "Vedi tesseramenti",
+      "entryFor": "Questa iscrizione è per {{name}}",
+      "whoIsThisFor": "Per chi è questa iscrizione?",
+      "whoIsThisForHint": "Avete più di un tesseramento. Scegliete il socio che state iscrivendo.",
+      "optionAlreadyEntered": "{{name}} — già iscritto"
+    },
     "submit": "Salva e aggiungi al carrello",
     "saving": "Salvataggio…",
     "loadFailed": "Non è stato possibile caricare questo modulo di iscrizione.",

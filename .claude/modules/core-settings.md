@@ -15,6 +15,18 @@ four-tab container.
 | 2 | Email Templates | `EmailTemplatesTab` | `GET`/`PUT /api/orgadmin/organisation/email-templates`, `DELETE .../email-templates/:name` |
 | 3 | Branding | `BrandingTab` | `GET`/`PUT /api/orgadmin/organisation/branding-settings`, `POST /api/orgadmin/files/branding-logo` |
 
+Everything under `/api/orgadmin/organisation/` is served by `orgadmin-organisation.routes`, which is
+mounted **once, bare** — not organisation-scoped like the data routers. Two consequences worth
+knowing before touching these tabs, both of which had already bitten:
+
+- The path is listed in `UNSCOPED_ORGADMIN_PATHS` (`orgadmin-core/src/hooks/useApi.ts`). Remove it
+  and `useApi` rewrites to `/api/orgadmin/organisations/<id>/organisation/…`, which matches nothing —
+  every tab here 404s.
+- The router picks the organisation from `X-Organisation-Id`, verified against the caller's own
+  org-admin rows. It previously took an arbitrary one, so an administrator of two clubs edited the
+  settings of a club they had not opened. See
+  [OFFLINE_PAYMENTS_MENU_AND_AUDIT.md](../../docs/OFFLINE_PAYMENTS_MENU_AND_AUDIT.md).
+
 ## Storage: the `settings` JSONB column
 
 Every tab persists into `organizations.settings`, a single JSONB column shared with the super-admin

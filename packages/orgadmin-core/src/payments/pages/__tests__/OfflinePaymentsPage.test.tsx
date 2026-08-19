@@ -142,6 +142,29 @@ describe('OfflinePaymentsPage', () => {
       );
 
       expect(await screen.findByText(/could not be created for/)).toBeInTheDocument();
+
+      /*
+       * And it must not look like good news. This shipped as a green success
+       * alert with a tick beside the words "could not be created" — the one
+       * pairing certain to be read as "done" and skimmed past, while a member
+       * has paid and has nothing.
+       */
+      expect(screen.getByRole('alert').className).toMatch(/standardWarning/);
+    });
+
+    it('does show plain success when everything was created', async () => {
+      // The counterpart: a clean settlement must not be dressed as a warning
+      // either, or the distinction stops carrying any information at all.
+      mockExecute.mockImplementation((request: { method?: string }) =>
+        request.method === 'POST'
+          ? Promise.resolve({ fulfilment: { fulfilled: 2, failed: 0, complete: true } })
+          : Promise.resolve([payment()])
+      );
+      renderWithProviders(<OfflinePaymentsPage />);
+
+      await userEvent.click(await screen.findByRole('button', { name: /Mark received/i }));
+
+      expect((await screen.findByRole('alert')).className).toMatch(/standardSuccess/);
     });
 
     it('reports a refusal from the server', async () => {
@@ -228,4 +251,82 @@ describe('OfflinePaymentsPage', () => {
 
     expect(await screen.findByText(/could not load offline payments/)).toBeInTheDocument();
   });
+
+  describe('reads the list once', () => {
+    /*
+     * This page shipped with an unbounded request loop, and none of the tests
+     * above saw it — because the shell test double returns a stable `t` from
+     * module scope, while the real hook built a fresh one on every render. The
+     * mock was more correct than production, so the suite stayed green while a
+     * browser issued requests until the API answered 429 and Chrome ran out of
+     * sockets with ERR_INSUFFICIENT_RESOURCES.
+     *
+     * The hook is fixed and orgadmin-shell guards it directly. This guards the
+     * page from the other side: even handed the churning `t` that production
+     * actually had, the loader must not be rebuilt, because it must not name
+     * `t` at all.
+     */
+    it('does not refetch when the translation function churns', async () => {
+      const shell = await import('../../../test/orgadminShellMock');
+      const stable = shell.useTranslation();
+
+      // Exactly the old defect: a new `t` closure per render.
+      const churning = vi
+        .spyOn(shell, 'useTranslation')
+        .mockImplementation(() => ({
+          ...stable,
+          t: (key: string, options?: Record<string, unknown>) => stable.t(key, options),
+        }));
+
+      const { rerender } = renderWithProviders(<OfflinePaymentsPage />);
+      rerender(<OfflinePaymentsPage />);
+      rerender(<OfflinePaymentsPage />);
+      rerender(<OfflinePaymentsPage />);
+
+      /*
+       * Settle first, so a loop has every chance to fire — the re-entrant
+       * fetches were queued rather than synchronous, so an immediate count
+       * would read 1 even against the broken version.
+       */
+      await waitFor(() => expect(mockExecute).toHaveBeenCalled());
+      await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+      expect(
+        mockExecute.mock.calls.length,
+        'the list was re-read on render — `load` is being rebuilt, so something unstable is in its dependency array'
+      ).toBe(1);
+      expect(screen.getByText('Sam Rivers')).toBeInTheDocument();
+
+      churning.mockRestore();
+    });
+  });
+
+  describe('the way useApi actually reports failure', () => {
+    /*
+     * `execute` returns null on failure; it does not throw. The test above
+     * rejects, which is something a browser never does — so the page's `catch`
+     * was passing tests while a real failure fell through to
+     * `Array.isArray(null)` and rendered "Nothing is waiting on an offline
+     * payment". That tells a club there is no money to chase at the exact
+     * moment nobody could ask.
+     */
+    it('does not report an outage as an empty list', async () => {
+      mockExecute.mockImplementation(async (request: { onError?: (m: string) => void }) => {
+        request.onError?.('Request failed with status code 500');
+        return null;
+      });
+      renderWithProviders(<OfflinePaymentsPage />);
+
+      expect(await screen.findByText(/could not load offline payments/)).toBeInTheDocument();
+      expect(screen.queryByText(/Nothing is waiting/)).not.toBeInTheDocument();
+    });
+
+    it('treats a bare null as a failure too', async () => {
+      mockExecute.mockResolvedValue(null);
+      renderWithProviders(<OfflinePaymentsPage />);
+
+      expect(await screen.findByText(/could not load offline payments/)).toBeInTheDocument();
+    });
+  });
+
 });

@@ -107,7 +107,8 @@ email-notifications         entry-discounts         entry-restrictions
 event-document-management   event-management        event-ticketing
 event-types                 membership-discounts    membership-document-management
 memberships                 merchandise             merchandise-discounts
-multi-area-discounts        payment-processing      pcuk-integration
+multi-area-discounts        organisation-level-members
+payment-processing          pcuk-integration
 public-search               registration-discounts  registration-document-management
 registrations               reporting               sms-notifications
 venues

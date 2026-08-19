@@ -1,19 +1,29 @@
 /**
- * Lodgements Page
- * 
- * Displays lodgement history with breakdown by payment method
+ * Lodgements — money that actually reached the club's bank account.
+ *
+ * This replaces a screen of the same name that summed our own `payments` table
+ * by day and payment method. That is what the club *charged*; it is not what
+ * arrived. The two differ by fees, by refunds, by Stripe's payout schedule, and
+ * by the plain fact that a card payment on Monday is in nobody's bank on
+ * Monday. A treasurer reconciling against a bank statement needs the second
+ * number, and had no way to see it.
+ *
+ * Every figure here comes from the club's own Stripe account rather than from
+ * our database, so it agrees with the statement by construction.
+ *
+ * See docs/LODGEMENTS.md.
  */
 
-import React, { useState, useEffect } from 'react';
-import { useCurrency } from '../../hooks/useCurrency';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   Box,
+  Button,
   Card,
   CardContent,
-  Grid,
-  IconButton,
-  Paper,
+  Chip,
+  CircularProgress,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -22,223 +32,270 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import {
-  ArrowBack as BackIcon,
-} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
+import { useCurrency } from '../../hooks/useCurrency';
+import { useTranslation, useLocale, formatDate } from '@aws-web-framework/orgadmin-shell';
 
-interface Lodgement {
+export interface Lodgement {
   id: string;
-  date: string;
-  totalAmount: number;
-  cardAmount: number;
-  chequeAmount: number;
-  offlineAmount: number;
-  transactionCount: number;
-  status: 'pending' | 'completed';
+  arrivalDate: string;
+  amount: number;
+  currency: string;
+  status: 'paid' | 'pending' | 'in_transit' | 'canceled' | 'failed';
+  failureMessage: string | null;
+  destination: string | null;
 }
 
-interface LodgementSummary {
-  totalLodged: number;
-  totalCard: number;
-  totalCheque: number;
-  totalOffline: number;
-  lodgementCount: number;
+interface LodgementPage {
+  lodgements: Lodgement[];
+  nextCursor: string | null;
+  notYetPaidOut: { amount: number; currency: string } | null;
 }
+
+/**
+ * Colour carries the same meaning it does everywhere else in the product: green
+ * for done, amber for in flight, red for something a club must act on.
+ */
+const STATUS_COLOUR: Record<Lodgement['status'], 'success' | 'warning' | 'error' | 'default'> = {
+  paid: 'success',
+  pending: 'warning',
+  in_transit: 'warning',
+  canceled: 'default',
+  failed: 'error',
+};
 
 const LodgementsPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
-  const { format: formatMoney } = useCurrency();
   const { locale } = useLocale();
-  
-  const [lodgements, setLodgements] = useState<Lodgement[]>([]);
-  const [summary, setSummary] = useState<LodgementSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { format: formatMoney } = useCurrency();
 
-  useEffect(() => {
-    loadLodgements();
+  const [lodgements, setLodgements] = useState<Lodgement[]>([]);
+  const [notYetPaidOut, setNotYetPaidOut] = useState<LodgementPage['notYetPaidOut']>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  /**
+   * Two problems that are not "loading failed": never connected, and connected
+   * but no longer reachable. Both are configuration with a remedy the
+   * administrator can act on, and both send them to the same place.
+   */
+  const [connection, setConnection] = useState<'none' | 'invalid' | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  /**
+   * What a failure means, decided in one place.
+   *
+   * A connection problem is not an error to report as one: it has a cause the
+   * administrator can fix and a place to go and fix it. Matched on the message
+   * because that is all `useApi` passes on — the codes the backend sets
+   * (`STRIPE_ACCESS_REVOKED`) do not survive the trip — so the wording is
+   * asserted on both sides of the wire.
+   *
+   * Flags rather than messages, so the loader below need not name `t`. Naming
+   * it would rebuild the loader on every render and refetch without end.
+   */
+  const classify = useCallback((message: string) => {
+    if (/not connected to Stripe/i.test(message)) setConnection('none');
+    else if (/no longer valid/i.test(message)) setConnection('invalid');
+    else setFailed(true);
   }, []);
 
-  const loadLodgements = async () => {
-    try {
-      setLoading(true);
-      const response = await execute({
-        method: 'GET',
-        url: '/api/orgadmin/payments/lodgements',
-      });
-      
-      setLodgements(response.lodgements || []);
-      
-      // Calculate summary
-      const totalLodged = response.lodgements.reduce((sum: number, l: Lodgement) => sum + l.totalAmount, 0);
-      const totalCard = response.lodgements.reduce((sum: number, l: Lodgement) => sum + l.cardAmount, 0);
-      const totalCheque = response.lodgements.reduce((sum: number, l: Lodgement) => sum + l.chequeAmount, 0);
-      const totalOffline = response.lodgements.reduce((sum: number, l: Lodgement) => sum + l.offlineAmount, 0);
-      
-      setSummary({
-        totalLodged,
-        totalCard,
-        totalCheque,
-        totalOffline,
-        lodgementCount: response.lodgements.length,
-      });
-    } catch (error) {
-      console.error('Failed to load lodgements:', error);
-      setLodgements([]);
-      setSummary(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = useCallback(
+    async (after: string | null) => {
+      after ? setLoadingMore(true) : setLoading(true);
+      setFailed(false);
+      setConnection(null);
 
-  const handleBack = () => {
-    navigate('/payments');
-  };
+      /*
+       * `onError`, not `catch`.
+       *
+       * `useApi.execute` **returns null** when a request fails; it does not
+       * throw. A `try/catch` around it is dead code, and the null then flows
+       * into `response?.lodgements ?? []` and renders as "No lodgements yet" —
+       * an outage reported to a club as *"no money has reached your bank"*.
+       * Which is the single most alarming thing this screen could say, and it
+       * would be false.
+       *
+       * `onError` is the hook's own answer to this and hands over the message
+       * at the moment of failure.
+       */
+      let failure: string | null = null;
+
+      try {
+        const response: LodgementPage | null = await execute({
+          method: 'GET',
+          url: `/api/orgadmin/organisation/payments/lodgements${after ? `?cursor=${after}` : ''}`,
+          onError: (message: string) => {
+            failure = message;
+          },
+        });
+
+        if (failure !== null || !response) {
+          classify(failure ?? '');
+          return;
+        }
+
+        setLodgements((current) =>
+          after ? [...current, ...(response.lodgements ?? [])] : response.lodgements ?? []
+        );
+        setNotYetPaidOut(response.notYetPaidOut ?? null);
+        setCursor(response.nextCursor ?? null);
+      } catch (error) {
+        // Both routes reach the same judgement. `execute` returning null is what
+        // happens in a browser; a rejection is what a test double does — and a
+        // failure must not mean different things depending on which it was.
+        classify(error instanceof Error ? error.message : '');
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [execute, classify]
+  );
+
+  useEffect(() => {
+    void load(null);
+  }, [load]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+        <CircularProgress aria-label={t('common.loading')} />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <IconButton onClick={handleBack}>
-          <BackIcon />
-        </IconButton>
-        <Typography variant="h4">{t('payments.lodgements.title')}</Typography>
-      </Box>
+      <Typography variant="h4" gutterBottom>
+        {t('payments.lodgements.title')}
+      </Typography>
+      <Typography color="text.secondary" sx={{ mb: 3 }}>
+        {t('payments.lodgements.subtitle')}
+      </Typography>
 
-      {summary && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  {t('payments.lodgements.totalLodged')}
-                </Typography>
-                <Typography variant="h5" color="primary">
-                  {formatMoney(summary.totalLodged)}
-                </Typography>
-                <Typography variant="caption" color="textSecondary">
-                  {t('payments.lodgements.lodgementsCount', { count: summary.lodgementCount })}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  {t('payments.lodgements.cardPayments')}
-                </Typography>
-                <Typography variant="h5">
-                  {formatMoney(summary.totalCard)}
-                </Typography>
-                <Typography variant="caption" color="textSecondary">
-                  {summary.totalLodged > 0 
-                    ? t('payments.lodgements.percentOfTotal', { percent: ((summary.totalCard / summary.totalLodged) * 100).toFixed(1) })
-                    : t('payments.lodgements.percentOfTotal', { percent: '0' })}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  {t('payments.lodgements.chequePayments')}
-                </Typography>
-                <Typography variant="h5">
-                  {formatMoney(summary.totalCheque)}
-                </Typography>
-                <Typography variant="caption" color="textSecondary">
-                  {summary.totalLodged > 0 
-                    ? t('payments.lodgements.percentOfTotal', { percent: ((summary.totalCheque / summary.totalLodged) * 100).toFixed(1) })
-                    : t('payments.lodgements.percentOfTotal', { percent: '0' })}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  {t('payments.lodgements.offlinePayments')}
-                </Typography>
-                <Typography variant="h5">
-                  {formatMoney(summary.totalOffline)}
-                </Typography>
-                <Typography variant="caption" color="textSecondary">
-                  {summary.totalLodged > 0 
-                    ? t('payments.lodgements.percentOfTotal', { percent: ((summary.totalOffline / summary.totalLodged) * 100).toFixed(1) })
-                    : t('payments.lodgements.percentOfTotal', { percent: '0' })}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+      {failed && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t('payments.lodgements.loadError')}
+        </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t('payments.table.date')}</TableCell>
-              <TableCell align="right">{t('payments.table.totalAmount')}</TableCell>
-              <TableCell align="right">{t('payments.table.card')}</TableCell>
-              <TableCell align="right">{t('payments.table.cheque')}</TableCell>
-              <TableCell align="right">{t('payments.table.offline')}</TableCell>
-              <TableCell align="right">{t('payments.table.transactions')}</TableCell>
-              <TableCell>{t('payments.table.status')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  {t('payments.loadingLodgements')}
-                </TableCell>
-              </TableRow>
-            ) : lodgements.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  {t('payments.noLodgementsFound')}
-                </TableCell>
-              </TableRow>
-            ) : (
-              lodgements.map((lodgement) => (
-                <TableRow key={lodgement.id} hover>
-                  <TableCell>{formatDate(new Date(lodgement.date), 'dd MMM yyyy', locale)}</TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" fontWeight="medium">
-                      {formatMoney(lodgement.totalAmount)}
+      {connection ? (
+        <Alert
+          severity={connection === 'invalid' ? 'warning' : 'info'}
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate('/settings?tab=payments')}>
+              {t('payments.lodgements.goToSettings')}
+            </Button>
+          }
+        >
+          {t(
+            connection === 'invalid'
+              ? 'payments.lodgements.connectionInvalid'
+              : 'payments.lodgements.notConnected'
+          )}
+        </Alert>
+      ) : (
+        <>
+          {/*
+            A card, never a row. This money has no date and has not moved; a row
+            in the table would be a lodgement that has not happened.
+          */}
+          {notYetPaidOut && notYetPaidOut.amount > 0 && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  spacing={1}
+                >
+                  <Box>
+                    <Typography variant="subtitle1">
+                      {t('payments.lodgements.notYetPaidOut')}
                     </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatMoney(lodgement.cardAmount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatMoney(lodgement.chequeAmount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {formatMoney(lodgement.offlineAmount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {lodgement.transactionCount}
-                  </TableCell>
-                  <TableCell sx={{ textTransform: 'capitalize' }}>
-                    {t(`common.status.${lodgement.status}`)}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('payments.lodgements.notYetPaidOutHint')}
+                    </Typography>
+                  </Box>
+                  <Typography variant="h5">{formatMoney(notYetPaidOut.amount / 100)}</Typography>
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
+
+          {lodgements.length === 0 && !failed ? (
+            <Alert severity="info">{t('payments.lodgements.empty')}</Alert>
+          ) : (
+            <>
+              {/* Scrolls within itself; the page never scrolls sideways. */}
+              <TableContainer component={Card} sx={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('payments.lodgements.columnDate')}</TableCell>
+                      <TableCell align="right">{t('payments.lodgements.columnAmount')}</TableCell>
+                      <TableCell>{t('payments.lodgements.columnStatus')}</TableCell>
+                      <TableCell>{t('payments.lodgements.columnAccount')}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {lodgements.map((lodgement) => (
+                      <TableRow
+                        key={lodgement.id}
+                        hover
+                        onClick={() => navigate(`/payments/lodgements/${lodgement.id}`)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <TableCell>
+                          {formatDate(lodgement.arrivalDate, 'PP', locale)}
+                          {/*
+                            The reason a club opened this screen at all. Kept on
+                            the row rather than behind the drill-down: someone
+                            chasing missing money should not have to click to
+                            find out it failed.
+                          */}
+                          {lodgement.failureMessage && (
+                            <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
+                              {lodgement.failureMessage}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">{formatMoney(lodgement.amount / 100)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            color={STATUS_COLOUR[lodgement.status] ?? 'default'}
+                            label={t(`payments.lodgements.status.${lodgement.status}`)}
+                          />
+                        </TableCell>
+                        <TableCell>{lodgement.destination ?? '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/*
+                Stripe gives a cursor and no total, so there is no page count to
+                show and nothing honest to put on a paginator.
+              */}
+              {cursor && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Button onClick={() => void load(cursor)} disabled={loadingMore}>
+                    {loadingMore
+                      ? t('common.loading')
+                      : t('payments.lodgements.showMore')}
+                  </Button>
+                </Box>
+              )}
+            </>
+          )}
+        </>
+      )}
     </Box>
   );
 };

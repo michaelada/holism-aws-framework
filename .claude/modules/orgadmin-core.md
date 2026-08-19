@@ -74,6 +74,30 @@ await execute({ method: 'GET', url: '/api/orgadmin/events', retryCount: 3 });
   `onSuccess`, `onError`, `retryCount` (default 2), `retryDelay` (default 1000).
 - Returns loading/error state alongside the resolved data.
 
+### ⚠️ `execute` resolves to `null` on failure — it does not throw
+
+Probably the most misleading thing in this package. **Every `try/catch` wrapped around
+`await execute(...)` is dead code in a browser**; a rejection only ever happens under a test double.
+A page relying on `catch` therefore renders its **empty state** for a failed request — which on a
+money screen means telling a club there is nothing to chase, or that no money has reached its bank.
+Both were live defects, in `OfflinePaymentsPage` and `LodgementsPage`.
+
+Use the `onError` callback, and suppress the empty state when a load has failed:
+
+```ts
+let errored = false;
+const response = await execute({ method: 'GET', url, onError: () => { errored = true; } });
+if (errored || response === null) { setLoadFailed(true); return; }
+```
+
+Showing an error *and* an empty state together is worse than either alone: the reassuring one is
+the one that gets believed.
+
+No suite catches a regression here, because every mock rejects. A test must reproduce the real
+contract — resolve `null` **and** call `onError`. `LodgementsPage.test.tsx` and
+`OfflinePaymentsPage.test.tsx` both do; the rest of the package still asserts against a rejection
+that production never produces.
+
 **Testing note:** `execute` is a new function identity on each render. Components typically wrap
 loaders in `useCallback([…, execute])` and call them from a `useEffect`, so a test mock that returns
 a fresh `execute` (or a fresh `organisation` object) each render causes an infinite reload loop and

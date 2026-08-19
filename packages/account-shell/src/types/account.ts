@@ -223,6 +223,10 @@ export type UnavailableReason =
   | 'event-full'
   | 'activity-full'
   | 'already-entered'
+  /** Open to the club's members, and this login holds no active membership. */
+  | 'members-only'
+  /** Members-only, and every membership this login holds is already entered. */
+  | 'members-all-entered'
   | 'not-open-for-applications'
   | 'already-a-member'
   | 'not-on-sale'
@@ -251,6 +255,25 @@ export interface CatalogueActivity {
   termsAndConditions: string | null;
   available: boolean;
   unavailableReason: UnavailableReason | null;
+  /**
+   * Restricted to the club's members.
+   *
+   * Sent even when the caller is eligible, because availability alone cannot
+   * distinguish "open to everyone" from "open to you" — and the entry form
+   * needs the difference to know whether to ask which member.
+   */
+  membersOnly: boolean;
+  /** The caller's own active memberships. Empty unless `membersOnly`. */
+  eligibleMembers: EligibleMember[];
+}
+
+/** One membership the signed-in account holds, as an entry-form option. */
+export interface EligibleMember {
+  id: string;
+  name: string;
+  membershipTypeName: string;
+  membershipNumber: string;
+  alreadyEntered: boolean;
 }
 
 export interface CatalogueEvent {
@@ -363,6 +386,19 @@ export interface DashboardComingUp {
 }
 
 /** One teaser on the "what's on" row. */
+/** An event another branch is running, open across the organisation type. */
+export interface DashboardExternalEvent {
+  id: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+  entriesClosingDate: string | null;
+  organisationName: string;
+  organisationCode: string;
+  /** Decides whether the member is invited to open the club, or to join it. */
+  alreadyJoined: boolean;
+}
+
 export interface DashboardWhatsOn {
   kind: 'event' | 'merchandise' | 'calendar' | 'registration';
   id: string;
@@ -411,6 +447,16 @@ export interface AccountDashboard {
   comingUp: DashboardComingUp[] | null;
   cart: { itemCount: number; total: number; handlingFee: number; currency: string } | null;
   whatsOn: DashboardWhatsOn[];
+  /**
+   * Events run by other clubs of the same type, open to members across it.
+   *
+   * Separate from `whatsOn` because nothing here can be entered from this club:
+   * the member is being pointed at another organisation's app, and may have to
+   * join it first.
+   */
+  externalEvents: DashboardExternalEvent[];
+  /** What the federation is called — names the external-events section. */
+  organisationTypeName: string | null;
 }
 
 /** One line of a payment — what it bought, and whether that arrived. */

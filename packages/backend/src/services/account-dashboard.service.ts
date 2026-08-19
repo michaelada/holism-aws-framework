@@ -1,4 +1,5 @@
 import { logger } from '../config/logger';
+import { db } from '../database/pool';
 import { accountActivityService } from './account-activity.service';
 import { accountCatalogueService } from './account-catalogue.service';
 import { cartService } from './cart.service';
@@ -128,6 +129,52 @@ export interface AccountDashboard {
   comingUp: DashboardComingUp[] | null;
   cart: { itemCount: number; total: number; handlingFee: number; currency: string } | null;
   whatsOn: DashboardWhatsOn[];
+  /**
+   * Events run by *other* clubs of the same type that this club's members may
+   * enter. Empty for almost everyone; null is not used, because "none" and
+   * "not applicable" look the same on the screen and neither renders anything.
+   */
+  externalEvents: DashboardExternalEvent[];
+  /**
+   * What the federation is called — "Irish Pony Clubs".
+   *
+   * Only the external-events section names it, so it is null whenever that
+   * section is empty rather than being looked up for every dashboard that will
+   * never show it. It is the *caller's* organisation type, which is the same
+   * type every external event belongs to: that equality is the join condition,
+   * not a coincidence.
+   */
+  organisationTypeName: string | null;
+}
+
+/**
+ * An event another branch is running, open across the organisation type.
+ *
+ * Deliberately **not** folded into `whatsOn`. Everything in that list is
+ * something the member can act on here and now; this is something happening
+ * somewhere else, which they may first have to join a club to enter. Putting
+ * the two in one list would mean every consumer of `whatsOn` having to
+ * re-establish the difference, and the first one to forget would offer an
+ * "Enter" button that leads nowhere.
+ */
+export interface DashboardExternalEvent {
+  id: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+  entriesClosingDate: string | null;
+  /** The club running it — the whole point of the row. */
+  organisationName: string;
+  /** Its account-app code, for the link that takes the member there. */
+  organisationCode: string;
+  /**
+   * Whether this person already has an account with that club.
+   *
+   * Decides the wording: someone who has joined is being sent to an event,
+   * someone who has not is being asked to join first — and being asked to join
+   * something you already belong to reads as the software not knowing you.
+   */
+  alreadyJoined: boolean;
 }
 
 /** What a teaser without a date or an entry window fills those fields with. */
@@ -158,7 +205,7 @@ export class AccountDashboardService {
      * other, and a member on a phone waits for the slowest, not the sum. A
      * section the club has not enabled is not asked for at all.
      */
-    const [entries, bookings, memberships, cart, whatsOn] = await Promise.all([
+    const [entries, bookings, memberships, cart, whatsOn, externalEvents] = await Promise.all([
       has('event-management')
         ? accountActivityService.listEntries(organisationId, organisationUserId, today)
         : null,
@@ -175,6 +222,11 @@ export class AccountDashboardService {
         return null;
       }),
       this.buildWhatsOn(organisationId, organisationUserId, capabilities, today),
+      this.externalEvents(organisationId, organisationUserId, today).catch((error) => {
+        // A cross-club courtesy is not worth failing a dashboard over.
+        logger.warn('Dashboard could not read external events', { organisationId, error });
+        return { events: [], typeName: null };
+      }),
     ]);
 
     return {
@@ -190,6 +242,73 @@ export class AccountDashboardService {
             }
           : null,
       whatsOn,
+      externalEvents: externalEvents.events,
+      organisationTypeName: externalEvents.typeName,
+    };
+  }
+
+  /**
+   * Events other branches are running that this member may enter.
+   *
+   * Shown to *every* account user of a club whose type contains such an event —
+   * not only to members. Someone who has not joined is exactly who the link is
+   * for: it takes them to the organising club so they can. Whether they may
+   * ultimately enter is decided there, by that club's catalogue, against their
+   * memberships.
+   *
+   * Restricted to events with at least one publicly visible activity opened
+   * across the type. An event whose organiser has not opened anything to other
+   * branches is not other branches' business.
+   */
+  private async externalEvents(
+    organisationId: string,
+    organisationUserId: string,
+    today: Date
+  ): Promise<{ events: DashboardExternalEvent[]; typeName: string | null }> {
+    const result = await db.query(
+      `SELECT DISTINCT e.id, e.name, e.start_date, e.end_date, e.entries_closing_date,
+              o.display_name AS organisation_name, o.url_code,
+              ot.display_name AS organisation_type_name,
+              EXISTS (
+                SELECT 1
+                  FROM organization_users theirs
+                  JOIN organization_users mine ON mine.keycloak_user_id = theirs.keycloak_user_id
+                 WHERE mine.id = $2
+                   AND theirs.organization_id = o.id
+                   AND theirs.status = 'active'
+              ) AS already_joined
+         FROM events e
+         JOIN organizations o ON o.id = e.organisation_id
+         JOIN organization_types ot ON ot.id = o.organization_type_id
+         JOIN event_activities a ON a.event_id = e.id
+        WHERE o.organization_type_id = (
+                SELECT organization_type_id FROM organizations WHERE id = $1
+              )
+          AND o.id <> $1
+          AND o.status = 'active'
+          AND e.status = 'published'
+          AND e.deleted = FALSE
+          AND (e.end_date IS NULL OR e.end_date >= $3)
+          AND a.entry_eligibility = 'org-type-members'
+          AND a.show_publicly = TRUE
+        ORDER BY e.start_date ASC NULLS LAST`,
+      [organisationId, organisationUserId, today]
+    );
+
+    return {
+      typeName: result.rows[0]?.organisation_type_name ?? null,
+      events: result.rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      startDate: row.start_date ? new Date(row.start_date).toISOString() : null,
+      endDate: row.end_date ? new Date(row.end_date).toISOString() : null,
+      entriesClosingDate: row.entries_closing_date
+        ? new Date(row.entries_closing_date).toISOString()
+        : null,
+      organisationName: row.organisation_name,
+      organisationCode: row.url_code,
+      alreadyJoined: Boolean(row.already_joined),
+      })),
     };
   }
 

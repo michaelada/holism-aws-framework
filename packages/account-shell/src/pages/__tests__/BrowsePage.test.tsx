@@ -92,6 +92,20 @@ const render = (section: 'events' | 'memberships' = 'events') =>
     path: '/:orgCode/browse/:section',
   });
 
+
+/**
+ * Open an event so its activities are reachable.
+ *
+ * Events start collapsed — a club with eighteen of them is a wall otherwise —
+ * so a test that wants an activity has to do what a member does and open the
+ * event first. Before this the accordions defaulted open and the step was
+ * invisible.
+ */
+const openFirstEvent = async (user: ReturnType<typeof userEvent.setup>) => {
+  const [summary] = await screen.findAllByRole('button', { expanded: false });
+  await user.click(summary);
+};
+
 describe('BrowsePage (D1/D4)', () => {
   beforeEach(() => {
     mockExecute.mockReset();
@@ -110,6 +124,7 @@ describe('BrowsePage (D1/D4)', () => {
     const user = userEvent.setup();
     render();
 
+    await openFirstEvent(user);
     await user.click(await screen.findByRole('button', { name: 'Add to basket' }));
 
     await waitFor(() =>
@@ -132,6 +147,7 @@ describe('BrowsePage (D1/D4)', () => {
 
     await waitFor(() => expect(screen.getByText('Summer Regatta')).toBeInTheDocument());
     const before = mockExecute.mock.calls.length;
+    await openFirstEvent(user);
     await user.click(screen.getByRole('button', { name: 'Add to basket' }));
 
     await waitFor(() => expect(mockExecute.mock.calls.length).toBeGreaterThan(before + 1));
@@ -319,6 +335,7 @@ describe('BrowsePage (D1/D4)', () => {
     ]);
     render();
 
+    await openFirstEvent(user);
     await user.click(await screen.findByRole('button', { name: 'Add to basket' }));
 
     const posts = mockExecute.mock.calls.filter((call) => call[0].method === 'POST');
@@ -331,6 +348,7 @@ describe('BrowsePage (D1/D4)', () => {
     respond([event({ activities: [activity({ applicationFormId: 'form-1' })] })]);
     render();
 
+    await openFirstEvent(user);
     await user.click(await screen.findByRole('button', { name: 'Add to basket' }));
 
     // Nothing has been added yet — the form comes first, and it is now a page
@@ -346,6 +364,7 @@ describe('BrowsePage (D1/D4)', () => {
     respond([event({ activities: [activity({ applicationFormId: null })] })]);
     render();
 
+    await openFirstEvent(user);
     await user.click(await screen.findByRole('button', { name: 'Add to basket' }));
 
     await waitFor(() =>
@@ -404,4 +423,62 @@ describe('BrowsePage (D1/D4)', () => {
 
     expect(await screen.findByText('We could not load what is available.')).toBeInTheDocument();
   });
+
+  /**
+   * Events start closed.
+   *
+   * Every enterable event used to open by default. Fine for a club with three;
+   * unreadable for one with eighteen, where the list becomes a wall of
+   * activities and the *dates* — the thing an events list is scanned for — end
+   * up screenfuls apart. Collapsed, the page is a programme.
+   */
+  describe('collapsing', () => {
+    it('opens with every event closed', async () => {
+      render();
+      await screen.findByText('Summer Regatta');
+
+      expect(screen.queryByRole('button', { name: 'Add to basket' })).not.toBeInTheDocument();
+      expect(screen.getAllByRole('button', { expanded: false }).length).toBeGreaterThan(0);
+    });
+
+    it('opens one when it is clicked, and closes it again', async () => {
+      const user = userEvent.setup();
+      render();
+      await screen.findByText('Summer Regatta');
+
+      await openFirstEvent(user);
+      expect(await screen.findByRole('button', { name: 'Add to basket' })).toBeInTheDocument();
+
+      const [summary] = screen.getAllByRole('button', { expanded: true });
+      await user.click(summary);
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Add to basket' })).not.toBeInTheDocument()
+      );
+    });
+
+    it('offers nothing to expand when there is only one event', async () => {
+      // A control that opens "all" of one thing is the accordion it sits above.
+      render();
+      await screen.findByText('Summer Regatta');
+
+      expect(screen.queryByRole('button', { name: /Expand all/i })).not.toBeInTheDocument();
+    });
+
+    it('offers to open them all, then to close them all', async () => {
+      const user = userEvent.setup();
+      respond([event(), event({ id: 'event-2', name: 'Autumn Gallop' })]);
+      render();
+      await screen.findByText('Autumn Gallop');
+
+      await user.click(screen.getByRole('button', { name: /Expand all/i }));
+      expect((await screen.findAllByRole('button', { name: 'Add to basket' })).length).toBe(2);
+
+      // The control now offers the opposite, rather than repeating itself.
+      await user.click(await screen.findByRole('button', { name: /Collapse all/i }));
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Add to basket' })).not.toBeInTheDocument()
+      );
+    });
+  });
+
 });

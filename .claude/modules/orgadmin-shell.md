@@ -15,7 +15,7 @@ src/
   main.tsx, App.tsx      Bootstrap; ALL_MODULES registry; auth/i18n gating; route composition
   components/            Layout, ModuleLoader, dashboard cards, help drawer, onboarding dialogs
   context/               Capability, Locale, Organisation, Onboarding providers
-  hooks/                 useAuth, useTranslation, usePageHelp
+  hooks/                 useAuth, useTranslation, usePageHelp   ← see the note on `t` below
   pages/                 DashboardPage
   i18n/config.ts         i18next initialisation
   locales/<locale>/      translation.json × 6 locales  ← all org-admin strings live here
@@ -121,6 +121,16 @@ Rules:
 - Edit surgically — do not reformat or re-serialise the whole file.
 - `__tests__/i18n` and the modules' own translation tests check key usage; one property-based
   translation test is known to be flaky because it generates keys containing i18next separators.
+
+### `useTranslation` returns stable references — keep it that way
+
+`t`, `i18n` and the result object keep their identity between renders, changing only when the
+language does, so `t` is safe to name in a `useCallback`/`useEffect` dependency array. That is not a
+micro-optimisation: the wrapper used to rebuild `t` on every render, and a page that wrote the
+obvious `useCallback(load, [execute, t])` fetched in an unbounded loop until the API answered 429.
+Guarded by `hooks/__tests__/useTranslation.stability.test.tsx`. Note that the test doubles in the
+other packages return a stable `t` from module scope, so a regression here will **not** show up in
+their suites — it only shows up in a browser.
 
 ## Vite configuration worth knowing
 

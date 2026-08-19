@@ -19,6 +19,8 @@ import {
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandAllIcon from '@mui/icons-material/UnfoldMore';
+import CollapseAllIcon from '@mui/icons-material/UnfoldLess';
 import {
   EventDateTile,
   formatCurrency,
@@ -76,6 +78,28 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
   const [adding, setAdding] = useState<string | null>(null);
   const [added, setAdded] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  /**
+   * Which events are open. Empty means all collapsed, which is how the page
+   * starts.
+   *
+   * Every enterable event used to open by default, which is fine for a club
+   * with three events and unreadable for one with eighteen: the list becomes a
+   * wall of activities and the *dates* — the thing an events list is actually
+   * scanned for — are pushed apart by screenfuls. Collapsed, the page is a
+   * programme; expanded, it is a catalogue.
+   */
+  const [openEvents, setOpenEvents] = useState<Set<string>>(new Set());
+
+  /** Every event open — decides whether the control offers to expand or collapse. */
+  const allOpen = events.length > 0 && events.every((event) => openEvents.has(event.id));
+
+  const toggleEvent = useCallback((id: string) => {
+    setOpenEvents((current) => {
+      const next = new Set(current);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
 
   const tab: TabKey = section;
 
@@ -201,8 +225,30 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
         events.length === 0 ? (
           !failed && <Typography sx={{ py: 4 }}>{t('browse.noEvents')}</Typography>
         ) : (
-          events.map((event) => (
-            <Accordion key={event.id} defaultExpanded={event.available}>
+          <>
+            {/*
+              Only worth offering when there is more than one thing to open, and
+              placed above the list so it is found before the scrolling starts.
+            */}
+            {events.length > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                <Button
+                  size="small"
+                  startIcon={allOpen ? <CollapseAllIcon /> : <ExpandAllIcon />}
+                  onClick={() =>
+                    setOpenEvents(allOpen ? new Set() : new Set(events.map((e) => e.id)))
+                  }
+                >
+                  {t(allOpen ? 'browse.collapseAll' : 'browse.expandAll')}
+                </Button>
+              </Box>
+            )}
+            {events.map((event) => (
+            <Accordion
+              key={event.id}
+              expanded={openEvents.has(event.id)}
+              onChange={() => toggleEvent(event.id)}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 {/*
                   The date leads: an events list is scanned for *when*, and a
@@ -289,7 +335,8 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
                 )}
               </AccordionDetails>
             </Accordion>
-          ))
+            ))}
+          </>
         )
       ) : types.length === 0 ? (
         !failed && <Typography sx={{ py: 4 }}>{t('browse.noMembershipTypes')}</Typography>

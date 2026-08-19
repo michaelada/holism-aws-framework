@@ -54,6 +54,8 @@ const activity = (over: Record<string, unknown> = {}) => ({
   termsAndConditions: null,
   available: true,
   unavailableReason: null,
+  membersOnly: false,
+  eligibleMembers: [],
   ...over,
 });
 
@@ -565,4 +567,135 @@ describe('EntryFormPage', () => {
 
     expect(await screen.findByText(/no longer available/i)).toBeInTheDocument();
   });
+
+  /**
+   * Members-only activities.
+   *
+   * The interesting cases are all about *how many* memberships the login holds,
+   * because a parent holding their children's is normal rather than
+   * exceptional. One is stated, several are asked, none is refused.
+   *
+   * See docs/MEMBERS_ONLY_ENTRIES.md.
+   */
+  describe('entering as a member', () => {
+    const member = (over: Record<string, unknown> = {}) => ({
+      id: 'mem-1',
+      name: 'Saoirse Byrne',
+      membershipTypeName: 'Junior Member',
+      membershipNumber: 'KHP-0241',
+      alreadyEntered: false,
+      ...over,
+    });
+
+    const membersOnly = (members: Array<Record<string, unknown>>) =>
+      activity({ membersOnly: true, eligibleMembers: members });
+
+    it('states who the entry is for when there is only one', async () => {
+      // No choice to make. A select with one option is a question with one
+      // answer, and a sentence reads faster than a dropdown nobody can change.
+      respond(membersOnly([member()]));
+      render();
+
+      expect(await screen.findByText(/This entry is for Saoirse Byrne/)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Who is this entry for/)).not.toBeInTheDocument();
+    });
+
+    it('asks which member when the login holds several', async () => {
+      respond(membersOnly([member(), member({ id: 'mem-2', name: 'Fionn Byrne' })]));
+      render();
+
+      expect(await screen.findByLabelText(/Who is this entry for/)).toBeInTheDocument();
+      expect(screen.queryByText(/This entry is for/)).not.toBeInTheDocument();
+    });
+
+    it('preselects nothing when there is a genuine choice', async () => {
+      /*
+       * A parent entering Fionn who gets Saoirse by default has been handed a
+       * wrong answer that looks like their own. An empty required field asks
+       * the question instead.
+       */
+      respond(membersOnly([member(), member({ id: 'mem-2', name: 'Fionn Byrne' })]));
+      render();
+
+      /*
+       * MUI renders a `Select` as a button plus a hidden input; the hidden
+       * input is what carries the value, and the visible element has no value
+       * at all — so this asserts on the button's own text rather than through
+       * `toHaveValue`.
+       */
+      const select = await screen.findByLabelText(/Who is this entry for/);
+
+      // Neither name is showing: nothing has been chosen for them.
+      expect(select).not.toHaveTextContent('Saoirse');
+      expect(select).not.toHaveTextContent('Fionn');
+
+      // And the consequence that matters — they cannot submit until they say.
+      expect(screen.getByRole('button', { name: /Add to basket/i })).toBeDisabled();
+    });
+
+    it('refuses to render for someone holding no membership', async () => {
+      /*
+       * Not reachable from the listing, but a link can be pasted and a
+       * membership can lapse between opening the list and opening the form.
+       */
+      respond(membersOnly([]));
+      render();
+
+      expect(await screen.findByText(/do not hold an active membership/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Add to basket/i })).not.toBeInTheDocument();
+    });
+
+    it('lists an already-entered member, disabled, rather than dropping them', async () => {
+      // A name simply missing reads as a bug; a disabled row answers the
+      // question the absence would raise.
+      respond(
+        membersOnly([
+          member({ alreadyEntered: true }),
+          member({ id: 'mem-2', name: 'Fionn Byrne' }),
+        ])
+      );
+      render();
+
+      fireEvent.mouseDown(await screen.findByLabelText(/Who is this entry for/));
+      const listbox = within(screen.getByRole('listbox'));
+
+      expect(listbox.getByText(/Saoirse Byrne — already entered/)).toBeInTheDocument();
+      expect(listbox.getByText(/Fionn Byrne/)).toBeInTheDocument();
+    });
+
+    it('sends the chosen member with the basket line', async () => {
+      // What carries the choice all the way to the entry record.
+      respond(membersOnly([member()]));
+      render();
+
+      await screen.findByText(/This entry is for Saoirse Byrne/);
+      await userEvent.click(screen.getByRole('button', { name: /Add to basket/i }));
+
+      await waitFor(() =>
+        expect(mockExecute).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: 'POST',
+            data: expect.objectContaining({
+              contextRef: expect.objectContaining({ memberId: 'mem-1' }),
+            }),
+          })
+        )
+      );
+    });
+
+    it('sends no member for an open activity', async () => {
+      respond(activity());
+      render();
+
+      await screen.findByText('Junior Single Sculls');
+      await userEvent.click(screen.getByRole('button', { name: /Add to basket/i }));
+
+      await waitFor(() => expect(mockExecute).toHaveBeenCalled());
+      const add = mockExecute.mock.calls
+        .map(([request]) => request)
+        .find((request: any) => request?.data?.contextRef?.activityId);
+      expect(add.data.contextRef).not.toHaveProperty('memberId');
+    });
+  });
+
 });

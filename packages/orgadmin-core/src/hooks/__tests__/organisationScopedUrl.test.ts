@@ -41,6 +41,46 @@ describe('organisationScopedUrl', () => {
     );
   });
 
+  describe('the current organisation’s own router', () => {
+    /*
+     * `/api/orgadmin/organisation/` — singular — is mounted once, bare. It is
+     * not one of the dual-mounted data routers, so scoping it produced
+     * `/api/orgadmin/organisations/<id>/organisation/payment-settings`, which
+     * matches nothing and answered 404.
+     *
+     * That was not a small blast radius: all six Settings tabs, the
+     * registrations screen and offline payments read from this router. Opening
+     * Payment Settings fired two requests and got two 404s, and the tab showed
+     * an error where a club's bank details belong. The rule was written for the
+     * data routers and quietly applied to a router that was never mounted that
+     * way.
+     */
+    it('does not scope it', () => {
+      expect(organisationScopedUrl('/api/orgadmin/organisation/payment-settings', ORG)).toBe(
+        '/api/orgadmin/organisation/payment-settings'
+      );
+      expect(organisationScopedUrl('/api/orgadmin/organisation/payments/offline', ORG)).toBe(
+        '/api/orgadmin/organisation/payments/offline'
+      );
+      expect(organisationScopedUrl('/api/orgadmin/organisation/stripe-connect', ORG)).toBe(
+        '/api/orgadmin/organisation/stripe-connect'
+      );
+    });
+
+    it('still scopes the plural collection, which is a different route', () => {
+      /*
+       * One character apart, and the exclusion must not swallow the other. The
+       * trailing slash on the singular prefix is what separates them.
+       */
+      expect(organisationScopedUrl('/api/orgadmin/organisations/org-999/events', ORG)).toBe(
+        '/api/orgadmin/organisations/org-999/events'
+      );
+      expect(organisationScopedUrl('/api/orgadmin/organisation-types', ORG)).toBe(
+        '/api/orgadmin/organisations/org-123/organisation-types'
+      );
+    });
+  });
+
   it('leaves anything outside /api/orgadmin alone', () => {
     expect(organisationScopedUrl('/api/admin/organizations', ORG)).toBe('/api/admin/organizations');
     expect(organisationScopedUrl('/api/user-preferences/onboarding', ORG)).toBe(

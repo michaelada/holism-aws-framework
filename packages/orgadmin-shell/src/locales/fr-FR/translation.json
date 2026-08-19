@@ -204,6 +204,15 @@
         "applicationFormRequired": "Chaque activité doit avoir un formulaire de candidature sélectionné"
       },
       "activity": {
+        "entriesOrgTypeMembers": "Inscriptions ouvertes aux membres (toutes organisations/sections)",
+        "entriesOrgTypeMembersHint": "Les membres de toute organisation du même type que la vôtre.",
+        "entriesOrgTypeMembersNote": "Cet événement sera affiché aux utilisateurs de toutes les autres organisations du même type, en indiquant qu’il est organisé par la vôtre.",
+        "whoCanEnter": "Qui peut s’inscrire",
+        "entriesOpenToAll": "Inscriptions ouvertes à tous",
+        "entriesOpenToAllHint": "Toute personne ayant un compte peut s’inscrire.",
+        "entriesMembersOnly": "Inscriptions réservées à nos membres",
+        "entriesMembersOnlyHint": "Uniquement les personnes ayant une adhésion active à ce club.",
+        "entriesMembersOnlyNote": "Les personnes sans adhésion active verront cette activité marquée « Réservé aux membres » et ne pourront pas s’inscrire.",
         "untitled": "Activité sans titre",
         "activityNumber": "Activité {{number}}",
         "name": "Nom de l'activité",
@@ -2467,6 +2476,56 @@
     }
   },
   "payments": {
+    "lodgements": {
+      "menu": "Versements",
+      "title": "Versements",
+      "subtitle": "Argent que Stripe a versé sur votre compte bancaire.",
+      "notYetPaidOut": "Pas encore versé",
+      "notYetPaidOutHint": "Encaissé mais pas encore programmé pour un versement.",
+      "columnDate": "Date",
+      "columnAmount": "Montant",
+      "columnStatus": "Statut",
+      "columnAccount": "Vers le compte",
+      "columnMember": "Membre",
+      "columnCharged": "Facturé",
+      "columnIntoLodgement": "Dans ce versement",
+      "status": {
+        "paid": "Versé",
+        "pending": "En attente",
+        "in_transit": "En cours",
+        "canceled": "Annulé",
+        "failed": "Échoué"
+      },
+      "showMore": "Afficher plus",
+      "empty": "Aucun versement pour l'instant. Ils apparaîtront ici dès que Stripe aura versé de l'argent sur votre compte.",
+      "notConnected": "Vous n'êtes pas encore connecté à Stripe, il n'y a donc aucun versement à afficher.",
+      "connectionInvalid": "La connexion Stripe de cette organisation n'est plus valide, les versements ne peuvent donc pas être affichés. Reconnectez-la pour les rétablir.",
+      "goToSettings": "Paramètres de paiement",
+      "loadError": "Impossible de charger vos versements.",
+      "detailTitle": "Versement · {{date}}",
+      "detailLoadError": "Impossible de charger ce versement.",
+      "backToList": "Versements",
+      "howThisAddsUp": "Le détail du calcul",
+      "summaryCharged": "Facturé aux membres ({{count}} lignes)",
+      "summaryFees": "Frais de gestion conservés par la plateforme",
+      "summaryRefunds": "Remboursements",
+      "summaryIntoBank": "Sur votre compte",
+      "stripeFeeNote": "Les frais de traitement de Stripe sont payés par la plateforme et ne sont pas déduits de votre versement.",
+      "paymentsIn": "Paiements dans ce versement",
+      "inTheBasket": "Dans le panier",
+      "chargedToMember": "Facturé au membre",
+      "platformFee": "Frais de gestion conservés par la plateforme",
+      "intoThisLodgement": "Dans ce versement",
+      "viewPayment": "Voir le paiement",
+      "lineRefund": "Remboursement",
+      "lineAdjustment": "Ajustement",
+      "lineUnknown": "Autre",
+      "lineUnmatched": "Ceci est arrivé via Stripe mais n'a aucun enregistrement correspondant ici.",
+      "expandLine": "Afficher le panier",
+      "collapseLine": "Masquer le panier",
+      "total": "Total"
+    },
+    "allMenu": "Tous les paiements",
     "offline": {
       "menu": "Paiements hors ligne",
       "title": "Paiements hors ligne",
@@ -2487,7 +2546,9 @@
       "recordFailed": "Nous n’avons pas pu enregistrer ce paiement.",
       "undo": "Annuler",
       "undone": "Le paiement de {{name}} est de nouveau en attente.",
-      "undoFailed": "Nous n’avons pas pu annuler cet enregistrement."
+      "undoFailed": "Nous n’avons pas pu annuler cet enregistrement.",
+      "receivedByOn": "Enregistré par {{name}} le {{date}}",
+      "receivedByUnknownOn": "Enregistré par un ancien administrateur le {{date}}"
     }
   },
   "venues": {

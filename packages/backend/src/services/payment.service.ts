@@ -46,17 +46,6 @@ export interface Refund {
 }
 
 /**
- * Lodgement summary interface
- */
-export interface Lodgement {
-  date: Date;
-  paymentMethod: string;
-  totalAmount: number;
-  transactionCount: number;
-  currency: string;
-}
-
-/**
  * DTO for requesting a refund
  */
 export interface RequestRefundDto {
@@ -392,7 +381,8 @@ export class PaymentService {
   async markOfflinePaymentReceived(
     organisationId: string,
     paymentId: string,
-    receivedBy: string
+    /** The **Keycloak** id of the administrator doing this, from the token. */
+    receivedByKeycloakUserId: string
   ): Promise<{ payment: Payment; fulfilment: FulfilmentOutcome }> {
     const existing = await db.query(
       `SELECT id, payment_status, offline_received_at
@@ -414,6 +404,27 @@ export class PaymentService {
     if (row.payment_status !== 'awaiting_offline' && !row.offline_received_at) {
       throw new ValidationError('That payment is not awaiting an offline settlement');
     }
+
+    /*
+     * `offline_received_by` references `organization_users(id)`, and the caller
+     * has a **Keycloak** id — a different identifier entirely. Writing the token's
+     * id straight in violated the foreign key, so recording a receipt failed with
+     * a 500 and the money could not be marked as arrived at all.
+     *
+     * Scoped to the organisation as well as the person: an administrator of
+     * several clubs has one `organization_users` row per club, and the receipt
+     * belongs to the club whose money it is.
+     */
+    const actor = await db.query(
+      `SELECT id
+         FROM organization_users
+        WHERE keycloak_user_id = $1
+          AND organization_id = $2::uuid
+          AND user_type = 'org-admin'
+        LIMIT 1`,
+      [receivedByKeycloakUserId, organisationId]
+    );
+    const receivedBy: string | null = actor.rows[0]?.id ?? null;
 
     await db.query(
       `UPDATE payments
@@ -499,61 +510,6 @@ export class PaymentService {
     logger.info('Offline payment receipt undone', { paymentId });
 
     return (await this.getPaymentById(paymentId))!;
-  }
-
-  /**
-   * Get lodgements (payment summaries) by organisation
-   */
-  async getLodgementsByOrganisation(
-    organisationId: string,
-    startDate?: Date,
-    endDate?: Date
-  ): Promise<Lodgement[]> {
-    try {
-      let query = `
-        SELECT 
-          DATE(payment_date) as date,
-          payment_method,
-          currency,
-          SUM(amount) as total_amount,
-          COUNT(*) as transaction_count
-        FROM payments
-        WHERE organisation_id = $1
-          AND payment_status = 'paid'
-      `;
-      const params: any[] = [organisationId];
-      let paramCount = 2;
-
-      if (startDate) {
-        query += ` AND payment_date >= $${paramCount}`;
-        params.push(startDate);
-        paramCount++;
-      }
-
-      if (endDate) {
-        query += ` AND payment_date <= $${paramCount}`;
-        params.push(endDate);
-        paramCount++;
-      }
-
-      query += `
-        GROUP BY DATE(payment_date), payment_method, currency
-        ORDER BY date DESC, payment_method
-      `;
-
-      const result = await db.query(query, params);
-
-      return result.rows.map(row => ({
-        date: row.date,
-        paymentMethod: row.payment_method,
-        totalAmount: parseFloat(row.total_amount),
-        transactionCount: parseInt(row.transaction_count, 10),
-        currency: row.currency,
-      }));
-    } catch (error) {
-      logger.error('Error getting lodgements by organisation:', error);
-      throw error;
-    }
   }
 }
 

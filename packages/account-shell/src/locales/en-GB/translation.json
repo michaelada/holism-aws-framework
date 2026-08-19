@@ -132,6 +132,11 @@
     "orders": "My shop orders"
   },
   "home": {
+    "externalEvents": "Events at other organisations",
+    "externalEventsHint": "Run by another organisation but open to all members of {{organisationType}}",
+    "externalEventBadge": "External event",
+    "externalEventOpen": "Go to {{organisation}}",
+    "externalEventJoin": "Join {{organisation}} to enter",
     "registrations": "Registrations",
     "viewAll": "View all",
     "upcomingEvents": "Upcoming events",
@@ -228,6 +233,8 @@
     "renewalNotOpen": "Renewals are not open yet."
   },
   "browse": {
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
     "loadError": "We could not load what is available.",
     "noEvents": "There are no events open at the moment.",
     "noMembershipTypes": "There are no memberships open at the moment.",
@@ -239,6 +246,9 @@
     "placesRemaining_one": "{{count}} place left",
     "placesRemaining_other": "{{count}} places left",
     "reason": {
+      "org-members-only": "Members of any branch only",
+      "members-only": "Members only",
+      "members-all-entered": "All your members are entered",
       "in-your-basket": "In your basket",
       "held-by-others": "Held by someone else",
       "unavailable": "Not available",
@@ -446,6 +456,14 @@
     "home": "Home"
   },
   "form": {
+    "membersOnly": {
+      "notAMember": "This activity is open to members of {{organisation}} only, and you do not hold an active membership.",
+      "viewMemberships": "View memberships",
+      "entryFor": "This entry is for {{name}}",
+      "whoIsThisFor": "Who is this entry for?",
+      "whoIsThisForHint": "You hold more than one membership. Choose the member you are entering.",
+      "optionAlreadyEntered": "{{name}} — already entered"
+    },
     "submit": "Save and add to basket",
     "saving": "Saving…",
     "loadFailed": "This entry form could not be loaded.",

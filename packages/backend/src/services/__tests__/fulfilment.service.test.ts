@@ -76,6 +76,12 @@ const respond = (lines: any[], overrides: Record<string, any> = {}) => {
           } as any)
       );
     }
+    if (text.includes('FROM members WHERE id')) {
+      return Promise.resolve(
+        overrides.memberRecord ??
+          ({ rows: [{ first_name: 'Saoirse', last_name: 'Byrne' }], rowCount: 1 } as any)
+      );
+    }
     if (text.includes('INSERT INTO event_entries')) {
       return Promise.resolve({ rows: [{ id: 'entry-1' }], rowCount: 1 } as any);
     }
@@ -784,6 +790,77 @@ describe('FulfilmentService', () => {
       expect(mockRegistration.createRegistration).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * Whose entry it is, when a login holds several memberships.
+   *
+   * A parent entering two children would otherwise produce two rows both
+   * reading "Aoife Byrne", and the club could not tell which child is in which
+   * class — which would make the whole member selector pointless.
+   *
+   * See docs/MEMBERS_ONLY_ENTRIES.md.
+   */
+  describe('entries made for a member', () => {
+    const memberLine = (memberId: string | null) =>
+      line({ context_ref: memberId ? { activityId: ACTIVITY, memberId } : { activityId: ACTIVITY } });
+
+    const insertArgs = () =>
+      mockDb.query.mock.calls.find((call) =>
+        String(call[0]).includes('INSERT INTO event_entries')
+      )?.[1] as any[];
+
+    it("puts the member's name on the entry, not the account holder's", async () => {
+      respond([memberLine('mem-1')]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(insertArgs()).toContain('Saoirse');
+      expect(insertArgs()).toContain('Byrne');
+      expect(insertArgs()).not.toContain('Sam');
+    });
+
+    it('records which membership it was made against', async () => {
+      // What lets the org admin's entry list show a membership number.
+      respond([memberLine('mem-1')]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(insertArgs()).toContain('mem-1');
+    });
+
+    it("keeps the account holder's email, which is where the club writes", async () => {
+      // A child's membership record may carry no address at all.
+      respond([memberLine('mem-1')]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(insertArgs()).toContain('sam@example.com');
+    });
+
+    it('leaves an open entry exactly as it was', async () => {
+      respond([memberLine(null)]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(insertArgs()).toContain('Sam');
+      expect(insertArgs()).toContain(null);
+    });
+
+    it('falls back to the account holder if the membership has since gone', async () => {
+      /*
+       * Not a failure. The money is taken and the entry must exist; a member
+       * record deleted between checkout and fulfilment is a reason to name the
+       * payer, not to fail a paid line.
+       */
+      respond([memberLine('mem-1')], { memberRecord: { rows: [], rowCount: 0 } });
+
+      const outcome = await service.fulfilPayment('pay-1');
+
+      expect(outcome.fulfilled).toBe(1);
+      expect(insertArgs()).toContain('Sam');
+    });
+  });
+
 });
 
 /**

@@ -475,6 +475,56 @@ router.get(
  *       404:
  *         description: Member not found
  */
+/**
+ * @openapi
+ * /api/orgadmin/members/exists:
+ *   get:
+ *     summary: Whether this organisation has any members at all
+ *     description: >
+ *       One boolean, for interface decisions that turn on whether a club has
+ *       started using memberships. The event activity form asks it before
+ *       offering "entries open to our members only" — a setting whose only
+ *       possible effect, in a club with nobody on file, is to lock everyone out
+ *       of the event.
+ *
+ *       Deliberately not a count and not a list: the caller does not need one,
+ *       and `EXISTS` stops at the first row where `COUNT(*)` scans them all.
+ *     tags: [OrgAdmin]
+ *     responses:
+ *       200:
+ *         description: '{ hasMembers: boolean }'
+ */
+router.get(
+  '/members/exists',
+  authenticateToken(),
+  byCurrentOrganisation(),
+  async (req: Request, res: Response) => {
+    try {
+      /*
+       * From the middleware, which resolves the organisation the administrator
+       * actually has open and verifies they belong to it. Not re-derived here:
+       * the older routes in this file each run their own
+       * `SELECT … LIMIT 1` with no ORDER BY, which returns an arbitrary club
+       * for an administrator who runs two.
+       */
+      const organisationId = (req as any).organisationId;
+      if (!organisationId) {
+        return res.status(403).json({ error: 'User is not an organization administrator' });
+      }
+
+      const result = await db.query(
+        `SELECT EXISTS (SELECT 1 FROM members WHERE organisation_id = $1) AS has_members`,
+        [organisationId]
+      );
+
+      return res.json({ hasMembers: Boolean(result.rows[0]?.has_members) });
+    } catch (error) {
+      logger.error('Error in GET /members/exists:', error);
+      return res.status(500).json({ error: 'Failed to check for members' });
+    }
+  }
+);
+
 router.get(
   '/members/:id',
   authenticateToken(),
