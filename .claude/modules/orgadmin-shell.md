@@ -60,6 +60,25 @@ hold rows in several organisations. `/auth/me` returns `organisations[]` alongsi
 `OrganisationSwitcher` renders in the AppBar and **shows a plain label rather than a menu when
 there is only one** — which falls out of the list's length, not a flag.
 
+**The rail is permanent, global, and grouped.** It renders on every route including the dashboard, in
+two groups: *Running the club* (everything with a `capability`) above *Setup* (everything without —
+the registry's `capability: undefined` is the marker for an always-on core area, so the split needs
+no extra metadata). The module you are inside expands to its `subMenuItems`; every other module stays
+a single collapsed row. Expansion follows the route rather than a toggle, so there is no state to
+restore after a reload. **A group with no visible members renders no heading at all** — a
+memberships-only club must look deliberate, not broken. Labels wrap rather than truncate: the longest
+module name across the six locales is Spanish at 30 characters, which cannot fit 248px on one line.
+
+Two landmarks exist by design — the rail (`aria-label` `navigation.sections`) and the breadcrumb
+(`navigation.breadcrumb`). Both are named, because two unnamed `nav`s would give a screen-reader user
+two indistinguishable entries in the landmarks list. `accessibility.test.tsx` asserts exactly this.
+
+**`main` carries `minWidth: 0`, and that is load-bearing.** It is a flex child, and a flex child's
+default `min-width: auto` will not shrink below its content — so a 997px table pushed the whole
+document to 1093px on a 390px phone rather than scrolling itself. Removing that property puts the
+horizontal scrollbar back on the page. Page header rows across 37 files carry `flexWrap: 'wrap'` for
+the same reason: without it the action buttons overflow instead of dropping below the title.
+
 **A switch is not a relabelling.** Capabilities belong to the organisation, so the navigation itself
 differs between two clubs. `switchOrganisation` re-fetches `/auth/me`, and `Layout` then navigates
 to the dashboard — half the time the open page is a module the other club does not have, and
@@ -134,5 +153,6 @@ modules were in that state (`docs/ONBOARDING_DISMISSAL_IGNORED.md`).
 | "Why does a dismissed help dialog keep coming back?" | The two module-id lists above; then the browser console for `Failed to save module intro preference` |
 | "Where is this label defined?" | `locales/en-GB/translation.json` |
 | "How does the sidebar get built?" | `components/Layout.tsx` + each module's `menuItem`/`subMenuItems` |
+| "Why is a module missing from the rail?" | Its capability is off, or it is the `dashboard` module — withheld on purpose; see the filter's comment |
 | "How does a page get an auth token?" | `useAuth` → `AuthTokenContext` → `useApi` in orgadmin-core |
 | "Why is the app stuck loading?" | The four guard conditions at the end of `App.tsx` |

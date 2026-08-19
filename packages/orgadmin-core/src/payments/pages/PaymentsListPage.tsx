@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -33,7 +34,7 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation, useLocale, useOnboarding, usePageHelp, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, useOnboarding, usePageHelp, formatDate } from '@aws-web-framework/orgadmin-shell';
 
 interface Payment {
   id: string;
@@ -50,6 +51,7 @@ const PaymentsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { locale } = useLocale();
   const { checkModuleVisit } = useOnboarding();
   
@@ -164,7 +166,7 @@ const PaymentsListPage: React.FC = () => {
       formatDate(new Date(payment.date), 'dd MMM yyyy', locale),
       payment.customerName,
       payment.customerEmail,
-      formatCurrency(payment.amount, 'GBP', locale),
+      formatMoney(payment.amount),
       t(`common.status.${payment.status}`),
       t(`payments.paymentTypes.${payment.type}`),
       payment.paymentMethod,
@@ -193,7 +195,11 @@ const PaymentsListPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
+        // Wraps rather than overflowing: a non-wrapping header row pushed
+        // page actions past the right edge of a phone, with nothing on
+        // screen to show the page had scrolled.
+        flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4">{t('payments.title')}</Typography>
         <Button
           variant="contained"
@@ -298,7 +304,7 @@ const PaymentsListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {formatCurrency(payment.amount, 'GBP', locale)}
+                      {formatMoney(payment.amount)}
                     </Typography>
                   </TableCell>
                   <TableCell>

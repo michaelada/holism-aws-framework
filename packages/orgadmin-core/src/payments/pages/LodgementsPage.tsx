@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -27,7 +28,6 @@ import {
 import { useApi } from '../../hooks/useApi';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
 
 interface Lodgement {
@@ -53,6 +53,7 @@ const LodgementsPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { locale } = useLocale();
   
   const [lodgements, setLodgements] = useState<Lodgement[]>([]);
@@ -117,7 +118,7 @@ const LodgementsPage: React.FC = () => {
                   {t('payments.lodgements.totalLodged')}
                 </Typography>
                 <Typography variant="h5" color="primary">
-                  {formatCurrency(summary.totalLodged, 'GBP', locale)}
+                  {formatMoney(summary.totalLodged)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {t('payments.lodgements.lodgementsCount', { count: summary.lodgementCount })}
@@ -133,7 +134,7 @@ const LodgementsPage: React.FC = () => {
                   {t('payments.lodgements.cardPayments')}
                 </Typography>
                 <Typography variant="h5">
-                  {formatCurrency(summary.totalCard, 'GBP', locale)}
+                  {formatMoney(summary.totalCard)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {summary.totalLodged > 0 
@@ -151,7 +152,7 @@ const LodgementsPage: React.FC = () => {
                   {t('payments.lodgements.chequePayments')}
                 </Typography>
                 <Typography variant="h5">
-                  {formatCurrency(summary.totalCheque, 'GBP', locale)}
+                  {formatMoney(summary.totalCheque)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {summary.totalLodged > 0 
@@ -169,7 +170,7 @@ const LodgementsPage: React.FC = () => {
                   {t('payments.lodgements.offlinePayments')}
                 </Typography>
                 <Typography variant="h5">
-                  {formatCurrency(summary.totalOffline, 'GBP', locale)}
+                  {formatMoney(summary.totalOffline)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   {summary.totalLodged > 0 
@@ -214,17 +215,17 @@ const LodgementsPage: React.FC = () => {
                   <TableCell>{formatDate(new Date(lodgement.date), 'dd MMM yyyy', locale)}</TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" fontWeight="medium">
-                      {formatCurrency(lodgement.totalAmount, 'GBP', locale)}
+                      {formatMoney(lodgement.totalAmount)}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(lodgement.cardAmount, 'GBP', locale)}
+                    {formatMoney(lodgement.cardAmount)}
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(lodgement.chequeAmount, 'GBP', locale)}
+                    {formatMoney(lodgement.chequeAmount)}
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(lodgement.offlineAmount, 'GBP', locale)}
+                    {formatMoney(lodgement.offlineAmount)}
                   </TableCell>
                   <TableCell align="right">
                     {lodgement.transactionCount}

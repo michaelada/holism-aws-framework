@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
   Card,
@@ -33,7 +34,6 @@ import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport, ReportType } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
  * Reporting dashboard metrics data structure
@@ -157,7 +157,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
  * Reporting Dashboard Page Component
  */
 const ReportingDashboardPage: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { organisation } = useOrganisation();
   const navigate = useNavigate();
 
@@ -331,9 +332,9 @@ const ReportingDashboardPage: React.FC = () => {
           <Grid item xs={12} md={4}>
             <MetricCard
               title={t('reporting.metrics.revenue')}
-              value={formatCurrency(data.totalRevenue, 'EUR', i18n.language)}
+              value={formatMoney(data.totalRevenue)}
               subtitle={t('reporting.metrics.recentSubtitle', {
-                count: formatCurrency(data.recentRevenue, 'EUR', i18n.language),
+                count: formatMoney(data.recentRevenue),
                 days: recentDays,
               })}
               icon={<MoneyIcon sx={{ color: '#ed6c02', fontSize: 32 }} />}

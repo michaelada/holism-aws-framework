@@ -189,8 +189,14 @@ describe('OrgAdmin E2E Critical Paths', () => {
         'Users',
       ];
 
+      /*
+       * Scoped to <main>: the navigation rail is present on the dashboard now
+       * too, so every module name matches twice on this screen. These
+       * assertions are about the cards.
+       */
+      const cards = within(screen.getByRole('main'));
       for (const name of cardNames) {
-        expect(screen.getByRole('button', { name })).toBeInTheDocument();
+        expect(cards.getByRole('button', { name })).toBeInTheDocument();
       }
 
       // And nothing the organisation has not enabled
@@ -208,7 +214,7 @@ describe('OrgAdmin E2E Critical Paths', () => {
       });
 
       // Click on Events module card
-      await user.click(screen.getByRole('button', { name: 'Events' }));
+      await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Events' }));
 
       // Verify navigation occurred (URL should change)
       await waitFor(() => {
@@ -227,9 +233,16 @@ describe('OrgAdmin E2E Critical Paths', () => {
    */
   describe('Reaching each module from the dashboard', () => {
     const journeys: Array<{ card: string; path: string; entry: string }> = [
-      { card: 'Events', path: '/events', entry: 'Back to Main Page' },
+      /*
+       * `entry` is something the rail shows once you are inside. For a module
+       * with sub-items that is one of them; for a module without, the rail
+       * still lists every other module, so the dashboard entry proves it
+       * rendered. It used to be "Back to Main Page", which no longer exists —
+       * the rail is global, so the dashboard is a destination, not a way back.
+       */
+      { card: 'Events', path: '/events', entry: 'Dashboard' },
       { card: 'Memberships', path: '/members', entry: 'Membership Types' },
-      { card: 'Payments', path: '/payments', entry: 'Back to Main Page' },
+      { card: 'Payments', path: '/payments', entry: 'Dashboard' },
     ];
 
     for (const journey of journeys) {
@@ -242,7 +255,7 @@ describe('OrgAdmin E2E Critical Paths', () => {
           expect(screen.getByText(/Welcome to Test Organisation/i)).toBeInTheDocument();
         });
 
-        await user.click(screen.getByRole('button', { name: journey.card }));
+        await user.click(within(screen.getByRole('main')).getByRole('button', { name: journey.card }));
 
         await waitFor(() => {
           expect(window.location.pathname).toContain(journey.path);
@@ -270,10 +283,12 @@ describe('OrgAdmin E2E Critical Paths', () => {
        * every module — the landing page is the menu. So navigate into one and
        * check its own entries appear.
        */
-      await user.click(screen.getByRole('button', { name: 'Memberships' }));
+      await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Memberships' }));
 
       await waitFor(() => {
-        expect(screen.getAllByText('Back to Main Page').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Dashboard').length).toBeGreaterThan(0);
+          // A module you are not inside stays listed, collapsed.
+          expect(screen.getAllByText('Events').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Membership Types').length).toBeGreaterThan(0);
       });
     });
@@ -288,7 +303,12 @@ describe('OrgAdmin E2E Critical Paths', () => {
       });
 
       // Find and click logout button
-      const logoutButton = screen.getByRole('button', { name: /log out/i });
+      /*
+       * Logout lives in the rail, which is on every route now — the app bar's
+       * duplicate went with the landing-page special case. Both drawers are
+       * mounted, so take the first.
+       */
+      const logoutButton = screen.getAllByRole('button', { name: /logout/i })[0];
       await user.click(logoutButton);
 
       // The shell hands logging out to the auth hook, which ends the Keycloak

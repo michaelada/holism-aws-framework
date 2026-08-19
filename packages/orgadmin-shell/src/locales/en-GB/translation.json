@@ -2137,9 +2137,13 @@
   "navigation": {
     "organisation": "Organisation",
     "loading": "Loading...",
-    "backToMainPage": "Back to Main Page",
     "logout": "Logout",
-    "appName": "ItsPlainSailing"
+    "appName": "ItsPlainSailing",
+    "dashboard": "Dashboard",
+    "groupWork": "Running the club",
+    "groupSetup": "Setup",
+    "breadcrumb": "Breadcrumb",
+    "sections": "Sections"
   },
   "dashboard": {
     "welcomeTo": "Welcome to {{organisationName}}",
@@ -2745,5 +2749,17 @@
         "rejected": "{{name}} has been refused."
       }
     }
+  },
+  "venues": {
+    "deleteTitle": "Delete this venue?",
+    "deleteBody": "The venue will be removed from the list. Events already held there keep their record.",
+    "deleteConfirm": "Delete venue",
+    "deleteFailed": "That venue could not be deleted. It may still be in use by an event."
+  },
+  "eventTypes": {
+    "deleteTitle": "Delete this event type?",
+    "deleteBody": "The type will be removed from the list. Events already using it keep their record.",
+    "deleteConfirm": "Delete event type",
+    "deleteFailed": "That event type could not be deleted. It may still be in use by an event."
   }
 }

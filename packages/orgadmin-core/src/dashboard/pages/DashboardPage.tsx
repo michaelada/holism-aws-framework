@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
   Card,
@@ -121,19 +122,12 @@ const DashboardPage: React.FC = () => {
   const { data, error, loading, execute } = useApiGet<DashboardMetrics>(
     '/api/orgadmin/reports/dashboard'
   );
+  const { format: formatMoney } = useCurrency();
 
   // Fetch dashboard metrics on mount
   useEffect(() => {
     execute();
   }, [execute]);
-
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -198,8 +192,8 @@ const DashboardPage: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <MetricCard
               title="Revenue"
-              value={formatCurrency(data.revenue.total)}
-              subtitle={`${formatCurrency(data.revenue.thisMonth)} this month`}
+              value={formatMoney(data.revenue.total)}
+              subtitle={`${formatMoney(data.revenue.thisMonth)} this month`}
               icon={<MoneyIcon sx={{ color: '#ed6c02', fontSize: 32 }} />}
               color="#ed6c02"
             />

@@ -197,7 +197,11 @@ const TicketingDashboardPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
+        // Wraps rather than overflowing: a non-wrapping header row pushed
+        // page actions past the right edge of a phone, with nothing on
+        // screen to show the page had scrolled.
+        flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4">{t('ticketing.title')}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button

@@ -315,7 +315,11 @@ const MembersDatabasePage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
+        // Wraps rather than overflowing: a non-wrapping header row pushed
+        // page actions past the right edge of a phone, with nothing on
+        // screen to show the page had scrolled.
+        flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4">{t('memberships.membersDatabase')}</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -444,7 +448,25 @@ const MembersDatabasePage: React.FC = () => {
               <TableCell>{t('memberships.table.validUntil')}</TableCell>
               <TableCell>{t('memberships.table.labels')}</TableCell>
               <TableCell>{t('memberships.table.processed')}</TableCell>
-              <TableCell align="right">{t('memberships.table.actions')}</TableCell>
+              <TableCell
+                align="right"
+                sx={{
+                  /*
+                   * Pinned right. The members table is 997px in an 856px well at
+                   * 1200px, so the column carrying View and Edit — the most-used
+                   * controls in the product — scrolled out of sight. The rest of
+                   * the row now scrolls underneath it.
+                   */
+                  position: 'sticky',
+                  right: 0,
+                  zIndex: 2,
+                  bgcolor: 'background.paper',
+                  borderLeft: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {t('memberships.table.actions')}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

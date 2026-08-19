@@ -8,7 +8,8 @@
  * - Branding
  */
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -50,8 +51,26 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
   );
 };
 
+/**
+ * The tab, in the order the strip renders it, addressable as `?tab=<slug>`.
+ *
+ * Slugs rather than indices: `?tab=payments` survives a tab being inserted
+ * ahead of it, and it is a link somebody can read.
+ */
+const TAB_SLUGS = ['organisation', 'payments', 'email', 'branding', 'registration'] as const;
+
 const SettingsPage: React.FC = () => {
-  const [currentTab, setCurrentTab] = useState(0);
+  /*
+   * The open tab lives in the URL, not in component state.
+   *
+   * Held in `useState` it could not be linked, shared or bookmarked; a reload
+   * dropped the administrator back on Organisation Details, and browser Back
+   * left the module entirely instead of returning to the previous tab. For a
+   * user working in interrupted bursts, losing your place on refresh is the
+   * expensive failure.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = Math.max(0, TAB_SLUGS.indexOf(searchParams.get('tab') as typeof TAB_SLUGS[number]));
   const { t } = useTranslation();
   const { setCurrentModule, checkModuleVisit } = useOnboarding();
 
@@ -64,7 +83,9 @@ const SettingsPage: React.FC = () => {
   }, [setCurrentModule, checkModuleVisit]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setCurrentTab(newValue);
+    // `replace` so tabbing through settings does not fill the back stack —
+    // Back should leave settings, not walk back through five tabs.
+    setSearchParams({ tab: TAB_SLUGS[newValue] }, { replace: true });
   };
 
   // Tab labels reuse each tab's own title key, so the tab and the panel it

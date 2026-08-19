@@ -7,6 +7,17 @@ capabilities, plus the hooks, contexts and utilities the capability modules buil
 - **Tests:** Vitest — `npm run test:orgadmin-core` (~36 test files).
 - **First place to look** when functionality is needed by more than one org-admin module.
 
+**Money is never named at the call site.** `useCurrency()` reads the code from the organisation —
+fixed by its organisation type — and returns a bound `format`. Twelve payment screens hard-coded
+`GBP` and ten reporting screens hard-coded `EUR` before it existed, so a euro club saw sterling on
+its refund confirmation and a sterling club saw euro on its revenue report. `formatCurrency` now
+*requires* a currency; its old `'GBP'` default was the trap. `money-is-not-hard-coded.test.ts` fails
+the build on any currency literal reaching a formatter.
+
+**`ConfirmDialog` is the only way to ask "are you sure?"** Two screens used the browser's native
+`confirm()`, which carries no i18n at all. The confirm button names the action rather than agreeing
+with the question, cancel precedes it in the DOM, and `busy` prevents a double-send.
+
 ## Public surface (`src/index.ts`)
 
 ```ts

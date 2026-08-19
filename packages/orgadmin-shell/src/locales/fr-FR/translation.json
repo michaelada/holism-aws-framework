@@ -2092,9 +2092,13 @@
   "navigation": {
     "organisation": "Organisation",
     "loading": "Chargement...",
-    "backToMainPage": "Retour à la page principale",
     "logout": "Déconnexion",
-    "appName": "ItsPlainSailing"
+    "appName": "ItsPlainSailing",
+    "dashboard": "Tableau de bord",
+    "groupWork": "Gérer le club",
+    "groupSetup": "Configuration",
+    "breadcrumb": "Fil d’Ariane",
+    "sections": "Sections"
   },
   "dashboard": {
     "welcomeTo": "Bienvenue à {{organisationName}}",
@@ -2485,5 +2489,17 @@
       "undone": "Le paiement de {{name}} est de nouveau en attente.",
       "undoFailed": "Nous n’avons pas pu annuler cet enregistrement."
     }
+  },
+  "venues": {
+    "deleteTitle": "Supprimer ce lieu ?",
+    "deleteBody": "Le lieu sera retiré de la liste. Les événements qui s’y sont déjà tenus conservent leur enregistrement.",
+    "deleteConfirm": "Supprimer le lieu",
+    "deleteFailed": "Ce lieu n’a pas pu être supprimé. Il est peut-être encore utilisé par un événement."
+  },
+  "eventTypes": {
+    "deleteTitle": "Supprimer ce type d’événement ?",
+    "deleteBody": "Le type sera retiré de la liste. Les événements qui l’utilisent déjà conservent leur enregistrement.",
+    "deleteConfirm": "Supprimer le type",
+    "deleteFailed": "Ce type n’a pas pu être supprimé. Il est peut-être encore utilisé par un événement."
   }
 }

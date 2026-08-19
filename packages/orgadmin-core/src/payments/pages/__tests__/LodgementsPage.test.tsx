@@ -65,6 +65,12 @@ const mockLodgements = [
   },
 ];
 
+/*
+ * The club in this harness is EUR (`test/renderWithProviders`), and these
+ * assertions used to read £ — the page hard-coded 'GBP' regardless of the
+ * organisation, and the tests agreed with it. The currency now comes from the
+ * organisation via `useCurrency()`, so the symbol follows the club.
+ */
 describe('LodgementsPage', () => {
   const mockExecute = vi.fn();
 
@@ -133,9 +139,9 @@ describe('LodgementsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getAllByText('£500.00')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('£750.00')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('£400.00')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('€500.00')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('€750.00')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('€400.00')[0]).toBeInTheDocument();
       });
     });
 
@@ -171,7 +177,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Total Lodged')).toBeInTheDocument();
-        expect(screen.getAllByText('£1,650.00')[0]).toBeInTheDocument(); // 500 + 750 + 400
+        expect(screen.getAllByText('€1,650.00')[0]).toBeInTheDocument(); // 500 + 750 + 400
         expect(screen.getByText('3 lodgements')).toBeInTheDocument();
       });
     });
@@ -182,7 +188,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Card Payments')).toBeInTheDocument();
-        expect(screen.getAllByText('£1,050.00')[0]).toBeInTheDocument(); // 300 + 500 + 250
+        expect(screen.getAllByText('€1,050.00')[0]).toBeInTheDocument(); // 300 + 500 + 250
       });
     });
 
@@ -192,7 +198,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Cheque Payments')).toBeInTheDocument();
-        expect(screen.getAllByText('£450.00')[0]).toBeInTheDocument(); // 150 + 200 + 100
+        expect(screen.getAllByText('€450.00')[0]).toBeInTheDocument(); // 150 + 200 + 100
       });
     });
 
@@ -202,7 +208,7 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Offline Payments')).toBeInTheDocument();
-        expect(screen.getAllByText('£150.00')[0]).toBeInTheDocument(); // 50 + 50 + 50
+        expect(screen.getAllByText('€150.00')[0]).toBeInTheDocument(); // 50 + 50 + 50
       });
     });
 
@@ -225,7 +231,7 @@ describe('LodgementsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getAllByText('£0.00')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('€0.00')[0]).toBeInTheDocument();
       });
     });
   });
@@ -237,9 +243,9 @@ describe('LodgementsPage', () => {
 
       await waitFor(() => {
         // First lodgement
-        expect(screen.getAllByText('£300.00')[0]).toBeInTheDocument(); // Card
-        expect(screen.getAllByText('£150.00')[0]).toBeInTheDocument(); // Cheque
-        expect(screen.getAllByText('£50.00')[0]).toBeInTheDocument(); // Offline
+        expect(screen.getAllByText('€300.00')[0]).toBeInTheDocument(); // Card
+        expect(screen.getAllByText('€150.00')[0]).toBeInTheDocument(); // Cheque
+        expect(screen.getAllByText('€50.00')[0]).toBeInTheDocument(); // Offline
       });
     });
 

@@ -61,6 +61,12 @@ const mockRefundedPayment = {
   refundedAt: '2024-01-20T10:00:00Z',
 };
 
+/*
+ * The club in this harness is EUR (`test/renderWithProviders`), and these
+ * assertions used to read £ — the page hard-coded 'GBP' regardless of the
+ * organisation, and the tests agreed with it. The currency now comes from the
+ * organisation via `useCurrency()`, so the symbol follows the club.
+ */
 describe('PaymentDetailsPage', () => {
   const mockExecute = vi.fn();
 
@@ -120,7 +126,7 @@ describe('PaymentDetailsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
         expect(screen.getByText('john@example.com')).toBeInTheDocument();
-        expect(screen.getByText('£50.00')).toBeInTheDocument();
+        expect(screen.getByText('€50.00')).toBeInTheDocument();
       });
     });
 
@@ -152,7 +158,7 @@ describe('PaymentDetailsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Payment Information')).toBeInTheDocument();
-        expect(screen.getByText('£50.00')).toBeInTheDocument();
+        expect(screen.getByText('€50.00')).toBeInTheDocument();
         expect(screen.getAllByText('Paid')[0]).toBeInTheDocument();
         expect(screen.getAllByText(/Card/)[0]).toBeInTheDocument();
         expect(screen.getByText('txn_123456789')).toBeInTheDocument();

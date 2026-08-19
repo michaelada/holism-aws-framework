@@ -2099,9 +2099,13 @@
   "navigation": {
     "organisation": "Organisation",
     "loading": "Wird geladen...",
-    "backToMainPage": "Zurück zur Hauptseite",
     "logout": "Abmelden",
-    "appName": "ItsPlainSailing"
+    "appName": "ItsPlainSailing",
+    "dashboard": "Übersicht",
+    "groupWork": "Verein führen",
+    "groupSetup": "Einrichtung",
+    "breadcrumb": "Navigationspfad",
+    "sections": "Bereiche"
   },
   "dashboard": {
     "welcomeTo": "Willkommen bei {{organisationName}}",
@@ -2468,5 +2472,17 @@
       "maximumDiscount": "Maximaler Rabattbetrag",
       "maximumDiscountHelper": "Begrenzt den maximal gewährten Rabatt"
     }
+  },
+  "venues": {
+    "deleteTitle": "Diesen Veranstaltungsort löschen?",
+    "deleteBody": "Der Ort wird aus der Liste entfernt. Bereits dort abgehaltene Veranstaltungen behalten ihren Eintrag.",
+    "deleteConfirm": "Ort löschen",
+    "deleteFailed": "Dieser Ort konnte nicht gelöscht werden. Möglicherweise wird er noch von einer Veranstaltung verwendet."
+  },
+  "eventTypes": {
+    "deleteTitle": "Diesen Veranstaltungstyp löschen?",
+    "deleteBody": "Der Typ wird aus der Liste entfernt. Veranstaltungen, die ihn bereits nutzen, behalten ihren Eintrag.",
+    "deleteConfirm": "Typ löschen",
+    "deleteFailed": "Dieser Typ konnte nicht gelöscht werden. Möglicherweise wird er noch von einer Veranstaltung verwendet."
   }
 }

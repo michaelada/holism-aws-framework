@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -31,7 +32,6 @@ import {
 import { useApi } from '../../hooks/useApi';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
 import { formatDateTime } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
 
 interface Payment {
@@ -61,6 +61,7 @@ const PaymentDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { execute } = useApi();
   const { t } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { locale } = useLocale();
   
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -167,7 +168,11 @@ const PaymentDetailsPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
+        // Wraps rather than overflowing: a non-wrapping header row pushed
+        // page actions past the right edge of a phone, with nothing on
+        // screen to show the page had scrolled.
+        flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton onClick={handleBack}>
             <BackIcon />
@@ -207,7 +212,7 @@ const PaymentDetailsPage: React.FC = () => {
                   {t('payments.details.amount')}
                 </Typography>
                 <Typography variant="h5" color="primary">
-                  {formatCurrency(payment.amount, 'GBP', locale)}
+                  {formatMoney(payment.amount)}
                 </Typography>
               </Box>
 
@@ -351,7 +356,7 @@ const PaymentDetailsPage: React.FC = () => {
         <DialogTitle>{t('payments.refund.title')}</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            {t('payments.refund.message', { amount: formatCurrency(payment.amount, 'GBP', locale) })}
+            {t('payments.refund.message', { amount: formatMoney(payment.amount) })}
           </DialogContentText>
           <TextField
             autoFocus

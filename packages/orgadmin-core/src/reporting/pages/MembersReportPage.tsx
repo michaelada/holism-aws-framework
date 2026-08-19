@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
   Card,
@@ -34,7 +35,6 @@ import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
  * Membership type report row, matching the backend reporting service shape
@@ -54,7 +54,8 @@ interface MembershipTypeRow {
  */
 const MembersReportPage: React.FC = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { organisation } = useOrganisation();
 
   // Filter state
@@ -229,7 +230,7 @@ const MembersReportPage: React.FC = () => {
                     {t('reporting.members.summary.totalRevenue')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(summary.totalRevenue, 'EUR', i18n.language)}
+                    {formatMoney(summary.totalRevenue)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -293,7 +294,7 @@ const MembersReportPage: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" fontWeight="medium">
-                          {formatCurrency(type.totalRevenue, 'EUR', i18n.language)}
+                          {formatMoney(type.totalRevenue)}
                         </Typography>
                       </TableCell>
                     </TableRow>

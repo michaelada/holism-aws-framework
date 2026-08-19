@@ -252,7 +252,7 @@ describe('Accessibility Tests', () => {
       // the permanent one — so take the entry inside the open dialog.
       const drawer = await screen.findByRole('presentation');
       const drawerButton = within(drawer)
-        .getByText('navigation.backToMainPage')
+        .getByText('navigation.dashboard')
         .closest('[role="button"]') as HTMLElement;
       expect(drawerButton).toBeInTheDocument();
 
@@ -615,8 +615,7 @@ describe('Accessibility Tests', () => {
 
     it('should have proper landmark regions', () => {
       // The layout supplies the landmarks; nesting another <main> inside it
-      // would create the second one this asserts against. Away from the
-      // landing page, since that deliberately shows no navigation.
+      // would create the second one this asserts against.
       window.history.pushState({}, '', '/events');
 
       render(
@@ -630,7 +629,19 @@ describe('Accessibility Tests', () => {
 
       expect(screen.getByRole('main')).toBeInTheDocument();
       expect(screen.getByRole('banner')).toBeInTheDocument();
-      expect(screen.getByRole('navigation')).toBeInTheDocument();
+
+      /*
+       * Two navigation landmarks, deliberately: the section rail and the
+       * breadcrumb. That is only correct while each carries its own accessible
+       * name — an unnamed second `nav` would leave a screen-reader user with
+       * two indistinguishable "navigation" entries in the landmarks list.
+       */
+      const landmarks = screen.getAllByRole('navigation');
+      expect(landmarks).toHaveLength(2);
+      expect(landmarks.map((nav) => nav.getAttribute('aria-label')).sort()).toEqual([
+        'navigation.breadcrumb',
+        'navigation.sections',
+      ]);
     });
 
     it('should provide skip links for keyboard users', () => {
@@ -790,7 +801,7 @@ describe('Accessibility Tests', () => {
       // the main page is the one entry the layout always offers.
       window.history.pushState({}, '', '/events');
       await userEvent.click(
-        screen.getAllByText('navigation.backToMainPage')[0]
+        screen.getAllByText('navigation.dashboard')[0]
       );
 
       // Lang attribute should still be set

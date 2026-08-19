@@ -36,7 +36,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ConfirmDialog } from '@aws-web-framework/orgadmin-core';
 
 interface Venue {
   id: string;
@@ -57,6 +57,12 @@ const VenuesListPage: React.FC = () => {
   const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  /*
+   * Deletion used to call the browser's own `confirm()`: OS chrome, no styling,
+   * and — decisively — no i18n, so a German administrator was asked in English
+   * by a dialog that did not look like the product.
+   */
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
   const [formData, setFormData] = useState({
@@ -160,8 +166,12 @@ const VenuesListPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this venue?')) return;
+  const handleDelete = (id: string) => setPendingDelete(id);
+
+  const confirmDelete = async () => {
+    const id = pendingDelete;
+    if (!id) return;
+    setPendingDelete(null);
     
     try {
       await execute({
@@ -171,13 +181,25 @@ const VenuesListPage: React.FC = () => {
       loadVenues();
     } catch (error) {
       console.error('Failed to delete venue:', error);
-      alert('Failed to delete venue. It may be in use by existing events.');
+      setError(t('venues.deleteFailed'));
     }
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t('venues.deleteTitle')}
+        body={t('venues.deleteBody')}
+        confirmLabel={t('venues.deleteConfirm')}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
+        // Wraps rather than overflowing: a non-wrapping header row pushed
+        // page actions past the right edge of a phone, with nothing on
+        // screen to show the page had scrolled.
+        flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4">Venues</Typography>
         <Button
           variant="contained"

@@ -34,9 +34,16 @@ describe('formatting utilities', () => {
   });
 
   describe('formatCurrency', () => {
-    it('should format currency with default settings', () => {
-      const formatted = formatCurrency(1234.56);
+    /*
+     * There is no default currency any more. It used to be 'GBP', so a call
+     * that simply omitted the code rendered sterling — silently correct for one
+     * of the seven currencies this platform supports and wrong for the rest.
+     * Prefer `useCurrency()`, which reads it from the organisation.
+     */
+    it('requires the caller to name a currency', () => {
+      const formatted = formatCurrency(1234.56, 'GBP');
       expect(formatted).toContain('1,234.56');
+      expect(formatted).toContain('£');
     });
 
     it('should format currency with custom currency', () => {
@@ -45,8 +52,8 @@ describe('formatting utilities', () => {
     });
 
     it('should handle null/undefined', () => {
-      expect(formatCurrency(null as any)).toBe('');
-      expect(formatCurrency(undefined as any)).toBe('');
+      expect(formatCurrency(null as any, 'GBP')).toBe('');
+      expect(formatCurrency(undefined as any, 'GBP')).toBe('');
     });
   });
 

@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
   Card,
@@ -32,7 +33,6 @@ import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
 
 /**
@@ -61,6 +61,7 @@ interface EventReportRow {
 const EventsReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { organisation } = useOrganisation();
 
   // Filter state
@@ -215,7 +216,7 @@ const EventsReportPage: React.FC = () => {
                   {t('reporting.events.summary.totalRevenue')}
                 </Typography>
                 <Typography variant="h4">
-                  {formatCurrency(summary.totalRevenue, 'EUR', i18n.language)}
+                  {formatMoney(summary.totalRevenue)}
                 </Typography>
               </CardContent>
             </Card>
@@ -268,7 +269,7 @@ const EventsReportPage: React.FC = () => {
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatCurrency(event.totalRevenue, 'EUR', i18n.language)}
+                          {formatMoney(event.totalRevenue)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -282,7 +283,7 @@ const EventsReportPage: React.FC = () => {
                             display="block"
                             color="textSecondary"
                           >
-                            {activity.activityName}: {activity.entries} {t('reporting.events.table.entries').toLowerCase()}, {formatCurrency(activity.revenue, 'EUR', i18n.language)}
+                            {activity.activityName}: {activity.entries} {t('reporting.events.table.entries').toLowerCase()}, {formatMoney(activity.revenue)}
                           </Typography>
                         ))}
                       </TableCell>

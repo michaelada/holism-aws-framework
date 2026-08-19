@@ -15,6 +15,8 @@ import {
   useTheme,
   Divider,
   Avatar,
+  Breadcrumbs,
+  Link,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -29,7 +31,8 @@ import { HelpButton } from './HelpButton';
 import { OrganisationSwitcher } from './OrganisationSwitcher';
 import { useOnboarding } from '../context/OnboardingContext';
 
-const DRAWER_WIDTH = 260;
+// 248px is the rail width DESIGN.md specifies.
+const DRAWER_WIDTH = 248;
 const SMALL_LOGO_URL = 'https://itsplainsailing.com/admin//logos/ips-logo-sails-transparent-64.png';
 
 interface LayoutProps {
@@ -88,18 +91,15 @@ export const Layout: React.FC<LayoutProps> = ({
   const { t } = useTranslation();
   const { helpDrawerOpen, toggleHelpDrawer } = useOnboarding();
 
-  // Debug: Log modules on mount and when they change
-  React.useEffect(() => {
-    console.log('Layout modules:', modules.map(m => ({
-      id: m.id,
-      hasSubMenuItems: !!m.subMenuItems,
-      subMenuItemsCount: m.subMenuItems?.length || 0,
-      subMenuItems: m.subMenuItems
-    })));
-  }, [modules]);
-
-  // Check if we're on the landing page
-  const isLandingPage = location.pathname === '/';
+  /*
+   * The dashboard is a destination, not a mode.
+   *
+   * The rail used to be suppressed here and the app bar rendered a different
+   * shell, so the one screen every administrator starts from was the one screen
+   * with no navigation. It is now framed like every other route; only the
+   * highlighted rail item changes.
+   */
+  const isDashboard = location.pathname === '/';
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -118,8 +118,51 @@ export const Layout: React.FC<LayoutProps> = ({
     }
   };
 
-  // Sort modules by order for consistent menu display
-  const sortedModules = [...modules].sort((a, b) => (a.order || 999) - (b.order || 99));
+  /*
+   * Sorted by `order`, with the same fallback on both sides — the previous
+   * `(a.order || 999) - (b.order || 99)` sorted an unordered module *ahead* of
+   * an ordered one, because the two defaults disagreed by a factor of ten.
+   */
+  const sortedModules = React.useMemo(
+    () => [...modules].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)),
+    [modules]
+  );
+
+  /*
+   * Two groups, work first.
+   *
+   * `capability: undefined` is the registry's own marker for an always-on core
+   * area, so the split needs no new metadata: everything gated by a capability
+   * is something the club *does*, and everything ungated is how it is set up.
+   * A group with no visible members renders nothing at all — a memberships-only
+   * club should look deliberate, not broken.
+   */
+  /*
+   * `dashboard` is withheld from the rail, deliberately and temporarily.
+   *
+   * It registers a second destination also called "Dashboard" (at `/dashboard`,
+   * not `/`), so the rail would show the label twice — and that page currently
+   * throws `Cannot read properties of undefined (reading 'total')` at
+   * orgadmin-core `dashboard/pages/DashboardPage.tsx:186`, rendering a blank
+   * screen. It was unreachable from the interface before this rail existed,
+   * which is why nobody had hit it.
+   *
+   * Listing a duplicate label that white-screens is worse than not listing it.
+   * Delete this filter the moment that page renders — the rail is meant to be
+   * driven by the registry, not by exceptions.
+   */
+  const railModules = React.useMemo(
+    () => sortedModules.filter((m) => m.id !== 'dashboard'),
+    [sortedModules]
+  );
+
+  const moduleGroups = React.useMemo(
+    () => [
+      { key: 'work', labelKey: 'navigation.groupWork', modules: railModules.filter((m) => m.capability) },
+      { key: 'setup', labelKey: 'navigation.groupSetup', modules: railModules.filter((m) => !m.capability) },
+    ].filter((group) => group.modules.length > 0),
+    [railModules]
+  );
 
   // Determine which module is currently active based on the route
   const currentModule = React.useMemo(() => {
@@ -129,22 +172,9 @@ export const Layout: React.FC<LayoutProps> = ({
     }
 
     // Find the module that matches the current path
-    const found = sortedModules.find(module => {
-      // Check if any of the module's routes match the current path
-      return module.routes.some(route => {
-        const routePath = `/${route.path}`;
-        return location.pathname.startsWith(routePath);
-      });
-    });
-    
-    console.log('Layout Debug:', {
-      pathname: location.pathname,
-      currentModule: found?.id,
-      hasSubMenuItems: found?.subMenuItems?.length,
-      subMenuItems: found?.subMenuItems
-    });
-    
-    return found;
+    return sortedModules.find((module) =>
+      module.routes.some((route) => location.pathname.startsWith(`/${route.path}`))
+    );
   }, [location.pathname, sortedModules]);
 
   // Create gradient background based on module color (same as DashboardCard)
@@ -173,14 +203,38 @@ export const Layout: React.FC<LayoutProps> = ({
   const moduleColor = currentModule?.card?.color;
   const moduleGradient = moduleColor ? getGradientBackground(moduleColor) : undefined;
 
-  // Filter modules to show only the current module's menu items
-  const visibleModules = currentModule ? [currentModule] : [];
-  
-  console.log('visibleModules:', visibleModules.map(m => ({
-    id: m.id,
-    hasSubMenuItems: !!m.subMenuItems,
-    subMenuItemsCount: m.subMenuItems?.length
-  })));
+  /** Sub-items the organisation's capabilities actually allow. */
+  const visibleSubItems = React.useCallback(
+    (module: ModuleRegistration) =>
+      (module.subMenuItems ?? []).filter(
+        (subItem) =>
+          !subItem.capability || organisation?.enabledCapabilities?.includes(subItem.capability)
+      ),
+    [organisation?.enabledCapabilities]
+  );
+
+  /** The sub-item the current route is on, for the breadcrumb's last step. */
+  const currentSubItem = currentModule
+    ? visibleSubItems(currentModule).find((subItem) => location.pathname === subItem.path)
+    : undefined;
+
+  /*
+   * Selection is carried by ground *and* colour together, never colour alone,
+   * and the focus ring is explicit — DESIGN.md forbids relying on the browser
+   * default. `whiteSpace: normal` is deliberate: the longest module label in
+   * the six locales is Spanish at 30 characters ("Venta de entradas para
+   * eventos"), which cannot fit 248px on one line. A wrapped label is correct;
+   * a truncated one in a navigation rail is not.
+   */
+  const railItemSx = {
+    mx: 1,
+    borderRadius: 1,
+    py: 0.75,
+    '&.Mui-selected': { fontWeight: 600 },
+    '&:focus-visible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: '-3px' },
+  } as const;
+
+  const railLabelProps = { variant: 'body2' as const, sx: { whiteSpace: 'normal' } };
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -219,87 +273,87 @@ export const Layout: React.FC<LayoutProps> = ({
       <Divider />
 
       {/* Navigation Menu */}
-      <List sx={{ flexGrow: 1, pt: 2 }}>
-        {/* Back to Main Page Link */}
+      <List sx={{ flexGrow: 1, pt: 1, overflowY: 'auto' }}>
         <ListItem disablePadding>
           <ListItemButton
-            selected={location.pathname === '/'}
+            selected={isDashboard}
+            aria-current={isDashboard ? 'page' : undefined}
             onClick={() => handleNavigation('/')}
+            sx={railItemSx}
           >
-            <ListItemIcon>
-              <DashboardIcon />
-            </ListItemIcon>
-            <ListItemText primary={t('navigation.backToMainPage')} />
+            <ListItemIcon sx={{ minWidth: 36 }}><DashboardIcon /></ListItemIcon>
+            <ListItemText primary={t('navigation.dashboard')} primaryTypographyProps={railLabelProps} />
           </ListItemButton>
         </ListItem>
 
-        {/* Module Menu Items - only show current module's items */}
-        {visibleModules.map((module) => {
-          console.log('Rendering module in drawer:', {
-            moduleId: module.id,
-            hasSubMenuItems: !!module.subMenuItems,
-            subMenuItemsLength: module.subMenuItems?.length,
-            subMenuItems: module.subMenuItems
-          });
-          
-          // If module has sub-menu items, render them
-          if (module.subMenuItems && module.subMenuItems.length > 0) {
-            console.log('Rendering subMenuItems for module:', module.id);
-            return (
-              <React.Fragment key={module.id}>
-                {module.subMenuItems
-                  .filter((subItem) => {
-                    // If subItem has a capability requirement, check if org has it
-                    if (subItem.capability) {
-                      return organisation?.enabledCapabilities?.includes(subItem.capability);
-                    }
-                    // If no capability requirement, always show
-                    return true;
-                  })
-                  .map((subItem) => {
-                    const Icon = subItem.icon || DashboardIcon;
-                    // Use exact match for sub-items to avoid highlighting multiple items
-                    const isActive = location.pathname === subItem.path;
+        {moduleGroups.map((group) => (
+          <Box key={group.key} component="li" sx={{ listStyle: 'none', mt: 1.5 }}>
+            <Typography
+              variant="caption"
+              component="h2"
+              sx={{ display: 'block', px: 2.5, pb: 0.5, color: 'text.secondary', fontWeight: 600 }}
+            >
+              {t(group.labelKey)}
+            </Typography>
 
-                    return (
-                      <ListItem key={`${module.id}-${subItem.path}`} disablePadding>
-                        <ListItemButton
-                          selected={isActive}
-                          onClick={() => handleNavigation(subItem.path)}
-                          sx={{ pl: 4 }} // Indent sub-items
-                        >
-                          <ListItemIcon>
-                            <Icon />
-                          </ListItemIcon>
-                          <ListItemText primary={t(subItem.label)} />
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-              </React.Fragment>
-            );
-          }
+            <List disablePadding>
+              {group.modules.map((module) => {
+                const target = module.menuItem?.path ?? `/${module.routes[0]?.path ?? ''}`;
+                const Icon = module.menuItem?.icon || DashboardIcon;
+                const isCurrent = currentModule?.id === module.id;
+                const subItems = isCurrent ? visibleSubItems(module) : [];
 
-          // Otherwise, render the main menu item
-          if (!module.menuItem) return null;
+                return (
+                  <React.Fragment key={module.id}>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        selected={isCurrent}
+                        aria-current={isCurrent && !currentSubItem ? 'page' : undefined}
+                        onClick={() => handleNavigation(target)}
+                        sx={railItemSx}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36 }}><Icon /></ListItemIcon>
+                        <ListItemText
+                          primary={t(module.menuItem?.label ?? module.name)}
+                          primaryTypographyProps={railLabelProps}
+                        />
+                      </ListItemButton>
+                    </ListItem>
 
-          const Icon = module.menuItem.icon || DashboardIcon;
-          const isActive = location.pathname.startsWith(module.menuItem.path);
-
-          return (
-            <ListItem key={module.id} disablePadding>
-              <ListItemButton
-                selected={isActive}
-                onClick={() => handleNavigation(module.menuItem!.path)}
-              >
-                <ListItemIcon>
-                  <Icon />
-                </ListItemIcon>
-                <ListItemText primary={t(module.menuItem.label)} />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
+                    {/*
+                      Only the module you are in opens. Expansion follows the
+                      route rather than a toggle the user has to manage, so the
+                      rail's height is predictable and there is no state to
+                      restore after a reload.
+                    */}
+                    {subItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      const isActive = location.pathname === subItem.path;
+                      return (
+                        <ListItem key={`${module.id}-${subItem.path}`} disablePadding>
+                          <ListItemButton
+                            selected={isActive}
+                            aria-current={isActive ? 'page' : undefined}
+                            onClick={() => handleNavigation(subItem.path)}
+                            sx={{ ...railItemSx, pl: SubIcon ? 4 : 6.5 }}
+                          >
+                            {SubIcon && (
+                              <ListItemIcon sx={{ minWidth: 32 }}><SubIcon /></ListItemIcon>
+                            )}
+                            <ListItemText
+                              primary={t(subItem.label)}
+                              primaryTypographyProps={{ ...railLabelProps, fontSize: '0.875rem' }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </List>
+          </Box>
+        ))}
       </List>
 
       <Divider />
@@ -324,17 +378,16 @@ export const Layout: React.FC<LayoutProps> = ({
       <AppBar
         position="fixed"
         sx={{
-          width: isLandingPage ? '100%' : { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: isLandingPage ? 0 : { md: `${DRAWER_WIDTH}px` },
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          ml: { md: `${DRAWER_WIDTH}px` },
           ...(moduleGradient && {
             background: moduleGradient,
           }),
         }}
       >
         <Toolbar>
-          {/* Mobile Menu Toggle - only show when not on landing page */}
-          {!isLandingPage && (
-            <IconButton
+          {/* Mobile Menu Toggle */}
+          <IconButton
               color="inherit"
               aria-label={t('common.accessibility.openDrawer')}
               edge="start"
@@ -342,27 +395,56 @@ export const Layout: React.FC<LayoutProps> = ({
               sx={{ mr: 2, display: { md: 'none' } }}
             >
               <MenuIcon />
-            </IconButton>
-          )}
+          </IconButton>
 
-          {/* App Title / Module Name */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            {isLandingPage ? (
-              <>
-                <Avatar
-                  src={SMALL_LOGO_URL}
-                  alt={t('navigation.appName')}
-                  sx={{ width: 32, height: 32, mr: 1, display: { xs: 'none', sm: 'block' } }}
-                />
-                <Typography variant="h6" noWrap component="div">
-                  {t('navigation.appName')}
+          {/*
+            Where you are, spelled out. The app bar used to show only the
+            module name, so a sub-page announced its module and nothing else —
+            and the dashboard announced the product. Three steps at most, and
+            the last one is plain text because you are already there.
+          */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, minWidth: 0 }}>
+            <Breadcrumbs
+              aria-label={t('navigation.breadcrumb')}
+              separator="›"
+              sx={{ color: 'inherit', '& .MuiBreadcrumbs-separator': { mx: 0.75, opacity: 0.6 } }}
+            >
+              <Link
+                component="button"
+                type="button"
+                underline="hover"
+                color="inherit"
+                onClick={() => handleNavigation('/')}
+                sx={{ font: 'inherit', cursor: 'pointer' }}
+              >
+                {organisation?.displayName || t('navigation.appName')}
+              </Link>
+
+              {currentModule && (
+                currentSubItem ? (
+                  <Link
+                    component="button"
+                    type="button"
+                    underline="hover"
+                    color="inherit"
+                    onClick={() => handleNavigation(currentModule.menuItem?.path ?? '/')}
+                    sx={{ font: 'inherit', cursor: 'pointer' }}
+                  >
+                    {t(currentModule.name)}
+                  </Link>
+                ) : (
+                  <Typography variant="h6" component="span" noWrap sx={{ color: 'inherit' }}>
+                    {t(currentModule.name)}
+                  </Typography>
+                )
+              )}
+
+              {currentSubItem && (
+                <Typography variant="h6" component="span" noWrap sx={{ color: 'inherit' }}>
+                  {t(currentSubItem.label)}
                 </Typography>
-              </>
-            ) : (
-              <Typography variant="h6" noWrap component="div">
-                {currentModule ? t(currentModule.name) : t('navigation.appName')}
-              </Typography>
-            )}
+              )}
+            </Breadcrumbs>
           </Box>
 
           {/*
@@ -382,24 +464,13 @@ export const Layout: React.FC<LayoutProps> = ({
             active={helpDrawerOpen}
           />
 
-          {/* Logout Button - only show on landing page */}
-          {isLandingPage && (
-            <IconButton
-              color="inherit"
-              onClick={handleLogout}
-              aria-label={t('common.accessibility.logout')}
-              sx={{ ml: 1 }}
-            >
-              <LogoutIcon />
-            </IconButton>
-          )}
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Drawer - hide on landing page */}
-      {!isLandingPage && (
-        <Box
+      {/* Navigation Drawer — present on every route, dashboard included */}
+      <Box
           component="nav"
+          aria-label={t('navigation.sections')}
           sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
         >
           {/* Mobile Drawer */}
@@ -441,16 +512,27 @@ export const Layout: React.FC<LayoutProps> = ({
           >
             {drawerContent}
           </Drawer>
-        </Box>
-      )}
+      </Box>
 
       {/* Main Content */}
       <Box
         component="main"
         sx={{
+          /*
+           * `minWidth: 0` is what stops the page scrolling sideways.
+           *
+           * This is a flex child, and a flex child's default `min-width: auto`
+           * refuses to shrink below its content. A 997px table therefore pushed
+           * the whole document to 1093px on a 390px phone: "Add Member" sat 464px
+           * beyond the right edge, with nothing on screen to suggest the page
+           * scrolled at all. Allowing the region to shrink moves the overflow
+           * inside the table, where it belongs and where it is visible.
+           */
+          minWidth: 0,
           flexGrow: 1,
-          p: isLandingPage ? 0 : 3,
-          width: isLandingPage ? '100%' : { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          /* The dashboard supplies its own padding; every other route gets it here. */
+          p: isDashboard ? 0 : 3,
+          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           mt: 8, // Account for AppBar height
         }}
       >

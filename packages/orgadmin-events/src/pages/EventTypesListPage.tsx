@@ -35,7 +35,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ConfirmDialog } from '@aws-web-framework/orgadmin-core';
 
 interface EventType {
   id: string;
@@ -54,6 +54,12 @@ const EventTypesListPage: React.FC = () => {
   const [filteredEventTypes, setFilteredEventTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  /*
+   * Deletion used to call the browser's own `confirm()`: OS chrome, no styling,
+   * and — decisively — no i18n, so a German administrator was asked in English
+   * by a dialog that did not look like the product.
+   */
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<EventType | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
@@ -140,8 +146,12 @@ const EventTypesListPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this event type?')) return;
+  const handleDelete = (id: string) => setPendingDelete(id);
+
+  const confirmDelete = async () => {
+    const id = pendingDelete;
+    if (!id) return;
+    setPendingDelete(null);
     
     try {
       await execute({
@@ -151,13 +161,25 @@ const EventTypesListPage: React.FC = () => {
       loadEventTypes();
     } catch (error) {
       console.error('Failed to delete event type:', error);
-      alert('Failed to delete event type. It may be in use by existing events.');
+      setError(t('eventTypes.deleteFailed'));
     }
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t('eventTypes.deleteTitle')}
+        body={t('eventTypes.deleteBody')}
+        confirmLabel={t('eventTypes.deleteConfirm')}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
+        // Wraps rather than overflowing: a non-wrapping header row pushed
+        // page actions past the right edge of a phone, with nothing on
+        // screen to show the page had scrolled.
+        flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4">Event Types</Typography>
         <Button
           variant="contained"

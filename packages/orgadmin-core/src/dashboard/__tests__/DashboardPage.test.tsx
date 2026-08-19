@@ -6,6 +6,16 @@ import * as useApiModule from '../../hooks/useApi';
 // Mock the useApi hook
 vi.mock('../../hooks/useApi');
 
+/*
+ * The page formats money through `useCurrency()`, which reads the code from the
+ * organisation — money is never named at the call site. Supplying a euro club
+ * here is what makes the amounts assertable, and is the point of the hook: the
+ * same page renders sterling for a sterling club without changing.
+ */
+vi.mock('../../context/OrganisationContext', () => ({
+  useOrganisation: () => ({ organisation: { id: 'org-1', currency: 'EUR' } }),
+}));
+
 describe('DashboardPage', () => {
   const mockExecute = vi.fn();
 

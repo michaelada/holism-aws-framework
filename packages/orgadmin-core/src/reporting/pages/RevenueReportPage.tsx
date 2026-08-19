@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
   Card,
@@ -32,7 +33,6 @@ import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
 
 /**
  * Revenue source row, matching the backend reporting service shape
@@ -50,7 +50,8 @@ interface RevenueSourceRow {
  */
 const RevenueReportPage: React.FC = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { format: formatMoney } = useCurrency();
   const { organisation } = useOrganisation();
 
   // Filter state
@@ -239,7 +240,7 @@ const RevenueReportPage: React.FC = () => {
                     {t('reporting.revenue.summary.totalRevenue')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(summary.totalRevenue, 'EUR', i18n.language)}
+                    {formatMoney(summary.totalRevenue)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -261,7 +262,7 @@ const RevenueReportPage: React.FC = () => {
                     {t('reporting.revenue.summary.avgTransaction')}
                   </Typography>
                   <Typography variant="h4">
-                    {formatCurrency(summary.averageTransactionValue, 'EUR', i18n.language)}
+                    {formatMoney(summary.averageTransactionValue)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -323,7 +324,7 @@ const RevenueReportPage: React.FC = () => {
                       </Box>
                       <Box textAlign="right">
                         <Typography variant="body1" fontWeight="medium">
-                          {formatCurrency(source.totalRevenue, 'EUR', i18n.language)}
+                          {formatMoney(source.totalRevenue)}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
                           {t('reporting.revenue.table.transactions', { count: source.transactionCount })}

@@ -60,13 +60,19 @@ export const formatRelativeTime = (date: Date | string | number): string => {
  * Format a currency amount
  * 
  * @param amount - Amount to format
- * @param currency - Currency code (default: 'GBP')
+ * **`currency` is required on purpose.** It used to default to `'GBP'`, so a
+ * call site that simply forgot it rendered sterling — silently, and correctly
+ * for exactly one of the currencies this platform supports. Prefer
+ * `useCurrency()`, which takes the code from the organisation; reach for this
+ * function directly only where no organisation is in scope.
+ *
+ * @param currency - ISO 4217 code. No default: guessing is the bug.
  * @param locale - Locale for formatting (default: 'en-GB')
  * @returns Formatted currency string
  */
 export const formatCurrency = (
   amount: number,
-  currency = 'GBP',
+  currency: string,
   locale = 'en-GB'
 ): string => {
   if (amount === null || amount === undefined) return '';

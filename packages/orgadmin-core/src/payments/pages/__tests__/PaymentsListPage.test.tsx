@@ -65,6 +65,12 @@ const mockPayments = [
   },
 ];
 
+/*
+ * The club in this harness is EUR (`test/renderWithProviders`), and these
+ * assertions used to read £ — the page hard-coded 'GBP' regardless of the
+ * organisation, and the tests agreed with it. The currency now comes from the
+ * organisation via `useCurrency()`, so the symbol follows the club.
+ */
 describe('PaymentsListPage', () => {
   const mockExecute = vi.fn();
 
@@ -145,9 +151,9 @@ describe('PaymentsListPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('£50.00')).toBeInTheDocument();
-        expect(screen.getByText('£100.00')).toBeInTheDocument();
-        expect(screen.getByText('£75.00')).toBeInTheDocument();
+        expect(screen.getByText('€50.00')).toBeInTheDocument();
+        expect(screen.getByText('€100.00')).toBeInTheDocument();
+        expect(screen.getByText('€75.00')).toBeInTheDocument();
       });
     });
 

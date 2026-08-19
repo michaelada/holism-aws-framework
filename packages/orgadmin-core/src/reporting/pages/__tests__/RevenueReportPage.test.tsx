@@ -56,6 +56,12 @@ const REVENUE_ROWS = [
   },
 ];
 
+/*
+ * These asserted 'EUR 60000.00' — the shared formatter's *fallback* string,
+ * produced when Intl threw because the locale arrived undefined. The tests were
+ * pinning degraded output. `useCurrency()` formats properly, so the figures now
+ * read as a person would see them.
+ */
 describe('RevenueReportPage', () => {
   const mockExecute = vi.fn();
 
@@ -184,7 +190,7 @@ describe('RevenueReportPage', () => {
       renderWithProviders(<RevenueReportPage />);
 
       expect(screen.getByText('reporting.revenue.summary.totalRevenue')).toBeInTheDocument();
-      expect(screen.getByText('EUR 60000.00')).toBeInTheDocument();
+      expect(screen.getByText('€60,000.00')).toBeInTheDocument();
     });
 
     it('should display total transactions summed from the source rows', () => {
@@ -199,7 +205,7 @@ describe('RevenueReportPage', () => {
 
       expect(screen.getByText('reporting.revenue.summary.avgTransaction')).toBeInTheDocument();
       // 60000 / 300
-      expect(screen.getByText('EUR 200.00')).toBeInTheDocument();
+      expect(screen.getByText('€200.00')).toBeInTheDocument();
     });
 
     it('should display the highest-earning source', () => {
@@ -215,7 +221,7 @@ describe('RevenueReportPage', () => {
 
       renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getAllByText('EUR 0.00').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('€0.00').length).toBeGreaterThan(0);
     });
   });
 
@@ -243,9 +249,9 @@ describe('RevenueReportPage', () => {
 
       renderWithProviders(<RevenueReportPage />);
 
-      expect(screen.getByText('EUR 30000.00')).toBeInTheDocument();
-      expect(screen.getByText('EUR 20000.00')).toBeInTheDocument();
-      expect(screen.getByText('EUR 10000.00')).toBeInTheDocument();
+      expect(screen.getByText('€30,000.00')).toBeInTheDocument();
+      expect(screen.getByText('€20,000.00')).toBeInTheDocument();
+      expect(screen.getByText('€10,000.00')).toBeInTheDocument();
     });
 
     it('should display transaction counts for each source', () => {

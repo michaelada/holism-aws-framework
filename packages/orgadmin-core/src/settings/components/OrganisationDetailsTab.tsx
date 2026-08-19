@@ -53,7 +53,12 @@ const OrganisationDetailsTab: React.FC = () => {
     name: '',
     displayName: '',
     domain: '',
-    currency: 'GBP',
+    /*
+     * Empty, not 'GBP'. This field is read-only — the currency is fixed by the
+     * organisation type — so a default here is not a starting point the
+     * administrator can correct, it is a wrong answer displayed as fact.
+     */
+    currency: '',
     language: 'en-GB',
     settings: {
       address: '',

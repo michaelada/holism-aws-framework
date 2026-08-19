@@ -13,6 +13,7 @@
 
 // Shared hooks
 export * from './hooks';
+export * from './components';
 
 // Shared utilities
 export * from './utils';

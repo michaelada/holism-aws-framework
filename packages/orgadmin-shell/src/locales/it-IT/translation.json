@@ -2099,9 +2099,13 @@
   "navigation": {
     "organisation": "Organizzazione",
     "loading": "Caricamento...",
-    "backToMainPage": "Torna alla pagina principale",
     "logout": "Disconnetti",
-    "appName": "ItsPlainSailing"
+    "appName": "ItsPlainSailing",
+    "dashboard": "Pannello",
+    "groupWork": "Gestione del club",
+    "groupSetup": "Configurazione",
+    "breadcrumb": "Percorso di navigazione",
+    "sections": "Sezioni"
   },
   "dashboard": {
     "welcomeTo": "Benvenuto a {{organisationName}}",
@@ -2468,5 +2472,17 @@
       "maximumDiscount": "Sconto massimo",
       "maximumDiscountHelper": "Limita lo sconto massimo applicabile"
     }
+  },
+  "venues": {
+    "deleteTitle": "Eliminare questa sede?",
+    "deleteBody": "La sede verrà rimossa dall’elenco. Gli eventi già svolti lì mantengono la loro registrazione.",
+    "deleteConfirm": "Elimina sede",
+    "deleteFailed": "Non è stato possibile eliminare la sede. Potrebbe essere ancora usata da un evento."
+  },
+  "eventTypes": {
+    "deleteTitle": "Eliminare questo tipo di evento?",
+    "deleteBody": "Il tipo verrà rimosso dall’elenco. Gli eventi che lo usano mantengono la loro registrazione.",
+    "deleteConfirm": "Elimina tipo",
+    "deleteFailed": "Non è stato possibile eliminare il tipo. Potrebbe essere ancora usato da un evento."
   }
 }
