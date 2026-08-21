@@ -18650,3 +18650,254 @@ Docs updated with both rules. Nothing committed.
 
 On the orgadmin can you move the Payments and Reporting Menu items on the left from the Setup section to the “Running the club” section.
 Also, can you change the label ”Running the Club” to “Running the Org”
+
+### Assistant
+
+The split is by capability, and Payments/Reporting are core modules — so it needs an explicit exception. Let me check the current labels first:
+
+Now the grouping change:
+
+Let me hoist that constant to module scope rather than rebuilding it every render:
+
+Now the label, in all six locales:
+
+Now the two tests that assert the old label and grouping:
+
+Let me add a test that pins the new grouping, then check it live:
+
+Both changes are live. But note Payments and Reporting jumped to the *top* of the group, above Events — let me check why:
+
+That ordering is an artefact — core areas were numbered 1–9 on the assumption they'd sit in Setup. Payments/Reporting leading the section above Events looks accidental, so let me keep the activities first:
+
+My `positionOf` helper was fragile. Let me use document order directly:
+
+"Payments" at position 18 is the page header, not the rail — the test renders at `/payments`. Let me scope to the nav:
+
+Two `<nav>`s — the first is the breadcrumb. The rail text confirms the fix works: `Events | Payments | Reporting`. Let me select the right one:
+
+That one's mine from earlier — registering `auditModule` changed the core module count, and I'd never run the shell suite in full. Let me look:
+
+All 707 green. Let me confirm live and update the module summary:
+
+Both changes are in and verified live.
+
+## Payments and Reporting moved
+
+The rail split modules by capability — gated meant "work", ungated meant "setup". Payments and Reporting are ungated because *every* organisation has them, which is how they ended up filed next to Forms. That heuristic is now overridden by a named list in `Layout.tsx`, rather than adding a field to every module registration for two exceptions.
+
+**One judgement call worth flagging:** on `order` alone they landed at the *top* of the group, above Events. The core areas were numbered 1–9 back when they all sat in Setup, so Payments (4) sorts ahead of Events (10) — an artefact, and it read as an accident. I kept the capability modules first and put Payments/Reporting after them, so the section is now Events, Memberships, Calendar, Payments, Reporting. That also matches the meaning: the first three are what you run, the last two are what you then go and look at. Renumbering instead would have moved the dashboard cards too, which you didn't ask for. Easy to flip if you'd rather they led.
+
+## Label changed
+
+"Running the Org" as you wrote it, plus the five other locales — where I took the opportunity to drop "club" for the neutral word, since the label is now about organisations generally: *Organisation führen*, *Gestión de la organización*, *Gérer l'organisation*, *Gestione dell'organizzazione*, *Gerir a organização*.
+
+## One thing I found on the way
+
+Running the `orgadmin-shell` suite for the first time turned up a failure I'd introduced earlier this session and not caught: `App.integration.test.tsx` asserts the core-module count, and registering the audit module took it from 6 to 7. My fault for never running that package's suite while building the audit work — corrected, and the assertion now says which seven and why.
+
+**orgadmin-shell: 707 passing, 0 failing** (55 files), including three new tests pinning the grouping, the ordering, and that the heading still disappears for an organisation with nothing in that group.
+
+Nothing committed.
+
+---
+
+
+## 2026-08-21 17:34:18 — Prompt
+
+On the orgadmin can you move the Payments and Reporting Menu items on the left from the Setup section to the “Running the club” section.
+Also, can you change the label ”Running the Club” to “Running the Org”
+
+### Assistant
+
+Both of those are already done — that was my previous turn. Let me confirm the current state on disk rather than assume:
+
+Both changes are still in place from my last turn — nothing was reverted.
+
+The screenshot I took at the end of that turn shows the result:
+
+- **Running the Org** — Events, Memberships, Calendar, **Payments**, **Reporting**
+- **Setup** — Forms, Settings, Users, Audit Log
+
+The label is `Running the Org` in `en-GB` plus translations in the other five locales, and `RUNNING_MODULES` in [Layout.tsx:81](packages/orgadmin-shell/src/components/Layout.tsx#L81) is what pulls `payments` and `reporting` out of the capability-based split. `orgadmin-shell` was 707 passing, 0 failing.
+
+If you're not seeing it in the browser, it'll be a stale bundle — the locale JSON is loaded lazily and Vite doesn't always hot-reload translation files. A hard refresh (Cmd-Shift-R) on `localhost:5175` should pick it up.
+
+If instead you *are* seeing it but something about it isn't right — the ordering within the group, or the capitalisation of "Org" — tell me which and I'll adjust. The one call I made on your behalf was putting Payments and Reporting *after* Events rather than before it; on module `order` alone they'd have led the section.
+
+---
+
+
+## 2026-08-21 17:50:46 — Prompt
+
+Twice now I have tried to create a new filter on the Members Database, but each time, after I created the filter there was nothing in the Custom Filter dropdown list.
+
+### Assistant
+
+The table is empty — so the save never landed. Note `user_id` is `NOT NULL`:
+
+Only a GET route exists. Let me see what the UI calls:
+
+The GET route is a stub that returns `[]` and never queries the table. Let me find what the save does:
+
+Now I have it. Let me confirm the whole chain before concluding:
+
+Now I have the whole picture. Let me check the member shape so the filter can actually apply:
+
+Now the backend. Let me build the service:
+
+Now the routes — replacing the stub:
+
+`memberFilter` needs to be in the audit middleware's row map too, or the delete record loses its values:
+
+Now the backend tests:
+
+22 passing. Now the front end — the save that discarded its payload, and the filter that did nothing:
+
+Now the `withinBounds` helper and the imports:
+
+`organisation` is pre-existing; `filterError` is mine and needs rendering. Let me surface it:
+
+Now the one new i18n key, in all six locales:
+
+Now front-end tests for the two behaviours that were broken:
+
+The label isn't associated with the Select — a real a11y gap, not just a test problem. Let me fix the control:
+
+The test bundle is minimal, so some keys render as English and others as keys. Let me make it explicit:
+
+Test-data collision — my surname "Lapsed" also matches the "Elapsed" toggle. Let me use distinctive names:
+
+All 9 pass. Now let me verify it live end to end:
+
+The page is up. Let me create a filter exactly as you did:
+
+It saved. Now the dropdown:
+
+Saved, listed, and auto-selected. Let me prove the *applying* works live too — a filter that actually narrows:
+
+Working end to end — narrowed from 5 members to the 2 Juniors. Let me run the full suites:
+
+120 failures across 27 files — most in pages I never touched. Let me establish whether these pre-date my change:
+
+One test regressed — 119 → 120. Let me find exactly which:
+
+No test newly fails from my change. The two that differ are in a property-based file — CLAUDE.md §3.3 flags those as intermittent. Let me confirm:
+
+Confirmed flaky — 2 passes and 1 failure across three identical runs. My change causes zero regressions. Now the docs:
+
+Nothing you did was wrong — it would have failed every time, for every club.
+
+## What was actually there
+
+The feature was three stubs that together looked finished:
+
+| Piece | State |
+|---|---|
+| The dialog | Collected a complete, valid filter and handed it to `onSave` |
+| `onSave` on the page | **Threw the payload away.** Closed the dialog, reloaded the list |
+| `POST /member-filters` | **Did not exist** |
+| `GET /member-filters` | `// For now, return empty array` → `return res.json([])` |
+| Selecting a filter | `if (selectedCustomFilter) { // Custom filter logic would go here }` |
+
+`member_filters` had zero rows and could not have had any — nothing in the system could write one.
+
+What made this hide so well is that an empty list is a *plausible* answer. The route returned `200`, the dialog behaved, the dropdown rendered correctly with nothing in it. Every layer looked healthy.
+
+## Built
+
+**Backend** — a `member-filter.service` and real `GET`, `POST`, `DELETE` routes, organisation-scoped, with creates and deletes audited.
+
+Two date traps worth naming, since I'd just been bitten by the same class of thing in the events module:
+- The dialog sends an **empty string** for an untouched date field. Cast to a `date` column that's an error, not "no bound" — a 500 instead of a saved filter.
+- `date` columns come back as `Date` objects at *local* midnight, and `toISOString()` converts to UTC first. A bound saved as the 1st would read back as the 31st of the month before. Taking the local parts avoids it.
+
+**Front end** — the save now posts, the list reloads, and the new filter is selected automatically. Selecting one actually narrows the roster: status, labels (any of, not all), and both date ranges. An empty clause narrows *nothing* — a filter naming no status matches every status, which is what leaving a field alone means; the opposite reading would make a half-filled filter return zero members and look broken.
+
+Two things I fixed while in there: a failed save now says so (`execute` resolves to `null` rather than throwing, so a refusal looked exactly like success — the bug all over again), and the Custom Filter dropdown had no `labelId`, so screen readers announced an unnamed combo box.
+
+## Verified live
+
+Created "Lapsed since the show" → row in the database, appears in the dropdown, auto-selected. Then "Junior members" with a Junior label → the roster narrowed from five members to the two Juniors.
+
+## Tests
+
+**22 backend**, **9 front-end** — starting with the plain one that was missing: *pressing Save must send the filter somewhere*.
+
+The `orgadmin-memberships` package carries ~119 pre-existing failures across 27 files. I measured rather than assumed: reverting my page to `HEAD` and diffing the failing sets gives **zero tests newly failing from this change**. The one apparent difference was a property-based test that passed twice and failed once across three identical runs — the unseeded-generator flakiness CLAUDE.md §3.3 warns about. Backend is **3205 passing, 0 failing**.
+
+## Not built
+
+There's still **no way to delete a filter** in the interface — the endpoint exists and is scoped, but nothing calls it, so a filter can't be removed once saved. Say the word and I'll add the button; it needs one new i18n key across six locales.
+
+Written up in [docs/MEMBER_CUSTOM_FILTERS.md](docs/MEMBER_CUSTOM_FILTERS.md), with the module summaries updated. Nothing committed.
+
+---
+
+
+## 2026-08-21 18:27:31 — Prompt
+
+addd the delete buton
+
+### Assistant
+
+`common.actions.cancel/delete` already exist — I only need four new keys. Let me check the imports:
+
+Now the delete button, confirmation, and handler:
+
+Let me clean that up — `useApi` supports `onError`, which distinguishes a 204 from a failure properly:
+
+Now the button and the confirmation dialog:
+
+Only the pre-existing warning. Now the four keys across six locales:
+
+Now tests for the delete flow:
+
+The confirmation dialog is still animating closed, so MUI has `aria-hidden` on the page behind it. Let me wait for it:
+
+All 15 pass. Let me verify live:
+
+No selection, no delete button — correct. Let me select one:
+
+Delete works end to end, and the audit trail captured the removed filter's values. Let me update the doc that said this wasn't built:
+
+Final test pass:
+
+Done and verified live.
+
+## What it looks like
+
+A bin icon sits beside the Custom Filter dropdown, appearing **only once a filter is chosen** — a permanently-present delete button next to a dropdown reading "None" has nothing to act on, and invites the question of what it would remove.
+
+Confirming names the filter and says plainly that it goes for *every* administrator:
+
+> **Delete this filter?**
+> "Junior members" will be removed for every administrator of this organisation. The members themselves are not affected.
+
+That second sentence is deliberate. These filters are organisation-wide, which isn't obvious from a screen showing one person's view, and "delete" next to a members table could reasonably be misread as deleting members.
+
+## Two details worth naming
+
+**A 204 and a failure both resolve to `null`.** `useApi.execute` can't distinguish them from the response, so the handler passes `onError` and reads that instead. Without it, a refused delete would remove the filter from the screen and leave it on the server — the display and the database quietly disagreeing. That's the same class of trap as the original bug, where a save that never happened looked exactly like one that did.
+
+**The selection is cleared on success.** Left set, the roster would stay narrowed by a filter that no longer exists, with the dropdown showing nothing to explain why.
+
+## Verified
+
+Deleted "Junior members" live: gone from the database, gone from the dropdown, the delete button withdrew, and the roster went back to all five members. The audit trail recorded it with the filter's values intact — `memberLabels: ["Junior"]` — since what a filter *matched* is the interesting part of one that's gone.
+
+I reused the existing `common.actions.cancel` and `common.actions.delete` rather than adding new ones, so it's **4 new keys** across all six locales.
+
+## Tests
+
+**15 front-end** (6 new, covering: no button until selected; asks first and does nothing until confirmed; deletes the right id; clears the selection; keeps the filter and says so when refused; cancel does nothing). Backend **3205 passing, 0 failing**; orgadmin-shell **707 passing, 0 failing**.
+
+One thing the tests taught me: MUI dialogs animate closed and mark the page behind them `aria-hidden` while they do, so asserting on a button "behind" a just-closed dialog needs a wait for the dialog to leave the DOM. Noted in the test.
+
+[docs/MEMBER_CUSTOM_FILTERS.md](docs/MEMBER_CUSTOM_FILTERS.md) updated — deleting now has its own section, and only editing remains on the not-built list. Nothing committed.
+
+---
+
+
+## 2026-08-21 19:19:20 — Prompt
+
+Can you deploy all the latest code now to itsps.org and reset the seed data

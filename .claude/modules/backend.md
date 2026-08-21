@@ -114,6 +114,8 @@ the browser calculator in `orgadmin-calendar` — the two must agree, and both a
 same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md)).
 
 **Cross-cutting** — `discount.service`, `discount-calculator.service`, `discount-validator.service`,
+`member-filter.service` (saved filters over the members database — see
+[docs/MEMBER_CUSTOM_FILTERS.md](../../docs/MEMBER_CUSTOM_FILTERS.md)),
 `application-form.service`, `form-submission.service`, `payment.service`, `payment-method.service`,
 `capability.service`, `metadata.service`, `generic-crud.service`, `table-generator.service`,
 `reporting.service`, `email.service`, `file-upload.service`, `cache.service`, `validation.service`,

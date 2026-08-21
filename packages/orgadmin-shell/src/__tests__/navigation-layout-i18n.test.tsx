@@ -20,7 +20,7 @@ describe('Navigation and Layout i18n', () => {
       expect(i18n.t('navigation.organisation')).toBe('Organisation');
       expect(i18n.t('navigation.loading')).toBe('Loading...');
       expect(i18n.t('navigation.dashboard')).toBe('Dashboard');
-        expect(i18n.t('navigation.groupWork')).toBe('Running the club');
+        expect(i18n.t('navigation.groupWork')).toBe('Running the Org');
         expect(i18n.t('navigation.groupSetup')).toBe('Setup');
       expect(i18n.t('navigation.logout')).toBe('Logout');
       expect(i18n.t('navigation.appName')).toBe('ItsPlainSailing');
@@ -32,7 +32,7 @@ describe('Navigation and Layout i18n', () => {
       expect(i18n.t('navigation.organisation')).toBe('Organisation');
       expect(i18n.t('navigation.loading')).toBe('Chargement...');
       expect(i18n.t('navigation.dashboard')).toBe('Tableau de bord');
-        expect(i18n.t('navigation.groupWork')).toBe('Gérer le club');
+        expect(i18n.t('navigation.groupWork')).toBe('Gérer l’organisation');
         expect(i18n.t('navigation.groupSetup')).toBe('Configuration');
       expect(i18n.t('navigation.logout')).toBe('Déconnexion');
       expect(i18n.t('navigation.appName')).toBe('ItsPlainSailing');
@@ -44,7 +44,7 @@ describe('Navigation and Layout i18n', () => {
       expect(i18n.t('navigation.organisation')).toBe('Organización');
       expect(i18n.t('navigation.loading')).toBe('Cargando...');
       expect(i18n.t('navigation.dashboard')).toBe('Panel');
-        expect(i18n.t('navigation.groupWork')).toBe('Gestión del club');
+        expect(i18n.t('navigation.groupWork')).toBe('Gestión de la organización');
         expect(i18n.t('navigation.groupSetup')).toBe('Configuración');
       expect(i18n.t('navigation.logout')).toBe('Cerrar sesión');
       expect(i18n.t('navigation.appName')).toBe('ItsPlainSailing');
@@ -56,7 +56,7 @@ describe('Navigation and Layout i18n', () => {
       expect(i18n.t('navigation.organisation')).toBe('Organizzazione');
       expect(i18n.t('navigation.loading')).toBe('Caricamento...');
       expect(i18n.t('navigation.dashboard')).toBe('Pannello');
-        expect(i18n.t('navigation.groupWork')).toBe('Gestione del club');
+        expect(i18n.t('navigation.groupWork')).toBe('Gestione dell’organizzazione');
         expect(i18n.t('navigation.groupSetup')).toBe('Configurazione');
       expect(i18n.t('navigation.logout')).toBe('Disconnetti');
       expect(i18n.t('navigation.appName')).toBe('ItsPlainSailing');
@@ -68,7 +68,7 @@ describe('Navigation and Layout i18n', () => {
       expect(i18n.t('navigation.organisation')).toBe('Organisation');
       expect(i18n.t('navigation.loading')).toBe('Wird geladen...');
       expect(i18n.t('navigation.dashboard')).toBe('Übersicht');
-        expect(i18n.t('navigation.groupWork')).toBe('Verein führen');
+        expect(i18n.t('navigation.groupWork')).toBe('Organisation führen');
         expect(i18n.t('navigation.groupSetup')).toBe('Einrichtung');
       expect(i18n.t('navigation.logout')).toBe('Abmelden');
       expect(i18n.t('navigation.appName')).toBe('ItsPlainSailing');
@@ -80,7 +80,7 @@ describe('Navigation and Layout i18n', () => {
       expect(i18n.t('navigation.organisation')).toBe('Organização');
       expect(i18n.t('navigation.loading')).toBe('A carregar...');
       expect(i18n.t('navigation.dashboard')).toBe('Painel');
-        expect(i18n.t('navigation.groupWork')).toBe('Gerir o clube');
+        expect(i18n.t('navigation.groupWork')).toBe('Gerir a organização');
         expect(i18n.t('navigation.groupSetup')).toBe('Configuração');
       expect(i18n.t('navigation.logout')).toBe('Terminar sessão');
       expect(i18n.t('navigation.appName')).toBe('ItsPlainSailing');

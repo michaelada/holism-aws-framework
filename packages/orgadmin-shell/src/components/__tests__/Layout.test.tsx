@@ -90,6 +90,35 @@ const settingsModule: ModuleRegistration = {
   menuItem: { label: 'Settings', path: '/settings', icon: DashboardIcon },
 };
 
+/**
+ * Core areas that still belong under "running the organisation".
+ *
+ * Payments and Reporting carry no capability — every organisation has them —
+ * but neither is setup: you do not configure payments once and walk away, you
+ * go and look at what came in.
+ */
+const paymentsModule: ModuleRegistration = {
+  id: 'payments',
+  name: 'Payments',
+  title: 'Payments',
+  description: 'What came in',
+  order: 2,
+  card: { title: 'Payments', description: 'Payments', icon: DashboardIcon, path: '/payments' },
+  routes: [{ path: 'payments', element: null as never }],
+  menuItem: { label: 'Payments', path: '/payments', icon: DashboardIcon },
+};
+
+const reportingModule: ModuleRegistration = {
+  ...paymentsModule,
+  id: 'reporting',
+  name: 'Reporting',
+  title: 'Reporting',
+  order: 3,
+  card: { title: 'Reporting', description: 'Reporting', icon: DashboardIcon, path: '/reporting' },
+  routes: [{ path: 'reporting', element: null as never }],
+  menuItem: { label: 'Reporting', path: '/reporting', icon: DashboardIcon },
+};
+
 const renderAt = (path: string, modules: ModuleRegistration[]) => {
   window.history.pushState({}, '', path);
   return render(
@@ -223,7 +252,7 @@ describe('Layout Component', () => {
     expect(screen.getAllByText('Settings').length).toBeGreaterThan(0);
   });
 
-  it('groups the club’s work above its setup', () => {
+  it('groups the organisation’s work above its setup', () => {
     renderAt('/events', [eventsWithSubItems, settingsModule]);
 
     /*
@@ -234,18 +263,71 @@ describe('Layout Component', () => {
     const headings = screen
       .getAllByRole('heading', { level: 2, hidden: true })
       .map((h) => h.textContent);
-    const work = headings.indexOf('Running the club');
+    const work = headings.indexOf('Running the Org');
     const setup = headings.indexOf('Setup');
 
     expect(work).toBeGreaterThanOrEqual(0);
     expect(setup).toBeGreaterThan(work);
   });
 
+it('puts Payments and Reporting under running, not setup', () => {
+    /*
+     * They are ungated, so the plain capability split filed them under Setup
+     * next to Forms — which is where you look to configure something, not to
+     * see what money came in this week.
+     */
+    renderAt('/payments', [eventsWithSubItems, paymentsModule, reportingModule, settingsModule]);
+
+    const headings = screen
+      .getAllByRole('heading', { level: 2, hidden: true })
+      .map((h) => h.textContent);
+    const work = headings.indexOf('Running the Org');
+    const setup = headings.indexOf('Setup');
+
+    /*
+     * Position by document order within the rail.
+     *
+     * Scoped to a `<nav>`, because this test renders at `/payments` and the page
+     * header says "Payments" before the rail does — a whole-document search
+     * compares a heading against a menu item. And to the *right* nav: the
+     * breadcrumb is one too, and it comes first.
+     */
+    const rail =
+      Array.from(document.querySelectorAll('nav'))
+        .map((nav) => nav.textContent ?? '')
+        .find((text) => text.includes('Running the Org')) ?? '';
+    const positionOf = (label: string) => rail.indexOf(label);
+
+    expect(rail).not.toBe('');
+    expect(work).toBeGreaterThanOrEqual(0);
+    expect(setup).toBeGreaterThan(work);
+    // Both appear, and Settings is still the one under Setup.
+    expect(screen.getAllByText('Payments').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reporting').length).toBeGreaterThan(0);
+    expect(positionOf('Payments')).toBeLessThan(positionOf('Settings'));
+    expect(positionOf('Reporting')).toBeLessThan(positionOf('Settings'));
+
+    /*
+     * And after the capability modules. On `order` alone they would lead the
+     * section — the core areas were numbered 1–9 when they all sat in Setup —
+     * with Events beneath them, which reads as an accident.
+     */
+    expect(positionOf('Events')).toBeLessThan(positionOf('Payments'));
+  });
+
+  it('shows the running group for an organisation with no capability modules', () => {
+    // Payments alone is enough to earn the heading — it is not a setup area.
+    renderAt('/payments', [paymentsModule, settingsModule]);
+
+    expect(screen.getAllByText('Running the Org').length).toBeGreaterThan(0);
+  });
+
   it('renders no heading for a group with nothing in it', () => {
-    // A club with only core areas — no capability module is enabled.
+    // Only setup areas — no capability module, and none of the core areas
+    // that count as running the organisation.
     renderAt('/settings', [settingsModule]);
 
-    expect(screen.queryByText('Running the club')).not.toBeInTheDocument();
+    expect(screen.queryByText('Running the Org')).not.toBeInTheDocument();
     expect(screen.getAllByText('Setup').length).toBeGreaterThan(0);
   });
 

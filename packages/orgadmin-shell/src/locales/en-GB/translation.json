@@ -555,7 +555,12 @@
       "beforeDate": "Before Date",
       "afterDate": "After Date",
       "memberLabels": "Member Labels",
-      "saveFilter": "Save Filter"
+      "saveFilter": "Save Filter",
+      "saveFailed": "The filter could not be saved. Please try again.",
+      "deleteFilter": "Delete filter",
+      "deleteConfirmTitle": "Delete this filter?",
+      "deleteConfirmBody": "“{{name}}” will be removed for every administrator of this organisation. The members themselves are not affected.",
+      "deleteFailed": "The filter could not be deleted. Please try again."
     },
     "paymentMethods": {
       "payOffline": "Pay Offline",
@@ -2228,7 +2233,7 @@
     "logout": "Logout",
     "appName": "ItsPlainSailing",
     "dashboard": "Dashboard",
-    "groupWork": "Running the club",
+    "groupWork": "Running the Org",
     "groupSetup": "Setup",
     "breadcrumb": "Breadcrumb",
     "sections": "Sections"

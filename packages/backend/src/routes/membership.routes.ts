@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { membershipService } from '../services/membership.service';
+import { memberFilterService } from '../services/member-filter.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import {
   byCurrentOrganisation,
@@ -813,11 +814,11 @@ router.post(
  * @swagger
  * /api/orgadmin/member-filters:
  *   get:
- *     summary: Get all custom member filters for the authenticated user's organisation
+ *     summary: Saved member filters for this organisation
  *     tags: [Member Filters]
  *     responses:
  *       200:
- *         description: List of custom filters
+ *         description: List of saved filters
  */
 router.get(
   '/member-filters',
@@ -825,28 +826,107 @@ router.get(
   byCurrentOrganisation(),
   async (req: Request, res: Response) => {
     try {
-      const user = (req as any).user;
-      if (!user?.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-      
-      // Get user's organisation from organization_users table
-      const orgResult = await db.query(
-        `SELECT organization_id FROM organization_users 
-         WHERE keycloak_user_id = $1 AND user_type = 'org-admin' AND status = 'active'
-         LIMIT 1`,
-        [user.userId]
-      );
-      
-      if (orgResult.rows.length === 0) {
-        return res.status(403).json({ error: 'User is not an organization administrator' });
-      }
-      
-      // For now, return empty array - full implementation would query member_filters table
-      return res.json([]);
+      const organisationId = (req as any).organisationId as string;
+      const filters = await memberFilterService.listForOrganisation(organisationId);
+      return res.json(filters);
     } catch (error) {
       logger.error('Error in GET /member-filters:', error);
       return res.status(500).json({ error: 'Failed to fetch member filters' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/member-filters:
+ *   post:
+ *     summary: Save a member filter
+ *     tags: [Member Filters]
+ *     responses:
+ *       201:
+ *         description: The filter as saved
+ *       400:
+ *         description: The filter is not valid
+ */
+router.post(
+  '/member-filters',
+  authenticateToken(),
+  byCurrentOrganisation(),
+  audited({
+    action: 'settings.organisation-updated',
+    entityType: 'member-filter',
+    label: 'name',
+    kind: 'create',
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const organisationId = (req as any).organisationId as string;
+      const organisationUserId = (req as any).organisationUserId as string | undefined;
+
+      /*
+       * `user_id` is NOT NULL and records who saved the filter. The scope
+       * middleware resolves it alongside the organisation; without it the
+       * insert fails at the database rather than here, which is a 500 where a
+       * 400 belongs.
+       */
+      if (!organisationUserId) {
+        return res.status(400).json({ error: 'Organisation user ID not found' });
+      }
+
+      const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+      if (!name) {
+        return res.status(400).json({ error: 'A filter needs a name' });
+      }
+
+      const filter = await memberFilterService.create(organisationId, organisationUserId, {
+        ...req.body,
+        name: DOMPurify.sanitize(name, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }),
+      });
+
+      return res.status(201).json(filter);
+    } catch (error) {
+      logger.error('Error in POST /member-filters:', error);
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Failed to save the member filter' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/member-filters/{id}:
+ *   delete:
+ *     summary: Delete a saved member filter
+ *     tags: [Member Filters]
+ *     responses:
+ *       204:
+ *         description: Deleted
+ *       404:
+ *         description: No such filter in this organisation
+ */
+router.delete(
+  '/member-filters/:id',
+  authenticateToken(),
+  byResource('memberFilter', 'id'),
+  audited({
+    action: 'settings.organisation-updated',
+    resource: 'memberFilter',
+    entityType: 'member-filter',
+    label: 'name',
+    kind: 'delete',
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const organisationId = (req as any).organisationId as string;
+      const removed = await memberFilterService.remove(req.params.id, organisationId);
+
+      if (!removed) return res.status(404).json({ error: 'Filter not found' });
+      return res.status(204).send();
+    } catch (error) {
+      logger.error('Error in DELETE /member-filters/:id:', error);
+      return res.status(500).json({ error: 'Failed to delete the member filter' });
     }
   }
 );

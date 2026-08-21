@@ -72,6 +72,14 @@ function isUnderPath(pathname: string, path: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
+/**
+ * Core areas that belong under "running", not "setup".
+ *
+ * See the note in `moduleGroups`: these two carry no capability because every
+ * organisation has them, but neither is something you configure once and leave.
+ */
+const RUNNING_MODULES = new Set(['payments', 'reporting']);
+
 export const Layout: React.FC<LayoutProps> = ({
   children,
   modules = [],
@@ -142,11 +150,18 @@ export const Layout: React.FC<LayoutProps> = ({
   /*
    * Two groups, work first.
    *
-   * `capability: undefined` is the registry's own marker for an always-on core
-   * area, so the split needs no new metadata: everything gated by a capability
-   * is something the club *does*, and everything ungated is how it is set up.
+   * `capability: undefined` marks an always-on core area, which gets the split
+   * *almost* right for free: everything gated by a capability is something the
+   * organisation does, and most ungated areas are how it is set up.
+   *
+   * Almost. Payments and Reporting are core — every organisation has them, so
+   * neither carries a capability — but neither is setup either. You do not
+   * configure your payments once and walk away; you go and look at what came
+   * in. They are named here rather than given new metadata on the registry,
+   * because two exceptions do not justify a field on every module.
+   *
    * A group with no visible members renders nothing at all — a memberships-only
-   * club should look deliberate, not broken.
+   * organisation should look deliberate, not broken.
    */
   /*
    * `dashboard` is withheld from the rail, deliberately and temporarily.
@@ -169,8 +184,32 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const moduleGroups = React.useMemo(
     () => [
-      { key: 'work', labelKey: 'navigation.groupWork', modules: railModules.filter((m) => m.capability) },
-      { key: 'setup', labelKey: 'navigation.groupSetup', modules: railModules.filter((m) => !m.capability) },
+      {
+        key: 'work',
+        labelKey: 'navigation.groupWork',
+        /*
+         * Capability modules first, then Payments and Reporting.
+         *
+         * Not what `order` alone gives: the core areas were numbered 1–9 back
+         * when every one of them sat in Setup, so on merit of number alone
+         * Payments (4) and Reporting (5) lead the section and Events (10)
+         * follows them — which reads as an accident. Renumbering them would
+         * move the dashboard cards too, and this is a question about the rail.
+         *
+         * It is also the truer order: Events, Memberships and Calendar are what
+         * an organisation runs; Payments and Reporting are what it then goes
+         * and looks at.
+         */
+        modules: [
+          ...railModules.filter((m) => m.capability),
+          ...railModules.filter((m) => !m.capability && RUNNING_MODULES.has(m.id)),
+        ],
+      },
+      {
+        key: 'setup',
+        labelKey: 'navigation.groupSetup',
+        modules: railModules.filter((m) => !m.capability && !RUNNING_MODULES.has(m.id)),
+      },
     ].filter((group) => group.modules.length > 0),
     [railModules]
   );

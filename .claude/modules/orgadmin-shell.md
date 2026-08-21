@@ -103,6 +103,13 @@ Full record: [docs/ORGADMIN_MULTI_ORGANISATION.md](../../docs/ORGADMIN_MULTI_ORG
 - **Capability-gated:** `eventsModule`, `membershipsModule`, `merchandiseModule`, `calendarModule`,
   `registrationsModule`, `ticketingModule`.
 
+The rail's two groups are **not** a straight capability split. `RUNNING_MODULES`
+in `Layout.tsx` names the core areas that still belong under "Running the Org" —
+`payments` and `reporting`, which every organisation has but neither of which is
+setup. Within that group the capability modules come first: the core areas were
+numbered 1–9 when they all sat in Setup, so `order` alone puts Payments above
+Events.
+
 Routes are then filtered a second time per-route against `organisation.enabledCapabilities`, so a
 module can appear with some pages hidden. `ModuleLoader` supplies the `Suspense` fallback and the
 404 page.

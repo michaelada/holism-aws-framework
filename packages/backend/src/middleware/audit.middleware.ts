@@ -75,6 +75,7 @@ const ROW_SQL: Record<string, string> = {
   formSubmission: 'SELECT * FROM form_submissions WHERE id = $1',
   payment: 'SELECT * FROM payments WHERE id = $1',
   userGroup: 'SELECT * FROM user_groups WHERE id = $1',
+  memberFilter: 'SELECT * FROM member_filters WHERE id = $1',
   organisationUser: 'SELECT * FROM organization_users WHERE id = $1',
   adminRole: 'SELECT * FROM organization_admin_roles WHERE id = $1',
   organisation: 'SELECT * FROM organizations WHERE id = $1',

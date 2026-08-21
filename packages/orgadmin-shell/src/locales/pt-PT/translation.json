@@ -531,7 +531,12 @@
       "beforeDate": "Antes de",
       "afterDate": "Depois de",
       "memberLabels": "Etiquetas dos sócios",
-      "saveFilter": "Guardar filtro"
+      "saveFilter": "Guardar filtro",
+      "saveFailed": "Não foi possível guardar o filtro. Tente novamente.",
+      "deleteFilter": "Eliminar filtro",
+      "deleteConfirmTitle": "Eliminar este filtro?",
+      "deleteConfirmBody": "«{{name}}» será removido para todos os administradores desta organização. Os sócios não são afetados.",
+      "deleteFailed": "Não foi possível eliminar o filtro. Tente novamente."
     },
     "paymentMethods": {
       "payOffline": "Pagar offline",
@@ -2190,7 +2195,7 @@
     "logout": "Terminar sessão",
     "appName": "ItsPlainSailing",
     "dashboard": "Painel",
-    "groupWork": "Gerir o clube",
+    "groupWork": "Gerir a organização",
     "groupSetup": "Configuração",
     "breadcrumb": "Trilho de navegação",
     "sections": "Secções"

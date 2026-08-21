@@ -531,7 +531,12 @@
       "beforeDate": "Vor dem",
       "afterDate": "Nach dem",
       "memberLabels": "Mitglieder-Labels",
-      "saveFilter": "Filter speichern"
+      "saveFilter": "Filter speichern",
+      "saveFailed": "Der Filter konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "deleteFilter": "Filter löschen",
+      "deleteConfirmTitle": "Diesen Filter löschen?",
+      "deleteConfirmBody": "„{{name}}“ wird für alle Administratoren dieser Organisation entfernt. Die Mitglieder selbst sind nicht betroffen.",
+      "deleteFailed": "Der Filter konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
     },
     "paymentMethods": {
       "payOffline": "Offline bezahlen",
@@ -2190,7 +2195,7 @@
     "logout": "Abmelden",
     "appName": "ItsPlainSailing",
     "dashboard": "Übersicht",
-    "groupWork": "Verein führen",
+    "groupWork": "Organisation führen",
     "groupSetup": "Einrichtung",
     "breadcrumb": "Navigationspfad",
     "sections": "Bereiche"

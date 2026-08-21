@@ -276,8 +276,12 @@ describe('App Integration Tests', () => {
 
       // Dashboard should render (core modules are always available)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument();
-      // Should show "Dashboard with 6 modules" (6 core modules)
-      expect(screen.getByText(/Dashboard with 6 modules/)).toBeInTheDocument();
+      /*
+       * Seven core areas: dashboard, forms, settings, payments, reporting,
+       * users, audit. All ungated — a club with no capabilities still gets
+       * every one of them, including its own audit trail.
+       */
+      expect(screen.getByText(/Dashboard with 7 modules/)).toBeInTheDocument();
     });
   });
 

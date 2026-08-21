@@ -13,6 +13,11 @@ import {
   CardContent,
   Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControl,
   IconButton,
   InputAdornment,
@@ -29,6 +34,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
   Alert,
   Snackbar,
@@ -43,15 +49,54 @@ import {
   Label as LabelIcon,
   FilterList as FilterIcon,
   Add as AddIcon,
+  DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
 import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { useApi } from '@aws-web-framework/orgadmin-core';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
-import type { Member, MemberFilter } from '../types/membership.types';
+import type { Member, MemberFilter, CreateMemberFilterDto } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
+
+/**
+ * Is a member's date inside the filter's bounds?
+ *
+ * Both bounds are optional and either may be absent, so an unbounded side is
+ * always satisfied. Compared as **days**, because these bounds are days: a
+ * member whose membership runs to the 15th is inside "valid until before the
+ * 15th"... only if the caller meant the end of that day, and they did not — so
+ * the comparison is exclusive on `before` and inclusive on `after`, matching
+ * how the two words read.
+ *
+ * A member with no date at all fails a bounded comparison rather than passing
+ * it: "renewed before June" should not include somebody who has never renewed.
+ */
+const asDay = (value: unknown): number | null => {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
+const withinBounds = (
+  value: unknown,
+  after?: string | Date | null,
+  before?: string | Date | null
+): boolean => {
+  if (!after && !before) return true;
+
+  const day = asDay(value);
+  if (day === null) return false;
+
+  const from = asDay(after);
+  const to = asDay(before);
+
+  if (from !== null && day < from) return false;
+  if (to !== null && day >= to) return false;
+  return true;
+};
 
 const MembersDatabasePage: React.FC = () => {
   const navigate = useNavigate();
@@ -72,6 +117,9 @@ const MembersDatabasePage: React.FC = () => {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [customFilters, setCustomFilters] = useState<MemberFilter[]>([]);
   const [selectedCustomFilter, setSelectedCustomFilter] = useState<string>('');
+  const [filterError, setFilterError] = useState<string | null>(null);
+  const [filterToDelete, setFilterToDelete] = useState<MemberFilter | null>(null);
+  const [deletingFilter, setDeletingFilter] = useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchOperation, setBatchOperation] = useState<'mark_processed' | 'mark_unprocessed' | 'add_labels' | 'remove_labels'>('mark_processed');
@@ -215,6 +263,73 @@ const MembersDatabasePage: React.FC = () => {
     }
   };
 
+  /**
+   * Save what the dialog collected.
+   *
+   * The dialog handed its payload to a callback that dropped it on the floor
+   * and reloaded a list that was itself a stub, so a filter created here has
+   * never once reached the database. The reload afterwards is what makes the
+   * new filter appear in the menu.
+   */
+  const saveCustomFilter = async (filter: CreateMemberFilterDto) => {
+    const saved = await execute({
+      method: 'POST',
+      url: '/api/orgadmin/member-filters',
+      data: filter,
+    });
+
+    // `useApi.execute` resolves to null on failure rather than throwing, so a
+    // silent close would look exactly like a successful save.
+    if (!saved) {
+      setFilterError(t('memberships.customFilter.saveFailed'));
+      return;
+    }
+
+    setFilterError(null);
+    setFilterDialogOpen(false);
+    await loadCustomFilters();
+
+    // Select it: somebody who just described a filter wants to see it applied.
+    setSelectedCustomFilter(saved.id);
+  };
+
+  /**
+   * Delete the selected filter.
+   *
+   * A successful delete answers 204, which `execute` resolves to `null` — the
+   * same as a failure. `onError` is what tells them apart; without it a refused
+   * delete would silently look like a successful one.
+   *
+   * The selection is cleared on success: leaving it set would leave the roster
+   * narrowed by a filter that no longer exists, with the dropdown showing
+   * nothing to explain why.
+   */
+  const deleteCustomFilter = async () => {
+    if (!filterToDelete) return;
+    const { id } = filterToDelete;
+
+    let failed = false;
+    setDeletingFilter(true);
+    await execute({
+      method: 'DELETE',
+      url: `/api/orgadmin/member-filters/${id}`,
+      onError: () => {
+        failed = true;
+      },
+    });
+    setDeletingFilter(false);
+    setFilterToDelete(null);
+
+    if (failed) {
+      setFilterError(t('memberships.customFilter.deleteFailed'));
+      return;
+    }
+
+    setFilterError(null);
+    if (selectedCustomFilter === id) setSelectedCustomFilter('');
+    await loadCustomFilters();
+  };
+
   const filterMembers = () => {
     let filtered = [...members];
 
@@ -235,9 +350,31 @@ const MembersDatabasePage: React.FC = () => {
       );
     }
 
-    // Apply custom filter (simplified - would need full implementation)
-    if (selectedCustomFilter) {
-      // Custom filter logic would go here
+    /*
+     * Apply the saved filter.
+     *
+     * Every clause is a narrowing, and an empty one narrows nothing — a filter
+     * that names no status matches every status rather than none, which is what
+     * somebody means by leaving the field alone.
+     */
+    const custom = customFilters.find((f) => f.id === selectedCustomFilter);
+    if (custom) {
+      if (custom.memberStatus?.length) {
+        filtered = filtered.filter((m) => custom.memberStatus.includes(m.status));
+      }
+
+      if (custom.memberLabels?.length) {
+        // Any of them, not all: "Committee or Junior" is the useful question.
+        filtered = filtered.filter((m) =>
+          (m.labels ?? []).some((label) => custom.memberLabels.includes(label))
+        );
+      }
+
+      filtered = filtered.filter(
+        (m) =>
+          withinBounds(m.dateLastRenewed, custom.dateLastRenewedAfter, custom.dateLastRenewedBefore) &&
+          withinBounds(m.validUntil, custom.validUntilAfter, custom.validUntilBefore)
+      );
     }
 
     setFilteredMembers(filtered);
@@ -360,8 +497,17 @@ const MembersDatabasePage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>{t('memberships.filters.customFilter')}</InputLabel>
+              {/*
+                `labelId` and `id`: without them the label is drawn next to the
+                control but attached to nothing, so a screen reader announces an
+                unnamed combo box.
+              */}
+              <InputLabel id="custom-filter-label">
+                {t('memberships.filters.customFilter')}
+              </InputLabel>
               <Select
+                labelId="custom-filter-label"
+                id="custom-filter"
                 value={selectedCustomFilter}
                 label={t('memberships.filters.customFilter')}
                 onChange={(e) => setSelectedCustomFilter(e.target.value)}
@@ -374,6 +520,27 @@ const MembersDatabasePage: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+
+            {/*
+              Only once a filter is chosen: an always-present delete button next
+              to a dropdown reading "None" has nothing to act on, and invites the
+              question of what it would remove.
+            */}
+            {selectedCustomFilter && (
+              <Tooltip title={t('memberships.customFilter.deleteFilter')}>
+                <IconButton
+                  aria-label={t('memberships.customFilter.deleteFilter')}
+                  onClick={() =>
+                    setFilterToDelete(
+                      customFilters.find((f) => f.id === selectedCustomFilter) ?? null
+                    )
+                  }
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+
             <Button
               variant="outlined"
               startIcon={<FilterIcon />}
@@ -382,6 +549,18 @@ const MembersDatabasePage: React.FC = () => {
               {t('memberships.filters.createFilter')}
             </Button>
           </Box>
+
+          {/*
+            `useApi.execute` resolves to null on failure rather than throwing,
+            so without this a refused save closes the dialog and reloads a list
+            that has not changed — indistinguishable from success, which is
+            exactly how this looked when nothing was saved at all.
+          */}
+          {filterError && (
+            <Alert severity="error" onClose={() => setFilterError(null)}>
+              {filterError}
+            </Alert>
+          )}
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <ToggleButtonGroup
@@ -544,13 +723,37 @@ const MembersDatabasePage: React.FC = () => {
         </Table>
       </TableContainer>
 
+      <Dialog open={Boolean(filterToDelete)} onClose={() => setFilterToDelete(null)}>
+        <DialogTitle>{t('memberships.customFilter.deleteConfirmTitle')}</DialogTitle>
+        <DialogContent>
+          {/*
+            Named, because a club may have several and they read alike in a
+            list. And said to be shared, because it is: this removes it for
+            every administrator, not just for the person pressing the button.
+          */}
+          <DialogContentText>
+            {t('memberships.customFilter.deleteConfirmBody', { name: filterToDelete?.name })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFilterToDelete(null)} disabled={deletingFilter}>
+            {t('common.actions.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={deleteCustomFilter}
+            disabled={deletingFilter}
+          >
+            {t('common.actions.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <CreateCustomFilterDialog
         open={filterDialogOpen}
         onClose={() => setFilterDialogOpen(false)}
-        onSave={() => {
-          setFilterDialogOpen(false);
-          loadCustomFilters();
-        }}
+        onSave={saveCustomFilter}
       />
 
       <BatchOperationsDialog

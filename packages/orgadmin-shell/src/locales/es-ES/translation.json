@@ -546,7 +546,12 @@
       "beforeDate": "Antes de la fecha",
       "afterDate": "Después de la fecha",
       "memberLabels": "Etiquetas de miembro",
-      "saveFilter": "Guardar filtro"
+      "saveFilter": "Guardar filtro",
+      "saveFailed": "No se ha podido guardar el filtro. Inténtelo de nuevo.",
+      "deleteFilter": "Eliminar filtro",
+      "deleteConfirmTitle": "¿Eliminar este filtro?",
+      "deleteConfirmBody": "«{{name}}» se eliminará para todos los administradores de esta organización. Los socios no se ven afectados.",
+      "deleteFailed": "No se ha podido eliminar el filtro. Inténtelo de nuevo."
     },
     "paymentMethods": {
       "payOffline": "Pagar fuera de línea",
@@ -2139,7 +2144,7 @@
     "logout": "Cerrar sesión",
     "appName": "ItsPlainSailing",
     "dashboard": "Panel",
-    "groupWork": "Gestión del club",
+    "groupWork": "Gestión de la organización",
     "groupSetup": "Configuración",
     "breadcrumb": "Ruta de navegación",
     "sections": "Secciones"

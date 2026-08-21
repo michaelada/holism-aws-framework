@@ -44,8 +44,14 @@ src/
 - **Single vs group membership types** — separate creation pages over the same
   `MembershipTypeForm`; group types configure multiple people per membership, which is what
   `PersonConfigurationSection` and `FieldConfigurationTable` drive.
-- **Member database** — `MembersDatabasePage` is a filterable, batch-operable grid. Custom filters
-  persist to `member_filters`.
+- **Member database** — `MembersDatabasePage` is a filterable, batch-operable grid. **Custom
+  filters** are saved questions over the roster (status, labels, renewal and validity bounds),
+  stored in `member_filters` and shared across every administrator of the club — `user_id` records
+  who saved one, not who may see it. They are applied in the browser over the members already
+  loaded; an empty clause narrows nothing, so a half-filled filter shows everybody rather than
+  nobody. Until August 2026 the whole feature was three stubs — a dialog that discarded its payload,
+  no create endpoint, and a list endpoint returning a hard-coded `[]` — so the dropdown was empty
+  for every club. See [docs/MEMBER_CUSTOM_FILTERS.md](../../docs/MEMBER_CUSTOM_FILTERS.md).
 - **Membership numbers** — generated and validated server-side
   (`membership-number-generator.service`, `membership-number-validator.service`), configured by the
   membership-numbering migration.
@@ -55,8 +61,8 @@ src/
 
 `/api/orgadmin/members`, `/api/orgadmin/membership-types`, member filters, discounts for
 memberships, application forms. Backend: `membership.service`, `membership-number-*.service`,
-`discount*.service`, `form-submission.service`. Tables: `members`, `membership_types`,
-`member_filters`.
+`discount*.service`, `member-filter.service`, `form-submission.service`. Tables: `members`,
+`membership_types`, `member_filters`.
 
 ## Where to look for what
 
