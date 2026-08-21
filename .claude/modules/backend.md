@@ -173,7 +173,18 @@ rejects every token as untrusted, which presents as *sign-in succeeds and then e
 
 ## Database
 
-Raw SQL through `db` (`src/database/pool.ts`). Schema is defined solely by `migrations/`. Tables:
+Raw SQL through `db` (`src/database/pool.ts`). Schema is defined solely by `migrations/`.
+
+`pool.ts` registers one type parser at import time: **`timestamp without time zone` is read as
+UTC**, not as the server's local time. Without it, reading and writing a naive timestamp are not
+inverse operations — the read applies the server's offset and the write discards it — so every save
+of an event moved its entry open/close times back an hour on a non-UTC machine. A no-op on the
+deployed containers, which run UTC; the bug was latent there and live in local development. `date`
+(1082) is deliberately untouched. See
+[docs/TIMESTAMP_ROUND_TRIP.md](../../docs/TIMESTAMP_ROUND_TRIP.md). Note that any suite mocking `pg`
+must stub `types`, since the parser registers on import.
+
+Tables:
 
 ```
 organizations  organization_types  organization_users  organization_user_roles

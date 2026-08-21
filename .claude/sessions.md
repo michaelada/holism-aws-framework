@@ -18901,3 +18901,201 @@ One thing the tests taught me: MUI dialogs animate closed and mark the page behi
 ## 2026-08-21 19:19:20 — Prompt
 
 Can you deploy all the latest code now to itsps.org and reset the seed data
+
+### Assistant
+
+Before I touch anything — deployment and a seed reset are both hard to reverse, so let me understand exactly what they do here. The `scripts/README.md` you have open looks relevant:
+
+Two safety guards exist specifically to stop this. Let me see how deployment gets its code:
+
+`update.sh` pulls branch **`main`** from GitHub. That's the blocker — let me confirm the state of things:
+
+I'm on `main` and only 22 files are outstanding — fewer than I expected. Let me see what's actually uncommitted and what happened:
+
+One more decision-relevant fact — the seed refuses `NODE_ENV=production` with **no override**, so let me check what the deployed stack runs as:
+
+I've got what I need, and I'm stopping before doing either — both are blocked on decisions that are yours.
+
+**What I found:**
+
+1. **itsps.org is the `testing` environment** — it's named only in `terraform/environments/testing/terraform.tfvars`. Production and staging have no domains configured.
+
+2. **A deploy right now would ship none of today's later work.** [scripts/deploy/update.sh](scripts/deploy/update.sh) pulls branch `main` from GitHub, and local `main` is level with `origin/main`. But 22 paths are uncommitted, holding: the entire member-filters fix, the nav regrouping and "Running the Org" label with all six locales, the audit middleware refinements, and the docs. Committing and pushing is a git operation, and your project rules say I don't touch git unless you ask in that message — you asked me to deploy, not to commit.
+
+3. **The seed reset is refused by design.** The deployed backend runs `NODE_ENV: production` ([docker-compose.deploy.yml:97](docker-compose.deploy.yml#L97)), and the seed script refuses that outright — `NODE_ENV=production` is refused, *with no override*, unlike the remote-DB and remote-Keycloak guards which do have escape hatches. Resetting there means deliberately running that one command with the environment masked. And `--reset` deletes all tenant data plus every Keycloak user the script created.
+
+Authorized on both. Let me check one untracked path before I blanket-commit:
+
+That's a **76 MB** untracked file. Let me identify it before going anywhere near a commit:
+
+A 73 MB WordPress database dump (`eitest_wp`) — unrelated to this project and containing personal data. Excluding it. Let me confirm what's already committed so the deploy ships a consistent set:
+
+Good — the audit work is already in `main`. Staging everything except the dump:
+
+Already excluded it. Pushing:
+
+Pushed. Now the deploy — let me find the instance:
+
+Confirmed: itsps.org → the `holism-testing` instance, currently serving 200. Running the deploy:
+
+Deploy succeeded — images rebuilt, containers restarted, and it printed the exact re-seed command. Let me check health and the `tools` environment before the destructive step:
+
+The `tools` service doesn't set `NODE_ENV` at all — let me check whether the image does:
+
+`base` is plain `node:20-alpine`, which sets no `NODE_ENV` — and the tools container reaches `postgres`/`keycloak`, both on the script's local-host list. So **no override is needed**: running it on the box is exactly the case the guards were written to permit. My earlier warning applied to the backend container, not this one.
+
+Running the reset with the command the deploy script itself documents:
+
+Seed reset complete — 4 clubs rebuilt with members, shop, bookings, registrations and discounts. Let me verify the site and find an admin login:
+
+Live site shows **"Running the Org"** with Payments and Reporting in it — today's nav change is live. But **Audit Log is missing from Setup**, and it's there locally. Let me check:
+
+Registration is on `main`, so it should be there. Let me close the dialog and hard-reload — likely a cached bundle:
+
+My misread — the DOM shows **Audit Log** is there; it was just below the fold behind the dialog. Now the real test, the bug you reported, on the live site:
+
+All done and verified on the live site.
+
+## Deployed
+
+`c30dec8` is what's running on itsps.org — the commit I pushed, confirmed on the instance. All four containers healthy.
+
+**itsps.org is the `testing` environment** (`holism-testing`, `i-047af81d…`) — it's the only place that domain is configured. Production and staging have no domains set, so nothing else was touched.
+
+## The commit
+
+One commit covering the member custom filters, the nav regrouping and "Running the Org" across six locales, the audit display refinements, and the docs. The audit trail work was already on `main` from your earlier checkpoint.
+
+**I left one thing out.** `terraform/environments/testing/eiprod2new` was untracked — a **73 MB MySQL dump of a WordPress database** (`eitest_wp`). It's unrelated to this project and full of personal data, and committing it would have put it in the repo's history permanently. You've since said to ignore it, which is what I'd already done — it's still sitting untracked in your working tree.
+
+## A correction on the seed guard
+
+I told you the reset would need the `NODE_ENV=production` guard overridden. **It didn't.** That guard applies to the `backend` container; the seed runs in `tools`, which sets no `NODE_ENV` at all, and reaches `postgres`/`keycloak` — both on the script's local-host list. So all three guards passed on their own merits. Running it on the box is precisely the case they were written to allow; they exist to stop someone firing it from a laptop at a remote database. No override, no masking.
+
+The reset rebuilt: 4 clubs, membership types and members, a shop, bookings, registrations, electronic tickets and 30 discounts. Every login is `Passw0rd!`.
+
+## Verified live
+
+Signed in as `admin@laoishunt.test` and checked today's two fixes:
+
+- **"Running the Org"** with Events, Memberships, Calendar, **Payments**, **Reporting** — and Setup down to Forms, Settings, Users, Audit Log.
+- **Created a filter called "Renewals due"** — it saved, appeared in the Custom Filter dropdown, was auto-selected, and the delete button appeared beside it. The thing that failed for you twice now works on the deployed site.
+
+One misread on my part along the way: I said Audit Log was missing from the rail. It wasn't — the expanded Memberships submenu had pushed it below the fold, and the DOM confirmed it was there all along.
+
+---
+
+
+## 2026-08-21 20:17:02 — Prompt
+
+Are u finished or still working
+
+### Assistant
+
+I'm finished — nothing running in the background.
+
+Everything from this turn is done and verified:
+
+- **Committed and pushed** to `main` as `c30dec8`
+- **Deployed** to itsps.org — confirmed the instance is running that exact commit, all four containers healthy
+- **Seed data reset** — 4 clubs rebuilt, every login `Passw0rd!`
+- **Verified live** — signed in and confirmed both fixes: "Running the Org" with Payments/Reporting in it, and a custom filter that saved and appeared in the dropdown
+
+Two things worth remembering from the session:
+
+The `NODE_ENV=production` guard I warned you about **didn't need overriding** — it applies to the backend container, not the `tools` container the seed runs in. My earlier warning was wrong on that point.
+
+And the **73 MB WordPress database dump** (`terraform/environments/testing/eiprod2new`) is still sitting untracked in your working tree. I left it alone as you said, but it's not in `.gitignore`, so a future `git add -A` would sweep it in. Worth either deleting it or adding a gitignore line if it's going to stay there.
+
+Also still open from earlier, if you want to pick either up:
+
+- **The timezone bug** in the events save path — every save shifts `open_date_entries` and `entries_closing_date` back by the UTC offset. It's live on itsps.org now. I diagnosed it but didn't fix it, since changing timestamp handling is its own decision.
+- **No editing of custom filters** — you can create and delete, but not amend.
+
+---
+
+
+## 2026-08-21 20:21:31 — Prompt
+
+Please fix the time zone  bug
+
+### Assistant
+
+Let me re-establish the exact mechanism before changing anything, and scope how far it reaches:
+
+No type parsers or timezone config at all — so node-postgres uses its default, parsing naive timestamps as **local**. Before choosing a fix, one fact that changes its scope:
+
+Decisive: **deployed backend is UTC, my machine is UTC+1**. So the drift is latent in production and active in local dev. Let me verify the mechanism and the fix empirically on a scratch table:
+
+The probe is conclusive: `17:23:46.269` → sent as `16:23Z` → stored `16:23`. One line makes it symmetric. Let me check whether `date` columns have the same family of problem before I decide how wide to go:
+
+`date` columns round-trip correctly for display — the local-midnight offset is undone by the browser. So this is squarely the `timestamp without time zone` case. Let me look at the pool:
+
+Now the fix:
+
+Fixed at the driver. Now a regression test so this can't come back:
+
+All 7 pass — but a regression test that passes without the fix is worthless. Let me confirm it actually catches the bug:
+
+That failed to compile rather than failing assertions — proves nothing. Let me sabotage it properly, reproducing the *original* behaviour:
+
+Genuine regression test: 5 of 7 fail with the old behaviour, all 7 pass with the fix. Now the important check — this is a global driver change:
+
+The suite mocks `pg` without `types`, so my import-time registration explodes. Let me look:
+
+3212 passing, zero failures. Now the real proof — the exact edit that exposed it:
+
+Form shows `18:23` local for the stored `17:23` — consistent. Let me save without touching anything and check for drift:
+
+No drift — and the audit record for that save is an **empty diff `{}`**, exactly right for a no-op save. Previously it reported a phantom `openDateEntries` change. Let me document it:
+
+Fixed, and it's a one-line change at the driver.
+
+## The mechanism
+
+Reading and writing `timestamp without time zone` were not inverse operations:
+
+| step | what happened |
+|---|---|
+| **read** | node-postgres parses a naive timestamp as **local** time — `17:23` became the instant `16:23Z` on a UTC+1 machine |
+| **send** | the API serialised that instant: `2026-09-19T16:23:46.269Z` |
+| **write** | Postgres cast it back by **discarding the offset**, storing `16:23` |
+
+Read applied the offset, write discarded it. I proved it with a round-trip probe before touching anything, then proved the fix the same way.
+
+## An important correction to what I told you
+
+I said "every save of an event moves its entry open/close times back by one hour." That was true **on my machine and not on itsps.org**. The deployed containers run UTC, where local and UTC coincide and the asymmetry cancels. I'd only observed it locally and overstated the reach.
+
+So: latent in production, live in local development. Still worth fixing — dev data was silently drifting, and setting `TZ` on the container (an entirely reasonable thing for an Irish product wanting readable logs) would have switched the corruption on in production with no code change to blame. **No existing data needs correcting**, since production never drifted.
+
+## The fix
+
+```ts
+pgTypes.setTypeParser(1114, (value) =>
+  value === null ? null : new Date(`${value.replace(' ', 'T')}Z`)
+);
+```
+
+At the driver rather than in the event service, because the asymmetry is the driver's and ~25 other naive columns share it — `discounts.valid_from`, `electronic_tickets.valid_until`, `reports.next_run_at` — each of which would have needed the same patch and been forgotten once.
+
+I checked `date` (1082) too and deliberately left it: it has the same local-midnight quirk, but a browser in the server's zone renders it back correctly, and stringifying those would break every caller doing date arithmetic.
+
+## Verified
+
+- **Regression test**, 7 cases, pinned to `Europe/Dublin` — on UTC the bug is invisible and the test would pass against broken code. I confirmed it *fails* before trusting it: restoring the old reading fails 5 of 7. Covers three consecutive saves, since the drift was cumulative, and a date past the daylight-saving boundary.
+- **Live**: saved that event untouched. Both timestamps unchanged, and the audit record for the save is an **empty diff `{}`** — where it previously reported a phantom `openDateEntries` change.
+- **Backend: 3212 passing, 0 failing.**
+
+One thing this shook out: `pool.test.ts` mocks `pg` without `types`, and the parser registers at import time, so the suite died on import. Mock completed, and noted in the docs — it's the same partial-mock trap that's bitten this codebase repeatedly.
+
+Written up in [docs/TIMESTAMP_ROUND_TRIP.md](docs/TIMESTAMP_ROUND_TRIP.md), including that it was the audit trail that surfaced this — the drift was invisible from every screen until something wrote down what the values had been.
+
+**Not committed or deployed** — you didn't ask this time. Say the word and I'll push and roll it out; on itsps.org it's a no-op, so there's no urgency.
+
+---
+
+
+## 2026-08-21 20:34:50 — Prompt
+
+Push and roll it out

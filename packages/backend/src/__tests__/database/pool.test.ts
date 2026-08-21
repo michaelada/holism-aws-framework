@@ -15,6 +15,12 @@ jest.mock('pg', () => {
 
   return {
     Pool: jest.fn(() => mockPool),
+    /*
+     * `pool.ts` registers a type parser at import time, so this mock has to
+     * carry `types` or importing the module under test throws before a single
+     * test runs. See the note in pool.ts: naive timestamps are read as UTC.
+     */
+    types: { setTypeParser: jest.fn(), getTypeParser: jest.fn() },
   };
 });
 

@@ -1,7 +1,60 @@
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult, types as pgTypes } from 'pg';
 import { getDatabaseConfig, validateDatabaseConfig } from '../config/database.config';
 import { dbQueryDuration, dbQueryTotal, dbQueryErrors, dbConnectionPoolSize } from '../config/metrics';
 import { logger } from '../config/logger';
+
+/**
+ * `timestamp without time zone` is read as UTC, not as the server's local time.
+ *
+ * ## The bug this fixes
+ *
+ * Saving an event moved its entry open/close times back by the server's UTC
+ * offset — **every time it was saved**. Nobody touched the field; it just
+ * walked backwards an hour per save.
+ *
+ * The cause is an asymmetry between how these columns are read and written:
+ *
+ * | step | what happens |
+ * |---|---|
+ * | read  | node-postgres parses a naive timestamp as **local** time, so `17:23` becomes the instant `16:23Z` in Dublin |
+ * | send  | the API serialises that instant: `2026-09-19T16:23:46.269Z` |
+ * | write | Postgres casts that back to `timestamp without time zone` by **discarding the offset**, storing `16:23` |
+ *
+ * Read applies the offset; write does not. One round trip, one hour lost.
+ *
+ * ## Why here, and why this way
+ *
+ * Reading as UTC makes the two halves inverse operations: `17:23` reads as
+ * `17:23Z`, is sent as `17:23Z`, and is stored again as `17:23`. Proven with a
+ * round-trip probe before and after.
+ *
+ * It is deliberately at the driver rather than in the event service, because
+ * the asymmetry is the driver's, and every naive column shares it —
+ * `discounts.valid_from`, `electronic_tickets.valid_until` and the rest would
+ * each need the same patch otherwise, and would each be forgotten once.
+ *
+ * **On a UTC server this changes nothing at all.** The deployed containers run
+ * UTC, so the bug was latent there and live only where a developer's machine
+ * sets a different zone. That is precisely why it is worth fixing rather than
+ * shrugging at: a `TZ` set on the container — an entirely reasonable thing for
+ * an Irish product wanting readable logs — would have started corrupting entry
+ * dates in production, and dev and production disagreeing is the kind of
+ * difference that hides a fault until it is expensive.
+ *
+ * `date` (OID 1082) is deliberately left alone. It has the same local-midnight
+ * quirk, but a browser in the server's zone renders it back correctly, and
+ * turning those values into strings would change every caller that does date
+ * arithmetic on them. Where a `date` must cross a zone boundary server-side,
+ * the caller converts explicitly — see `asDateString` in member-filter.service.
+ */
+const TIMESTAMP_WITHOUT_TIME_ZONE = 1114;
+
+pgTypes.setTypeParser(TIMESTAMP_WITHOUT_TIME_ZONE, (value: string) =>
+  // Postgres hands these over as `2026-09-19 17:23:46.269`. Naming it UTC is
+  // the whole fix; `new Date(...)` on the bare string would apply local time
+  // again and put us back where we started.
+  value === null ? null : new Date(`${value.replace(' ', 'T')}Z`)
+);
 
 /**
  * Database connection pool singleton
