@@ -78,14 +78,14 @@ describe('RegisterWithOrganisationPage (A4)', () => {
   it('is clear that connecting is not the same as buying a membership', async () => {
     render();
 
-    expect(await screen.findByText(/does not buy a membership/i)).toBeInTheDocument();
+    expect(await screen.findByText(/is not a membership/i)).toBeInTheDocument();
   });
 
   it('connects the member to the club', async () => {
     const user = userEvent.setup();
     render();
 
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
     await waitFor(() =>
       expect(mockExecute).toHaveBeenCalledWith(
@@ -107,7 +107,7 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     const user = userEvent.setup();
     render();
 
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith('/khpc', { replace: true })
@@ -122,7 +122,7 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     respondWith('pending');
     render();
 
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith('/khpc/pending', { replace: true })
@@ -133,7 +133,7 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     const user = userEvent.setup();
     render();
 
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
     const [, options] = mockNavigate.mock.calls.at(-1)!;
@@ -152,7 +152,7 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     respondWith('active');
     render();
 
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith('/khpc', { replace: true })
@@ -166,7 +166,7 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     respondWith('active');
 
     render();
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
@@ -180,9 +180,9 @@ describe('RegisterWithOrganisationPage (A4)', () => {
     );
 
     render();
-    await user.click(await screen.findByRole('button', { name: 'Connect to this organisation/ club' }));
+    await user.click(await screen.findByRole('button', { name: 'Create my account' }));
 
-    expect(await screen.findByText(/could not connect you to this club/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect to this organisation/ club' })).toBeEnabled();
+    expect(await screen.findByText(/could not create your account/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create my account' })).toBeEnabled();
   });
 });

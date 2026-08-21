@@ -8,6 +8,7 @@ import {
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -16,6 +17,14 @@ import { db } from '../database/pool';
  * names no organisation at all.
  */
 const router = Router({ mergeParams: true });
+
+/*
+ * A field's `name` is generated from its label — `Any medical conditions?`
+ * becomes `any_medical_conditions`. Recording both says the same thing twice,
+ * and puts the machine-readable one first.
+ */
+const FIELD_INTERNALS = new Set(['name']);
+
 
 // ============================================================================
 // Application Forms Routes
@@ -199,6 +208,7 @@ router.post(
   '/application-forms',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'form.created', resource: 'applicationForm', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const form = await applicationFormService.createApplicationForm(req.body);
@@ -242,6 +252,7 @@ router.put(
   '/application-forms/:id',
   authenticateToken(),
   byResource('applicationForm', 'id'),
+  audited({ action: 'form.updated', resource: 'applicationForm', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -280,6 +291,7 @@ router.delete(
   '/application-forms/:id',
   authenticateToken(),
   byResource('applicationForm', 'id'),
+  audited({ action: 'form.deleted', resource: 'applicationForm', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -345,6 +357,7 @@ router.post(
   '/application-fields',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'field.created', resource: 'applicationField', label: 'label', exclude: FIELD_INTERNALS }),
   async (req: Request, res: Response) => {
     try {
       // Extract organisationId from request body
@@ -434,6 +447,7 @@ router.put(
   '/application-fields/:id',
   authenticateToken(),
   byResource('applicationField', 'id'),
+  audited({ action: 'field.updated', resource: 'applicationField', label: 'label', exclude: FIELD_INTERNALS }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -480,6 +494,7 @@ router.delete(
   '/application-fields/:id',
   authenticateToken(),
   byResource('applicationField', 'id'),
+  audited({ action: 'field.deleted', resource: 'applicationField', label: 'label', exclude: FIELD_INTERNALS }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -526,6 +541,7 @@ router.post(
   '/application-forms/:formId/fields',
   authenticateToken(),
   byResource('applicationForm', 'formId'),
+  audited({ action: 'form.updated', resource: 'applicationForm', param: 'formId', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { formId } = req.params;
@@ -570,6 +586,7 @@ router.delete(
   '/application-forms/:formId/fields/:fieldId',
   authenticateToken(),
   byResource('applicationForm', 'formId'),
+  audited({ action: 'form.updated', resource: 'applicationForm', param: 'formId', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { formId, fieldId } = req.params;

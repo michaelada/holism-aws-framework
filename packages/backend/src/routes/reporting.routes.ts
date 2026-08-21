@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { reportingService } from '../services/reporting.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -36,6 +37,7 @@ const router = Router({ mergeParams: true });
 router.get(
   '/organisations/:organisationId/reports/dashboard',
   authenticateToken(),
+  audited({ action: 'report.viewed', entityType: 'report', label: () => 'Dashboard', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -90,6 +92,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/events',
   authenticateToken(),
+  audited({ action: 'report.viewed', entityType: 'report', label: () => 'Events', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -156,6 +159,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/members',
   authenticateToken(),
+  audited({ action: 'report.viewed', entityType: 'report', label: () => 'Members', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -217,6 +221,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/revenue',
   authenticateToken(),
+  audited({ action: 'report.viewed', entityType: 'report', label: () => 'Revenue', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -298,6 +303,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/export',
   authenticateToken(),
+  audited({ action: 'export.downloaded', entityType: 'report', label: () => 'Export', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;

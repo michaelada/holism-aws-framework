@@ -41,8 +41,15 @@
     "resultCount_one": "{{count}} organisation",
     "resultCount_other": "{{count}} organisations",
     "empty": "Aucune organisation ne correspond à « {{query}} ».",
-    "emptyHint": "Vérifiez l'orthographe ou demandez à votre club son lien d'inscription.",
+    "emptyHint": "Vérifiez l’orthographe ou demandez à votre club son lien d’inscription.",
     "loadError": "Nous n'avons pas pu charger la liste des organisations."
+  },
+  "poweredBy": {
+    "text": "Propulsé par ItsPlainSailing.com",
+    "copyright": "© {{year}} Esker Software. Tous droits réservés"
+  },
+  "posts": {
+    "regionLabel": "Annonces"
   },
   "gateway": {
     "signInPrompt": "Connectez-vous pour voir vos inscriptions, adhésions et réservations.",
@@ -57,28 +64,28 @@
     }
   },
   "register": {
-    "title": "Rejoindre {{organisation}}",
+    "title": "Créez votre compte {{organisation}}",
     "body": "Cela relie votre compte ItsPlainSailing à {{organisation}}. Cela n'achète pas d'adhésion — vous pourrez en demander une une fois relié.",
-    "notAMembership": "Cela n'achète pas d'adhésion. Si le club propose des adhésions, vous en ferez la demande séparément une fois connecté.",
-    "submit": "Rejoindre ce club",
-    "submitting": "Connexion en cours…",
-    "failed": "Nous n'avons pas pu vous relier à ce club.",
+    "notAMembership": "Ceci n’est pas une adhésion. Si le club propose des adhésions, vous en faites la demande séparément une fois votre compte créé.",
+    "submit": "Créer mon compte",
+    "submitting": "Création de votre compte…",
+    "failed": "Nous n’avons pas pu créer votre compte auprès de ce club.",
     "submitted": {
       "title": "Demande envoyée",
-      "bodyAuto": "Vous êtes maintenant relié à {{organisation}}.",
+      "bodyAuto": "Votre compte {{organisation}} est prêt.",
       "bodyApproval": "Un administrateur du club examinera votre demande avant que vous puissiez vous connecter.",
       "continue": "Continuer"
     }
   },
   "notConnected": {
-    "title": "Vous n'êtes pas membre de {{organisation}}",
+    "title": "Vous n’avez pas encore de compte {{organisation}}",
     "body": "Votre connexion a réussi, mais ce club n'a pas encore de trace de vous.",
-    "register": "Demander à rejoindre",
+    "register": "Créer un compte",
     "switch": "Aller à l'une de vos organisations"
   },
   "pending": {
     "title": "En attente d'approbation",
-    "body": "Votre demande pour rejoindre {{organisation}} est en cours d'examen par le club.",
+    "body": "Votre demande de compte {{organisation}} est en cours d’examen par le club.",
     "statusEmail": "Adresse e-mail vérifiée",
     "statusApproval": "En attente de l'approbation du club",
     "checkAgain": "Vérifier à nouveau",
@@ -88,7 +95,7 @@
   },
   "rejected": {
     "title": "Demande non approuvée",
-    "body": "{{organisation}} n'a pas approuvé votre demande d'adhésion. Veuillez contacter le club directement si vous pensez qu'il s'agit d'une erreur."
+    "body": "{{organisation}} n’a pas approuvé votre demande de compte. Veuillez contacter le club directement si vous pensez qu’il s’agit d’une erreur."
   },
   "inactive": {
     "title": "Votre compte est inactif",
@@ -131,12 +138,72 @@
     "browseMemberships": "Adhésions",
     "orders": "Mes commandes"
   },
+  "platformEvents": {
+    "title": "Au programme",
+    "subtitle": "Événements équestres de tous les clubs sur ItsPlainSailing.",
+    "metaTitle": "Au programme · ItsPlainSailing",
+    "metaDescription": "Recherchez les événements équestres de tous les clubs sur ItsPlainSailing : saut d’obstacles, cross, dressage, stages et rallyes.",
+    "searchPlaceholder": "Rechercher événements, clubs ou lieux",
+    "searchLabel": "Rechercher des événements",
+    "refine": "Affiner",
+    "eventType": "Type d’événement",
+    "region": "Région",
+    "club": "Club",
+    "clearAll": "Tout effacer",
+    "filters": "Filtres",
+    "filtersWithCount": "Filtres ({{count}})",
+    "apply": "Appliquer",
+    "sort": "Trier",
+    "sortSoonest": "Les plus proches",
+    "sortClosing": "Clôture imminente",
+    "sortRecent": "Ajoutés récemment",
+    "sortOrganisation": "Club A–Z",
+    "resultCount": "{{count}} événement",
+    "resultCount_other": "{{count}} événements",
+    "noMatches": "Aucun événement ne correspond à ces filtres.",
+    "noneYet": "Aucun club n’a encore publié d’événements ici.",
+    "loadError": "Impossible de charger ces événements.",
+    "showMore": "Afficher plus d’événements",
+    "someMembersOnly": "{{count}} réservés aux membres"
+  },
+  "publicEvents": {
+    "title": "Au programme chez {{organisation}}",
+    "subtitle": "Ouvert à tous, sauf indication contraire d’une activité.",
+    "empty": "Ce club n’a pas encore publié d’événements.",
+    "loadError": "Impossible de charger ces événements.",
+    "notFound": "Nous n’avons pas trouvé cet événement.",
+    "backToList": "Tous les événements",
+    "previously": "Précédemment",
+    "finished": "Terminé",
+    "activities": "Activités",
+    "activityCount": "{{count}} activité",
+    "activityCount_other": "{{count}} activités",
+    "from": "à partir de {{price}}",
+    "placesLeft": "{{count}} place restante",
+    "placesLeft_other": "{{count}} places restantes",
+    "membersOnly": "Réservé aux membres",
+    "membersOnlyAnyBranch": "Membres de toute section",
+    "entriesOpen": "Ouverture des inscriptions",
+    "entriesClose": "Clôture des inscriptions",
+    "eventLimit": "Limite de l’événement",
+    "ofPlaces": "{{remaining}} sur {{limit}} restantes",
+    "enterWith": "S’inscrire avec {{organisation}}",
+    "signInNote": "Vous vous connecterez ou créerez un compte pour vous inscrire.",
+    "enterPrompt": "Les inscriptions se font depuis votre compte {{organisation}}.",
+    "signInOrCreate": "Se connecter ou créer un compte",
+    "metaList": "Événements organisés par {{organisation}} et ouverts aux inscriptions sur ItsPlainSailing.",
+    "enter": "S’inscrire",
+    "soldOut": "Complet",
+    "entriesClosedNote": "Les inscriptions à cet événement sont closes.",
+    "entriesNotOpenNote": "Les inscriptions à cet événement ne sont pas encore ouvertes.",
+    "metaFallback": "Un événement organisé par {{organisation}} sur ItsPlainSailing."
+  },
   "home": {
     "externalEvents": "Événements d’autres organisations",
     "externalEventsHint": "Organisé par une autre organisation mais ouvert à tous les membres de {{organisationType}}",
     "externalEventBadge": "Événement externe",
     "externalEventOpen": "Aller à {{organisation}}",
-    "externalEventJoin": "Rejoindre {{organisation}} pour s’inscrire",
+    "externalEventAccount": "Créer un compte {{organisation}}",
     "welcome": "Bon retour, {{name}}",
     "welcomeAnonymous": "Bon retour",
     "comingSoon": "Votre tableau de bord pour {{organisation}} apparaîtra ici.",
@@ -457,13 +524,21 @@
     "home": "Accueil"
   },
   "form": {
+    "entrant": {
+      "label": "Pour qui est cette inscription ?",
+      "placeholder": "Nom",
+      "hintOpen": "Commencez à saisir pour trouver un membre, ou saisissez n'importe quel nom.",
+      "hintMembersOnly": "Commencez à saisir pour trouver un membre. Seuls les membres actifs peuvent être inscrits.",
+      "hintPlain": "Le nom de la personne concernée par cette inscription.",
+      "noMatches": "Aucun membre trouvé.",
+      "alreadyEntered": "Déjà inscrit",
+      "searching": "Recherche en cours…",
+      "required": "Saisissez le nom de la personne concernée par cette inscription.",
+      "mustBeMember": "Choisissez un membre actif dans la liste."
+    },
     "membersOnly": {
       "notAMember": "Cette activité est réservée aux membres de {{organisation}}, et vous n'avez pas d'adhésion active.",
-      "viewMemberships": "Voir les adhésions",
-      "entryFor": "Cette inscription est pour {{name}}",
-      "whoIsThisFor": "Pour qui est cette inscription ?",
-      "whoIsThisForHint": "Vous avez plusieurs adhésions. Choisissez le membre que vous inscrivez.",
-      "optionAlreadyEntered": "{{name}} — déjà inscrit"
+      "viewMemberships": "Voir les adhésions"
     },
     "submit": "Enregistrer et ajouter au panier",
     "saving": "Enregistrement…",

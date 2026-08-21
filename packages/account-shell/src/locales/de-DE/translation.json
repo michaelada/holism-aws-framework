@@ -41,8 +41,15 @@
     "resultCount_one": "{{count}} Organisation",
     "resultCount_other": "{{count}} Organisationen",
     "empty": "Keine Organisation entspricht „{{query}}“.",
-    "emptyHint": "Prüfen Sie die Schreibweise oder fragen Sie Ihren Verein nach dem Beitrittslink.",
+    "emptyHint": "Prüfen Sie die Schreibweise oder fragen Sie Ihren Club nach dem Anmeldelink.",
     "loadError": "Die Organisationsliste konnte nicht geladen werden."
+  },
+  "poweredBy": {
+    "text": "Bereitgestellt von ItsPlainSailing.com",
+    "copyright": "© {{year}} Esker Software. Alle Rechte vorbehalten"
+  },
+  "posts": {
+    "regionLabel": "Mitteilungen"
   },
   "gateway": {
     "signInPrompt": "Melden Sie sich an, um Ihre Anmeldungen, Mitgliedschaften und Buchungen zu sehen.",
@@ -57,28 +64,28 @@
     }
   },
   "register": {
-    "title": "{{organisation}} beitreten",
+    "title": "Erstellen Sie Ihr Konto für {{organisation}}",
     "body": "Damit wird Ihr ItsPlainSailing-Konto mit {{organisation}} verknüpft. Eine Mitgliedschaft wird dadurch nicht erworben — diese können Sie beantragen, sobald die Verknüpfung besteht.",
-    "notAMembership": "Damit wird keine Mitgliedschaft gekauft. Wenn der Verein Mitgliedschaften anbietet, beantragen Sie diese nach der Verbindung separat.",
-    "submit": "Mit diesem Verein verknüpfen",
-    "submitting": "Wird verknüpft…",
-    "failed": "Die Verknüpfung mit diesem Verein war nicht möglich.",
+    "notAMembership": "Dies ist keine Mitgliedschaft. Wenn der Club Mitgliedschaften anbietet, beantragen Sie diese separat, sobald Ihr Konto eingerichtet ist.",
+    "submit": "Mein Konto erstellen",
+    "submitting": "Konto wird erstellt…",
+    "failed": "Wir konnten Ihr Konto bei diesem Club nicht erstellen.",
     "submitted": {
       "title": "Anfrage gesendet",
-      "bodyAuto": "Sie sind jetzt mit {{organisation}} verknüpft.",
+      "bodyAuto": "Ihr Konto für {{organisation}} ist bereit.",
       "bodyApproval": "Ein Vereinsadministrator prüft Ihre Anfrage, bevor Sie sich anmelden können.",
       "continue": "Weiter"
     }
   },
   "notConnected": {
-    "title": "Sie sind kein Mitglied von {{organisation}}",
+    "title": "Sie haben noch kein Konto für {{organisation}}",
     "body": "Ihre Anmeldung war erfolgreich, aber dieser Verein hat noch keinen Eintrag für Sie.",
-    "register": "Beitritt beantragen",
+    "register": "Konto erstellen",
     "switch": "Zu einer Ihrer Organisationen wechseln"
   },
   "pending": {
     "title": "Warten auf Freigabe",
-    "body": "Ihre Anfrage zum Beitritt zu {{organisation}} wird vom Verein geprüft.",
+    "body": "Ihre Kontoanfrage für {{organisation}} wird vom Club geprüft.",
     "statusEmail": "E-Mail-Adresse bestätigt",
     "statusApproval": "Warten auf Freigabe durch den Verein",
     "checkAgain": "Erneut prüfen",
@@ -88,7 +95,7 @@
   },
   "rejected": {
     "title": "Anfrage nicht genehmigt",
-    "body": "{{organisation}} hat Ihre Beitrittsanfrage nicht genehmigt. Bitte wenden Sie sich direkt an den Verein, wenn Sie dies für einen Fehler halten."
+    "body": "{{organisation}} hat Ihre Kontoanfrage nicht genehmigt. Bitte wenden Sie sich direkt an den Club, wenn Sie glauben, dass dies ein Fehler ist."
   },
   "inactive": {
     "title": "Ihr Konto ist inaktiv",
@@ -131,12 +138,72 @@
     "browseMemberships": "Mitgliedschaften",
     "orders": "Meine Bestellungen"
   },
+  "platformEvents": {
+    "title": "Veranstaltungen",
+    "subtitle": "Reitveranstaltungen aller Vereine auf ItsPlainSailing.",
+    "metaTitle": "Veranstaltungen · ItsPlainSailing",
+    "metaDescription": "Reitveranstaltungen aller Vereine auf ItsPlainSailing durchsuchen — Springen, Geländeritt, Dressur, Camps und Rallyes.",
+    "searchPlaceholder": "Veranstaltungen, Vereine oder Orte suchen",
+    "searchLabel": "Veranstaltungen suchen",
+    "refine": "Eingrenzen",
+    "eventType": "Art der Veranstaltung",
+    "region": "Region",
+    "club": "Verein",
+    "clearAll": "Alle zurücksetzen",
+    "filters": "Filter",
+    "filtersWithCount": "Filter ({{count}})",
+    "apply": "Anwenden",
+    "sort": "Sortieren",
+    "sortSoonest": "Nächste zuerst",
+    "sortClosing": "Anmeldeschluss zuerst",
+    "sortRecent": "Zuletzt hinzugefügt",
+    "sortOrganisation": "Verein A–Z",
+    "resultCount": "{{count}} Veranstaltung",
+    "resultCount_other": "{{count}} Veranstaltungen",
+    "noMatches": "Keine Veranstaltungen entsprechen diesen Filtern.",
+    "noneYet": "Noch keine Vereine haben hier Veranstaltungen veröffentlicht.",
+    "loadError": "Diese Veranstaltungen konnten nicht geladen werden.",
+    "showMore": "Mehr anzeigen",
+    "someMembersOnly": "{{count}} nur für Mitglieder"
+  },
+  "publicEvents": {
+    "title": "Veranstaltungen bei {{organisation}}",
+    "subtitle": "Offen für alle, sofern eine Aktivität nichts anderes sagt.",
+    "empty": "Dieser Verein hat noch keine Veranstaltungen öffentlich gemacht.",
+    "loadError": "Diese Veranstaltungen konnten nicht geladen werden.",
+    "notFound": "Diese Veranstaltung wurde nicht gefunden.",
+    "backToList": "Alle Veranstaltungen",
+    "previously": "Vergangene",
+    "finished": "Beendet",
+    "activities": "Aktivitäten",
+    "activityCount": "{{count}} Aktivität",
+    "activityCount_other": "{{count}} Aktivitäten",
+    "from": "ab {{price}}",
+    "placesLeft": "noch {{count}} Platz",
+    "placesLeft_other": "noch {{count}} Plätze",
+    "membersOnly": "Nur für Mitglieder",
+    "membersOnlyAnyBranch": "Mitglieder jeder Zweigstelle",
+    "entriesOpen": "Anmeldung ab",
+    "entriesClose": "Anmeldeschluss",
+    "eventLimit": "Teilnehmerlimit",
+    "ofPlaces": "{{remaining}} von {{limit}} frei",
+    "enterWith": "Bei {{organisation}} anmelden",
+    "signInNote": "Sie melden sich an oder erstellen ein Konto, um teilzunehmen.",
+    "enterPrompt": "Anmeldungen erfolgen über Ihr Konto bei {{organisation}}.",
+    "signInOrCreate": "Anmelden oder Konto erstellen",
+    "metaList": "Veranstaltungen von {{organisation}}, zur Anmeldung geöffnet auf ItsPlainSailing.",
+    "enter": "Anmelden",
+    "soldOut": "Ausgebucht",
+    "entriesClosedNote": "Die Anmeldung für diese Veranstaltung ist geschlossen.",
+    "entriesNotOpenNote": "Die Anmeldung für diese Veranstaltung ist noch nicht geöffnet.",
+    "metaFallback": "Eine Veranstaltung von {{organisation}} auf ItsPlainSailing."
+  },
   "home": {
     "externalEvents": "Veranstaltungen anderer Organisationen",
     "externalEventsHint": "Von einer anderen Organisation durchgeführt, aber offen für alle Mitglieder von {{organisationType}}",
     "externalEventBadge": "Externe Veranstaltung",
     "externalEventOpen": "Zu {{organisation}}",
-    "externalEventJoin": "{{organisation}} beitreten, um teilzunehmen",
+    "externalEventAccount": "Konto bei {{organisation}} erstellen",
     "welcome": "Willkommen zurück, {{name}}",
     "welcomeAnonymous": "Willkommen zurück",
     "comingSoon": "Ihr Dashboard für {{organisation}} erscheint hier.",
@@ -457,13 +524,21 @@
     "home": "Startseite"
   },
   "form": {
+    "entrant": {
+      "label": "Für wen ist diese Anmeldung?",
+      "placeholder": "Name",
+      "hintOpen": "Tippen Sie, um ein Mitglied zu finden, oder geben Sie einen beliebigen Namen ein.",
+      "hintMembersOnly": "Tippen Sie, um ein Mitglied zu finden. Nur aktive Mitglieder können angemeldet werden.",
+      "hintPlain": "Der Name der Person, für die diese Anmeldung gilt.",
+      "noMatches": "Keine Mitglieder gefunden.",
+      "alreadyEntered": "Bereits angemeldet",
+      "searching": "Suche läuft…",
+      "required": "Geben Sie den Namen der Person ein, für die diese Anmeldung gilt.",
+      "mustBeMember": "Wählen Sie ein aktives Mitglied aus der Liste."
+    },
     "membersOnly": {
       "notAMember": "Diese Aktivität steht nur Mitgliedern von {{organisation}} offen, und Sie haben keine aktive Mitgliedschaft.",
-      "viewMemberships": "Mitgliedschaften ansehen",
-      "entryFor": "Diese Anmeldung ist für {{name}}",
-      "whoIsThisFor": "Für wen ist diese Anmeldung?",
-      "whoIsThisForHint": "Sie haben mehrere Mitgliedschaften. Wählen Sie das Mitglied aus, das Sie anmelden.",
-      "optionAlreadyEntered": "{{name}} — bereits angemeldet"
+      "viewMemberships": "Mitgliedschaften ansehen"
     },
     "submit": "Speichern und in den Warenkorb",
     "saving": "Wird gespeichert…",

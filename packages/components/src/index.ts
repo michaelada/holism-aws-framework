@@ -30,8 +30,13 @@ export * from './components/CalendarIcon/CalendarIcon';
 export * from './components/CalendarIcon/calendarIcons';
 export * from './components/RichText/RichText';
 export * from './components/discount';
+export * from './components/EntrantNameField/EntrantNameField';
+export * from './components/PostCard/PostCard';
+export * from './components/PoweredByFooter/PoweredByFooter';
+export * from './components/AuditChanges/AuditChanges';
 
 // Shared locale-aware formatting (CLAUDE.md §1.5)
 export * from './utils/formatting';
 export * from './utils/ticketGeneration';
 export * from './utils/applicationField';
+export * from './utils/auditLabels';

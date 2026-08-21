@@ -74,16 +74,40 @@ const eventWith = (act: Record<string, unknown>) => ({
   activities: [act],
 });
 
-/** Routes by URL: catalogue, form definition, submission, cart. */
+/**
+ * How the entrant name field behaves, per test.
+ *
+ * Defaults to a plain text box — the commonest case, a club that does not run
+ * memberships — so the tests that are about terms and forms are not also tests
+ * about autocompletion.
+ */
+let entrants: { autocomplete: boolean; allowFreeText: boolean; matches: unknown[] } = {
+  autocomplete: false,
+  allowFreeText: true,
+  matches: [],
+};
+
+/** Routes by URL: catalogue, form definition, entrants, submission, cart. */
 const respond = (act: Record<string, unknown>, form?: Record<string, unknown>) => {
   mockExecute.mockImplementation((request: { url: string; method?: string }) => {
     if (request.method === 'POST' && request.url.includes('form-submissions')) {
       return Promise.resolve({ id: 'sub-1' });
     }
     if (request.method === 'POST') return Promise.resolve({});
+    if (request.url.includes('/entrants')) return Promise.resolve(entrants);
     if (request.url.includes('/forms/')) return Promise.resolve(form ?? null);
     return Promise.resolve([eventWith(act)]);
   });
+};
+
+/**
+ * Name the entry, which every event entry now requires.
+ *
+ * A helper because it is a precondition of almost every test in this file
+ * rather than the subject of them — the ones that *are* about the name say so.
+ */
+const nameTheEntrant = async (name = 'Saoirse Byrne') => {
+  await userEvent.type(await screen.findByLabelText(/Who is this entry for/), name);
 };
 
 const render = () => renderWithProviders(<EntryFormPage kind="event" />);
@@ -99,6 +123,7 @@ describe('EntryFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     contextValue = makeOrganisationContext();
+    entrants = { autocomplete: false, allowFreeText: true, matches: [] };
     respond(activity());
   });
 
@@ -112,6 +137,7 @@ describe('EntryFormPage', () => {
 
   it('adds to the basket and moves on when there is nothing to agree to', async () => {
     render();
+    await nameTheEntrant();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Add to basket' }));
 
@@ -147,6 +173,7 @@ describe('EntryFormPage', () => {
 
     it('adds once the member has agreed', async () => {
       render();
+      await nameTheEntrant();
 
       await userEvent.click(await screen.findByRole('checkbox'));
       await userEvent.click(screen.getByRole('button', { name: 'Add to basket' }));
@@ -365,6 +392,7 @@ describe('EntryFormPage', () => {
     it('draws a checkbox field as a row of checkboxes', async () => {
       respond(activity({ applicationFormId: 'form-1' }), choiceForm);
       render();
+      await nameTheEntrant();
 
       expect(await screen.findByText('Dietary needs')).toBeInTheDocument();
       const group = screen.getByRole('group', { name: /Dietary needs/ });
@@ -380,6 +408,7 @@ describe('EntryFormPage', () => {
         fields: [choiceForm.fields[3]],
       });
       render();
+      await nameTheEntrant();
 
       await userEvent.click(await screen.findByRole('checkbox', { name: 'Vegetarian' }));
       await userEvent.click(screen.getByRole('checkbox', { name: 'Gluten free' }));
@@ -412,6 +441,7 @@ describe('EntryFormPage', () => {
         fields: [choiceForm.fields[1]],
       });
       render();
+      await nameTheEntrant();
 
       // MUI opens on mouseDown, not click (CLAUDE.md §3.4).
       fireEvent.mouseDown(await screen.findByRole('combobox', { name: /Boat class/ }));
@@ -450,6 +480,7 @@ describe('EntryFormPage', () => {
     it('will not accept an email field that is not an email', async () => {
       respond(activity({ applicationFormId: 'form-1' }), typedForm('email', 'email', 'Email'));
       render();
+      await nameTheEntrant();
 
       await userEvent.type(await screen.findByLabelText(/Email/), 'not an email');
 
@@ -467,6 +498,7 @@ describe('EntryFormPage', () => {
     it('will not accept letters in a phone number', async () => {
       respond(activity({ applicationFormId: 'form-1' }), typedForm('phone', 'mobile', 'Mobile'));
       render();
+      await nameTheEntrant();
 
       await userEvent.type(await screen.findByLabelText(/Mobile/), 'call the club');
 
@@ -500,6 +532,7 @@ describe('EntryFormPage', () => {
         fields: [{ id: 'f1', name: 'email', label: 'Email', datatype: 'email', order: 1 }],
       });
       render();
+      await nameTheEntrant();
 
       const submit = await screen.findByRole('button', { name: 'Add to basket' });
       expect(submit).toBeEnabled();
@@ -513,6 +546,7 @@ describe('EntryFormPage', () => {
         fields: [{ ...choiceForm.fields[0], required: true }],
       });
       render();
+      await nameTheEntrant();
 
       expect(await screen.findByRole('button', { name: 'Add to basket' })).toBeDisabled();
 
@@ -542,6 +576,7 @@ describe('EntryFormPage', () => {
      */
     it('keeps the button disabled until every required answer is given', async () => {
       render();
+      await nameTheEntrant();
 
       const submit = await screen.findByRole('button', { name: 'Add to basket' });
       expect(submit).toBeDisabled();
@@ -590,25 +625,17 @@ describe('EntryFormPage', () => {
     const membersOnly = (members: Array<Record<string, unknown>>) =>
       activity({ membersOnly: true, eligibleMembers: members });
 
-    it('states who the entry is for when there is only one', async () => {
-      // No choice to make. A select with one option is a question with one
-      // answer, and a sentence reads faster than a dropdown nobody can change.
+    it('opens already filled in when the account holds exactly one membership', async () => {
+      // No choice to make, so the question is answered rather than asked.
       respond(membersOnly([member()]));
       render();
 
-      expect(await screen.findByText(/This entry is for Saoirse Byrne/)).toBeInTheDocument();
-      expect(screen.queryByLabelText(/Who is this entry for/)).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByLabelText(/Who is this entry for/)).toHaveValue('Saoirse Byrne')
+      );
     });
 
-    it('asks which member when the login holds several', async () => {
-      respond(membersOnly([member(), member({ id: 'mem-2', name: 'Fionn Byrne' })]));
-      render();
-
-      expect(await screen.findByLabelText(/Who is this entry for/)).toBeInTheDocument();
-      expect(screen.queryByText(/This entry is for/)).not.toBeInTheDocument();
-    });
-
-    it('preselects nothing when there is a genuine choice', async () => {
+    it('asks, and preselects nothing, when the account holds several', async () => {
       /*
        * A parent entering Fionn who gets Saoirse by default has been handed a
        * wrong answer that looks like their own. An empty required field asks
@@ -617,17 +644,8 @@ describe('EntryFormPage', () => {
       respond(membersOnly([member(), member({ id: 'mem-2', name: 'Fionn Byrne' })]));
       render();
 
-      /*
-       * MUI renders a `Select` as a button plus a hidden input; the hidden
-       * input is what carries the value, and the visible element has no value
-       * at all — so this asserts on the button's own text rather than through
-       * `toHaveValue`.
-       */
-      const select = await screen.findByLabelText(/Who is this entry for/);
-
-      // Neither name is showing: nothing has been chosen for them.
-      expect(select).not.toHaveTextContent('Saoirse');
-      expect(select).not.toHaveTextContent('Fionn');
+      const field = await screen.findByLabelText(/Who is this entry for/);
+      expect(field).toHaveValue('');
 
       // And the consequence that matters — they cannot submit until they say.
       expect(screen.getByRole('button', { name: /Add to basket/i })).toBeDisabled();
@@ -637,6 +655,9 @@ describe('EntryFormPage', () => {
       /*
        * Not reachable from the listing, but a link can be pasted and a
        * membership can lapse between opening the list and opening the form.
+       *
+       * Note this still gates on the *caller*: widening who may be named did
+       * not widen who may reach a members-only activity.
        */
       respond(membersOnly([]));
       render();
@@ -645,22 +666,51 @@ describe('EntryFormPage', () => {
       expect(screen.queryByRole('button', { name: /Add to basket/i })).not.toBeInTheDocument();
     });
 
-    it('lists an already-entered member, disabled, rather than dropping them', async () => {
-      // A name simply missing reads as a bug; a disabled row answers the
-      // question the absence would raise.
-      respond(
-        membersOnly([
-          member({ alreadyEntered: true }),
-          member({ id: 'mem-2', name: 'Fionn Byrne' }),
-        ])
-      );
+    it('completes against the whole roster, not just the account’s own members', async () => {
+      /*
+       * The widening, from the form's side. A parent whose child's membership
+       * sits on the other parent's login, or a secretary entering half the
+       * club, could name nobody at all under the old list.
+       */
+      respond(membersOnly([member()]));
+      entrants = {
+        autocomplete: true,
+        allowFreeText: false,
+        matches: [
+          {
+            memberId: 'mem-9',
+            name: 'Somebody Else’s Child',
+            membershipTypeName: 'Junior Member',
+            membershipNumber: 'KHP-0999',
+          },
+        ],
+      };
       render();
 
-      fireEvent.mouseDown(await screen.findByLabelText(/Who is this entry for/));
-      const listbox = within(screen.getByRole('listbox'));
+      const field = await screen.findByLabelText(/Who is this entry for/);
+      await userEvent.clear(field);
+      await userEvent.type(field, 'som');
 
-      expect(listbox.getByText(/Saoirse Byrne — already entered/)).toBeInTheDocument();
-      expect(listbox.getByText(/Fionn Byrne/)).toBeInTheDocument();
+      expect(await screen.findByText('Somebody Else’s Child')).toBeInTheDocument();
+    });
+
+    it('asks the server for matches as the member types', async () => {
+      respond(membersOnly([member()]));
+      entrants = { autocomplete: true, allowFreeText: false, matches: [] };
+      render();
+
+      const field = await screen.findByLabelText(/Who is this entry for/);
+      await userEvent.clear(field);
+      await userEvent.type(field, 'byr');
+
+      await waitFor(() =>
+        expect(mockExecute).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: expect.stringContaining('/activities/act-1/entrants'),
+            params: { q: 'byr' },
+          })
+        )
+      );
     });
 
     it('sends the chosen member with the basket line', async () => {
@@ -668,7 +718,9 @@ describe('EntryFormPage', () => {
       respond(membersOnly([member()]));
       render();
 
-      await screen.findByText(/This entry is for Saoirse Byrne/);
+      await waitFor(() =>
+        expect(screen.getByLabelText(/Who is this entry for/)).toHaveValue('Saoirse Byrne')
+      );
       await userEvent.click(screen.getByRole('button', { name: /Add to basket/i }));
 
       await waitFor(() =>
@@ -676,18 +728,22 @@ describe('EntryFormPage', () => {
           expect.objectContaining({
             method: 'POST',
             data: expect.objectContaining({
-              contextRef: expect.objectContaining({ memberId: 'mem-1' }),
+              contextRef: expect.objectContaining({
+                memberId: 'mem-1',
+                entrantName: 'Saoirse Byrne',
+              }),
             }),
           })
         )
       );
     });
 
-    it('sends no member for an open activity', async () => {
+    it('sends the typed name, and no member, for an open activity', async () => {
       respond(activity());
       render();
 
       await screen.findByText('Junior Single Sculls');
+      await nameTheEntrant('Fionn Doyle');
       await userEvent.click(screen.getByRole('button', { name: /Add to basket/i }));
 
       await waitFor(() => expect(mockExecute).toHaveBeenCalled());
@@ -695,6 +751,19 @@ describe('EntryFormPage', () => {
         .map(([request]) => request)
         .find((request: any) => request?.data?.contextRef?.activityId);
       expect(add.data.contextRef).not.toHaveProperty('memberId');
+      expect(add.data.contextRef.entrantName).toBe('Fionn Doyle');
+    });
+
+    it('will not submit an open entry with no name at all', async () => {
+      /*
+       * The name is the entry, not a question about it. Without it the club's
+       * entry list is a column of account holders.
+       */
+      respond(activity());
+      render();
+
+      await screen.findByText('Junior Single Sculls');
+      expect(screen.getByRole('button', { name: /Add to basket/i })).toBeDisabled();
     });
   });
 

@@ -5,6 +5,7 @@ import { organizationAdminRoleService } from '../services/organization-admin-rol
 import { authenticateToken } from '../middleware/auth.middleware';
 import { byParam, byResource } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 const router = Router();
 
@@ -66,7 +67,7 @@ router.get('/admins/:organizationId', scopedToTheOrganisation, async (req: Reque
  * POST /api/orgadmin/users/admins/:organizationId
  * Create a new admin user
  */
-router.post('/admins/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:organizationId', scopedToTheOrganisation, audited({ action: 'user.org-admin-created', entityType: 'user', kind: 'create' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
     const { email, firstName, lastName, temporaryPassword, roleIds } = req.body;
@@ -108,7 +109,7 @@ router.post('/admins/:organizationId', scopedToTheOrganisation, async (req: Requ
  * PUT /api/orgadmin/users/admins/:id
  * Update an admin user
  */
-router.put('/admins/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.put('/admins/:id', scopedToTheUser, audited({ action: 'user.org-admin-updated', resource: 'organisationUser', entityType: 'user' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { firstName, lastName, status } = req.body;
@@ -138,7 +139,7 @@ router.put('/admins/:id', scopedToTheUser, async (req: Request, res: Response): 
  * DELETE /api/orgadmin/users/admins/:id
  * Delete an admin user
  */
-router.delete('/admins/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.delete('/admins/:id', scopedToTheUser, audited({ action: 'user.org-admin-deleted', resource: 'organisationUser', entityType: 'user' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -163,7 +164,7 @@ router.delete('/admins/:id', scopedToTheUser, async (req: Request, res: Response
  * POST /api/orgadmin/users/admins/:id/roles
  * Assign roles to an admin user
  */
-router.post('/admins/:id/roles', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:id/roles', scopedToTheUser, audited({ action: 'role.assigned', resource: 'organisationUser', entityType: 'user', kind: 'action' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { roleIds } = req.body;
@@ -199,7 +200,7 @@ router.post('/admins/:id/roles', scopedToTheUser, async (req: Request, res: Resp
  * DELETE /api/orgadmin/users/admins/:id/roles/:roleId
  * Remove a role from an admin user
  */
-router.delete('/admins/:id/roles/:roleId', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.delete('/admins/:id/roles/:roleId', scopedToTheUser, audited({ action: 'role.removed', resource: 'organisationUser', entityType: 'user', kind: 'action' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id, roleId } = req.params;
 
@@ -224,7 +225,7 @@ router.delete('/admins/:id/roles/:roleId', scopedToTheUser, async (req: Request,
  * POST /api/orgadmin/users/admins/:id/resend-invite
  * Resend invitation email to an admin user who hasn't activated
  */
-router.post('/admins/:id/resend-invite', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:id/resend-invite', scopedToTheUser, audited({ action: 'user.invited', resource: 'organisationUser', entityType: 'user', kind: 'action' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -250,7 +251,7 @@ router.post('/admins/:id/resend-invite', scopedToTheUser, async (req: Request, r
  * POST /api/orgadmin/users/admins/:id/reset-password
  * Reset admin user password
  */
-router.post('/admins/:id/reset-password', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.post('/admins/:id/reset-password', scopedToTheUser, audited({ action: 'auth.password-reset-requested', resource: 'organisationUser', entityType: 'user', kind: 'action' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
@@ -315,7 +316,7 @@ router.get('/accounts/:organizationId', scopedToTheOrganisation, async (req: Req
  * POST /api/orgadmin/users/accounts/:organizationId
  * Create a new account user
  */
-router.post('/accounts/:organizationId', scopedToTheOrganisation, async (req: Request, res: Response): Promise<void> => {
+router.post('/accounts/:organizationId', scopedToTheOrganisation, audited({ action: 'user.account-created', entityType: 'user', kind: 'create' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { organizationId } = req.params;
     const { email, firstName, lastName, phone, temporaryPassword } = req.body;
@@ -356,7 +357,7 @@ router.post('/accounts/:organizationId', scopedToTheOrganisation, async (req: Re
  * PUT /api/orgadmin/users/accounts/:id
  * Update an account user
  */
-router.put('/accounts/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.put('/accounts/:id', scopedToTheUser, audited({ action: 'user.account-updated', resource: 'organisationUser', entityType: 'user' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { firstName, lastName, phone, status } = req.body;
@@ -387,7 +388,7 @@ router.put('/accounts/:id', scopedToTheUser, async (req: Request, res: Response)
  * DELETE /api/orgadmin/users/accounts/:id
  * Delete an account user
  */
-router.delete('/accounts/:id', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.delete('/accounts/:id', scopedToTheUser, audited({ action: 'user.account-deleted', resource: 'organisationUser', entityType: 'user' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -412,7 +413,7 @@ router.delete('/accounts/:id', scopedToTheUser, async (req: Request, res: Respon
  * POST /api/orgadmin/users/accounts/:id/reset-password
  * Reset account user password
  */
-router.post('/accounts/:id/reset-password', scopedToTheUser, async (req: Request, res: Response): Promise<void> => {
+router.post('/accounts/:id/reset-password', scopedToTheUser, audited({ action: 'auth.password-reset-requested', resource: 'organisationUser', entityType: 'user', kind: 'action' }), async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;

@@ -143,9 +143,35 @@ function can produce correctly every time.
 
 So `organisationScopedUrl` in `orgadmin-core/src/hooks/useApi.ts` rewrites the
 URL as the request goes out, from the organisation the shell already resolved.
-`/api/orgadmin/auth/*` is exempt: `/auth/me` is how an administrator finds out
-which organisations they have, so requiring one in order to ask would be
-circular.
+
+### What the rewrite must not touch
+
+The rewrite assumes its target is one of the **dual-mounted** data routers in
+`backend/src/index.ts` — the ones registered bare *and* under
+`/organisations/:organisationId`. Three routers are mounted only bare, and
+rewriting their URLs produces a path that matches nothing:
+
+| Exempt prefix | Why it is mounted once | Why exempting it is safe |
+|---|---|---|
+| `/api/orgadmin/auth/` | `/auth/me` and `/auth/capabilities` are not about a club | `/auth/me` is how an administrator finds out which organisations they have; requiring one in order to ask would be circular |
+| `/api/orgadmin/organisation/` (singular) | The current club's own router — settings, branding, Stripe Connect, registrations, offline payments | It resolves the club from the **signed-in user**, and unlike the dual-mounted routers has no path/subject agreement check, so a scoped mount could accept a URL naming one club while acting on another. The club travels on `X-Organisation-Id` |
+| `/api/orgadmin/users/` | The user-management router | It already names the club in its **own** path (`/users/accounts/:organizationId`) and every route declares what it is scoped by, so a prefix would only repeat the id — and the path that carries it is the one the server reads |
+
+The trailing slash on the singular `organisation/` is what keeps it from
+swallowing the plural `/api/orgadmin/organisations/…`, and the one on `users/`
+keeps `user-groups` — a genuinely dual-mounted router — still being scoped.
+
+Each of these was found the same way: a screen that answered nothing. The users
+router cost the whole Users area — both list pages, user details, roles, invites
+and password resets — and the two lists failed *silently*, because "no users"
+is a plausible answer to "who works here" rather than an obvious error. The page
+tests all mock `useApi`, so none of them exercise the rewrite; the guard is
+`hooks/__tests__/organisationScopedUrl.test.ts`, and a new bare-only mount needs
+a case added there rather than a page test.
+
+**Adding a router under `/api/orgadmin` means choosing one of the two**: put it
+in `ORGADMIN_DATA_ROUTERS` so both forms resolve, or add its prefix here. Doing
+neither compiles, passes every test, and 404s in the browser.
 
 `orgadmin-events`' `discount.service.ts` keeps its own axios instance and
 therefore received none of this — **including the organisation header**, which

@@ -1,6 +1,8 @@
 import {
   OrganizationBrandingService,
   DEFAULT_BRANDING_SETTINGS,
+  effectiveLogo,
+  typeLogoPolicyFromRow,
 } from '../organization-branding.service';
 import { ValidationError } from '../../middleware/errors';
 import { db } from '../../database/pool';
@@ -23,6 +25,17 @@ jest.mock('../../config/logger');
 describe('OrganizationBrandingService', () => {
   let service: OrganizationBrandingService;
   const mockDb = db as jest.Mocked<typeof db>;
+
+  /**
+   * The UPDATE, found by what it is rather than by where it sits.
+   *
+   * `mock.calls[0]` was fine while the update was the only statement, and broke
+   * the moment a policy lookup ran before it — a failure that says nothing about
+   * the behaviour under test.
+   */
+  const updateCall = () =>
+    (mockDb.query as jest.Mock).mock.calls.find(([sql]: [string]) => sql.includes('jsonb_set'))!;
+
   const ORG_ID = 'org-1';
 
   beforeEach(() => {
@@ -36,7 +49,17 @@ describe('OrganizationBrandingService', () => {
 
       const result = await service.getBrandingSettings(ORG_ID);
 
-      expect(result).toEqual(DEFAULT_BRANDING_SETTINGS);
+      /*
+       * The defaults, plus the two fields derived per read. They are not in
+       * `DEFAULT_BRANDING_SETTINGS` because they are never stored: they say
+       * where the logo came from and whether this club may change it, which
+       * are facts about the organisation type rather than about the branding.
+       */
+      expect(result).toEqual({
+        ...DEFAULT_BRANDING_SETTINGS,
+        logoSource: 'none',
+        canOverrideLogo: true,
+      });
     });
 
     it('returns the defaults when the organisation has settings but no branding', async () => {
@@ -46,7 +69,11 @@ describe('OrganizationBrandingService', () => {
 
       const result = await service.getBrandingSettings(ORG_ID);
 
-      expect(result).toEqual(DEFAULT_BRANDING_SETTINGS);
+      expect(result).toEqual({
+        ...DEFAULT_BRANDING_SETTINGS,
+        logoSource: 'none',
+        canOverrideLogo: true,
+      });
     });
 
     it('merges stored branding over the defaults', async () => {
@@ -85,10 +112,24 @@ describe('OrganizationBrandingService', () => {
       expect(result.logoUrl).toBe('https://cdn/logo.png');
       expect(result.accentColor).toBe(DEFAULT_BRANDING_SETTINGS.accentColor);
 
-      const [sql, params] = (mockDb.query as jest.Mock).mock.calls[0];
+      const [sql, params] = updateCall();
       expect(sql).toContain('jsonb_set');
       expect(sql).toContain("'{branding}'");
-      expect(JSON.parse(params[0])).toEqual(result);
+
+      /*
+       * What is stored is deliberately *not* what is returned: `logoSource` and
+       * `canOverrideLogo` are derived on every read, and persisting them would
+       * leave a row claiming a club may override its logo long after its type
+       * stopped permitting it.
+       */
+      const stored = JSON.parse(params[0]);
+      expect(stored).not.toHaveProperty('logoSource');
+      expect(stored).not.toHaveProperty('canOverrideLogo');
+      expect(stored).toEqual({
+        ...result,
+        logoSource: undefined,
+        canOverrideLogo: undefined,
+      });
     });
 
     it('stores a club’s own word for its bookings area', async () => {
@@ -121,7 +162,7 @@ describe('OrganizationBrandingService', () => {
     it('writes only the branding key so other settings survive', async () => {
       await service.updateBrandingSettings(ORG_ID, { primaryColor: '#000000' });
 
-      const [sql] = (mockDb.query as jest.Mock).mock.calls[0];
+      const [sql] = updateCall();
       // jsonb_set on a single key, rather than replacing the whole column
       expect(sql).toContain("COALESCE(settings, '{}'::jsonb)");
       expect(sql).not.toMatch(/SET settings = \$1/);
@@ -134,7 +175,7 @@ describe('OrganizationBrandingService', () => {
         ...({ evil: 'value', paymentSettings: { stripeSecretKey: 'leak' } } as any),
       });
 
-      const [, params] = (mockDb.query as jest.Mock).mock.calls[0];
+      const [, params] = updateCall();
       const persisted = JSON.parse(params[0]);
       expect(persisted).not.toHaveProperty('evil');
       expect(persisted).not.toHaveProperty('paymentSettings');
@@ -249,5 +290,104 @@ describe('logo resolution', () => {
         logoS3Key: 'organisations/other-org/private/secrets.pdf',
       } as any)
     ).rejects.toThrow(ValidationError);
+  });
+});
+
+/**
+ * Which logo an organisation actually shows.
+ *
+ * A federation has one mark and every branch was uploading its own copy of it.
+ * Set once at the organisation type, it is inherited — and may be locked, so a
+ * branch cannot replace it.
+ *
+ * The order is the whole feature, and the case worth reading twice is the third
+ * one: a locked type logo has to beat a logo the club had already uploaded,
+ * because otherwise locking the type changes nothing for exactly the clubs it
+ * was meant to bring into line.
+ *
+ * See docs/ORGANISATION_TYPE_LOGO.md.
+ */
+describe('the logo an organisation inherits', () => {
+  const orgLogo = { logoS3Key: 'organisations/abc/branding/own.png', logoUrl: '' };
+  const noLogo = { logoS3Key: '', logoUrl: '' };
+  const sharedMark = { logoS3Key: 'organisation-types/xyz/logo.png', allowOverride: true };
+
+  it('uses the type’s logo where the organisation has none', () => {
+    const result = effectiveLogo(noLogo, sharedMark);
+
+    expect(result.source).toBe('organisation-type');
+    expect(result.s3Key).toBe('organisation-types/xyz/logo.png');
+  });
+
+  it('prefers the organisation’s own where overriding is allowed', () => {
+    const result = effectiveLogo(orgLogo, sharedMark);
+
+    expect(result.source).toBe('organisation');
+    expect(result.s3Key).toBe('organisations/abc/branding/own.png');
+  });
+
+  it('lets a locked type logo beat a logo the club already had', () => {
+    /*
+     * The one that matters. A club that uploaded a logo before its type was
+     * locked would otherwise keep showing it, so locking would bring into line
+     * only the clubs that were already conforming.
+     */
+    const result = effectiveLogo(orgLogo, { ...sharedMark, allowOverride: false });
+
+    expect(result.source).toBe('organisation-type');
+    expect(result.canOverride).toBe(false);
+  });
+
+  it('leaves a club in control where its type has no shared mark', () => {
+    /*
+     * `allowOverride: false` with no logo to inherit is a dead configuration a
+     * super admin can reach by ticking one box: honouring it literally would
+     * leave every club in the type unable to have any logo at all.
+     */
+    const result = effectiveLogo(orgLogo, { logoS3Key: null, allowOverride: false });
+
+    expect(result.source).toBe('organisation');
+    expect(result.canOverride).toBe(true);
+  });
+
+  it('falls back to nothing, which renders as the organisation’s initial', () => {
+    const result = effectiveLogo(noLogo, null);
+
+    expect(result.source).toBe('none');
+    expect(result.s3Key).toBe('');
+  });
+
+  it('inherits for an organisation with no type at all', () => {
+    // `null` means "not joined to a type", which must never read as locked.
+    expect(effectiveLogo(orgLogo, null).source).toBe('organisation');
+    expect(effectiveLogo(noLogo, null).canOverride).toBe(true);
+  });
+
+  it('honours an externally-hosted logo as the organisation’s own', () => {
+    // A club may point at a logo it hosts elsewhere; that is still its own.
+    const result = effectiveLogo({ logoS3Key: '', logoUrl: 'https://club.example/logo.png' }, sharedMark);
+
+    expect(result.source).toBe('organisation');
+    expect(result.url).toBe('https://club.example/logo.png');
+  });
+});
+
+describe('reading the type policy off a joined row', () => {
+  it('treats a missing flag as permitted, never as locked', () => {
+    /*
+     * A LEFT JOIN that matched nothing gives nulls. Reading that as "locked"
+     * would take the upload away from every organisation with no type.
+     */
+    expect(typeLogoPolicyFromRow({ type_logo_s3_key: null, type_allow_logo_override: null }))
+      .toEqual({ logoS3Key: null, allowOverride: true });
+  });
+
+  it('reads a real lock', () => {
+    expect(typeLogoPolicyFromRow({ type_logo_s3_key: 'k', type_allow_logo_override: false }))
+      .toEqual({ logoS3Key: 'k', allowOverride: false });
+  });
+
+  it('is null where no row was joined at all', () => {
+    expect(typeLogoPolicyFromRow(null)).toBeNull();
   });
 });

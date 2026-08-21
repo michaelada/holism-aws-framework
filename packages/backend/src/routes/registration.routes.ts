@@ -11,6 +11,7 @@ import { db } from '../database/pool';
 import validator from 'validator';
 import DOMPurify from 'isomorphic-dompurify';
 import { richTextConfig } from '../middleware/xss-protection.middleware';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -179,6 +180,7 @@ router.post(
   '/registration-types',
   authenticateToken(),
   byBodyOrCurrent(),
+  audited({ action: 'registration-type.created', resource: 'registrationType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -268,6 +270,7 @@ router.put(
   '/registration-types/:id',
   authenticateToken(),
   byResource('registrationType', 'id'),
+  audited({ action: 'registration-type.updated', resource: 'registrationType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -311,6 +314,7 @@ router.delete(
   '/registration-types/:id',
   authenticateToken(),
   byResource('registrationType', 'id'),
+  audited({ action: 'registration-type.deleted', resource: 'registrationType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -451,6 +455,7 @@ router.post(
   '/organisations/:organisationId/registrations',
   authenticateToken(),
   requireRegistrationsCapability,
+  audited({ action: 'registration.submitted', resource: 'registration', entityType: 'registration' }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -570,6 +575,7 @@ router.put(
   '/registrations/:id/status',
   authenticateToken(),
   byResource('registration', 'id'),
+  audited({ action: 'registration.approved', resource: 'registration', entityType: 'registration', kind: 'update' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -624,6 +630,7 @@ router.post(
   '/registrations/batch/add-labels',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'registration.approved', entityType: 'registration', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds, labels } = req.body;
@@ -670,6 +677,7 @@ router.post(
   '/registrations/batch/remove-labels',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'registration.approved', entityType: 'registration', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds, labels } = req.body;
@@ -712,6 +720,7 @@ router.post(
   '/registrations/batch/mark-processed',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'registration.approved', entityType: 'registration', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds } = req.body;
@@ -754,6 +763,7 @@ router.post(
   '/registrations/batch/mark-unprocessed',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'registration.approved', entityType: 'registration', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { registrationIds } = req.body;

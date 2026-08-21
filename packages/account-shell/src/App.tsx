@@ -8,6 +8,9 @@ import { buildTheme } from './theme';
 import OrganisationRoute from './components/OrganisationRoute';
 import StaleDataProvider from './offline/StaleDataContext';
 import OrganisationDirectoryPage from './pages/OrganisationDirectoryPage';
+import PublicEventsPage from './pages/PublicEventsPage';
+import PlatformEventsPage from './pages/PlatformEventsPage';
+import PublicEventPage from './pages/PublicEventPage';
 import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage';
 import OrganisationSwitcherPage from './pages/OrganisationSwitcherPage';
 import RegisterWithOrganisationPage from './pages/RegisterWithOrganisationPage';
@@ -405,6 +408,52 @@ export const App: React.FC = () => (
             element={
               <OrganisationRoute>
                 <OrderConfirmationPage />
+              </OrganisationRoute>
+            }
+          />
+
+          {/*
+            Public event pages.
+            
+            `allowAnonymous` — a visitor arriving from a search result has no
+            session and may never have heard of the club, so the gateway is
+            skipped entirely. The club's branding still applies.
+            
+            Declared before `/:orgCode` so `whats-on` is matched as a page
+            rather than being read as the start of a club's own route tree.
+            
+            See docs/PUBLIC_EVENTS.md.
+          */}
+          {/*
+            The platform listing — every club's public events in one place.
+            
+            Declared before `/:orgCode` so `events` is matched as this page
+            rather than as an organisation code. `events` is reserved in
+            `RESERVED_URL_CODES` and in migration 1709000000033 so no club can
+            take it and shadow this route.
+          */}
+          <Route
+            path="/events"
+            element={
+              <UnbrandedRoute>
+                <PlatformEventsPage />
+              </UnbrandedRoute>
+            }
+          />
+
+          <Route
+            path="/:orgCode/whats-on"
+            element={
+              <OrganisationRoute allowAnonymous requireConnection={false}>
+                <PublicEventsPage />
+              </OrganisationRoute>
+            }
+          />
+          <Route
+            path="/:orgCode/whats-on/:slug"
+            element={
+              <OrganisationRoute allowAnonymous requireConnection={false}>
+                <PublicEventPage />
               </OrganisationRoute>
             }
           />

@@ -50,6 +50,24 @@ async function loadTranslation(locale: SupportedLocale): Promise<unknown> {
 }
 
 /**
+ * Tell the document what language it is in.
+ *
+ * `index.html` hard-codes `lang="en"` and nothing has ever changed it, so every
+ * page in this application has claimed to be English — including a German
+ * club's, read by a German member, in German.
+ *
+ * Three things read it and all three were being misled: screen readers choose a
+ * voice and pronunciation from it, browsers offer translation from it, and
+ * search engines take it as a language signal — which matters most on exactly
+ * the pages a stranger arrives at from a search result.
+ */
+const setDocumentLanguage = (locale: string): void => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = locale;
+  }
+};
+
+/**
  * Initialise i18next.
  *
  * Locale is set explicitly rather than detected: the organisation's own
@@ -72,8 +90,10 @@ export async function initializeI18n(
     react: { useSuspense: false },
   });
 
+  setDocumentLanguage(i18n.language);
   return i18n;
 }
+
 
 /** Switch locale, loading the catalogue first if it has not been seen. */
 export async function changeLocale(locale: SupportedLocale): Promise<void> {
@@ -82,6 +102,7 @@ export async function changeLocale(locale: SupportedLocale): Promise<void> {
     i18n.addResourceBundle(locale, 'translation', translation, true, true);
   }
   await i18n.changeLanguage(locale);
+  setDocumentLanguage(locale);
 }
 
 export default i18n;

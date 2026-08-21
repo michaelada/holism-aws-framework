@@ -19,6 +19,8 @@ import {
   getOrganizationTypePaymentFees,
   setOrganizationTypePaymentFees,
   getCardPaymentMethodDefaults,
+  uploadOrganizationTypeLogo,
+  deleteOrganizationTypeLogo,
 } from '../services/organizationApi';
 import type { Capability, UpdateOrganizationTypeDto } from '../types/organization.types';
 import { useNotification } from '../context/NotificationContext';
@@ -29,6 +31,7 @@ import type { CardPaymentMethodDefault } from '../types/organization.types';
 import { PageHeader } from '../components/PageHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { FormSection } from '../components/FormSection';
+import { TypeLogoSection } from '../components/TypeLogoSection';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import { CURRENCIES, LANGUAGES, LOCALES } from '../constants/localisation';
 
@@ -66,9 +69,18 @@ export const EditOrganizationTypePage: React.FC = () => {
     defaultLocale: 'en-GB',
     defaultCapabilities: [],
     membershipNumbering: 'internal',
+    allowLogoOverride: true,
     membershipNumberUniqueness: 'organization',
     initialMembershipNumber: 1000000,
   });
+  /*
+   * The chosen file lives outside `formData` because it is not part of the JSON
+   * save — it goes to its own multipart endpoint afterwards — and `removeLogo`
+   * records the intent to clear, which is not the same as "no file chosen".
+   */
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>('');
 
   const isDirty = useMemo(
     () => initialSnapshot !== '' && JSON.stringify(formData) !== initialSnapshot,
@@ -103,10 +115,12 @@ export const EditOrganizationTypePage: React.FC = () => {
         defaultLocale: typeData.defaultLocale || 'en-GB',
         defaultCapabilities: typeData.defaultCapabilities,
         membershipNumbering: typeData.membershipNumbering || 'internal',
+        allowLogoOverride: typeData.allowLogoOverride !== false,
         membershipNumberUniqueness: typeData.membershipNumberUniqueness || 'organization',
         initialMembershipNumber: typeData.initialMembershipNumber || 1000000,
       };
       setFormData(loaded);
+      setLogoUrl(typeData.logoUrl || '');
       setSavedCurrency(typeData.currency);
       setInitialSnapshot(JSON.stringify(loaded));
     } catch (error) {
@@ -209,6 +223,17 @@ export const EditOrganizationTypePage: React.FC = () => {
       }
 
       await updateOrganizationType(id, submitData);
+
+      /*
+       * The logo is its own endpoint — it carries a file, not JSON — so it is
+       * saved after the rest. A failure here is reported without claiming the
+       * whole save failed: the name, capabilities and flag are already stored.
+       */
+      if (logoFile) {
+        await uploadOrganizationTypeLogo(id, logoFile);
+      } else if (removeLogo) {
+        await deleteOrganizationTypeLogo(id);
+      }
 
       if (paymentFees.length > 0) {
         await setOrganizationTypePaymentFees(
@@ -511,6 +536,25 @@ export const EditOrganizationTypePage: React.FC = () => {
               />
             </>
           )}
+        </FormSection>
+
+        <FormSection
+          title="Shared logo"
+          description="Inherited by every organisation of this type. A federation has one mark; without this each branch uploads its own copy of it."
+        >
+          <TypeLogoSection
+            logoUrl={removeLogo ? '' : logoUrl}
+            pendingFile={logoFile}
+            allowOverride={formData.allowLogoOverride !== false}
+            onChooseFile={(file) => {
+              setLogoFile(file);
+              // Choosing a replacement supersedes a removal.
+              if (file) setRemoveLogo(false);
+            }}
+            onRemove={() => setRemoveLogo(true)}
+            onAllowOverrideChange={(allow) => handleChange('allowLogoOverride', allow)}
+            busy={submitting}
+          />
         </FormSection>
 
         <FormSection

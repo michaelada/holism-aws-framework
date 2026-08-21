@@ -15,12 +15,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   getCapabilities,
   createOrganizationType,
+  uploadOrganizationTypeLogo,
   getCardPaymentMethodDefaults,
   setOrganizationTypePaymentFees,
 } from '../services/organizationApi';
 import type { Capability, CreateOrganizationTypeDto } from '../types/organization.types';
 import { useNotification } from '../context/NotificationContext';
 import { CapabilitySelector } from '../components/CapabilitySelector';
+import { TypeLogoSection } from '../components/TypeLogoSection';
 import { PaymentFeeEditor } from '../components/PaymentFeeEditor';
 import type { PaymentFeeEditorMethod } from '../components/PaymentFeeEditor';
 import type { CardPaymentMethodDefault } from '../types/organization.types';
@@ -64,10 +66,13 @@ export const CreateOrganizationTypePage: React.FC = () => {
     language: 'en',
     defaultLocale: 'en-GB',
     defaultCapabilities: [],
+    allowLogoOverride: true,
     membershipNumbering: 'internal',
     membershipNumberUniqueness: 'organization',
     initialMembershipNumber: 1000000,
   });
+  // Uploaded after the type is created; see the save handler.
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadCapabilities();
@@ -126,6 +131,21 @@ export const CreateOrganizationTypePage: React.FC = () => {
       }
       
       const created = await createOrganizationType(submitData);
+
+      /*
+       * The logo is addressed by id, so it can only be attached once the type
+       * exists. A failure here leaves a created type with no logo rather than
+       * failing the whole save — the operator is told, and can add it from the
+       * edit screen.
+       */
+      if (logoFile && created?.id) {
+        try {
+          await uploadOrganizationTypeLogo(created.id, logoFile);
+        } catch (error) {
+          console.error('Error uploading the organisation type logo:', error);
+          showError('The organisation type was created, but the logo could not be uploaded');
+        }
+      }
 
       // The type has to exist before fees can hang off it, so this is a second
       // call rather than part of the create payload. A failure here leaves the
@@ -321,6 +341,24 @@ export const CreateOrganizationTypePage: React.FC = () => {
 
               />
 
+
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Shared Logo
+                </Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Inherited by every organisation of this type. A federation has one mark; without
+                  this each branch uploads its own copy of it.
+                </Typography>
+                <TypeLogoSection
+                  pendingFile={logoFile}
+                  allowOverride={formData.allowLogoOverride !== false}
+                  onChooseFile={setLogoFile}
+                  onAllowOverrideChange={(allow) => handleChange('allowLogoOverride', allow)}
+                  deferred
+                  busy={submitting}
+                />
+              </Box>
 
               <Box>
                 <Typography variant="h6" gutterBottom>

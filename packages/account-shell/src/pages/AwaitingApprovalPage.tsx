@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { PoweredBy } from '../components/PoweredBy';
 import { useAuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -152,6 +153,8 @@ export const AwaitingApprovalPage: React.FC = () => {
           </Box>
         )}
       </Paper>
+
+      <PoweredBy />
     </Container>
   );
 };

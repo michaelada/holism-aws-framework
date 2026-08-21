@@ -2,6 +2,7 @@ import request from 'supertest';
 import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
+import { auditService } from '../../services/audit/audit.service';
 
 // Mock the Keycloak services
 jest.mock('../../services/keycloak-admin.factory', () => {
@@ -204,12 +205,17 @@ describe('Admin API Routes Integration Tests', () => {
       // Note: Due to mocking, the returned data may not match exactly
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2',
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2',
         ['user', response.body.id]
       );
       expect(auditLog.rows.length).toBe(1);
-      expect(auditLog.rows[0].action).toBe('create');
+      expect(auditLog.rows[0].action).toBe('user.org-admin-created');
     });
 
     it('should list all users', async () => {
@@ -304,9 +310,14 @@ describe('Admin API Routes Integration Tests', () => {
       expect(response.body.id).toBe(userId);
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'update']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'user.org-admin-updated']
       );
       expect(auditLog.rows.length).toBe(1);
     });
@@ -330,9 +341,14 @@ describe('Admin API Routes Integration Tests', () => {
         .expect(204);
 
       // Verify audit log (deletion verification skipped due to mocking complexity)
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'delete']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'user.org-admin-deleted']
       );
       expect(auditLog.rows.length).toBe(1);
     });
@@ -359,9 +375,14 @@ describe('Admin API Routes Integration Tests', () => {
       expect(response.body.message).toBe('Password reset successfully');
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'reset_password']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'auth.password-reset-requested']
       );
       expect(auditLog.rows.length).toBe(1);
     });
@@ -400,12 +421,17 @@ describe('Admin API Routes Integration Tests', () => {
       expect(response.body.id).toBeDefined();
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2',
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2',
         ['role', response.body.id]
       );
       expect(auditLog.rows.length).toBe(1);
-      expect(auditLog.rows[0].action).toBe('create');
+      expect(auditLog.rows[0].action).toBe('role.created');
     });
 
     it('should list all roles', async () => {
@@ -437,9 +463,14 @@ describe('Admin API Routes Integration Tests', () => {
         .expect(204);
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['role', roleId, 'delete']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['role', roleId, 'role.deleted']
       );
       expect(auditLog.rows.length).toBe(1);
     });
@@ -490,9 +521,14 @@ describe('Admin API Routes Integration Tests', () => {
       expect(response.body.message).toBe('Role assigned successfully');
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', testUserId, 'assign_role']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', testUserId, 'role.assigned']
       );
       expect(auditLog.rows.length).toBe(1);
     });
@@ -513,9 +549,14 @@ describe('Admin API Routes Integration Tests', () => {
       expect(response.body.message).toBe('Role removed successfully');
 
       // Verify audit log
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', testUserId, 'remove_role']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', testUserId, 'role.removed']
       );
       expect(auditLog.rows.length).toBe(1);
     });
@@ -555,21 +596,24 @@ describe('Admin API Routes Integration Tests', () => {
         .delete(`/api/admin/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       const auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 ORDER BY timestamp',
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 ORDER BY occurred_at',
         ['user', userId]
       );
 
       expect(auditLogs.rows.length).toBe(3);
-      expect(auditLogs.rows[0].action).toBe('create');
-      expect(auditLogs.rows[1].action).toBe('update');
-      expect(auditLogs.rows[2].action).toBe('delete');
+      expect(auditLogs.rows[0].action).toBe('user.org-admin-created');
+      expect(auditLogs.rows[1].action).toBe('user.org-admin-updated');
+      expect(auditLogs.rows[2].action).toBe('user.org-admin-deleted');
 
       // Verify user ID is logged (should be the database user UUID, not Keycloak user ID)
       auditLogs.rows.forEach(log => {
-        expect(log.user_id).toBeDefined();
+        expect(log.actor_kc_user_id).toBeDefined();
         // User ID should be a UUID format
-        expect(log.user_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        expect(log.actor_user_type).toBe('super-admin');
       });
     });
 
@@ -586,12 +630,15 @@ describe('Admin API Routes Integration Tests', () => {
           password: 'TestPassword123!',
         });
 
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       const auditLog = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2',
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2',
         ['user', response.body.id]
       );
 
-      expect(auditLog.rows[0].ip_address).toBeDefined();
+      expect(auditLog.rows[0].context.ip).toBeDefined();
     });
   });
 });

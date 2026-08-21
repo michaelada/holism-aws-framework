@@ -60,6 +60,21 @@
 </head>
 
 <body class="${properties.kcBodyClass!}">
+<#--
+  Two columns on a wide screen: the sign-in on the left, the platform's
+  announcements on the right. Stacked on a narrow one, sign-in first — somebody
+  on a phone is here to sign in, and announcements they have to scroll past to
+  reach the password field would be an obstacle rather than a message.
+
+  `data-has-posts` is set by posts.js once something has actually been
+  rendered. Until then the shell stays one column, so a deployment with no posts
+  looks exactly as it did before this existed rather than showing an empty half
+  of a screen.
+
+  See docs/PLATFORM_POSTS.md.
+-->
+<div class="ips-shell">
+<div class="ips-login-col">
 <div class="${properties.kcLoginClass!}">
     <div id="kc-header" class="${properties.kcHeaderClass!}">
         <div id="kc-header-wrapper" class="${properties.kcHeaderWrapperClass!}">
@@ -69,7 +84,7 @@
             ${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!'')))?no_esc}
         </div>
     </div>
-    
+
     <div id="kc-content">
         <div id="kc-content-wrapper">
             <h2 class="kc-account-login-heading"><#nested "header"></h2>
@@ -129,6 +144,41 @@
             </#if>
         </div>
     </div>
+</div>
+
+    <#--
+      Attribution, under the card rather than beside it.
+
+      Inside `.ips-login-col` and after the card, so it sits beneath the form on
+      a wide screen and beneath the form on a narrow one too — the column is the
+      same element in both layouts, which a footer placed in the shell would not
+      have been.
+
+      A new tab, and `rel="noopener"` with it: somebody halfway through filling
+      in a registration form should not lose it to a click on a footer.
+    -->
+    <p class="ips-powered-by">
+        <a href="https://itsplainsailing.com" target="_blank" rel="noopener noreferrer">
+            <img src="${url.resourcesPath}/img/logo.png" alt="" class="ips-powered-by-logo" />
+            <span>${msg("poweredBy")}</span>
+        </a>
+        <#-- The separator is markup, so a translator is never handed a
+             dangling " - " and it can wrap away cleanly on a narrow screen. -->
+        <span aria-hidden="true">&ndash;</span>
+        <span>${msg("copyright", .now?string('yyyy'))}</span>
+    </p>
+</div>
+
+<#--
+  Filled in by posts.js. `data-api-base` comes from theme.properties and is
+  empty in the normal case, where nginx serves Keycloak and the API on one
+  origin and a relative path is correct.
+-->
+<aside class="ips-posts-col"
+       id="ips-posts"
+       data-surface="account"
+       data-api-base="${properties.ipsApiBase!''}"
+       aria-label="${msg("announcements")}"></aside>
 </div>
 </body>
 </html>

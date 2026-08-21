@@ -4,6 +4,14 @@ import { organizationTypePaymentFeeService } from '../services/organization-type
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
 import { ValidationError } from '../middleware/errors';
 import { logger } from '../config/logger';
+import multer from 'multer';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
+import { fileUploadService } from '../services/file-upload.service';
+import { audited } from '../middleware/audit.middleware';
+
+/** Big enough for a federation's mark, small enough to stay a logo. */
+const logoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -24,7 +32,9 @@ router.get('/', authenticateToken(), async (_req: Request, res: Response) => {
     // Add organization count for each type
     const typesWithCounts = await Promise.all(
       types.map(async (type) => ({
-        ...type,
+        // Signed here too, so the list can show each type's mark rather than
+        // making an operator open every one to see which have logos.
+        ...(await organizationTypeService.withSignedLogo(type)),
         organizationCount: await organizationTypeService.getOrganizationCount(type.id)
       }))
     );
@@ -67,7 +77,7 @@ router.get('/:id', authenticateToken(), async (req: Request, res: Response) => {
     const organizationCount = await organizationTypeService.getOrganizationCount(id);
     
     return res.json({
-      ...type,
+      ...(await organizationTypeService.withSignedLogo(type)),
       organizationCount
     });
   } catch (error) {
@@ -137,6 +147,7 @@ router.post(
   '/',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'organisation-type.created', resource: 'organisationType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user?.sub;
@@ -226,6 +237,7 @@ router.put(
   '/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'organisation-type.updated', resource: 'organisationType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -285,6 +297,7 @@ router.delete(
   '/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'organisation-type.deleted', resource: 'organisationType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -391,6 +404,7 @@ router.put(
   '/:id/payment-fees',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'settings.payment-updated', resource: 'organisationType', entityType: 'organisation-type', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -411,5 +425,91 @@ router.put(
     }
   }
 );
+
+
+
+/**
+ * @swagger
+ * /api/admin/organization-types/{id}/logo:
+ *   post:
+ *     summary: Set the shared logo inherited by this type's organisations
+ *     tags: [Organization Types]
+ */
+router.post(
+  '/:id/logo',
+  authenticateToken(),
+  requireRole('super-admin'),
+  logoUpload.single('file'),
+  audited({ action: 'organisation-type.logo-changed', resource: 'organisationType', entityType: 'organisation-type', label: 'name', kind: 'action' }),
+  async (req: Request, res: Response) => {
+    try {
+      const file = (req as any).file;
+      if (!file) return res.status(400).json({ error: 'No file was uploaded' });
+
+      const validation = fileUploadService.validateFile(file, 'image');
+      if (!validation.valid) return res.status(400).json({ error: validation.errors.join(', ') });
+
+      // Read before writing, so the object being replaced can be removed.
+      const previous = await organizationTypeService.currentLogoKey(req.params.id);
+
+      const uploaded = await fileUploadService.uploadOrganizationTypeLogo({
+        organizationTypeId: req.params.id,
+        file,
+      });
+      const type = await organizationTypeService.setLogo(req.params.id, {
+        s3Key: uploaded.s3Key,
+        mimeType: uploaded.mimeType,
+      });
+
+      if (previous && previous !== uploaded.s3Key) await deleteQuietly(previous);
+
+      return res.json(type);
+    } catch (error: any) {
+      logger.error('Error in POST /organization-types/:id/logo:', error);
+      return res.status(500).json({ error: 'Failed to upload the logo' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/admin/organization-types/{id}/logo:
+ *   delete:
+ *     summary: Remove the shared logo
+ *     description: >
+ *       Every organisation of this type falls back to its own logo, or to no
+ *       logo where it never had one.
+ *     tags: [Organization Types]
+ */
+router.delete(
+  '/:id/logo',
+  authenticateToken(),
+  requireRole('super-admin'),
+  audited({ action: 'organisation-type.logo-changed', resource: 'organisationType', entityType: 'organisation-type', label: 'name', kind: 'action' }),
+  async (req: Request, res: Response) => {
+    try {
+      const previous = await organizationTypeService.currentLogoKey(req.params.id);
+      const type = await organizationTypeService.setLogo(req.params.id, null);
+      if (previous) await deleteQuietly(previous);
+      return res.json(type);
+    } catch (error: any) {
+      logger.error('Error in DELETE /organization-types/:id/logo:', error);
+      return res.status(500).json({ error: 'Failed to remove the logo' });
+    }
+  }
+);
+
+/**
+ * The row is already updated, so a failure to tidy S3 is a stray object rather
+ * than a failed save. Telling the operator their change failed, when it did
+ * not, would have them do it again.
+ */
+async function deleteQuietly(key: string): Promise<void> {
+  try {
+    await s3Client.send(new DeleteObjectCommand({ Bucket: S3_BUCKET_NAME, Key: key }));
+  } catch (error) {
+    logger.warn('Could not delete an organisation type logo from S3', { key, error });
+  }
+}
 
 export default router;

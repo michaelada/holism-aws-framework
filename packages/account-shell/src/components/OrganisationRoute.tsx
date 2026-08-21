@@ -38,7 +38,20 @@ export const OrganisationRoute: React.FC<{
    * straight back to itself.
    */
   requireConnection?: boolean;
-}> = ({ children, requireConnection = true }) => {
+  /**
+   * Render for a signed-out visitor too.
+   *
+   * Distinct from `requireConnection`, and the difference is the whole point:
+   * that one lets a *signed-in* person through who is not a member of this
+   * club, and still sends an anonymous visitor to the gateway to sign in. A
+   * public page has nobody to sign in — the visitor may never have heard of the
+   * club — so it needs the gateway skipped entirely.
+   *
+   * The organisation is still resolved and its branding still applied; only the
+   * identity gate is lifted.
+   */
+  allowAnonymous?: boolean;
+}> = ({ children, requireConnection = true, allowAnonymous = false }) => {
   const { orgCode } = useParams<{ orgCode: string }>();
   const { authenticated, loading: authLoading } = useAuthContext();
 
@@ -51,7 +64,10 @@ export const OrganisationRoute: React.FC<{
 
   return (
     <AccountOrganisationProvider orgCode={orgCode ?? null} authenticated={authenticated}>
-      <OrganisationRouteContent requireConnection={requireConnection}>
+      <OrganisationRouteContent
+        requireConnection={requireConnection}
+        allowAnonymous={allowAnonymous}
+      >
         {children}
       </OrganisationRouteContent>
     </AccountOrganisationProvider>
@@ -61,8 +77,9 @@ export const OrganisationRoute: React.FC<{
 const OrganisationRouteContent: React.FC<{
   children: React.ReactNode;
   requireConnection: boolean;
-}> = ({ children, requireConnection }) => {
-  const { state, me, primaryColor } = useAccountOrganisation();
+  allowAnonymous: boolean;
+}> = ({ children, requireConnection, allowAnonymous }) => {
+  const { state, me, primaryColor, publicDetail } = useAccountOrganisation();
 
   /**
    * Theme and locale both follow the organisation, so both are applied here
@@ -80,12 +97,28 @@ const OrganisationRouteContent: React.FC<{
    * Null preference means "follow the organisation", which is the default and
    * what nearly every member does.
    */
+  /**
+   * Which language this club is read in.
+   *
+   * Three sources, in order of how specific they are to the reader:
+   *
+   *   1. the member's own preference
+   *   2. the organisation's language, from their session
+   *   3. **the organisation's language from its public record**
+   *
+   * The third is not a fallback for completeness — it is the only one that
+   * exists for an anonymous visitor, and the public pages have nothing else.
+   * Without it a French club's public programme was read in English by everyone
+   * who had not signed in, which is precisely the audience those pages are for.
+   */
+  const language =
+    me?.user.preferredLanguage || me?.organisation.language || publicDetail?.language;
+
   useEffect(() => {
-    const language = me?.user.preferredLanguage || me?.organisation.language;
     if (language) {
       void changeLocale(localeForLanguage(language));
     }
-  }, [me?.user.preferredLanguage, me?.organisation.language]);
+  }, [language]);
 
   let content: React.ReactNode;
 
@@ -95,6 +128,20 @@ const OrganisationRouteContent: React.FC<{
    * an anonymous visitor is still sent to the gateway to sign in first —
    * registering with a club requires an identity to connect.
    */
+  /*
+   * A public page renders for anyone the moment the organisation resolves —
+   * including a visitor with no session, which is the case it exists for. An
+   * unknown club still falls through to the gateway's not-found variant below.
+   */
+  if (allowAnonymous && state !== 'loading' && state !== 'unavailable') {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    );
+  }
+
   if (!requireConnection && state !== 'loading' && state !== 'anonymous') {
     return (
       <ThemeProvider theme={theme}>

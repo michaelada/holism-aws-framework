@@ -6,6 +6,7 @@ import { calendarService } from './calendar.service';
 import { registrationService } from './registration.service';
 import { accountCatalogueService } from './account-catalogue.service';
 import { ticketingService } from './ticketing.service';
+import { splitName } from './entrant.service';
 import { parseContextRef } from '../utils/context-ref';
 
 /**
@@ -260,8 +261,11 @@ export class FulfilmentService {
     // Through `parseContextRef` like every other reader in this file: the
     // column comes back as a string under some drivers and an object under
     // others, and `?.memberId` on a string is silently undefined.
-    const memberId: string | null =
-      (parseContextRef(line.context_ref) as { memberId?: string })?.memberId ?? null;
+    const context = parseContextRef(line.context_ref) as {
+      memberId?: string;
+      entrantName?: string;
+    };
+    const memberId: string | null = context?.memberId ?? null;
     if (memberId) {
       const record = await db.query(
         `SELECT first_name, last_name FROM members WHERE id = $1`,
@@ -271,6 +275,19 @@ export class FulfilmentService {
         first_name = record.rows[0].first_name;
         last_name = record.rows[0].last_name;
       }
+    } else if (typeof context?.entrantName === 'string' && context.entrantName.trim()) {
+      /*
+       * A name typed rather than chosen — an open activity, entered for
+       * somebody who is not a member of anything.
+       *
+       * The membership record wins where there is one: it is the club's own
+       * spelling of that person's name, and letting a typed variant override it
+       * would put "sarah byrne" on one entry list beside "Sarah Byrne" on
+       * another and leave the club to work out they are the same child.
+       */
+      const split = splitName(context.entrantName);
+      first_name = split.firstName;
+      last_name = split.lastName;
     }
 
     /*

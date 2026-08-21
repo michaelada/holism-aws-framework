@@ -514,3 +514,240 @@ a:hover {
   background: var(--mui-primary-hover-bg);
   text-decoration: none;
 }
+
+/* ================================================================== *
+ * The announcements column
+ *
+ * Platform posts, written by a super admin, shown beside the sign-in
+ * form. Two columns on a wide screen and stacked on a narrow one, with
+ * sign-in first either way — somebody on a phone came here to sign in,
+ * and announcements they have to scroll past to reach the password
+ * field are an obstacle rather than a message.
+ *
+ * Everything below is gated on `[data-has-posts]`, which posts.js sets
+ * only after it has actually rendered something. A deployment with no
+ * posts — every one of them until somebody writes the first — therefore
+ * gets exactly the single-column page that existed before this, rather
+ * than an empty half of a screen beside the form.
+ *
+ * See docs/PLATFORM_POSTS.md.
+ * ================================================================== */
+
+.ips-posts-col {
+  display: none;
+}
+
+.ips-shell[data-has-posts='true'] .ips-posts-col {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  box-sizing: border-box;
+}
+
+/*
+ * Two columns from 600px — `sm` — rather than 900.
+ *
+ * The 380px floor that used to sit on the sign-in column had to go with it:
+ * 380px plus a second column does not fit inside 600, so keeping it would have
+ * given a full-width form beside a 120px ribbon of announcements. Even columns
+ * shrink together instead, which is the honest behaviour when there is not much
+ * width to divide.
+ */
+@media (min-width: 600px) {
+  .ips-shell[data-has-posts='true'] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Tight at this size: 48px of gutter out of 600 is most of a column. */
+    gap: 24px;
+    align-items: start;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 16px 48px;
+    box-sizing: border-box;
+  }
+
+  /*
+   * The single-column page owns the viewport height and its own padding.
+   * Inside the grid the shell owns both, or the two columns start at
+   * different heights and the login card is pushed down the page.
+   */
+  .ips-shell[data-has-posts='true'] .login-pf-page {
+    min-height: 0;
+    padding: 0;
+  }
+
+  /*
+   * Narrower than the column that holds it, and centred in it.
+   *
+   * The grid stays an even split — the two halves of the page are still equal
+   * — but a card of text and a 16:9 image does not need the whole of its half,
+   * and at the full 552px the announcements read as the main event beside a
+   * sign-in form that is the actual reason for the page. Centred rather than
+   * flush left so the slack falls evenly instead of opening one wide gutter.
+   *
+   * Only in the two-column layout. Stacked on a narrow screen the cards should
+   * match the sign-in card above them, and narrowing them there would leave
+   * them visibly thinner than it for no reason.
+   */
+  .ips-shell[data-has-posts='true'] .ips-posts-col {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0;
+  }
+}
+
+/*
+ * A tinted panel rather than white-on-white.
+ *
+ * This page has a white background, so a white card with a hairline border
+ * barely reads as a card — the announcements looked like loose text beside the
+ * sign-in form. These values come from the org-admin login theme, where the
+ * same cards already looked right, and are matched by `PostCard` in
+ * packages/components so the member sees one card design whether they are on
+ * this page or in the account application.
+ *
+ * Not `--mui-paper`: the sign-in card beside it *is* paper-white, and the
+ * announcements are deliberately a step back from it.
+ */
+.ips-post {
+  background: #faf8f5;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.ips-post:last-child {
+  margin-bottom: 0;
+}
+
+/* A fixed ratio, so a column of posts does not jump as each image loads. */
+.ips-post-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.ips-post-content {
+  padding: 24px;
+}
+
+/* typography.h6 — Sora 1.25rem/600. */
+.ips-post-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--mui-text-primary);
+  margin: 0 0 8px;
+}
+
+.ips-post-body {
+  color: var(--mui-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.ips-post-body > :first-child {
+  margin-top: 0;
+}
+
+.ips-post-body > :last-child {
+  margin-bottom: 0;
+}
+
+.ips-post-body a {
+  color: var(--mui-primary);
+}
+
+.ips-post-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* MUI Button size="small" variant="outlined". */
+.ips-post-link {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid var(--mui-primary-outline);
+  border-radius: var(--mui-radius);
+  color: var(--mui-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.75;
+  letter-spacing: 0.02857em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.ips-post-link:hover {
+  border-color: var(--mui-primary);
+  background: var(--mui-primary-hover-bg);
+  text-decoration: none;
+}
+
+/*
+ * Room to breathe, once there is room. Below this the same two columns are
+ * simply closer together.
+ */
+@media (min-width: 900px) {
+  .ips-shell[data-has-posts='true'] {
+    gap: 48px;
+    padding: 64px 24px 48px;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * "Powered by" — under the card, not beside it
+ *
+ * Deliberately quiet: caption-sized, in text.secondary, with a logo
+ * small enough to read as a mark rather than a second piece of
+ * branding. The header above the card already carries the full logo at
+ * 72px, and repeating that weight at the foot would make the page look
+ * like it belonged to the platform rather than to the club the member
+ * came here for.
+ * ------------------------------------------------------------------ */
+
+.ips-powered-by {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.66;
+  color: var(--mui-text-secondary);
+}
+
+/*
+ * Ordinary inline flow, not a flex row.
+ *
+ * `display: inline-flex` on the link made it a box of its own beside the
+ * copyright, and the logo made that box taller — so the two runs of text sat
+ * on visibly different lines inside the same row. Inline content shares one
+ * line box and therefore one baseline, which is what actually needs to line
+ * up; the mark is then aligned to the text rather than the text to the mark.
+ */
+.ips-powered-by a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ips-powered-by a:hover {
+  color: var(--mui-text-primary);
+  text-decoration: underline;
+}
+
+.ips-powered-by-logo {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  /* On the baseline, nudged down by the descender so it sits in the line. */
+  vertical-align: baseline;
+  position: relative;
+  top: 2px;
+  margin-right: 6px;
+}

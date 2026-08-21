@@ -99,7 +99,7 @@ describe('OrganisationRoute', () => {
     meResolvesTo(new AccountApiError('no', 403, 'NOT_CONNECTED'));
     renderRoute();
 
-    expect(await screen.findByText(/not a member of/i)).toBeInTheDocument();
+    expect(await screen.findByText(/do not have a .* account yet/i)).toBeInTheDocument();
   });
 
   it('shows the wait screen to a member pending approval', async () => {
@@ -129,7 +129,7 @@ describe('OrganisationRoute', () => {
   /**
    * The registration and awaiting-approval screens exist *because* the member
    * is not connected. Gating them on connection would replace each with the
-   * not-connected screen that links to them — "Request to join" would loop
+   * not-connected screen that links to them — "Create an account" would loop
    * straight back to itself.
    */
   it('lets a standalone screen render for a member who is not connected', async () => {
@@ -137,7 +137,7 @@ describe('OrganisationRoute', () => {
     renderRoute(false);
 
     expect(await screen.findByText('The app')).toBeInTheDocument();
-    expect(screen.queryByText(/not a member of/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/do not have a .* account yet/i)).not.toBeInTheDocument();
   });
 
   it('still sends an anonymous visitor to sign in before a standalone screen', async () => {

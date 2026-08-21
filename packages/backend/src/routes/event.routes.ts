@@ -9,6 +9,7 @@ import {
   requireOrgAdminCapability,
 } from '../middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -110,6 +111,7 @@ router.post(
   authenticateToken(),
   byBodyOrCurrent(),
   ...requireOrgAdminCapability('event-management'),
+  audited({ action: 'event.created', resource: 'event', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       // Extract user and organisation from authenticated request
@@ -174,6 +176,7 @@ router.put(
   '/events/:id',
   authenticateToken(),
   byResource('event', 'id'),
+  audited({ action: 'event.updated', resource: 'event', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -217,6 +220,7 @@ router.post(
   authenticateToken(),
   byResource('event', 'id'),
   ...requireOrgAdminCapability('event-management'),
+  audited({ action: 'event.created', resource: 'event', label: 'name', kind: 'create' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -256,6 +260,7 @@ router.delete(
   authenticateToken(),
   byResource('event', 'id'),
   ...requireOrgAdminCapability('event-management'),
+  audited({ action: 'event.deleted', resource: 'event', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -341,6 +346,7 @@ router.post(
   '/events/:eventId/activities',
   authenticateToken(),
   byResource('event', 'eventId'),
+  audited({ action: 'activity.created', resource: 'eventActivity', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
@@ -391,6 +397,7 @@ router.put(
   '/events/:eventId/activities/:activityId',
   authenticateToken(),
   byResource('event', 'eventId'),
+  audited({ action: 'activity.updated', resource: 'eventActivity', param: 'activityId', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { activityId } = req.params;
@@ -434,6 +441,7 @@ router.delete(
   '/events/:eventId/activities/:activityId',
   authenticateToken(),
   byResource('event', 'eventId'),
+  audited({ action: 'activity.deleted', resource: 'eventActivity', param: 'activityId', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { activityId } = req.params;

@@ -37,7 +37,7 @@ shell adds to `ALL_MODULES`. None of them declare a `capability`, so they are al
 
 ## Feature areas
 
-Five of the six have their own summary — read that rather than this table when working on the area.
+Five of the seven have their own summary — read that rather than this table when working on the area.
 
 | Area | Summary | Routes | In brief |
 |---|---|---|---|
@@ -46,6 +46,7 @@ Five of the six have their own summary — read that rather than this table when
 | `payments/` | [core-payments.md](core-payments.md) | `payments`, `payments/:id`, `payments/lodgements` | Consolidated payment history, detail, refunds and lodgements |
 | `reporting/` | [core-reporting.md](core-reporting.md) | `reporting`, `reporting/events`, `reporting/members`, `reporting/revenue` | Reports & Analytics — dashboard plus events, members and revenue reports |
 | `users/` | [core-users.md](core-users.md) | `users`, `users/admins`, `users/admins/invite`, `users/accounts`, `users/accounts/create`, `users/:type/:id` | Org-admin users vs account users, roles and Keycloak invitations |
+| `audit/` | — | `audit` | This organisation's audit trail — the same events the Platform Admin sees, with the organisation **fixed by the server**. See docs/AUDIT_TRAIL_AND_SESSIONS.md §7 |
 | `dashboard/` | — | `dashboard` | A single `DashboardPage` composed of the available modules' cards; no summary of its own |
 
 ## `useApi` — the API hook everything uses
@@ -68,8 +69,16 @@ await execute({ method: 'GET', url: '/api/orgadmin/events', retryCount: 3 });
   `/api/orgadmin/events/:id` into `/api/orgadmin/organisations/<current>/events/:id`, so a request is
   legible in a log without cross-referencing a header against a session. Done here rather than at
   the ~240 call sites because half of them live in components with no organisation in scope.
-  `/api/orgadmin/auth/*` is exempt — `/auth/me` is how an administrator learns which organisations
-  they have. A URL that already names one is left alone.
+  A URL that already names one is left alone.
+- **Three prefixes are exempt, and the list is load-bearing** — `/api/orgadmin/auth/`,
+  `/api/orgadmin/organisation/` (singular) and `/api/orgadmin/users/`. Their routers are mounted
+  **once, bare**, so rewriting them yields a path that matches nothing: the users one blanked the
+  entire Users area, and the singular organisation one blanked all six Settings tabs. Adding a
+  router under `/api/orgadmin` means either putting it in `ORGADMIN_DATA_ROUTERS`
+  (`backend/src/index.ts`) or adding its prefix to `UNSCOPED_ORGADMIN_PATHS` — doing neither
+  compiles, passes every test, and 404s in the browser. Page tests mock `useApi` and cannot catch
+  it; the guard is `hooks/__tests__/organisationScopedUrl.test.ts`. See
+  [docs/ORGADMIN_ROUTE_TENANCY.md](../../docs/ORGADMIN_ROUTE_TENANCY.md).
 - Options extend Axios config with `showSuccessMessage`, `successMessage`, `showErrorMessage`,
   `onSuccess`, `onError`, `retryCount` (default 2), `retryDelay` (default 1000).
 - Returns loading/error state alongside the resolved data.

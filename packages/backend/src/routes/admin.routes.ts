@@ -2,9 +2,9 @@ import { Router, Response } from 'express';
 import { requireAuth, requireAdminRole, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { UserService } from '../services/user.service';
 import { RoleService } from '../services/role.service';
-import { AuditLogService } from '../services/audit-log.service';
 import { createKeycloakAdminService } from '../services/keycloak-admin.factory';
 import { db } from '../database/pool';
+import { recordAudit } from '../services/audit/with-audit';
 
 const router = Router();
 
@@ -12,7 +12,6 @@ const router = Router();
 const kcAdminService = createKeycloakAdminService();
 const userService = new UserService(kcAdminService, db);
 const roleService = new RoleService(kcAdminService, db);
-const auditLogService = new AuditLogService(db);
 
 // Apply authentication and admin role check to all admin routes
 router.use(requireAuth());
@@ -108,13 +107,12 @@ router.post('/users', async (req: AuthenticatedRequest, res: Response) => {
     const user = await userService.createUser(userData);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'create',
-      'user',
-      user.id,
-      { username: userData.username, email: userData.email, organizationId: userData.organizationId, roles: userData.roles }
-    );
+    recordAudit(req, {
+      action: 'user.org-admin-created',
+      entityType: 'user',
+      entityId: user.id,
+      values: { username: userData.username, email: userData.email, organizationId: userData.organizationId, roles: userData.roles },
+    });
 
     return res.status(201).json(user);
   } catch (error: any) {
@@ -332,13 +330,12 @@ router.put('/users/:id', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'update',
-      'user',
-      id,
-      updates
-    );
+    recordAudit(req, {
+      action: 'user.org-admin-updated',
+      entityType: 'user',
+      entityId: id,
+      values: updates,
+    });
 
     return res.json(user);
   } catch (error) {
@@ -387,12 +384,11 @@ router.delete('/users/:id', async (req: AuthenticatedRequest, res: Response) => 
     await userService.deleteUser(id);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'delete',
-      'user',
-      id
-    );
+    recordAudit(req, {
+      action: 'user.org-admin-deleted',
+      entityType: 'user',
+      entityId: id,
+    });
 
     return res.status(204).send();
   } catch (error: any) {
@@ -478,13 +474,12 @@ router.post('/users/:id/reset-password', async (req: AuthenticatedRequest, res: 
     await userService.resetPassword(id, password, temporary);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'reset_password',
-      'user',
-      id,
-      { temporary }
-    );
+    recordAudit(req, {
+      action: 'auth.password-reset-requested',
+      entityType: 'user',
+      entityId: id,
+      values: { temporary },
+    });
 
     return res.json({ message: 'Password reset successfully' });
   } catch (error: any) {
@@ -567,13 +562,12 @@ router.post('/users/:id/roles', async (req: AuthenticatedRequest, res: Response)
     await userService.assignRoleToUser(id, roleName);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'assign_role',
-      'user',
-      id,
-      { roleName }
-    );
+    recordAudit(req, {
+      action: 'role.assigned',
+      entityType: 'user',
+      entityId: id,
+      values: { roleName },
+    });
 
     return res.json({ message: 'Role assigned successfully' });
   } catch (error: any) {
@@ -638,13 +632,12 @@ router.delete('/users/:id/roles/:roleId', async (req: AuthenticatedRequest, res:
     await userService.removeRoleFromUser(id, roleId);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'remove_role',
-      'user',
-      id,
-      { roleName: roleId }
-    );
+    recordAudit(req, {
+      action: 'role.removed',
+      entityType: 'user',
+      entityId: id,
+      values: { roleName: roleId },
+    });
 
     return res.json({ message: 'Role removed successfully' });
   } catch (error: any) {
@@ -733,13 +726,12 @@ router.post('/roles', async (req: AuthenticatedRequest, res: Response) => {
     const role = await roleService.createRole(roleData);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'create',
-      'role',
-      role.id,
-      { name: roleData.name, displayName: roleData.displayName }
-    );
+    recordAudit(req, {
+      action: 'role.created',
+      entityType: 'role',
+      entityId: role.id,
+      values: { name: roleData.name, displayName: roleData.displayName },
+    });
 
     return res.status(201).json(role);
   } catch (error: any) {
@@ -832,12 +824,11 @@ router.delete('/roles/:id', async (req: AuthenticatedRequest, res: Response) => 
     await roleService.deleteRole(id);
 
     // Log admin action
-    await auditLogService.logAdminActionFromRequest(
-      req,
-      'delete',
-      'role',
-      id
-    );
+    recordAudit(req, {
+      action: 'role.deleted',
+      entityType: 'role',
+      entityId: id,
+    });
 
     return res.status(204).send();
   } catch (error: any) {

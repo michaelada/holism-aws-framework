@@ -81,6 +81,44 @@ describe('organisationScopedUrl', () => {
     });
   });
 
+  describe('the users router', () => {
+    /*
+     * Mounted once and bare, like the singular organisation router — so the
+     * rewrite 404'd and a club with eight account users and an administrator
+     * showed empty lists on both Users tabs. An empty state is a plausible
+     * answer to "who works here", which is why nobody read it as a failure.
+     *
+     * The reason it is safe to exclude is different from the organisation
+     * router's, though. This one already names the club in its own path and
+     * checks it, so nothing is being trusted to a header that was not before.
+     */
+    it('does not scope it, because the path already names the organisation', () => {
+      expect(organisationScopedUrl('/api/orgadmin/users/accounts/org-123', ORG)).toBe(
+        '/api/orgadmin/users/accounts/org-123'
+      );
+      expect(organisationScopedUrl('/api/orgadmin/users/admins/org-123', ORG)).toBe(
+        '/api/orgadmin/users/admins/org-123'
+      );
+      expect(organisationScopedUrl('/api/orgadmin/users/roles/org-123', ORG)).toBe(
+        '/api/orgadmin/users/roles/org-123'
+      );
+    });
+
+    it('leaves the routes keyed by a person alone too', () => {
+      // `:id` here is the user, not the club; these are scoped by who owns them.
+      expect(organisationScopedUrl('/api/orgadmin/users/admins/user-7/reset-password', ORG)).toBe(
+        '/api/orgadmin/users/admins/user-7/reset-password'
+      );
+    });
+
+    it('still scopes user groups, which is a dual-mounted data router', () => {
+      // Adjacent name, different mounting. The trailing slash keeps them apart.
+      expect(organisationScopedUrl('/api/orgadmin/user-groups', ORG)).toBe(
+        '/api/orgadmin/organisations/org-123/user-groups'
+      );
+    });
+  });
+
   it('leaves anything outside /api/orgadmin alone', () => {
     expect(organisationScopedUrl('/api/admin/organizations', ORG)).toBe('/api/admin/organizations');
     expect(organisationScopedUrl('/api/user-preferences/onboarding', ORG)).toBe(

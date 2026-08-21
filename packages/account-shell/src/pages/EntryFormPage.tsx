@@ -10,14 +10,13 @@ import {
   Container,
   Divider,
   FormControlLabel,
-  MenuItem,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
+  EntrantNameField,
   FieldRenderer,
   RichText,
   applicationFieldToFieldDefinition,
@@ -25,6 +24,7 @@ import {
   formatCurrency,
   validateApplicationField,
 } from '@aws-web-framework/components';
+import type { EntrantOption, EntrantValue } from '@aws-web-framework/components';
 import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -33,7 +33,6 @@ import {
   CatalogueEvent,
   CatalogueMembershipType,
   CartItemType,
-  EligibleMember,
 } from '../types/account';
 
 interface FormField {
@@ -100,6 +99,11 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const { execute: executeForm } = useAccountApi<any>();
   const { execute: executeSubmit } = useAccountApi<{ id: string }>();
   const { execute: executeAdd } = useAccountApi<unknown>();
+  const { execute: executeEntrants } = useAccountApi<{
+    autocomplete: boolean;
+    allowFreeText: boolean;
+    matches: EntrantOption[];
+  }>();
 
   const currency = me?.organisation.currency ?? 'EUR';
   const locale = i18n.language;
@@ -110,15 +114,34 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [agreed, setAgreed] = useState(false);
   /**
-   * Which membership this entry is for.
+   * Who the entry is for — a name, and the membership behind it where there is
+   * one.
    *
-   * Only meaningful on a members-only activity. Preselected when the account
-   * holds exactly one — there is no choice to make, and a select with a single
-   * option is a question with one answer. Left empty when they hold several: a
-   * parent entering Fionn who gets Saoirse by default has been handed a wrong
-   * answer that looks like their own.
+   * Preselected when the account holds exactly one eligible membership on a
+   * members-only activity: there is no choice to make, and a field with a
+   * single possible answer is a question worth answering for the member. Left
+   * empty otherwise, including on open entries — a parent entering Fionn who
+   * gets Saoirse by default has been handed a wrong answer that looks like
+   * their own, and prefilling the account holder's own name would make the
+   * commonest mistake the commonest default.
    */
-  const [memberId, setMemberId] = useState<string>('');
+  const [entrant, setEntrant] = useState<EntrantValue>({ memberId: null, name: '' });
+  /**
+   * How the field behaves here, decided by the server from the activity.
+   *
+   * Null until it has answered. The field is not rendered before then rather
+   * than being rendered as a plain box and turning into an autocomplete a
+   * moment later.
+   */
+  const [entrantMode, setEntrantMode] = useState<{
+    autocomplete: boolean;
+    allowFreeText: boolean;
+  } | null>(null);
+  const [entrantOptions, setEntrantOptions] = useState<EntrantOption[]>([]);
+  const [entrantLoading, setEntrantLoading] = useState(false);
+  const [entrantQuery, setEntrantQuery] = useState('');
+  /** Errors on this field wait until the member has left it once. */
+  const [entrantTouched, setEntrantTouched] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -148,10 +171,11 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
         setEvent(parent ?? null);
         setItem(activity);
 
-        // The only case with nothing to ask.
+        // The only case with nothing to ask: one eligible membership, so the
+        // name is already known and the field opens filled in.
         const selectable = (activity.eligibleMembers ?? []).filter((m) => !m.alreadyEntered);
         if (activity.membersOnly && selectable.length === 1) {
-          setMemberId(selectable[0].id);
+          setEntrant({ memberId: selectable[0].id, name: selectable[0].name });
         }
 
         if (activity.applicationFormId) {
@@ -190,6 +214,58 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * The roster behind the name field.
+   *
+   * One endpoint answers both halves — how the field should behave, and who
+   * matches — so the first call, made with an empty query while the page is
+   * still loading, is what renders the field at all, and every call after it is
+   * a search. Two endpoints would have meant two round trips to draw one field.
+   *
+   * Debounced, because this fires per keystroke and each one is a query against
+   * a club's whole membership. The first call is not delayed: there is nothing
+   * to debounce yet and 300ms of empty field is 300ms of the member wondering.
+   *
+   * `cancelled` guards the response rather than the request. Answers to "Sar",
+   * "Sara" and "Sarah" can return in any order, and without this the list can
+   * settle on the results for a prefix of what is in the box.
+   */
+  useEffect(() => {
+    if (kind !== 'event' || !orgCode || !itemId) return undefined;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setEntrantLoading(true);
+      try {
+        const result = await executeEntrants({
+          url: `/api/account/${orgCode}/catalogue/activities/${itemId}/entrants`,
+          params: { q: entrantQuery },
+        });
+        if (cancelled || !result) return;
+        setEntrantMode({
+          autocomplete: Boolean(result.autocomplete),
+          allowFreeText: Boolean(result.allowFreeText),
+        });
+        setEntrantOptions(result.matches ?? []);
+      } catch {
+        /*
+         * Deliberately quiet. A failed search leaves the last list in place and
+         * the member still able to type; raising a page-level error over a
+         * lookup would bury a form they can otherwise complete. Anything
+         * genuinely ineligible is refused by the server on submit.
+         */
+        if (!cancelled) setEntrantOptions([]);
+      } finally {
+        if (!cancelled) setEntrantLoading(false);
+      }
+    }, entrantQuery ? 300 : 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [kind, orgCode, itemId, entrantQuery, executeEntrants]);
 
   const terms: string | null = item?.termsAndConditions ?? null;
   const fields = useMemo(
@@ -287,10 +363,15 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
                 contextRef: {
                   activityId: item.id,
                   eventId: event?.id,
-                  // Only on a members-only activity; the server refuses the
-                  // line without it, and refuses a membership the caller does
-                  // not hold.
-                  ...(membersOnly ? { memberId } : {}),
+                  /*
+                   * The name always travels; the membership only when one was
+                   * chosen. The server prefers the membership where it has one
+                   * — that is the club's own spelling of the person's name —
+                   * and falls back to what was typed, which is the only thing
+                   * it has for a non-member entering an open event.
+                   */
+                  entrantName: entrant.name.trim(),
+                  ...(entrant.memberId ? { memberId: entrant.memberId } : {}),
                 },
                 description: `${event?.name ?? ''} — ${item.name}`,
                 unitFee: item.fee,
@@ -370,20 +451,22 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const termsRequired = Boolean(terms);
 
   /*
-   * Members-only handling, all derived rather than stored, so a reload cannot
-   * leave the page disagreeing with the catalogue about who may enter.
+   * Who the entry is for, as a rule the submit button can read.
+   *
+   * A name is always required. On anything but an open activity the name must
+   * also have come from the roster — `allowFreeText` is the server's word for
+   * that, so the two cannot disagree about which activities admit a stranger.
    */
-  const membersOnly = kind === 'event' && Boolean(item?.membersOnly);
-  const eligibleMembers: EligibleMember[] = membersOnly ? item?.eligibleMembers ?? [] : [];
-  const selectableMembers = eligibleMembers.filter((member) => !member.alreadyEntered);
+  const entrantNamed = entrant.name.trim().length > 0;
+  const entrantSatisfied =
+    kind !== 'event' ||
+    (entrantNamed && (entrantMode?.allowFreeText !== false || Boolean(entrant.memberId)));
 
   const canSubmit =
     online &&
     !saving &&
     (!termsRequired || agreed) &&
-    // A required question like any other: nothing is preselected when there is
-    // a genuine choice, so it has to be answered before submitting.
-    (!membersOnly || Boolean(memberId)) &&
+    entrantSatisfied &&
     outstanding.length === 0 &&
     badAnswers.length === 0;
 
@@ -428,47 +511,47 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
       )}
 
       {/*
-        Who the entry is for.
+        Who the entry is for — first, above the club's own questions.
 
-        Stated when there is one membership and asked when there are several —
-        a select with a single option is a question with one answer, and a
-        sentence reads faster than a dropdown nobody can change.
+        Always asked on an event entry, whatever the club put on its form. The
+        name is not a question *about* the entry, it is the entry: without it an
+        entry list is a column of account holders, and a family's three entries
+        are indistinguishable. Clubs were building this field by hand, under a
+        different name each time, and forgetting it entirely often enough that
+        the entry list was the place the omission was discovered.
       */}
-      {membersOnly && (
+      {kind === 'event' && entrantMode && (
         <Paper sx={{ p: 3, mb: 3 }}>
-          {selectableMembers.length === 1 && eligibleMembers.length === 1 ? (
-            <>
-              <Typography variant="body1">
-                {t('form.membersOnly.entryFor', { name: eligibleMembers[0].name })}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {eligibleMembers[0].membershipTypeName} · {eligibleMembers[0].membershipNumber}
-              </Typography>
-            </>
-          ) : (
-            <TextField
-              select
-              fullWidth
-              required
-              label={t('form.membersOnly.whoIsThisFor')}
-              value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-              helperText={t('form.membersOnly.whoIsThisForHint')}
-            >
-              {eligibleMembers.map((member) => (
-                /*
-                  An already-entered membership is listed and disabled rather
-                  than dropped. A name simply missing from the list reads as a
-                  bug; a disabled row with a reason answers the question.
-                */
-                <MenuItem key={member.id} value={member.id} disabled={member.alreadyEntered}>
-                  {member.alreadyEntered
-                    ? t('form.membersOnly.optionAlreadyEntered', { name: member.name })
-                    : `${member.name} — ${member.membershipTypeName} · ${member.membershipNumber}`}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
+          <EntrantNameField
+            value={entrant}
+            onChange={setEntrant}
+            onSearch={setEntrantQuery}
+            options={entrantOptions}
+            loading={entrantLoading}
+            autocomplete={entrantMode.autocomplete}
+            allowFreeText={entrantMode.allowFreeText}
+            disabled={saving}
+            onBlur={() => setEntrantTouched(true)}
+            error={
+              entrantTouched && !entrantSatisfied
+                ? entrantMode.allowFreeText
+                  ? t('form.entrant.required')
+                  : t('form.entrant.mustBeMember')
+                : null
+            }
+            labels={{
+              label: t('form.entrant.label'),
+              placeholder: t('form.entrant.placeholder'),
+              helperText: entrantMode.autocomplete
+                ? entrantMode.allowFreeText
+                  ? t('form.entrant.hintOpen')
+                  : t('form.entrant.hintMembersOnly')
+                : t('form.entrant.hintPlain'),
+              noMatches: t('form.entrant.noMatches'),
+              alreadyEntered: t('form.entrant.alreadyEntered'),
+              loading: t('form.entrant.searching'),
+            }}
+          />
         </Paper>
       )}
 

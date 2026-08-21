@@ -32,6 +32,7 @@ const mockOrganizationTypes = [
     defaultLocale: 'en-GB',
     defaultCapabilities: ['events'],
     membershipNumbering: 'internal' as const,
+    allowLogoOverride: true,
     membershipNumberUniqueness: 'organization' as const,
     initialMembershipNumber: 1000000,
     status: 'active' as const,

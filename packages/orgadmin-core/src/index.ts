@@ -28,6 +28,7 @@ export * from './forms';
 export * from './settings';
 export * from './payments';
 export * from './reporting';
+export * from './audit';
 export * from './users';
 
 // Export AuthTokenContext for shell integration

@@ -7,6 +7,7 @@ import {
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { db } from '../database/pool';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -179,6 +180,7 @@ router.post(
   authenticateToken(),
   byBodyOrCurrent(),
   requireCalendarBookingsCapability,
+  audited({ action: 'calendar.created', resource: 'calendar', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const calendar = await calendarService.createCalendar(req.body);
@@ -222,6 +224,7 @@ router.put(
   '/calendars/:id',
   authenticateToken(),
   byResource('calendar', 'id'),
+  audited({ action: 'calendar.updated', resource: 'calendar', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -260,6 +263,7 @@ router.patch(
   '/calendars/:id/status',
   authenticateToken(),
   byResource('calendar', 'id'),
+  audited({ action: 'calendar.updated', resource: 'calendar', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -299,6 +303,7 @@ router.delete(
   '/calendars/:id',
   authenticateToken(),
   byResource('calendar', 'id'),
+  audited({ action: 'calendar.deleted', resource: 'calendar', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -448,6 +453,7 @@ router.post(
   '/bookings',
   authenticateToken(),
   byBodyOrCurrent(),
+  audited({ action: 'booking.created', resource: 'booking', entityType: 'booking' }),
   async (req: Request, res: Response) => {
     try {
       const booking = await calendarService.createBooking(req.body);
@@ -614,6 +620,7 @@ router.post(
   authenticateToken(),
   byResource('calendar', 'calendarId'),
   requireCalendarBookingsCapability,
+  audited({ action: 'booking.added-to-basket', entityType: 'reservation', param: 'calendarId', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { calendarId } = req.params;
@@ -662,6 +669,7 @@ router.delete(
   authenticateToken(),
   byResource('reservation', 'id'),
   requireCalendarBookingsCapability,
+  audited({ action: 'booking.cancelled', entityType: 'reservation', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -711,6 +719,7 @@ router.post(
   '/bookings/:id/cancel',
   authenticateToken(),
   byResource('booking', 'id'),
+  audited({ action: 'booking.cancelled', resource: 'booking', entityType: 'booking' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

@@ -10,6 +10,8 @@ export interface Organisation {
   keycloakGroupId: string;
   name: string;
   displayName: string;
+  /** How the club is addressed in the account app — `/account/{urlCode}`. */
+  urlCode?: string;
   domain?: string;
   status: 'active' | 'inactive';
   currency?: string;

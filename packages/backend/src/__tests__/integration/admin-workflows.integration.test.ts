@@ -2,6 +2,7 @@ import request from 'supertest';
 import type { Server } from 'http';
 import { app } from '../../index';
 import { db } from '../../database/pool';
+import { auditService } from '../../services/audit/audit.service';
 
 // Mock the Keycloak services
 jest.mock('../../services/keycloak-admin.factory', () => {
@@ -212,9 +213,12 @@ describe('Admin Workflows Integration Tests', () => {
       expect(createResponse.body.keycloakUserId).toBeDefined();
 
       // Verify creation audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       let auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'create']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'user.org-admin-created']
       );
       expect(auditLogs.rows.length).toBe(1);
 
@@ -242,9 +246,12 @@ describe('Admin Workflows Integration Tests', () => {
       expect(updateResponse.body.id).toBe(userId);
 
       // Verify update audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'update']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'user.org-admin-updated']
       );
       expect(auditLogs.rows.length).toBe(1);
 
@@ -258,9 +265,12 @@ describe('Admin Workflows Integration Tests', () => {
       expect(resetResponse.body.message).toBe('Password reset successfully');
 
       // Verify password reset audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'reset_password']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'auth.password-reset-requested']
       );
       expect(auditLogs.rows.length).toBe(1);
 
@@ -287,22 +297,28 @@ describe('Admin Workflows Integration Tests', () => {
         .expect(204);
 
       // Verify deletion audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', userId, 'delete']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', userId, 'user.org-admin-deleted']
       );
       expect(auditLogs.rows.length).toBe(1);
 
       // Verify all audit logs for this user
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       const allAuditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 ORDER BY timestamp',
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 ORDER BY occurred_at',
         ['user', userId]
       );
       expect(allAuditLogs.rows.length).toBe(4);
-      expect(allAuditLogs.rows[0].action).toBe('create');
-      expect(allAuditLogs.rows[1].action).toBe('update');
-      expect(allAuditLogs.rows[2].action).toBe('reset_password');
-      expect(allAuditLogs.rows[3].action).toBe('delete');
+      expect(allAuditLogs.rows[0].action).toBe('user.org-admin-created');
+      expect(allAuditLogs.rows[1].action).toBe('user.org-admin-updated');
+      expect(allAuditLogs.rows[2].action).toBe('auth.password-reset-requested');
+      expect(allAuditLogs.rows[3].action).toBe('user.org-admin-deleted');
     });
   });
 
@@ -344,9 +360,12 @@ describe('Admin Workflows Integration Tests', () => {
       expect(roleName).toBe(createData.name);
 
       // Verify creation audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       let auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['role', roleId, 'create']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['role', roleId, 'role.created']
       );
       expect(auditLogs.rows.length).toBe(1);
 
@@ -368,9 +387,12 @@ describe('Admin Workflows Integration Tests', () => {
       expect(assignResponse.body.message).toBe('Role assigned successfully');
 
       // Verify role assignment audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', testUserId, 'assign_role']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', testUserId, 'role.assigned']
       );
       expect(auditLogs.rows.length).toBe(1);
 
@@ -383,9 +405,12 @@ describe('Admin Workflows Integration Tests', () => {
       expect(removeResponse.body.message).toBe('Role removed successfully');
 
       // Verify role removal audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['user', testUserId, 'remove_role']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['user', testUserId, 'role.removed']
       );
       expect(auditLogs.rows.length).toBe(1);
 
@@ -396,20 +421,26 @@ describe('Admin Workflows Integration Tests', () => {
         .expect(204);
 
       // Verify deletion audit log
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       auditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 AND action = $3',
-        ['role', roleId, 'delete']
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 AND action = $3',
+        ['role', roleId, 'role.deleted']
       );
       expect(auditLogs.rows.length).toBe(1);
 
       // Verify all audit logs for this role
+      // The audit service batches its writes, so force the flush first.
+      await auditService.flushNow();
+
       const allRoleAuditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource = $1 AND resource_id = $2 ORDER BY timestamp',
+        'SELECT * FROM audit_events WHERE entity_type = $1 AND entity_id = $2 ORDER BY occurred_at',
         ['role', roleId]
       );
       expect(allRoleAuditLogs.rows.length).toBe(2); // create and delete
-      expect(allRoleAuditLogs.rows[0].action).toBe('create');
-      expect(allRoleAuditLogs.rows[1].action).toBe('delete');
+      expect(allRoleAuditLogs.rows[0].action).toBe('role.created');
+      expect(allRoleAuditLogs.rows[1].action).toBe('role.deleted');
     });
   });
 
@@ -483,8 +514,10 @@ describe('Admin Workflows Integration Tests', () => {
         .send({ password: 'AuditPassword123!', temporary: true });
 
       // Verify all audit logs were created
+      await auditService.flushNow();
+
       const allAuditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE ip_address = $1 ORDER BY timestamp',
+        `SELECT * FROM audit_events WHERE context->>'ip' = $1 ORDER BY occurred_at`,
         ['192.168.1.100']
       );
 
@@ -492,19 +525,19 @@ describe('Admin Workflows Integration Tests', () => {
 
       // Verify each audit log has required fields
       allAuditLogs.rows.forEach(log => {
-        expect(log.user_id).toBeDefined();
+        expect(log.actor_kc_user_id).toBeDefined();
         expect(log.action).toBeDefined();
-        expect(log.resource).toBeDefined();
-        expect(log.resource_id).toBeDefined();
-        expect(log.ip_address).toBe('192.168.1.100');
-        expect(log.timestamp).toBeDefined();
+        expect(log.entity_type).toBeDefined();
+        expect(log.entity_id).toBeDefined();
+        expect(log.context.ip).toBe('192.168.1.100');
+        expect(log.occurred_at).toBeDefined();
       });
 
       // Verify specific actions were logged
       const actions = allAuditLogs.rows.map(log => log.action);
-      expect(actions).toContain('create');
-      expect(actions).toContain('assign_role');
-      expect(actions).toContain('reset_password');
+      expect(actions).toContain('user.org-admin-created');
+      expect(actions).toContain('role.assigned');
+      expect(actions).toContain('auth.password-reset-requested');
     });
   });
 
@@ -592,8 +625,13 @@ describe('Admin Workflows Integration Tests', () => {
         .send({ password: 'ComplexPassword123!', temporary: false });
 
       // Verify audit logs for all operations
+
+      // The audit service batches its writes, so force the flush first.
+
+      await auditService.flushNow();
+
       const allAuditLogs = await db.query(
-        'SELECT * FROM admin_audit_log WHERE resource_id IN ($1, $2, $3, $4) ORDER BY timestamp',
+        'SELECT * FROM audit_events WHERE entity_id IN ($1, $2, $3, $4) ORDER BY occurred_at',
         [organisation1Id, organisation2Id, user1Id, user2Id]
       );
 

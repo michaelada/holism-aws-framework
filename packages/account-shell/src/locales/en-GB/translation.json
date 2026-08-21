@@ -41,8 +41,15 @@
     "resultCount_one": "{{count}} organisation",
     "resultCount_other": "{{count}} organisations",
     "empty": "No organisations match “{{query}}”.",
-    "emptyHint": "Check the spelling, or ask your club for their joining link.",
+    "emptyHint": "Check the spelling, or ask your club for their sign-up link.",
     "loadError": "We could not load the organisation list."
+  },
+  "poweredBy": {
+    "text": "Powered by ItsPlainSailing.com",
+    "copyright": "© {{year}} Esker Software. All rights reserved"
+  },
+  "posts": {
+    "regionLabel": "Announcements"
   },
   "gateway": {
     "signInPrompt": "Sign in to see your entries, memberships and bookings.",
@@ -57,28 +64,28 @@
     }
   },
   "register": {
-    "title": "Join {{organisation}}",
+    "title": "Create your {{organisation}} account",
     "body": "This connects your ItsPlainSailing account to {{organisation}} so you can login and access their online events etc.",
-    "notAMembership": "This does not buy a membership. If the club offers memberships, you apply for one separately once you are connected.",
-    "submit": "Connect to this organisation/ club",
-    "submitting": "Connecting…",
-    "failed": "We could not connect you to this club.",
+    "notAMembership": "This is not a membership. If the club offers memberships, you apply for one separately once your account is set up.",
+    "submit": "Create my account",
+    "submitting": "Creating your account…",
+    "failed": "We could not create your account with this club.",
     "submitted": {
       "title": "Request sent",
-      "bodyAuto": "You are now connected to {{organisation}}.",
+      "bodyAuto": "Your {{organisation}} account is ready.",
       "bodyApproval": "A club administrator will review your request before you can sign in.",
       "continue": "Continue"
     }
   },
   "notConnected": {
-    "title": "You are not a member of {{organisation}}",
+    "title": "You do not have a {{organisation}} account yet",
     "body": "Your sign-in worked, but this club has no record of you yet.",
-    "register": "Request to join",
+    "register": "Create an account",
     "switch": "Go to one of your organisations"
   },
   "pending": {
     "title": "Awaiting approval",
-    "body": "Your request to join {{organisation}} is with the club for review.",
+    "body": "Your {{organisation}} account request is with the club for review.",
     "statusEmail": "Email address verified",
     "statusApproval": "Awaiting club approval",
     "checkAgain": "Check again",
@@ -88,7 +95,7 @@
   },
   "rejected": {
     "title": "Request not approved",
-    "body": "{{organisation}} did not approve your request to join. Please contact the club directly if you think this is a mistake."
+    "body": "{{organisation}} did not approve your account request. Please contact the club directly if you think this is a mistake."
   },
   "inactive": {
     "title": "Your account is inactive",
@@ -131,12 +138,72 @@
     "browseMemberships": "Memberships",
     "orders": "My shop orders"
   },
+  "platformEvents": {
+    "title": "What's on",
+    "subtitle": "Equestrian events across every club on ItsPlainSailing.",
+    "metaTitle": "What's on · ItsPlainSailing",
+    "metaDescription": "Search equestrian events across every club on ItsPlainSailing — show jumping, cross country, dressage, camps and rallies.",
+    "searchPlaceholder": "Search events, clubs or venues",
+    "searchLabel": "Search events",
+    "refine": "Refine",
+    "eventType": "Event type",
+    "region": "Region",
+    "club": "Club",
+    "clearAll": "Clear all",
+    "filters": "Filters",
+    "filtersWithCount": "Filters ({{count}})",
+    "apply": "Apply",
+    "sort": "Sort",
+    "sortSoonest": "Soonest first",
+    "sortClosing": "Closing soonest",
+    "sortRecent": "Recently added",
+    "sortOrganisation": "Club A–Z",
+    "resultCount": "{{count}} event",
+    "resultCount_other": "{{count}} events",
+    "noMatches": "No events match those filters.",
+    "noneYet": "No clubs have published events here yet.",
+    "loadError": "We could not load these events.",
+    "showMore": "Show more events",
+    "someMembersOnly": "{{count}} members only"
+  },
+  "publicEvents": {
+    "title": "What's on at {{organisation}}",
+    "subtitle": "Open to everyone unless an activity says otherwise.",
+    "empty": "This club has not published any events publicly yet.",
+    "loadError": "We could not load these events.",
+    "notFound": "We could not find that event.",
+    "backToList": "All events",
+    "previously": "Previously",
+    "finished": "Finished",
+    "activities": "Activities",
+    "activityCount": "{{count}} activity",
+    "activityCount_other": "{{count}} activities",
+    "from": "from {{price}}",
+    "placesLeft": "{{count}} place left",
+    "placesLeft_other": "{{count}} places left",
+    "membersOnly": "Members only",
+    "membersOnlyAnyBranch": "Members of any branch",
+    "entriesOpen": "Entries open",
+    "entriesClose": "Entries close",
+    "eventLimit": "Event limit",
+    "ofPlaces": "{{remaining}} of {{limit}} left",
+    "enterWith": "Enter with {{organisation}}",
+    "signInNote": "You’ll sign in or create an account to enter.",
+    "enterPrompt": "Entries are made through your {{organisation}} account.",
+    "signInOrCreate": "Sign in or create an account",
+    "metaList": "Events run by {{organisation}} and open to enter on ItsPlainSailing.",
+    "enter": "Enter",
+    "soldOut": "Full",
+    "entriesClosedNote": "Entries for this event have closed.",
+    "entriesNotOpenNote": "Entries for this event have not opened yet.",
+    "metaFallback": "An event run by {{organisation}} on ItsPlainSailing."
+  },
   "home": {
     "externalEvents": "Events at other organisations",
     "externalEventsHint": "Run by another organisation but open to all members of {{organisationType}}",
     "externalEventBadge": "External event",
     "externalEventOpen": "Go to {{organisation}}",
-    "externalEventJoin": "Join {{organisation}} to enter",
+    "externalEventAccount": "Create a {{organisation}} account",
     "registrations": "Registrations",
     "viewAll": "View all",
     "upcomingEvents": "Upcoming events",
@@ -456,13 +523,21 @@
     "home": "Home"
   },
   "form": {
+    "entrant": {
+      "label": "Who is this entry for?",
+      "placeholder": "Name",
+      "hintOpen": "Start typing to find a member, or type any name.",
+      "hintMembersOnly": "Start typing to find a member. Only active members can be entered.",
+      "hintPlain": "The name of the person this entry is for.",
+      "noMatches": "No members found.",
+      "alreadyEntered": "Already entered",
+      "searching": "Searching…",
+      "required": "Enter the name of the person this entry is for.",
+      "mustBeMember": "Choose an active member from the list."
+    },
     "membersOnly": {
       "notAMember": "This activity is open to members of {{organisation}} only, and you do not hold an active membership.",
-      "viewMemberships": "View memberships",
-      "entryFor": "This entry is for {{name}}",
-      "whoIsThisFor": "Who is this entry for?",
-      "whoIsThisForHint": "You hold more than one membership. Choose the member you are entering.",
-      "optionAlreadyEntered": "{{name}} — already entered"
+      "viewMemberships": "View memberships"
     },
     "submit": "Save and add to basket",
     "saving": "Saving…",

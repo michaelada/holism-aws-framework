@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { organizationUserService } from '../services/organization-user.service';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 const router = Router();
 
@@ -132,6 +133,7 @@ router.post(
   '/:organizationId/users/admin',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'user.org-admin-created', resource: 'organisationUser', entityType: 'user' }),
   async (req: Request, res: Response) => {
     try {
       const { organizationId } = req.params;
@@ -192,6 +194,7 @@ router.post(
 router.post(
   '/:organizationId/users/account',
   authenticateToken(),
+  audited({ action: 'user.account-created', resource: 'organisationUser', entityType: 'user' }),
   async (req: Request, res: Response) => {
     try {
       const { organizationId } = req.params;
@@ -244,6 +247,7 @@ router.post(
 router.put(
   '/:organizationId/users/:id',
   authenticateToken(),
+  audited({ action: 'user.org-admin-updated', resource: 'organisationUser', entityType: 'user' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -287,6 +291,7 @@ router.delete(
   '/:organizationId/users/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'user.org-admin-deleted', resource: 'organisationUser', entityType: 'user' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -336,6 +341,7 @@ router.post(
   '/:organizationId/users/:id/roles',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'role.assigned', resource: 'organisationUser', entityType: 'user', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -382,6 +388,7 @@ router.delete(
   '/:organizationId/users/:id/roles/:roleId',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'role.removed', resource: 'organisationUser', entityType: 'user', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id, roleId } = req.params;
@@ -431,6 +438,7 @@ router.post(
   '/:organizationId/users/:id/reset-password',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'auth.password-reset-requested', resource: 'organisationUser', entityType: 'user', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

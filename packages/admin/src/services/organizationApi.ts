@@ -351,6 +351,30 @@ export const deleteOrganizationRole = async (
   );
 };
 
+/**
+ * Set the shared logo for an organisation type.
+ *
+ * Addressed by id, so a brand-new type has to be created before its logo can be
+ * attached — the create screen uploads immediately after saving.
+ */
+export const uploadOrganizationTypeLogo = async (
+  id: string,
+  file: File
+): Promise<OrganizationType> => {
+  const form = new FormData();
+  form.append('file', file);
+  const response = await apiClient.post(`/api/admin/organization-types/${id}/logo`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+/** Remove it, handing every organisation of this type back its own logo. */
+export const deleteOrganizationTypeLogo = async (id: string): Promise<OrganizationType> => {
+  const response = await apiClient.delete(`/api/admin/organization-types/${id}/logo`);
+  return response.data;
+};
+
 // Payment Methods
 export const getPaymentMethods = async (): Promise<PaymentMethod[]> => {
   const response = await apiClient.get('/api/admin/payment-methods');

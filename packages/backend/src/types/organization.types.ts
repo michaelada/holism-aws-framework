@@ -56,6 +56,19 @@ export interface OrganizationType {
   membershipNumbering: MembershipNumbering;
   membershipNumberUniqueness: MembershipNumberUniqueness;
   initialMembershipNumber: number;
+  /**
+   * A shared logo inherited by every organisation of this type, signed on read.
+   * Empty where the type has none, which is the default and today's behaviour.
+   */
+  logoUrl?: string;
+  /** The stored key behind `logoUrl`. Present so the admin screen can tell
+   *  "no logo" from "a logo we could not sign". */
+  logoS3Key?: string;
+  /**
+   * Whether an organisation of this type may replace the shared logo with its
+   * own. Defaults to true; only meaningful once the type has a logo.
+   */
+  allowLogoOverride: boolean;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -73,7 +86,9 @@ export interface CreateOrganizationTypeDto {
   defaultCapabilities: string[];
   membershipNumbering?: MembershipNumbering;
   membershipNumberUniqueness?: MembershipNumberUniqueness;
-  initialMembershipNumber?: number;
+  initialMembershipNumber?: number;  /** Whether organisations of this type may replace the shared logo. */
+  allowLogoOverride?: boolean;
+
 }
 
 export interface UpdateOrganizationTypeDto {
@@ -87,7 +102,9 @@ export interface UpdateOrganizationTypeDto {
   membershipNumbering?: MembershipNumbering;
   membershipNumberUniqueness?: MembershipNumberUniqueness;
   initialMembershipNumber?: number;
-  status?: string;
+  status?: string;  /** Whether organisations of this type may replace the shared logo. */
+  allowLogoOverride?: boolean;
+
 }
 
 /**

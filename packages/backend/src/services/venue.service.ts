@@ -9,6 +9,15 @@ export interface Venue {
   organisationId: string;
   name: string;
   address?: string;
+  /**
+   * County or region, for the public event listings' location filter.
+   *
+   * Separate from `address` because that is prose — "Craddockstown, Naas, Co.
+   * Kildare" — and a filter cannot be built from prose without parsing it, which
+   * works until the first venue written differently. Optional, and null for
+   * every venue predating it.
+   */
+  region?: string;
   latitude?: number;
   longitude?: number;
   createdAt: Date;
@@ -22,6 +31,15 @@ export interface CreateVenueDto {
   organisationId: string;
   name: string;
   address?: string;
+  /**
+   * County or region, for the public event listings' location filter.
+   *
+   * Separate from `address` because that is prose — "Craddockstown, Naas, Co.
+   * Kildare" — and a filter cannot be built from prose without parsing it, which
+   * works until the first venue written differently. Optional, and null for
+   * every venue predating it.
+   */
+  region?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -32,6 +50,15 @@ export interface CreateVenueDto {
 export interface UpdateVenueDto {
   name?: string;
   address?: string;
+  /**
+   * County or region, for the public event listings' location filter.
+   *
+   * Separate from `address` because that is prose — "Craddockstown, Naas, Co.
+   * Kildare" — and a filter cannot be built from prose without parsing it, which
+   * works until the first venue written differently. Optional, and null for
+   * every venue predating it.
+   */
+  region?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -49,6 +76,7 @@ export class VenueService {
       organisationId: row.organisation_id,
       name: row.name,
       address: row.address,
+      region: row.region ?? undefined,
       latitude: row.latitude ? parseFloat(row.latitude) : undefined,
       longitude: row.longitude ? parseFloat(row.longitude) : undefined,
       createdAt: row.created_at,
@@ -123,13 +151,14 @@ export class VenueService {
 
       const result = await db.query(
         `INSERT INTO venues 
-         (organisation_id, name, address, latitude, longitude)
-         VALUES ($1, $2, $3, $4, $5)
+         (organisation_id, name, address, region, latitude, longitude)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
         [
           data.organisationId,
           data.name.trim(),
           data.address?.trim() || null,
+          data.region?.trim() || null,
           data.latitude || null,
           data.longitude || null,
         ]
@@ -177,6 +206,10 @@ export class VenueService {
       if (data.address !== undefined) {
         updates.push(`address = $${paramCount++}`);
         values.push(data.address?.trim() || null);
+      }
+      if (data.region !== undefined) {
+        updates.push(`region = $${paramCount++}`);
+        values.push(data.region?.trim() || null);
       }
       if (data.latitude !== undefined) {
         updates.push(`latitude = $${paramCount++}`);

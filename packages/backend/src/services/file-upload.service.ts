@@ -280,6 +280,98 @@ export class FileUploadService {
   }
 
   /**
+   * Upload the shared logo for an organisation type.
+   *
+   * Its own key prefix — `organisation-types/…` rather than `organisations/…` —
+   * because the object belongs to the type, outlives any one club, and must not
+   * be reachable by the branding endpoint's key check, which confines an
+   * organisation to its own prefix.
+   *
+   * Uniquified per upload, so a federation that rebrands does not have the old
+   * mark served from a cache to half its branches.
+   */
+  async uploadOrganizationTypeLogo(params: {
+    organizationTypeId: string;
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number };
+  }): Promise<{ s3Key: string; fileName: string; fileSize: number; mimeType: string }> {
+    const { organizationTypeId, file } = params;
+
+    const validation = this.validateFile(file, 'image');
+    if (!validation.valid) {
+      throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const sanitizedFileName = path.basename(file.originalname);
+    const extension = path.extname(sanitizedFileName);
+    const unique = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+    const s3Key = `organisation-types/${organizationTypeId}/logo_${unique}${extension}`;
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        Metadata: {
+          organizationTypeId,
+          purpose: 'organisation-type-logo',
+          originalName: sanitizedFileName,
+        },
+      })
+    );
+
+    logger.info('Organisation type logo uploaded', { organizationTypeId, s3Key, fileSize: file.size });
+
+    return { s3Key, fileName: sanitizedFileName, fileSize: file.size, mimeType: file.mimetype };
+  }
+
+  /**
+   * Upload the image shown with a platform post.
+   *
+   * Its own method for the same reason `uploadBrandingLogo` is: `uploadFile`
+   * builds its key from `formId`/`fieldId` and writes a `form_submission_files`
+   * row, neither of which exists here. A post belongs to the platform rather
+   * than to any organisation, so the key is not under `organisations/`.
+   *
+   * Uniquified per upload, so replacing a post's image cannot be served stale
+   * from a browser or a CDN that is still holding the previous one.
+   */
+  async uploadPostImage(params: {
+    postId: string;
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number };
+  }): Promise<{ s3Key: string; fileName: string; fileSize: number; mimeType: string }> {
+    const { postId, file } = params;
+
+    const validation = this.validateFile(file, 'image');
+    if (!validation.valid) {
+      throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const sanitizedFileName = path.basename(file.originalname);
+    const extension = path.extname(sanitizedFileName);
+    const unique = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+    const s3Key = `platform/posts/${postId}/image_${unique}${extension}`;
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        Metadata: {
+          postId,
+          purpose: 'platform-post-image',
+          originalName: sanitizedFileName,
+        },
+      })
+    );
+
+    logger.info('Platform post image uploaded', { postId, s3Key, fileSize: file.size });
+
+    return { s3Key, fileName: sanitizedFileName, fileSize: file.size, mimeType: file.mimetype };
+  }
+
+  /**
    * Get signed URL for file download
    * URL expires after 1 hour
    */

@@ -31,6 +31,9 @@ export {
 } from './organisation-scope.middleware';
 export type { ResourceKind, OrganisationSource } from './organisation-scope.middleware';
 
+export { audited } from './audit.middleware';
+export type { AuditedOptions, AuditResource } from './audit.middleware';
+
 export {
   errorHandler,
   asyncHandler

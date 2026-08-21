@@ -82,6 +82,13 @@ export interface EventFormData {
   addConfirmationMessage: boolean;
   confirmationMessage?: string;
   status: 'draft' | 'published';
+  /**
+   * Public listing. Both false is "Show publicly: No" — the toggle on the form
+   * is derived from these rather than stored, so there is no state where the
+   * toggle says yes and nothing is chosen. See docs/PUBLIC_EVENTS.md §2.
+   */
+  showOnOrganisationPage: boolean;
+  showOnPlatformPage: boolean;
   activities: EventActivityFormData[];
   eventTypeId?: string;
   venueId?: string;

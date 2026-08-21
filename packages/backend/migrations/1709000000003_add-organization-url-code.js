@@ -29,6 +29,9 @@ const RESERVED = [
   'login', 'logout', 'metrics', 'new', 'orgadmin', 'password', 'payment',
   'payments', 'profile', 'public', 'register', 'settings', 'signin', 'signup',
   'static', 'support', 'switch', 'user', 'users', 'www',
+  // Added by migration 1709000000033; listed here so a fresh database
+  // backfilled by this migration reserves them too.
+  'events', 'event', 'whats-on', 'sitemap', 'robots',
 ];
 
 const SLUG_MAX = 50;

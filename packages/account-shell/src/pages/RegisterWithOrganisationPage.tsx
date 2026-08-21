@@ -10,6 +10,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { PoweredBy } from '../components/PoweredBy';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { PublicOrganisationDetail } from '../types/account';
@@ -145,6 +146,16 @@ export const RegisterWithOrganisationPage: React.FC = () => {
           </Button>
         </Stack>
       </Paper>
+
+      {/*
+        Outside the Paper, under it — the same placement as the login pages, so
+        a member who arrives here from one does not see the attribution move.
+
+        The year is read at render rather than written into the translations:
+        a hard-coded one is correct until the 1st of January and then quietly
+        wrong on every page of the product until somebody notices.
+      */}
+      <PoweredBy />
     </Container>
   );
 };

@@ -126,7 +126,7 @@ describe('AwaitingApprovalPage (A8)', () => {
 
     // Whatever the admin recorded is internal — surfacing it invites arguments
     // the platform cannot adjudicate.
-    const body = await screen.findByText(/did not approve your request/i);
+    const body = await screen.findByText(/did not approve your account request/i);
     expect(body.textContent).not.toMatch(/reason/i);
   });
 

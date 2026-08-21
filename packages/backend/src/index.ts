@@ -22,6 +22,9 @@ import metadataRoutes from './routes/metadata.routes';
 import genericCrudRoutes from './routes/generic-crud.routes';
 import adminRoutes from './routes/admin.routes';
 import capabilityRoutes from './routes/capability.routes';
+import platformPostRoutes from './routes/platform-post.routes';
+import auditRoutes, { sessionReportRouter } from './routes/audit.routes';
+import { auditRefusals } from './middleware/audit-auth.middleware';
 import organizationTypeRoutes from './routes/organization-type.routes';
 import organizationRoutes from './routes/organization.routes';
 import organizationUserRoutes from './routes/organization-user.routes';
@@ -49,9 +52,11 @@ import { allowedOrigins as allowedOriginList } from './utils/allowed-origins';
 import userPreferencesRoutes from './routes/user-preferences.routes';
 import userGroupRoutes from './routes/user-group.routes';
 import publicRoutes from './routes/public.routes';
+import seoRoutes from './routes/seo.routes';
 import accountRoutes from './routes/account.routes';
 import { swaggerSpec } from './config/swagger';
 import { register } from './config/metrics';
+import { startPartitionRotation } from './services/audit/audit-partitions';
 
 // Load environment variables
 dotenv.config();
@@ -170,6 +175,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // Input sanitization middleware
+/*
+ * Records 401s and 403s across every route. Placed before the routers so it
+ * wraps `res.status` for all of them; see audit-auth.middleware for why this is
+ * not an error handler.
+ */
+app.use(auditRefusals());
 app.use(sanitizeBody());
 app.use(sanitizeQuery());
 app.use(sanitizeParams());
@@ -278,6 +289,10 @@ app.use('/api/metadata', metadataRoutes);
 app.use('/api/objects', genericCrudRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/capabilities', capabilityRoutes);
+app.use('/api/admin/posts', platformPostRoutes);
+app.use('/api/admin', auditRoutes);
+// Unauthenticated by necessity: a failed sign-in has no token to present.
+app.use('/api/audit', sessionReportRouter);
 app.use('/api/admin/payment-methods', paymentMethodRoutes);
 app.use('/api/admin/organization-types', organizationTypeRoutes);
 app.use('/api/admin/organizations', organizationRoutes);
@@ -352,6 +367,11 @@ app.use('/api/user-preferences', userPreferencesRoutes);
 // resolves the organisation from the URL rather than from the token, because
 // an account user may belong to several.
 app.use('/api/public', publicRoutes);
+/*
+ * `robots.txt` and `sitemap.xml` sit at the site root, not under `/api`,
+ * because that is where crawlers look. nginx routes both here.
+ */
+app.use('/', seoRoutes);
 app.use('/api/account', accountRoutes);
 
 // 404 handler
@@ -376,7 +396,16 @@ async function start() {
     
     // Initialize database connection
     await db.initialize();
-    
+
+    /*
+     * Keep the audit table's monthly partitions ahead of the calendar.
+     *
+     * Before listening, so a boot on the 1st of a month has somewhere to put
+     * the first login it records. It never throws — a missing partition is a
+     * degradation, not a reason to refuse to start.
+     */
+    startPartitionRotation();
+
     app.listen(PORT, () => {
       logger.info('AWS Web Application Framework - Backend Service');
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);

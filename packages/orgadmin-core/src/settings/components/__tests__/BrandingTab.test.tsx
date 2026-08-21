@@ -280,3 +280,130 @@ describe('BrandingTab', () => {
     expect(screen.getByText(label('settings.branding.preview.accentButton'))).toBeInTheDocument();
   });
 });
+
+/**
+ * A logo inherited from the organisation type.
+ *
+ * A federation has one mark and every branch was uploading its own copy of it.
+ * Set once at the type, it is inherited — and may be locked, so a branch cannot
+ * replace it.
+ *
+ * The screen is courtesy, not enforcement: the server refuses the change
+ * regardless (`docs/ORGANISATION_TYPE_LOGO.md`). What is tested here is that a
+ * club is told *why* there is no upload, which is a different sentence from
+ * "you have not uploaded one yet".
+ */
+describe('BrandingTab — a logo set by the organisation type', () => {
+  const mockExecute = vi.fn();
+
+  const branding = (over: Record<string, unknown> = {}) => ({
+    logoUrl: 'https://example.com/type-logo.png',
+    primaryColor: '#1976d2',
+    secondaryColor: '#dc004e',
+    accentColor: '#ff9800',
+    backgroundColor: '#ffffff',
+    textColor: '#000000',
+    ...over,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(useApiModule, 'useApi').mockReturnValue({
+      data: null,
+      error: null,
+      loading: false,
+      execute: mockExecute,
+      reset: vi.fn(),
+    } as any);
+  });
+
+  const uploadControl = () => document.querySelector('input[type="file"]#logo-upload');
+
+  it('removes the upload entirely when the type forbids overriding', async () => {
+    /*
+     * Removed rather than disabled. A greyed-out button invites a click and
+     * then explains nothing; its absence beside a sentence says what is true.
+     */
+    mockExecute.mockResolvedValueOnce(
+      branding({ logoSource: 'organisation-type', canOverrideLogo: false })
+    );
+
+    render(<BrandingTab />);
+
+    expect(
+      await screen.findByText(label('settings.branding.fields.logoFromType'))
+    ).toBeInTheDocument();
+    expect(uploadControl()).toBeNull();
+  });
+
+  it('still shows the inherited logo, so the club can see what members see', async () => {
+    mockExecute.mockResolvedValueOnce(
+      branding({ logoSource: 'organisation-type', canOverrideLogo: false })
+    );
+
+    render(<BrandingTab />);
+
+    await screen.findByText(label('settings.branding.fields.logoFromType'));
+    expect(screen.getByAltText('Organisation Logo')).toHaveAttribute(
+      'src',
+      'https://example.com/type-logo.png'
+    );
+  });
+
+  it('keeps the upload where the type permits overriding', async () => {
+    mockExecute.mockResolvedValueOnce(
+      branding({ logoSource: 'organisation-type', canOverrideLogo: true })
+    );
+
+    render(<BrandingTab />);
+
+    await waitFor(() => expect(uploadControl()).not.toBeNull());
+    expect(
+      screen.queryByText(label('settings.branding.fields.logoFromType'))
+    ).not.toBeInTheDocument();
+  });
+
+  it('says an inherited logo is inherited, rather than giving size advice', async () => {
+    // The usual hint is about dimensions; it is the wrong thing to say about a
+    // logo this club did not upload and cannot remove.
+    mockExecute.mockResolvedValueOnce(
+      branding({ logoSource: 'organisation-type', canOverrideLogo: true })
+    );
+
+    render(<BrandingTab />);
+
+    expect(
+      await screen.findByText(label('settings.branding.fields.logoInherited'))
+    ).toBeInTheDocument();
+  });
+
+  it('offers no "remove" for a logo the club does not own', async () => {
+    /*
+     * `logoUrl` is set — the inherited mark is on screen — but there is no
+     * `logoS3Key`, because the club has nothing of its own to remove. Keying
+     * the button off the URL offered a delete that would have done nothing.
+     */
+    mockExecute.mockResolvedValueOnce(
+      branding({ logoSource: 'organisation-type', canOverrideLogo: true, logoS3Key: '' })
+    );
+
+    render(<BrandingTab />);
+
+    await waitFor(() => expect(uploadControl()).not.toBeNull());
+    expect(
+      screen.queryByRole('button', { name: label('settings.branding.fields.removeLogo') })
+    ).not.toBeInTheDocument();
+  });
+
+  it('behaves as before for an organisation whose type says nothing', async () => {
+    // The overwhelmingly common case, and the one that must not regress.
+    mockExecute.mockResolvedValueOnce(branding({ logoSource: 'organisation', logoS3Key: 'k' }));
+
+    render(<BrandingTab />);
+
+    await waitFor(() => expect(uploadControl()).not.toBeNull());
+    expect(
+      screen.getByRole('button', { name: label('settings.branding.fields.removeLogo') })
+    ).toBeInTheDocument();
+  });
+});

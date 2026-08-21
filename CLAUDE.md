@@ -99,6 +99,7 @@ it can answer without opening code.
 | [core-payments.md](.claude/modules/core-payments.md) | Payments | Consolidated payment list, detail, refunds, lodgements |
 | [core-reporting.md](.claude/modules/core-reporting.md) | Reports & Analytics | Dashboard plus events, members and revenue reports |
 | [core-users.md](.claude/modules/core-users.md) | Users | Org-admin vs account users, roles, Keycloak invitations |
+| — (see [orgadmin-core.md](.claude/modules/orgadmin-core.md)) | Audit Log | This organisation's own audit trail; scope fixed by the server |
 
 ### Org-admin capability modules
 

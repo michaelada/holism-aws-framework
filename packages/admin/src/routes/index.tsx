@@ -15,6 +15,13 @@ import { EditOrganizationPage } from '../pages/EditOrganizationPage';
 import { CreateOrganizationPage } from '../pages/CreateOrganizationPage';
 import { AddOrganizationAdminUserPage } from '../pages/AddOrganizationAdminUserPage';
 import { CreateOrganizationRolePage } from '../pages/CreateOrganizationRolePage';
+import { PostsPage } from '../pages/PostsPage';
+import { SessionsPage } from '../pages/SessionsPage';
+import { AuditLogPage } from '../pages/AuditLogPage';
+import { AuditEventPage } from '../pages/AuditEventPage';
+import { CreatePostPage } from '../pages/CreatePostPage';
+import { EditPostPage } from '../pages/EditPostPage';
+import { PostDetailsPage } from '../pages/PostDetailsPage';
 
 function NotFoundPage() {
   const navigate = useNavigate();
@@ -43,6 +50,62 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts"
+        element={
+          <ProtectedRoute>
+            <PostsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts/new"
+        element={
+          <ProtectedRoute>
+            <CreatePostPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts/:id"
+        element={
+          <ProtectedRoute>
+            <PostDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/posts/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditPostPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sessions"
+        element={
+          <ProtectedRoute>
+            <SessionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <AuditLogPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit/:id"
+        element={
+          <ProtectedRoute>
+            <AuditEventPage />
           </ProtectedRoute>
         }
       />

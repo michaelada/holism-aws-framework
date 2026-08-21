@@ -48,6 +48,10 @@ const DEFAULT_FORM_DATA: EventFormData = {
   addConfirmationMessage: false,
   confirmationMessage: undefined,
   status: 'draft',
+  // Off until a club deliberately turns it on. A new event is not published to
+  // the world by a default.
+  showOnOrganisationPage: false,
+  showOnPlatformPage: false,
   activities: [],
   eventTypeId: undefined,
   venueId: undefined,
@@ -190,6 +194,10 @@ export function useEventForm(): UseEventFormReturn {
             : new Date(),
           activities: Array.isArray(response.activities) ? response.activities : [],
           discountIds: response.discountIds || [],
+          // Coerced rather than spread: an older event predating the columns
+          // must load as "not public", not as undefined.
+          showOnOrganisationPage: Boolean(response.showOnOrganisationPage),
+          showOnPlatformPage: Boolean(response.showOnPlatformPage),
           // Ticketing fields — ensure not null
           ticketHeaderText: response.ticketHeaderText || '',
           ticketInstructions: response.ticketInstructions || '',

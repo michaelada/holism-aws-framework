@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Container, Paper, Stack, Typography } from '@mui/material';
+import { PoweredBy } from '../components/PoweredBy';
 import { useAuthContext } from '../context/AuthContext';
 
 /**
@@ -52,6 +53,8 @@ export const NotConnectedPage: React.FC = () => {
           <Button onClick={logout}>{t('common.signOut')}</Button>
         </Stack>
       </Paper>
+
+      <PoweredBy />
     </Container>
   );
 };

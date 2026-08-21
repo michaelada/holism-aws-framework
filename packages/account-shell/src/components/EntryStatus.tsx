@@ -7,7 +7,6 @@ import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 import GroupIcon from '@mui/icons-material/Group';
 import { formatOrdinalDateTime } from '@aws-web-framework/components';
 import { capacityFor, entryWindowFor } from '../utils/entryWindow';
-import { CatalogueActivity, CatalogueEvent } from '../types/account';
 
 /**
  * The entry window and remaining places for an event, as chips.
@@ -27,10 +26,26 @@ import { CatalogueActivity, CatalogueEvent } from '../types/account';
  * event that is closed shows only that it is closed, never "closed" beside
  * "3 places left", which would read as an invitation to try anyway.
  */
+/**
+ * The four fields this actually reads.
+ *
+ * Structural rather than `CatalogueEvent`, so the **public** pages can render
+ * the same status as the member catalogue. They carry the same facts under a
+ * different type, and a second component phrasing entry windows would drift
+ * from this one — which is the failure the shared `entryWindowFor` exists to
+ * prevent.
+ */
+export interface EntryStatusEvent {
+  entriesOpenDate: string | null;
+  entriesClosingDate: string | null;
+  entriesLimit: number | null;
+  placesRemaining: number | null;
+}
+
 export const EntryStatus: React.FC<{
-  event: CatalogueEvent;
+  event: EntryStatusEvent;
   /** Narrows capacity to one activity; omitted at event level. */
-  activity?: CatalogueActivity | null;
+  activity?: { entriesLimit?: number | null; placesRemaining: number | null } | null;
   size?: 'small' | 'medium';
   now?: Date;
 }> = ({ event, activity, size = 'small', now }) => {

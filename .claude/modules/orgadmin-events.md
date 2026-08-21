@@ -89,6 +89,22 @@ handling-fee option.
 
 ## Documentation
 
+### Show publicly (`showOnOrganisationPage`, `showOnPlatformPage`)
+
+Two booleans on the event, both false by default. `(false, false)` **is** "Show publicly: No" — the
+Yes/No radio on `EventBasicInfoSection` is derived from "is either one on", so unticking both turns
+it off and there is no invalid state to validate. The second checkbox needs the `public-search`
+capability.
+
+A public event appears at `/account/{urlCode}/whats-on` and, with the second flag, on the platform
+listing at `/events`. Draft events never reach either — the public read requires
+`status = 'published'` as well as the flag.
+
+`VenuesListPage` carries a **region** field. It is the only value the public listings can filter
+locations on: `venues.address` is prose and cannot be filtered without parsing it.
+
+See [PUBLIC_EVENTS.md](../../docs/PUBLIC_EVENTS.md).
+
 ### Who can enter (`entryEligibility`)
 
 Three values, defaulting to `'all'` — which is the previous behaviour, so every existing activity is

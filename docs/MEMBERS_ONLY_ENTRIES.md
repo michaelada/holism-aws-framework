@@ -9,6 +9,14 @@ choose who may enter:
   - with one active membership, the entry form says the entry is for that member
   - with more than one, the form asks which member is being entered
 
+> **Superseded in part by [ENTRANT_NAME.md](ENTRANT_NAME.md).** Every event entry form now opens
+> with a name field, and *which member an entry may name* is no longer decided by
+> `eligibleMembers` — the caller's own memberships — but by whether the member is active and within
+> the activity's scope. A secretary may now enter members they do not hold a membership for, which
+> the rule below refused. **Who may reach a members-only activity is unchanged**: the caller must
+> still hold an eligible membership themselves. The eligibility options, the capability gate and the
+> `unavailableReason` wording described here all still stand.
+
 ---
 
 ## 1. What already exists, and is reused rather than rebuilt

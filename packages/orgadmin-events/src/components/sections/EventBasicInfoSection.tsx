@@ -9,9 +9,15 @@
 
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
+  Box,
   Checkbox,
   FormControlLabel,
+  FormHelperText,
+  FormLabel,
   Grid,
+  Radio,
+  RadioGroup,
   TextField,
   Typography,
   Tooltip,
@@ -51,7 +57,20 @@ const EventBasicInfoSection: React.FC<EventBasicInfoSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const { hasCapability } = useCapabilities();
+
   const { organisation } = useOrganisation();
+
+  /**
+   * The Yes/No toggle is derived, never stored.
+   *
+   * "Public" means at least one destination is chosen, so unticking both turns
+   * the toggle off by itself. There is no state where it says Yes and nothing
+   * is selected, and therefore no validation message to write, translate and
+   * explain. See docs/PUBLIC_EVENTS.md §2.
+   */
+  const isPublic = Boolean(formData.showOnOrganisationPage || formData.showOnPlatformPage);
+
+  const publicPageUrl = `${window.location.origin}/account/${organisation?.urlCode ?? ''}/whats-on`;
 
   // Local UI-only state for toggling event type/venue selection
   const [addEventType, setAddEventType] = useState(!!formData.eventTypeId);
@@ -320,6 +339,102 @@ const EventBasicInfoSection: React.FC<EventBasicInfoSectionProps> = ({
               )}
             </>
           )}
+
+
+          {/*
+            Who can see this event at all.
+            
+            Placed with the discount selector at the foot of Basic Information
+            rather than beside a date, because it is the same kind of question
+            as the event's status: not *when* it happens but *who it is for*.
+          */}
+          <Grid item xs={12}>
+            <FormControl component="fieldset" sx={{ width: '100%' }}>
+              <FormLabel component="legend">
+                {t('events.public.legend')}
+              </FormLabel>
+              <RadioGroup
+                row
+                value={isPublic ? 'yes' : 'no'}
+                onChange={(e) => {
+                  /*
+                   * Turning it on selects the club's own page, which is the
+                   * safer of the two — it publishes to the club's own visitors
+                   * rather than to the whole platform. Turning it off clears
+                   * both, so the stored state always matches what is shown.
+                   */
+                  const on = e.target.value === 'yes';
+                  onChange('showOnOrganisationPage', on);
+                  if (!on) onChange('showOnPlatformPage', false);
+                }}
+              >
+                <FormControlLabel value="no" control={<Radio />} label={t('events.public.no')} />
+                <FormControlLabel value="yes" control={<Radio />} label={t('events.public.yes')} />
+              </RadioGroup>
+              <FormHelperText sx={{ ml: 0 }}>
+                {t('events.public.helper')}
+              </FormHelperText>
+
+              {isPublic && (
+                <Box sx={{ mt: 1.5, pl: { xs: 0, sm: 2 } }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.showOnOrganisationPage ?? false}
+                        onChange={(e) => onChange('showOnOrganisationPage', e.target.checked)}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2">
+                          {t('events.public.onOurPage')}
+                        </Typography>
+                        {/*
+                          The address, because the first thing a club does after
+                          switching this on is paste the link somewhere. Making
+                          them hunt for it is the difference between a feature
+                          used and a feature asked about.
+                        */}
+                        <Typography variant="caption" color="text.secondary">
+                          {publicPageUrl}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+
+                  {hasCapability('public-search') && (
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={formData.showOnPlatformPage ?? false}
+                          onChange={(e) => onChange('showOnPlatformPage', e.target.checked)}
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2">
+                            {t('events.public.onPlatformPage')}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('events.public.onPlatformPageHint')}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  )}
+
+                  {/*
+                    Factual, not cautionary. It names what becomes visible —
+                    including prices, which an administrator will not have
+                    thought about — without discouraging the choice.
+                  */}
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    {t('events.public.note')}
+                  </Alert>
+                </Box>
+              )}
+            </FormControl>
+          </Grid>
 
           {/* Discount Selection */}
           {hasCapability('entry-discounts') && (

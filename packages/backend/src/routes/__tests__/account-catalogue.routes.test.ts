@@ -30,6 +30,15 @@ jest.mock('../../services/account-organisation.service', () => ({
   },
 }));
 
+jest.mock('../../services/entrant.service', () => ({
+  entrantService: {
+    fieldMode: jest.fn(),
+    searchEntrants: jest.fn(),
+    resolveEntrant: jest.fn(),
+  },
+  splitName: jest.requireActual('../../services/entrant.service').splitName,
+}));
+
 jest.mock('../../services/account-catalogue.service', () => ({
   accountCatalogueService: {
     listMerchandise: jest.fn(),
@@ -76,6 +85,7 @@ jest.mock('../../middleware/auth.middleware', () => ({
 import { db } from '../../database/pool';
 import { accountOrganisationService } from '../../services/account-organisation.service';
 import { accountCatalogueService } from '../../services/account-catalogue.service';
+import { entrantService } from '../../services/entrant.service';
 import { accountActivityService } from '../../services/account-activity.service';
 import { cartService } from '../../services/cart.service';
 import { accountDashboardService } from '../../services/account-dashboard.service';
@@ -84,6 +94,7 @@ import accountRoutes from '../account.routes';
 
 const mockedOrg = accountOrganisationService as jest.Mocked<typeof accountOrganisationService>;
 const mockedCatalogue = accountCatalogueService as jest.Mocked<typeof accountCatalogueService>;
+const mockedEntrants = entrantService as jest.Mocked<typeof entrantService>;
 const mockedActivity = accountActivityService as jest.Mocked<typeof accountActivityService>;
 const mockedCart = cartService as jest.Mocked<typeof cartService>;
 const mockedDb = db as jest.Mocked<typeof db>;
@@ -223,7 +234,12 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     const response = await request(server)
       .post('/api/account/khpc/cart/items')
-      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+      .send({
+        itemType: 'event-entry',
+        // Every entry names somebody now; these cases are about capacity.
+        contextRef: { activityId: 'act-1', entrantName: 'Saoirse Byrne' },
+        unitFee: 2500,
+      });
 
     expect(response.status).toBe(400);
     expect(mockedCart.addItem).not.toHaveBeenCalled();
@@ -237,7 +253,12 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     const response = await request(server)
       .post('/api/account/khpc/cart/items')
-      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+      .send({
+        itemType: 'event-entry',
+        // Every entry names somebody now; these cases are about capacity.
+        contextRef: { activityId: 'act-1', entrantName: 'Saoirse Byrne' },
+        unitFee: 2500,
+      });
 
     expect(response.status).toBe(201);
     expect(mockedCart.addItem).toHaveBeenCalled();
@@ -255,7 +276,12 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     await request(server)
       .post('/api/account/khpc/cart/items')
-      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+      .send({
+        itemType: 'event-entry',
+        // Every entry names somebody now; these cases are about capacity.
+        contextRef: { activityId: 'act-1', entrantName: 'Saoirse Byrne' },
+        unitFee: 2500,
+      });
 
     expect(mockedCart.addItem).toHaveBeenCalledWith(
       'org-1',
@@ -273,7 +299,12 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     await request(server)
       .post('/api/account/khpc/cart/items')
-      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+      .send({
+        itemType: 'event-entry',
+        // Every entry names somebody now; these cases are about capacity.
+        contextRef: { activityId: 'act-1', entrantName: 'Saoirse Byrne' },
+        unitFee: 2500,
+      });
 
     expect(mockedCart.addItem).toHaveBeenCalledWith(
       'org-1',
@@ -293,7 +324,12 @@ describe('POST /api/account/:orgCode/cart/items', () => {
 
     await request(server)
       .post('/api/account/khpc/cart/items')
-      .send({ itemType: 'event-entry', contextRef: { activityId: 'act-1' }, unitFee: 2500 });
+      .send({
+        itemType: 'event-entry',
+        // Every entry names somebody now; these cases are about capacity.
+        contextRef: { activityId: 'act-1', entrantName: 'Saoirse Byrne' },
+        unitFee: 2500,
+      });
 
     expect(mockedCart.addItem).toHaveBeenCalledWith(
       'org-1',
@@ -330,24 +366,40 @@ describe('POST /api/account/:orgCode/cart/items', () => {
    *
    * See docs/MEMBERS_ONLY_ENTRIES.md.
    */
-  describe('members-only activities', () => {
-    const membersOnlyActivity = (members: any[], over: Record<string, any> = {}) => ({
+  describe('who the entry is for', () => {
+    /*
+     * Every event entry now names somebody, and the rules differ by activity:
+     * an open one takes a typed name, a restricted one takes only a member.
+     *
+     * The eligibility decision moved out of `eligibleMembers` — the caller's
+     * *own* memberships — and into `entrantService`, which asks whether the
+     * member is active and in the activity's scope. That is a deliberate
+     * widening: entries are made on other people's behalf constantly, and
+     * validating against the caller's own list refused all of them. What is
+     * still enforced, and is what these tests are about, is the scope.
+     *
+     * See docs/ENTRANT_NAME.md.
+     */
+    const activityFor = (over: Record<string, any> = {}) => ({
       event: { entriesLimit: null },
       activity: {
         available: true,
         entriesLimit: null,
         membersOnly: true,
         entryEligibility: 'members',
-        eligibleMembers: members,
+        eligibleMembers: [],
         ...over,
       },
     });
 
+    const openActivity = () => activityFor({ membersOnly: false, entryEligibility: 'all' });
+
     const saoirse = {
-      id: 'mem-1',
+      memberId: 'mem-1',
       name: 'Saoirse Byrne',
       membershipTypeName: 'Junior Member',
       membershipNumber: 'KHP-0241',
+      organisationName: null,
       alreadyEntered: false,
     };
 
@@ -357,8 +409,12 @@ describe('POST /api/account/:orgCode/cart/items', () => {
       unitFee: 2000,
     });
 
-    it('refuses an entry that names no member', async () => {
-      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+    beforeEach(() => {
+      mockedEntrants.resolveEntrant.mockResolvedValue(saoirse as any);
+    });
+
+    it('refuses a members-only entry that names no member', async () => {
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
 
       const response = await request(server)
         .post('/api/account/khpc/cart/items')
@@ -369,27 +425,54 @@ describe('POST /api/account/:orgCode/cart/items', () => {
       expect(mockedCart.addItem).not.toHaveBeenCalled();
     });
 
-    it('refuses a membership the caller does not hold', async () => {
+    it('refuses a members-only entry carrying only a typed name', async () => {
       /*
-       * The one that matters. Supplying somebody else's member id must not
-       * enter their child in a class — and cannot, because the candidate list
-       * was built from the caller's own memberships.
+       * A typed name is exactly what a members-only activity excludes, so it is
+       * refused rather than accepted-and-flagged. The field will not hold one
+       * either, but the field is not what protects this.
        */
-      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
 
       const response = await request(server)
         .post('/api/account/khpc/cart/items')
-        .send(entry({ memberId: 'somebody-elses-child' }));
+        .send(entry({ entrantName: 'Somebody Who Is Not A Member' }));
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toMatch(/not one you hold/);
+      expect(response.body.error).toMatch(/Choose which member/);
       expect(mockedCart.addItem).not.toHaveBeenCalled();
     });
 
+    it('refuses a member the activity’s scope does not reach', async () => {
+      /*
+       * The one that matters. A member id from another club must not enter that
+       * club's child in a members-only class — and cannot, because the scope
+       * check is made against the activity rather than against whatever the
+       * caller sent.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
+      mockedEntrants.resolveEntrant.mockResolvedValue(null);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'another-clubs-child' }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/not eligible/);
+      expect(mockedCart.addItem).not.toHaveBeenCalled();
+    });
+
+    it('checks the member against this activity, not against the caller', async () => {
+      // The arguments are the assertion: the activity decides the scope.
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
+
+      await request(server).post('/api/account/khpc/cart/items').send(entry({ memberId: 'mem-1' }));
+
+      expect(mockedEntrants.resolveEntrant).toHaveBeenCalledWith('org-1', 'act-1', 'mem-1');
+    });
+
     it('refuses a member already entered', async () => {
-      mockedCatalogue.findActivity.mockResolvedValue(
-        membersOnlyActivity([{ ...saoirse, alreadyEntered: true }]) as any
-      );
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
+      mockedEntrants.resolveEntrant.mockResolvedValue({ ...saoirse, alreadyEntered: true } as any);
 
       const response = await request(server)
         .post('/api/account/khpc/cart/items')
@@ -405,7 +488,7 @@ describe('POST /api/account/:orgCode/cart/items', () => {
        * both lines are still in the basket. Without this the parent pays twice
        * for one child, and the club has one entry and one refund to make.
        */
-      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
       mockedDb.query.mockResolvedValueOnce({ rows: [{ exists: 1 }], rowCount: 1 } as any);
 
       const response = await request(server)
@@ -417,60 +500,112 @@ describe('POST /api/account/:orgCode/cart/items', () => {
       expect(mockedCart.addItem).not.toHaveBeenCalled();
     });
 
-    it('adds an entry for a member the caller does hold', async () => {
-      mockedCatalogue.findActivity.mockResolvedValue(membersOnlyActivity([saoirse]) as any);
+    it('adds an entry for any member in scope, not only one the caller holds', async () => {
+      /*
+       * The widening, stated as a test. A club secretary holds no membership of
+       * their own and enters half the club; the old rule refused every one of
+       * those entries.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
 
       const response = await request(server)
         .post('/api/account/khpc/cart/items')
-        .send(entry({ memberId: 'mem-1' }));
+        .send(entry({ memberId: 'mem-1', entrantName: 'Saoirse Byrne' }));
 
       expect(response.status).toBe(201);
-      // The choice rides to fulfilment on the line itself.
+      // Both ride to fulfilment on the line itself.
       expect(mockedCart.addItem).toHaveBeenCalledWith(
         'org-1',
         'ou-1',
         'EUR',
         expect.objectContaining({
-          contextRef: expect.objectContaining({ memberId: 'mem-1' }),
+          contextRef: expect.objectContaining({
+            memberId: 'mem-1',
+            entrantName: 'Saoirse Byrne',
+          }),
         })
       );
     });
 
-    it('asks nothing of an open activity', async () => {
-      // No member, no question. The rule applies only where entry is restricted.
-      mockedCatalogue.findActivity.mockResolvedValue({
-        event: { entriesLimit: null },
-        activity: { available: true, entriesLimit: null, membersOnly: false, eligibleMembers: [] },
+    it('accepts a member of another branch where the activity is federation-wide', async () => {
+      mockedCatalogue.findActivity.mockResolvedValue(
+        activityFor({ entryEligibility: 'org-type-members' }) as any
+      );
+      mockedEntrants.resolveEntrant.mockResolvedValue({
+        ...saoirse,
+        organisationName: 'Ward Union Pony Club',
       } as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'mem-1' }));
+
+      expect(response.status).toBe(201);
+    });
+
+    it('takes a typed name on an open activity', async () => {
+      // Somebody who is not a member of anything, entering an open show.
+      mockedCatalogue.findActivity.mockResolvedValue(openActivity() as any);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ entrantName: 'Fionn Doyle' }));
+
+      expect(response.status).toBe(201);
+      expect(mockedCart.addItem).toHaveBeenCalledWith(
+        'org-1',
+        'ou-1',
+        'EUR',
+        expect.objectContaining({
+          contextRef: expect.objectContaining({ entrantName: 'Fionn Doyle' }),
+        })
+      );
+      // Nothing to resolve: no member was chosen.
+      expect(mockedEntrants.resolveEntrant).not.toHaveBeenCalled();
+    });
+
+    it('still validates a member chosen on an open activity', async () => {
+      /*
+       * Open entry means a *name* need not be a member, not that a member id
+       * goes unchecked. An expired membership offered here would put a lapsed
+       * member on the entry list as though they were current.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(openActivity() as any);
+      mockedEntrants.resolveEntrant.mockResolvedValue(null);
+
+      const response = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'lapsed', entrantName: 'Lapsed Member' }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/not eligible/);
+    });
+
+    it('refuses an open entry that names nobody at all', async () => {
+      /*
+       * The name is the entry, not a question about it. Without this an entry
+       * list is a column of account holders and a family's three entries are
+       * indistinguishable.
+       */
+      mockedCatalogue.findActivity.mockResolvedValue(openActivity() as any);
 
       const response = await request(server)
         .post('/api/account/khpc/cart/items')
         .send(entry({}));
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toMatch(/name of the person/);
+      expect(mockedCart.addItem).not.toHaveBeenCalled();
     });
 
-    it('applies the same member check across the organisation type', async () => {
-      /*
-       * The third option changes *which* memberships qualify, not whether the
-       * check runs. A member id from outside the caller's own set is still
-       * refused — the catalogue built that set, scoped to the federation.
-       */
-      mockedCatalogue.findActivity.mockResolvedValue(
-        membersOnlyActivity([{ ...saoirse, organisationName: 'Ward Union Pony Club' }], {
-          entryEligibility: 'org-type-members',
-        }) as any
-      );
+    it('does not accept whitespace as a name', async () => {
+      mockedCatalogue.findActivity.mockResolvedValue(openActivity() as any);
 
-      const refused = await request(server)
+      const response = await request(server)
         .post('/api/account/khpc/cart/items')
-        .send(entry({ memberId: 'another-branchs-member' }));
-      expect(refused.status).toBe(400);
+        .send(entry({ entrantName: '   ' }));
 
-      const accepted = await request(server)
-        .post('/api/account/khpc/cart/items')
-        .send(entry({ memberId: 'mem-1' }));
-      expect(accepted.status).toBe(201);
+      expect(response.status).toBe(400);
     });
   });
 });
@@ -479,6 +614,103 @@ describe('POST /api/account/:orgCode/cart/items', () => {
  * the range — every slot on every configuration for every day. So the range is
  * checked before any of it is done.
  */
+describe('GET /api/account/:orgCode/catalogue/activities/:activityId/entrants', () => {
+  /*
+   * The lookup behind the name field. One call answers both halves — how the
+   * field should behave, and who matches — because the form needs the mode in
+   * order to render the field at all, and needs it before anything has been
+   * typed to match against.
+   */
+  const mode = (over: Record<string, any> = {}) => ({
+    autocomplete: true,
+    allowFreeText: false,
+    scope: 'organisation',
+    ...over,
+  });
+
+  beforeEach(() => {
+    mockedOrg.resolveMembership.mockResolvedValue(membership(['event-management']) as any);
+    mockedEntrants.fieldMode.mockResolvedValue(mode() as any);
+    mockedEntrants.searchEntrants.mockResolvedValue([]);
+  });
+
+  it('returns the mode and the matches together', async () => {
+    mockedEntrants.searchEntrants.mockResolvedValue([
+      { memberId: 'mem-1', name: 'Saoirse Byrne' },
+    ] as any);
+
+    const response = await request(server)
+      .get('/api/account/khpc/catalogue/activities/act-1/entrants')
+      .query({ q: 'byr' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.autocomplete).toBe(true);
+    expect(response.body.allowFreeText).toBe(false);
+    expect(response.body.matches).toHaveLength(1);
+  });
+
+  it('never lets the caller choose the scope', async () => {
+    /*
+     * The property this endpoint exists to protect. A client that could name
+     * its own scope could ask an open club event for the federation-wide
+     * roster, so the query string is passed as a *search term* and nothing
+     * else — the scope is read from the activity, server-side.
+     */
+    await request(server)
+      .get('/api/account/khpc/catalogue/activities/act-1/entrants')
+      .query({ q: 'byr', scope: 'organisation-type', organisationId: 'some-other-club' });
+
+    expect(mockedEntrants.fieldMode).toHaveBeenCalledWith('org-1', 'act-1');
+    expect(mockedEntrants.searchEntrants).toHaveBeenCalledWith('org-1', 'act-1', 'byr');
+  });
+
+  it('does not search when there is no roster to search', async () => {
+    // A club that does not run memberships gets a plain text box; running the
+    // query anyway would be work with nothing to return.
+    mockedEntrants.fieldMode.mockResolvedValue(mode({ autocomplete: false }) as any);
+
+    const response = await request(server).get(
+      '/api/account/khpc/catalogue/activities/act-1/entrants'
+    );
+
+    expect(response.body.autocomplete).toBe(false);
+    expect(response.body.matches).toEqual([]);
+    expect(mockedEntrants.searchEntrants).not.toHaveBeenCalled();
+  });
+
+  it('answers the mode even with nothing typed, so the field can be drawn', async () => {
+    const response = await request(server).get(
+      '/api/account/khpc/catalogue/activities/act-1/entrants'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('allowFreeText');
+    expect(mockedEntrants.searchEntrants).toHaveBeenCalledWith('org-1', 'act-1', '');
+  });
+
+  it('reports an activity that is not this club’s as a bad request', async () => {
+    mockedEntrants.fieldMode.mockRejectedValue(
+      new ValidationError('That activity could not be found')
+    );
+
+    const response = await request(server).get(
+      '/api/account/khpc/catalogue/activities/somebody-elses/entrants'
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it('is refused for a club without events', async () => {
+    mockedOrg.resolveMembership.mockResolvedValue(membership([]) as any);
+
+    const response = await request(server).get(
+      '/api/account/khpc/catalogue/activities/act-1/entrants'
+    );
+
+    expect(response.status).toBe(403);
+  });
+});
+
 describe('GET /api/account/:orgCode/catalogue/calendars/:id/availability', () => {
   beforeEach(() => {
     mockedOrg.resolveMembership.mockResolvedValue(membership(['calendar-bookings']) as any);

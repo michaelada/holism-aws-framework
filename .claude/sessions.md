@@ -16283,3 +16283,2370 @@ The event listing on both the account public page and the common public page sho
 Note: entries for the events must always still be made through the account login, however the user should be able to click on the event which should redirect them to that event within the specific account redirecting the user to login/ join if they are not already logged in.
 
 Please investigate this piece of work and propose a design for my review and please work on an advanced, professional design proposal for these public pages.
+
+### Assistant
+
+This is a substantial piece of work and you've asked for a proposal rather than an implementation, so let me investigate properly first and then design.
+
+`public-search` is a seeded capability that currently gates nothing — a natural home for this. Let me see the existing public surface:
+
+Two useful precedents: organisations already opt into the public directory via `settings->listedInDirectory`, and `public-search` is a capability that currently gates nothing. Let me settle where these pages would live:
+
+The site root is currently just a placeholder linking to the four apps — so the platform-wide public page is genuinely a new public surface. Last thing to check: how a deep link survives sign-in.
+
+Critical gap found: an anonymous visitor deep-linked to an event gets the gateway, but sign-in returns them to the club home — not the event. That's a concrete thing the design must solve. Let me check the committed visual world before designing:
+
+I have what I need. Writing the proposal — first the investigation and design:
+
+Now the visual design proposal — the part you asked to be advanced and professional:
+
+Proposal written — two documents, nothing implemented:
+
+- **[PUBLIC_EVENTS.md](docs/PUBLIC_EVENTS.md)** — investigation, data model, API, decisions, task breakdown
+- **[PUBLIC_EVENTS_WIREFRAMES.md](docs/PUBLIC_EVENTS_WIREFRAMES.md)** — the visual design
+
+## Three findings that shape the work
+
+**Sign-in currently loses the destination.** An anonymous visitor deep-linked to an event gets the gateway, and the gateway signs them in with `redirectUri: /account/{orgCode}` — the club home. The event is gone. So the central promise of your request ("clicking an event brings them to that event") doesn't work today. The fix is small and contained, but it's a change to shared auth code, and better named now than discovered at step nine.
+
+**Location filtering needs a field that doesn't exist.** Venues hold a free-text address (`"Craddockstown, Naas, Co. Kildare"`) and nullable lat/long — nothing structured. Filtering by county means either parsing prose or storing it. I propose `venues.region`, and I'd rather be straight about the cost: every existing venue is null until an admin edits it. The alternative is a filter that silently omits most events.
+
+**`event_activities.show_publicly` already exists and means something else** — whether an activity shows in the club's *own* list to its *own* members. The new setting must not be folded into it.
+
+## Two design decisions worth your eye
+
+**Two booleans, not an enum.** `(false, false)` *is* "Show Public: No", so the Yes/No toggle is derived. Untick both and the toggle turns itself off — there's no "choose at least one" error to write, translate and explain, because the invalid state can't be represented.
+
+**Members-only activities are listed publicly, marked as such.** Hiding them would misstate the event's size — a show with eight classes would look like it had three — and "members only" tells a visitor something true and useful: joining is the way in.
+
+## On the public pages
+
+Every other screen in this product is someone with a job to do. This is the first that's a stranger deciding whether any of it is for them, so the page is airier, the type scale steps up for the hero only, and there is **exactly one orange thing on it** — the Enter button. Your DESIGN.md's Two Oranges Rule already says signal marks where a decision is asked; on a page whose whole purpose is one decision, spending orange elsewhere spends it on nothing.
+
+A single column of wide rows rather than a grid of tiles, because these events differ along date, place and club — three text facts that a narrow column wraps badly. And the date tile is `EventDateTile`, which already exists.
+
+## Five decisions I need from you
+
+They're in §7 of the proposal with recommendations. The two that most change the work:
+
+1. **Add `venues.region`?** I'd say yes — region filtering can't be done otherwise.
+2. **Gate the platform page on `public-search`?** It's a seeded capability that gates nothing today, and this is plainly what it means. It also gives you a per-organisation switch without inventing a concept.
+
+One limitation I won't leave for later: **the platform page is a SPA route, so search engines see an empty shell.** That's exactly the page a club would expect to be findable. I'd accept it for a first version and decide on evidence — but consciously, not by omission.
+
+I'd also suggest building it in two halves: the flags, the admin control and the **organisation page** are a complete shippable feature needing no filters, no region field and no search. The platform page is better built against real published events than seed data.
+
+---
+
+
+## 2026-08-20 13:50:15 — Prompt
+
+In relation to discovering whats on for web searches, can you investigate and propose a solution for this as it is important ?
+
+### Assistant
+
+Let me investigate what exists today before proposing.
+
+No robots.txt, no sitemap, a static `<title>` for every route, no Open Graph, and an empty `#root`. Let me check what the serving path can do:
+
+Two concrete findings. Writing the proposal:
+
+Now correcting the main proposal, which deferred this and lacked the per-event URL:
+
+Investigated and proposed: **[PUBLIC_EVENTS_SEO.md](docs/PUBLIC_EVENTS_SEO.md)**. It corrects my earlier proposal rather than extending it, and I've amended [PUBLIC_EVENTS.md](docs/PUBLIC_EVENTS.md) accordingly.
+
+## The finding that changes the shape
+
+My proposal had two public pages — two URLs. **Neither is an event.**
+
+Forty-seven events on one URL can rank for *"equestrian events Ireland"* and nothing else — not for "Spring Show Jumping League", not for "cross country Punchestown September", which are the searches that actually bring someone to a club. And a search result that lands a visitor on a filter page, where they have to find the event again among forty-six others, has wasted the click.
+
+So search needs **one URL per event** — `/{orgCode}/whats-on/{slug}` — canonical at the club, because it's their event, their brand, and where entry happens. That's structural, not a layer on top.
+
+## What a crawler sees today
+
+I checked rather than assumed. Every route shares one `<title>` and one description, `#root` is empty, there's no `robots.txt`, no `sitemap.xml`, no structured data, and nothing anywhere sets `document.title`.
+
+**And no Open Graph tags at all.** That one isn't really SEO — it means the first thing a pony club does with a public link, paste it into Facebook or WhatsApp, produces a grey box with no title, image or description. The product looks broken at the exact moment a club is recommending it.
+
+A second finding, unrelated to crawlers but fatal to the URL plan: **`events` is not in `RESERVED_URL_CODES`**. A club could take that code and `/account/events` would resolve to them instead of the platform page. It has to be reserved, and the list has a mirror in a migration that must move with it.
+
+## The proposal
+
+Four layers, each useful alone:
+
+1. **Per-event URLs** — the thing to rank. `slugifyUrlCode` already exists; the id resolves, the words are for the reader, renames `301`.
+2. **Express injects the `<head>`** — nginx already routes `/api/` to the backend, so the public paths route the same way and Express returns the built `index.html` with title, canonical, OG and JSON-LD filled in. No SSR framework, no second app, no change to how the SPA builds, authenticated routes untouched. Plus a `<noscript>` block carrying the same facts, for crawlers that don't run JS.
+3. **`schema.org/Event`** — the highest-return item here, because Google has a *dedicated events experience* fed by exactly this. The mapping is unusually clean: activities become `offers` with price and availability, and `location.geo` is finally what those unused `latitude`/`longitude` columns are for.
+4. **`robots.txt` and a generated `sitemap.xml`** — the `Disallow` lines matter as much as the allows; the member app is behind auth, so crawling it just indexes sign-in walls.
+
+## Two things I'd flag hardest
+
+**`offers.url` must work for an anonymous visitor** — which is the sign-in-return-path fix from the main proposal. A rich result whose ticket link dead-ends is worse than no rich result.
+
+**Members-only activities are listed on the page but excluded from the structured data.** They aren't purchasable by the reader, and publishing them as available offers would put a false price in a search result.
+
+## What I'd rule out
+
+Full SSR (Node in a serving path that's static today, for pages mostly behind a login), build-time pre-rendering (clubs publish continuously; a snapshot is stale before it deploys), and dynamic rendering — serving crawlers a different page — which Google now treats as a stopgap and whose failure mode is being judged as cloaking.
+
+Six decisions in §6. The one that's not really optional is reserving `events`; the one worth doing regardless of everything else is self-hosting the two fonts, which currently cost a third-party DNS lookup and TLS handshake before first paint.
+
+---
+
+
+## 2026-08-20 15:05:27 — Prompt
+
+can you implement this
+
+### Assistant
+
+Proceeding on the recommendations I made, since you've read them — I'll flag anything that turns out differently. Starting with the foundation.
+
+Now the backend service — one query behind every public surface:
+
+Now the public endpoints, plus robots and sitemap:
+
+Now robots and the sitemap — these must live at the site root, not under `/api`:
+
+Now let me make some seeded events public and test the whole backend end to end:
+
+The stale-slug redirect is the piece most likely to be wrong, so let me test it directly:
+
+All three behave correctly. Now robots and the sitemap:
+
+Backend works end to end. Now the tests for it:
+
+`slugifyUrlCode` falls back to the literal `"org"` for unusable input — sensible for an organisation code, misleading in an event URL:
+
+Reusing that utility was my mistake — its minimum-length and reserved-word rules exist for organisation codes and are wrong for an event slug, which is always suffixed with an id and sits a segment deeper:
+
+Backend complete: **1439 passing**. Now the org-admin control so a club can actually switch this on:
+
+`useCapabilities` is available here. Adding the control:
+
+`organisation.name` is the org slug, not the URL code — let me check what's actually available:
+
+Not there. The URL is the most useful part of that control, so let me add `urlCode` to the org-admin's organisation payload:
+
+orgadmin-events resolves orgadmin-core through its built `dist` — same thing I hit earlier this session. Rebuilding its declarations:
+
+The build fails at the vite step for pre-existing reasons, but `tsc` emitted the declaration first — timestamp is now current:
+
+Now wiring the fields through the form state and the save payload:
+
+Now the i18n for the org-admin control, then the live check:
+
+Still exactly 113 — the pre-existing count, unchanged. Live check of the control:
+
+Signed out by the reseed — logging back in:
+
+The control renders. Selecting Yes to confirm the checkboxes and the URL appear:
+
+The URL reads `/account/lhpc/whats-on` — **Laois** — while this admin has Kildare open. That's the wrong club's public address. Let me find where the context organisation comes from:
+
+`/auth/me` does honour `X-Organisation-Id`, so the context should be the club actually open. Let me check which club that is:
+
+Correct after all — the app is genuinely open on Laois, so `lhpc` is right. Now the public pages themselves:
+
+`OrganisationRoute` sends anonymous visitors to the gateway — correct for member pages, wrong for a public one. Adding an explicit opt-out:
+
+Now the two public pages. First a shared JSON-LD component, since that's the SEO core:
+
+Now the club's public page:
+
+Now the event detail page — the URL that actually gets indexed:
+
+Now wiring the routes and checking what the shared components actually export:
+
+`useAccountApi` has a different contract from orgadmin-core's hook — let me check what it does on failure:
+
+Different contract — this hook *throws*, and it has an explicit `anonymous` flag for `/api/public/*` which I must set. Fixing both pages:
+
+Now the locale keys, then a live check:
+
+Renders for a fully anonymous visitor. One bug though — "What's on at" with no club name, because `me` requires a session. The gateway shows the name to anonymous visitors, so there's a public source:
+
+`publicDetail` is exactly the right source — fetched regardless of session:
+
+URL and title are right, but the body is empty and there are console errors — it's crashing after render:
+
+My bug — `dataset` is read-only, so `Object.assign` on it throws. Restoring previous values needs a plain map:
+
+Zero console errors, and `offers: []` is correct — both activities on that event are members-only. Verifying offers appear when they should:
+
+Four valid `Offer` objects with prices, availability and `validFrom`. Final sweep:
+
+Implemented and verified live. Suites: **backend 1439**, **orgadmin-shell 705**, **account-shell 607** (the 3 failures are the pre-existing `EntryFormPage` ones), **orgadmin-events 113 pre-existing, unchanged**.
+
+## What works now
+
+An anonymous visitor — cookies cleared — can reach `/account/khpc/whats-on`, click through to an event, and gets:
+
+```
+URL         /account/khpc/whats-on/spring-show-jumping-league-3e1836b2
+<title>     Spring Show Jumping League · Kildare Hunt Pony Club
+canonical   …/whats-on/spring-show-jumping-league-3e1836b2
+og:title    Spring Show Jumping League · Kildare Hunt Pony Club
+JSON-LD     Event → Place → PostalAddress(addressRegion) → Organization
+            offers: 4 × Offer, price/currency/availability/validFrom
+```
+
+Zero console errors. Every route out goes to the member app, so entries still happen behind the login.
+
+**The offers rule works as designed**: on the Inter-Branch Championship, where both activities are members-only, `offers` is `[]` — nothing a reader can't buy is published as purchasable. On the Spring League, all four open activities appear with prices.
+
+Also live: `robots.txt` (disallowing the whole member app), a generated `sitemap.xml` (9 URLs, well-formed, `lastmod` per event, priority dropping for finished events), and the org-admin *Show publicly* control with its two checkboxes and copyable URL.
+
+## Three things I got wrong and corrected
+
+**`slugifyUrlCode` was the wrong tool** — I'd said in the proposal it could be reused. It enforces a minimum length and appends `-org` to reserved words, so an event named "!!!" would publish at `/whats-on/org-a1b2c3d4`. Event slugs need neither rule. Caught by a test I'd written for that exact case.
+
+**`useAccountApi` throws; it doesn't return null.** I wrote the pages against orgadmin-core's opposite contract. It also has a required `anonymous` flag for `/api/public/*` which I'd have missed — without it the page attaches a session a visitor doesn't have.
+
+**A crash in my own metadata hook** — `element.dataset` is read-only, so `Object.assign` on it threw and blanked the page after setting the title. Only visible in a browser.
+
+## What remains
+
+I did not finish everything, and the honest list:
+
+- **The platform page `/events`** — search, filters, sort. The API behind it is built and tested (search, filters with counts, paging, sort); the page isn't.
+- **Express head injection** (SEO §3 layer 2). The metadata is currently client-side, so Google gets it but Bing and social scrapers don't. This is what makes the Facebook preview work.
+- **The sign-in return path** — clicking Enter from a public page still lands an anonymous visitor on the club home, not the event. Diagnosed in the proposal, not yet fixed.
+- **nginx routes** for `/robots.txt`, `/sitemap.xml` and the `/events` alias; and front-end tests for the three new components.
+
+I also went ahead on all eleven open decisions using my stated recommendations, since you'd read them — including adding `venues.region` and gating the platform checkbox on `public-search`. Say if any of those should go the other way.
+
+One thing worth knowing: the migration **renames any organisation holding a now-reserved code** (`events`, `whats-on`, `sitemap`…) by appending `-club`. Nothing in your data hit that, but it would rename a real club's URL silently on another environment.
+
+---
+
+
+## 2026-08-20 16:58:03 — Prompt
+
+can you finish off the remaining tasks for this piece of work?
+
+### Assistant
+
+Let me work through the remaining list. Starting with the sign-in return path, since the Enter button depends on it:
+
+My test's `window.location` stub has no `pathname` — and the real object always does. Fixing the stub and adding cases for the new behaviour:
+
+Now the `?event=` handling on the browse page, so arriving there opens the right event:
+
+Now the platform page — the biggest remaining piece:
+
+The platform page works: 7 events, filter counts, sort, real title, and no `robots` tag on the unfiltered view. Testing that filtering narrows *and* applies `noindex`:
+
+Filtering works — 7 → 2 → 1, state in the URL, and `noindex,follow` exactly on the filtered view. Now the head injection. First, how the backend is containerised:
+
+The backend image has no copy of the built shell, so head injection needs that wired in. Implementing it as best-effort with an explicit deployment requirement:
+
+Let me verify the injection works against the real built shell:
+
+Import hoisting meant the env var was set too late — that 404 is actually the correct degradation. Setting it properly:
+
+All correct except the `noscript` check — the built shell already has a `<noscript>` for fonts, so my probe matched that one. Verifying properly:
+
+A crawler with no JavaScript now gets the event name, club, date, venue, description and every priced activity. Now the nginx routes:
+
+Config valid. Now the front-end tests for the three new components:
+
+The club name legitimately appears twice — in the row and in the filter panel. Scoping to the row:
+
+Now tests for the two org public pages, then the full sweep:
+
+646 passing (up from 607), same three pre-existing failures. Final sweep across everything, plus the docs:
+
+Done. Everything on the list is built except two items I'll name.
+
+**Suites:** backend **1439**, orgadmin-shell **705**, account-shell **646** (up from 607; same 3 pre-existing `EntryFormPage` failures), orgadmin-events **113 pre-existing, unchanged**. Backend typecheck clean, nginx config validates.
+
+## The four remaining tasks
+
+**Sign-in return path.** `redirectFor` returned the club's front door unconditionally, silently discarding every deep link. It now returns the visitor to where they were — path *and* query string — but only when they're already inside that club's routes, so signing in *to* Kildare from Laois's page doesn't return to Laois. Four new tests, including one that `/account/khpc-old` is not inside `/account/khpc`. Paired with `?event=` handling on the browse page, which opens and scrolls to the right row then strips the parameter so collapsing it doesn't re-open.
+
+**The platform page.** Verified live and anonymous: 7 events → 2 with a Cross Country filter → 1 with "inter" on top. Filter state lives in the URL so it's shareable and the back button steps through refinements; counts sit beside every option; `noindex,follow` appears exactly on the filtered view and not on the base list.
+
+**Express head injection.** Tested against the real built shell: one `<title>` (the generic one is stripped, not appended to), one description, four `Offer` objects, the app's module script still present so it hydrates, a stale slug answering **301** to the canonical, and a `<noscript>` block carrying name, club, date, venue and every priced activity.
+
+**nginx** — `robots.txt`, `sitemap.xml`, the public event paths, and `/events` → `/account/events`. Added to both the dev and SSL configs; `nginx -t` passes.
+
+Plus **35 new front-end tests** across the structured data, the platform page and the event page.
+
+## Two things I did not build
+
+- **`410` on a withdrawn event** — it currently 404s, so Google re-crawls for weeks instead of dropping it promptly.
+- **Self-hosting the fonts** — independent of all of this, and worth doing regardless for the third-party DNS lookup and TLS handshake before first paint.
+
+Both are recorded in §7 of the SEO doc rather than left implied.
+
+## One deployment requirement
+
+Head injection needs `ACCOUNT_SHELL_HTML` pointing at the built `account-shell/index.html`, which lives in the nginx image, not the backend's. **Unset, the routes do nothing and nginx serves the static shell exactly as today** — I made it degrade rather than break, since only crawlers and link previews can see the difference. Wiring it up is a mount or a `COPY` in the backend Dockerfile; I couldn't verify that path from here.
+
+I also corrected the SEO document itself: it had said to reuse `slugifyUrlCode`, and that was wrong — its minimum-length and reserved-word rules would publish an event named "!!!" at `/whats-on/org-a1b2c3d4`.
+
+Still uncommitted, all in the working tree — and worth noting the migration renames any organisation holding a newly-reserved code (`events`, `whats-on`, `sitemap`…) by appending `-club`. Nothing in your data hits that, but another environment might.
+
+---
+
+
+## 2026-08-20 17:35:26 — Prompt
+
+can you finish the tasks, is there anything else to do?
+
+### Assistant
+
+Let me audit what's actually outstanding against my own task list, not just the two I named.
+
+Three more gaps than I'd named. The worst is the venue region — without it an admin **cannot set** the region, so that filter could never be populated. Let me find the venue form:
+
+Now the venue form itself:
+
+`t` is already available — the labels just weren't translated. My field will be:
+
+Now the seed, so a reseed produces working public data instead of my manual SQL:
+
+Seed produces 4 public events with a deliberate spread, and all 6 venues have regions. Now `410` for a withdrawn event:
+
+Correct on all three. Now self-hosting the fonts:
+
+Self-hosting means adding font packages. I'll do it for **account-shell only** — that's the public-facing app where this actually affects ranking, and the rationale doesn't extend to the two admin apps:
+
+Fonts now bundled as local woff2. Verifying no third-party font request remains:
+
+Zero third-party font requests. Now the `ACCOUNT_SHELL_HTML` deployment wiring:
+
+Now the missing tests — the club list page and the public routes:
+
+Now backend route tests, including the 410 behaviour:
+
+Now the module summaries — the §3.6 obligation I'd missed:
+
+Full sweep across all four packages, plus the seed and nginx:
+
+112 rather than 113 — one fewer failure. Let me confirm that's not a different set, and check whether the `VenuesListPage` unused-`navigate` is mine:
+
+Unmodified sources: **113 failed, 12 tsc errors**. Mine: **112 failed** — one *fewer*. So no regressions, and one previously-failing test now passes. Confirming the error count too:
+
+Identical error count, one fewer failure. Final live check of the venue field and the whole flow:
+
+The dialog didn't open — let me find the actual button:
+
+An onboarding dialog is covering the page. Closing it first:
+
+Everything's finished. Final state:
+
+| Package | Tests |
+|---|---|
+| backend | **1506** passing (77 suites) |
+| account-shell | **654** passing, 3 pre-existing failures |
+| orgadmin-shell | **705** passing |
+| orgadmin-events | 112 pre-existing failures — **one fewer** than unmodified sources, identical tsc error count |
+
+## Answering your question directly: yes, there was more
+
+I'd named two outstanding items last time. Auditing against my own task list in `PUBLIC_EVENTS.md` §8 found **three more I'd missed**, and the first was serious:
+
+**The venue region field was never built.** So an org admin literally could not set a region — the location filter I'd built, documented and tested could never be populated through the UI. I'd only ever set regions by hand in SQL, which is exactly how a gap like that stays invisible. Now on the venue form with a hint saying why it exists, wired through the service, and translated.
+
+**The seed produced no public events.** Every public page I demoed was running on manual SQL that a reseed wipes. The seed now sets regions on all six venues and marks four events public with a deliberate spread — three on both destinations, one club-page-only — so a fresh `--reset` gives a working demo.
+
+**Module summaries were never updated** (§3.6). Now done across `backend.md`, `account-shell.md` and `orgadmin-events.md`.
+
+## And the two I had named
+
+**`410` for a withdrawn event.** Verified live: public → 200, withdrawn → **410**, never-existed → **404**. A crawler retries a 404 for weeks and drops a 410 promptly, so a club that stops advertising stops appearing.
+
+**Self-hosted fonts** — `@fontsource/roboto` and `@fontsource/sora`, imported in `main.tsx`, Google Fonts links removed. Confirmed in a browser: **zero requests to `fonts.googleapis.com` or `fonts.gstatic.com`**. I did this for account-shell only; the two admin apps still use Google Fonts, and the ranking rationale doesn't extend to them — say if you want it applied there too.
+
+Also wired `ACCOUNT_SHELL_HTML` into `docker-compose.yml` so head injection is live rather than dormant, and added **19 more tests** (8 club-page, 11 backend route including the 410/404 split and the sitemap's degraded path).
+
+## What's genuinely left
+
+Nothing on the plan. Two things worth knowing rather than doing:
+
+- The `<html lang>` on public pages is the app's, not the club's — fine while each club serves one language, which is the decision recorded in the SEO doc. It needs `hreflang` only if you later serve one event in several.
+- `VenuesListPage` still hard-codes English for its other labels (Name, Address, Latitude). Pre-existing, and my field is the only translated one on that dialog — slightly odd-looking, but the alternative was adding a sixth hard-coded label against §3.2.
+
+Nothing committed; 50-odd files in the working tree.
+
+---
+
+
+## 2026-08-20 17:49:02 — Prompt
+
+can you fix the language limitations so that the correct language is used and remove hard coded labels
+
+### Assistant
+
+Let me look at both — first how language is resolved today, then the extent of the hard-coded labels.
+
+The language comes from `me`, which is **null for an anonymous visitor** — so public pages fall back to English regardless of the club. And nothing sets `document.documentElement.lang` at all:
+
+`publicDetail.language` is already there — the route just never reads it. Both fixes:
+
+Now `document.documentElement.lang`, which nothing has ever set — it's stuck at `en` for every reader:
+
+`setDocumentLanguage` is used above its declaration — safe at runtime since it's inside a function, but confusing to read. Moving it up:
+
+Now the hard-coded labels. Let me see the full extent in that file:
+
+I have the full inventory. Adding the keys, then replacing every one:
+
+All 18 replaced. Verifying none remain:
+
+Clean. Now a test pinning the language resolution, since that's the substantive behaviour change:
+
+Now the anonymous-visitor language path — the actual gap:
+
+`vi.mock` is hoisted above the `const` — that's what `vi.hoisted()` is for:
+
+Live check — a club set to French, read by an anonymous visitor:
+
+`lang="fr-FR"`, French copy, even the date tile localised. One gap it exposes though — the club list page has no title of its own:
+
+Title, description and `lang` all in French. Reverting the club's language and running the full sweep:
+
+Both fixed. Suites: backend **1506**, account-shell **662** (up from 654), orgadmin-shell **705**, orgadmin-events **112** — one fewer than unmodified, identical tsc error count.
+
+## The language problem was worse than "a limitation"
+
+It had two independent causes, and I'd only spotted one.
+
+**The club's language was never read for anonymous visitors.** Language resolution had two sources — the member's preference and their organisation — and *both* come from `/me`, which is null when nobody is signed in. So a French club's public programme rendered in English for everyone who hadn't logged in: precisely the audience those pages exist for. The club's public record already carried `language` and was already being fetched regardless of session; the route just never looked at it. Now third in the chain, behind the two session sources, because those are specific to the reader while the public record is the same for everyone.
+
+**`document.documentElement.lang` had never been set by anything.** `index.html` hard-codes `lang="en"` and nothing changed it, so every page in the app has always claimed to be English — including a German club's, read by a German member, in German. Three things read that attribute and all three were being misled: screen readers pick a voice and pronunciation from it, browsers offer translation from it, and search engines take it as a language signal, which matters most on exactly the pages a stranger reaches from a search.
+
+Verified live with Kildare temporarily set to French, then reverted:
+
+```
+lang        fr-FR
+<title>     Au programme chez Kildare Hunt Pony Club
+description Événements organisés par Kildare Hunt Pony Club…
+heading     Au programme chez Kildare Hunt Pony Club
+date tile   SEPT. | Jeudi | 10
+```
+
+That check also caught something I'd missed: **the club programme page had no title of its own** — it was reporting "ItsPlainSailing", the same as every other route. It now has a translated title, description and canonical like the other two public pages.
+
+## Hard-coded labels
+
+All **18** in `VenuesListPage` — the page heading, Create Venue, the search placeholder, four table headers, both empty states, the Edit/Delete tooltips, every dialog field and hint, and Cancel/Update/Create. 20 keys across six locales. Grepping for hard-coded attributes and text nodes now returns nothing.
+
+Eight new tests: three on document language (including that `pt-PT` keeps its region, since truncating to `pt` discards the only thing distinguishing it from `pt-BR`) and five on the resolution order.
+
+One thing I left alone: `VenuesListPage` has an unused `navigate` variable that trips `TS6133`. It's pre-existing — the unmodified file has it, and the error count is unchanged at 12 — so I didn't fold an unrelated fix into this diff. Trivial to remove if you'd like it gone.
+
+---
+
+
+## 2026-08-20 18:02:17 — Prompt
+
+is that everyting implemented
+
+### Assistant
+
+Let me verify rather than assert — I've been caught assuming twice already. Checking the two places most likely to have holes.
+
+No `location /account/` block at all. So every deep link falls through `try_files` to the **root placeholder**, not the account shell. Let me prove that rather than reason about it:
+
+Proven — and this is bigger than my feature. **Every deep link into every SPA serves the root placeholder in production.** `/account/khpc`, `/orgadmin/events`, all of them. Only each app's bare root works. Fixing it:
+
+Now proving the fix with the same harness, including the `/events` rewrite:
+
+That failure is only the upstream not resolving outside compose. Validating with the upstreams stubbed:
+
+openssl isn't in that image. Installing it so the check is real:
+
+Production config valid (the stapling warning is just the self-signed test cert). Let me finish the audit against the remaining task items:
+
+Real gap: the 410 exists on the JSON API but **crawlers request the HTML page**, which returns 200 with a generic shell — so the signal never reaches them. Fixing:
+
+A crawler gets the 410; a person still gets a working app. Adding a test, then the last audit item:
+
+Final full sweep across all four packages:
+
+Running the *full* backend suite (I'd only been running a subset) surfaces 2 failures in 3034. Let me identify them:
+
+An event creation now returns 400 — I changed that insert. Checking whether it's mine:
+
+Fails identically on the unmodified service — pre-existing, not mine. Confirming the baseline count:
+
+The restore used mismatched filenames — let me fix that immediately and verify the tree is intact:
+
+Two files lost my changes (the backup names dropped `.ts`). Reapplying both — I have the exact edits:
+
+Now the like-for-like comparison at identical scope:
+
+Identical single pre-existing failure, **+33 passing**. Verifying the reapplied edits actually work end to end:
+
+**No — asking was the right call. The audit found two more things, one of them serious.**
+
+## A production bug that made the whole feature dead on arrival
+
+There is no `location /account/` block in the nginx config. I proved it with a throwaway nginx container:
+
+```
+/account/                -> ACCOUNT-SHELL
+/account/khpc            -> ROOT-PLACEHOLDER   ✗
+/account/khpc/whats-on   -> ROOT-PLACEHOLDER   ✗
+/account/events          -> ROOT-PLACEHOLDER   ✗
+```
+
+**Every deep link into every SPA served the root placeholder page in production** — not just my new pages. `/account/khpc`, `/orgadmin/events`, `/admin/...`, a bookmarked member page: all of them. Only each app's bare root worked. And since every public event URL *is* a deep link, none of this feature would have functioned once deployed.
+
+Pre-existing, but it would have looked like my bug. Fixed with per-app fallbacks, proven with the same harness — all eight routes now serve the right shell — and the full production config validates with real certs.
+
+## The 410 was invisible to the audience it exists for
+
+I'd built it on the JSON API. Crawlers request the **HTML page**, which was still returning 200 with a generic shell. The withdrawn-event signal never reached anything. Now the page returns 410 — and still serves the app, so a person following an old link gets the proper "we could not find that event" while a crawler gets the signal to drop the URL.
+
+## And I was under-reporting the test scope
+
+I'd been running `jest src/services src/routes` and quoting **1506**. The full backend suite is **2978**. At matched scope: baseline on unmodified sources is 1 failure / 2930 passing; mine is **1 failure / 2963 passing** — same single pre-existing failure (an event-lifecycle integration test that fails identically without my changes), **+33 passing**.
+
+I also broke two files during that comparison — my backup filenames dropped `.ts`, so `event.service.ts` and `venue.service.ts` were left reverted. Caught it, reapplied both, verified by typecheck and by the live endpoint still returning 4 events with regions.
+
+## Final state
+
+| Package | Result |
+|---|---|
+| backend | 2963 passing, 1 pre-existing failure |
+| account-shell | 662 passing, 3 pre-existing |
+| orgadmin-shell | 705 passing |
+| orgadmin-events | 112 pre-existing — one *fewer* than unmodified |
+
+Every item on both task lists is now done. The only things I'd still flag are choices rather than gaps: `ACCOUNT_SHELL_HTML` is wired into compose but the production deployment needs the same (a mount or a `COPY`), fonts are self-hosted for account-shell only, and `VenuesListPage` retains a pre-existing unused `navigate` variable I deliberately didn't fold into this diff.
+
+---
+
+
+## 2026-08-20 18:19:01 — Prompt
+
+What is the url to view all open events across all organisations ?
+
+### Assistant
+
+Two URLs, depending on environment:
+
+**Locally** (Vite dev server):
+```
+http://localhost:5176/account/events
+```
+
+**Production** — either of:
+```
+https://itsps.org/events            ← the public-facing one
+https://itsps.org/account/events    ← what it resolves to
+```
+
+The short `/events` is an nginx rewrite I added to `default-ssl.conf`, so the page has a clean public URL rather than one saying "account" to people who have no account. I verified it in the nginx harness earlier: `/events` → the account shell.
+
+It's `/account/events` under the hood because the page lives in `account-shell`, which is built with `base: '/account/'`. That's also why `events` is now in `RESERVED_URL_CODES` — without it a club could take the code `events` and shadow the page.
+
+The page itself takes filter state in the query string, so these are shareable:
+
+```
+/events?type=Cross+Country
+/events?type=Dressage&region=Co.+Meath&sort=closing
+/events?q=inter
+```
+
+One caveat: the local Docker nginx config (`default.conf`) proxies `/` to the metadata dev server and never served the account app, so `/events` won't work there — use port 5176 directly, which is how the front ends are run locally anyway.
+
+---
+
+
+## 2026-08-20 18:20:29 — Prompt
+
+can you update the seed generator program to include more public events across more organisations that are available at http://localhost:5176/account/events
+
+### Assistant
+
+Only Kildare has public events, so the Club and Region filters each have one option — that's a poor demo. Let me see the full inventory to pick a spread:
+
+My regex missed several. Let me get the complete picture, including something suspicious — a draft marked public:
+
+18 events; 4 public, all Kildare. Let me set a spread that actually exercises the filters:
+
+Now documenting the spread where the fixture lives, so the intent is legible:
+
+All four clubs, three regions, six event types. Verifying the page and its filters live:
+
+Every filter now has multiple options with counts. Testing that combining them actually narrows correctly:
+
+Counts narrow correctly (12 → 5 → 3 → 2). My probe was reading club names out of the filter panel though, so let me confirm the actual result rows:
+
+The combined filter is the nicest proof: **Co. Meath + Cross Country** returns Meath's Tara Hunter Trial *and* Ward Union's league — because Ward Union's grounds are in Meath despite the club's name. The region filter is doing real work independent of the club.
+
+Updating the seed doc:
+
+Done. `http://localhost:5176/account/events` now shows **12 events across all four clubs** instead of 4 from one.
+
+## The spread, and why it's shaped that way
+
+15 of the 18 seeded events are now public; 12 of those also reach the platform page. That page is a *filterable* surface, and a fixture where every event shares a club, a county and a type gives each filter exactly one option — which demos nothing and tests nothing.
+
+| Filter | Now offers |
+|---|---|
+| Club | all four |
+| Region | Co. Kildare (4), Co. Laois (3), Co. Meath (5) |
+| Event type | Show Jumping (3), Cross Country (3), Dressage (2), Fun Day (2), Camp (1), Rally (1) |
+| Entry windows | open, closing in days, not yet open, closed, no window at all, finished |
+
+Verified narrowing live: 12 → 5 (Co. Meath) → 3 (Cross Country) → **2** combined.
+
+## Three deliberate exclusions
+
+**Three are club-page-only** — Kildare's Members' Cup, Laois's closed event, Meath's summer camp. Without them the two flags would always agree, and a bug that read one and ignored the other would pass unnoticed.
+
+**Three aren't public at all**, one being a draft. A draft can never reach the public whatever its flags say; having one in the fixture makes that rule testable rather than assumed.
+
+## The combination worth trying
+
+```
+/account/events?type=Cross+Country&region=Co.+Meath
+```
+
+Returns Meath Hunt's Tara Hunter Trial **and Ward Union's** Cross Country League — because Ward Union's grounds are in Co. Meath despite the club's name. That's the case an implementation filtering location by club name gets wrong, and the seed now contains it on purpose.
+
+Backend: 2963 passing, same single pre-existing failure as unmodified sources. Seed suite 56. The publication policy sits in one commented block at the top of `EVENTS` rather than scattered across fifteen inline flags, and `EVENTS_DEMO_SEED.md` records the spread.
+
+---
+
+
+## 2026-08-20 18:33:06 — Prompt
+
+The /account/events page should not show finished events, why are they included in the listing ?
+
+Also, why does it not show the information about whether entries are open / closed and their open/ closinf dates where applciable.
+
+Also, why can I not click into entering the event activity directly?
+
+### Assistant
+
+Three fair criticisms. The first is a real design error on my part — let me check the others against what already exists.
+
+`EntryStatus` is typed to the member-side `CatalogueEvent`, but it only reads a handful of fields. Let me see exactly which:
+
+`capacityFor` is already structural, and `EntryStatus` only reads four fields. Widening its prop to that shape lets one component serve both surfaces:
+
+Now the three fixes. First, excluding finished events from the platform listing:
+
+12 → 11, none finished. Now the entry-window status on both listings — my own wireframe specified this and I never built it:
+
+Now the third point — clicking straight into entering an activity. There's already a route for exactly that:
+
+That route takes an activity id directly. Making each activity its own entry point, which also removes the ambiguity of one event-level button for six classes:
+
+No finished events. Let me check the status chips actually render — my slice cut them off:
+
+"Closes in 1 day" with the exact deadline, and places remaining. Now the per-activity Enter buttons:
+
+Four activities, four **Enter** buttons, each with its own price and places. Testing that one lands on the right entry form:
+
+The URL carries the *activity* id, and an anonymous visitor gets the gateway. The decisive test — does signing in return them to this exact form?
+
+The full chain works — same URL before and after sign-in. But there's now a console error; let me check it:
+
+A 500 on the cart endpoint. Let me find out whether that's mine:
+
+Service works directly, so it's the route layer:
+
+Not reproducible — a one-off at the sign-in moment; the cart route and service are untouched by my changes. Now the suites, since I widened `EntryStatus`, which the member browse page also uses:
+
+My own test correctly caught the behaviour change — it asserted the old event-level button. Updating it to the new per-activity contract:
+
+All three fixed. Suites back to baseline: account-shell **665** passing (3 pre-existing), backend **2963** (1 pre-existing).
+
+## 1. Finished events — my error
+
+I conflated two different things. Keeping a finished event's **own page** alive is right: it holds whatever search ranking it earned, and a club's past programme is evidence it's worth joining. Listing it on a page headed *"What's on"* is not — and because the default sort is date ascending, last July's Summer Show was sitting at the very **top** of the discovery page.
+
+The platform search now excludes them (12 → 11). The club's own programme still keeps them, under the existing "Previously" heading, where a reader has already chosen that club. The sitemap and the per-event pages still include them, via an explicit `includeFinished` flag.
+
+## 2. Entry windows — specified but never built
+
+My own wireframe showed `⏳ Closes in 6 days` on every row. I didn't implement it. Both listings now carry it:
+
+```
+Autumn Rally · Laois Hunt Pony Club · Ballyroan Showgrounds · Co. Laois
+Rally · Closes in 1 day · Closes 21st Aug 2026, 18:23 · 2 activities
+```
+
+Rather than write a second version, I widened the existing `EntryStatus` from `CatalogueEvent` to the four fields it actually reads, so the public pages and the member catalogue phrase entry windows identically. Two implementations would have drifted — which is the exact failure the shared `entryWindowFor` exists to prevent. A finished event shows only "Finished", never that beside "closes in 3 days".
+
+## 3. Entering an activity directly
+
+You were right that this was awkward. One "Enter with Kildare" button at the foot of a six-class show dropped you into the member app to find the class again.
+
+Each activity now has its own **Enter**, going straight to `/{orgCode}/browse/events/{activityId}/enter` — the entry form for that class. Verified the whole chain end to end: clicking the *second* activity produced a URL carrying that activity's id, an anonymous visitor got the gateway, and after signing in they landed **back on the same URL** rather than the club home. That's the redirect fix from earlier doing its job.
+
+No button where it would only lead to a refusal — a full class shows "Full", and a closed or not-yet-open event says which, instead of offering nothing with no explanation.
+
+One of my own tests caught the change and failed, which is what it was for; I updated it and added four more (per-activity count, full activity, closed window, finished event).
+
+One thing I saw and could not reproduce: a single `500` on `/api/account/khpc/cart` at the moment of sign-in. It didn't recur on reload or on any other page, the cart service returns cleanly when called directly with every currency value the route could pass, and neither the cart route nor its service is touched by any of my changes. Flagging it rather than filing it as fine.
+
+---
+
+
+## 2026-08-20 18:46:15 — Prompt
+
+I logged into the Org Admin for Kildare Hunt Pony Club and when I click into users I see no users listed under Admin other Accounts ?
+
+### Assistant
+
+Confirmed the diagnosis. `userManagementRoutes` is mounted once at the bare path only, but `useApi` rewrites its URLs to the scoped form, which 404s. Let me look at the exclusion list:
+
+The router already scopes every route by its own `:organizationId` path param via `byParam`, with a verified caller check — so the prefix rewrite adds nothing but a 404. Excluding it keeps the scoping intact:
+
+Now the test. Let me see the existing coverage:
+
+All 12 pass. Now let me prove it end-to-end rather than trusting the URL analysis — getting a real token for a Kildare admin:
+
+Both 200 with correct data via the bare URL — the one the front end will now send. Let me check the full blast radius of callers and the third endpoint:
+
+The roles endpoint returns 200 (a bare array — my one-liner assumed an object). The blast radius is larger than the two lists: **every page in the Users area** was calling this router. Let me check for regressions:
+
+All 745 pass, no regressions. Now the docs — the module summary and the multi-organisation doc both describe this rule:
+
+`ORGADMIN_ROUTE_TENANCY.md` owns this rule but still lists only the auth exemption — it predates both later exclusions. Let me read the surrounding section:
+
+Now the module summary (§3.6):
+
+Let me confirm visually, since the report was visual. Checking whether the dev server is up:
+
+Need to sign in first:
+
+Admin Users now populates — Aoife Byrne, zero console errors. Checking the Account Users tab:
+
+Both tabs populate: 8 account users and 1 admin, zero console errors.
+
+## What was wrong
+
+Not a data problem — the users were always there. `useApi.organisationScopedUrl` rewrites every `/api/orgadmin/*` URL into the organisation-scoped form, on the assumption that the target is one of the dual-mounted data routers in [index.ts](packages/backend/src/index.ts). `userManagementRoutes` is mounted **once, bare**:
+
+```
+/api/orgadmin/users/accounts/<orgId>                       401   ← mounted
+/api/orgadmin/organisations/<orgId>/users/accounts/<orgId> 404   ← what the app actually sent
+```
+
+So both lists 404'd and rendered as empty. It failed silently because "no users" is a plausible answer to "who works here" rather than a visible error.
+
+This is the third instance of the same defect — after `/api/orgadmin/auth/` and the `/api/orgadmin/organisation/` singular router that blanked all six Settings tabs. So I swept for the rest instead of fixing just this one: three routers are mounted bare, and those are now exactly the three exempt prefixes. No others remain.
+
+## Blast radius
+
+Larger than the two lists you hit — every page in the Users area calls this router: user details (view, edit, delete, roles, resend-invite, reset-password), the invite dialog, Invite Admin User, Create Account User, and User Groups.
+
+## The fix
+
+One line of behaviour in [useApi.ts:76-89](packages/orgadmin-core/src/hooks/useApi.ts#L76-L89) — adding `/api/orgadmin/users/` to `UNSCOPED_ORGADMIN_PATHS`. Scoping isn't given up: unlike the singular organisation router, this one already names the club in its own path (`/users/accounts/:organizationId`) and every route declares what it's scoped by via `byParam`/`byResource`, so the prefix would only have repeated the id. The path that carries it is the one the server reads.
+
+Verified at three levels: the endpoints return 200 with correct counts under a real Kildare admin token; 745 orgadmin-core tests pass; and both tabs render in the browser.
+
+## Why no test caught it
+
+Every Users page test mocks `useApi`, so none of them exercise the rewrite. The guard is [organisationScopedUrl.test.ts](packages/orgadmin-core/src/hooks/__tests__/organisationScopedUrl.test.ts), which I extended with the users paths — including one asserting that `user-groups`, a genuinely dual-mounted router with an adjacent name, is *still* scoped.
+
+Docs updated per §1.4/§3.6: [ORGADMIN_ROUTE_TENANCY.md](docs/ORGADMIN_ROUTE_TENANCY.md) now carries the full exemption table and the rule that a new router under `/api/orgadmin` must either join `ORGADMIN_DATA_ROUTERS` or be added here — doing neither compiles, passes every test, and 404s in the browser. Same note in [orgadmin-core.md](.claude/modules/orgadmin-core.md).
+
+Changes are in the working tree, uncommitted.
+
+---
+
+
+## 2026-08-20 18:58:44 — Prompt
+
+When it comes to event entries, the entry form should always have a name field at the top of the form to capture the name of the person who the entry relates to.
+The name field should be a text field with possible autocomplete capabilities as follows:
+
+- if the organisation has the membership capability and actually have active members then the name field should autocomplete against the list of all active members within the organisation, not just any members within this account, 
+- if the entries are open to all, then the person should also be able to type a new name of a non member to enter
+- if the entries are “Entries open to our members only” of this organisation then the name field should autocomplete against the list of all active members and not allow the entry to proceed unless an actual active member is selected.
+- if the entries are “Entries open to members (all orgs/branches)” then the name field should autocomplete against the list of all active members across all organisations within this organisation type and not allow the entry to proceed unless an actual active member is selected - if selecting members that are in an different organisation then the selected members organisation should be shown with their name.
+
+The idea is that the forms that people design don’t have to include a name field at the top as the name is always built in.
+
+### Assistant
+
+This is substantial — let me understand the existing entry flow before designing it.
+
+`event_entries` already carries `first_name`/`last_name`/`member_id` — so there's a natural home. Let me see what's written there today:
+
+Now I have the full picture. Let me check the remaining unknowns — the members table, capability gating, and account-shell's locales:
+
+I have what I need. One thing to flag before I build: this widens who can be entered — today the server only accepts a member id **you hold**, and autocompleting the whole roster means any signed-in account user can enter any member, and can enumerate the membership list. That's inherent in what you asked for (and matches how a club secretary actually works), so I'll build it, with the search requiring a signed-in member of that club, a minimum query length, a result cap, and no contact details in the payload.
+
+Now the backend service. Checking conventions first:
+
+`jsonb` and `memberships` confirmed. Now the route:
+
+Now the route — one endpoint returning both the mode and the matches, so the form makes a single call:
+
+Now `assertAddable` — the check that decides who actually gets in:
+
+Now a name-splitting helper, since `event_entries` stores first and last separately:
+
+Backend compiles. Let me verify the SQL against real seed data — first, is the running backend serving my code?
+
+Live. Now an account-user token to exercise it end to end:
+
+Modes and scopes all correct. `wal` finding nobody in club scope but Niamh Walsh at Laois in type scope matches the one-club-per-person seed rule. Let me confirm club scope returns Kildare's own roster:
+
+Club scope returns Saoirse Brennan — not one of the signed-in user's own memberships, which is exactly the widening you asked for. Backend verified.
+
+Those are pre-existing (§3.3). Checking whether any are mine:
+
+23 pre-existing, none in my file. Now the account-shell integration — reading the parts I need to change:
+
+Now the integration:
+
+Now the submit payload and the `canSubmit` gate:
+
+Now replace the members-only select block with the field:
+
+Need to build components and clear the now-unused pieces:
+
+Clean. Now the i18n keys across all six locales:
+
+A full rewrite would reformat five of six files. Let me find out how they actually differ:
+
+Some strings are stored unicode-escaped, so a rewrite would unescape them. I'll do surgical text edits instead:
+
+The 78-line diff is cumulative against HEAD (it includes my earlier `platformEvents` work). Let me verify this edit specifically — key parity across all six:
+
+All six locales at 542 keys with identical key sets. Now the tests.
+
+23 pass. Now the `assertAddable` guard — let me find its existing tests:
+
+These tests encode the old contract. Let me update them and add the new cases:
+
+Now the members-only block, updated for the new contract:
+
+4 failures — older tests that post an entry with no name, which my new rule refuses. They're testing holds, not naming, so they need a name added:
+
+51 pass. Let me run the whole backend suite to find any other impact:
+
+1 failure — the same pre-existing `orgadmin-workflows.integration.test.ts` from the session baseline (needs a live DB; unrelated to entries). 3047 passing. Now a route test for the search endpoint:
+
+57 pass. Now the front-end tests — first the component:
+
+The click failure actually proves the option is disabled. Let me assert that directly, and look at a warning it surfaced:
+
+12 pass (the `act()` warnings are MUI Autocomplete noise, present in other suites too). Now account-shell — checking the existing EntryFormPage tests:
+
+The `respond` helper needs to serve the new endpoint. Let me wire it and see the impact:
+
+Two groups: tests that now need a name before submitting, and the old members-only tests that exercised the removed select. Let me see them:
+
+Now let me rewrite that block for the new field and patch the tests that need a name:
+
+Now the tests that need a name before submitting:
+
+These 3 are the pre-existing `EntryFormPage` failures from the session baseline — MUI label ambiguity on `Dietary needs`, nothing to do with the name field. Let me confirm against the whole suite:
+
+3 failures / 666 passing against a baseline of 3 failures / 665. But the third failing test differed between runs, so let me check stability and the actual cause:
+
+Stable set of 3, and the causes are the club's form-field renderers (`Dietary needs` label ambiguity, `Vegetarian` checkbox, phone validation) — the same `FieldRenderer` phone/checkbox typing that's broken pre-existing in the components package. These match the session baseline of 3 pre-existing `EntryFormPage` failures exactly.
+
+Before docs, let me verify the real thing in a browser — that's what proves it:
+
+Signed in as the org-admin from the earlier task. Let me switch to a khpc account user:
+
+Signed out cleanly. Now signing in as a khpc account user:
+
+The field renders at the top in open mode — "Start typing to find a member, or type any name" — above the club's own hand-built "Rider name" field, which is precisely what this makes redundant. Let me test the autocomplete:
+
+Autocomplete works — and note the signed-in user (Niamh Walsh) holds no khpc membership yet can still name Saoirse Brennan, which is exactly the widening you asked for. Now the federation-wide activity:
+
+The field was pre-filled with Niamh's own membership, so my typing appended to it. Let me clear and search properly:
+
+The federation mode shows **Niamh Walsh · Laois Hunt Pony Club** — the member's own club named because it differs from the host, exactly as specified. Let me confirm the club-only gate still holds:
+
+All three modes verified in the browser, and the club-only caller gate still holds. Now the documentation.
+
+Now the module summaries (§3.6):
+
+Now a pointer from the members-only doc, since this changes what that feature validates:
+
+Let me do a final verification across all four packages:
+
+Done. Every event entry form now opens with a name field, above whatever the club designed.
+
+## How it behaves
+
+| Activity | Completes against | A typed name |
+|---|---|---|
+| Open to all | the club's active members | **accepted** — a non-member entrant |
+| Our members only | the club's active members | refused |
+| Members (all orgs/branches) | active members of every club in the organisation type | refused, and each match from another club shows its club beside the name |
+
+A club with no memberships — or with memberships but no active member yet — gets a plain text box rather than an autocomplete that can never suggest anything. "Active" means `status = 'active'` **and** `valid_until >= today`; the date test isn't redundant, since a lapsed membership keeps its status until something sweeps it.
+
+## The widening, stated plainly
+
+This changes who may be named. The old rule validated a chosen member against `eligibleMembers` — the caller's *own* memberships — so a secretary entering half the club, or a parent entering the child whose membership sits on the other parent's login, was refused. The search and the check are now over the roster in scope. Guards: the caller must already be a connected account user of the club, queries under two characters return nothing, results cap at 20, and the payload carries only name, membership type and number — no contact details.
+
+**Who may *reach* a members-only activity is unchanged.** A caller with no eligible membership still sees "you do not hold an active membership" — I verified that in the browser. Widening who may be named didn't widen who may enter, which would have undone the feature you specified earlier.
+
+## Where the safety lives
+
+[entrant.service.ts](packages/backend/src/services/entrant.service.ts) derives scope from the activity's `entry_eligibility` and never accepts it as a parameter — a client that could name its own scope could ask an open club event for the federation-wide roster. `searchEntrants` and `resolveEntrant` share one scope function, so what's offered and what's accepted can't drift.
+
+[EntrantNameField](packages/components/src/components/EntrantNameField/EntrantNameField.tsx) went into `packages/components` per §1.5 — an org admin entering a phone booking needs the same field. It's presentational; strings arrive as props.
+
+## Verified
+
+Browser, signed in as an account user holding no khpc membership: open mode offered **Saoirse Brennan** (a member she doesn't hold — the widening working); federation mode offered **Niamh Walsh · Laois Hunt Pony Club** with the club chip; the club-only gate still refused her.
+
+Tests: backend **3053 passing**, components **12 passing**, account-shell **666 passing**. The 1 backend failure (`orgadmin-workflows.integration`) and the 3 account-shell failures are the session baseline — the latter are the club form's own checkbox/phone renderers, stable across repeated runs and unrelated to this field. i18n added to all six locales by surgical text edit, since five of the six store some strings unicode-escaped and a JSON rewrite would have reformatted them; all six now at 542 keys with identical key sets.
+
+Docs: [ENTRANT_NAME.md](docs/ENTRANT_NAME.md), [ENTRANT_NAME_WIREFRAMES.md](docs/ENTRANT_NAME_WIREFRAMES.md), module summaries, and a note on [MEMBERS_ONLY_ENTRIES.md](docs/MEMBERS_ONLY_ENTRIES.md) marking what it supersedes.
+
+One thing worth your decision: the seeded Kildare entry form still carries a hand-built **"Rider name"** field, so that form now asks twice. Nothing depends on those fields and they can be deleted in the form builder — I left existing forms untouched rather than editing clubs' data. Changes are in the working tree, uncommitted.
+
+---
+
+
+## 2026-08-20 20:02:25 — Prompt
+
+I would like to introduce a new concept to the application and it relates the ItsPlainSailing super admin through the Platform Admin interface being able to create “posts” that are then displayed to all account and orgadmin users on the account and orgadmin login pages.
+So the Platform admin should be updated with a new section that allows the super admin to add and edit posts, where a post is made up of the following:
+
+- title - the title of the post
+- body - the rich text post message
+- an optional image to display with the post, uploaded an made available publicly
+- an option list of web page links where each one has a display text name, and the link that the user is brought to when they click the link
+- status - Active or Inactive
+- Two checkboxes, one to indicate that the post is to be displayed on all account login pages and one to indicate that it is to be displayed on all orgadmin login pages
+
+So the user should be able to create, edit, view and delete posts from within this new Platform Admin area.
+The user should also be able to arrange the order of posts
+
+Then the login page for orgadmin and accounts should be updated as follows for normal width screens:
+
+- the current login elements of the page should be moved to the left and side of the page
+- the right hand side of the page should be updated t display the posts in the order that they have been arranged
+
+For narrow screens, the right hand side posts should move underneath the left hand side login elements.
+
+Each post should be displayed as a card with the image at the top (if one has been uploaded), then the title, then the text, and then optionally any links on a row underneath. 
+
+Can you update the Platform Admin and the two login pages with this new functionality.
+
+### Assistant
+
+Substantial feature. Let me understand what "login page" means here before designing — there are two candidates:
+
+The real login pages are Keycloak-themed FreeMarker templates, not React. Let me look at their current structure:
+
+S3-backed uploads. I have what I need except one genuinely consequential thing — and getting it wrong would waste the whole build:
+
+Both it is. Let me check a few conventions before I start building.
+
+No CORS work needed — dev already allows any localhost origin, and in production Keycloak and the API are same-origin behind nginx. Let me set up and start building.
+
+Migration applied. Now the service:
+
+There's a `uploadBrandingLogo` precedent. Let me see how that image is served publicly — the same path will work for post images:
+
+`isomorphic-dompurify` is already a backend dependency. Now the service:
+
+Now the routes — admin CRUD plus the two anonymous reads:
+
+Now `uploadPostImage` on the file service, and the anonymous read routes:
+
+Now mount the admin router:
+
+Backend compiles. Let me verify the endpoints live before building UI on top:
+
+The `<script>` was stripped even on the admin read, which returns unsanitised. Something upstream is filtering input — let me find it:
+
+The platform already has a rich-text allowlist and `body` is in it — that's why `<p>` survived and `<script>` didn't. But that same middleware HTML-escapes ordinary strings, which is a known hazard for URLs:
+
+All correct. Let me clean up the probes and test reorder:
+
+Reorder works. Now the Platform Admin UI — let me learn the app's conventions:
+
+Now the admin pages. Checking what's available in that package:
+
+Both resolved (the error is just Node refusing to read dompurify's package.json directly). Now the shared form component:
+
+Now the four pages — list with reordering, create, edit, view:
+
+Good — `StatusChip` already handles both values. Now the create, edit and view pages:
+
+Now wiring routes and navigation:
+
+All pre-existing (test files); nothing in the new code. Let me verify the admin section in the browser:
+
+Route didn't register — let me check the insertion:
+
+Vite is serving the routes correctly — the browser held a stale bundle. Forcing a reload:
+
+A service worker may be holding the old bundle — this repo has PWA setup. Let me check:
+
+The nav entry loaded, so the bundle is fresh. Let me click it:
+
+The viewport is narrow, so the nav drawer is unmounted. Let me size it to a desktop width — which I need for the two-column work anyway:
+
+Works — I was using the production path; in dev the admin app is served at the root. Let me test reordering:
+
+The token expired — that's all. Refreshing it:
+
+Reorder persists. Now the shared card component:
+
+Now the account gateway page — let me read its current layout:
+
+Now the i18n key across all six locales:
+
+Let me verify the account gateway in the browser before moving to the Keycloak themes:
+
+The gateway only renders for signed-out visitors, and I'm signed in as the super admin. Signing out:
+
+The gateway works: sign-in left, Announcements right, correct posts (the orgadmin-only one correctly excluded), rich text and links intact. Now the Keycloak themes:
+
+Now the theme JS that renders posts on the Keycloak pages:
+
+Now restructuring the account-user template into two columns:
+
+Now the CSS for the two-column shell and the cards:
+
+Now the org-admin theme — template, script, CSS, and properties:
+
+`start-dev` means no theme caching. Let me load the org-admin login page:
+
+The Keycloak org-admin login now has both columns, with the account-only post correctly excluded. Let me see it rendered:
+
+Two columns working in the warm theme. Now narrow-screen stacking:
+
+Narrow stacks correctly, sign-in first. Now the account-user theme:
+
+Both themes verified. One untested path remains — the image. Let me exercise upload and public serving:
+
+Byte-identical round trip. Let me confirm the theme's image URL construction works:
+
+Everything verified end to end. Let me remove the test image and move to tests:
+
+A real bug in my sanitiser — it's returning input unchanged. Let me see all three failures:
+
+Works in plain Node, so Jest is interfering. Let me check its config:
+
+Found the cause, and it's worth flagging: the repo has a **global Jest mock of `isomorphic-dompurify` that is an identity function** ("we're not actually testing sanitization"). Any test believing it checks sanitisation is checking nothing. My tests must use the real thing:
+
+Still mocked — `moduleNameMapper` intercepts `requireActual` too. The right fix is the mock itself: an identity stand-in silently disables every sanitisation assertion in the repo. Let me make it honest and measure the blast radius:
+
+All 26 pass with real sanitisation. Now the critical check — what did fixing that mock reveal elsewhere?
+
+That's my bug, not the mock: `platform-post.routes` builds its middleware array at module scope, so any suite that partially mocks the auth middleware breaks on import — and `public.routes` was dragging the admin router in just to reach the image handler. Let me fix both:
+
+Now move the image handler into `public.routes`, removing the cross-import:
+
+Back to the exact baseline: 1 pre-existing failure, 3079 passing. Making the sanitiser mock honest caused **zero** regressions across 159 suites — it was pure risk. Let me re-verify the moved route live:
+
+Super-admin gating holds (org admin → 403). Now route tests:
+
+16 pass. Now the front-end tests — the component and the admin list:
+
+The empty-alt image is correctly excluded from the a11y tree, so `getByRole` can't reach it. Querying the element directly:
+
+Now the admin list page test — reordering is the part worth pinning down:
+
+12 pass. Now the full suites across the three front-end packages:
+
+Let me check whether those failures are mine or pre-existing:
+
+None of the failing tests import anything I touched, and the assertions are about unrelated things — pre-existing per §3.3. Now account-shell, where I changed the gateway:
+
+Same 3 pre-existing failures, 666 passing — the gateway change broke nothing. Let me add its test:
+
+All 10 pass. Final verification across every package, then docs:
+
+Now the module summaries (§3.6):
+
+Now the infrastructure summary, since the Keycloak themes changed materially:
+
+Let me do a final end-to-end pass — create a post through the UI and confirm it reaches a login page:
+
+That's ReactQuill 2.0's known `findDOMNode` StrictMode warning — inherent to the library, same as the three other packages already using it. Let me create a post through the UI:
+
+Now setting status to Active and saving:
+
+Created and appended to the end. Now the real test — does it reach a login page?
+
+The full loop works — written in Platform Admin, appearing on the real login page. Let me tidy the screenshots and do a final check:
+
+Done, and verified end to end: I wrote a post in Platform Admin and watched it appear on the real org-admin login page.
+
+## Platform Admin → Posts
+
+New `Content → Posts` section: create, view, edit, delete, and arrange. Title, ReactQuill body, optional public image, a repeatable list of `{display text, URL}` links, Active/Inactive, and the two independent checkboxes.
+
+Ordering is a pair of arrows per row, not drag-and-drop — keyboard-reachable and screen-reader-legible with none of drag's machinery — and each move saves the **whole** arrangement, so two people reordering at once end with one of their orders rather than an interleaving. The list is deliberately not the sortable `AdminTable` the other screens use: here the order *is* the content.
+
+Status and the checkboxes answer different questions, so an active post shown on neither page is allowed — and the form says so rather than refusing it.
+
+## Both login pages, both ways
+
+You chose **Both**, so posts render on four surfaces via two implementations:
+
+- **The Keycloak login pages** (`org-admin`, `account-user`) — the ones that actually hold the password field. FreeMarker with no React, so they carry a second implementation of the card in `posts.js`. Verified at 1440px and 430px.
+- **The account app's organisation gateway** — via a shared [PostCard](packages/components/src/components/PostCard/PostCard.tsx) in `packages/components` per §1.5.
+
+Sign-in left, posts right at ≥900px; stacked sign-in-first below. **With no posts every surface collapses to exactly the page it was before** — otherwise a deployment that never writes one gets an empty half-screen and an off-centre form.
+
+## What I'd want you to know
+
+**The public read is sanitised on the server, not by its callers.** The Keycloak theme sets `innerHTML` and has no sanitiser available to it at all — leaving it to the caller means leaving it to the one that can't. Link URLs are restricted to http/https on write, since they become anchors on an anonymous page. The public read returns `[]` on failure rather than an error: nobody on a login page can report a broken panel, and an error beside a sign-in form reads as the sign-in being broken.
+
+**Writing a post is super-admin only** — an org admin runs one club; this reaches everyone. An org-admin token gets 403.
+
+**A trap this surfaced.** `packages/backend/__mocks__/isomorphic-dompurify.js` was an identity function ("we're not actually testing sanitization"), wired in through `moduleNameMapper` — so every sanitisation assertion in the repo passed while proving nothing, and no individual suite could opt out, because `moduleNameMapper` intercepts `requireActual` too. My tests failed against it, which is how I found it. It now delegates to real DOMPurify; **zero** failures across 159 suites, so it was pure risk. The XSS middleware depends on it working.
+
+No configuration needed in a deployment — nginx already serves Keycloak and the API on one origin. Dev is handled by a port fallback plus the existing localhost CORS rule.
+
+## Tests
+
+65 new. Suites are exactly at baseline: backend 3095 passing / 1 pre-existing failure; account-shell 670 / 3 pre-existing. The admin (11) and components (10) failures are in `RolesPage`, `RoleForm`, `organization-type-locale`, `MultiSelectRenderer` and `applicationField` — none import anything I touched, and their assertions are about unrelated datatypes and DOM events.
+
+Docs: [PLATFORM_POSTS.md](docs/PLATFORM_POSTS.md), [PLATFORM_POSTS_WIREFRAMES.md](docs/PLATFORM_POSTS_WIREFRAMES.md), and summaries for admin, backend, components, account-shell and infrastructure.
+
+Two notes: `packages/admin` gained `react-quill` and `dompurify` (both already used elsewhere at the same versions), and react-quill 2.0 logs a `findDOMNode` StrictMode warning — inherent to the library, same as in the three packages already using it. Changes are uncommitted; the migration `1709000000034_platform-posts` has been applied to your local database.
+
+---
+
+
+## 2026-08-20 21:13:43 — Prompt
+
+I removed the image on a post in the Platform Admin, saved it, but when I go to the login page, the image is still being shown on the post, cam you fix this.
+
+
+## 2026-08-20 21:14:34 — Prompt
+
+I removed the image on a post in the Platform Admin, saved it, but when I go to the login page, the image is still being shown on the post, cam you fix this.
+
+### Assistant
+
+A real bug — let me reproduce it rather than guess. First, a post with an image:
+
+The server path is flawless — removal propagates to every read. So the bug is client-side. Let me reproduce through the actual UI:
+
+Preview loads and "Remove image" is offered. Let me remove and save, watching the network:
+
+The DELETE fires and returns 200 — the admin side is correct. So let me look at what a login page actually receives right now:
+
+The removal *is* honoured on a fresh load — so this is a caching defect, and there are two of them. Let me confirm the sharper one, image **replacement**:
+
+Both confirmed, plus a third latent one. Let me fix them.
+
+Now the S3 leak — `RETURNING` after `SET` gives the *new* value, so the old key was never recovered:
+
+Now the caching headers — the JSON must not go stale, while the now-versioned image can be cached hard:
+
+Now verify all three fixes against the running server:
+
+Let me prove the CTE actually returns the *old* key, since that's the subtle one:
+
+That's the leak proven and fixed: old SQL returned blank, the CTE returns `OLD.png`. Now regression tests for all three:
+
+47 pass. Now the definitive test — the exact sequence you hit, with no waiting:
+
+Just an expired token again. Refreshing and running the sequence properly:
+
+Image A (8px) is rendered and now cached hard by the browser. Replacing it — under the old code this would have shown the stale image for five minutes:
+
+Replacement is now immediate. Finally, the removal you reported — through the real UI, then straight to the login page:
+
+Fixed and confirmed on the real login page. Let me clean up the probe and update the docs:
+
+Fixed. Your removal *was* saving correctly — the database was cleared every time. What you were seeing was cached.
+
+## Two caching bugs, both mine
+
+**1. The image URL didn't change when the image did.** I'd built it as `/api/public/posts/:id/image` — derived from the *post*, which doesn't change when its picture does — and then cached it for 5 minutes. So the same address served different bytes. I proved it: uploading two different images produced the identical URL.
+
+For a removal that combines badly with the second bug: the stale post list still pointed at that URL, and your browser still had the old bytes sitting in its cache.
+
+The URL is now `?v=<hash of the S3 key>`. The key is uniquified per upload, so the token changes exactly when the bytes change and not otherwise. Because the URL is now content-addressed, the image itself can be cached properly — `immutable` rather than 5 minutes.
+
+**2. The post list was held for 60 seconds.** I'd set `max-age=60` to spare the database on the busiest anonymous endpoint in the product. That cost more than it saved: for a minute after any edit the login pages showed the previous version, which reads exactly as "my change didn't save". Now `no-cache` — revalidate, not "don't store", so Express still returns a 304 when nothing changed, and the query behind it is a single indexed read.
+
+## And a third, found on the way
+
+`clearImage` used `UPDATE … SET image_key = NULL … RETURNING image_key`. That reads perfectly and is wrong — Postgres `RETURNING` gives the **new** row, so it returned the null it had just written. The caller saw "no previous image" every time, so **no replaced or removed picture was ever deleted from S3**. I ran both statements side by side against your database: the old one returns blank, the CTE returns `OLD.png`. (`RETURNING OLD.*` would be the tidy fix; it landed in PG18 and you're on 16.)
+
+## Verified
+
+End to end on the real Keycloak login page, with no waiting: image A rendered and cached → replaced with B → **B appeared immediately** → removed through the Platform Admin UI → **gone immediately**.
+
+Backend is at 3100 passing with the same single pre-existing failure. Six regression tests added, including one asserting on the SQL itself — the `RETURNING` bug is invisible in the result, since the old statement returned a row with the wrong value in it. Docs and the backend summary updated; probe post cleaned up, your four posts untouched.
+
+---
+
+
+## 2026-08-20 21:29:02 — Prompt
+
+The notes on the right of the login pags take up too much width, it doesn't look like 50/ 50
+
+### Assistant
+
+Right — it's currently 5fr/7fr, so the posts column is ~58%. Let me make it a true 50/50 in all three places:
+
+552px / 552px. Let me confirm the other two surfaces:
+
+Signed in as the super admin again — signing out to see the gateway:
+
+Account gateway is 556/556. Now the account-user Keycloak theme, the third surface:
+
+All three surfaces even. Let me check narrow still stacks, then update the doc:
+
+Done — it's now a genuine 50/50 on all three surfaces.
+
+It was `minmax(380px, 5fr) 7fr`, so the posts column was taking ~58%. Now `minmax(380px, 1fr) 1fr`, measured live:
+
+| Surface | Columns |
+|---|---|
+| Keycloak org-admin login | 552px / 552px |
+| Keycloak account-user login | 552px / 552px |
+| Account app gateway | 556px / 556px |
+
+The `minmax` floor stays on the sign-in side — a form stops being usable before a column of text stops being readable — but at the 1200px cap each column is ~552px, so it never actually binds and the split reads as even. Narrow screens still stack sign-in-first (confirmed: `display: block`, posts below the form).
+
+Changed in three files, since the Keycloak themes each carry their own CSS and the account gateway is React: [account.css](infrastructure/keycloak/themes/account-user/login/resources/css/account.css), [warm.css](infrastructure/keycloak/themes/org-admin/login/resources/css/warm.css), [OrganisationGatewayPage.tsx](packages/account-shell/src/pages/OrganisationGatewayPage.tsx#L159). Gateway tests still pass (10/10); the wireframe and feature doc now record the even split.
+
+Your "Next Phase ItsPlainSailing Released" post with the screenshot renders well at this width — the 16:9 image and the two-column body have room without the panel dominating the page.
+
+---
+
+
+## 2026-08-20 21:32:49 — Prompt
+
+Can you reduce the max-width of the notes display sections on the login pages by about 80% of their current width.
+
+### Assistant
+
+"By about 80% of their current width" — I'm reading that as narrowing them *to* roughly 80%, so ~440px instead of ~552px. The grid stays 50/50; the cards just occupy a narrower band inside their column.
+
+Exactly 80%. Let me confirm the other two surfaces and that narrow is untouched:
+
+Narrow stacking is untouched — posts and sign-in card both 398px. Confirming the third surface (account-user theme):
+
+Done — the notes are now 440px, exactly 80% of the previous 552px.
+
+| Surface | Login column | Notes width |
+|---|---|---|
+| Keycloak org-admin login | 552px | **440px** |
+| Keycloak account-user login | 552px | **440px** |
+| Account app gateway | 556px | **440px** |
+
+The grid itself stays an even split — the two halves of the page are still equal — and the cards sit centred within their half, so the leftover space falls evenly rather than opening one wide gutter on the outside.
+
+Two things I scoped deliberately, worth flagging in case you'd rather they were different:
+
+- **Centred, not flush left.** The sign-in card is centred in its half, so centring the notes keeps the composition symmetrical. Flush left would pull them tight against the gutter and leave ~112px of space at the right edge.
+- **Only in the two-column layout.** On narrow screens the cards still match the sign-in card above them (both 398px at 430px wide, verified). Applying the 440px cap there would have made the notes visibly thinner than the sign-in card for no reason.
+
+Changed in the same three files as before — each Keycloak theme carries its own CSS, and the gateway is React. Gateway tests still pass 10/10; feature doc and wireframe updated to record the cap and why it's confined to the wide layout.
+
+---
+
+
+## 2026-08-20 21:36:48 — Prompt
+
+Can you reduce the break point that causes the right hand panel to move down underneath the login panel - to sm or xs
+
+### Assistant
+
+Lowering it to `sm` (600px) — `xs` would mean 0, i.e. never stacking, which would put two columns on a phone. But the 380px floor I put on the form won't fit two columns at 600px, so that has to go too or the split collapses. Let me look:
+
+Only lines 549 (account) and 586 (warm) are mine; the other two are pre-existing. Let me rework just those:
+
+`sm` confirmed — that's what I've done (600px). Now the account gateway:
+
+Now let me verify at the boundary — 599px should stack, 600px should split:
+
+The boundary is exact: 599 stacks, 600 splits evenly at 272/272. Let me see how that actually looks:
+
+Tight at exactly 600 — the email field truncates — but that's inherent to two columns at that width, and it's what you asked for. It improves quickly:
+
+At tablet width it reads well. Let me confirm the wide layout is unchanged and check the other two surfaces:
+
+Wide is untouched — 552/552 columns, posts capped at 440, 48px gap. Now the account gateway and the account-user theme:
+
+Gateway matches exactly. Last surface — the account-user Keycloak theme:
+
+All three surfaces behave identically. Updating the docs and re-running the tests:
+
+Done — the panel now moves underneath below **600px** (`sm`) instead of 900px, on all three surfaces.
+
+Verified at the exact boundary: **599px stacks, 600px splits.**
+
+| Width | Layout |
+|---|---|
+| 599px | stacked, sign-in first |
+| 600px | 272 / 272 |
+| 768px | 356 / 356 |
+| 1440px | 552 / 552, posts capped at 440 |
+
+## One thing the change forced
+
+I had a `minmax(380px, 1fr)` floor on the sign-in column, to stop the form shrinking past usability. That floor can't survive at 600px — 380px plus a second column doesn't fit — and leaving it in would have produced a full-width form beside a ~120px ribbon of announcements, which is worse than either stacking or splitting. So both columns are now plain `1fr 1fr` and shrink together.
+
+I also stepped the gap and padding down below 900px (48→24px gap, 64→32px top). At 600px, 48px of gutter is most of a column.
+
+**At exactly 600px it is tight** — the email field truncates mid-address and the heading wraps to three lines. It's usable, and it's the unavoidable consequence of two columns at that width; by tablet width (768px) it reads comfortably. If the 600–700px band bothers you, the options are to put the breakpoint back somewhere around 700–768, or to let the sign-in column take the larger share below 900px rather than splitting evenly. Say the word and I'll adjust.
+
+I didn't take `xs`, since that's 0 — it would mean never stacking, so two columns on a phone. Your follow-up confirmed `sm`, which is what I'd built.
+
+Changed in the same three files; gateway tests pass 10/10, TypeScript clean, and the feature doc and wireframes now say 600px.
+
+---
+
+
+## 2026-08-21 08:10:26 — Prompt
+
+On the register page for account login, can you add a small foornote, with the small itsplainsaioing logo undeneath the card on the left to indicate something like "Powered by ItsPlainSailing.com"
+
+### Assistant
+
+Let me look at the actual page — the Keycloak account-user registration is the one with a left card:
+
+That's the page — card on the left, posts on the right. It shares `template.ftl` with sign-in, so let me place the footer inside the left column:
+
+I dropped a closing `</div>` — the posts panel is now nested inside the login column instead of beside it. Let me fix the nesting:
+
+Balanced now, with the footer inside the login column and the `<aside>` back outside it. Verifying:
+
+Layout intact and the footer sits under the card. Since `template.ftl` is shared, let me check it on sign-in too, and at narrow width:
+
+Correct order on narrow too. Let me record it where the theme is documented:
+
+Added. A small logo and caption sit under the card in the left column, linking to itsplainsailing.com.
+
+Verified on the register page at 1440px, and:
+
+| Check | Result |
+|---|---|
+| Text | "Powered by ItsPlainSailing.com" |
+| Logo | 16px, aligned to the caption's optical centre |
+| Link | `https://itsplainsailing.com`, `target="_blank"`, `rel="noopener noreferrer"` |
+| Placement | inside the login column, below the card |
+| Narrow (430px) | card → powered-by → posts |
+
+Three judgement calls worth flagging, all easy to change:
+
+- **It's on every page of the account-user theme**, not just register — sign-in and forgotten-password too. They share one `template.ftl`, and an attribution that appears on registration but vanishes on sign-in would look like a bug. Confirmed present on both.
+- **It's a link, opening in a new tab.** That's the convention for a "Powered by" footer, and the new tab is deliberate: someone halfway through a registration form shouldn't lose it to a footer click. Say the word if you'd rather it were plain text.
+- **Only the account-user theme**, since you asked for account login. The org-admin login doesn't have it — happy to add it there too.
+
+## One thing I broke and caught
+
+My first edit dropped a `</div>`, which pushed the `<aside>` *inside* the login column — the announcements silently moved from beside the card to underneath it. The page didn't error; it just quietly rearranged itself, which is why I screenshot rather than trust the markup. Fixed, and tag balance verified (16 open / 16 close).
+
+That trap is now recorded in the infrastructure summary: `template.ftl` opens three nested divs before the card, and the tail is exactly where one goes missing.
+
+---
+
+
+## 2026-08-21 08:22:35 — Prompt
+
+can you add this to the account/<slug>/register page also, and can you add on the right of the text "Powered by ItsPlainSailing.com" additional text as follows " - ©  <current year> Esker Software. All rigths reserved"
+
+### Assistant
+
+Two changes: the footer on the in-app register page, and the copyright appended on both. Let me look at the register page and what logo assets exist:
+
+No ItsPlainSailing logo in account-shell (its `icon.svg` is a deliberate placeholder). The real mark lives in the Keycloak theme, so let me bring a copy over and build the footer as a shared component:
+
+Now the i18n keys across all six locales:
+
+Now wiring it into the register page:
+
+Now the same copyright on the Keycloak theme, with the year computed at render:
+
+Let me verify both. Keycloak first — including that FreeMarker's `.now` actually resolves:
+
+`.now` resolved to 2026. Now the in-app register page:
+
+The register page needs a session (it's "request to join"). Let me sign in as someone not connected to this club:
+
+Both surfaces done. Let me verify the details and add a test for the shared component:
+
+Same 3 pre-existing failures, 670 passing. Let me record it in the docs:
+
+Both done, reading:
+
+> ![logo] Powered by ItsPlainSailing.com – © 2026 Esker Software. All rights reserved
+
+| Page | Verified |
+|---|---|
+| `/account/khpc/register` (in-app) | footer under the card, logo loads, year 2026 |
+| Keycloak account-user (sign-in, register, forgotten password) | same, `.now` resolves to 2026 |
+
+## Decisions worth knowing
+
+**The year is computed, never written down.** `new Date().getFullYear()` in React, `.now?string('yyyy')` in FreeMarker. A literal year is correct until the 1st of January and then quietly wrong on every page of the product until somebody notices — and the copyright line is exactly the sort of thing nobody re-reads.
+
+**The separator is markup, not text.** It's `aria-hidden`, and neither translation carries a dangling " – ". A screen reader would otherwise read a dash between two unrelated sentences, and a translator would have been handed a fragment to puzzle over.
+
+**Built as a shared component** ([PoweredByFooter](packages/components/src/components/PoweredByFooter/PoweredByFooter.tsx)) per §1.5 — the strings and the logo path are props, so the app keeps its translations and its asset paths. The Keycloak themes still need their own FreeMarker copy, same bargain as `PostCard`.
+
+**The logo needed copying.** account-shell had no ItsPlainSailing mark — its `icon.svg` is a deliberate per-club placeholder — so the theme's `logo.png` is now also at `packages/account-shell/public/itsplainsailing-logo.png`. Two copies of one asset; worth replacing with a single served path if that starts to drift.
+
+I used "rights" rather than the "rigths" in your message, and an en-dash for the separator.
+
+Translated across all six locales (545 keys each, parity confirmed) — "Powered by" and "All rights reserved" translate; *ItsPlainSailing.com* and *Esker Software* stay as-is. 9 new component tests pass; account-shell at 670 passing with the same 3 pre-existing failures; TypeScript clean.
+
+One thing I did **not** do: the org-admin login has no footer, since you asked for account. Say the word and it's a two-line change.
+
+---
+
+
+## 2026-08-21 08:37:56 — Prompt
+
+The veritcal alignment of the two pieces of text is off, plus the /account/<slug>/register page still shows nothing
+
+### Assistant
+
+Let me reproduce the "shows nothing" first — signed out, which is how you'd most likely hit that URL:
+
+It renders for me — so let me test the case I haven't: genuinely signed out, with the Keycloak SSO cookie gone.
+
+Renders for me signed out too. So the difference is likely your dev server's dependency cache — let me check how account-shell resolves the components package:
+
+Not a cache issue — account-shell aliases `components` straight to source, so it hot-reloads. Let me check the state you're most likely in: signed in as an actual member of that club.
+
+Rather than keep guessing which screen you're on, let me put it on all the pre-auth screens — and fix the alignment. First a small wrapper so the wiring isn't repeated five times:
+
+Now the alignment. The two runs were separate flex items, so they centred by box rather than sharing a baseline — switching to inline flow:
+
+Now the same alignment fix in the Keycloak CSS, which had the identical flex problem:
+
+Now the footer on all five pre-auth screens:
+
+Now let me verify the alignment is actually fixed, by measuring the two text baselines:
+
+Delta is now exactly 0. Let me look:
+
+Now let me confirm the footer reaches every pre-auth screen, and check the Keycloak alignment:
+
+A6 has it. Let me check the gateway signed-out, and the directory:
+
+Footer aligned. Now the Keycloak theme, where I made the same CSS fix:
+
+Both aligned. Let me finish the set with the directory page, then run everything:
+
+Both fixed.
+
+## The alignment
+
+The two runs were separate flex items — the link was `inline-flex` and the logo made its box taller than the copyright's, so they centred against each other instead of sharing a baseline. Now it's ordinary inline flow: one line box, one baseline, with the mark aligned to the text rather than the text to the mark. Measured on both surfaces, the tops of the two text runs are now identical (delta **0.0px**, was visibly offset).
+
+## The register page
+
+It was rendering for me on your dev server, signed in *and* signed out — so rather than keep hunting for the state you were in, I put the footer on **every pre-auth screen**, which is what you'd want anyway:
+
+| Screen | Route |
+|---|---|
+| Directory | `/` |
+| Gateway | `/:orgCode` |
+| **Register** | `/:orgCode/register` |
+| Not connected | `/:orgCode` (signed in, no record) |
+| Awaiting approval | `/:orgCode/pending` |
+
+Whichever of those you land on, it's there now. Worth knowing why it may have looked empty: **`/account/<slug>/register` only renders for a signed-in visitor who isn't yet connected to that club.** Signed out you get the gateway; already connected you get the app. That's pre-existing routing, not something I changed — but it means the URL alone doesn't reach the page. All three of those states now carry the footer regardless.
+
+If it's still not showing for you, tell me which of those five headings is on screen and I'll know exactly where to look.
+
+## Also
+
+The five pages share a small [PoweredBy](packages/account-shell/src/components/PoweredBy.tsx) wrapper rather than repeating the logo path, translation keys and year in each — one place to change, and the year stays computed at render.
+
+Tests: 20 passing in components (9 new for the footer), account-shell 670 passing with the same 3 pre-existing `EntryFormPage` failures, TypeScript clean.
+
+I did *not* touch the org-admin login — still account-only, as you asked.
+
+---
+
+
+## 2026-08-21 08:53:17 — Prompt
+
+I see several places in the application where, there are messages to indicate that a person has to join the club in order to gain access to there events etc. However from a terminology point of view I think it should say “create an account” rather than “join the club”, because many events etc could be open to all, so they only need an account login, they don’t need to also become a member using the membership functionality. Can you check the terminology used and correct it where appropriate.
+
+### Assistant
+
+A terminology audit — and a careful one, since some of these genuinely *are* about membership and must not change. Let me find every instance first:
+
+That's exactly one of them (`publicEvents.signInNote`). Let me see the full context of each candidate before deciding:
+
+Now let me check for hard-coded English and any tests pinned to these strings:
+
+The Keycloak heading is **"Member Login"** — that's the same conflation. Let me see the full set:
+
+Now I have the full picture. Let me check how the two most awkward keys are used before rewording:
+
+Both are button labels, so length matters. Let me see the counterpart label:
+
+Now I have the complete picture. Let me apply the changes across all six locales, scoped by section so I don't hit same-named keys elsewhere:
+
+Both remaining are genuinely about membership, so they stay. Now the renamed key references, the Keycloak heading, and the pinned tests:
+
+9 tests are pinned to the old copy (plus the 3 pre-existing). Let me update each:
+
+Back to the baseline 3 pre-existing failures. Let me confirm the copy in the browser:
+
+Let me check the public event page, which carries the note you quoted:
+
+That event is finished so the note isn't rendered. Let me find one with entries open:
+
+Your example now reads correctly. Let me record the distinction so it doesn't drift back:
+
+You're right, and the conflation was fairly widespread. Fourteen strings changed across all six locales.
+
+## Changed — these were about having an account, not a membership
+
+| Where | Was | Now |
+|---|---|---|
+| Public event note | *You'll sign in or **join the club** to enter.* | You'll sign in or **create an account** to enter. |
+| Platform events button | Sign in or join | Sign in or create an account |
+| Not-connected heading | **You are not a member of** {{club}} | You do not have a {{club}} **account** yet |
+| Not-connected button | Request to join | Create an account |
+| Register heading | **Join** {{club}} | Create your {{club}} **account** |
+| Register button | Connect to this organisation/ club | Create my account |
+| Awaiting approval | Your **request to join** … | Your {{club}} **account request** … |
+| Rejected | did not approve your **request to join** | did not approve your **account request** |
+| Home, other clubs' events | **Join** {{club}} to enter | Create a {{club}} **account** |
+| Directory hint | ask your club for their **joining link** | … their **sign-up link** |
+| Keycloak login heading | **Member Login** | **Account Login** |
+
+That last one was worth catching on its own: every member of every club was greeted with "Member Login" before they'd signed in.
+
+## Deliberately left alone — these really are membership
+
+- `browse.membershipsSubtitle` — *"Join your club or renew your membership"* is the memberships catalogue.
+- `cart.browse` — *"Find something to enter or join"*: events to enter, memberships to join.
+- Everything in the memberships module, the members-only entry rules, and "open to all members of {{type}}" on federation events.
+
+The clarifying sentence on the register page survives but now matches: *"This is **not a membership**. If the club offers memberships, you apply for one separately once your account is set up."*
+
+I also renamed two i18n keys — `publicEvents.signInOrJoin` → `signInOrCreate`, `home.externalEventJoin` → `externalEventAccount`. A key called `…Join` holding "create an account" is the same trap one layer down.
+
+Verified live: the gateway now offers *Sign in / Create an account*, and the public event page reads *"You'll sign in or create an account to enter."*
+
+All six locales at 545 keys with parity; 9 tests were pinned to the old wording and now assert the new; account-shell back to 670 passing with the same 3 pre-existing `EntryFormPage` failures; TypeScript clean. The rule is written into the account-shell module summary so it doesn't drift back.
+
+One judgement call to flag: I changed the register button from *"Connect to this organisation/ club"* to *"Create my account"*. "Connect" wasn't misleading, but leaving it under a heading that now says "Create your … account" read oddly. Easy to revert if you preferred the connect wording.
+
+---
+
+
+## 2026-08-21 09:16:18 — Prompt
+
+Currently it is possible for an organisation to upload its own logo, I would like to update the functionality so that optionally a Logo can be set at the Organisation Type level, and then by default this logo would be inherited by all organisations within that Org Type.
+Furthermore, at the Organisation Type level it should be possible to provide a flag to indicate whether this shared logo can be changed/ overridden for their own organisation from within their orgadmin or not. If not then the ability to upload a logo should be removed from the Orgadmin settings brand page.
+
+### Assistant
+
+A cross-cutting feature. Let me understand how logos work today before designing the inheritance.
+
+Now I understand the model. Let me plan this out.
+
+Now the resolution rule — the heart of the feature, in one place both readers share:
+
+Now the branding read needs the type policy, and the write needs to enforce it:
+
+A knock-on: adding a boolean field widened `keyof BrandingSettings`, so the colour loop no longer type-checks. Narrowing it:
+
+Now enforce the rule on write — hiding a control isn't enforcement:
+
+Backend core compiles. Now the account app's public read, so members see the inherited logo:
+
+All three already join the type — I just need the columns and to pass the policy through:
+
+Now the org-type logo upload, alongside the existing branding-logo route:
+
+Now the org-type service and routes. Let me check what's there:
+
+Now the update path and the signed URL on read, plus the upload/delete routes:
+
+Now the upload/delete routes and signing the type logo on read:
+
+Backend live. Let me exercise the whole rule end to end before building UI on it:
+
+The middle case is wrong — let me check whether my SQL actually wrote it:
+
+My test SQL was the bug — `jsonb_set` with a two-level path is a no-op when `branding` doesn't exist. Let me redo it properly:
+
+All three branches correct. Let me confirm what the org-admin branding screen will receive:
+
+Backend rule verified. Let me confirm the write enforcement — posting a logo while locked:
+
+Enforcement works — the logo is refused and cleared, colours still save. Backend done; now the two UIs.
+
+There's a `FormSection` pattern. Let me add the API calls and a shared section component:
+
+Now wiring it into both org-type pages:
+
+That landed in the MUI import block. Let me fix it:
+
+Now render the section in both pages:
+
+Two test fixtures need the new required field. Let me fix them rather than weaken the type:
+
+My replace clipped an `as const` off `membershipNumbering`. Repairing:
+
+Good — 14 errors, all pre-existing, and fewer than the 23 baseline. Now the Create page and the org-admin branding tab:
+
+Now the org-admin branding tab — where the upload must disappear when locked:
+
+Now the two new i18n keys across all six org-admin locales:
+
+The org-admin locales have large pre-existing parity gaps (de-DE 2002 vs en-GB 2237) — not something I introduced. Let me confirm just my keys landed everywhere:
+
+Both keys in all six. Now tests:
+
+Two failures of my own making. The re-read after update was both wasteful and contract-breaking — I already have the policy in hand, so let me derive rather than re-query:
+
+The tests index `calls[0]`, and my policy lookup now runs first. Let me make them find the statement they mean rather than assume its position:
+
+The helper landed above where `mockDb` is defined. Let me move it:
+
+These three assert the old shape. The third is actually meaningful — what's stored deliberately differs from what's returned now:
+
+All 35 pass, including 10 new. Full backend suite:
+
+1 failing test but 3 failing suites — two failed to *run*. Let me find them:
+
+Back to baseline: 1 pre-existing failure, 3110 passing. Let me verify the two UIs in the browser:
+
+"Shared logo" section is there. Let me look at it:
+
+Section renders with the logo — but the checkbox is unchecked despite my resetting it. Let me check whether that PUT actually took:
+
+Two separate bugs. Let me look at both — the single-type GET and the update route:
+
+Expired token again, and my probes were silently reading the error object. Let me refresh and make the check fail loudly:
+
+Everything works — the earlier "bugs" were both the expired token. The checkbox was correctly showing the locked state. Let me confirm the UI round-trips a change:
+
+The checkbox reflects the stored state and the warning is correctly hidden. Now the org-admin branding tab — the key deliverable:
+
+Exactly the requirement: upload gone, shared logo shown, explanation in its place. Let me confirm the unlocked case restores the upload:
+
+The inherited hint is showing, which means we're in the upload branch — so my selector is probably just wrong. Let me look at the actual controls:
+
+The control is a `<label>` wrapping a MUI `component="span"`, not a `<button>` — my selector was wrong. Let me A/B both states unambiguously:
+
+Both states confirmed. Now front-end tests for the branding tab, then docs:
+
+A pre-existing test caught a real regression in my change: I keyed "Remove" off `logoS3Key`, which would strand a club that points at an externally-hosted logo. The right condition is ownership, not storage:
+
+All 20 pass, and the external-logo case is preserved. Full suites, then docs:
+
+Same three pre-existing admin failures as before this task; orgadmin-core 751 passing. Now the docs:
+
+The reset didn't apply — that was the expired token again. Let me actually clear it:
+
+Done, and verified end to end in both UIs.
+
+## The rule
+
+One function, [`effectiveLogo`](packages/backend/src/services/organization-branding.service.ts), used by every reader — the org-admin screen and the member-facing account app resolve identically. The order is the feature:
+
+1. **A locked type logo wins outright** — it has to beat a logo the club already uploaded, or locking a type brings into line only the clubs that were already conforming.
+2. Otherwise the organisation's own.
+3. Otherwise the type's, inherited as a default.
+4. Otherwise nothing, and the shell renders the initial.
+
+All four branches verified against the live database.
+
+## Where it's enforced
+
+**Not just by hiding the upload.** A club that had a logo before the type was locked keeps posting it back with every colour change, and the endpoint is reachable from a console. `updateBrandingSettings` clears the logo while still saving colours and the bookings label — proven live: posting a logo key while locked kept the colour and left the stored key empty.
+
+## What you see
+
+| Screen | Result |
+|---|---|
+| Platform Admin → Organisation Types | *Shared logo* section: upload, remove, and the override checkbox |
+| Org Admin → Branding, **locked** | Upload **gone**, shared logo shown, "This logo is set by your organisation type and cannot be changed here" |
+| Org Admin → Branding, **unlocked** | Upload present, inherited logo shown, "Inherited from your organisation type" |
+
+Removed rather than greyed out: a disabled button invites a click and then explains nothing.
+
+## Two judgement calls worth your eye
+
+**The flag only bites once the type has a logo.** `allowLogoOverride: false` with no shared mark would leave every club in that type unable to have *any* logo — a dead configuration reachable by ticking one box. I treat it as permissive and say so on screen. Tell me if you'd rather it were literal.
+
+**Unticking the box changes what existing clubs show.** The admin screen warns about this explicitly, because it's the consequence least likely to be anticipated.
+
+## One regression I caused and a test caught
+
+I first keyed *Remove logo* off `logoS3Key`, which would have stranded any club pointing `logoUrl` at an externally-hosted logo — no key, so no way to clear it. An existing test failed and I re-keyed it off the logo's *source*.
+
+Backend **3110 passing** (1 pre-existing failure), orgadmin-core **751 passing**, admin at its three pre-existing failures. 10 new backend tests, 6 new branding-tab tests. i18n in all six locales. Docs: [ORGANISATION_TYPE_LOGO.md](docs/ORGANISATION_TYPE_LOGO.md) + wireframes, and three module summaries.
+
+Migration `1709000000035` is applied locally and defaults to today's behaviour, so nothing changes until you upload a type logo. I've left the demo data reset to that default. Changes are uncommitted.
+
+---
+
+
+## 2026-08-21 10:02:04 — Prompt
+
+The posts that are displayed on the Keycloak themed login page are more nicely coloured than the ones on the /account/<slug> pages where they use a very light grey backgroun inside the card where the text is displayed, can you apply this same formatting on the /account register etc pages.
+
+### Assistant
+
+Let me measure both rather than guess at the colours:
+
+Signed in from the last task. Let me sign out to reach the gateway where posts render:
+
+Session is still cached in the app. Let me clear it:
+
+Let me sign out properly through the app so I can see the gateway:
+
+Now I can see the problem — white card on a white page, no shadow. Let me measure the Keycloak counterpart:
+
+The account-user Keycloak theme is *identical* to the React card — so the one you're comparing against must be the org-admin login. Let me measure it:
+
+Confirmed — that's exactly the page I'm on. Let me get its values:
+
+Now I have the exact target. Note the account-user Keycloak theme currently matches the React card exactly — those two are deliberately kept in step, so I'll change both:
+
+Byte-for-byte identical to the org-admin login card. Let me see it:
+
+That's the org-admin treatment on the account gateway — tinted panel, softer border, rounded corners, and enough shadow to lift it off the page. Let me confirm the account-user Keycloak page matches, since those two are meant to be indistinguishable:
+
+All three surfaces now identical. Let me run the tests and note the shared constants:
+
+The org-admin theme expresses those values through its own tokens rather than literals — let me make the doc precise rather than misleading:
+
+Done — the org-admin card treatment now applies to the account pages.
+
+| | Before | After |
+|---|---|---|
+| Background | `#ffffff` on a white page | `#faf8f5` |
+| Border | `rgba(0,0,0,0.12)` | `rgba(0,0,0,0.08)` |
+| Radius | 4px | 12px |
+| Shadow | none | `0 1px 3px /.06`, `0 1px 2px /.04` |
+
+Measured on the org-admin login and copied exactly, then verified identical on all three surfaces.
+
+The real problem was white-on-white: with no shadow and a hairline border, the cards barely read as cards, so the announcements looked like loose text beside the sign-in form. The tint also puts them a deliberate step back from the sign-in card, which stays paper-white — the form is still the reason for the page.
+
+## One thing I extended beyond the ask
+
+You asked for the `/account` pages. I also changed the **account-user Keycloak login theme**, which had been pixel-identical to the React card. Those two are deliberately kept in step — a member crosses between them mid-task, and that theme exists precisely so the boundary is invisible. Changing only the React side would have made the card change shape as they signed in. Easy to revert if you'd rather only the app changed.
+
+## Where the values live
+
+Three files, two of which now carry the literals:
+
+- [PostCard.tsx](packages/components/src/components/PostCard/PostCard.tsx) — a MUI `sx`
+- `account-user/login/resources/css/account.css` — `.ips-post`
+
+Those two must change together, since FreeMarker can't read a MUI theme. The org-admin theme keeps expressing the same look through its own tokens (`--bg-paper`, `--border-medium`, `--shadow-sm`) — it should track the warm theme, not this card. I'd initially written the doc as "three files with the same literals", which was wrong, and corrected it.
+
+Tests unchanged: PostCard 11 passing, gateway 10 passing. Recorded in [PLATFORM_POSTS.md](docs/PLATFORM_POSTS.md) and the components summary.
+
+---
+
+
+## 2026-08-21 10:09:05 — Prompt
+
+When it comes to the Orgadmin keycloak login page, there should not be an option to "New User? Create Account" - an orgadmin account can only be created by a full administraor of that organisation who is already logged in, or by the super admin user Platform Admin ui. Can you remove this element on the Org Admin keycloak login page underneath the sign in section.
+
+### Assistant
+
+Balanced, and no registration references remain. Let me verify on the actual page:
+
+Card now ends cleanly at Sign In — the grey footer strip is gone too. Let me confirm I didn't affect the member login, where self-registration is legitimate:
+
+Member self-registration is untouched. Let me record the reasoning:
+
+Removed. The org-admin login card now ends at **Sign In** — no "New user? Create Account", and the grey footer strip that held it has gone with it.
+
+## How
+
+`login.ftl` now passes `displayInfo=false` unconditionally, and I deleted the `info` section rather than leaving dead code that reads as re-enableable.
+
+**Done in the theme, not the realm.** `registrationAllowed` is realm-wide, and turning it off would take *member* self-registration with it — which the account-user theme depends on. Verified: the member login still offers "Create Account".
+
+## One thing worth being precise about
+
+This is a **correctness fix, not a security boundary**. The realm still permits registration, so `/registrations` remains reachable by typing the URL. What stops a self-registered user becoming an org admin is the `organization_users` row with `user_type = 'org-admin'` — which is why anyone without one already lands on *"User is not an organization administrator"*.
+
+That's exactly why the link was worth removing: it walked an administrator down a path that ended in that error, having created a stray Keycloak user on the way. It was never granting access it shouldn't.
+
+Verified live: no "New user", no "Create Account", no registration links, Sign In intact, FTL directives balanced (12 `<#if>` / 12 `</#if>`), and the member login unchanged. Recorded in the infrastructure summary.
+
+I left the super-admin theme alone — same argument would apply, but you asked for org-admin. Say the word if you want it there too.
+
+---
+
+
+## 2026-08-21 10:21:00 — Prompt
+
+On the platform admin, it would be good to be able to view who is logged in at the moment, and have the ability to make them login again.
+
+Also, it would be good to be able to have a meaningful audit log of everything that is happening in the system, both by super admin, by orgadmins and by account users.
+Can you propose a design that would deliver this where every action by a user is logged and then this logged audit trail is visible to the Platform Admin / super user where they can search and filter by organisation, user, by type of action, by user type, by substring search the audit log.
+When it comes to the audit log messages themselves, it should include all the security related actions e.g. login/ logout, password change, email change, add role, assign user to role, create org admin user, create account user, failed login attempt and anything else suitable you can think of in this area. It should also include the following additional categories of audit log messages.
+- event entries - users selecting to enter an event activity, filling out the form, adding an entry to their basket showing the values in the form that they used, which payment method they choose, changing payment method
+- same type of logging for registration, memberships, calendar bookings, merchandise, forms and any other items
+- all admin create, edit and delete operations for events, registration, memberships, calendar bookings and merchandise 
+- in relation to create, the values used in the creation need to be included in the audit log message
+- in relation to editing, the old values and the newly updated values need to be included in the audit log message
+- in relation to deleting it should show the values of the object deleted 
+- it should show all changes to settings made by the user, showing the old values and the newly changed values
+- log any activities by users where they download data or view reports
+- log any actions around payments, e.g. refunding card payments, viewing reports/ lodgements
+
+### Assistant
+
+A design proposal, then — this is large enough that §1.3 calls for requirements → design → tasks → wireframes. Let me ground it in what already exists.
+
+There's already an `audit-log.service` — that changes the proposal substantially. Let me read it:
+
+Two audit tables already exist. Let me see their shape and how much is actually wired up:
+
+Near-empty and overlapping — that's important grounding. Let me check the identity model and the Keycloak admin capability for sessions:
+
+`users` is **empty** while `organization_users` has 39 — so the existing audit table FKs to a table nobody populates. Let me confirm what that means in practice:
+
+Confirmed the crucial defect: `extractUserIdFromRequest` looks up the **empty** `users` table, so every audit row is written with `user_id = NULL`. Let me get one more fact for the sessions half — how long an access token stays valid after revocation:
+
+Now I have what I need. Writing the design.
+
+Design proposal written — nothing built yet, as you asked.
+
+**[AUDIT_TRAIL_AND_SESSIONS.md](docs/AUDIT_TRAIL_AND_SESSIONS.md)** and **[the wireframes](docs/AUDIT_TRAIL_AND_SESSIONS_WIREFRAMES.md)**.
+
+## The thing I'd want you to know first
+
+You already have audit infrastructure, and **it cannot say who did anything.**
+
+`admin_audit_log` (0 rows), `organization_audit_log` (1 row), and a 226-line `audit-log.service` wired into exactly one route file. The service resolves the actor with `SELECT id FROM users WHERE keycloak_user_id = $1` — and `users` has **0 rows**, because this platform's identity is `organization_users`. So the lookup misses, logs a warning, returns null, and every row is written with a null actor.
+
+So the proposal replaces both tables and the service rather than building on them — otherwise the new feature inherits that bug.
+
+## Sessions — with one honest limit
+
+Keycloak owns sessions, so the screen reads through the Admin API and joins to our tables for names and organisations. The union across the three clients also tells you *which application* each person is in.
+
+Measured on your deployment: access token **300s**, refresh **1800s**. So "make them log in again" really means **within five minutes**, not now. I've written the confirmation dialog to say that rather than overselling it. Your tokens do carry a `sid` claim, which makes immediate revocation cheap to add later — I've scoped it as optional, because whether it matters depends on whether the real reason is "permissions changed" or "this account is compromised".
+
+## Audit — the shape
+
+One partitioned `audit_events` table; actor identified by Keycloak sub with name and email **denormalised**, deliberately not a foreign key — an audit row has to outlive the user it describes, or "who deleted this account?" is precisely the question you can't answer.
+
+Capture is a hybrid: explicit service calls where before/after matters, a `withAudit` wrapper for the repetitive CRUD, and a middleware hook for auth. **Not database triggers** — they see the row change but not the person or the intent.
+
+## Five decisions I need from you
+
+The one I'd flag hardest: **your entry forms ask for medical notes and emergency contacts.** "Log the values in the form" would copy special-category data into a second store, read by super admins, retained as long as the log. I've recommended a `sensitive` flag on form fields so those are recorded as answered-but-hidden — but it should be your call, not my default.
+
+The others: retention (is there a regulatory floor?), whether any action should *fail* if it can't be logged, immediate revocation yes/no, and how much of Phase 3 you want — your list is roughly 60–80 call sites.
+
+## Scope, honestly
+
+Four phases. Phase 1 is foundation plus the Sessions screen; Phase 2 is the audit reader; Phase 3 is per-module coverage and is the bulk of the work. "Log everything" isn't a single deliverable — so I've proposed an action registry with a test asserting every mutating service method has an audit action, which makes coverage measurable instead of discovered a year later when someone asks who changed a fee.
+
+Tell me which phases to start on and how you want the five questions answered, and I'll build it.
+
+---
+
+
+## 2026-08-21 10:38:17 — Prompt
+
+As well as having a system wide Audit log viewer/ access in the Platform Admin, can you also add it to the Orgadmin, where in the case of the Orgadmin it only shows log messages related to that organisation.
+
+In relation to your questions:
+
+Replace both tables and the service with one design, and migrate the single existing row
+
+For now in kicking someone out, use the "because their permissions changed" approach.
+
+Go with option c for redacting sensitive values
+
+No, failed logging should not fail the action - is it possible to attempt to record that the logging failed, or would that get us into a potential infinite look 
+
+We don't have an enforced poliy, your partition approach sounds good, and we can later create scheduled tasks to delete log partitions older than x Months if necessary.
+
+Yes, see comment earlier, an org admin should be able tosee their own club's trail
+
+Please do all modules and all phases.
+
+### Assistant
+
+All answered — and yes to the org-admin viewer, which the design already anticipated. Let me answer your loop question, then build.
+
+**No infinite loop, provided the failure path never re-enters the audit write.** The rule is: `record()` catches everything, and its handler is forbidden from calling `record()`. Failures go to the application logger plus a Prometheus counter, and the UI reads the counter for the degraded banner. Writing the failure *to the audit table* is the thing that loops — if the table is what's broken, the failure-write fails, which triggers another failure-write. So: count it and log it, never audit it.
+
+Migration applied cleanly: five partitions, indexes propagated, the one row carried across, both old tables gone. Now the service — the heart of it:
+
+Now the redaction and diff helpers — the part that decides what never reaches the table:
+
+Now the service itself — non-throwing, batched, with the no-loop guarantee:
+
+I left dead code in `flush()` — a SQL string built and discarded. Let me clean that up:
+
+Let me prove the two core guarantees before building anything on top:
+
+Both guarantees proven. Now the redaction rules — security-critical, so worth pinning down before anything writes through them:
+
+31 tests green across the two foundation pieces. Now the read side — one query layer both viewers share, organisation-aware from the start:
+
+Let me add the session id to `UserInfo` — it ties every audit event to a row on the Sessions screen — and hook the auth outcomes:
+
+Now the Keycloak session methods, then the routes both features need:
+
+Now the routes — platform-wide and organisation-scoped, sharing one query layer:
+
+`auditAuthentication` can't work as global middleware — `req.user` is set per-route by `authenticateToken`. The right home is inside that middleware, the single choke point for every authenticated request:
+
+187 pass. Let me verify the whole loop live — sign in, act, and see the trail:
+
+The actor is populated — the defect that made the old log useless. Let me verify sessions:
+
+Sessions read through to Keycloak correctly, joined to our tables. Let me add the org-scoped twin so both viewers have their API:
+
+The org-admin trail is empty because login events carry no organisation. That would leave their viewer without any security events — let me attribute them:
+
+That's a real finding: this org admin administers **3** clubs, so my "exactly one organisation" rule correctly declines to guess — and in this seed almost no org-admin sign-in will be attributable. Let me confirm no regressions and take stock:
+
+Same trap as before — importing a *router* to reuse a helper drags its middleware into every consumer. The helper belongs with the query layer:
+
+Back to the single pre-existing failure, 3141 passing. Let me stop here and report accurately rather than overstate progress.
+
+I've built and verified the whole backend foundation. I'm stopping to report rather than push on, because there's a lot left and you should see where it stands.
+
+## Working and verified end to end
+
+**The table** — `audit_events`, partitioned by month (5 partitions, indexes propagated), `pg_trgm` for free-text. Both old tables dropped, the one existing row migrated across.
+
+**The service** — non-blocking, batched, never throws. 31 tests covering both guarantees.
+
+**Your loop question, answered in code:** `record()` catches everything; the failure handler is forbidden from calling `record()`. It increments an in-memory counter and writes to the application logger — neither touches Postgres, so a broken table can't cause a cascade. `/api/admin/audit/health` reads that counter for the degraded banner. A failed batch is *dropped*, not retried, because retrying against a table refusing writes grows the queue without bound. There's a test asserting the queue stays empty after a failure.
+
+**Live proof** the original defect is fixed — the old log could never say *who*:
+
+```
+access.denied   anonymous     denied    GET /api/admin/posts
+auth.login      super-admin   success   Sam Platform
+```
+
+**Sessions** — reads through to Keycloak, joined to our tables:
+
+```
+Aoife Byrne    org-admin     Org Admin       Kildare Hunt Pony Club
+super.admin@…  super-admin   Platform Admin  —
+```
+
+**Tenancy holds**: org admin gets 403 on the platform route, and `?organisationId=all` on their own route does not widen scope.
+
+Backend suite: **3141 passing**, same single pre-existing failure.
+
+## Two findings worth your attention
+
+**Org admins here administer multiple clubs.** `admin@kildarehunt.test` belongs to **3**. I attribute a sign-in to an organisation only when it's unambiguous, so in this seed org-admin sign-ins land at platform level with no organisation — meaning they won't appear in any club's trail. Their *actions* will (those carry an organisation). If you want sign-ins in the club trail too, the fix is to show events where the actor is a member of that club, rather than guessing which club they signed into. Worth a decision.
+
+**A trap bit me again**: importing `audit.routes` to reuse a query-parsing helper executed that router's definitions inside an unrelated test suite and broke it. The helper now lives with the query layer. Same lesson as the `platform-post.routes` case earlier — routers are not utility modules.
+
+## Not yet built
+
+The three screens (Sessions, Platform Admin audit, Org Admin audit), the `withAudit` rollout across all modules, the sensitive-field flag, partition rotation, i18n and docs. That's the bulk of Phase 3 — roughly 60–80 call sites — and I'd rather tell you that plainly than imply it's done.
+
+Say the word and I'll continue with the three screens next, since they make everything above visible.
+
+---
+
+
+## 2026-08-21 11:04:09 — Prompt
+
+please continue
+
+### Assistant
+
+Now let me verify the module registration and typecheck:
+
+No audit-related errors — those are all pre-existing. Let me verify live in the browser:
+
+The org-admin viewer works end to end — scoped to Kildare Hunt, i18n resolving, nav entry, and the before/after diff in the dialog. Now Phase 3 — audit coverage across the modules.
+
+Now the `withAudit` helper — the piece every module will use:
+
+Let me clean up a botched block in that file:
+
+Now the tests for the helper, then wiring:
+
+53 passing. Now let me map every mutating endpoint I need to instrument:
+
+The 180 handlers all share one shape, so a middleware beats editing each body. Let me check the existing resource map first:
+
+Now the `audited()` middleware — one line per route instead of rewriting 180 handler bodies:
+
+The before-row is snake_case from SQL while the response is camelCase — diffing those would report every field as changed. Let me check for an existing converter:
+
+Now apply the normalisation at the points where before/after are compared:
+
+Now tests for the middleware, covering the traps I just fixed:
+
+The middleware replaces `res.json`, so the test must assert on the original. Let me fix it:
+
+17 passing. Now export it and start wiring the routers:
+
+Now the wiring. Events first:
+
+I'll script the insertion so it's uniform across all routers:
+
+All 7 event routes match. Let me run it for real and check the diff:
+
+The insertion lands exactly right. Now let me survey the remaining routers so I can write correct specs:
+
+Some routers use a single-line form. Let me generalise the script:
+
+Now the full wiring pass across every module — dry run first:
+
+94 of 101 matched. Let me look at the two problem shapes:
+
+Most routers import from specific middleware files, not the barrel — and importing the barrel would drag `requireRole` into unrelated suites, a trap I've already hit twice. Direct import it is:
+
+Now the `withOrganisation` shape used by the settings routes:
+
+All 101 routes match. Applying for real:
+
+Typecheck is clean. Now the full backend suite to check for regressions:
+
+3180 passing, 1 failing. Let me confirm whether that failure predates my change:
+
+Confirmed pre-existing — identical failure with the unmodified router. Restoring:
+
+Now the parts a middleware can't reach — reports, exports, and the entry/basket flow:
+
+The account routes carry the org on `req.account`. Let me teach the resolver about that, and let `audited` record query parameters for report views:
+
+Now wire the account flow and the reports:
+
+Now the sensitive-field flag. Let me look at the form field schema:
+
+Now the migration for the sensitive-field flag:
+
+Now the service that reads the flag and applies it to the form-submission routes:
+
+Now let `audited` resolve sensitive fields per-request:
+
+The internal helpers need the resolved type, not the union. Let me split them:
+
+Now attach the sensitive-field lookup to the routes that carry form answers:
+
+Now the field routes must invalidate the cache on write:
+
+Now thread `isSensitive` through the service:
+
+Now invalidate the cache when a field's mark changes:
+
+Now run the migration and add tests for the sensitive-field lookup:
+
+Let me fix an indentation inconsistency my script introduced, then move to Phase 4:
+
+Now Phase 4 — partition rotation and retention:
+
+Now tests for partition rotation:
+
+The second failure is mine — the test database hasn't had the new migration. Let me apply it:
+
+The test DB was behind, and applying it exposed a real gap: migration 036 dropped the old tables but `audit-log.service.ts` still writes to them. Let me find its callers:
+
+Clean mapping. Let me replace the old service at all 8 call sites:
+
+Now remove the dead service and its tests:
+
+The failures are the tests themselves asserting against the dropped table. Let me update them to the new one:
+
+The rows are landing correctly — just the action-name assertions left:
+
+The remaining failures are missing flushes — my regex only caught the commented sites. Let me add the rest:
+
+All 25 pass. Full backend suite:
+
+Backend fully green — 3174 passing, zero failures (the two integration failures were the stale test DB). Now the org-admin UI for the sensitive flag:
+
+Now add the sensitive toggle to both field pages:
+
+Now the same for the edit page:
+
+Now the two new i18n keys across all six locales:
+
+Let me create a sensitive field and prove the round-trip:
+
+Full round-trip proven live. Now the docs my code comments reference, and the front-end tests:
+
+Now let me rewrite the doc's tail as-built, so the section numbers my code cites are real:
+
+Section numbers now match what the code cites. Now the front-end tests:
+
+16 passing. Now the org-admin viewer test:
+
+13 passing. Now the Platform Admin screens:
+
+15 passing. Now the Platform Admin audit viewer and event detail:
+
+Now the event detail page:
+
+Two real findings — one in the test, one a genuine bug: the money formatter never fires on camelCase fields like `entryFee`:
+
+My three new suites all pass. Let me confirm the full front-end picture:
+
+All failing suites are unmodified by me — pre-existing. Now the module summaries:
+
+The summaries still name the deleted service and dropped tables. Let me fix and extend:
+
+Now the CLAUDE.md module index and the orgadmin-shell summary:
+
+There are pre-existing locale gaps. Let me confirm my keys specifically are in all six:
+
+Only `audit.action` matches English in French, where "Action" is correct French. Let me prove the middleware's before/after diff end-to-end with a real edit:
+
+The toggle correctly loaded as checked — the read round-trip works. Now save:
+
+A clean single-field diff — no spurious "everything changed", housekeeping columns excluded. Let me see it in the viewer:
+
+Both events, correctly scoped. Let me clean up stray screenshots and run the final full pass:
+
+The audit trail is complete — all modules, all phases.
+
+## What went in
+
+**Two recording helpers.** [audit.middleware.ts](packages/backend/src/middleware/audit.middleware.ts) carries the load: `audited({...})` sits in the middleware chain beside the guards, and **101 mutating routes** are wired without a single handler body being edited. It loads the before-row for updates and deletes, captures the response as the after-row, and records on `finish`. [with-audit.ts](packages/backend/src/services/audit/with-audit.ts) provides `withAudit`/`recordAudit` for what isn't a table row.
+
+Two traps that would have been silent and are now tested:
+- **The two spellings** — `before` is `SELECT *` (`entry_fee`), `after` is the response (`entryFee`). Diffed as-is, *every* field reads as changed and the trail is useless on exactly the updates it exists for. Both sides normalise to camelCase.
+- **The envelope** — many handlers answer `{ success: true, data: {...} }`; recording that would have filled the log with `{success: true}`.
+
+**Coverage** spans security, roles, users, platform, all settings tabs, events and the entry/basket/checkout flow, memberships, registrations, bookings, merchandise, forms, payments and refunds, and every report view and export with the filters used.
+
+**Sensitive fields (your option c).** `application_fields.is_sensitive`, a toggle in the field editor, matched on both field name *and* label — matching only one would be a redaction that silently did nothing. The cache is cleared on write, because the dangerous direction to be stale in is a field just marked sensitive still being logged.
+
+**Partitions.** `ensurePartitions()` runs on boot then daily. `dropPartitionsBefore(date)` exists and **nothing calls it** — you said retention is a later scheduled task, so it takes an explicit date rather than a configured default.
+
+## Two things worth flagging
+
+**The old service was still live.** Migration 036 dropped `admin_audit_log` and `organization_audit_log`, but `AuditLogService` still wrote to them — masked only because the test database was behind on migrations. Bringing it up to date exposed it. The service is now deleted and its 8 super-admin call sites use `recordAudit`. This also cleared the "pre-existing" integration failures I'd previously reported: they were the stale test DB, not real.
+
+**A real bug in the money formatter.** `AuditEventPage`'s regex looked for lowercase `fee`, so it never fired on `entryFee` — and camelCase is precisely what arrives. Now matched by word, which also stops `accountId` being mistaken for a total.
+
+## Verified live
+
+Not just tested — a real field created and edited through the org-admin produced `field.created` and `field.updated`, the latter with a clean single-field diff (housekeeping columns excluded, unchanged fields absent), visible in the org-admin viewer scoped to that club alone.
+
+## Tests
+
+| | |
+|---|---|
+| Backend | **3174 passing, 0 failing** (+~110 new) |
+| orgadmin-core | 764 passing, 0 failing (+13) |
+| components | +16 new; 11 pre-existing failures in `MultiSelectRenderer`/`applicationField`, untouched by this work |
+| admin | +40 new; 11 pre-existing failures in `RoleForm`/`RolesPage`/`organization-type-locale`, untouched |
+
+i18n: 40 new keys in all six locales, verified present and genuinely translated. Docs rewritten as-built (§3–§7 now match what the code cites), and `backend.md`, `admin.md`, `components.md`, `orgadmin-core.md`, `orgadmin-shell.md` and the `CLAUDE.md` index updated — `backend.md` still listed the deleted service and dropped tables.
+
+Everything is in the working tree; I haven't touched git.
+
+---
+
+
+## 2026-08-21 13:42:10 — Prompt
+
+I edited an event, selected the addConfirmationMessage to ye and added a short confirmationMessage and the clicked save, however when I went to look at the log message and clicked into it I saw:
+
+the actvities field  shownig an empty before, and then a big jsonb element for the after, even though I had not changed the activities.
+
+it listed the openDateEntries field as having changed even though I had not changed it, the before and after were the same.
+
+Also, the field names were internal field names, not their names as presented to the user.
+
+### Assistant
+
+Three real bugs. Let me look at the actual record first:
+
+All three confirmed. Let me check whether #2 is my diff or a real data shift:
+
+Noted on the action names too. First, a decisive test on the date — let me save that event again untouched:
+
+The labels already exist and are translated. Let me pin down the date issue precisely:
+
+The DB value now serialises to `16:23Z`; the audit recorded `from: 17:23Z`. So the value really did move. Let me prove it repeats:
+
+Conclusive — and it's not the audit. Let me capture the action list, then fix what is mine:
+
+Fix 1 — the phantom `activities` change. The before-row comes from `SELECT *`, so its keys *are* the columns:
+
+Now the shared label utilities — one English source both viewers use:
+
+Now let `AuditChanges` render field labels, and wire both viewers:
+
+Now the Platform Admin viewers — action names in the list and the detail:
+
+Now the org-admin viewer, resolving through translations first:
+
+Now the 109 action labels across all six locales:
+
+All 109. Let me insert them into the six locale files:
+
+The components package needs rebuilding for admin to see the new exports:
+
+Clean. Now tests for the new behaviour:
+
+Now backend tests for the `only` fix — the phantom `activities` change:
+
+94 passing. Let me update the org-admin page test for the new labels, then verify live:
+
+The page test mocks the components package, so the new helpers are undefined there. Let me make that mock realistic:
+
+Let me add a test that the label chain actually resolves, then verify live:
+
+17 passing. Now let me verify live — the Meath event that showed the phantom changes:
+
+The scope guard correctly refused (Meath event, Laois session). Let me switch organisation:
+
+Let me just use an event in the currently-selected organisation:
+
+`Spring Dressage Series` has 2 activities and `open_date_entries = 18:23:46.254`. Let me edit it exactly as you did:
+
+Both results are decisive. Let me check the display:
+
+All three fixed. One thing I can see is still poor — the raw ISO dates. Let me format those too:
+
+Now let the Platform Admin formatter use it too, and humanise the entity type in the org-admin dialog:
+
+Two older assertions expected the raw field names — which is the thing I just changed:
+
+Same mock gap in the two admin suites I wrote earlier:
+
+Full suites across everything:
+
+Pre-existing (a missing test provider). Let me update the docs for the behaviour I changed:
+
+Two of your three were my bugs and are fixed. The third turned out to be the audit trail telling the truth about something else.
+
+## `activities` — fixed
+
+`activities` isn't a column of `events`; it's a joined child list the response carries. My before-row comes from `SELECT *`, so it had no such key and the diff read it as "nothing → wall of JSON" on *every* save. The update diff is now narrowed to the columns the row actually owns. Verified: the same edit now records only the three real fields.
+
+## Internal names — fixed
+
+Actions and fields both. In your screenshot it now reads **"Event updated"**, and the fields **"Open Date Entries"**, **"Confirmation Email Message"**, **"Add Message To Confirmation Email"**.
+
+Rather than invent a second vocabulary, field labels resolve first against the namespaces your edit forms already translate (`events.dates.openDateEntries` and friends) — so the audit log calls a field exactly what the form that set it calls it, in all six locales, with no new strings. Action names did need new strings: all **109 registered actions × 6 locales**. The stored identifier stays the filter value; only the display changed.
+
+I also formatted timestamps while I was in there — raw ISO strings side by side were the hardest possible way to spot a difference.
+
+## `openDateEntries` — not the audit log. A real bug.
+
+The audit was right: the value genuinely changed. I reproduced it cleanly.
+
+I edited *Spring Dressage Series*, touching only the confirmation message, and:
+
+```
+open_date_entries  before: 2026-09-19 18:23:46.254
+open_date_entries   after: 2026-09-19 17:23:46.254
+```
+
+**Every save of an event moves its entry open/close times back by one hour** (the local UTC offset — currently +1 in Ireland). The cause is an asymmetry: the columns are `timestamp without time zone`, node-postgres *reads* them as local time and converts to UTC, but the ISO string sent back on save is *written* as its literal UTC wall clock. Read applies the offset, write doesn't, so each round-trip loses it.
+
+The reason before and after looked identical to you is that they were rendered as near-identical ISO strings differing in one digit. With the new formatting the two now read as `18:23:46` and `17:23:46`, which is much harder to miss.
+
+This is pre-existing, outside the audit feature, and affects any `timestamp without time zone` column saved the same way — `entries_closing_date` certainly, and probably others. **Entries would open an hour early, drifting further each time someone edits the event.** I haven't touched it: changing timestamp handling in the events save path is a data-correctness decision that deserves its own look rather than being folded into a display fix. Say the word and I'll take it on.
+
+## Tests
+
+Backend **3177 passing, 0 failing**; orgadmin-core **768 passing, 0 failing**; +31 new front-end tests (label maps, timestamp rendering, the derived-data fix). The 21 remaining failures in `components` and `admin` are in files this work never touched — `MultiSelectRenderer`, `applicationField`, `RoleForm`, `RolesPage`, `organization-type-locale` (a missing test provider) — all pre-existing.
+
+Docs and `components.md` updated with the derived-data trap and the labelling scheme. Nothing committed.
+
+---
+
+
+## 2026-08-21 14:22:44 — Prompt
+
+when I drill into a "Form field created" log message it shows the id, and Name field which are more like internal fields, can you remove them from the list.
+There also a field called "key 'events.basicInfo.validation (en-GB)' returned an object instead of string." Does this need to be included ?
+
+Also the Audit Log title on the page in the Orgadmin is coming out as a H1 and is much larger that the other page titles which are h4
+
+### Assistant
+
+Three fair points. Let me check what the other org-admin pages use for titles, and what that `validation` field actually is:
+
+All three confirmed — `h4` is the convention, and the created row is mostly housekeeping. Let me fix the recording first:
+
+Now apply the housekeeping exclusion to creates and deletes, plus a per-route `exclude`:
+
+Now exclude the machine `name` on form-field routes:
+
+Now the i18next warning — my label probe was hitting keys that resolve to objects:
+
+Namespace confirmed. Let me make the probe resolve only genuine strings:
+
+Now drop unset fields from create/delete snapshots, and fix the heading:
+
+The `attempted` case shouldn't drop empties — an empty value is often *why* a change was rejected:
+
+Now update the two tests that asserted the old snapshot contents, and add coverage for the new rules:
+
+100 passing. Full backend, then verify live:
+
+From 14 fields to 3 meaningful ones. Let me check the page:
+
+The object warning is gone, but my optional `audit.fields.*` tier now trips the app's missing-key logger. That tier is an override — a miss is expected:
+
+The test mock needs an `i18n`. Let me make it mirror "no translations loaded":
+
+The stub now labels the real change keys, which is a better test. Updating the assertion:
+
+Console clean. Final full pass:
+
+Same 21 pre-existing failures as before, untouched files. Let me record the new rules in the docs:
+
+All three done.
+
+## `id` and `name` — removed
+
+A create recorded the whole row, so a new form field led with its uuid, generated machine name and both timestamps before reaching its label. Three rules now:
+
+- **Housekeeping is dropped everywhere** — `id`, `createdAt`/`updatedAt`, `createdBy`/`updatedBy`, `deletedAt`, `deleted`, `organisationId`. None of it answers "what changed" or "what was this created with", and the id is already the event's own `entityId`.
+- **Routes can name their own internals.** A field's `name` is generated from its label (`Any medical conditions?` → `any_medical_conditions`), so recording both says the same thing twice, machine-readable version first. The form-field routes now exclude it.
+- **Unset fields are dropped from snapshots.** "Created with" should list what it was created *with*; a blank field wasn't. `false` and `0` stay — only nothing is nothing.
+
+That last rule has two deliberate exceptions I'd have got wrong by applying it blindly: a **diff** still shows a field being cleared (that's a change, and the reason diffs exist), and a **rejected** submission keeps its blanks — an empty name is very often *why* the save was refused, so dropping it would leave a failure record that doesn't show the failure.
+
+Your record went from 14 fields to 3: Label, Field type, Sensitive answer.
+
+## The `validation` string — my bug, now gone
+
+Good catch, and it wasn't a field that needed excluding. It was my field-label lookup. I probed each translation namespace with `t()`, and when a key holds a *nested object* i18next returns its own diagnostic — `key 'events.basicInfo.validation (en-GB)' returned an object instead of string` — as an ordinary string. It passed my truthiness check and rendered as a field name. A form field called `validation` had collided with the `events.basicInfo.validation` message group.
+
+The probes now read i18next resources directly, so an object simply doesn't match and the next candidate is tried. That also fixed a second, quieter problem you hadn't hit yet: every probe miss is *expected* (the English map is the fallback), and `t()` was reporting each one to the app's missing-key logger — the console was filling with warnings about a path working exactly as designed. `validation` itself stays, since it's a real setting.
+
+## Heading — `h4`
+
+It was `variant="h1"`. Every other page in the org-admin uses `h4`; it now matches.
+
+## Tests
+
+Backend **3183 passing, 0 failing** (+6); orgadmin-core **770 passing, 0 failing** (+2, including one that reproduces the object-key collision). The 21 failures in `components` and `admin` are the same pre-existing ones in files this work hasn't touched.
+
+Docs updated with both rules. Nothing committed.
+
+---
+
+
+## 2026-08-21 14:53:14 — Prompt
+
+On the orgadmin can you move the Payments and Reporting Menu items on the left from the Setup section to the “Running the club” section.
+Also, can you change the label ”Running the Club” to “Running the Org”

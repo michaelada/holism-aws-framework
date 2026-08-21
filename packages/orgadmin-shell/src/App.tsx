@@ -22,6 +22,7 @@ import {
   settingsModule,
   paymentsModule,
   reportingModule,
+  auditModule,
   usersModule,
 } from '@aws-web-framework/orgadmin-core';
 
@@ -54,6 +55,7 @@ const ALL_MODULES: ModuleRegistration[] = [
   settingsModule,
   paymentsModule,
   reportingModule,
+  auditModule,
   usersModule,
   // Capability modules (filtered by organisation capabilities)
   eventsModule,

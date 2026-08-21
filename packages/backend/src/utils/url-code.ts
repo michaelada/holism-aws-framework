@@ -24,6 +24,13 @@ export const RESERVED_URL_CODES: ReadonlySet<string> = new Set([
   'login', 'logout', 'metrics', 'new', 'orgadmin', 'password', 'payment',
   'payments', 'profile', 'public', 'register', 'settings', 'signin', 'signup',
   'static', 'support', 'switch', 'user', 'users', 'www',
+  /*
+   * Public surfaces. `/events` is the platform's own listing and shares this
+   * namespace with organisation codes — a club holding the code `events` would
+   * take that page over. Added in migration 1709000000033, which reserves the
+   * same words and renames any organisation already holding one.
+   */
+  'events', 'event', 'whats-on', 'sitemap', 'robots',
 ]);
 
 const URL_CODE_PATTERN = new RegExp(

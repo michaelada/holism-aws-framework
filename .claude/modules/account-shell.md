@@ -415,6 +415,36 @@ app (read on every organisation resolve, via `GET /me` → `user.preferredLangua
 `locale` attribute so the **login page** follows it too. `OrganisationRoute` prefers the member's
 language over the organisation's; null means "follow the organisation".
 
+## Public pages — the only routes with no signed-in reader
+
+| Route | Page | Who |
+|---|---|---|
+| `/events` | `PlatformEventsPage` | anyone — every club's public events, searchable |
+| `/:orgCode/whats-on` | `PublicEventsPage` | anyone — one club's programme |
+| `/:orgCode/whats-on/:slug` | `PublicEventPage` | anyone — **the URL search results point at** |
+
+`OrganisationRoute` takes `allowAnonymous` for these. It is distinct from
+`requireConnection`: that one lets a *signed-in* non-member through and still sends an anonymous
+visitor to the gateway; a public page has nobody to sign in, so the identity gate is lifted entirely
+while the club's branding still applies.
+
+**Every request sets `anonymous: true`.** Without it `useAccountApi` attaches a session and resolves
+an organisation, and a visitor arriving from a search result has neither.
+
+The event slug is `words-{first 8 of the uuid}`. The id resolves it, so a renamed event still answers
+on its old address and the page corrects the URL with `replace`. One event, one indexable address.
+
+`usePageMetadata` sets title, description, canonical, Open Graph and Twitter tags, restoring what it
+found on unmount — `description` lives in `index.html` and belongs to every other route.
+`EventStructuredData` mounts `schema.org/Event` into `<head>`; **members-only activities are never
+`offers`**, because a reader cannot buy them and a price they cannot pay is a false claim.
+
+Fonts are self-hosted (`@fontsource/*`, imported in `main.tsx`) rather than fetched from Google, so
+a public page draws text without a third-party DNS lookup and TLS handshake first.
+
+See [PUBLIC_EVENTS.md](../../docs/PUBLIC_EVENTS.md) and
+[PUBLIC_EVENTS_SEO.md](../../docs/PUBLIC_EVENTS_SEO.md).
+
 ## Members-only entries
 
 An activity may be restricted to a club's members (`members`) or to members of any club of the same
@@ -423,10 +453,61 @@ and `eligibleMembers` — **the caller's own active memberships** — and a reas
 for its remedy: `members-only` means renew here, `org-members-only` means join any club in the
 federation.
 
-`EntryFormPage` states the member when the login holds one, asks when it holds several (preselecting
-nothing — a parent who gets the wrong child by default has been handed a wrong answer that looks
-like their own), and refuses to render when it holds none. The server refuses independently; the
-screen is courtesy.
+`EntryFormPage` refuses to render when the caller holds no eligible membership. The server refuses
+independently; the screen is courtesy.
+
+### Account vs membership — the terminology rule
+
+**An account is not a membership, and the copy must never blur them.** Connecting to a club creates
+an *account* with it: enough to sign in, enter open events, buy merchandise and book. A *membership*
+is the separate, paid, club-approved thing the memberships module sells, and it is only needed where
+an activity is marked members-only.
+
+So the pre-auth screens say "create an account", never "join the club" — the latter reads as "become
+a member", which turns an open event into something the visitor thinks they must pay to reach.
+`notConnected.title` in particular used to say "You are not a member of {{organisation}}" to somebody
+whose only problem was having no account.
+
+Language that still says "join" is correct where it means membership: `browse.membershipsSubtitle`
+("Join your club or renew your membership") and `cart.browse` ("Find something to enter or join")
+are about the memberships catalogue and stay as they are. The Keycloak account-user theme's
+`accountLoginHeading` is "Account Login" for the same reason.
+
+### The "powered by" footer
+
+`RegisterWithOrganisationPage` (`/:orgCode/register`) carries `PoweredByFooter` under its card, and
+the Keycloak account-user theme carries the same thing on sign-in, register and forgotten-password.
+The mark is `public/itsplainsailing-logo.png` — a copy of the theme's, because the app's own
+`icon.svg` is a deliberate per-club placeholder and not the ItsPlainSailing logo. The year comes
+from `new Date().getFullYear()` at render.
+
+### Platform announcements on the gateway
+
+`OrganisationGatewayPage` puts the sign-in card on the left and the platform's posts on the right at
+≥`md`, stacking sign-in-first below it. With no posts it returns to the original centred `Container`
+entirely, so a deployment that has never written one is unchanged. `usePlatformPosts` fetches
+`/api/public/posts?surface=account` anonymously and **never surfaces an error** — a failure resolves
+to an empty list, because an error beside a sign-in form reads as the sign-in being broken. See
+[docs/PLATFORM_POSTS.md](../../docs/PLATFORM_POSTS.md).
+
+### Who the entry is for
+
+Every event entry opens with a **name field**, above the club's own form, whatever that form
+contains — the name is the entry, not a question about it, and clubs were building it by hand under
+a different name each time. `EntrantNameField` comes from `packages/components`; the data comes from
+`GET /catalogue/activities/:activityId/entrants?q=`, which returns *both* how the field should
+behave (`autocomplete`, `allowFreeText`) and any matches, so one call draws the field.
+
+The completion is over **the club's whole roster**, not the caller's own memberships — entries are
+made on other people's behalf constantly. A typed name is accepted only where entries are open to
+all; members-only and federation-wide activities take a chosen member or nothing. A member's own
+club is shown beside their name when it is not the host's. Preselected only where the account holds
+exactly one eligible membership; nothing is defaulted otherwise, including the account holder's own
+name — a parent who gets the wrong child by default has been handed a wrong answer that looks like
+their own.
+
+The basket line carries `entrantName` and, when one was chosen, `memberId`. See
+[docs/ENTRANT_NAME.md](../../docs/ENTRANT_NAME.md).
 
 `HomePage` shows `dashboard.externalEvents` in its own section: events other clubs of the same type
 have opened, badged, linking to `/{urlCode}` of the organiser. Deliberately not merged into

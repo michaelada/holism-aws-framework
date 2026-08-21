@@ -12,6 +12,7 @@ import { orgPaymentMethodDataService } from '../services/org-payment-method-data
 import validator from 'validator';
 import DOMPurify from 'isomorphic-dompurify';
 import { richTextConfig } from '../middleware/xss-protection.middleware';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -223,6 +224,7 @@ router.post(
   '/membership-types',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'membership-type.created', resource: 'membershipType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
@@ -312,6 +314,7 @@ router.put(
   '/membership-types/:id',
   authenticateToken(),
   byResource('membershipType', 'id'),
+  audited({ action: 'membership-type.updated', resource: 'membershipType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -355,6 +358,7 @@ router.delete(
   '/membership-types/:id',
   authenticateToken(),
   byResource('membershipType', 'id'),
+  audited({ action: 'membership-type.deleted', resource: 'membershipType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -584,6 +588,7 @@ router.patch(
   '/members/:id',
   authenticateToken(),
   byResource('member', 'id'),
+  audited({ action: 'membership.updated', resource: 'member', entityType: 'member' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -645,6 +650,7 @@ router.post(
   '/members/batch',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'membership.updated', entityType: 'member', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { memberIds, operation, labels } = req.body;
@@ -778,6 +784,7 @@ router.post(
   byCurrentOrganisation(),
   requireOrgAdmin(),
   requireMembershipsCapability,
+  audited({ action: 'membership.created', resource: 'member', entityType: 'member' }),
   async (req: Request, res: Response) => {
     try {
       const member = await membershipService.createMember(req.body);

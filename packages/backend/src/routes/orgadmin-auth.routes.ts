@@ -45,6 +45,7 @@ router.get('/auth/me', authenticateToken(), async (req: OrganisationRequest, res
     const memberships = await db.query(
       `SELECT ou.*, o.id as org_id, o.name as org_name, o.display_name as org_display_name,
               o.url_code as org_url_code,
+              o.url_code as org_url_code,
               o.status as org_status, o.currency, o.language, o.enabled_capabilities, o.settings,
               o.organization_type_id, o.keycloak_group_id, o.created_at as org_created_at, 
               o.updated_at as org_updated_at,
@@ -178,6 +179,12 @@ router.get('/auth/me', authenticateToken(), async (req: OrganisationRequest, res
         keycloakGroupId: userRow.keycloak_group_id,
         name: userRow.org_name,
         displayName: userRow.org_display_name,
+        /*
+         * How the club is addressed in the account application —
+         * `/account/khpc`. The org-admin needs it to show an administrator the
+         * public address of something they have just published.
+         */
+        urlCode: userRow.org_url_code,
         status: userRow.org_status,
         currency: userRow.currency,
         language: userRow.language,

@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import { PoweredBy } from '../components/PoweredBy';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAuthContext } from '../context/AuthContext';
 import { toMemberships } from '../utils/accountMemberships';
@@ -199,6 +200,8 @@ export const OrganisationDirectoryPage: React.FC = () => {
           </Grid>
         </>
       )}
+
+      <PoweredBy />
     </Container>
   );
 };

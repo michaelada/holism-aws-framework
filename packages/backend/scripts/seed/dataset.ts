@@ -1141,6 +1141,12 @@ export interface SeedEvent {
   openDays: number | null;
   closeDays: number | null;
   status: 'draft' | 'published';
+  /**
+   * Public listing. Omitted means not public, which is what most events are.
+   * See docs/PUBLIC_EVENTS.md §2.
+   */
+  showOnOrganisationPage?: boolean;
+  showOnPlatformPage?: boolean;
   limitEntries?: boolean;
   entriesLimit?: number;
   addConfirmationMessage?: boolean;
@@ -1167,16 +1173,26 @@ export interface SeedEvent {
 
 export const EVENT_TYPES = ['Show Jumping', 'Cross Country', 'Dressage', 'Camp', 'Rally', 'Fun Day'];
 
-export const VENUES: Record<SeedOrg['key'], Array<{ name: string; address: string }>> = {
+/**
+ * `region` is what the public listings filter on.
+ *
+ * The address is prose and cannot be filtered without parsing it; the region is
+ * the value. Ward Union's grounds are in Meath despite the club's name, which is
+ * exactly the kind of thing a filter built from club names would get wrong.
+ */
+export const VENUES: Record<
+  SeedOrg['key'],
+  Array<{ name: string; address: string; region: string }>
+> = {
   kildare: [
-    { name: 'Craddockstown Equestrian', address: 'Craddockstown, Naas, Co. Kildare' },
-    { name: 'Punchestown Event Centre', address: 'Punchestown, Naas, Co. Kildare' },
+    { name: 'Craddockstown Equestrian', address: 'Craddockstown, Naas, Co. Kildare', region: 'Co. Kildare' },
+    { name: 'Punchestown Event Centre', address: 'Punchestown, Naas, Co. Kildare', region: 'Co. Kildare' },
   ],
-  laois: [{ name: 'Ballyroan Showgrounds', address: 'Ballyroan, Co. Laois' }],
-  ward: [{ name: 'Ward Union Grounds', address: 'Ashbourne, Co. Meath' }],
+  laois: [{ name: 'Ballyroan Showgrounds', address: 'Ballyroan, Co. Laois', region: 'Co. Laois' }],
+  ward: [{ name: 'Ward Union Grounds', address: 'Ashbourne, Co. Meath', region: 'Co. Meath' }],
   meath: [
-    { name: 'Kilmessan Equestrian Centre', address: 'Kilmessan, Co. Meath' },
-    { name: 'Tara Hill Cross Country', address: 'Hill of Tara, Navan, Co. Meath' },
+    { name: 'Kilmessan Equestrian Centre', address: 'Kilmessan, Co. Meath', region: 'Co. Meath' },
+    { name: 'Tara Hill Cross Country', address: 'Hill of Tara, Navan, Co. Meath', region: 'Co. Meath' },
   ],
 };
 
@@ -1192,6 +1208,28 @@ export const VENUES: Record<SeedOrg['key'], Array<{ name: string; address: strin
  *   closed     closeDays < 0                      closed to entries
  *   no-window  openDays and closeDays both null   never gated
  */
+/*
+ * ## Which of these are public, and why that spread
+ *
+ * Fifteen of the eighteen are published publicly; twelve of those also appear
+ * on the platform listing at `/events`. The split is not arbitrary — the
+ * platform page is a **filterable** surface, and a fixture where every event
+ * shares a club, a county and an event type gives every filter exactly one
+ * option and proves nothing:
+ *
+ *   clubs    all four, so the Club filter is worth opening
+ *   regions  Co. Kildare, Co. Laois and Co. Meath
+ *   types    Show Jumping, Cross Country, Dressage, Camp, Rally, Fun Day
+ *   windows  open, closing in days, not yet open, closed, no window, finished
+ *
+ * **Three are club-page-only** — Kildare's Members' Cup, Laois's closed event
+ * and Meath's summer camp. Without them the two flags would always agree and a
+ * bug that ignored one of them would pass unnoticed.
+ *
+ * **Three are not public at all**, including `khpc-fun-day-draft`, which is a
+ * draft. A draft can never reach the public whatever its flags say, and having
+ * one in the fixture is what makes that rule testable rather than assumed.
+ */
 export const EVENTS: SeedEvent[] = [
   /* ---------------------------------------------------------- Kildare */
   {
@@ -1206,6 +1244,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -10,
     closeDays: 14,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     limitEntries: true,
     entriesLimit: 120,
     addConfirmationMessage: true,
@@ -1266,6 +1306,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: 21, // not open yet
     closeDays: 75,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     limitEntries: true,
     entriesLimit: 60,
     activities: [
@@ -1386,6 +1428,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -90,
     closeDays: -50,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     activities: [
       { name: '80cm', description: 'Eighty centimetre class.', fee: 25, form: 'shortEntry', payment: 'both' },
       { name: '1.00m', description: 'One metre class.', fee: 30, form: 'shortEntry', payment: 'both' },
@@ -1405,6 +1449,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -5,
     closeDays: 21,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     limitEntries: true,
     entriesLimit: 80,
     discounts: ['cartTenner', 'laoisFamily', 'laoisAutumn'],
@@ -1450,6 +1496,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -20,
     closeDays: 1, // closing soonest
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     activities: [
       {
         name: 'Morning group',
@@ -1483,6 +1531,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: 30, // not open yet
     closeDays: 70,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     activities: [
       { name: 'Intro A', description: 'Intro test A.', fee: 18, form: 'shortEntry', payment: 'offline' },
       { name: 'Prelim 7', description: 'Preliminary test 7.', fee: 20, form: 'shortEntry', payment: 'offline' },
@@ -1500,6 +1550,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -35,
     closeDays: -7,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: false,
     activities: [
       { name: 'Novice', description: 'Novice track.', fee: 26, form: 'shortEntry', payment: 'both' },
     ],
@@ -1518,6 +1570,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: null,
     closeDays: null,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     discounts: ['wardCapped', 'wardVolunteer', 'wardSuspended'],
     activities: [
       {
@@ -1552,6 +1606,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -12,
     closeDays: 20,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     limitEntries: true,
     entriesLimit: 50,
     activities: [
@@ -1585,6 +1641,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -30,
     closeDays: 3,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     limitEntries: true,
     entriesLimit: 200,
     addConfirmationMessage: true,
@@ -1628,6 +1686,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -10,
     closeDays: 25,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: false,
     // Capped at the event level, so the whole camp fills even though each
     // activity has room — the case the account app words as "event full".
     limitEntries: true,
@@ -1680,6 +1740,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -20,
     closeDays: 14,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     discounts: ['mhpcFamilyEntry'],
     ticketing: {
       headerText: 'Meath Hunt Pony Club — Tara Hunter Trial',
@@ -1730,6 +1792,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: 30,
     closeDays: 85,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     activities: [
       {
         name: 'Preliminary',
@@ -1771,6 +1835,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -7,
     closeDays: 28,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: false,
     activities: [
       {
         /*
@@ -1812,6 +1878,8 @@ export const EVENTS: SeedEvent[] = [
     openDays: -3,
     closeDays: 42,
     status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
     activities: [
       {
         /*

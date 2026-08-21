@@ -58,6 +58,9 @@ Five components carry the conventions; reach for them before hand-rolling.
 | `/organizations`, `/organizations/new`, `/:id`, `/:id/edit` | `OrganizationsPage`, `CreateOrganizationPage`, `OrganizationDetailsPage`, `EditOrganizationPage` |
 | `/organizations/:id/users/add` | `AddOrganizationAdminUserPage` |
 | `/organizations/:id/roles/create` | `CreateOrganizationRolePage` |
+| `/posts`, `/posts/new`, `/posts/:id`, `/posts/:id/edit` | `PostsPage`, `CreatePostPage`, `PostDetailsPage`, `EditPostPage` |
+| `/sessions` | `SessionsPage` |
+| `/audit`, `/audit/:id` | `AuditLogPage`, `AuditEventPage` |
 | `/roles` | `RolesPage` |
 | `/users` | `UsersPage` |
 | — | `AccessDeniedPage` |
@@ -92,13 +95,63 @@ Five components carry the conventions; reach for them before hand-rolling.
 
 ## Navigation
 
-`components/Layout.tsx` is a persistent left rail carrying **all eight** destinations, grouped
-Platform / Configuration / Access, collapsing to a temporary `Drawer` below `md`. It marks the
+`components/Layout.tsx` is a persistent left rail carrying **all eleven** destinations, grouped
+Platform / Configuration / Content / Oversight / Access, collapsing to a temporary `Drawer` below
+`md`. It marks the
 current section with `aria-current="page"` and keeps a section current inside its detail pages.
 
 Adding a route means adding it to `routes/index.tsx` **and** to `NAV_GROUPS` in `Layout.tsx`. The
 rail listed three of eight for a long time, which left Users and Roles reachable only by
 typed URL — see `docs/PLATFORM_ADMIN_CRAFT_PASS.md`.
+
+## Organisation type logos
+
+`TypeLogoSection` on the create and edit screens: upload, remove, and "Organisations may replace
+this with their own logo". Unticking it warns that clubs' own logos stop being shown — the
+consequence an operator is least likely to have thought through.
+
+The logo is addressed by type id, so the **create** screen holds the file and uploads it straight
+after saving; a failure there leaves a created type without a logo rather than failing the save.
+See [docs/ORGANISATION_TYPE_LOGO.md](../../docs/ORGANISATION_TYPE_LOGO.md).
+
+## Posts
+
+Announcements shown to the whole platform on both login pages
+([docs/PLATFORM_POSTS.md](../../docs/PLATFORM_POSTS.md)). `postApi.ts` is a separate client from
+`organizationApi` because a post belongs to no organisation and every route is `super-admin`.
+
+`PostsPage` is a plain ordered list, **not** `AdminTable` — here the order *is* the content, and a
+table that can be re-sorted by title would show an arrangement that is not the one being edited.
+Reordering is a pair of arrows per row (keyboard-reachable, no drag machinery) and saves the whole
+arrangement on every move.
+
+`PostForm` is shared by create and edit. The image is uploaded *after* the post exists, because the
+upload route is addressed by post id — so a create whose image fails still created the post, says
+so, and lands on the edit screen. This package gained `react-quill` and `dompurify` for it.
+
+## Oversight — sessions and the audit trail
+
+Two screens, one nav group, almost nothing shared.
+
+**`SessionsPage`** reads through to Keycloak, which owns sessions, and keeps no state of its own —
+a second copy would be wrong the moment somebody signed out. **Each row is a session, not a
+person**, which is what makes "end this session" and "sign them out everywhere" different actions.
+The confirmation says the person is signed out *within 5 minutes*, not now: ending the Keycloak
+session stops the refresh, but an access token already issued stays valid for its remaining
+lifetime.
+
+**`AuditLogPage`** keeps its filters in the URL, so an investigation can be sent to somebody else.
+Paging is keyset (`occurred_at|id`), because an offset would skip or repeat rows as new events
+arrive underneath — constant, on an append-only log. It also carries the **health banner**: a failed
+audit write is deliberately silent everywhere else (`record()` never throws), so this is the only
+place a gap in the trail becomes visible.
+
+**`AuditEventPage`** is the before/after table, which is the reason the trail exists. Values are
+formatted for a reader — a fee is `€25.00`, not `2500` — with the raw record one click away.
+
+Both viewers render changes through `AuditChanges` from `packages/components`, so a club reading its
+own trail in the org-admin and a super admin reading the platform's never see two renderings of one
+event. See [docs/AUDIT_TRAIL_AND_SESSIONS.md](../../docs/AUDIT_TRAIL_AND_SESSIONS.md).
 
 ## The capability handshake
 

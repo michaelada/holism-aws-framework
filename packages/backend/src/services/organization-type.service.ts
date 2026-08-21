@@ -6,6 +6,7 @@ import {
   UpdateOrganizationTypeDto
 } from '../types/organization.types';
 import { capabilityService } from './capability.service';
+import { fileUploadService } from './file-upload.service';
 import { ValidationError } from '../middleware/errors';
 
 export class OrganizationTypeService {
@@ -70,12 +71,58 @@ export class OrganizationTypeService {
       membershipNumbering: row.membership_numbering || 'internal',
       membershipNumberUniqueness: row.membership_number_uniqueness || 'organization',
       initialMembershipNumber: row.initial_membership_number || 1000000,
+      logoS3Key: row.logo_s3_key || '',
+      // Signed by the caller where it matters; the key alone is not loadable.
+      logoUrl: '',
+      // Absent reads as permitted: the column defaults to true and a null here
+      // would otherwise silently lock every club out of its own logo.
+      allowLogoOverride: row.allow_logo_override !== false,
       status: row.status || 'active',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       createdBy: row.created_by,
       updatedBy: row.updated_by
     };
+  }
+
+  /**
+   * Sign a type's shared logo so an <img> can load it.
+   *
+   * Same bargain as an organisation's own logo: the bucket blocks public
+   * access, so the key is what is stored and the URL is minted per read. Never
+   * throws — a logo that cannot be signed must not take down the list of
+   * organisation types.
+   */
+  async withSignedLogo(type: OrganizationType): Promise<OrganizationType> {
+    if (!type.logoS3Key) return type;
+    try {
+      return { ...type, logoUrl: await fileUploadService.getFileUrl(type.logoS3Key, 12 * 60 * 60) };
+    } catch (error) {
+      logger.warn('Could not sign a URL for the organisation type logo', {
+        organizationTypeId: type.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return type;
+    }
+  }
+
+  /** Set or clear the shared logo. The key comes from the upload route. */
+  async setLogo(id: string, logo: { s3Key: string; mimeType: string } | null): Promise<OrganizationType> {
+    const result = await db.query(
+      `UPDATE organization_types
+          SET logo_s3_key = $2, logo_mime = $3, updated_at = NOW()
+        WHERE id = $1
+        RETURNING *`,
+      [id, logo?.s3Key ?? null, logo?.mimeType ?? null]
+    );
+    if (result.rows.length === 0) throw new Error('Organization type not found');
+    return this.withSignedLogo(this.rowToOrganizationType(result.rows[0]));
+  }
+
+  /** The stored key, so a replaced logo can be tidied out of S3. */
+  async currentLogoKey(id: string): Promise<string | null> {
+    const result = await db.query('SELECT logo_s3_key FROM organization_types WHERE id = $1', [id]);
+    return result.rows[0]?.logo_s3_key ?? null;
   }
 
   /**
@@ -377,6 +424,16 @@ export class OrganizationTypeService {
         if (data.initialMembershipNumber !== undefined) {
           updates.push(`initial_membership_number = $${paramCount++}`);
           values.push(data.initialMembershipNumber);
+        }
+
+        /*
+         * The logo itself is set by the upload route, which knows the S3 key.
+         * This handles the flag beside it, and clearing the logo — a super
+         * admin who removes the shared mark hands every club back its own.
+         */
+        if (data.allowLogoOverride !== undefined) {
+          updates.push(`allow_logo_override = $${paramCount++}`);
+          values.push(data.allowLogoOverride === true);
         }
 
         if (userId) {

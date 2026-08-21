@@ -384,7 +384,7 @@ export const HomePage: React.FC = () => {
                           >
                             {event.alreadyJoined
                               ? t('home.externalEventOpen', { organisation: event.organisationName })
-                              : t('home.externalEventJoin', { organisation: event.organisationName })}
+                              : t('home.externalEventAccount', { organisation: event.organisationName })}
                           </Button>
                         </CardActions>
                       </Card>

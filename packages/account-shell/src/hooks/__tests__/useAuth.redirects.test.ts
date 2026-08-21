@@ -38,6 +38,19 @@ vi.mock('../../offline/responseCache', () => ({ forgetResponses: vi.fn() }));
 
 const config = { url: 'http://localhost:8080', realm: 'aws-framework', clientId: 'account' };
 
+/** A location stub carrying everything `redirectFor` reads. */
+const setLocation = (pathname: string, search = '') => {
+  Object.defineProperty(window, 'location', {
+    value: {
+      origin: 'https://itsps.org',
+      pathname,
+      search,
+      href: `https://itsps.org${pathname}${search}`,
+    },
+    writable: true,
+  });
+};
+
 const setup = async () => {
   const rendered = renderHook(() => useAuth(config));
   // Let Keycloak's init settle so the hook holds an instance.
@@ -49,10 +62,7 @@ const setup = async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.defineProperty(window, 'location', {
-    value: { origin: 'https://itsps.org', href: 'https://itsps.org/account/khpc' },
-    writable: true,
-  });
+  setLocation('/account/khpc');
 });
 
 describe('sign-out', () => {
@@ -104,6 +114,65 @@ describe('sign-in', () => {
     const { result } = await setup();
 
     act(() => result.current.login());
+
+    expect(login).toHaveBeenCalledWith({ redirectUri: 'https://itsps.org/account/khpc' });
+  });
+});
+
+/**
+ * Signing in from a deep link.
+ *
+ * The redirect used to be the club's front door unconditionally, which silently
+ * discarded every deep link: a visitor who clicked an event on a public page
+ * signed in and landed on the home page with no trace of what they had clicked.
+ * On a feature whose whole promise is "click this event to enter it", that is
+ * the last step failing.
+ *
+ * See docs/PUBLIC_EVENTS.md §5.3.
+ */
+describe('returning to where the visitor was', () => {
+  it('comes back to the page they were on', async () => {
+    setLocation('/account/khpc/browse/events', '?event=abc123');
+    const { result } = await setup();
+
+    act(() => result.current.login('khpc'));
+
+    expect(login).toHaveBeenCalledWith({
+      redirectUri: 'https://itsps.org/account/khpc/browse/events?event=abc123',
+    });
+  });
+
+  it('keeps the query string, which is what names the event', async () => {
+    // Losing `?event=` returns them to an events list of eighteen collapsed
+    // rows with no indication which one they came for.
+    setLocation('/account/khpc/browse/events', '?event=abc123');
+    const { result } = await setup();
+
+    act(() => result.current.login('khpc'));
+
+    const [{ redirectUri }] = login.mock.calls[0];
+    expect(redirectUri).toContain('?event=abc123');
+  });
+
+  it('does not return to another club’s page', async () => {
+    /*
+     * Signing in *to* Kildare while standing on Laois's public page. Returning
+     * to Laois would sign them in and immediately show them somewhere else.
+     */
+    setLocation('/account/lhpc/whats-on/some-event-a1b2c3d4');
+    const { result } = await setup();
+
+    act(() => result.current.login('khpc'));
+
+    expect(login).toHaveBeenCalledWith({ redirectUri: 'https://itsps.org/account/khpc' });
+  });
+
+  it('is not fooled by a club code that merely starts the same', async () => {
+    // `/account/khpc-old` is not inside `/account/khpc`.
+    setLocation('/account/khpc-old/whats-on');
+    const { result } = await setup();
+
+    act(() => result.current.login('khpc'));
 
     expect(login).toHaveBeenCalledWith({ redirectUri: 'https://itsps.org/account/khpc' });
   });

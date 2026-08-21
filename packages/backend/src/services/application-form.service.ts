@@ -1,5 +1,6 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
+import { forgetSensitiveFields } from './audit/sensitive-fields';
 
 /**
  * ApplicationForm interface matching database schema
@@ -30,6 +31,14 @@ export interface ApplicationField {
   options?: any;
   allowedFileTypes?: string[];
   maxFileSize?: number;
+  /**
+   * Answers to this field are recorded in the audit trail as present-but-hidden.
+   *
+   * For the questions only the club knows are sensitive — a medical condition,
+   * a dietary requirement — which no fixed redaction list could anticipate.
+   * See docs/AUDIT_TRAIL_AND_SESSIONS.md §4.
+   */
+  isSensitive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -101,6 +110,14 @@ export interface CreateApplicationFieldDto {
   options?: any;
   allowedFileTypes?: string[];
   maxFileSize?: number;
+  /**
+   * Answers to this field are recorded in the audit trail as present-but-hidden.
+   *
+   * For the questions only the club knows are sensitive — a medical condition,
+   * a dietary requirement — which no fixed redaction list could anticipate.
+   * See docs/AUDIT_TRAIL_AND_SESSIONS.md §4.
+   */
+  isSensitive?: boolean;
 }
 
 /**
@@ -115,6 +132,14 @@ export interface UpdateApplicationFieldDto {
   options?: any;
   allowedFileTypes?: string[];
   maxFileSize?: number;
+  /**
+   * Answers to this field are recorded in the audit trail as present-but-hidden.
+   *
+   * For the questions only the club knows are sensitive — a medical condition,
+   * a dietary requirement — which no fixed redaction list could anticipate.
+   * See docs/AUDIT_TRAIL_AND_SESSIONS.md §4.
+   */
+  isSensitive?: boolean;
 }
 
 /**
@@ -167,6 +192,7 @@ export class ApplicationFormService {
       options: row.options,
       allowedFileTypes: row.allowed_file_types,
       maxFileSize: row.max_file_size,
+      isSensitive: row.is_sensitive ?? false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -376,8 +402,8 @@ export class ApplicationFormService {
 
       const result = await db.query(
         `INSERT INTO application_fields 
-         (organisation_id, name, label, description, datatype, validation, options, allowed_file_types, max_file_size)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         (organisation_id, name, label, description, datatype, validation, options, allowed_file_types, max_file_size, is_sensitive)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           data.organisationId,
@@ -389,10 +415,14 @@ export class ApplicationFormService {
           data.options ? JSON.stringify(data.options) : null,
           data.allowedFileTypes ? JSON.stringify(data.allowedFileTypes) : null,
           data.maxFileSize || null,
+          data.isSensitive ?? false,
         ]
       );
 
       logger.info(`Application field created: ${data.name} (${result.rows[0].id})`);
+      // The mark must bite immediately: a cache that lags by a minute on a
+      // field just marked sensitive is a minute of answers in the log.
+      forgetSensitiveFields(data.organisationId);
       return this.rowToField(result.rows[0]);
     } catch (error) {
       logger.error('Error creating application field:', error);
@@ -461,6 +491,10 @@ export class ApplicationFormService {
         updates.push(`max_file_size = $${paramCount++}`);
         values.push(data.maxFileSize || null);
       }
+      if (data.isSensitive !== undefined) {
+        updates.push(`is_sensitive = $${paramCount++}`);
+        values.push(data.isSensitive);
+      }
 
       values.push(id);
 
@@ -477,6 +511,11 @@ export class ApplicationFormService {
       }
 
       logger.info(`Application field updated: ${id}`);
+
+      // As on create: a field just marked sensitive must stop being logged now,
+      // not when the cache happens to expire.
+      forgetSensitiveFields(result.rows[0].organisation_id);
+
       return this.rowToField(result.rows[0]);
     } catch (error) {
       logger.error('Error updating application field:', error);

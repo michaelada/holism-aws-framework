@@ -549,3 +549,171 @@ textarea,
 a {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ================================================================== *
+ * The announcements column
+ *
+ * Platform posts, written by an ItsPlainSailing super admin, shown
+ * beside the sign-in form. Two columns on a wide screen and stacked on
+ * a narrow one, with sign-in first either way — an administrator on a
+ * phone came here to sign in, and announcements they have to scroll
+ * past to reach the password field are an obstacle, not a message.
+ *
+ * Gated on `[data-has-posts]`, which posts.js sets only after it has
+ * rendered something, so a deployment with no posts keeps exactly the
+ * single-column page it had before this existed.
+ *
+ * The card matches this theme rather than the account theme's: the same
+ * markup is styled twice on purpose, because these two login pages have
+ * deliberately different visual languages.
+ *
+ * See docs/PLATFORM_POSTS.md.
+ * ================================================================== */
+
+.ips-posts-col {
+  display: none;
+}
+
+.ips-shell[data-has-posts='true'] .ips-posts-col {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  box-sizing: border-box;
+}
+
+/*
+ * Two columns from 600px — `sm` — rather than 900.
+ *
+ * The 380px floor that used to sit on the sign-in column had to go with it:
+ * 380px plus a second column does not fit inside 600, so keeping it would have
+ * given a full-width form beside a 120px ribbon of announcements. Even columns
+ * shrink together instead, which is the honest behaviour when there is not much
+ * width to divide.
+ */
+@media (min-width: 600px) {
+  .ips-shell[data-has-posts='true'] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Tight at this size: 48px of gutter out of 600 is most of a column. */
+    gap: 24px;
+    align-items: start;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 16px 48px;
+    box-sizing: border-box;
+  }
+
+  /* Inside the grid the shell owns the height and padding, or the two
+     columns start at different heights. */
+  .ips-shell[data-has-posts='true'] .login-pf-page {
+    min-height: 0;
+    padding: 0;
+  }
+
+  /*
+   * Narrower than the column that holds it, and centred in it.
+   *
+   * The grid stays an even split — the two halves of the page are still equal
+   * — but a card of text and a 16:9 image does not need the whole of its half,
+   * and at the full 552px the announcements read as the main event beside a
+   * sign-in form that is the actual reason for the page. Centred rather than
+   * flush left so the slack falls evenly instead of opening one wide gutter.
+   *
+   * Only in the two-column layout. Stacked on a narrow screen the cards should
+   * match the sign-in card above them, and narrowing them there would leave
+   * them visibly thinner than it for no reason.
+   */
+  .ips-shell[data-has-posts='true'] .ips-posts-col {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0;
+  }
+}
+
+.ips-post {
+  background: var(--bg-paper);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.ips-post:last-child {
+  margin-bottom: 0;
+}
+
+/* A fixed ratio, so the column does not jump as each image loads. */
+.ips-post-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.ips-post-content {
+  padding: 24px;
+}
+
+.ips-post-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-charcoal);
+  margin: 0 0 8px;
+}
+
+.ips-post-body {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.ips-post-body > :first-child {
+  margin-top: 0;
+}
+
+.ips-post-body > :last-child {
+  margin-bottom: 0;
+}
+
+.ips-post-body a {
+  color: var(--primary-dark);
+}
+
+.ips-post-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ips-post-link {
+  display: inline-block;
+  padding: 4px 12px;
+  border: 1px solid var(--primary-main);
+  border-radius: 8px;
+  color: var(--primary-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ips-post-link:hover {
+  background: var(--primary-main);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+/*
+ * Room to breathe, once there is room. Below this the same two columns are
+ * simply closer together.
+ */
+@media (min-width: 900px) {
+  .ips-shell[data-has-posts='true'] {
+    gap: 48px;
+    padding: 64px 24px 48px;
+  }
+}

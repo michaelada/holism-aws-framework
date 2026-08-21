@@ -11,6 +11,7 @@ import {
 } from '../middleware';
 import { logger } from '../config/logger';
 import { ModuleType } from '../types/discount.types';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -149,6 +150,7 @@ router.post(
   '/discounts',
   authenticateToken(),
   byBodyOrCurrent(),
+  audited({ action: 'settings.organisation-updated', entityType: 'discount', label: 'name', kind: 'create' }),
   async (req: Request, res: Response) => {
     try {
       const { moduleType } = req.body;
@@ -242,6 +244,7 @@ router.put(
   '/discounts/:id',
   authenticateToken(),
   byResource('discount', 'id'),
+  audited({ action: 'settings.organisation-updated', resource: 'discount', entityType: 'discount', label: 'name', kind: 'update' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -290,6 +293,7 @@ router.delete(
   '/discounts/:id',
   authenticateToken(),
   byResource('discount', 'id'),
+  audited({ action: 'settings.organisation-updated', resource: 'discount', entityType: 'discount', label: 'name', kind: 'delete' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -353,6 +357,7 @@ router.delete(
   '/discounts/:id/force',
   authenticateToken(),
   byResource('discount', 'id'),
+  audited({ action: 'settings.organisation-updated', resource: 'discount', entityType: 'discount', label: 'name', kind: 'delete' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

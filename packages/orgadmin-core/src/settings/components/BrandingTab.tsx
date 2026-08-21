@@ -35,6 +35,16 @@ interface BrandingSettings {
    */
   logoS3Key?: string;
   /**
+   * Where the logo being shown comes from. Derived by the server on every read,
+   * never sent back — the screen must not be able to talk itself out of a lock.
+   */
+  logoSource?: 'organisation' | 'organisation-type' | 'none';
+  /**
+   * Whether this organisation may set a logo of its own. False when its
+   * organisation type supplies a shared logo it does not permit replacing.
+   */
+  canOverrideLogo?: boolean;
+  /**
    * What the member-facing app calls its bookings area.
    *
    * Empty means the default ("Bookings"). Only offered when the organisation
@@ -94,6 +104,8 @@ const BrandingTab: React.FC = () => {
         setFormData({
           logoUrl: response.logoUrl || '',
           logoS3Key: response.logoS3Key || '',
+          logoSource: response.logoSource,
+          canOverrideLogo: response.canOverrideLogo !== false,
           primaryColor: response.primaryColor || DEFAULT_COLORS.primaryColor,
           secondaryColor: response.secondaryColor || DEFAULT_COLORS.secondaryColor,
           accentColor: response.accentColor || DEFAULT_COLORS.accentColor,
@@ -264,38 +276,72 @@ const BrandingTab: React.FC = () => {
             )}
             
             <Box>
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="logo-upload"
-                type="file"
-                onChange={handleLogoUpload}
-                disabled={uploading}
-              />
-              <label htmlFor="logo-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<UploadIcon />}
-                  disabled={uploading}
-                >
-                  {uploading ? t('settings.branding.fields.uploading') : t('settings.branding.fields.uploadLogo')}
-                </Button>
-              </label>
-              {formData.logoUrl && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  onClick={handleRemoveLogo}
-                  sx={{ ml: 1 }}
-                >
-                  {t('settings.branding.fields.removeLogo')}
-                </Button>
+              {/*
+                No upload where the organisation type supplies the logo and does
+                not permit replacing it. The control is removed rather than
+                disabled: a greyed-out button invites a click and then explains
+                nothing, while its absence plus a sentence says what is actually
+                true. The server refuses the change regardless — see
+                docs/ORGANISATION_TYPE_LOGO.md.
+              */}
+              {formData.canOverrideLogo === false ? (
+                <Typography variant="body2" color="text.secondary">
+                  {t('settings.branding.fields.logoFromType')}
+                </Typography>
+              ) : (
+                <>
+                  <input
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    id="logo-upload"
+                    type="file"
+                    onChange={handleLogoUpload}
+                    disabled={uploading}
+                  />
+                  <label htmlFor="logo-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<UploadIcon />}
+                      disabled={uploading}
+                    >
+                      {uploading ? t('settings.branding.fields.uploading') : t('settings.branding.fields.uploadLogo')}
+                    </Button>
+                  </label>
+                  {/*
+                    Offered for a logo this club owns — whether uploaded here or
+                    hosted elsewhere — and never for one inherited from the
+                    organisation type, which is not this club's to remove.
+
+                    Keyed off the *source* rather than off `logoS3Key`: a club
+                    that points `logoUrl` at its own externally-hosted logo has
+                    no key, and testing for one stranded it with no way to clear
+                    what it had set.
+                  */}
+                  {formData.logoSource !== 'organisation-type' &&
+                    (formData.logoS3Key || formData.logoUrl) && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleRemoveLogo}
+                      sx={{ ml: 1 }}
+                    >
+                      {t('settings.branding.fields.removeLogo')}
+                    </Button>
+                  )}
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    {/*
+                      An inherited logo is on screen but is not this club's to
+                      remove, so the hint says where it came from instead of the
+                      usual size advice.
+                    */}
+                    {formData.logoSource === 'organisation-type'
+                      ? t('settings.branding.fields.logoInherited')
+                      : t('settings.branding.fields.logoHelper')}
+                  </Typography>
+                </>
               )}
-              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                {t('settings.branding.fields.logoHelper')}
-              </Typography>
             </Box>
           </Box>
         </Grid>

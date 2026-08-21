@@ -1,5 +1,20 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
+<#--
+  `displayInfo=false`, unconditionally.
+
+  The parent theme puts a "New user? Create Account" link under the form when
+  the realm allows registration — and this realm does, because *members* self
+  register through the account-user theme. An organisation administrator does
+  not: the account is created for them, either by a full administrator of their
+  own organisation or by a super admin in the Platform Admin UI. Offering
+  self-registration here sends an administrator down a path that ends in
+  "User is not an organization administrator", having created a Keycloak user
+  nobody asked for.
+
+  Turned off in the theme rather than on the realm, because `registrationAllowed`
+  is realm-wide and switching it off would take member self-registration with it.
+-->
+<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=false; section>
     <#if section = "header">
         ${msg("loginAccountTitle")}
     <#elseif section = "form">
@@ -67,15 +82,6 @@
             </form>
         </#if>
     </div>
-    <#elseif section = "info" >
-        <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
-            <div id="kc-registration-container">
-                <div id="kc-registration">
-                    <span>${msg("noAccount")} <a tabindex="6"
-                                                 href="${url.registrationUrl}">${msg("doRegister")}</a></span>
-                </div>
-            </div>
-        </#if>
     </#if>
 
 </@layout.registrationLayout>

@@ -59,6 +59,37 @@ the app and cleared on sign-out, and a second copy would outlive that.
 
 - `infrastructure/init-db.sql` — initial database bootstrap.
 - `infrastructure/keycloak/` — realm setup notes (`KEYCLOAK_SETUP.md`) and custom themes.
+  - Four login themes; `org-admin` and `account-user` are the two real login pages. Both now render
+    **platform posts** beside the sign-in form: a two-column shell in `template.ftl`, cards drawn by
+    `resources/js/posts.js`, styling in each theme's own CSS. The script is a **second
+    implementation** of `packages/components`' `PostCard` — FreeMarker has no React — and the two
+    must be kept in step by hand.
+  - It fetches `/api/public/posts?surface=…` relatively, which is correct wherever nginx serves
+    Keycloak under `/auth/` and the API under `/api/` on one origin. In development it detects port
+    8080 and falls back to `http://localhost:3000`; `ipsApiBase` in `theme.properties` overrides
+    both for a split-host setup. Nothing to configure in a normal deployment.
+  - The **account-user** theme also carries a `Powered by ItsPlainSailing.com` footer under the
+    card — small logo plus caption, linked with `target="_blank" rel="noopener"` so a half-filled
+    registration form is not lost to a click. It lives in `template.ftl` inside `.ips-login-col`,
+    so it appears on every page of that theme (sign-in, register, forgotten password) and stays
+    with the form when the layout stacks. Not applied to the org-admin theme. The copyright year is
+    `.now?string('yyyy')` passed into the `copyright` message as `{0}`, never a literal. The React
+    twin is `PoweredByFooter` in `packages/components`, used by the in-app register page.
+  - ⚠️ `template.ftl` opens **three** nested divs before the card (`ips-shell` → `ips-login-col` →
+    `kcLoginClass`). Editing near the tail is where a `</div>` goes missing, and the symptom is not
+    a broken page: the `<aside>` ends up *inside* the login column and the announcements silently
+    render underneath the card instead of beside it.
+  - **The org-admin theme offers no self-registration.** `login.ftl` passes `displayInfo=false`, so
+    the parent theme's "New user? Create Account" never renders. An organisation administrator's
+    account is created *for* them — by a full administrator of their own organisation, or by a super
+    admin in the Platform Admin UI — so the link led only to
+    "User is not an organization administrator", having created a stray Keycloak user on the way.
+    Done in the theme rather than on the realm: `registrationAllowed` is realm-wide, and switching
+    it off would take **member** self-registration with it, which the account-user theme relies on.
+    This is a correctness fix, not a security boundary — org-admin access needs an
+    `organization_users` row with `user_type = 'org-admin'`, which self-registration cannot create.
+  - Keycloak runs `start-dev`, so theme edits need no restart — just reload.
+  - See [docs/PLATFORM_POSTS.md](../../docs/PLATFORM_POSTS.md).
 - **Keycloak clients are created by hand; there is no realm import.** `aws-framework-frontend`,
   `aws-framework-admin`, `orgadmin-client` and `account-app` each have to be created in the
   `aws-framework` realm before their app can sign anyone in — a missing one fails with "Client not

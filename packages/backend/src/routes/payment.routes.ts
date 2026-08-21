@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import { byResource } from '../middleware/organisation-scope.middleware';
 import { OrganisationRequest } from '../middleware/capability.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -218,6 +219,7 @@ router.post(
    * and money would move.
    */
   byResource('payment', 'id'),
+  audited({ action: 'refund.issued', resource: 'payment', entityType: 'payment', kind: 'action' }),
   async (req: OrganisationRequest, res: Response) => {
     try {
       const { id } = req.params;

@@ -1,5 +1,5 @@
 import { db } from '../database/pool';
-import { resolveLogoUrl } from './organization-branding.service';
+import { resolveLogoUrl, typeLogoPolicyFromRow } from './organization-branding.service';
 
 /**
  * Organisation lookup for the account-user application.
@@ -108,7 +108,13 @@ async function toPublicOrganisationWithLogo(row: any): Promise<PublicOrganisatio
     ...base,
     branding: {
       ...base.branding,
-      logoUrl: await resolveLogoUrl(row.settings?.branding || {}),
+      /*
+       * The type's policy travels with the row, so a club that inherits its
+       * federation's mark shows it here too — the account app is where a member
+       * actually sees it, and a logo that appeared in org-admin but not on the
+       * member's screen would be the worst of both.
+       */
+      logoUrl: await resolveLogoUrl(row.settings?.branding || {}, typeLogoPolicyFromRow(row)),
     },
   };
 }
@@ -148,7 +154,9 @@ export class AccountOrganisationService {
     const [rows, count] = await Promise.all([
       db.query(
         `SELECT o.url_code, o.display_name, o.settings,
-                ot.display_name AS org_type_display_name
+                ot.display_name AS org_type_display_name,
+              ot.logo_s3_key AS type_logo_s3_key,
+              ot.allow_logo_override AS type_allow_logo_override
          FROM organizations o
          LEFT JOIN organization_types ot ON ot.id = o.organization_type_id
          ${where}
@@ -180,7 +188,9 @@ export class AccountOrganisationService {
     const result = await db.query(
       `SELECT o.url_code, o.display_name, o.settings, o.enabled_capabilities,
               o.currency, o.language,
-              ot.display_name AS org_type_display_name
+              ot.display_name AS org_type_display_name,
+              ot.logo_s3_key AS type_logo_s3_key,
+              ot.allow_logo_override AS type_allow_logo_override
        FROM organizations o
        LEFT JOIN organization_types ot ON ot.id = o.organization_type_id
        WHERE o.url_code = $1 AND o.status = 'active'`,
@@ -214,7 +224,9 @@ export class AccountOrganisationService {
     const result = await db.query(
       `SELECT o.url_code, o.display_name, o.settings, o.enabled_capabilities,
               ou.status,
-              ot.display_name AS org_type_display_name
+              ot.display_name AS org_type_display_name,
+              ot.logo_s3_key AS type_logo_s3_key,
+              ot.allow_logo_override AS type_allow_logo_override
        FROM organization_users ou
        JOIN organizations o ON o.id = ou.organization_id
        LEFT JOIN organization_types ot ON ot.id = o.organization_type_id

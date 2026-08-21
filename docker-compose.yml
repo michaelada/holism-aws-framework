@@ -50,6 +50,8 @@ services:
       dockerfile: Dockerfile
     container_name: aws-framework-backend
     environment:
+      # Enables server-rendered <head> on the public event pages.
+      ACCOUNT_SHELL_HTML: /app/public/account-index.html
       NODE_ENV: development
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
@@ -87,6 +89,11 @@ services:
     volumes:
       - ./packages/backend/src:/app/src:ro
       - ./packages/backend/migrations:/app/migrations:ro
+      # The built account-shell shell, so the public event pages can be served
+      # with a real <head>. Read-only, and absent it the routes simply do
+      # nothing — nginx serves the static shell as before.
+      # See docs/PUBLIC_EVENTS_SEO.md §7.
+      - ./packages/account-shell/dist/index.html:/app/public/account-index.html:ro
 
   # Frontend - For local development, run outside Docker to access monorepo packages
   # Uncomment to run in Docker (will have limited functionality without components package)

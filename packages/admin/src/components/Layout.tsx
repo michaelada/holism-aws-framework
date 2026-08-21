@@ -18,6 +18,9 @@ import {
 import {
   Assessment as DashboardIcon,
   Business as OrganisationsIcon,
+  Campaign as PostsIcon,
+  DevicesOther as SessionsIcon,
+  FactCheck as AuditIcon,
   Category as OrganisationTypesIcon,
   ExitToApp as LogoutIcon,
   Menu as MenuIcon,
@@ -79,6 +82,19 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Organisation Types', path: '/organization-types', icon: <OrganisationTypesIcon /> },
       { label: 'Organisations', path: '/organizations', icon: <OrganisationsIcon /> },
+    ],
+  },
+  {
+    heading: 'Content',
+    items: [
+      { label: 'Posts', path: '/posts', icon: <PostsIcon /> },
+    ],
+  },
+  {
+    heading: 'Oversight',
+    items: [
+      { label: 'Sessions', path: '/sessions', icon: <SessionsIcon /> },
+      { label: 'Audit log', path: '/audit', icon: <AuditIcon /> },
     ],
   },
   {

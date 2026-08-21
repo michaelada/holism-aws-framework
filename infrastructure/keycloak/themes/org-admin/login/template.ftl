@@ -37,6 +37,18 @@
 </head>
 
 <body class="${properties.kcBodyClass!}">
+<#--
+  Two columns on a wide screen: the sign-in on the left, the platform's
+  announcements on the right. Stacked on a narrow one, sign-in first — an
+  administrator on a phone is here to sign in, and announcements they have to
+  scroll past to reach the password field would be an obstacle.
+
+  `data-has-posts` is set by posts.js once something has actually been
+  rendered, so a deployment with no posts keeps the single-column page it had
+  before this existed. See docs/PLATFORM_POSTS.md.
+-->
+<div class="ips-shell">
+<div class="ips-login-col">
 <div class="${properties.kcLoginClass!}">
     <div id="kc-header" class="${properties.kcHeaderClass!}">
         <div id="kc-header-wrapper" class="${properties.kcHeaderWrapperClass!}">
@@ -104,6 +116,18 @@
             </#if>
         </div>
     </div>
+</div>
+</div>
+
+<#--
+  Filled in by posts.js. `data-api-base` is empty in the normal case, where
+  nginx serves Keycloak and the API on one origin.
+-->
+<aside class="ips-posts-col"
+       id="ips-posts"
+       data-surface="orgadmin"
+       data-api-base="${properties.ipsApiBase!''}"
+       aria-label="${msg("announcements")}"></aside>
 </div>
 </body>
 </html>

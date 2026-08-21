@@ -12,6 +12,7 @@ import { accountActivityService } from '../services/account-activity.service';
 import { accountDashboardService } from '../services/account-dashboard.service';
 import { checkoutService } from '../services/checkout.service';
 import { accountCatalogueService } from '../services/account-catalogue.service';
+import { entrantService } from '../services/entrant.service';
 import { accountTicketingService } from '../services/account-ticketing.service';
 import { accountProfileService } from '../services/account-profile.service';
 import { accountCredentialsService } from '../services/account-credentials.service';
@@ -23,6 +24,9 @@ import { holdExpiry } from '../utils/holds';
 import { holdWindowsService } from '../services/hold-windows.service';
 import { ValidationError, NotFoundError } from '../middleware/errors';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
+import { sensitiveFieldsFor } from '../services/audit/sensitive-fields';
+import { organisationFromRequest } from '../services/audit/with-audit';
 
 /**
  * Authenticated endpoints for the account-user application.
@@ -82,29 +86,57 @@ async function assertAddable(
       }
 
       /*
-       * Who the entry is for, on a members-only activity.
+       * Who the entry is for.
        *
-       * This is the check that matters. The listing hides the button and the
-       * form refuses to render, but neither has stopped anyone who can type a
-       * URL — and this decides who gets into a club's event. The candidates
-       * come from `eligibleMembers`, which the catalogue built from *this*
-       * login's own active memberships, so a member id belonging to somebody
-       * else is not in the list and cannot be chosen by supplying it.
+       * This is the check that matters. The form validates as the member types
+       * and the listing hides what cannot be entered, but neither has stopped
+       * anyone who can post to this endpoint — and this decides both who gets
+       * into a club's event and whose name ends up on the entry list.
+       *
+       * The scope comes from `entrantService`, which reads it from the
+       * activity, rather than from `eligibleMembers`. That list is the
+       * *caller's own* memberships, and entries are made on other people's
+       * behalf constantly — a secretary entering half the club, a parent
+       * entering the child whose membership sits on the other parent's login.
+       * Validating against it would refuse all of them. What is still enforced
+       * is that the member is active and within the activity's scope, which is
+       * the part that was ever protecting anything.
        */
-      if (found.activity.membersOnly) {
-        const memberId = contextRef.memberId;
-        if (!memberId) {
-          throw new ValidationError('Choose which member this entry is for');
-        }
+      const memberId: string | undefined = contextRef.memberId || undefined;
+      const entrantName: string =
+        typeof contextRef.entrantName === 'string' ? contextRef.entrantName.trim() : '';
 
-        const member = found.activity.eligibleMembers.find((m) => m.id === memberId);
+      let member = null;
+      if (memberId) {
+        member = await entrantService.resolveEntrant(
+          organisationId,
+          contextRef.activityId,
+          memberId
+        );
         if (!member) {
-          throw new ValidationError('That membership is not one you hold');
+          throw new ValidationError('That member is not eligible to enter this activity');
+        }
+      }
+
+      if (found.activity.membersOnly) {
+        if (!member) {
+          /*
+           * A typed name is exactly what a members-only activity excludes, so
+           * this is refused rather than accepted-and-flagged. The message names
+           * the remedy: the field completes, and only a completion will do.
+           */
+          throw new ValidationError('Choose which member this entry is for');
         }
         if (member.alreadyEntered) {
           throw new ValidationError(`${member.name} is already entered in this activity`);
         }
+      } else if (!member && !entrantName) {
+        // Open entries still need to know who is entering; the name is the
+        // entry, not a question about it.
+        throw new ValidationError('Enter the name of the person this entry is for');
+      }
 
+      if (member) {
         /*
          * The same member twice in one basket.
          *
@@ -344,6 +376,7 @@ router.get(
 router.post(
   '/:orgCode/register',
   authenticateToken(),
+  audited({ action: 'account_user.registered', entityType: 'account-user', kind: 'create' }),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const organisationId = await accountOrganisationService.getOrganisationIdByCode(
@@ -494,6 +527,7 @@ router.post(
   '/:orgCode/cart/items',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'entry.added-to-basket', entityType: 'cart-item', kind: 'action', sensitiveFields: (req) => sensitiveFieldsFor(organisationFromRequest(req)) }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId, currency } = req.account!;
@@ -560,6 +594,7 @@ router.put(
   '/:orgCode/cart/items/:itemId/payment-method',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'payment.method-changed', entityType: 'cart-item', param: 'itemId', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId, currency } = req.account!;
@@ -611,6 +646,7 @@ router.delete(
   '/:orgCode/cart/items/:itemId',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'entry.removed-from-basket', entityType: 'cart-item', param: 'itemId', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId, currency } = req.account!;
@@ -835,6 +871,7 @@ router.post(
   '/:orgCode/checkout',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'checkout.started', entityType: 'checkout', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId, currency } = req.account!;
@@ -882,6 +919,7 @@ router.post(
   '/:orgCode/checkout/:paymentId/abandon',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'payment.failed', entityType: 'checkout', param: 'paymentId', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId } = req.account!;
@@ -997,6 +1035,7 @@ router.put(
   '/:orgCode/profile',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'user.account-updated', entityType: 'account-user', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationUserId } = req.account!;
@@ -1045,6 +1084,7 @@ router.post(
   '/:orgCode/profile/password',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'auth.password-changed', entityType: 'account-user', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationUserId } = req.account!;
@@ -1089,6 +1129,7 @@ router.post(
   '/:orgCode/profile/email',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'auth.email-change-requested', entityType: 'account-user', kind: 'action' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationUserId } = req.account!;
@@ -1221,6 +1262,61 @@ router.get(
 
 /**
  * @swagger
+ * /api/account/{orgCode}/catalogue/activities/{activityId}/entrants:
+ *   get:
+ *     summary: Who this entry could be for
+ *     description: >
+ *       Active members in the activity's own scope whose name or membership
+ *       number matches `q`, together with how the name field should behave.
+ *       The scope is derived from the activity's eligibility on the server and
+ *       is never taken from the request: a client that could name its own scope
+ *       could ask an open club event for the federation-wide roster.
+ *
+ *
+ *       A query shorter than two characters returns no matches — the mode still
+ *       comes back, so the form can render the field before anything is typed.
+ *     tags: [Account]
+ *     responses:
+ *       200:
+ *         description: The field mode, and any matches
+ */
+router.get(
+  '/:orgCode/catalogue/activities/:activityId/entrants',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  requireAccountCapability('event-management'),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationId } = req.account!;
+      const { activityId } = req.params;
+      const query = typeof req.query.q === 'string' ? req.query.q : '';
+
+      /*
+       * Both in one call, and the mode first.
+       *
+       * The form needs the mode to render the field at all — whether to
+       * complete, whether a typed name is acceptable — and needs it before the
+       * member has typed anything to complete against. Splitting it into a
+       * second endpoint would mean two round trips to draw one field.
+       */
+      const mode = await entrantService.fieldMode(organisationId, activityId);
+      const matches = mode.autocomplete
+        ? await entrantService.searchEntrants(organisationId, activityId, query)
+        : [];
+
+      return res.json({ ...mode, matches });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error('Error in GET /account/:orgCode/catalogue/activities/:activityId/entrants:', error);
+      return res.status(500).json({ error: 'Failed to search members' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/account/{orgCode}/catalogue/membership-types:
  *   get:
  *     summary: Membership types this member can apply for
@@ -1305,6 +1401,7 @@ router.post(
   authenticateToken(),
   resolveAccountOrganisation(),
   requireAccountCapability('calendar-bookings'),
+  audited({ action: 'booking.cancelled', resource: 'booking', entityType: 'booking', param: 'bookingId' }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId } = req.account!;
@@ -1632,6 +1729,7 @@ router.post(
   '/:orgCode/form-submissions',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'entry.form-submitted', entityType: 'form-submission', kind: 'action', sensitiveFields: (req) => sensitiveFieldsFor(organisationFromRequest(req)) }),
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId } = req.account!;
@@ -1766,6 +1864,7 @@ router.put(
   '/:orgCode/form-submissions/:submissionId',
   authenticateToken(),
   resolveAccountOrganisation(),
+  audited({ action: 'entry.form-submitted', resource: 'formSubmission', entityType: 'form-submission', param: 'submissionId', sensitiveFields: (req) => sensitiveFieldsFor(organisationFromRequest(req)) }),
   async (req: AccountRequest, res: Response) => {
     try {
       const submission = await ownEditableSubmission(req);

@@ -23,7 +23,7 @@ groups, roles).
 | Organisation type | **Irish Pony Clubs** — EUR, en-GB, 20 capabilities, handling fee €0.25 + 1.5%, platform share €0.30 + 1.5% |
 | Organisations | **Kildare Hunt** (`khpc`), **Laois Hunt** (`lhpc`), **Ward Union** (`wupc`) |
 | Logins | 1 super admin, 3 organisation admins, 16 account users across 24 club affiliations |
-| Events | 18, with 41 activities |
+| Events | 18, with 41 activities — 15 published publicly |
 | Forms | 6 forms per club (18), built from 26 fields per club (78) covering 13 field types |
 | Memberships | 5 membership types per club (13 in total), with 22 members for this season |
 | Shop | 8 products at Kildare Hunt, each with a generated image, plus 10 option groups and 30 option values |
@@ -93,6 +93,34 @@ Ready-made subjects:
 | `ruairi.kelly@example.test` | Laois member with no Kildare account — sees the Inter-Branch Championship on the Laois home page and is prompted to join Kildare |
 | `eoin.brady@example.test` | belongs to Ward Union only, one membership — the same path from a different branch |
 | `sinead.gallagher@example.test` | holds four memberships on one login — the parent case, for the "which member?" selector |
+
+### Fifteen events are published publicly
+
+Twelve of them also appear on the platform listing at **`/account/events`** (`/events` in
+production). The spread is deliberate: that page is a *filterable* surface, and a fixture where
+every event shares a club, a county and a type gives each filter one option and proves nothing.
+
+| | On the platform page |
+|---|---|
+| Clubs | all four |
+| Regions | Co. Kildare (4), Co. Laois (3), Co. Meath (5) |
+| Event types | Show Jumping (3), Cross Country (3), Dressage (2), Fun Day (2), Camp (1), Rally (1) |
+| Entry windows | open, closing in days, not yet open, closed, no window at all, finished |
+
+**Three are club-page-only** — Kildare's Members' Cup, Laois's closed event, Meath's summer camp.
+Without them the two flags would always agree and a bug that ignored one would pass unnoticed.
+
+**Three are not public at all**, one of which is a draft: a draft can never reach the public whatever
+its flags say, and having one in the fixture makes that rule testable rather than assumed.
+
+A filter combination worth trying, because it is the one a naive implementation gets wrong:
+
+```
+/account/events?type=Cross+Country&region=Co.+Meath
+```
+
+It returns Meath Hunt's Tara Hunter Trial **and Ward Union's** Cross Country League — Ward Union's
+grounds are in Co. Meath despite the club's name. Filtering location by club name would miss it.
 
 ### Events cover every entry-window state
 

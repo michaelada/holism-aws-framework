@@ -12,8 +12,11 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { PostCard } from '@aws-web-framework/components';
 import { useAuthContext } from '../context/AuthContext';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
+import { usePlatformPosts } from '../hooks/usePlatformPosts';
+import { PoweredBy } from '../components/PoweredBy';
 
 /**
  * A2 — Organisation Gateway. Route `/:orgCode` for a signed-out visitor.
@@ -38,6 +41,15 @@ export const OrganisationGatewayPage: React.FC = () => {
    * request and let the gateway and the theme disagree about the same club.
    */
   const { publicLoading, publicDetail: organisation } = useAccountOrganisation();
+
+  /**
+   * The platform's announcements, shown beside the sign-in card.
+   *
+   * Fetched unconditionally rather than only when the club resolves: it does
+   * not depend on which club this is, and waiting for the club would leave the
+   * panel arriving after the rest of the page had settled.
+   */
+  const { posts } = usePlatformPosts('account');
 
   /*
    * `displayName` rather than the object alone. A truthy `publicDetail` that is
@@ -74,8 +86,7 @@ export const OrganisationGatewayPage: React.FC = () => {
     );
   }
 
-  return (
-    <Container maxWidth="sm" sx={{ py: { xs: 4, md: 8 } }}>
+  const signIn = (
       <Paper sx={{ p: { xs: 3, md: 4 }, textAlign: 'center' }}>
         <Avatar
           src={organisation.branding?.logoUrl}
@@ -115,6 +126,75 @@ export const OrganisationGatewayPage: React.FC = () => {
           <Button onClick={() => navigate('/')}>{t('gateway.browseAll')}</Button>
         </Stack>
       </Paper>
+  );
+
+  /*
+   * Sign-in on the left, announcements on the right; stacked on a narrow
+   * screen, with sign-in first.
+   *
+   * `md` is the breakpoint rather than `sm` because the right column holds
+   * cards with images: two columns on a tablet gives each about 300px, which is
+   * narrower than the images want and narrower than the sign-in card reads
+   * well at.
+   *
+   * The whole layout collapses back to the original single centred column when
+   * there are no posts — which is every deployment until somebody writes one,
+   * and is what stops an empty right-hand column pushing the sign-in card
+   * off-centre for no reason.
+   */
+  if (posts.length === 0) {
+    return (
+      <Container maxWidth="sm" sx={{ py: { xs: 4, md: 8 } }}>
+        {signIn}
+        <PoweredBy />
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
+      <Box
+        sx={{
+          display: 'grid',
+          // Tight at 600px, where 40px of gutter is most of a column.
+          gap: { xs: 3, sm: 3, md: 5 },
+          alignItems: 'start',
+          /*
+           * Two columns from `sm` (600px). The `minmax` floor that used to sit
+           * on the sign-in column had to go with the breakpoint: a 320px floor
+           * plus a second column does not fit inside 600, so keeping it would
+           * have given a full-width form beside a ribbon of announcements.
+           * Even columns shrink together instead.
+           */
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+        }}
+      >
+        {/* Inside the left column, so it stays under the sign-in card when
+            the layout stacks rather than drifting under the announcements. */}
+        <Box>
+          {signIn}
+          <PoweredBy />
+        </Box>
+
+        <Stack
+          component="section"
+          aria-label={t('posts.regionLabel')}
+          spacing={2}
+          /*
+           * Narrower than the column that holds it, and centred in it. The grid
+           * stays an even split, but a card of text and a 16:9 image does not
+           * need the whole of its half — at full width the announcements read
+           * as the main event beside the sign-in that is the reason for the
+           * page. Only above `md`: stacked, they should match the card above
+           * them.
+           */
+          sx={{ width: '100%', maxWidth: { sm: 440 }, mx: { sm: 'auto' } }}
+        >
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} imageBaseUrl={import.meta.env.VITE_API_BASE_URL || ''} />
+          ))}
+        </Stack>
+      </Box>
     </Container>
   );
 };

@@ -11,6 +11,8 @@ import { isAllowedRedirectUrl } from '../utils/allowed-origins';
 import { organizationBrandingService } from '../services/organization-branding.service';
 import { organizationEmailTemplatesService } from '../services/organization-email-templates.service';
 import { accountRegistrationService } from '../services/account-registration.service';
+import { auditQueryService, queryFromRequest, actorFromRequest } from '../services/audit';
+import { audited } from '../middleware/audit.middleware';
 
 const router = Router();
 
@@ -307,6 +309,7 @@ router.get(
 router.post(
   '/payments/:id/received',
   authenticateToken(),
+  audited({ action: 'offline-payment.recorded', resource: 'payment', entityType: 'payment', kind: 'action' }),
   withOrganisation('Failed to record the payment', async (organisationId, req, res) => {
     const result = await paymentService.markOfflinePaymentReceived(
       organisationId,
@@ -337,6 +340,7 @@ router.post(
 router.delete(
   '/payments/:id/received',
   authenticateToken(),
+  audited({ action: 'offline-payment.recorded', resource: 'payment', entityType: 'payment', kind: 'action' }),
   withOrganisation('Failed to undo the receipt', async (organisationId, req, res) => {
     res.json(await paymentService.undoOfflinePaymentReceived(organisationId, req.params.id));
   })
@@ -375,6 +379,7 @@ router.get(
 router.put(
   '/payment-settings',
   authenticateToken(),
+  audited({ action: 'settings.payment-updated', entityType: 'payment-settings', label: () => 'Payment settings', kind: 'action' }),
   withOrganisation('Failed to update payment settings', async (organisationId, req, res) => {
     const updated = await organizationPaymentSettingsService.updatePaymentSettings(
       organisationId,
@@ -421,7 +426,8 @@ router.put(
   withOrganisation('Failed to update branding settings', async (organisationId, req, res) => {
     const updated = await organizationBrandingService.updateBrandingSettings(
       organisationId,
-      req.body
+      req.body,
+      actorFromRequest(req)
     );
     res.json(updated);
   })
@@ -464,6 +470,7 @@ router.get(
 router.put(
   '/email-templates',
   authenticateToken(),
+  audited({ action: 'settings.email-template-updated', entityType: 'email-template', kind: 'action' }),
   withOrganisation('Failed to update email template', async (organisationId, req, res) => {
     const updated = await organizationEmailTemplatesService.updateEmailTemplate(
       organisationId,
@@ -488,6 +495,7 @@ router.put(
 router.delete(
   '/email-templates/:name',
   authenticateToken(),
+  audited({ action: 'settings.email-template-updated', entityType: 'email-template', param: 'name', kind: 'action' }),
   withOrganisation('Failed to reset email template', async (organisationId, req, res) => {
     const reset = await organizationEmailTemplatesService.resetEmailTemplate(
       organisationId,
@@ -535,6 +543,7 @@ router.get(
 router.put(
   '/registration-settings',
   authenticateToken(),
+  audited({ action: 'settings.registration-updated', entityType: 'registration-settings', label: () => 'Registration settings', kind: 'action' }),
   withOrganisation('Failed to update registration settings', async (organisationId, req, res) => {
     const { approvePending, ...settings } = req.body ?? {};
     const updated = await accountRegistrationService.updateSettings(organisationId, settings);
@@ -603,6 +612,7 @@ router.get(
 router.post(
   '/registrations/:id/decision',
   authenticateToken(),
+  audited({ action: 'user.registration-approved', entityType: 'account-registration', kind: 'action' }),
   withOrganisation('Failed to record the decision', async (organisationId, req, res) => {
     const { decision, note } = req.body ?? {};
 
@@ -695,6 +705,65 @@ router.post(
       refreshUrl
     );
     res.json(link);
+  })
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/audit:
+ *   get:
+ *     summary: This organisation's audit trail
+ *     description: >
+ *       The same query layer the Platform Admin screen uses, with the
+ *       organisation fixed to the caller's own. The scope is not a filter the
+ *       client can change — `withOrganisation` resolves it from the session, and
+ *       a query-string `organisationId` is ignored — so a club cannot read
+ *       another club's trail by editing a URL.
+ *     tags: [OrgAdmin]
+ */
+router.get(
+  '/audit',
+  authenticateToken(),
+  withOrganisation('Failed to load the audit trail', async (organisationId, req, res) => {
+    const page = await auditQueryService.search(queryFromRequest(req, organisationId));
+    res.json(page);
+  })
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/audit/filters:
+ *   get:
+ *     summary: The filter values worth offering for this organisation
+ *     tags: [OrgAdmin]
+ */
+router.get(
+  '/audit/filters',
+  authenticateToken(),
+  withOrganisation('Failed to load the filters', async (organisationId, _req, res) => {
+    res.json(await auditQueryService.filterOptions(organisationId));
+  })
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/audit/{id}:
+ *   get:
+ *     summary: One event from this organisation's trail
+ *     tags: [OrgAdmin]
+ */
+router.get(
+  '/audit/:id',
+  authenticateToken(),
+  withOrganisation('Failed to load the event', async (organisationId, req, res) => {
+    const event = await auditQueryService.findById(req.params.id, organisationId);
+    // Scoped, so an event belonging to another club is "not found" rather than
+    // "forbidden" — which would confirm it exists.
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+    res.json(event);
   })
 );
 

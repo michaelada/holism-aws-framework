@@ -35,6 +35,17 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
+/**
+ * The platform's announcements, which the gateway now shows beside the sign-in
+ * card. Defaulted to none, so the tests above this one describe the page as it
+ * looks for a deployment that has never written a post — which is the shape
+ * they were written against.
+ */
+let posts: unknown[] = [];
+vi.mock('../../hooks/usePlatformPosts', () => ({
+  usePlatformPosts: () => ({ posts, loading: false }),
+}));
+
 const render = () => renderWithProviders(<OrganisationGatewayPage />);
 
 describe('OrganisationGatewayPage (A2)', () => {
@@ -43,6 +54,7 @@ describe('OrganisationGatewayPage (A2)', () => {
     mockRegister.mockReset();
     mockNavigate.mockReset();
     contextValue = makeOrganisationContext({ state: 'anonymous', me: null });
+    posts = [];
   });
 
   it('brands the page with the club a visitor arrived for', () => {
@@ -111,5 +123,52 @@ describe('OrganisationGatewayPage (A2)', () => {
     render();
 
     expect(screen.queryByText('We could not find that organisation')).not.toBeInTheDocument();
+  });
+
+  describe('the announcements column', () => {
+    const post = (over: Record<string, unknown> = {}) => ({
+      id: 'post-1',
+      title: 'Planned maintenance',
+      body: '<p>We will be unavailable on Sunday.</p>',
+      imageUrl: null,
+      links: [],
+      ...over,
+    });
+
+    it('shows the posts the platform has published, in order', () => {
+      posts = [post({ id: 'a', title: 'First' }), post({ id: 'b', title: 'Second' })];
+      render();
+
+      const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+      expect(headings).toEqual(['First', 'Second']);
+    });
+
+    it('groups them in a labelled region, so they can be skipped', () => {
+      // A landmark is what lets somebody using a screen reader move past the
+      // announcements to the sign-in form without hearing all of them.
+      posts = [post()];
+      render();
+
+      expect(screen.getByRole('region', { name: /announcements/i })).toBeInTheDocument();
+    });
+
+    it('renders no region at all when there is nothing to say', () => {
+      /*
+       * The whole two-column layout collapses back to the original centred
+       * card. Without this a deployment that has never written a post gets an
+       * empty half of a screen and an off-centre sign-in form.
+       */
+      render();
+
+      expect(screen.queryByRole('region', { name: /announcements/i })).not.toBeInTheDocument();
+    });
+
+    it('keeps the sign-in form regardless', () => {
+      // The announcements are decoration; the reason for the page is not.
+      posts = [post()];
+      render();
+
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    });
   });
 });

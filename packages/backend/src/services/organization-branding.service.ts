@@ -2,6 +2,7 @@ import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { ValidationError } from '../middleware/errors';
 import { fileUploadService } from './file-upload.service';
+import { audit, diff, type AuditActor } from './audit';
 
 /**
  * Branding settings for an organisation.
@@ -43,6 +44,16 @@ export interface BrandingSettings {
    * the capability off and on again does not lose what a club chose.
    */
   bookingsLabel?: string;
+  /**
+   * Where the logo being shown came from. Read-only: derived on every read from
+   * the organisation's own logo and its type's, never stored.
+   */
+  logoSource?: LogoSource;
+  /**
+   * Whether this organisation may set a logo of its own. Read-only, and false
+   * only where its type has a shared mark it forbids replacing.
+   */
+  canOverrideLogo?: boolean;
 }
 
 export const DEFAULT_BRANDING_SETTINGS: BrandingSettings = {
@@ -56,13 +67,19 @@ export const DEFAULT_BRANDING_SETTINGS: BrandingSettings = {
   textColor: '#000000',
 };
 
-const COLOUR_FIELDS: Array<keyof BrandingSettings> = [
+/*
+ * The literal keys, not `keyof BrandingSettings`. The wider type let the
+ * assignment below claim to write a string into any branding field, which was
+ * harmless while every field was a string and stopped compiling the moment one
+ * was not — a boolean would have been assigned a trimmed, lower-cased colour.
+ */
+const COLOUR_FIELDS = [
   'primaryColor',
   'secondaryColor',
   'accentColor',
   'backgroundColor',
   'textColor',
-];
+] as const;
 
 /** #rgb or #rrggbb, case-insensitive. */
 const HEX_COLOUR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -164,6 +181,102 @@ function sanitizeBrandingSettings(data: any): Partial<BrandingSettings> {
 }
 
 /**
+ * What an organisation's type says about logos.
+ *
+ * Read from `organization_types`; null where a caller has not joined to it, in
+ * which case the organisation's own logo is used and nothing is inherited.
+ */
+export interface TypeLogoPolicy {
+  /** The shared mark, or null where the type has not set one. */
+  logoS3Key: string | null;
+  /** Whether a club may replace the shared mark with its own. */
+  allowOverride: boolean;
+}
+
+/**
+ * Read the type's logo policy off a joined row.
+ *
+ * Its own function because three queries join to `organization_types` for this
+ * and the column names are the sort of thing that gets mistyped once and then
+ * silently returns "no shared logo" forever.
+ */
+export function typeLogoPolicyFromRow(row: any): TypeLogoPolicy | null {
+  if (!row) return null;
+  return {
+    logoS3Key: row.type_logo_s3_key ?? null,
+    // Absent means "no type joined", which must not read as "locked".
+    allowOverride: row.type_allow_logo_override !== false,
+  };
+}
+
+/** Where the logo an organisation actually shows came from. */
+export type LogoSource = 'organisation' | 'organisation-type' | 'none';
+
+export interface EffectiveLogo {
+  /** The key to sign, if the winning logo lives in our bucket. */
+  s3Key: string;
+  /** An externally-hosted URL, where that is what won. */
+  url: string;
+  source: LogoSource;
+  /**
+   * Whether this organisation may set a logo of its own at all. False only
+   * where its type has a shared mark and forbids replacing it — which is what
+   * removes the upload control from the branding screen.
+   */
+  canOverride: boolean;
+}
+
+/**
+ * Which logo an organisation actually shows, and whether it may change it.
+ *
+ * One function, used by every reader, because the alternative is each screen
+ * working it out again and one of them getting it wrong — and "wrong" here
+ * means a club showing another club's mark, or a federation's rebrand not
+ * reaching half its branches.
+ *
+ * The order is the whole rule:
+ *
+ * 1. A **locked** type logo wins outright. That is what "may not be overridden"
+ *    means, and it has to beat an organisation's own logo rather than merely
+ *    hiding the upload — a club that set a logo before the type was locked
+ *    would otherwise keep showing it.
+ * 2. Otherwise the organisation's own logo, if it has one.
+ * 3. Otherwise the type's logo, inherited as a default.
+ * 4. Otherwise nothing, and the shell renders the organisation's initial.
+ *
+ * **The flag only bites when the type actually has a logo.** With no shared
+ * mark there is nothing to protect, and honouring `allowOverride: false`
+ * literally would leave every club in that type unable to have any logo at all
+ * — a dead configuration a super admin could reach by ticking one box.
+ */
+export function effectiveLogo(
+  branding: Pick<BrandingSettings, 'logoS3Key' | 'logoUrl'>,
+  type: TypeLogoPolicy | null
+): EffectiveLogo {
+  const typeLogo = type?.logoS3Key || '';
+  const locked = Boolean(typeLogo) && type?.allowOverride === false;
+
+  if (locked) {
+    return { s3Key: typeLogo, url: '', source: 'organisation-type', canOverride: false };
+  }
+
+  if (branding.logoS3Key || branding.logoUrl) {
+    return {
+      s3Key: branding.logoS3Key || '',
+      url: branding.logoUrl || '',
+      source: 'organisation',
+      canOverride: true,
+    };
+  }
+
+  if (typeLogo) {
+    return { s3Key: typeLogo, url: '', source: 'organisation-type', canOverride: true };
+  }
+
+  return { s3Key: '', url: '', source: 'none', canOverride: true };
+}
+
+/**
  * Turn a stored logo into something an <img> can load.
  *
  * An uploaded logo is stored as an S3 key, not a URL: the bucket blocks public
@@ -177,41 +290,87 @@ function sanitizeBrandingSettings(data: any): Partial<BrandingSettings> {
  * with it the entire organisation shell. An empty logo renders as the
  * organisation's initial, which is the same thing an organisation without a
  * logo shows.
+ *
+ * `type` is optional so the many existing callers that have no type to hand
+ * keep working unchanged: without it, an organisation simply shows its own.
  */
-export async function resolveLogoUrl(branding: BrandingSettings): Promise<string> {
-  if (!branding.logoS3Key) {
-    return branding.logoUrl || '';
+export async function resolveLogoUrl(
+  branding: Pick<BrandingSettings, 'logoS3Key' | 'logoUrl'>,
+  type: TypeLogoPolicy | null = null
+): Promise<string> {
+  const effective = effectiveLogo(branding, type);
+
+  if (!effective.s3Key) {
+    return effective.url || '';
   }
 
   try {
-    return await fileUploadService.getFileUrl(branding.logoS3Key, LOGO_URL_TTL_SECONDS);
+    return await fileUploadService.getFileUrl(effective.s3Key, LOGO_URL_TTL_SECONDS);
   } catch (error) {
     logger.warn('Could not sign a URL for the branding logo', {
-      s3Key: branding.logoS3Key,
+      s3Key: effective.s3Key,
+      source: effective.source,
       error: error instanceof Error ? error.message : String(error),
     });
-    return branding.logoUrl || '';
+    return effective.url || '';
   }
 }
 
 export class OrganizationBrandingService {
+  /** What this organisation's type says about logos, or null if it has no type. */
+  async typeLogoPolicy(organizationId: string): Promise<TypeLogoPolicy | null> {
+    const result = await db.query(
+      `SELECT ot.logo_s3_key         AS type_logo_s3_key,
+              ot.allow_logo_override AS type_allow_logo_override
+         FROM organizations o
+         JOIN organization_types ot ON ot.id = o.organization_type_id
+        WHERE o.id = $1`,
+      [organizationId]
+    );
+    return result.rows.length ? typeLogoPolicyFromRow(result.rows[0]) : null;
+  }
+
   /**
    * Get the branding settings for an organisation, merged onto the defaults so
    * callers always receive a fully-populated object.
    */
   async getBrandingSettings(organizationId: string): Promise<BrandingSettings> {
-    const result = await db.query('SELECT settings FROM organizations WHERE id = $1', [
-      organizationId,
-    ]);
+    /*
+     * Joined to the type, because the logo an organisation shows may not be its
+     * own. `LEFT JOIN` — an organisation with no type still has branding.
+     */
+    const result = await db.query(
+      `SELECT o.settings,
+              ot.logo_s3_key         AS type_logo_s3_key,
+              ot.allow_logo_override AS type_allow_logo_override
+         FROM organizations o
+         LEFT JOIN organization_types ot ON ot.id = o.organization_type_id
+        WHERE o.id = $1`,
+      [organizationId]
+    );
 
     if (result.rows.length === 0) {
       throw new Error('Organization not found');
     }
 
-    const settings = result.rows[0].settings || {};
+    const row = result.rows[0];
+    const settings = row.settings || {};
     const branding = { ...DEFAULT_BRANDING_SETTINGS, ...(settings.branding || {}) };
+    const policy = typeLogoPolicyFromRow(row);
+    const effective = effectiveLogo(branding, policy);
 
-    return { ...branding, logoUrl: await resolveLogoUrl(branding) };
+    return {
+      ...branding,
+      logoUrl: await resolveLogoUrl(branding, policy),
+      /*
+       * Told to the caller rather than left to be inferred. The branding screen
+       * has to say *why* there is no upload control, and "your organisation
+       * type sets the logo" is a different sentence from "you have not uploaded
+       * one yet".
+       */
+      logoSource: effective.source,
+      canOverrideLogo: effective.canOverride,
+    };
   }
 
   /**
@@ -224,12 +383,42 @@ export class OrganizationBrandingService {
    */
   async updateBrandingSettings(
     organizationId: string,
-    data: Partial<BrandingSettings>
+    data: Partial<BrandingSettings>,
+    /**
+     * Who is making the change, for the audit trail.
+     *
+     * Optional so existing callers compile, but the route passes it — an
+     * unattributed settings change is the thing the old audit log was full of.
+     */
+    actor?: AuditActor
   ): Promise<BrandingSettings> {
+    // Read before writing: the audit record needs the values as they were, and
+    // after the UPDATE they are gone.
+    const before = await this.getBrandingSettings(organizationId).catch(() => null);
+
     const merged: BrandingSettings = {
       ...DEFAULT_BRANDING_SETTINGS,
       ...sanitizeBrandingSettings(data),
     };
+
+    /*
+     * The lock is enforced here, not only by hiding the upload.
+     *
+     * The branding screen removes the control when a club may not override its
+     * type's mark, but a screen is not a rule: the endpoint is reachable by
+     * anyone who can open a console, and a club that had a logo before the type
+     * was locked will still be posting it back with every colour change.
+     *
+     * Colours and the bookings label are untouched by this — the lock is about
+     * the logo, so the rest of the screen keeps working. The stored logo is
+     * cleared rather than refused, because a stored value that is never shown
+     * is a trap for whoever reads the row next.
+     */
+    const policy = await this.typeLogoPolicy(organizationId);
+    if (policy?.logoS3Key && policy.allowOverride === false) {
+      merged.logoS3Key = '';
+      merged.logoUrl = '';
+    }
 
     const result = await db.query(
       `UPDATE organizations
@@ -245,7 +434,38 @@ export class OrganizationBrandingService {
     }
 
     logger.info(`Branding settings updated for organization ${organizationId}`);
-    return merged;
+
+    if (actor) {
+      /*
+       * `logoSource` and `canOverrideLogo` are derived per read, not stored, so
+       * they would show up as spurious changes on every save.
+       */
+      audit.record({
+        actor,
+        category: 'settings',
+        action: 'settings.branding-updated',
+        organisationId: organizationId,
+        entityType: 'branding-settings',
+        entityLabel: 'Branding',
+        changes: diff(before as any, merged as any, {
+          ignore: new Set(['logoSource', 'canOverrideLogo', 'logoUrl']),
+        }),
+      });
+    }
+
+    /*
+     * Derived from the policy already fetched above, rather than re-reading the
+     * row. The caller still learns that its logo was refused — which it must,
+     * or the screen shows a logo the server just discarded — without a second
+     * round trip on every colour change.
+     */
+    const effective = effectiveLogo(merged, policy);
+    return {
+      ...merged,
+      logoUrl: await resolveLogoUrl(merged, policy),
+      logoSource: effective.source,
+      canOverrideLogo: effective.canOverride,
+    };
   }
 }
 

@@ -168,8 +168,31 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
    * realm, one credential set, branding as a theme parameter rather than a
    * separate realm per club.
    */
-  const redirectFor = (orgCode?: string) =>
-    orgCode ? `${window.location.origin}${ACCOUNT_ROOT}${orgCode}` : window.location.href;
+  const redirectFor = (orgCode?: string) => {
+    if (!orgCode) return window.location.href;
+
+    const clubRoot = `${ACCOUNT_ROOT}${orgCode}`;
+
+    /*
+     * Come back to where they were, not to the club's front door.
+     *
+     * This used to return the club root unconditionally, which quietly
+     * discarded every deep link. A visitor arriving from a public event page —
+     * or from any shared link — signed in successfully and landed on the home
+     * page, with no sign of the thing they had clicked. On a page whose whole
+     * purpose is "click this event to enter it", that is the feature failing at
+     * its last step.
+     *
+     * Only when the current path is already inside this club's routes: signing
+     * in *to* Kildare from Laois's page must not return to Laois.
+     */
+    const here = window.location.pathname;
+    const inThisClub = here === clubRoot || here.startsWith(`${clubRoot}/`);
+
+    return inThisClub
+      ? `${window.location.origin}${here}${window.location.search}`
+      : `${window.location.origin}${clubRoot}`;
+  };
 
   const login = useCallback(
     (orgCode?: string) => {

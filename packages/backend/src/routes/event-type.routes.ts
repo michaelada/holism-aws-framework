@@ -5,6 +5,7 @@ import {
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -81,6 +82,7 @@ router.post(
   '/organisations/:organisationId/event-types',
   authenticateToken(),
   ...requireOrgAdminCapability('event-management'),
+  audited({ action: 'event-type.created', resource: 'eventType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -177,6 +179,7 @@ router.put(
   authenticateToken(),
   byResource('eventType', 'id'),
   ...requireOrgAdminCapability('event-management'),
+  audited({ action: 'event-type.updated', resource: 'eventType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -218,6 +221,7 @@ router.delete(
   authenticateToken(),
   byResource('eventType', 'id'),
   ...requireOrgAdminCapability('event-management'),
+  audited({ action: 'event-type.deleted', resource: 'eventType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

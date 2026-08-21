@@ -72,8 +72,21 @@ export const OrganisationIdContext = createContext<(() => string | null) | undef
  *
  * The trailing slash is what keeps this from swallowing the plural
  * `/api/orgadmin/organisations/…`, which is already handled above.
+ *
+ * `/api/orgadmin/users/` is the same mounting story with a different ending.
+ * Its router is also mounted once and bare, so the rewrite produced a 404 and
+ * both Users lists — Admin and Accounts — rendered as though the club had no
+ * users at all. But this one already names the organisation in its *own* path
+ * (`/users/accounts/:organizationId`), and every route declares what it is
+ * scoped by, so scoping is not being given up here: a prefix would only have
+ * repeated the id a second time, and the URL that carries it is the one the
+ * server actually reads.
  */
-const UNSCOPED_ORGADMIN_PATHS = ['/api/orgadmin/auth/', '/api/orgadmin/organisation/'];
+const UNSCOPED_ORGADMIN_PATHS = [
+  '/api/orgadmin/auth/',
+  '/api/orgadmin/organisation/',
+  '/api/orgadmin/users/',
+];
 
 /**
  * Put the organisation in the URL, not only in a header.

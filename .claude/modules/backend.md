@@ -70,6 +70,43 @@ Grouped by area; each is a class or object exported from `src/services`.
 `membership-number-validator.service`, `merchandise.service`, `merchandise-option.service`,
 `registration.service`, `calendar.service`, `delivery-rule.service`, `ticketing.service`.
 
+**Organisation type logos** — a type may set a shared logo that every organisation of that type
+inherits, and may forbid replacing it. `effectiveLogo` in `organization-branding.service` is the one
+place the rule lives: a **locked** type logo beats a club's own (or locking changes nothing for the
+clubs it was meant to bring into line), then the club's own, then the type's as a default, then
+nothing. The flag only bites once the type has a logo — otherwise it would leave every club unable
+to have any. Enforced in `updateBrandingSettings`, not merely by hiding the upload. The branding read
+carries derived `logoSource` / `canOverrideLogo`, never stored. See
+[docs/ORGANISATION_TYPE_LOGO.md](../../docs/ORGANISATION_TYPE_LOGO.md).
+
+**Platform posts** — `platform-post.service` holds the announcements shown on both login pages.
+The public image URL carries a `?v=` token hashed from the S3 key, so replacing or removing a
+picture changes the address — without it the same URL served different bytes and a removed image
+stayed on screen until the browser's copy expired. The post list is `no-cache` (revalidated) rather
+than held for a minute, because a stale announcements panel reads as a failed save.
+Writes are `super-admin` only (`platform-post.routes`, mounted at `/api/admin/posts`); the two
+anonymous reads live in `public.routes` with the rest of the no-token surface. The public read is
+**sanitised in the service, not by its callers** — one caller is a Keycloak login theme with no
+sanitiser of its own — while the admin read is deliberately raw so the editor round-trips. Link URLs
+are restricted to http/https on write, because they become anchors on an anonymous page. A failing
+public read answers `[]` with a 200: a login page must render whatever happens. See
+[docs/PLATFORM_POSTS.md](../../docs/PLATFORM_POSTS.md).
+
+⚠️ `__mocks__/isomorphic-dompurify.js` used to be an **identity function**, wired in through
+`moduleNameMapper` — which silently disabled every sanitisation assertion in the repo, and which no
+individual suite could opt out of (`moduleNameMapper` intercepts `jest.requireActual` too). It now
+delegates to the real DOMPurify; making it honest broke nothing.
+
+**Who an entry is for** — `entrant.service` backs the name field every event entry form opens with.
+Scope (this club's roster, or every club in the organisation type) is derived from the activity's
+`entry_eligibility` and is **never** accepted as a parameter — a client that could name its own scope
+could ask an open club event for the federation-wide roster. `searchEntrants` and `resolveEntrant`
+share one scope function and one definition of "active" (`status = 'active'` **and** `valid_until >=
+today`); those two agreeing is the safety property, since one decides what is offered and the other
+what is accepted. Deliberately over the whole roster rather than the caller's own memberships —
+entries are made on other people's behalf constantly — with a two-character minimum, a cap of 20, and
+no contact details in the payload. See [docs/ENTRANT_NAME.md](../../docs/ENTRANT_NAME.md).
+
 **Availability and fulfilment** — `account-catalogue.service` decides what a member may buy;
 `fulfilment.service` turns each paid `payment_transactions` line into the thing it bought.
 `utils/slot-availability.ts` holds the booking rules and is a **deliberate second implementation** of
@@ -79,8 +116,15 @@ same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/A
 **Cross-cutting** — `discount.service`, `discount-calculator.service`, `discount-validator.service`,
 `application-form.service`, `form-submission.service`, `payment.service`, `payment-method.service`,
 `capability.service`, `metadata.service`, `generic-crud.service`, `table-generator.service`,
-`reporting.service`, `email.service`, `file-upload.service`, `cache.service`, `audit-log.service`,
-`validation.service`.
+`reporting.service`, `email.service`, `file-upload.service`, `cache.service`, `validation.service`,
+`session.service`.
+
+**Audit** (`services/audit/`) — `audit.service` (`record()`, batched and non-throwing),
+`audit.redaction` (`diff`/`created`/`deleted`, the never-log list), `audit.types` (the action
+registry — ~90 actions in 11 categories), `audit.query` (keyset paging, organisation **mandatory**),
+`with-audit` (`withAudit`, `recordAudit`), `sensitive-fields` (the club's own marked form fields),
+`audit-partitions` (monthly rotation, retention helper). See
+[docs/AUDIT_TRAIL_AND_SESSIONS.md](../../docs/AUDIT_TRAIL_AND_SESSIONS.md).
 
 ## Middleware
 
@@ -91,6 +135,8 @@ same cases ([docs/ACCOUNT_USER_APP_PHASE11_CATALOGUE_COMPLETION.md](../../docs/A
 | `capability.middleware` | `loadOrganisationCapabilities()`, `requireCapability()`, `requireAllCapabilities()`, `requireOrgAdminCapability()` — org admins only |
 | `account-auth.middleware` | `resolveAccountOrganisation()`, `requireAccountCapability()` — the account-user equivalent |
 | `organisation-scope.middleware` | `scopeToOrganisation()` and its shorthands — **which organisation a request concerns, and whether the caller may act there.** Required on every org-admin route; a structural test enforces it |
+| `audit.middleware` | `audited({...})` — records a route without touching its handler. Loads the before-row for an update or delete, captures the response as the after-row, records on `finish`. On 101 mutating routes |
+| `audit-auth.middleware` | `noteAuthenticatedRequest()`, `auditRefusals()` — logins and access refusals |
 | `field-capability.middleware` | Capability gating at field granularity |
 | `input-validation.middleware`, `xss-protection.middleware`, `csrf.middleware`, `rate-limit.middleware` | Request hardening |
 | `request-logger.middleware`, `metrics.middleware` | Observability |
@@ -129,7 +175,7 @@ Raw SQL through `db` (`src/database/pool.ts`). Schema is defined solely by `migr
 
 ```
 organizations  organization_types  organization_users  organization_user_roles
-organization_admin_roles  organization_audit_log  admin_audit_log  users  roles  capabilities
+organization_admin_roles  audit_events (partitioned by month)  users  roles  capabilities
 events  event_activities  event_entries  event_ticketing_config  electronic_tickets
 ticket_scan_history  members  membership_types  member_filters
 registrations  registration_types  registration_filters
@@ -271,6 +317,7 @@ currency sent by a client rather than honouring it.
 | "Why isn't a discount restriction applying?" | `discount-validator.service` — and check the stored `eligibility_criteria` key: older rows use `membershipTypeIds`, current ones `membershipTypes`; both are read |
 | "What can an account user call?" | `public.routes` (no token) and `account.routes` (token + membership) |
 | "Why was an item refused from the basket?" | `assertAddable` in `account.routes` → `account-catalogue.service`; the cart itself trusts its caller by design |
+| "Why was an entry refused for the person it names?" | `assertAddable` → `entrant.service.resolveEntrant`. Members-only takes a member in scope and refuses a typed name; open entries require *a name* and still check a `memberId` if one is sent |
 | "How does a paid line become an order/entry/membership?" | `fulfilment.service.fulfilLine`, from `payment_transactions` alone — `context_ref` and `quantity` are copied there at checkout because the basket is gone by then |
 | "Why is this slot unavailable?" | `src/utils/slot-availability.ts` — generate → block → window → occupy → hold. Availability is derived, never stored |
 | "Why can't a member cancel this booking?" | `src/utils/booking-cancellation.ts` — the club's three settings, and no money moves |
@@ -534,3 +581,27 @@ Things worth knowing before touching any of it:
   what the money produced. `undoOfflinePaymentReceived` reverses it, but **refuses once any
   `payment_transactions` line has `fulfilled_at`** — flipping the status back would strand every
   membership and booking it created. See docs/OFFLINE_PAYMENT_SETTLEMENT.md.
+
+## Public event listings and search discovery
+
+`public-event.service` serves every anonymous surface: a club's programme, the platform search with
+filters and counts, one event by slug, and the sitemap's URL list. One SQL projection behind all
+four, because writing the shape four times is how one of them ends up exposing a column the others
+do not. Two rules it applies in one place:
+
+- **Nothing about people.** No entrants, no member names. Asserted against the *queries*, not the
+  output — an output test only proves the fixture had no names in it.
+- **Published twice.** `status = 'published'` **and** a public flag. A draft cannot reach the world
+  by ticking a second box.
+
+A finished event keeps its page deliberately; the listings order it away rather than deleting it.
+A withdrawn one answers **410**, not 404, so a crawler drops it promptly instead of retrying for
+weeks.
+
+`seo.routes` serves `robots.txt` and a generated `sitemap.xml` at the site root, and injects a real
+`<head>` plus a `<noscript>` block into the account shell for public event pages —
+`ACCOUNT_SHELL_HTML` points at the built `index.html`, and unset the routes do nothing and nginx
+serves the static shell as before.
+
+See [PUBLIC_EVENTS.md](../../docs/PUBLIC_EVENTS.md) and
+[PUBLIC_EVENTS_SEO.md](../../docs/PUBLIC_EVENTS_SEO.md).

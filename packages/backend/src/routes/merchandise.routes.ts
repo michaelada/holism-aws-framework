@@ -16,6 +16,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
 import crypto from 'crypto';
 import path from 'path';
+import { audited } from '../middleware/audit.middleware';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -143,6 +144,7 @@ router.post(
   authenticateToken(),
   byBodyOrCurrent(),
   requireMerchandiseCapability,
+  audited({ action: 'merchandise.created', resource: 'merchandiseType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const merchandiseType = await merchandiseService.createMerchandiseType(req.body);
@@ -169,6 +171,7 @@ router.put(
   '/merchandise-types/:id',
   authenticateToken(),
   byResource('merchandiseType', 'id'),
+  audited({ action: 'merchandise.updated', resource: 'merchandiseType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -196,6 +199,7 @@ router.delete(
   '/merchandise-types/:id',
   authenticateToken(),
   byResource('merchandiseType', 'id'),
+  audited({ action: 'merchandise.deleted', resource: 'merchandiseType', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -257,6 +261,7 @@ router.post(
   '/merchandise-types/:id/options',
   authenticateToken(),
   byResource('merchandiseType', 'id'),
+  audited({ action: 'merchandise.updated', resource: 'merchandiseType', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -285,6 +290,7 @@ router.put(
   '/merchandise-types/:typeId/options/:optionId',
   authenticateToken(),
   byResource('merchandiseType', 'typeId'),
+  audited({ action: 'merchandise.updated', resource: 'merchandiseType', param: 'typeId', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { optionId } = req.params;
@@ -312,6 +318,7 @@ router.delete(
   '/merchandise-types/:typeId/options/:optionId',
   authenticateToken(),
   byResource('merchandiseType', 'typeId'),
+  audited({ action: 'merchandise.updated', resource: 'merchandiseType', param: 'typeId', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { optionId } = req.params;
@@ -405,6 +412,7 @@ router.post(
   '/merchandise-orders',
   authenticateToken(),
   byBodyOrCurrent(),
+  audited({ action: 'order.placed', resource: 'merchandiseOrder', entityType: 'order' }),
   async (req: Request, res: Response) => {
     try {
       const order = await merchandiseService.createOrder(req.body);
@@ -431,6 +439,7 @@ router.put(
   '/merchandise-orders/:id/status',
   authenticateToken(),
   byResource('merchandiseOrder', 'id'),
+  audited({ action: 'order.status-changed', resource: 'merchandiseOrder', entityType: 'order' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -507,6 +516,7 @@ router.post(
   '/merchandise-types/:id/stock/adjust',
   authenticateToken(),
   byResource('merchandiseType', 'id'),
+  audited({ action: 'merchandise.updated', resource: 'merchandiseType', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { selectedOptions, quantityChange } = req.body;
@@ -541,6 +551,7 @@ router.post(
   authenticateToken(),
   byCurrentOrganisation(),
   upload.single('file'),
+  audited({ action: 'merchandise.updated', entityType: 'merchandise-image', kind: 'action' }),
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { organisationId } = req.body;
@@ -635,6 +646,7 @@ router.delete(
   '/merchandise-images',
   authenticateToken(),
   byCurrentOrganisation(),
+  audited({ action: 'merchandise.updated', entityType: 'merchandise-image', kind: 'action' }),
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { key } = req.query;

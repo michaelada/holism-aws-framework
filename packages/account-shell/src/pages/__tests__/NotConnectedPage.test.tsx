@@ -26,7 +26,7 @@ describe('NotConnectedPage (A6)', () => {
     const user = userEvent.setup();
     renderWithProviders(<NotConnectedPage />);
 
-    await user.click(screen.getByRole('button', { name: 'Request to join' }));
+    await user.click(screen.getByRole('button', { name: 'Create an account' }));
     expect(mockNavigate).toHaveBeenCalledWith('/khpc/register');
   });
 

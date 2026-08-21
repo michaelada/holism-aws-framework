@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { capabilityService } from '../services/capability.service';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 const router = Router();
 
@@ -105,6 +106,7 @@ router.post(
   '/',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'capability.granted', entityType: 'capability', label: 'name', kind: 'create' }),
   async (req: Request, res: Response) => {
     try {
       const capability = await capabilityService.createCapability(req.body);
@@ -144,6 +146,7 @@ router.put(
   '/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'capability.granted', entityType: 'capability', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -176,6 +179,7 @@ router.delete(
   '/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'capability.revoked', entityType: 'capability', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

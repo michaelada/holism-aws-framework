@@ -35,6 +35,9 @@ export interface Event {
   openDateEntries?: Date;
   entriesClosingDate?: Date;
   limitEntries: boolean;
+  /** Public listing. See docs/PUBLIC_EVENTS.md §2. */
+  showOnOrganisationPage: boolean;
+  showOnPlatformPage: boolean;
   entriesLimit?: number;
   addConfirmationMessage: boolean;
   confirmationMessage?: string;
@@ -86,6 +89,8 @@ export interface CreateEventDto {
   openDateEntries?: Date;
   entriesClosingDate?: Date;
   limitEntries?: boolean;
+  showOnOrganisationPage?: boolean;
+  showOnPlatformPage?: boolean;
   entriesLimit?: number;
   addConfirmationMessage?: boolean;
   confirmationMessage?: string;
@@ -117,6 +122,8 @@ export interface UpdateEventDto {
   openDateEntries?: Date;
   entriesClosingDate?: Date;
   limitEntries?: boolean;
+  showOnOrganisationPage?: boolean;
+  showOnPlatformPage?: boolean;
   entriesLimit?: number;
   addConfirmationMessage?: boolean;
   confirmationMessage?: string;
@@ -170,6 +177,8 @@ export class EventService {
       openDateEntries: row.open_date_entries,
       entriesClosingDate: row.entries_closing_date,
       limitEntries: row.limit_entries,
+      showOnOrganisationPage: Boolean(row.show_on_organisation_page),
+      showOnPlatformPage: Boolean(row.show_on_platform_page),
       entriesLimit: row.entries_limit,
       addConfirmationMessage: row.add_confirmation_message,
       confirmationMessage: row.confirmation_message,
@@ -313,8 +322,9 @@ export class EventService {
          (organisation_id, name, description, event_owner, email_notifications,
           start_date, end_date, open_date_entries, entries_closing_date,
           limit_entries, entries_limit, add_confirmation_message, confirmation_message, 
-          status, event_type_id, venue_id, discount_ids)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+          status, event_type_id, venue_id, discount_ids,
+          show_on_organisation_page, show_on_platform_page)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
          RETURNING *`,
         [
           data.organisationId,
@@ -334,6 +344,8 @@ export class EventService {
           data.eventTypeId || null,
           data.venueId || null,
           JSON.stringify(data.discountIds || []),
+          data.showOnOrganisationPage ?? false,
+          data.showOnPlatformPage ?? false,
         ]
       );
 
@@ -400,6 +412,14 @@ export class EventService {
       if (data.name !== undefined) {
         updates.push(`name = $${paramCount++}`);
         values.push(data.name);
+      }
+      if (data.showOnOrganisationPage !== undefined) {
+        updates.push(`show_on_organisation_page = $${paramCount++}`);
+        values.push(data.showOnOrganisationPage);
+      }
+      if (data.showOnPlatformPage !== undefined) {
+        updates.push(`show_on_platform_page = $${paramCount++}`);
+        values.push(data.showOnPlatformPage);
       }
       if (data.description !== undefined) {
         updates.push(`description = $${paramCount++}`);

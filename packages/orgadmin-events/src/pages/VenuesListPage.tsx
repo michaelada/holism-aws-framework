@@ -42,6 +42,7 @@ interface Venue {
   id: string;
   name: string;
   address: string;
+  region?: string;
   latitude?: number;
   longitude?: number;
   createdAt: Date;
@@ -68,6 +69,7 @@ const VenuesListPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
+    region: '',
     latitude: '',
     longitude: '',
   });
@@ -116,7 +118,7 @@ const VenuesListPage: React.FC = () => {
 
   const handleCreate = () => {
     setEditingVenue(null);
-    setFormData({ name: '', address: '', latitude: '', longitude: '' });
+    setFormData({ name: '', address: '', region: '', latitude: '', longitude: '' });
     setDialogOpen(true);
   };
 
@@ -125,6 +127,7 @@ const VenuesListPage: React.FC = () => {
     setFormData({
       name: venue.name,
       address: venue.address,
+      region: venue.region ?? '',
       latitude: venue.latitude?.toString() || '',
       longitude: venue.longitude?.toString() || '',
     });
@@ -140,6 +143,7 @@ const VenuesListPage: React.FC = () => {
       const data = {
         name: formData.name,
         address: formData.address,
+        region: formData.region,
         latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
         longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
       };
@@ -200,21 +204,21 @@ const VenuesListPage: React.FC = () => {
         // page actions past the right edge of a phone, with nothing on
         // screen to show the page had scrolled.
         flexWrap: 'wrap', gap: 2 }}>
-        <Typography variant="h4">Venues</Typography>
+        <Typography variant="h4">{t('events.venues.title')}</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreate}
         >
-          Create Venue
+          {t('events.venues.create')}
         </Button>
       </Box>
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <TextField
-            placeholder="Search venues..."
+            placeholder={t('events.venues.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             fullWidth
@@ -233,10 +237,10 @@ const VenuesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Address</TableCell>
-              <TableCell>Coordinates</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>{t('events.venues.name')}</TableCell>
+              <TableCell>{t('events.venues.address')}</TableCell>
+              <TableCell>{t('events.venues.coordinates')}</TableCell>
+              <TableCell align="right">{t('events.venues.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -249,7 +253,7 @@ const VenuesListPage: React.FC = () => {
             ) : filteredVenues.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} align="center">
-                  {searchTerm ? 'No matching venues found' : 'No venues yet'}
+                  {searchTerm ? t('events.venues.noMatches') : t('events.venues.noneYet')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -270,7 +274,7 @@ const VenuesListPage: React.FC = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleEdit(venue)}
-                      title="Edit"
+                      title={t('events.venues.edit')}
                     >
                       <EditIcon />
                     </IconButton>
@@ -278,7 +282,7 @@ const VenuesListPage: React.FC = () => {
                       size="small"
                       color="error"
                       onClick={() => handleDelete(venue.id)}
-                      title="Delete"
+                      title={t('events.venues.delete')}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -301,7 +305,7 @@ const VenuesListPage: React.FC = () => {
           <TextField
             fullWidth
             required
-            label="Name"
+            label={t('events.venues.name')}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             sx={{ mt: 2, mb: 2 }}
@@ -311,9 +315,22 @@ const VenuesListPage: React.FC = () => {
             required
             multiline
             rows={2}
-            label="Address"
+            label={t('events.venues.address')}
             value={formData.address}
             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          {/*
+            The one field the public listings need that prose cannot give them.
+            The hint says why, because an administrator filling in a venue form
+            has no other way to know this feeds a filter somewhere else.
+          */}
+          <TextField
+            fullWidth
+            label={t('events.venues.region')}
+            helperText={t('events.venues.regionHint')}
+            value={formData.region ?? ''}
+            onChange={(e) => setFormData({ ...formData, region: e.target.value })}
             sx={{ mb: 2 }}
           />
           <Grid container spacing={2}>
@@ -321,34 +338,34 @@ const VenuesListPage: React.FC = () => {
               <TextField
                 fullWidth
                 type="number"
-                label="Latitude (optional)"
+                label={t('events.venues.latitude')}
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
                 inputProps={{ step: 'any' }}
-                helperText="e.g., 51.5074"
+                helperText={t('events.venues.latitudeHint')}
               />
             </Grid>
             <Grid item xs={6}>
               <TextField
                 fullWidth
                 type="number"
-                label="Longitude (optional)"
+                label={t('events.venues.longitude')}
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
                 inputProps={{ step: 'any' }}
-                helperText="e.g., -0.1278"
+                helperText={t('events.venues.longitudeHint')}
               />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDialogOpen(false)}>{t('events.venues.cancel')}</Button>
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={!formData.name.trim() || !formData.address.trim()}
           >
-            {editingVenue ? 'Update' : 'Create'}
+            {editingVenue ? t('events.venues.update') : t('events.venues.save')}
           </Button>
         </DialogActions>
       </Dialog>

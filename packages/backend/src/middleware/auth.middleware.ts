@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { noteAuthenticatedRequest } from './audit-auth.middleware';
 import jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 
@@ -19,6 +20,14 @@ export interface UserInfo {
    */
   firstName: string;
   lastName: string;
+  /**
+   * The Keycloak session this token belongs to (`sid`).
+   *
+   * Carried so an audit event can be tied to a row on the Sessions screen —
+   * "what did this session do?" — and so a future revocation check has
+   * something to test against without another round trip.
+   */
+  sessionId?: string;
 }
 
 /**
@@ -115,6 +124,7 @@ function extractUserInfo(decoded: any): UserInfo {
     groups: decoded.groups || [],
     firstName,
     lastName,
+    sessionId: decoded.sid,
   };
 }
 
@@ -250,6 +260,8 @@ export function authenticateToken() {
 
           // Extract user information and attach to request
           req.user = extractUserInfo(decoded);
+          // First request of a session becomes an `auth.login` event.
+          noteAuthenticatedRequest(req, (decoded as any)?.azp);
           next();
         }
       );
@@ -380,6 +392,8 @@ export function optionalAuth() {
         (err, decoded): void => {
           if (!err && decoded) {
             req.user = extractUserInfo(decoded);
+          // First request of a session becomes an `auth.login` event.
+          noteAuthenticatedRequest(req, (decoded as any)?.azp);
           }
           next();
         }

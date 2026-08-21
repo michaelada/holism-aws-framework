@@ -5,6 +5,7 @@ import { organizationApplicationFeeService } from '../services/organization-appl
 import { ValidationError } from '../middleware/errors';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 const router = Router();
 
@@ -162,6 +163,7 @@ router.post(
   '/',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'organisation.created', resource: 'organisation', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user?.sub;
@@ -209,6 +211,7 @@ router.put(
   '/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'organisation.updated', resource: 'organisation', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -267,6 +270,7 @@ router.delete(
   '/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'organisation.deleted', resource: 'organisation', label: 'name' }),
   async (req: Request, res: Response) => {
     logger.warn(`Refused DELETE /organizations/${req.params.id}: organisations are deactivated`);
     res.status(409).json({
@@ -312,6 +316,7 @@ router.put(
   '/:id/capabilities',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'capability.granted', resource: 'organisation', entityType: 'organisation', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -426,6 +431,7 @@ router.put(
   '/:id/application-fees',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'settings.payment-updated', resource: 'organisation', entityType: 'organisation', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const { fees } = req.body;
@@ -475,6 +481,7 @@ router.post(
   '/:id/application-fees/:paymentMethodId/reset',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'settings.payment-updated', resource: 'organisation', entityType: 'organisation', label: 'name', kind: 'action' }),
   async (req: Request, res: Response) => {
     try {
       const updated = await organizationApplicationFeeService.resetToTypeDefault(

@@ -15,6 +15,8 @@ import {
   Alert,
   Grid,
   FormControl,
+  FormControlLabel,
+  FormHelperText,
   InputLabel,
   Select,
   MenuItem,
@@ -23,6 +25,7 @@ import {
   Link,
   Chip,
   CircularProgress,
+  Switch,
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -46,6 +49,7 @@ const EditFieldPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [fieldLabel, setFieldLabel] = useState('');
   const [fieldDescription, setFieldDescription] = useState('');
+  const [isSensitive, setIsSensitive] = useState(false);
   const [fieldType, setFieldType] = useState('text');
   const [originalFieldType, setOriginalFieldType] = useState('text');
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
@@ -126,6 +130,7 @@ const EditFieldPage: React.FC = () => {
           name: generatedName,
           label: fieldLabel.trim(),
           description: fieldDescription.trim() || undefined,
+          isSensitive,
           datatype: fieldType,
           options: requiresOptions(fieldType) ? fieldOptions : undefined,
         },
@@ -163,6 +168,7 @@ const EditFieldPage: React.FC = () => {
         // Populate form with field data
         setFieldLabel(response.label || '');
         setFieldDescription(response.description || '');
+        setIsSensitive(Boolean(response.isSensitive));
         setFieldType(response.datatype || 'text');
         setOriginalFieldType(response.datatype || 'text');
         setFieldOptions(response.options || []);
@@ -289,6 +295,27 @@ const EditFieldPage: React.FC = () => {
                   />
                 </Grid>
                 
+                <Grid item xs={12}>
+                  {/*
+                    Answers to a sensitive field are recorded in the audit trail
+                    as present-but-hidden. The fixed redaction list can catch a
+                    password; it cannot know that this club called a field "Any
+                    medical conditions we should know about?".
+                    See docs/AUDIT_TRAIL_AND_SESSIONS.md §4.
+                  */}
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={isSensitive}
+                        onChange={(e) => setIsSensitive(e.target.checked)}
+                        disabled={saving}
+                      />
+                    }
+                    label={t('forms.fields.sensitive')}
+                  />
+                  <FormHelperText>{t('forms.fields.sensitiveHelper')}</FormHelperText>
+                </Grid>
+
                 <Grid item xs={12}>
                   <FormControl fullWidth required>
                     <InputLabel>{t('forms.fields.fieldType')}</InputLabel>

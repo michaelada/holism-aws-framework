@@ -567,8 +567,9 @@ export async function seedDatabase(
 
     for (const venue of VENUES[org.key]) {
       const r = await client.query(
-        `INSERT INTO venues (organisation_id, name, address) VALUES ($1,$2,$3) RETURNING id`,
-        [orgIds[org.key], venue.name, venue.address]
+        `INSERT INTO venues (organisation_id, name, address, region)
+         VALUES ($1,$2,$3,$4) RETURNING id`,
+        [orgIds[org.key], venue.name, venue.address, venue.region]
       );
       venueIds[org.key][venue.name] = r.rows[0].id;
       bump('venues');
@@ -732,8 +733,9 @@ export async function seedDatabase(
          (organisation_id, name, description, event_owner, start_date, end_date,
           open_date_entries, entries_closing_date, limit_entries, entries_limit,
           add_confirmation_message, confirmation_message, status,
-          event_type_id, venue_id, discount_ids)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+          event_type_id, venue_id, discount_ids,
+          show_on_organisation_page, show_on_platform_page)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING id`,
       [
         orgId,
@@ -752,6 +754,10 @@ export async function seedDatabase(
         eventTypeIds[event.org][event.eventType],
         venueIds[event.org][event.venue],
         JSON.stringify(eventDiscountIds),
+        // Defaulted here rather than relying on the column default, so the seed
+        // states what it means for every row it writes.
+        event.showOnOrganisationPage ?? false,
+        event.showOnPlatformPage ?? false,
       ]
     );
     const eventId = r.rows[0].id as string;

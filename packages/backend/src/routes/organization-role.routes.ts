@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { organizationAdminRoleService } from '../services/organization-admin-role.service';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
 import { logger } from '../config/logger';
+import { audited } from '../middleware/audit.middleware';
 
 const router = Router();
 
@@ -119,6 +120,7 @@ router.post(
   '/:organizationId/roles',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'role.created', resource: 'adminRole', entityType: 'role', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { organizationId } = req.params;
@@ -166,6 +168,7 @@ router.put(
   '/:organizationId/roles/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'role.updated', resource: 'adminRole', entityType: 'role', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -207,6 +210,7 @@ router.delete(
   '/:organizationId/roles/:id',
   authenticateToken(),
   requireRole('super-admin'),
+  audited({ action: 'role.deleted', resource: 'adminRole', entityType: 'role', label: 'name' }),
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

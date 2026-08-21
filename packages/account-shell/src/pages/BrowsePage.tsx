@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Accordion,
@@ -90,6 +90,17 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
    */
   const [openEvents, setOpenEvents] = useState<Set<string>>(new Set());
 
+  /**
+   * The event a visitor arrived for, named in the URL.
+   *
+   * Public event pages link here as `?event={id}`, and a member coming through
+   * sign-in is returned to the same address. Without this they land on eighteen
+   * collapsed rows with no sign of which one they clicked — which, after a
+   * round trip through Keycloak, reads as the link having failed.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedEvent = searchParams.get('event');
+
   /** Every event open — decides whether the control offers to expand or collapse. */
   const allOpen = events.length > 0 && events.every((event) => openEvents.has(event.id));
 
@@ -135,6 +146,29 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+   * Open it once the events are in, then take the parameter out of the URL —
+   * it has been consumed, and leaving it would re-open the row every time the
+   * member collapsed it.
+   */
+  useEffect(() => {
+    if (!requestedEvent || events.length === 0) return;
+    if (!events.some((event) => event.id === requestedEvent)) return;
+
+    setOpenEvents((current) => new Set(current).add(requestedEvent));
+    setSearchParams(
+      (params) => {
+        params.delete('event');
+        return params;
+      },
+      { replace: true }
+    );
+
+    document
+      .getElementById(`event-${requestedEvent}`)
+      ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [requestedEvent, events, setSearchParams]);
 
   /**
    * Add straight away, or send the member to the entry page first.
@@ -246,6 +280,7 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
             {events.map((event) => (
             <Accordion
               key={event.id}
+              id={`event-${event.id}`}
               expanded={openEvents.has(event.id)}
               onChange={() => toggleEvent(event.id)}
             >

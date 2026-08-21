@@ -6,6 +6,16 @@ sends, and its visual branding.
 Part of `orgadmin-core`, always available. One route, `settings`, rendering `SettingsPage` — a
 four-tab container.
 
+
+## The logo may not be this organisation's
+
+Branding's logo can be inherited from the **organisation type**, and the type can forbid replacing
+it. The read carries `logoSource` and `canOverrideLogo`; when overriding is forbidden `BrandingTab`
+**removes** the upload (a greyed-out button explains nothing) and says the type sets it. `Remove
+logo` is keyed off the logo's *source*, not off `logoS3Key` — a club pointing `logoUrl` at an
+externally-hosted logo has no key, and testing for one stranded it. The server enforces the lock
+regardless. See [docs/ORGANISATION_TYPE_LOGO.md](../../docs/ORGANISATION_TYPE_LOGO.md).
+
 ## Tabs
 
 | # | Tab | Component | Endpoint |

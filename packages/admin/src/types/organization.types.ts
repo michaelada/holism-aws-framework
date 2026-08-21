@@ -25,6 +25,12 @@ export interface OrganizationType {
   membershipNumbering: MembershipNumbering;
   membershipNumberUniqueness: MembershipNumberUniqueness;
   initialMembershipNumber: number;
+  /** The shared logo, signed for display. Empty where the type has none. */
+  logoUrl?: string;
+  /** The stored key — tells "no logo" apart from "a logo we could not sign". */
+  logoS3Key?: string;
+  /** Whether organisations of this type may replace the shared logo. */
+  allowLogoOverride: boolean;
   status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
@@ -98,6 +104,7 @@ export interface CreateOrganizationTypeDto {
   membershipNumbering?: MembershipNumbering;
   membershipNumberUniqueness?: MembershipNumberUniqueness;
   initialMembershipNumber?: number;
+  allowLogoOverride?: boolean;
 }
 
 export interface UpdateOrganizationTypeDto {
@@ -111,6 +118,7 @@ export interface UpdateOrganizationTypeDto {
   membershipNumbering?: MembershipNumbering;
   membershipNumberUniqueness?: MembershipNumberUniqueness;
   initialMembershipNumber?: number;
+  allowLogoOverride?: boolean;
   status?: 'active' | 'inactive';
 }
 
