@@ -124,6 +124,7 @@
     "noEventsFound": "Noch keine Veranstaltungen. Erstellen Sie Ihre erste Veranstaltung, um zu beginnen.",
     "noMatchingEvents": "Keine Veranstaltungen entsprechen Ihren Filtern",
     "loadingEvents": "Veranstaltungen werden geladen...",
+    "loadingEvent": "Veranstaltung wird geladen...",
     "failedToLoad": "Fehler beim Laden der Veranstaltungen",
     "failedToSave": "Fehler beim Speichern der Veranstaltung",
     "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler vor dem Speichern",

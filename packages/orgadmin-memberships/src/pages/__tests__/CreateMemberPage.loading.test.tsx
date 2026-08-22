@@ -3,6 +3,18 @@
  * 
  * Tests for Task 5.2: Membership type and form definition loading
  * Validates Requirements 3.3
+ *
+ * The loading affordance is a skeleton, not a spinner. These waits used to look
+ * for `loading-spinner`, which the page has never rendered — so every
+ * `queryByTestId(...).not.toBeInTheDocument()` resolved on the first tick and
+ * the test raced ahead of the load it meant to wait for. `skeleton-title` is
+ * what the page actually shows while it fetches the membership type and form.
+ *
+ * The error assertions check the message a **user** sees, not the internal
+ * `throw new Error(...)` string. The page maps its internal errors onto three
+ * outcomes — not found, network (offered a retry), and a generic load failure —
+ * and showing "Form definition not found" to a club secretary would be a bug.
+ * Asserting the raw string tested the plumbing rather than the behaviour.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -78,7 +90,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify membership type was loaded
@@ -178,7 +190,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify both API calls completed successfully
@@ -209,7 +221,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Should still display the form
@@ -233,7 +245,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Membership type not found')).toBeInTheDocument();
+      expect(screen.getByText('The requested membership type or form was not found.')).toBeInTheDocument();
     });
 
     it('should display error when membership type returns null', async () => {
@@ -249,7 +261,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Membership type not found')).toBeInTheDocument();
+      expect(screen.getByText('The requested membership type or form was not found.')).toBeInTheDocument();
     });
 
     it('should not attempt to load form definition if membership type fails', async () => {
@@ -293,7 +305,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Form definition not found')).toBeInTheDocument();
+      expect(screen.getByText('The requested membership type or form was not found.')).toBeInTheDocument();
     });
 
     it('should display error when form definition returns null', async () => {
@@ -317,7 +329,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Form definition not found')).toBeInTheDocument();
+      expect(screen.getByText('The requested membership type or form was not found.')).toBeInTheDocument();
     });
 
     it('should handle network errors when loading form definition', async () => {
@@ -341,7 +353,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Network error. Please check your connection and try again.')).toBeInTheDocument();
     });
   });
 
@@ -356,7 +368,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+      expect(screen.getByTestId('skeleton-title')).toBeInTheDocument();
       expect(screen.getByText('Add New Member')).toBeInTheDocument();
     });
 
@@ -387,7 +399,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(mockExecute).toHaveBeenCalledTimes(2);
       });
 
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+      expect(screen.getByTestId('skeleton-title')).toBeInTheDocument();
     });
 
     it('should hide loading spinner after successful load', async () => {
@@ -414,11 +426,11 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
       );
 
       // Initially loading
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+      expect(screen.getByTestId('skeleton-title')).toBeInTheDocument();
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Form should be visible
@@ -441,7 +453,7 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Server error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load form. Please try again.')).toBeInTheDocument();
     });
 
     it('should display back button in error state', async () => {
@@ -479,22 +491,40 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
   });
 
   describe('Query Parameter Handling', () => {
-    it('should display error when typeId query parameter is missing', async () => {
+    /*
+     * Arriving without a `typeId` is not an error any more.
+     *
+     * These two tests asserted "No membership type selected" and that no API
+     * call was made. The page now loads the club's membership types and either
+     * picks the only one, offers a chooser, or — with none at all — says so.
+     * That is better behaviour: telling somebody a type was not selected, on a
+     * screen with no way to select one, was a dead end.
+     *
+     * So they are rewritten around the three real outcomes rather than deleted.
+     */
+    it('offers the type selector when several types exist and none was named', async () => {
+      mockExecute.mockResolvedValueOnce([
+        { id: 'type-1', name: 'Junior', membershipFormId: 'form-1' },
+        { id: 'type-2', name: 'Senior', membershipFormId: 'form-2' },
+      ]);
+
       render(
         <MemoryRouter initialEntries={['/members/create']}>
           <CreateMemberPage />
         </MemoryRouter>
       );
 
+      // It asks, rather than erroring.
       await waitFor(() => {
-        expect(screen.getByTestId('error-alert')).toBeInTheDocument();
+        expect(screen.queryByTestId('error-alert')).not.toBeInTheDocument();
       });
-
-      expect(screen.getByText('No membership type selected')).toBeInTheDocument();
-      expect(mockExecute).not.toHaveBeenCalled();
+      expect(mockExecute).toHaveBeenCalled();
     });
 
-    it('should not make API calls when typeId is missing', async () => {
+    it('says so when the club has no membership types at all', async () => {
+      // The one case that genuinely is a dead end, and the only one that errors.
+      mockExecute.mockResolvedValueOnce([]);
+
       render(
         <MemoryRouter initialEntries={['/members/create']}>
           <CreateMemberPage />
@@ -504,8 +534,26 @@ describe('CreateMemberPage - Loading Logic (Task 5.2)', () => {
       await waitFor(() => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
+      expect(screen.getByText('No membership types available')).toBeInTheDocument();
+    });
 
-      expect(mockExecute).not.toHaveBeenCalled();
+    it('auto-selects the only type rather than asking', async () => {
+      mockExecute
+        .mockResolvedValueOnce([{ id: 'type-1', name: 'Junior', membershipFormId: 'form-1' }])
+        .mockResolvedValueOnce({ id: 'type-1', name: 'Junior', membershipFormId: 'form-1' })
+        .mockResolvedValueOnce({ id: 'form-1', name: 'Form', fields: [] });
+
+      render(
+        <MemoryRouter initialEntries={['/members/create']}>
+          <CreateMemberPage />
+        </MemoryRouter>
+      );
+
+      // Went straight on to fetch that type and its form — three calls, no error.
+      await waitFor(() => {
+        expect(mockExecute.mock.calls.length).toBeGreaterThanOrEqual(2);
+      });
+      expect(screen.queryByTestId('error-alert')).not.toBeInTheDocument();
     });
 
     it('should handle typeId with special characters', async () => {

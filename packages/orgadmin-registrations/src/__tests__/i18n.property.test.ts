@@ -172,7 +172,13 @@ describe('Feature: registrations-module, Property 20: Date formatting respects l
     fc.assert(
       fc.property(dateArb, localeArb, (date, locale) => {
         const result = formatDate(date, 'dd MMM yyyy', locale);
-        const dayStr = String(date.getUTCDate()).padStart(2, '0');
+        /*
+         * The local day, not the UTC one. `formatDate` renders in the reader's
+         * timezone, so an instant like 2006-05-25T23:00Z is the 26th here — and
+         * this failed only for the generated dates that happen to straddle
+         * midnight, which is the worst kind of intermittent.
+         */
+        const dayStr = String(date.getDate()).padStart(2, '0');
         // The formatted string should contain the day number
         expect(result).toContain(dayStr);
       }),

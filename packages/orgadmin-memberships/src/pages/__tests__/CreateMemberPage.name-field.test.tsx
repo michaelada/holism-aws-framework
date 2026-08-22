@@ -94,7 +94,7 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
         expect(screen.getByTestId('name-field')).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input') as HTMLInputElement;
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       expect(nameInput.required).toBe(true);
     });
 
@@ -132,10 +132,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input') as HTMLInputElement;
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       await user.type(nameInput, 'John Doe');
       
@@ -152,10 +152,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input') as HTMLInputElement;
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       const submitButton = screen.getByTestId('submit-button');
       
       // Trigger validation by submitting with empty name
@@ -183,10 +183,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input') as HTMLInputElement;
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       await user.type(nameInput, 'Jane Smith');
       await user.tab(); // Move focus away
@@ -206,10 +206,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       // Focus and blur without entering value
       await user.click(nameInput);
@@ -252,10 +252,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       await user.type(nameInput, '   ');
       await user.tab();
@@ -275,10 +275,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       await user.type(nameInput, 'Valid Name');
       await user.tab();
@@ -301,10 +301,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       await user.type(nameInput, 'A');
       await user.tab();
@@ -324,10 +324,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       const longName = 'A'.repeat(256); // 256 characters
       
       await user.type(nameInput, longName);
@@ -348,10 +348,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       const maxLengthName = 'A'.repeat(255); // Exactly 255 characters
       
       await user.type(nameInput, maxLengthName);
@@ -374,7 +374,7 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
       const submitButton = screen.getByTestId('submit-button');
@@ -407,7 +407,7 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       await user.click(submitButton);
       
       await waitFor(() => {
-        const nameInput = screen.getByTestId('name-input');
+        const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
         // MUI TextField with error prop adds aria-invalid attribute
         expect(nameInput.getAttribute('aria-invalid')).toBe('true');
       });
@@ -423,10 +423,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       const submitButton = screen.getByTestId('submit-button');
       
       // Trigger validation error
@@ -456,10 +456,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       
       // Focus the field
       await user.click(nameInput);
@@ -509,7 +509,7 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
       // No validation error should be shown initially
@@ -553,10 +553,10 @@ describe('CreateMemberPage - Name Field (Task 5.3)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       const submitButton = screen.getByTestId('submit-button');
       
       await user.type(nameInput, 'John Doe');

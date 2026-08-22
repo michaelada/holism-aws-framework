@@ -222,8 +222,11 @@ const EventDetailsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress />
+        {/* A bare spinner announces nothing. The other detail pages say what is
+            loading; this one now matches them. */}
+        <Typography>{t('events.loadingEvent')}</Typography>
       </Box>
     );
   }

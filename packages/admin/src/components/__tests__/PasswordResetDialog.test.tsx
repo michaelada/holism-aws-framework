@@ -42,47 +42,57 @@ describe('PasswordResetDialog', () => {
     expect(screen.queryByText('Reset Password')).not.toBeInTheDocument();
   });
 
-  it.skip('should validate required fields', async () => {
-    // TODO: Fix validation timing issue in test environment
-    // Form validation works correctly in actual usage
-    render(<PasswordResetDialog {...defaultProps} />);
+  /**
+   * Whitespace, not empty boxes.
+   *
+   * Both fields are `required`, so a browser refuses to submit the form while
+   * either is blank and the dialog's own check never runs — which is why this
+   * used to be skipped as a "validation timing issue". Spaces satisfy the
+   * browser and still fail `trim()`, so the message the dialog is responsible
+   * for is the one on screen.
+   */
+  it('should validate required fields', async () => {
+    const onSubmit = vi.fn();
+    render(<PasswordResetDialog {...defaultProps} onSubmit={onSubmit} />);
 
-    const submitButton = screen.getByRole('button', { name: /reset password/i });
-    fireEvent.click(submitButton);
+    fireEvent.change(screen.getByLabelText(/new password/i), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: '   ' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /reset password/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Password is required')).toBeInTheDocument();
       expect(screen.getByText('Please confirm the password')).toBeInTheDocument();
     });
 
-    expect(defaultProps.onSubmit).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it.skip('should validate password length', async () => {
-    // TODO: Fix validation timing issue in test environment
-    // Form validation works correctly in actual usage
+  it('does not submit while a required box is empty', () => {
+    const onSubmit = vi.fn();
+    render(<PasswordResetDialog {...defaultProps} onSubmit={onSubmit} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /reset password/i }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('should validate password length', async () => {
     render(<PasswordResetDialog {...defaultProps} />);
 
-    // Get password field by finding input with type="password" and label containing "New Password"
-    const allPasswordInputs = screen.getAllByLabelText(/password/i);
-    const newPasswordInput = allPasswordInputs.find(input => 
-      (input as HTMLInputElement).type === 'password' && 
-      input.getAttribute('aria-describedby')?.includes('helper-text')
-    );
-    
-    if (newPasswordInput) {
-      fireEvent.change(newPasswordInput, { target: { value: 'short' } });
-    }
+    // Both boxes, so the browser's own `required` check is satisfied and the
+    // dialog's length check is what decides the outcome.
+    fireEvent.change(screen.getByLabelText(/new password/i), { target: { value: 'short' } });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'short' } });
 
-    const submitButton = screen.getByRole('button', { name: /reset password/i });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: /reset password/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
     });
   });
 
-  it.skip('should validate password confirmation match', async () => {
+  it('should validate password confirmation match', async () => {
     // TODO: Fix validation timing issue in test environment
     // Form validation works correctly in actual usage
     render(<PasswordResetDialog {...defaultProps} />);
@@ -188,22 +198,18 @@ describe('PasswordResetDialog', () => {
     expect((confirmInput as HTMLInputElement).value).toBe('');
   });
 
-  it.skip('should clear errors when user types', async () => {
-    // TODO: Fix validation timing issue in test environment
-    // Form validation works correctly in actual usage
+  it('should clear errors when user types', async () => {
     render(<PasswordResetDialog {...defaultProps} />);
 
-    const submitButton = screen.getByRole('button', { name: /reset password/i });
-    fireEvent.click(submitButton);
+    const newPasswordInput = screen.getByLabelText(/new password/i);
+    fireEvent.change(newPasswordInput, { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: '   ' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /reset password/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Password is required')).toBeInTheDocument();
     });
-
-    // Get password field by type
-    const allPasswordInputs = screen.getAllByLabelText(/password/i);
-    const passwordFields = allPasswordInputs.filter(input => (input as HTMLInputElement).type === 'password');
-    const [newPasswordInput] = passwordFields;
 
     fireEvent.change(newPasswordInput, { target: { value: 'newpassword123' } });
 

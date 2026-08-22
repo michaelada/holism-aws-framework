@@ -254,7 +254,7 @@ describe('UsersPage', () => {
     });
   });
 
-  it.skip('should reset password', async () => {
+  it('should reset password', async () => {
     // TODO: Fix dialog rendering issue in test environment
     // The dialog opens correctly in actual usage but has timing issues in tests
     renderWithProviders(<UsersPage />);
@@ -266,8 +266,13 @@ describe('UsersPage', () => {
     const resetButton = screen.getByRole('button', { name: /^Reset password for / });
     fireEvent.click(resetButton);
 
-    // Wait for dialog to be fully visible - use findBy which waits automatically
-    const newPasswordField = await screen.findByLabelText(/^new password$/i, {}, { timeout: 3000 });
+    /*
+     * `/new password/i`, unanchored. MUI renders a required field's label as
+     * "New Password *", so an anchored `/^new password$/i` matched nothing and
+     * the test was skipped as a "dialog rendering issue" — the dialog was there
+     * all along.
+     */
+    const newPasswordField = await screen.findByLabelText(/new password/i, {}, { timeout: 3000 });
     expect(newPasswordField).toBeInTheDocument();
 
     fireEvent.change(newPasswordField, {

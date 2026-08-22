@@ -16,12 +16,29 @@ afterEach(() => {
 /**
  * Arbitrary generator for PaymentMethod
  */
+/**
+ * Text as it is actually written on a payment method — no leading or trailing
+ * space, no run of spaces inside.
+ *
+ * These two properties used to be skipped over "whitespace handling in
+ * testing-library". The library is behaving correctly: it normalises whitespace
+ * on both the query and the DOM, so a generated name of `" !"` is looked up as
+ * `"!"` and cannot be told apart from a neighbour. Nothing a club types has that
+ * shape, so the generator produces text that does not, and the properties can
+ * say something about the component again.
+ */
+const displayTextArbitrary = (maxLength: number) =>
+  fc
+    .string({ minLength: 1, maxLength })
+    .map((text) => text.replace(/\s+/g, ' ').trim())
+    .filter((text) => text.length > 0);
+
 const paymentMethodArbitrary = (): fc.Arbitrary<PaymentMethod> => {
   return fc.record({
     id: fc.uuid(),
     name: fc.stringMatching(/^[a-z][a-z0-9-]*$/), // kebab-case names
-    displayName: fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0), // No whitespace-only
-    description: fc.option(fc.string({ minLength: 1, maxLength: 500 }).filter(s => s.trim().length > 0)), // No whitespace-only
+    displayName: displayTextArbitrary(100),
+    description: fc.option(displayTextArbitrary(500)),
     requiresActivation: fc.boolean(),
     isActive: fc.constant(true), // Only active methods are shown
     createdAt: fc.date(),
@@ -70,11 +87,7 @@ const uniquePaymentMethodsArbitrary = (minLength: number, maxLength: number): fc
  * Validates: Requirements 8.4
  */
 describe('Property 17: UI renders all available payment methods', () => {
-  // FIXME: Edge case with whitespace handling in testing-library
-  // Fails when displayName has patterns like "! " (trailing space) or " !" (leading space)
-  // testing-library normalizes whitespace, making text matching fail
-  // Real-world payment method names would not have these patterns
-  it.skip('should render a checkbox for each payment method provided', () => {
+  it('should render a checkbox for each payment method provided', () => {
     fc.assert(
       fc.property(
         uniquePaymentMethodsArbitrary(1, 10),
@@ -109,11 +122,7 @@ describe('Property 17: UI renders all available payment methods', () => {
     );
   });
 
-  // FIXME: Edge case with whitespace handling in testing-library
-  // Fails when description has patterns like " !" (leading space with exclamation)
-  // testing-library normalizes whitespace, making text matching fail
-  // Real-world payment method descriptions would not have these patterns
-  it.skip('should render descriptions when provided', () => {
+  it('should render descriptions when provided', () => {
     fc.assert(
       fc.property(
         uniquePaymentMethodsArbitrary(1, 10),

@@ -1,6 +1,9 @@
 import React from 'react';
 import {
   FormControl,
+  FormControlLabel,
+  FormGroup,
+  FormLabel,
   InputLabel,
   Select,
   MenuItem,
@@ -53,6 +56,54 @@ export function MultiSelectRenderer({
     return option?.label || optionValue;
   };
 
+  const helperText = error || fieldDefinition.description;
+
+  /*
+   * A club that writes three choices should not make the member open something
+   * to see them. The form builder's `checkbox` field maps to this renderer, and
+   * asks for the choices laid out rather than hidden behind a dropdown; without
+   * this branch a checkbox list and a dropdown were the same control.
+   */
+  if (fieldDefinition.datatypeProperties?.displayMode === 'checkbox') {
+    const toggle = (optionValue: string, checked: boolean) => {
+      onChange(
+        checked
+          ? [...selectedValues, optionValue]
+          : selectedValues.filter((selected) => selected !== optionValue)
+      );
+    };
+
+    return (
+      <FormControl
+        component="fieldset"
+        fullWidth
+        error={!!error}
+        disabled={disabled}
+        required={required}
+      >
+        {/* `component="legend"` is what names the group for a screen reader —
+            a plain label leaves the checkboxes announced one by one with no
+            sense of the question they answer. */}
+        <FormLabel component="legend">{fieldDefinition.displayName}</FormLabel>
+        <FormGroup row onBlur={onBlur}>
+          {options.map((option: any) => (
+            <FormControlLabel
+              key={option.value}
+              control={
+                <Checkbox
+                  checked={selectedValues.indexOf(option.value) > -1}
+                  onChange={(event) => toggle(option.value, event.target.checked)}
+                />
+              }
+              label={option.label}
+            />
+          ))}
+        </FormGroup>
+        {helperText && <FormHelperText>{helperText}</FormHelperText>}
+      </FormControl>
+    );
+  }
+
   return (
     <FormControl fullWidth error={!!error} disabled={disabled}>
       <InputLabel id={labelId} required={required}>
@@ -80,9 +131,7 @@ export function MultiSelectRenderer({
           </MenuItem>
         ))}
       </Select>
-      {(error || fieldDefinition.description) && (
-        <FormHelperText>{error || fieldDefinition.description}</FormHelperText>
-      )}
+      {helperText && <FormHelperText>{helperText}</FormHelperText>}
     </FormControl>
   );
 }

@@ -126,6 +126,7 @@
     "noEventsFound": "Aucun événement pour le moment. Créez votre premier événement pour commencer.",
     "noMatchingEvents": "Aucun événement ne correspond à vos filtres",
     "loadingEvents": "Chargement des événements...",
+    "loadingEvent": "Chargement de l'événement...",
     "failedToLoad": "Échec du chargement des événements",
     "failedToSave": "Échec de l'enregistrement de l'événement",
     "fixValidationErrors": "Veuillez corriger les erreurs de validation avant d'enregistrer",

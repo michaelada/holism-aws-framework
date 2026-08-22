@@ -20,6 +20,8 @@ import MembersDatabasePage from '../MembersDatabasePage';
 import * as useApiModule from '@aws-web-framework/orgadmin-core';
 import { I18nextProvider } from 'react-i18next';
 import { createTestI18n } from '../../test/i18n-test-utils';
+import { navigatedTo, navigationPaths } from '../../test/navigation';
+import { authMeResponse } from '../../test/auth-me';
 
 // Mock react-router-dom
 vi.mock('react-router-dom', async () => {
@@ -40,11 +42,11 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({
-    checkModuleVisit: vi.fn(),
-  }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
 describe('MembersDatabasePage Enhancements - Unit Tests', () => {
   const testI18n = createTestI18n('en-GB');
@@ -78,6 +80,21 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
    */
   const renderMembersDatabasePage = (membershipTypes: any[]) => {
     const mockExecute = vi.fn().mockImplementation(({ url }) => {
+      /*
+       * The Add Member button is gated on an admin role as well as on there
+       * being membership types, and the page reads that from `/auth/me`.
+       * Unmocked it resolves to `[]`, `response.roles` is undefined, and the
+       * button never renders — so every test here failed for a reason that had
+       * nothing to do with what it was checking.
+       *
+       * The role gate itself is covered by
+       * MembersDatabasePage.role-based-visibility.property.test.tsx, which
+       * varies the roles deliberately. This suite grants one and varies the
+       * membership types.
+       */
+      if (url.includes('/auth/me')) {
+        return Promise.resolve(authMeResponse());
+      }
       if (url.includes('/membership-types')) {
         return Promise.resolve(membershipTypes);
       }
@@ -246,9 +263,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
 
       // Should navigate with typeId parameter
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          '/orgadmin/memberships/members/create?typeId=single-type-id'
-        );
+        expect(navigatedTo(mockNavigate, '/members/create?typeId=single-type-id'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
 
@@ -308,7 +323,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
 
       // Should NOT navigate to the plain create URL (without typeId)
       await waitFor(() => {
-        expect(mockNavigate).not.toHaveBeenCalledWith('/orgadmin/memberships/members/create');
+        expect(navigatedTo(mockNavigate, '/members/create'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(false);
         
         // Should have been called with typeId parameter
         const navigationUrl = mockNavigate.mock.calls[0][0];
@@ -339,7 +354,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
 
       // Should navigate to plain create URL (type selector)
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/memberships/members/create');
+        expect(navigatedTo(mockNavigate, '/members/create'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
 
@@ -366,7 +381,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
 
       // Should navigate to type selector
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/memberships/members/create');
+        expect(navigatedTo(mockNavigate, '/members/create'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
 
@@ -393,7 +408,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
       await waitFor(() => {
         const navigationUrl = mockNavigate.mock.calls[0][0];
         expect(navigationUrl).not.toContain('typeId');
-        expect(navigationUrl).toBe('/orgadmin/memberships/members/create');
+        expect(navigationUrl).toBe('/members/create');
       });
     });
   });
@@ -421,9 +436,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
       clickAddMemberButton(container);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          '/orgadmin/memberships/members/create?typeId=boundary-type'
-        );
+        expect(navigatedTo(mockNavigate, '/members/create?typeId=boundary-type'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
 
@@ -450,7 +463,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
       clickAddMemberButton(container);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/memberships/members/create');
+        expect(navigatedTo(mockNavigate, '/members/create'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
 
@@ -477,9 +490,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
 
       // Should navigate with typeId even with minimal data
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          '/orgadmin/memberships/members/create?typeId=minimal-type'
-        );
+        expect(navigatedTo(mockNavigate, '/members/create?typeId=minimal-type'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
 
@@ -511,9 +522,7 @@ describe('MembersDatabasePage Enhancements - Unit Tests', () => {
 
       // Should navigate correctly regardless of additional properties
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          '/orgadmin/memberships/members/create?typeId=full-type'
-        );
+        expect(navigatedTo(mockNavigate, '/members/create?typeId=full-type'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
       });
     });
   });

@@ -43,7 +43,8 @@ vi.mock('@aws-web-framework/orgadmin-core', () => ({
 
 const mockFormatCurrency = (value: number, currency: string) => `${currency} ${value.toFixed(2)}`;
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string>) => {
       if (key === 'events.activities.activity.feeCurrency' && opts?.currency) {

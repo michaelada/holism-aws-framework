@@ -147,7 +147,7 @@ which binds the organisation's locale.
 
 ## Testing pages in this package
 
-Most pages need the current organisation and several shell hooks. Two shared helpers exist:
+Most pages need the current organisation and several shell hooks. Three shared helpers exist:
 
 - **`src/test/renderWithProviders.tsx`** — router + `OrganisationProvider`. Rendering a page bare
   throws "useOrganisation must be used within an OrganisationProvider", which was the single largest
@@ -175,6 +175,30 @@ override the thing under test.
 
 Hooks returned by the mock use **stable references**; a fresh object per render re-triggers the
 `useEffect` they feed and the test times out rather than failing readably (§3.4).
+
+### `src/test/shellMock.ts` — the shell double the *other* org-admin packages use
+
+`createShellMock()` returns a plain object covering **every export
+`orgadmin-shell/index.ts` publishes**, for suites in `orgadmin-events`,
+`orgadmin-registrations`, `orgadmin-merchandise`, `orgadmin-calendar` and `orgadmin-ticketing`.
+Those packages each used to hand-write a partial mock listing only the hooks their page called at
+the time, so adding `usePageHelp` or `useOnboarding` to a page broke hundreds of unrelated
+assertions at once with *"No `usePageHelp` export is defined on the mock"*.
+
+```ts
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+  useCapabilities: () => ({ hasCapability: () => false, capabilities: [] }),   // override what matters
+}));
+```
+
+`t` resolves the real en-GB catalogue by default, exactly as `orgadminShellMock` does; pass
+`{ t: translateToKey }` for a suite that asserts on key paths.
+`src/test/__tests__/shellMock.test.ts` reads the shell's index and fails if the mock is missing an
+export, so it cannot drift — which is the whole reason it is worth having.
+
+See [docs/TEST_SUITE_REPAIR_FRONTEND.md](../../docs/TEST_SUITE_REPAIR_FRONTEND.md) for the repair
+this came out of.
 
 ### Traps this package has hit more than once
 

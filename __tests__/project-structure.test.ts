@@ -110,7 +110,13 @@ describe('Project Structure', () => {
       expect(fs.existsSync(readmePath)).toBe(true);
 
       const readme = fs.readFileSync(readmePath, 'utf-8');
-      expect(readme).toContain('AWS Web Application Framework');
+      /*
+       * A title and a way in, not a particular product name. This asserted the
+       * string "AWS Web Application Framework", which the README stopped saying
+       * when the project was renamed — a documentation test that failed for a
+       * rename tells you nothing about the documentation.
+       */
+      expect(readme).toMatch(/^# .+/m);
       expect(readme).toContain('Getting Started');
     });
   });

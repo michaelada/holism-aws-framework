@@ -87,9 +87,19 @@ router.post(
       res.status(201).json(orgPaymentMethod);
     } catch (error) {
       logger.error('Error in POST /organizations/:orgId/payment-methods:', error);
-      if (error instanceof Error && error.message.includes('already associated')) {
-        res.status(409).json({ error: error.message });
-      } else if (error instanceof Error && error.message.includes('foreign key')) {
+      const message = error instanceof Error ? error.message : '';
+
+      if (message.includes('already associated')) {
+        res.status(409).json({ error: message });
+      } else if (message === 'Organization not found' || message === 'Payment method not found') {
+        /*
+         * An id in the request that names nothing. The service has already
+         * turned Postgres's `23503` into one of these two messages — and one of
+         * them without ever reaching the database, when the payment method is
+         * looked up first — so matching on the word "foreign key", as this used
+         * to, matched neither and answered 500 to a request the caller could
+         * have corrected. Two tests were skipped over exactly that.
+         */
         res.status(400).json({ error: 'Invalid organization or payment method ID' });
       } else {
         res.status(500).json({ error: 'Failed to add payment method to organization' });

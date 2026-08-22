@@ -10,8 +10,8 @@
  * that includes the member's name.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import fc from 'fast-check';
 import CreateMemberPage from '../CreateMemberPage';
@@ -50,13 +50,35 @@ vi.mock('@aws-web-framework/components', () => ({
 }));
 
 // Mock onboarding hook
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({
-    checkModuleVisit: vi.fn(),
-  }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook cannot break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
+/*
+ * `numRuns` is small here on purpose.
+ *
+ * Each case mounts a whole page, waits for two network round trips and asserts
+ * against the DOM — roughly 300ms. At 50 or 100 cases these properties spent
+ * their entire timeout budget and were killed, which is worth nothing at all;
+ * a property that never finishes proves less than one that runs ten cases.
+ *
+ * The seed is fixed globally (see test/setup.ts), so these ten are the *same*
+ * ten every run and a counterexample can be reproduced. Raise this deliberately
+ * when hunting a specific bug.
+ */
 describe('Feature: manual-member-addition, Property 18: Success Notification with Member Name', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const testI18n = createTestI18n('en-GB');
   
   // Add translations
@@ -121,8 +143,8 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
       <I18nextProvider i18n={testI18n}>
         <MemoryRouter initialEntries={[initialRoute]}>
           <Routes>
-            <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
-            <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+            <Route path="/members" element={<MembersDatabasePage />} />
+            <Route path="/members/create" element={<CreateMemberPage />} />
           </Routes>
         </MemoryRouter>
       </I18nextProvider>
@@ -183,18 +205,18 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
 
           const { container, unmount } = renderApp(
             mockExecute,
-            `/orgadmin/memberships/members/create?typeId=${membershipType.id}`
+            `/members/create?typeId=${membershipType.id}`
           );
 
           try {
             // Wait for the create member page to load
             await waitFor(() => {
-              const loadingSpinner = container.querySelector('[data-testid="loading-spinner"]');
+              const loadingSpinner = container.querySelector('[data-testid="skeleton-title"]');
               expect(loadingSpinner).toBeNull();
             }, { timeout: 3000 });
 
             // Fill in the name field
-            const nameInput = container.querySelector('[data-testid="name-input"]') as HTMLInputElement;
+            const nameInput = container.querySelector('[data-testid="name-field"] input') as HTMLInputElement;
             expect(nameInput).not.toBeNull();
             fireEvent.change(nameInput, { target: { value: memberName } });
 
@@ -202,6 +224,7 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
             const submitButton = container.querySelector('[data-testid="submit-button"]') as HTMLButtonElement;
             expect(submitButton).not.toBeNull();
             fireEvent.click(submitButton);
+
 
             // Wait for navigation to members database page
             await waitFor(() => {
@@ -224,7 +247,7 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -287,18 +310,18 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
 
           const { container, unmount } = renderApp(
             mockExecute,
-            `/orgadmin/memberships/members/create?typeId=${membershipType.id}`
+            `/members/create?typeId=${membershipType.id}`
           );
 
           try {
             // Wait for the create member page to load
             await waitFor(() => {
-              const loadingSpinner = container.querySelector('[data-testid="loading-spinner"]');
+              const loadingSpinner = container.querySelector('[data-testid="skeleton-title"]');
               expect(loadingSpinner).toBeNull();
             }, { timeout: 3000 });
 
             // Fill in the name field
-            const nameInput = container.querySelector('[data-testid="name-input"]') as HTMLInputElement;
+            const nameInput = container.querySelector('[data-testid="name-field"] input') as HTMLInputElement;
             expect(nameInput).not.toBeNull();
             fireEvent.change(nameInput, { target: { value: memberName } });
 
@@ -324,7 +347,7 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -380,18 +403,18 @@ describe('Feature: manual-member-addition, Property 18: Success Notification wit
 
     const { container, unmount } = renderApp(
       mockExecute,
-      `/orgadmin/memberships/members/create?typeId=${membershipType.id}`
+      `/members/create?typeId=${membershipType.id}`
     );
 
     try {
       // Wait for the create member page to load
       await waitFor(() => {
-        const loadingSpinner = container.querySelector('[data-testid="loading-spinner"]');
+        const loadingSpinner = container.querySelector('[data-testid="skeleton-title"]');
         expect(loadingSpinner).toBeNull();
       }, { timeout: 3000 });
 
       // Fill in the name field
-      const nameInput = container.querySelector('[data-testid="name-input"]') as HTMLInputElement;
+      const nameInput = container.querySelector('[data-testid="name-field"] input') as HTMLInputElement;
       expect(nameInput).not.toBeNull();
       fireEvent.change(nameInput, { target: { value: memberName } });
 

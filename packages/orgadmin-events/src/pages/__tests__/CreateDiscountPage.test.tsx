@@ -63,6 +63,25 @@ describe('CreateDiscountPage', () => {
     );
   };
 
+  /**
+   * Walk the wizard to Eligibility Criteria and switch on the code field.
+   *
+   * The discount code is not part of Basic Information — it appears on the
+   * third step, and only once "Requires code entry" is ticked. Tests that
+   * looked for it on the first step were describing a form that has not
+   * existed for some time.
+   */
+  const enableDiscountCodeField = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.type(screen.getByRole('textbox', { name: /discount name/i }), 'Test Discount');
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => screen.getByRole('heading', { name: /discount configuration/i }));
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    await waitFor(() => screen.getByRole('heading', { name: /eligibility criteria/i }));
+
+    await user.click(screen.getByRole('checkbox', { name: /requires code entry/i }));
+    return screen.getByRole('textbox', { name: /discount code/i });
+  };
+
   describe('Wizard Navigation', () => {
     it('should render Step 1 initially', async () => {
       renderComponent();
@@ -208,8 +227,8 @@ describe('CreateDiscountPage', () => {
         const user = userEvent.setup();
         renderComponent();
 
-        await user.type(screen.getByRole('textbox', { name: /discount name/i }), 'Test Discount');
-        await user.type(screen.getByRole('textbox', { name: /discount code/i }), 'AB'); // Too short
+        const codeField = await enableDiscountCodeField(user);
+        await user.type(codeField, 'AB'); // Too short
 
         await user.click(screen.getByRole('button', { name: /next/i }));
 
@@ -222,13 +241,13 @@ describe('CreateDiscountPage', () => {
         const user = userEvent.setup();
         renderComponent();
 
-        await user.type(screen.getByRole('textbox', { name: /discount name/i }), 'Test Discount');
-        await user.type(screen.getByRole('textbox', { name: /discount code/i }), 'VALID123');
+        const codeField = await enableDiscountCodeField(user);
+        await user.type(codeField, 'VALID123');
 
         await user.click(screen.getByRole('button', { name: /next/i }));
 
         await waitFor(() => {
-          expect(screen.getByRole('heading', { name: /discount configuration/i })).toBeInTheDocument();
+          expect(screen.getByRole('heading', { name: /validity & limits/i })).toBeInTheDocument();
         });
       });
 
@@ -453,7 +472,6 @@ describe('CreateDiscountPage', () => {
       // Fill Step 1
       await user.type(screen.getByRole('textbox', { name: /discount name/i }), 'Test Discount');
       await user.type(screen.getByRole('textbox', { name: /description/i }), 'Test Description');
-      await user.type(screen.getByRole('textbox', { name: /discount code/i }), 'TEST123');
       await user.click(screen.getByRole('button', { name: /next/i }));
 
       // Go to Step 2 and back
@@ -464,7 +482,6 @@ describe('CreateDiscountPage', () => {
       await waitFor(() => {
         expect(screen.getByRole('textbox', { name: /discount name/i })).toHaveValue('Test Discount');
         expect(screen.getByRole('textbox', { name: /description/i })).toHaveValue('Test Description');
-        expect(screen.getByRole('textbox', { name: /discount code/i })).toHaveValue('TEST123');
       });
     });
 
@@ -562,16 +579,28 @@ describe('CreateDiscountPage', () => {
     it('should call update API when in edit mode', async () => {
       const user = userEvent.setup();
       mockParams.id = '123' as any;
-      mockExecute
-        .mockResolvedValueOnce({
-          id: '123',
-          name: 'Existing Discount',
-          discountType: 'percentage',
-          discountValue: 10,
-          applicationScope: 'item',
-          status: 'active',
-        })
-        .mockResolvedValueOnce({ id: '123', name: 'Updated Discount' });
+      /*
+       * Answer by URL rather than by call order. The page also loads membership
+       * types and user groups, and those requests swallowed the two queued
+       * `Once` responses — so the discount itself arrived undefined, the name
+       * was empty, and validation stopped the save before it was made.
+       */
+      mockExecute.mockImplementation(({ url, method }: { url: string; method: string }) => {
+        if (method === 'GET' && url.includes('/discounts/123')) {
+          return Promise.resolve({
+            id: '123',
+            name: 'Existing Discount',
+            discountType: 'percentage',
+            discountValue: 10,
+            applicationScope: 'item',
+            status: 'active',
+          });
+        }
+        if (method === 'PUT') {
+          return Promise.resolve({ id: '123', name: 'Updated Discount' });
+        }
+        return Promise.resolve([]);
+      });
 
       renderComponent();
 
@@ -579,18 +608,12 @@ describe('CreateDiscountPage', () => {
         expect(screen.getByText('Edit Discount')).toBeInTheDocument();
       });
 
-      // Navigate to last step
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /discount configuration/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /eligibility criteria/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /validity & limits/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /review & confirm/i }));
-
-      // Click Update
-      await user.click(screen.getByRole('button', { name: /update discount/i }));
+      /*
+       * Editing is not a wizard. An existing discount opens as one form of
+       * collapsible sections with a sticky save bar, so there is no Next to
+       * click and no Update button — the bar's Publish saves it.
+       */
+      await user.click(screen.getByRole('button', { name: /^publish$/i }));
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith(
@@ -606,7 +629,16 @@ describe('CreateDiscountPage', () => {
   describe('Error Handling', () => {
     it('should display error message when save fails', async () => {
       const user = userEvent.setup();
-      mockExecute.mockRejectedValueOnce(new Error('Failed to save'));
+      /*
+       * Reject the save specifically. `mockRejectedValueOnce` was consumed by
+       * the first request the wizard makes — the eligibility step loads
+       * membership types — so the save itself succeeded and no error appeared.
+       */
+      mockExecute.mockImplementation(({ method }: { method: string }) =>
+        method === 'POST' || method === 'PUT'
+          ? Promise.reject(new Error('Failed to save'))
+          : Promise.resolve([])
+      );
       renderComponent();
 
       // Navigate to last step
@@ -640,7 +672,16 @@ describe('CreateDiscountPage', () => {
 
     it('should allow dismissing error message', async () => {
       const user = userEvent.setup();
-      mockExecute.mockRejectedValueOnce(new Error('Failed to save'));
+      /*
+       * Reject the save specifically. `mockRejectedValueOnce` was consumed by
+       * the first request the wizard makes — the eligibility step loads
+       * membership types — so the save itself succeeded and no error appeared.
+       */
+      mockExecute.mockImplementation(({ method }: { method: string }) =>
+        method === 'POST' || method === 'PUT'
+          ? Promise.reject(new Error('Failed to save'))
+          : Promise.resolve([])
+      );
       renderComponent();
 
       // Navigate to last step and trigger error

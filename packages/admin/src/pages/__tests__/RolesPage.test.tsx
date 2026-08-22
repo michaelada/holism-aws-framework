@@ -89,17 +89,14 @@ describe('RolesPage', () => {
       expect(screen.getByText('Create Role')).toBeInTheDocument();
     });
 
-    const inputs = screen.getAllByRole('textbox');
-    const nameInput = inputs[0];
-    const displayNameInput = inputs[1];
-    const descriptionInput = inputs[2];
+    // The form takes a display name and a description; the role's identifier
+    // is derived from the display name rather than typed.
+    const [displayNameInput, descriptionInput] = screen.getAllByRole('textbox');
 
-    fireEvent.change(nameInput, { target: { value: 'new-role' } });
     fireEvent.change(displayNameInput, { target: { value: 'New Role' } });
     fireEvent.change(descriptionInput, { target: { value: 'New role description' } });
 
-    const submitButton = screen.getByRole('button', { name: /create/i });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
 
     await waitFor(() => {
       expect(mockApi.createRole).toHaveBeenCalledWith({

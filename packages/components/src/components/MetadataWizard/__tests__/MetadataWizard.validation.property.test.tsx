@@ -23,7 +23,7 @@ describe('Property 31: Wizard Step Validation', () => {
   });
 
   it('should prevent navigation to next step when mandatory fields are not filled', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.record({
           mandatoryFieldCount: fc.integer({ min: 1, max: 3 }),
@@ -123,7 +123,7 @@ describe('Property 31: Wizard Step Validation', () => {
   });
 
   it('should allow navigation to next step when all mandatory fields are filled', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.record({
           fieldValue: fc.string({ minLength: 1, maxLength: 20 }),

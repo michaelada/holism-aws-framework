@@ -29,11 +29,11 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => ({
   useOrganisation: vi.fn(),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({ checkModuleVisit: vi.fn() }),
-  usePageHelp: () => undefined,
-  useTranslation: () => ({ t: (k: string) => k }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook cannot break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
 const member = (over: Record<string, unknown> = {}) => ({
   id: 'm1',

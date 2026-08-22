@@ -10,8 +10,8 @@
  * should display all available membership types with their names and descriptions.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import fc from 'fast-check';
 import MembershipTypeSelector from '../MembershipTypeSelector';
 import { I18nextProvider } from 'react-i18next';
@@ -80,7 +80,27 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
   /**
    * Helper function to render MembershipTypeSelector with i18n
    */
+  /*
+   * Assertions here read `baseElement`, not `container`.
+   *
+   * `MembershipTypeSelector` is a MUI `Dialog`, which renders through a portal
+   * into `document.body`. RTL's `container` is only the div the component was
+   * rendered into, so it never contained the dialog and every "is the name
+   * shown" check saw zero elements — the tests could not have passed against
+   * any implementation.
+   */
+  /*
+   * Torn down after every property iteration.
+   *
+   * `fc.assert` runs the body many times inside a single test, and RTL only
+   * cleans up between tests. With a portalled dialog the previous iteration's
+   * markup was still in `document.body`, so a count that should have been 2
+   * came back as 130, then 217, then 504 — growing with each case.
+   */
+  afterEach(() => cleanup());
+
   const renderMembershipTypeSelector = (membershipTypes: MembershipType[], open: boolean = true) => {
+    cleanup();
     return render(
       <I18nextProvider i18n={testI18n}>
         <MembershipTypeSelector
@@ -98,12 +118,12 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
       fc.asyncProperty(
         uniqueMembershipTypesArbitrary(2, 10),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: All membership types should be displayed
           membershipTypes.forEach((type) => {
             // Check that the name is displayed
-            const nameElements = Array.from(container.querySelectorAll('*')).filter(
+            const nameElements = Array.from(baseElement.querySelectorAll('*')).filter(
               el => el.textContent?.includes(type.name)
             );
             expect(nameElements.length).toBeGreaterThan(0);
@@ -119,19 +139,19 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
       fc.asyncProperty(
         uniqueMembershipTypesArbitrary(2, 10),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: Each type should display both name and description
           membershipTypes.forEach((type) => {
             // Check that the name is displayed
-            const nameElements = Array.from(container.querySelectorAll('*')).filter(
+            const nameElements = Array.from(baseElement.querySelectorAll('*')).filter(
               el => el.textContent?.includes(type.name)
             );
             expect(nameElements.length).toBeGreaterThan(0);
 
             // Check that the description is displayed (if not empty)
             if (type.description.trim().length > 0) {
-              const descriptionElements = Array.from(container.querySelectorAll('*')).filter(
+              const descriptionElements = Array.from(baseElement.querySelectorAll('*')).filter(
                 el => el.textContent?.includes(type.description)
               );
               expect(descriptionElements.length).toBeGreaterThan(0);
@@ -148,10 +168,10 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
       fc.asyncProperty(
         uniqueMembershipTypesArbitrary(2, 10),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: The number of displayed types should match the input
-          const listItems = container.querySelectorAll('[role="button"]');
+          const listItems = baseElement.querySelectorAll('[role="button"]');
           expect(listItems.length).toBe(membershipTypes.length);
         }
       ),
@@ -189,14 +209,14 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
           id: `${type.id.slice(0, -4)}${index.toString().padStart(4, '0')}`,
         }))),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: All types should be displayed regardless of name length
-          const listItems = container.querySelectorAll('[role="button"]');
+          const listItems = baseElement.querySelectorAll('[role="button"]');
           expect(listItems.length).toBe(membershipTypes.length);
 
           membershipTypes.forEach((type) => {
-            const nameElements = Array.from(container.querySelectorAll('*')).filter(
+            const nameElements = Array.from(baseElement.querySelectorAll('*')).filter(
               el => el.textContent?.includes(type.name)
             );
             expect(nameElements.length).toBeGreaterThan(0);
@@ -238,14 +258,14 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
           id: `${type.id.slice(0, -4)}${index.toString().padStart(4, '0')}`,
         }))),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: All types should be displayed regardless of description length
-          const listItems = container.querySelectorAll('[role="button"]');
+          const listItems = baseElement.querySelectorAll('[role="button"]');
           expect(listItems.length).toBe(membershipTypes.length);
 
           membershipTypes.forEach((type) => {
-            const nameElements = Array.from(container.querySelectorAll('*')).filter(
+            const nameElements = Array.from(baseElement.querySelectorAll('*')).filter(
               el => el.textContent?.includes(type.name)
             );
             expect(nameElements.length).toBeGreaterThan(0);
@@ -261,10 +281,10 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
       fc.asyncProperty(
         uniqueMembershipTypesArbitrary(2, 10),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: Types should be displayed in the same order as provided
-          const listItems = Array.from(container.querySelectorAll('[role="button"]'));
+          const listItems = Array.from(baseElement.querySelectorAll('[role="button"]'));
           
           expect(listItems.length).toBe(membershipTypes.length);
           
@@ -311,10 +331,10 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
           id: `${type.id.slice(0, -4)}${index.toString().padStart(4, '0')}`,
         }))),
         async (membershipTypes) => {
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: All types should be displayed even with special characters
-          const listItems = container.querySelectorAll('[role="button"]');
+          const listItems = baseElement.querySelectorAll('[role="button"]');
           expect(listItems.length).toBe(membershipTypes.length);
         }
       ),
@@ -330,15 +350,15 @@ describe('Feature: manual-member-addition, Property 3: Membership Type Selector 
         async (count, allTypes) => {
           // Take only the specified count of types
           const membershipTypes = allTypes.slice(0, count);
-          const { container } = renderMembershipTypeSelector(membershipTypes, true);
+          const { baseElement } = renderMembershipTypeSelector(membershipTypes, true);
 
           // Property: Exactly 'count' types should be displayed
-          const listItems = container.querySelectorAll('[role="button"]');
+          const listItems = baseElement.querySelectorAll('[role="button"]');
           expect(listItems.length).toBe(count);
 
           // All selected types should be visible
           membershipTypes.forEach((type) => {
-            const nameElements = Array.from(container.querySelectorAll('*')).filter(
+            const nameElements = Array.from(baseElement.querySelectorAll('*')).filter(
               el => el.textContent?.includes(type.name)
             );
             expect(nameElements.length).toBeGreaterThan(0);

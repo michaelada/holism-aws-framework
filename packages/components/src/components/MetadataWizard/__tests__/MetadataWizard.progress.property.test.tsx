@@ -100,7 +100,7 @@ describe('Property 33: Wizard Progress Indication', () => {
   });
 
   it('should indicate current step and completed steps as user progresses', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.record({
           stepCount: fc.integer({ min: 3, max: 4 }),
@@ -184,7 +184,13 @@ describe('Property 33: Wizard Progress Indication', () => {
           expect(activeSteps[0].textContent).toBe(`Step ${targetStep + 1}`);
 
           // Verify completed steps are marked
-          const completedSteps = container.querySelectorAll('.MuiStep-root.MuiStep-completed');
+          /*
+           * `Mui-completed`, MUI's global state class — there is no
+           * `MuiStep-completed`, so this selector matched nothing and the
+           * count was always zero. The assertion only ever ran because the
+           * property was not awaited.
+           */
+          const completedSteps = container.querySelectorAll('.MuiStep-root.Mui-completed');
           expect(completedSteps.length).toBe(targetStep);
         }
       ),
@@ -193,7 +199,7 @@ describe('Property 33: Wizard Progress Indication', () => {
   });
 
   it('should show progress throughout entire wizard flow', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.record({
           stepCount: fc.integer({ min: 2, max: 3 }),

@@ -26,7 +26,8 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string>) => {
       if (key === 'payment.handlingFeeIncluded') return 'Handling fee included';

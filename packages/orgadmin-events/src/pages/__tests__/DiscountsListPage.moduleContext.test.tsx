@@ -25,7 +25,8 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock orgadmin-shell hooks
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   usePageHelp: vi.fn(),
   useOnboarding: () => ({
     setCurrentModule: vi.fn(),

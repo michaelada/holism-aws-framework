@@ -63,6 +63,31 @@ describe('UserForm', () => {
     onCancel: vi.fn(),
   };
 
+  /**
+   * Every required box filled with something a browser accepts.
+   *
+   * The four validation tests below used to submit an empty form and were
+   * skipped as a "validation timing issue". They were not: `username`, `email`,
+   * `firstName`, `lastName` and `password` are all `required`, so the browser
+   * refuses the submit while any is blank and the form's own `validateForm`
+   * never runs. Filling the form first and then spoiling one field is what
+   * reaches the message each test is about.
+   */
+  const fillValidForm = () => {
+    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'john.doe' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^email$/i }), {
+      target: { value: 'john.doe@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'John' } });
+    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Doe' } });
+    fireEvent.change(passwordField(), { target: { value: 'password123' } });
+  };
+
+  const passwordField = () =>
+    screen
+      .getAllByLabelText(/password/i)
+      .find((input) => (input as HTMLInputElement).type === 'password') as HTMLElement;
+
   describe('Create Mode', () => {
     it('should render create form', () => {
       render(<UserForm {...defaultProps} />);
@@ -79,35 +104,52 @@ describe('UserForm', () => {
       expect(passwordField).toBeInTheDocument();
     });
 
-    it.skip('should validate required fields', async () => {
-      // TODO: Fix validation timing issue in test environment
-      // Form validation works correctly in actual usage
-      render(<UserForm {...defaultProps} />);
+    it('should not submit while a required box is empty', () => {
+      const onSubmit = vi.fn();
+      render(<UserForm {...defaultProps} onSubmit={onSubmit} />);
 
-      const submitButton = screen.getByRole('button', { name: /create/i });
-      fireEvent.click(submitButton);
+      fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('should validate required fields', async () => {
+      const onSubmit = vi.fn();
+      render(<UserForm {...defaultProps} onSubmit={onSubmit} />);
+
+      /*
+       * Spaces satisfy the browser's `required` check and still fail `trim()`,
+       * so these are the form's own messages rather than the browser's. Email
+       * keeps a real address: `type="email"` rejects whitespace outright, and a
+       * field the browser blocks never reaches the form at all.
+       */
+      fireEvent.change(screen.getByLabelText(/username/i), { target: { value: '   ' } });
+      fireEvent.change(screen.getByRole('textbox', { name: /^email$/i }), {
+        target: { value: 'john.doe@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: '   ' } });
+      fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: '   ' } });
+      fireEvent.change(passwordField(), { target: { value: '   ' } });
+
+      fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
       await waitFor(() => {
         expect(screen.getByText('Username is required')).toBeInTheDocument();
-        expect(screen.getByText('Email is required')).toBeInTheDocument();
         expect(screen.getByText('First name is required')).toBeInTheDocument();
         expect(screen.getByText('Last name is required')).toBeInTheDocument();
         expect(screen.getByText('Password is required for new users')).toBeInTheDocument();
       });
 
-      expect(defaultProps.onSubmit).not.toHaveBeenCalled();
+      expect(onSubmit).not.toHaveBeenCalled();
     });
 
-    it.skip('should validate username format', async () => {
-      // TODO: Fix validation timing issue in test environment
-      // Form validation works correctly in actual usage
+    it('should validate username format', async () => {
       render(<UserForm {...defaultProps} />);
 
-      const usernameInput = screen.getByLabelText(/username/i);
-      fireEvent.change(usernameInput, { target: { value: 'invalid user!' } });
+      fillValidForm();
+      fireEvent.change(screen.getByLabelText(/username/i), { target: { value: 'invalid user!' } });
 
-      const submitButton = screen.getByRole('button', { name: /create/i });
-      fireEvent.click(submitButton);
+      fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
       await waitFor(() => {
         expect(
@@ -116,36 +158,33 @@ describe('UserForm', () => {
       });
     });
 
-    it.skip('should validate email format', async () => {
-      // TODO: Fix validation timing issue in test environment
-      // Form validation works correctly in actual usage
+    it('should validate email format', async () => {
       render(<UserForm {...defaultProps} />);
 
-      const emailInput = screen.getByRole('textbox', { name: /^email$/i });
-      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
+      fillValidForm();
+      /*
+       * `user@localhost` is a valid address to `type="email"` — the browser does
+       * not insist on a dotted domain — and invalid to the form, which does.
+       * A value the browser itself rejects would never reach `validateForm`.
+       */
+      fireEvent.change(screen.getByRole('textbox', { name: /^email$/i }), {
+        target: { value: 'user@localhost' },
+      });
 
-      const submitButton = screen.getByRole('button', { name: /create/i });
-      fireEvent.click(submitButton);
+      fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/email must be a valid email address/i)).toBeInTheDocument();
       });
     });
 
-    it.skip('should validate password length', async () => {
-      // TODO: Fix validation timing issue in test environment
-      // Form validation works correctly in actual usage
+    it('should validate password length', async () => {
       render(<UserForm {...defaultProps} />);
 
-      // Use more specific selector for password field (type="password")
-      const passwordInputs = screen.getAllByLabelText(/password/i);
-      const passwordField = passwordInputs.find(input => (input as HTMLInputElement).type === 'password');
-      if (passwordField) {
-        fireEvent.change(passwordField, { target: { value: 'short' } });
-      }
+      fillValidForm();
+      fireEvent.change(passwordField(), { target: { value: 'short' } });
 
-      const submitButton = screen.getByRole('button', { name: /create/i });
-      fireEvent.click(submitButton);
+      fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();

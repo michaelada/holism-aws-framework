@@ -19,15 +19,37 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import CreateMemberPage from '../CreateMemberPage';
 import MembersDatabasePage from '../MembersDatabasePage';
-import { createTestI18n } from '@aws-web-framework/orgadmin-core/test-utils';
-import * as useExecuteModule from '@aws-web-framework/orgadmin-core/hooks/useExecute';
-import * as useAuthModule from '@aws-web-framework/orgadmin-shell/hooks/useAuth';
-import * as useOrganisationModule from '@aws-web-framework/orgadmin-core/hooks/useOrganisation';
+import { createTestI18n } from '../../test/i18n-test-utils';
+import { authMeResponse } from '../../test/auth-me';
+
+/*
+ * `vi.mock` is hoisted to the top of the file no matter where it is written.
+ * This one lived inside the cancel-flow test and closed over a `mockNavigate`
+ * declared two lines above it, so at hoist time that variable did not exist and
+ * every render in the file threw "mockNavigate is not defined".
+ */
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+const mockUseApi = vi.fn();
+const mockUseOrganisation = vi.fn();
+
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, useApi: () => mockUseApi(), useOrganisation: () => mockUseOrganisation() };
+});
+
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
+
 
 // Mock modules
-vi.mock('@aws-web-framework/orgadmin-core/hooks/useExecute');
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useAuth');
-vi.mock('@aws-web-framework/orgadmin-core/hooks/useOrganisation');
 vi.mock('@aws-web-framework/orgadmin-shell/hooks/useNotification', () => ({
   useNotification: () => ({
     showNotification: vi.fn(),
@@ -91,31 +113,42 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
     ],
   };
 
+
+/**
+ * Answer by URL, not by call order.
+ *
+ * Every test here originally queued responses with `mockResolvedValueOnce`, in
+ * the order its author expected the page to ask. The page asks a different
+ * number of times depending on whether the address names a type, whether it
+ * needs the organisation type, and whether it checks roles — so one extra call
+ * shifted every later answer onto the wrong question. That is how the by-id
+ * fetch came to receive an *array*.
+ */
+const respondByUrl = (over: Record<string, unknown> = {}) =>
+  ({ url, method }: { url: string; method?: string }) => {
+    for (const [fragment, value] of Object.entries(over)) {
+      if (url.includes(fragment)) return Promise.resolve(value);
+    }
+    if (url.includes('/auth/me')) {
+      return Promise.resolve(authMeResponse());
+    }
+    if (url.includes('/application-forms')) return Promise.resolve(mockFormDefinition);
+    if (url.includes('/form-submissions')) return Promise.resolve({ id: 'submission-1' });
+    if (url.includes('/members') && method === 'POST') {
+      return Promise.resolve({ id: 'member-1', membershipNumber: 'TEST-1', status: 'active' });
+    }
+    return Promise.resolve([]);
+  };
+
   beforeEach(() => {
     mockExecute = vi.fn();
     mockShowNotification = vi.fn();
 
-    vi.spyOn(useExecuteModule, 'useExecute').mockReturnValue({
-      execute: mockExecute,
-      loading: false,
-      error: null,
-    });
-
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      user: mockUser,
-      isAuthenticated: true,
-      loading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-      hasRole: (role: string) => mockUser.roles.includes(role),
-    });
-
-    vi.spyOn(useOrganisationModule, 'useOrganisation').mockReturnValue({
-      organisation: mockOrganisation,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+    // The page reads `useApi().execute` and `useOrganisation()`; there is no
+    // `useExecute`, no `useAuth`, and `useOrganisation` lives in context, not
+    // hooks. This suite was written against all three and so had never run.
+    mockUseApi.mockReturnValue({ execute: mockExecute, data: null, error: null, loading: false, reset: vi.fn() });
+    mockUseOrganisation.mockReturnValue({ organisation: mockOrganisation });
   });
 
   afterEach(() => {
@@ -137,25 +170,42 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
    */
   it('should complete member creation flow with single membership type', async () => {
     // Arrange: Mock API responses
-    mockExecute
-      .mockResolvedValueOnce([mockMembershipType]) // Get membership types (count = 1)
-      .mockResolvedValueOnce(mockMembershipType) // Get membership type by ID
-      .mockResolvedValueOnce(mockFormDefinition) // Get form definition
-      .mockResolvedValueOnce({ id: 'submission-123' }) // Create form submission
-      .mockResolvedValueOnce({ // Create member
-        id: 'member-123',
-        membershipNumber: 'TEST-2024-00001',
-        firstName: 'John',
-        lastName: 'Doe',
-        status: 'active',
-      });
+    /*
+     * Keyed on the URL rather than an ordered queue. With `?typeId=` in the
+     * address the page goes straight to that type and never lists them, so a
+     * queue that began with "get membership types" handed the *array* to the
+     * by-id call — `membershipFormId` came out undefined and the form never
+     * showed its name. A URL-keyed mock cannot be knocked out of step by the
+     * page making one more call, or one fewer.
+     */
+    mockExecute.mockImplementation(({ url, method }: { url: string; method?: string }) => {
+      if (url.includes('/auth/me')) {
+        return Promise.resolve(authMeResponse());
+      }
+      if (url.includes(`/membership-types/${mockMembershipType.id}`)) {
+        return Promise.resolve(mockMembershipType);
+      }
+      if (url.includes('/membership-types')) return Promise.resolve([mockMembershipType]);
+      if (url.includes('/application-forms')) return Promise.resolve(mockFormDefinition);
+      if (url.includes('/form-submissions')) return Promise.resolve({ id: 'submission-123' });
+      if (url.includes('/members') && method === 'POST') {
+        return Promise.resolve({
+          id: 'member-123',
+          membershipNumber: 'TEST-2024-00001',
+          firstName: 'John',
+          lastName: 'Doe',
+          status: 'active',
+        });
+      }
+      return Promise.resolve([]);
+    });
 
     // Act: Render the complete flow
     const { container } = render(
-      <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${mockMembershipType.id}`]}>
+      <MemoryRouter initialEntries={[`/members/create?typeId=${mockMembershipType.id}`]}>
         <I18nextProvider i18n={testI18n}>
           <Routes>
-            <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+            <Route path="/members/create" element={<CreateMemberPage />} />
           </Routes>
         </I18nextProvider>
       </MemoryRouter>
@@ -215,25 +265,19 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
     };
 
     // Arrange: Mock API responses
-    mockExecute
-      .mockResolvedValueOnce([mockMembershipType, mockMembershipType2]) // Get membership types (count = 2)
-      .mockResolvedValueOnce(mockMembershipType) // Get selected membership type
-      .mockResolvedValueOnce(mockFormDefinition) // Get form definition
-      .mockResolvedValueOnce({ id: 'submission-456' }) // Create form submission
-      .mockResolvedValueOnce({ // Create member
-        id: 'member-456',
-        membershipNumber: 'TEST-2024-00002',
-        firstName: 'Jane',
-        lastName: 'Smith',
-        status: 'active',
-      });
+    mockExecute.mockImplementation(
+      respondByUrl({
+        [`/membership-types/${mockMembershipType.id}`]: mockMembershipType,
+        '/membership-types': [mockMembershipType, mockMembershipType2],
+      })
+    );
 
     // Act: Render create member page with selected type
     render(
-      <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${mockMembershipType.id}`]}>
+      <MemoryRouter initialEntries={[`/members/create?typeId=${mockMembershipType.id}`]}>
         <I18nextProvider i18n={testI18n}>
           <Routes>
-            <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+            <Route path="/members/create" element={<CreateMemberPage />} />
           </Routes>
         </I18nextProvider>
       </MemoryRouter>
@@ -279,24 +323,17 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
    */
   it('should handle validation error flow correctly', async () => {
     // Arrange: Mock API responses
-    mockExecute
-      .mockResolvedValueOnce(mockMembershipType) // Get membership type
-      .mockResolvedValueOnce(mockFormDefinition) // Get form definition
-      .mockResolvedValueOnce({ id: 'submission-789' }) // Create form submission (after fixing errors)
-      .mockResolvedValueOnce({ // Create member
-        id: 'member-789',
-        membershipNumber: 'TEST-2024-00003',
-        firstName: 'Bob',
-        lastName: 'Johnson',
-        status: 'active',
-      });
+    mockExecute.mockImplementation(respondByUrl({
+        [`/membership-types/${mockMembershipType.id}`]: mockMembershipType,
+        '/membership-types': [mockMembershipType],
+      }));
 
     // Act: Render create member page
     render(
-      <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${mockMembershipType.id}`]}>
+      <MemoryRouter initialEntries={[`/members/create?typeId=${mockMembershipType.id}`]}>
         <I18nextProvider i18n={testI18n}>
           <Routes>
-            <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+            <Route path="/members/create" element={<CreateMemberPage />} />
           </Routes>
         </I18nextProvider>
       </MemoryRouter>
@@ -311,14 +348,22 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
     const submitButton = screen.getByRole('button', { name: /create member|save/i });
     fireEvent.click(submitButton);
 
-    // Assert: Validation errors should be displayed
+    // Assert: Validation errors should be displayed.
+    // `getAllBy`, because more than one field can legitimately say "required"
+    // and the exact count is the form's business, not this test's.
     await waitFor(() => {
-      expect(screen.getByText(/name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/email.*required/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/name is required/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/email.*required/i).length).toBeGreaterThan(0);
     });
 
-    // Verify no API calls were made yet
-    expect(mockExecute).toHaveBeenCalledTimes(2); // Only initial loads
+    /*
+     * Nothing was submitted. Counting *all* calls would tie this test to how
+     * many the page makes to load itself — which has already changed once and
+     * is not what "no API calls were made yet" meant.
+     */
+    expect(
+      mockExecute.mock.calls.some(([{ method }]: [{ method?: string }]) => method === 'POST')
+    ).toBe(false);
 
     // Fill out required fields
     const nameInput = screen.getByLabelText(/name/i);
@@ -357,26 +402,13 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
       .mockResolvedValueOnce(mockMembershipType) // Get membership type
       .mockResolvedValueOnce(mockFormDefinition); // Get form definition
 
-    let currentPath = '/orgadmin/memberships/members/create';
-    const mockNavigate = vi.fn((path) => {
-      currentPath = path;
-    });
-
-    // Mock useNavigate
-    vi.mock('react-router-dom', async () => {
-      const actual = await vi.importActual('react-router-dom');
-      return {
-        ...actual,
-        useNavigate: () => mockNavigate,
-      };
-    });
 
     // Act: Render create member page
     render(
-      <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${mockMembershipType.id}`]}>
+      <MemoryRouter initialEntries={[`/members/create?typeId=${mockMembershipType.id}`]}>
         <I18nextProvider i18n={testI18n}>
           <Routes>
-            <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+            <Route path="/members/create" element={<CreateMemberPage />} />
           </Routes>
         </I18nextProvider>
       </MemoryRouter>
@@ -414,39 +446,39 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
    * 4. System should handle unauthorized access appropriately
    */
   it('should handle authorization flow correctly', async () => {
-    // Arrange: Mock non-admin user
-    const mockNonAdminUser = {
-      ...mockUser,
-      roles: ['member'], // Not an organization_administrator
-    };
-
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
-      user: mockNonAdminUser,
-      isAuthenticated: true,
-      loading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-      hasRole: (role: string) => mockNonAdminUser.roles.includes(role),
+    /*
+     * Whether the Add Member button appears is decided by the roles the page
+     * reads from `/api/orgadmin/auth/me`, not by a `useAuth` hook — there is no
+     * such hook, which is one of three imaginary imports that stopped this file
+     * running at all.
+     */
+    mockExecute.mockImplementation(({ url }: { url: string }) => {
+      if (url.includes('/auth/me')) {
+        // A member, not an administrator.
+        return Promise.resolve(authMeResponse({ roles: [{ id: 'r2', name: 'member', displayName: 'Member' }] }));
+      }
+      if (url.includes('/membership-types')) return Promise.resolve([mockMembershipType]);
+      return Promise.resolve([]);
     });
 
-    mockExecute.mockResolvedValueOnce([mockMembershipType]); // Get membership types
-
-    // Act: Render members database page
     render(
-      <MemoryRouter initialEntries={['/orgadmin/memberships/members']}>
+      <MemoryRouter initialEntries={['/members']}>
         <I18nextProvider i18n={testI18n}>
           <Routes>
-            <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
+            <Route path="/members" element={<MembersDatabasePage />} />
           </Routes>
         </I18nextProvider>
       </MemoryRouter>
     );
 
-    // Assert: Add Member button should not be visible
+    // The roles call has been made, so the gate has had its say.
     await waitFor(() => {
-      const addButton = screen.queryByRole('button', { name: /add member/i });
-      expect(addButton).not.toBeInTheDocument();
+      expect(
+        mockExecute.mock.calls.some(([{ url }]: [{ url: string }]) => url.includes('/auth/me'))
+      ).toBe(true);
     });
+
+    expect(screen.queryByRole('button', { name: /add member/i })).not.toBeInTheDocument();
   }, 10000);
 
   /**
@@ -469,10 +501,10 @@ describe('End-to-End Integration Tests: Manual Member Addition', () => {
 
     // Act: Render create member page
     render(
-      <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${mockMembershipType.id}`]}>
+      <MemoryRouter initialEntries={[`/members/create?typeId=${mockMembershipType.id}`]}>
         <I18nextProvider i18n={testI18n}>
           <Routes>
-            <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+            <Route path="/members/create" element={<CreateMemberPage />} />
           </Routes>
         </I18nextProvider>
       </MemoryRouter>

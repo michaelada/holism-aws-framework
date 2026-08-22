@@ -71,6 +71,14 @@ export function getModuleResolveConfig(dirname: string) {
       '@aws-web-framework/components': path.resolve(dirname, '../components/src'),
       '@aws-web-framework/orgadmin-shell': path.resolve(dirname, '../orgadmin-shell'),
       '@aws-web-framework/orgadmin-core': path.resolve(dirname, '../orgadmin-core/src'),
+      /*
+       * `orgadmin-events` points `main` at `./dist/index.js`, which is absent
+       * unless that package has been built — so any suite importing it failed
+       * to *resolve the module id*, before its own `vi.mock` could stand in.
+       * The discounts pages in memberships, calendar and merchandise all
+       * re-export from it, so this is not specific to one package.
+       */
+      '@aws-web-framework/orgadmin-events': path.resolve(dirname, '../orgadmin-events/src'),
     },
   };
 }
@@ -79,5 +87,10 @@ export function getModuleResolveConfig(dirname: string) {
  * Shared optimize deps configuration
  */
 export const sharedOptimizeDeps = {
-  exclude: ['@aws-web-framework/components', '@aws-web-framework/orgadmin-shell', '@aws-web-framework/orgadmin-core'],
+  exclude: [
+    '@aws-web-framework/components',
+    '@aws-web-framework/orgadmin-shell',
+    '@aws-web-framework/orgadmin-core',
+    '@aws-web-framework/orgadmin-events',
+  ],
 };

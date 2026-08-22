@@ -90,6 +90,17 @@ const mockDiscounts: Discount[] = [
   },
 ];
 
+/**
+ * The list endpoint answers `{ discounts, total }`, and the page reads
+ * `response.discounts`. These tests resolved a bare array, so the table was
+ * always empty and every assertion about a row failed for a reason that had
+ * nothing to do with the row.
+ */
+const discountsResponse = (discounts: Discount[]) => ({
+  discounts,
+  total: discounts.length,
+});
+
 describe('DiscountsListPage', () => {
   const mockExecute = vi.fn();
   const mockOrganisation = { id: 'org-1', name: 'Test Organisation' };
@@ -123,7 +134,7 @@ describe('DiscountsListPage', () => {
 
   describe('Table Rendering', () => {
     it('should render the page title and create button', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue(discountsResponse([]));
       renderComponent();
 
       expect(screen.getByText('Event Discounts')).toBeInTheDocument();
@@ -131,7 +142,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should load and display discounts on mount', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -156,7 +167,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display empty state when no discounts exist', async () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue(discountsResponse([]));
       renderComponent();
 
       await waitFor(() => {
@@ -165,7 +176,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display discount codes when present', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -175,7 +186,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display discount types with chips', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -188,7 +199,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should format discount values correctly', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       // Wait for all discounts to load
@@ -208,7 +219,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display application scopes', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -219,7 +230,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display status chips with correct colors', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -234,7 +245,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display usage counts', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -247,7 +258,7 @@ describe('DiscountsListPage', () => {
 
   describe('Filters', () => {
     it('should filter discounts by status', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -272,7 +283,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should filter discounts by type', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -297,7 +308,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should filter discounts by scope', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -322,7 +333,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should reset to first page when filters change', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -347,7 +358,7 @@ describe('DiscountsListPage', () => {
 
   describe('Search', () => {
     it('should filter discounts by name', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -365,7 +376,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should filter discounts by description', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -383,7 +394,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should filter discounts by code', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -401,7 +412,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should be case-insensitive when searching', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -417,7 +428,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should show "no matching discounts" message when search returns no results', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -435,7 +446,7 @@ describe('DiscountsListPage', () => {
 
   describe('Pagination', () => {
     it('should display pagination controls', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -447,7 +458,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should change rows per page', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -475,7 +486,7 @@ describe('DiscountsListPage', () => {
         name: `Discount ${i}`,
       }));
 
-      mockExecute.mockResolvedValue(manyDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(manyDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -497,7 +508,7 @@ describe('DiscountsListPage', () => {
 
   describe('Action Buttons', () => {
     it('should navigate to create page when create button is clicked', () => {
-      mockExecute.mockResolvedValue([]);
+      mockExecute.mockResolvedValue(discountsResponse([]));
       renderComponent();
 
       const createButton = screen.getByRole('button', { name: /create discount/i });
@@ -507,7 +518,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should navigate to edit page when edit button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -530,7 +541,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should toggle discount status when activate/deactivate button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -554,13 +565,13 @@ describe('DiscountsListPage', () => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'PUT',
           url: '/api/orgadmin/discounts/1',
-          data: { status: 'inactive' },
+          data: { organisationId: 'org-1', status: 'inactive' },
         });
       });
     });
 
     it('should activate inactive discount when activate button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -584,13 +595,13 @@ describe('DiscountsListPage', () => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'PUT',
           url: '/api/orgadmin/discounts/2',
-          data: { status: 'active' },
+          data: { organisationId: 'org-1', status: 'active' },
         });
       });
     });
 
     it('should disable activate/deactivate button for expired discounts', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -614,7 +625,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should navigate to stats page when view stats button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -639,7 +650,7 @@ describe('DiscountsListPage', () => {
 
   describe('Delete Confirmation', () => {
     it('should open delete confirmation dialog when delete button is clicked', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -667,7 +678,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should close delete dialog when cancel is clicked', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -701,7 +712,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should delete discount when confirmed', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -732,13 +743,13 @@ describe('DiscountsListPage', () => {
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'DELETE',
-          url: '/api/orgadmin/discounts/1',
+          url: '/api/orgadmin/discounts/1?organisationId=org-1',
         });
       });
     });
 
     it('should reload discounts after successful deletion', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -767,7 +778,7 @@ describe('DiscountsListPage', () => {
 
       // Confirm delete
       mockExecute.mockResolvedValueOnce(undefined); // DELETE response
-      mockExecute.mockResolvedValueOnce(mockDiscounts.slice(1)); // GET response after delete
+      mockExecute.mockResolvedValueOnce(discountsResponse(mockDiscounts.slice(1))); // GET response after delete
 
       const confirmDeleteButton = screen.getByRole('button', { name: /^delete$/i });
       fireEvent.click(confirmDeleteButton);
@@ -775,7 +786,7 @@ describe('DiscountsListPage', () => {
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
           method: 'DELETE',
-          url: '/api/orgadmin/discounts/1',
+          url: '/api/orgadmin/discounts/1?organisationId=org-1',
         });
       });
 
@@ -789,7 +800,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display error message when delete fails', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -826,18 +837,27 @@ describe('DiscountsListPage', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle API errors gracefully when loading discounts', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockExecute.mockRejectedValue(new Error('API Error'));
-      
+    it('shows the API error when the discounts fail to load', async () => {
+      /*
+       * `useApi.execute` never throws. A failed request resolves to `null` and
+       * the message is exposed through `error`, which is what the page renders
+       * — so rejecting the spy tested a path that cannot happen and left the
+       * page waiting on a promise nobody handled.
+       */
+      mockExecute.mockResolvedValue(null);
+      vi.mocked(useApiModule.useApi).mockReturnValue({
+        execute: mockExecute,
+        data: null,
+        error: 'Failed to load discounts',
+        loading: false,
+        reset: vi.fn(),
+      });
+
       renderComponent();
 
       await waitFor(() => {
         expect(screen.getByText('Failed to load discounts')).toBeInTheDocument();
       });
-
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
     });
 
     it('should set empty array when API returns null', async () => {
@@ -850,7 +870,7 @@ describe('DiscountsListPage', () => {
     });
 
     it('should display error message when status toggle fails', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
@@ -879,25 +899,35 @@ describe('DiscountsListPage', () => {
     });
 
     it('should close error alert when close button is clicked', async () => {
-      mockExecute.mockRejectedValue(new Error('API Error'));
+      // The alert's close button clears the page's own error. An error coming
+      // from `useApi` belongs to the hook and stays until the next request, so
+      // this drives the one the page raises itself: a failed status toggle.
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to load discounts')).toBeInTheDocument();
+        expect(screen.getByText('Early Bird Discount')).toBeInTheDocument();
       });
 
-      const closeButton = screen.getByRole('button', { name: /close/i });
-      fireEvent.click(closeButton);
+      mockExecute.mockRejectedValueOnce(new Error('Update failed'));
+      const toggleButton = screen.getAllByTestId('ToggleOffIcon')[0].closest('button');
+      fireEvent.click(toggleButton!);
 
       await waitFor(() => {
-        expect(screen.queryByText('Failed to load discounts')).not.toBeInTheDocument();
+        expect(screen.getByText('Failed to update discount status')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /close/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Failed to update discount status')).not.toBeInTheDocument();
       });
     });
   });
 
   describe('Combined Filters and Search', () => {
     it('should combine search and status filters', async () => {
-      mockExecute.mockResolvedValue(mockDiscounts);
+      mockExecute.mockResolvedValue(discountsResponse(mockDiscounts));
       renderComponent();
 
       await waitFor(() => {

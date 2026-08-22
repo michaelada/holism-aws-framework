@@ -229,8 +229,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
       expect(response.body.error).toContain('already associated');
     });
 
-    // TODO: Fix error handling - currently returns 500 instead of 400 for foreign key violations
-    it.skip('should return 400 for invalid organization ID', async () => {
+    it('should return 400 for invalid organization ID', async () => {
       const fakeOrgId = '00000000-0000-0000-0000-000000000000';
       const associationData = {
         paymentMethodId: testPaymentMethodId
@@ -245,8 +244,7 @@ describe('Organization Payment Method API Routes Integration Tests', () => {
       expect(response.body.error).toContain('Invalid organization or payment method ID');
     });
 
-    // TODO: Fix error handling - currently returns 500 instead of 400 for foreign key violations
-    it.skip('should return 400 for invalid payment method ID', async () => {
+    it('should return 400 for invalid payment method ID', async () => {
       const fakeMethodId = '00000000-0000-0000-0000-000000000000';
       const associationData = {
         paymentMethodId: fakeMethodId

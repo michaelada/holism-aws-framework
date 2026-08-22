@@ -14,7 +14,8 @@ import { render } from '@testing-library/react';
 
 // ── Mock setup (MUST be before component imports) ──
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string>) => {
       if (key === 'payment.handlingFeeIncluded') return 'Handling fee included';

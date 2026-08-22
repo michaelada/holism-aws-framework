@@ -307,8 +307,13 @@ const EventsListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>{t('events.table.status')}</InputLabel>
+              {/* `id`/`labelId` are what associate the label with the control —
+                  without them the filter is an unlabelled combobox to a screen
+                  reader, and to `getByLabelText`. */}
+              <InputLabel id="events-status-filter-label">{t('events.table.status')}</InputLabel>
               <Select
+                labelId="events-status-filter-label"
+                id="events-status-filter"
                 value={statusFilter}
                 label={t('events.table.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}

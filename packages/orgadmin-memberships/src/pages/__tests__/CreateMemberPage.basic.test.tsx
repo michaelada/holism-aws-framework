@@ -10,6 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import CreateMemberPage from '../CreateMemberPage';
+import { navigatedTo, navigationPaths } from '../../test/navigation';
 
 // Mock dependencies
 const mockExecute = vi.fn();
@@ -93,7 +94,7 @@ describe('CreateMemberPage - Basic Structure (Task 5.1)', () => {
       const backButton = screen.getByTestId('back-button');
       backButton.click();
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/memberships/members');
+      expect(navigatedTo(mockNavigate, '/members'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
     });
   });
 
@@ -108,7 +109,7 @@ describe('CreateMemberPage - Basic Structure (Task 5.1)', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+      expect(screen.getByTestId('skeleton-title')).toBeInTheDocument();
       expect(screen.getByText('Add New Member')).toBeInTheDocument();
     });
 
@@ -133,11 +134,11 @@ describe('CreateMemberPage - Basic Structure (Task 5.1)', () => {
       );
 
       // Initially loading
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+      expect(screen.getByTestId('skeleton-title')).toBeInTheDocument();
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Form should be visible
@@ -161,10 +162,19 @@ describe('CreateMemberPage - Basic Structure (Task 5.1)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Failed to load membership type')).toBeInTheDocument();
+      // The page maps internal errors to a message a user can act on.
+      expect(screen.getByText('Failed to load form. Please try again.')).toBeInTheDocument();
     });
 
     it('should display error when no typeId is provided', async () => {
+      /*
+       * Arriving without a `typeId` is no longer an error. The page loads the
+       * club's membership types and either picks the only one, offers a
+       * chooser, or — with none at all — says so. The one genuine dead end is
+       * the last, and it is the only one that shows an alert.
+       */
+      mockExecute.mockResolvedValueOnce([]); // the club has no membership types
+
       render(
         <MemoryRouter initialEntries={['/members/create']}>
           <CreateMemberPage />
@@ -175,7 +185,7 @@ describe('CreateMemberPage - Basic Structure (Task 5.1)', () => {
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('No membership type selected')).toBeInTheDocument();
+      expect(screen.getByText('No membership types available')).toBeInTheDocument();
     });
   });
 
@@ -296,7 +306,7 @@ describe('CreateMemberPage - Basic Structure (Task 5.1)', () => {
       const cancelButton = screen.getByTestId('cancel-button');
       cancelButton.click();
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/memberships/members');
+      expect(navigatedTo(mockNavigate, '/members'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
     });
 
     it('should disable submit button when submitting', async () => {

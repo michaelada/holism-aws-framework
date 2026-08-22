@@ -10,8 +10,8 @@
  * the organization has at least one membership type configured.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { render, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 import MembersDatabasePage from '../MembersDatabasePage';
@@ -29,13 +29,23 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({
-    checkModuleVisit: vi.fn(),
-  }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
 describe('Feature: manual-member-addition, Property 1: Add Member Button Visibility Based on Membership Type Count', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const testI18n = createTestI18n('en-GB');
   
   // Add translation for the Add Member button
@@ -59,6 +69,7 @@ describe('Feature: manual-member-addition, Property 1: Add Member Button Visibil
    * Helper function to render MembersDatabasePage with mocked API responses
    */
   const renderMembersDatabasePage = (membershipTypeCount: number) => {
+    cleanup(); // previous property iteration's render
     const mockExecute = vi.fn().mockImplementation(({ url }) => {
       if (url.includes('/membership-types')) {
         // Return array of membership types with the specified count
@@ -123,7 +134,7 @@ describe('Feature: manual-member-addition, Property 1: Add Member Button Visibil
   };
 
   it('should display Add Member button when at least one membership type exists', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1, max: 10 }), // Generate counts from 1 to 10
         async (membershipTypeCount) => {
@@ -145,7 +156,7 @@ describe('Feature: manual-member-addition, Property 1: Add Member Button Visibil
   });
 
   it('should hide Add Member button when no membership types exist', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.constant(0), // Always test with 0 membership types
         async (membershipTypeCount) => {
@@ -168,7 +179,7 @@ describe('Feature: manual-member-addition, Property 1: Add Member Button Visibil
   });
 
   it('should correctly toggle button visibility based on membership type count', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 0, max: 10 }), // Generate counts from 0 to 10
         async (membershipTypeCount) => {
@@ -194,14 +205,15 @@ describe('Feature: manual-member-addition, Property 1: Add Member Button Visibil
   it('should handle boundary case: exactly one membership type', async () => {
     const { container } = renderMembersDatabasePage(1);
 
+    /*
+     * Wait for the button itself, not merely for the API to have been *called*.
+     * The button appears only once the roles response has resolved and state
+     * has settled; asserting straight after "execute was called" was a race
+     * that happened to pass.
+     */
     await waitFor(() => {
-      const mockExecute = vi.mocked(useApiModule.useApi).mock.results[0]?.value.execute;
-      expect(mockExecute).toHaveBeenCalled();
+      expect(isAddMemberButtonVisible(container)).toBe(true);
     }, { timeout: 3000 });
-
-    // Property: Button should be visible with exactly 1 membership type
-    const buttonVisible = isAddMemberButtonVisible(container);
-    expect(buttonVisible).toBe(true);
   });
 
   it('should handle boundary case: zero membership types', async () => {
@@ -218,7 +230,7 @@ describe('Feature: manual-member-addition, Property 1: Add Member Button Visibil
   });
 
   it('should maintain button visibility invariant across multiple renders', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 0, max: 5 }),
         async (membershipTypeCount) => {

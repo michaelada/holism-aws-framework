@@ -33,26 +33,34 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 } as any;
 
-// Mock workspace packages
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: {
-      language: 'en-GB',
-      changeLanguage: vi.fn(),
-    },
-  }),
-  useLocale: () => ({
-    locale: 'en-GB',
-  }),
-  useCapabilities: () => ({
-    hasCapability: (cap: string) => true,
-  }),
-  formatDateTime: (date: any, _locale?: string) => String(date),
-  formatCurrency: (value: number, currency: string) => `${currency} ${value.toFixed(2)}`,
-}));
+/*
+ * Mock workspace packages.
+ *
+ * The shell stand-in comes from `orgadmin-core/test/shellMock`, which mirrors
+ * the shell's whole export surface. This file used to list only the four hooks
+ * the pages needed when it was written, so the day `usePageHelp` and
+ * `useOnboarding` appeared on those pages, every suite in this package died
+ * with "No `usePageHelp` export is defined on the mock". Only the two
+ * formatters are overridden below, because assertions here read the raw value.
+ */
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  const { createShellMock } = await import('@aws-web-framework/orgadmin-core/test/shellMock');
+  return {
+    ...createShellMock(),
+    formatDateTime: (date: any, _locale?: string) => String(date),
+    formatCurrency: (value: number, currency: string) => `${currency} ${value.toFixed(2)}`,
+  };
+});
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+/*
+ * Only `useApi` and `useOrganisation` are replaced; everything else in
+ * orgadmin-core comes through untouched. Listing exports by hand here meant
+ * that `AuthTokenContext` — read by `useDiscountService`, which the events
+ * pages call — was simply absent, and `useContext(undefined)` took the page
+ * down before any assertion ran.
+ */
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: vi.fn(() => ({
     execute: vi.fn(),
     data: null,

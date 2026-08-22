@@ -3,6 +3,19 @@ import { renderWithI18n, screen } from '../../test/i18n-test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import MembersDatabasePage from '../MembersDatabasePage';
 
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
+
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+  // Overrides only — see test/core-mock.ts for why this is not a full replacement.
+  const actual = await importOriginal<Record<string, unknown>>();
+  const { coreMock } = await import('../../test/core-mock');
+  return { ...actual, ...coreMock() };
+});
+
 describe('MembersDatabasePage', () => {
   beforeEach(() => {
     // Clear any mocks if needed

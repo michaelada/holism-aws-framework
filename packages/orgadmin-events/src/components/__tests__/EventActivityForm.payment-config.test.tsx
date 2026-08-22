@@ -59,7 +59,8 @@ vi.mock('@aws-web-framework/orgadmin-core', () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: mockT,
     i18n: { language: 'en-GB' },

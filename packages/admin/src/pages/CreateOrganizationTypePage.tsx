@@ -122,6 +122,8 @@ export const CreateOrganizationTypePage: React.FC = () => {
       // Prepare form data - only include conditional fields for internal mode
       const submitData: CreateOrganizationTypeDto = {
         ...formData,
+        // Trim the hyphen the field allows while a name is being typed.
+        name: formData.name.replace(/-$/, ''),
       };
       
       // Remove conditional fields if external mode
@@ -179,13 +181,20 @@ export const CreateOrganizationTypePage: React.FC = () => {
   };
 
   const handleChange = (field: keyof CreateOrganizationTypeDto, value: any) => {
-    // Sanitize name field to be URL-friendly
+    /*
+     * Sanitize name field to be URL-friendly.
+     *
+     * The trailing hyphen is left alone while typing. Stripping it on every
+     * keystroke meant a hyphen was deleted the moment it was typed, so
+     * "test-org" could only ever be entered as "testorg" — a hyphenated name
+     * was unreachable through the form. It is trimmed on submit instead.
+     */
     if (field === 'name') {
       value = value
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-') // Replace non-alphanumeric chars with hyphens
         .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+        .replace(/^-/, ''); // Remove a leading hyphen
     }
     setFormData({ ...formData, [field]: value });
   };

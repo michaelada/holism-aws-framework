@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import CreateEventPage from '../CreateEventPage';
@@ -81,7 +81,7 @@ const APPLICATION_FORMS = [{ id: 'form-1', name: 'Standard Entry Form' }];
  */
 const selectApplicationForm = async (index = 0) => {
   const selects = await screen.findAllByRole('combobox', {
-    name: /events\.activities\.activity\.applicationForm/i,
+    name: /Application Form/i,
   });
   fireEvent.mouseDown(selects[index]);
 
@@ -91,6 +91,24 @@ const selectApplicationForm = async (index = 0) => {
   const form = options.find((o) => o.getAttribute('aria-disabled') !== 'true');
   if (!form) throw new Error('No selectable application form was rendered');
   fireEvent.click(form);
+};
+
+/**
+ * Pick a discount from one of the `DiscountSelector` dropdowns.
+ *
+ * These tests were first written against a checkbox that gated the picker; the
+ * component has been a multiple MUI Select for some time. It opens on
+ * mouseDown rather than click, and its menu stays open after a choice with a
+ * backdrop over everything behind it — so it has to be dismissed with Escape
+ * before the next control is reachable (CLAUDE.md §3.4).
+ */
+const selectDiscount = async (label: RegExp, discountName: RegExp, index = 0) => {
+  const selectors = await screen.findAllByRole('combobox', { name: label });
+  fireEvent.mouseDown(selectors[index]);
+
+  const listbox = await screen.findByRole('listbox');
+  fireEvent.click(await within(listbox).findByText(discountName));
+  fireEvent.keyDown(listbox, { key: 'Escape' });
 };
 
 describe('CreateEventPage', () => {
@@ -106,7 +124,7 @@ describe('CreateEventPage', () => {
         return Promise.resolve([]);
       }
       if (url.includes('/discounts')) {
-        return Promise.resolve([]);
+        return Promise.resolve({ discounts: [], total: 0 });
       }
       if (url.includes('/application-forms')) {
         return Promise.resolve(APPLICATION_FORMS);
@@ -122,7 +140,7 @@ describe('CreateEventPage', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText('events.createEvent')).toBeInTheDocument();
+    expect(screen.getByText('Create Event')).toBeInTheDocument();
   });
 
   it('displays all required event fields', () => {
@@ -132,8 +150,8 @@ describe('CreateEventPage', () => {
       </BrowserRouter>
     );
     
-    const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
-    const descInputs = screen.getAllByLabelText(/events.basicInfo.eventDescription/i);
+    const nameInputs = screen.getAllByLabelText(/Event Name/i);
+    const descInputs = screen.getAllByLabelText(/Description/i);
     
     expect(nameInputs[0]).toBeInTheDocument();
     expect(descInputs[0]).toBeInTheDocument();
@@ -168,7 +186,10 @@ describe('CreateEventPage', () => {
           return Promise.resolve([]);
         }
         if (url.includes('/discounts')) {
-          return Promise.resolve(mockDiscounts);
+          return Promise.resolve({ discounts: mockDiscounts, total: mockDiscounts.length });
+        }
+        if (url.includes('/application-forms')) {
+          return Promise.resolve(APPLICATION_FORMS);
         }
         if (method === 'POST' && url.includes('/events')) {
           return Promise.resolve({ id: 'new-event-id' });
@@ -202,14 +223,14 @@ describe('CreateEventPage', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/Apply Discounts to Event/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Apply Discounts to Event/i).length).toBeGreaterThan(0);
       });
     });
 
     it('does not display discount selector when no discounts are available', async () => {
       mockExecute.mockImplementation(({ url }) => {
         if (url.includes('/discounts')) {
-          return Promise.resolve([]);
+          return Promise.resolve({ discounts: [], total: 0 });
         }
         return Promise.resolve([]);
       });
@@ -229,7 +250,7 @@ describe('CreateEventPage', () => {
       });
 
       // Discount selector should not be visible when no discounts
-      expect(screen.queryByText(/Apply Discounts to Event/i)).not.toBeInTheDocument();
+      expect(screen.queryAllByText(/Apply Discounts to Event/i)).toHaveLength(0);
     });
 
     it('allows selecting discounts for event', async () => {
@@ -243,16 +264,14 @@ describe('CreateEventPage', () => {
 
       // Wait for discounts to load
       await waitFor(() => {
-        expect(screen.getByText(/Apply Discounts to Event/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Apply Discounts to Event/i).length).toBeGreaterThan(0);
       });
 
-      // Enable discount selection
-      const checkbox = screen.getByRole('checkbox', { name: /Apply Discounts to Event/i });
-      await user.click(checkbox);
+      await selectDiscount(/Apply Discounts to Event/i, /Early Bird Discount/i);
 
-      // Dropdown should appear
+      // The chosen discount is listed back as a chip beneath the picker.
       await waitFor(() => {
-        expect(screen.getByLabelText(/Select Discounts/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Early Bird Discount/i).length).toBeGreaterThan(0);
       });
     });
 
@@ -265,7 +284,7 @@ describe('CreateEventPage', () => {
 
       // Wait for page to load
       await waitFor(() => {
-        const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
+        const nameInputs = screen.getAllByLabelText(/Event Name/i);
         expect(nameInputs[0]).toBeInTheDocument();
       });
 
@@ -294,18 +313,18 @@ describe('CreateEventPage', () => {
 
       // Fill in required fields
       await waitFor(() => {
-        const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
+        const nameInputs = screen.getAllByLabelText(/Event Name/i);
         expect(nameInputs[0]).toBeInTheDocument();
       });
 
-      const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
-      const descriptionInputs = screen.getAllByLabelText(/events.basicInfo.eventDescription/i);
+      const nameInputs = screen.getAllByLabelText(/Event Name/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(nameInputs[0], 'Test Event');
       await user.type(descriptionInputs[0], 'Test Description');
 
       // Navigate through steps
-      const nextButton = screen.getByRole('button', { name: /common.actions.next/i });
+      const nextButton = screen.getByRole('button', { name: /Next/i });
       await user.click(nextButton); // Step 2
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
@@ -314,16 +333,19 @@ describe('CreateEventPage', () => {
       const addActivityButton = screen.getByRole('button', { name: /Add Activity/i });
       await user.click(addActivityButton);
 
-      const activityNameInputs = screen.getAllByLabelText(/events.activities.activity.name/i);
-      const activityDescInputs = screen.getAllByLabelText(/events.activities.activity.description/i);
+      const activityNameInputs = screen.getAllByLabelText(/Activity Name/i);
+      const activityDescInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(activityNameInputs[0], 'Test Activity');
       await user.type(activityDescInputs[0], 'Test Activity Description');
 
+      // An application form is mandatory for every activity
+      await selectApplicationForm();
+
       // Go to review and publish
       await user.click(nextButton);
 
-      const publishButton = screen.getByRole('button', { name: /events.actions.publishEvent/i });
+      const publishButton = screen.getByRole('button', { name: /Publish Event/i });
       await user.click(publishButton);
 
       // Verify API call includes discountIds field
@@ -369,12 +391,10 @@ describe('CreateEventPage', () => {
           return Promise.resolve([]);
         }
         if (url.includes('/discounts')) {
-          return Promise.resolve(mockDiscounts);
+          return Promise.resolve({ discounts: mockDiscounts, total: mockDiscounts.length });
         }
         if (url.includes('/application-forms')) {
-          return Promise.resolve([
-            { id: 'form-1', name: 'Registration Form' },
-          ]);
+          return Promise.resolve([{ id: 'form-1', name: 'Registration Form' }]);
         }
         if (method === 'POST' && url.includes('/events')) {
           return Promise.resolve({ id: 'new-event-id' });
@@ -394,17 +414,17 @@ describe('CreateEventPage', () => {
 
       // Navigate to Step 4 (Activities)
       await waitFor(() => {
-        const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
+        const nameInputs = screen.getAllByLabelText(/Event Name/i);
         expect(nameInputs[0]).toBeInTheDocument();
       });
 
-      const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
-      const descriptionInputs = screen.getAllByLabelText(/events.basicInfo.eventDescription/i);
+      const nameInputs = screen.getAllByLabelText(/Event Name/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(nameInputs[0], 'Test Event');
       await user.type(descriptionInputs[0], 'Test Description');
 
-      const nextButton = screen.getByRole('button', { name: /common.actions.next/i });
+      const nextButton = screen.getByRole('button', { name: /Next/i });
       await user.click(nextButton); // Step 2
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
@@ -415,7 +435,7 @@ describe('CreateEventPage', () => {
 
       // Wait for activity form to render and check for discount selector
       await waitFor(() => {
-        expect(screen.getByText(/Apply Discounts to Activity/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Apply Discounts to Activity/i).length).toBeGreaterThan(0);
       });
     });
 
@@ -430,17 +450,17 @@ describe('CreateEventPage', () => {
 
       // Navigate to Step 4
       await waitFor(() => {
-        const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
+        const nameInputs = screen.getAllByLabelText(/Event Name/i);
         expect(nameInputs[0]).toBeInTheDocument();
       });
 
-      const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
-      const descriptionInputs = screen.getAllByLabelText(/events.basicInfo.eventDescription/i);
+      const nameInputs = screen.getAllByLabelText(/Event Name/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(nameInputs[0], 'Test Event');
       await user.type(descriptionInputs[0], 'Test Description');
 
-      const nextButton = screen.getByRole('button', { name: /common.actions.next/i });
+      const nextButton = screen.getByRole('button', { name: /Next/i });
       await user.click(nextButton); // Step 2
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
@@ -450,26 +470,21 @@ describe('CreateEventPage', () => {
       await user.click(addActivityButton);
 
       // Fill activity details using translation keys
-      const activityNameInputs = screen.getAllByLabelText(/events.activities.activity.name/i);
-      const activityDescInputs = screen.getAllByLabelText(/events.activities.activity.description/i);
+      const activityNameInputs = screen.getAllByLabelText(/Activity Name/i);
+      const activityDescInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(activityNameInputs[0], 'Test Activity');
       await user.type(activityDescInputs[0], 'Test Activity Description');
 
-      // Enable discount selection for activity
-      await waitFor(() => {
-        expect(screen.getByText(/Apply Discounts to Activity/i)).toBeInTheDocument();
-      });
+      // An application form is mandatory for every activity
+      await selectApplicationForm();
 
-      const activityDiscountCheckbox = screen.getByRole('checkbox', { 
-        name: /Apply Discounts to Activity/i 
-      });
-      await user.click(activityDiscountCheckbox);
+      await selectDiscount(/Apply Discounts to Activity/i, /Early Bird Discount/i);
 
       // Go to review and publish
       await user.click(nextButton);
 
-      const publishButton = screen.getByRole('button', { name: /events.actions.publishEvent/i });
+      const publishButton = screen.getByRole('button', { name: /Publish Event/i });
       await user.click(publishButton);
 
       // Verify API call includes activity with discountIds field
@@ -501,17 +516,17 @@ describe('CreateEventPage', () => {
 
       // Navigate to Step 4
       await waitFor(() => {
-        const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
+        const nameInputs = screen.getAllByLabelText(/Event Name/i);
         expect(nameInputs[0]).toBeInTheDocument();
       });
 
-      const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
-      const descriptionInputs = screen.getAllByLabelText(/events.basicInfo.eventDescription/i);
+      const nameInputs = screen.getAllByLabelText(/Event Name/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(nameInputs[0], 'Test Event');
       await user.type(descriptionInputs[0], 'Test Description');
 
-      const nextButton = screen.getByRole('button', { name: /common.actions.next/i });
+      const nextButton = screen.getByRole('button', { name: /Next/i });
       await user.click(nextButton); // Step 2
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
@@ -521,8 +536,8 @@ describe('CreateEventPage', () => {
       await user.click(addActivityButton);
 
       // Fill activity details using translation keys
-      const activityNameInputs = screen.getAllByLabelText(/events.activities.activity.name/i);
-      const activityDescInputs = screen.getAllByLabelText(/events.activities.activity.description/i);
+      const activityNameInputs = screen.getAllByLabelText(/Activity Name/i);
+      const activityDescInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(activityNameInputs[0], 'Test Activity');
       await user.type(activityDescInputs[0], 'Test Activity Description');
@@ -535,7 +550,7 @@ describe('CreateEventPage', () => {
       // Go to review and publish
       await user.click(nextButton);
 
-      const publishButton = screen.getByRole('button', { name: /events.actions.publishEvent/i });
+      const publishButton = screen.getByRole('button', { name: /Publish Event/i });
       await user.click(publishButton);
 
       // Verify API call includes activity with empty discountIds array
@@ -567,17 +582,17 @@ describe('CreateEventPage', () => {
 
       // Navigate to Step 4
       await waitFor(() => {
-        const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
+        const nameInputs = screen.getAllByLabelText(/Event Name/i);
         expect(nameInputs[0]).toBeInTheDocument();
       });
 
-      const nameInputs = screen.getAllByLabelText(/events.basicInfo.eventName/i);
-      const descriptionInputs = screen.getAllByLabelText(/events.basicInfo.eventDescription/i);
+      const nameInputs = screen.getAllByLabelText(/Event Name/i);
+      const descriptionInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(nameInputs[0], 'Test Event');
       await user.type(descriptionInputs[0], 'Test Description');
 
-      const nextButton = screen.getByRole('button', { name: /common.actions.next/i });
+      const nextButton = screen.getByRole('button', { name: /Next/i });
       await user.click(nextButton); // Step 2
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
@@ -586,8 +601,8 @@ describe('CreateEventPage', () => {
       const addActivityButton = screen.getByRole('button', { name: /Add Activity/i });
       await user.click(addActivityButton);
 
-      let activityNameInputs = screen.getAllByLabelText(/events.activities.activity.name/i);
-      let activityDescInputs = screen.getAllByLabelText(/events.activities.activity.description/i);
+      let activityNameInputs = screen.getAllByLabelText(/Activity Name/i);
+      let activityDescInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(activityNameInputs[0], 'Activity 1');
       await user.type(activityDescInputs[0], 'Activity 1 Description');
@@ -595,25 +610,29 @@ describe('CreateEventPage', () => {
       // Add second activity
       await user.click(addActivityButton);
 
-      activityNameInputs = screen.getAllByLabelText(/events.activities.activity.name/i);
-      activityDescInputs = screen.getAllByLabelText(/events.activities.activity.description/i);
+      activityNameInputs = screen.getAllByLabelText(/Activity Name/i);
+      activityDescInputs = screen.getAllByLabelText(/Description/i);
       
       await user.type(activityNameInputs[1], 'Activity 2');
       await user.type(activityDescInputs[1], 'Activity 2 Description');
 
+      // Every activity needs its own application form
+      await selectApplicationForm(0);
+      await selectApplicationForm(1);
+
       // Both activities should have discount selectors
-      const discountCheckboxes = screen.getAllByRole('checkbox', { 
-        name: /Apply Discounts to Activity/i 
+      const discountSelectors = await screen.findAllByRole('combobox', {
+        name: /Apply Discounts to Activity/i,
       });
-      expect(discountCheckboxes).toHaveLength(2);
+      expect(discountSelectors).toHaveLength(2);
 
       // Enable discounts for first activity only
-      await user.click(discountCheckboxes[0]);
+      await selectDiscount(/Apply Discounts to Activity/i, /Early Bird Discount/i, 0);
 
       // Go to review and publish
       await user.click(nextButton);
 
-      const publishButton = screen.getByRole('button', { name: /events.actions.publishEvent/i });
+      const publishButton = screen.getByRole('button', { name: /Publish Event/i });
       await user.click(publishButton);
 
       // Verify API call includes both activities with their respective discount configurations

@@ -124,6 +124,7 @@
     "noEventsFound": "Ainda não há eventos. Crie o seu primeiro evento para começar.",
     "noMatchingEvents": "Nenhum evento corresponde aos seus filtros",
     "loadingEvents": "A carregar eventos...",
+    "loadingEvent": "A carregar evento...",
     "failedToLoad": "Falha ao carregar eventos",
     "failedToSave": "Falha ao guardar o evento",
     "fixValidationErrors": "Por favor, corrija os erros de validação antes de guardar",

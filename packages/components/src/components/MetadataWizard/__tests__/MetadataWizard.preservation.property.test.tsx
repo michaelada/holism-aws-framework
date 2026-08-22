@@ -23,7 +23,7 @@ describe('Property 32: Wizard Data Preservation', () => {
   });
 
   it('should preserve data when navigating backward to previous step', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.record({
           step1Value: fc.string({ minLength: 1, maxLength: 20 }),
@@ -156,7 +156,7 @@ describe('Property 32: Wizard Data Preservation', () => {
   });
 
   it('should preserve data from all previous steps when completing wizard', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.record({
           values: fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 2, maxLength: 3 }),

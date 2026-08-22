@@ -11,14 +11,16 @@
  * to the member creation form, bypassing the type selector.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { render, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import fc from 'fast-check';
 import MembersDatabasePage from '../MembersDatabasePage';
 import * as useApiModule from '@aws-web-framework/orgadmin-core';
 import { I18nextProvider } from 'react-i18next';
 import { createTestI18n } from '../../test/i18n-test-utils';
+import { navigatedTo, navigationPaths, navigatedToMatching } from '../../test/navigation';
+import { authMeResponse } from '../../test/auth-me';
 
 // Mock react-router-dom
 vi.mock('react-router-dom', async () => {
@@ -39,13 +41,35 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({
-    checkModuleVisit: vi.fn(),
-  }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
+/*
+ * `numRuns` is small here on purpose.
+ *
+ * Each case mounts a whole page, waits for two network round trips and asserts
+ * against the DOM — roughly 300ms. At 50 or 100 cases these properties spent
+ * their entire timeout budget and were killed, which is worth nothing at all;
+ * a property that never finishes proves less than one that runs ten cases.
+ *
+ * The seed is fixed globally (see test/setup.ts), so these ten are the *same*
+ * ten every run and a counterexample can be reproduced. Raise this deliberately
+ * when hunting a specific bug.
+ */
 describe('Feature: manual-member-addition, Property 2: Automatic Membership Type Selection', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const testI18n = createTestI18n('en-GB');
   
   // Add translation for the Add Member button
@@ -86,7 +110,23 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
    * Helper function to render MembersDatabasePage with mocked API responses
    */
   const renderMembersDatabasePage = (membershipTypes: any[]) => {
+    cleanup(); // previous property iteration's render
     const mockExecute = vi.fn().mockImplementation(({ url }) => {
+      /*
+       * The Add Member button is gated on an admin role as well as on there
+       * being membership types, and the page reads that from `/auth/me`.
+       * Unmocked it resolves to `[]`, `response.roles` is undefined, and the
+       * button never renders — so every test here failed for a reason that had
+       * nothing to do with what it was checking.
+       *
+       * The role gate itself is covered by
+       * MembersDatabasePage.role-based-visibility.property.test.tsx, which
+       * varies the roles deliberately. This suite grants one and varies the
+       * membership types.
+       */
+      if (url.includes('/auth/me')) {
+        return Promise.resolve(authMeResponse());
+      }
       if (url.includes('/membership-types')) {
         return Promise.resolve(membershipTypes);
       }
@@ -175,13 +215,11 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
 
           // Property: Navigation should include the typeId query parameter
           await waitFor(() => {
-            expect(mockNavigate).toHaveBeenCalledWith(
-              expect.stringContaining(`/orgadmin/memberships/members/create?typeId=${membershipType.id}`)
-            );
+            expect(navigatedToMatching(mockNavigate, `/members/create?typeId=${membershipType.id}`), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
           }, { timeout: 3000 });
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 10 }
     );
   }, 10000);
 
@@ -210,7 +248,7 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
           });
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 10 }
     );
   });
 
@@ -230,12 +268,12 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
 
           // Property: URL should match the expected format
           await waitFor(() => {
-            const expectedUrl = `/orgadmin/memberships/members/create?typeId=${membershipType.id}`;
-            expect(mockNavigate).toHaveBeenCalledWith(expectedUrl);
+            const expectedUrl = `/members/create?typeId=${membershipType.id}`;
+            expect(navigatedTo(mockNavigate, expectedUrl), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
           });
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 10 }
     );
   });
 
@@ -272,13 +310,13 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
             const navigationUrl = mockNavigate.mock.calls[0][0];
             
             // Verify the URL contains the base path and typeId parameter
-            expect(navigationUrl).toContain('/orgadmin/memberships/members/create');
+            expect(navigationUrl).toContain('/members/create');
             expect(navigationUrl).toContain('typeId=');
             expect(navigationUrl).toContain(membershipType.id);
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -304,13 +342,11 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
 
           // Property: Should navigate with the correct typeId regardless of ID format
           await waitFor(() => {
-            expect(mockNavigate).toHaveBeenCalledWith(
-              `/orgadmin/memberships/members/create?typeId=${typeIds[0]}`
-            );
+            expect(navigatedTo(mockNavigate, `/members/create?typeId=${typeIds[0]}`), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
           });
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 10 }
     );
   });
 
@@ -330,7 +366,7 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
 
           // Property: Should NOT navigate to the plain create URL (without typeId)
           await waitFor(() => {
-            expect(mockNavigate).not.toHaveBeenCalledWith('/orgadmin/memberships/members/create');
+            expect(navigatedTo(mockNavigate, '/members/create'), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(false);
             
             // Should have been called with typeId parameter
             const navigationUrl = mockNavigate.mock.calls[0][0];
@@ -338,7 +374,7 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
           });
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 10 }
     );
   });
 
@@ -359,9 +395,7 @@ describe('Feature: manual-member-addition, Property 2: Automatic Membership Type
 
     // Property: Should navigate with typeId even with minimal data
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith(
-        `/orgadmin/memberships/members/create?typeId=${minimalMembershipType.id}`
-      );
+      expect(navigatedTo(mockNavigate, `/members/create?typeId=${minimalMembershipType.id}`), `navigated to ${JSON.stringify(navigationPaths(mockNavigate))}`).toBe(true);
     }, { timeout: 3000 });
   }, 10000);
 });

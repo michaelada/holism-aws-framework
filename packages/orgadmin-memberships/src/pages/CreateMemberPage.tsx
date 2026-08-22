@@ -550,11 +550,18 @@ const CreateMemberPage: React.FC = () => {
       
       if (error instanceof Error) {
         errorMessage = error.message;
-        // Network errors typically have specific messages or no response
-        if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
+        /*
+         * Matched case-insensitively. The obvious message — `Network error` —
+         * did not match the lowercase `network` needle, so the commonest
+         * connection failure was classified as a generic load failure and the
+         * member was never offered the Retry button that exists for exactly
+         * that case. `Failed to fetch` only matched by luck, through `fetch`.
+         */
+        const lowered = errorMessage.toLowerCase();
+        if (lowered.includes('network') || lowered.includes('fetch') || lowered.includes('timeout')) {
           errorType = 'network';
           errorMessage = t('memberships.errors.networkError', 'Network error. Please check your connection and try again.');
-        } else if (errorMessage.includes('not found')) {
+        } else if (lowered.includes('not found')) {
           errorMessage = t('memberships.errors.notFound', 'The requested membership type or form was not found.');
         } else {
           errorMessage = t('memberships.errors.loadFailed', 'Failed to load form. Please try again.');
@@ -892,13 +899,17 @@ const CreateMemberPage: React.FC = () => {
       
       if (error instanceof Error) {
         errorMessage = error.message;
+        // Matched case-insensitively, as on the load path: `Network error` did
+        // not match the lowercase needle, so the commonest connection failure
+        // was reported as a generic create failure with no Retry.
+        const lowered = errorMessage.toLowerCase();
         // Network errors
-        if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
+        if (lowered.includes('network') || lowered.includes('fetch') || lowered.includes('timeout')) {
           errorType = 'network';
           errorMessage = t('memberships.errors.networkError', 'Network error. Please check your connection and try again.');
         }
         // Duplicate membership number error (external mode)
-        else if (errorMessage.includes('already exists') || errorMessage.includes('duplicate') || errorMessage.includes('Membership number')) {
+        else if (lowered.includes('already exists') || lowered.includes('duplicate') || lowered.includes('membership number')) {
           errorType = 'validation';
           // Use the error message from the API if it contains membership number info
           if (errorMessage.includes('Membership number')) {
@@ -908,7 +919,7 @@ const CreateMemberPage: React.FC = () => {
           }
         }
         // Validation errors
-        else if (errorMessage.includes('validation') || errorMessage.includes('invalid') || errorMessage.includes('required')) {
+        else if (lowered.includes('validation') || lowered.includes('invalid') || lowered.includes('required')) {
           errorType = 'validation';
           errorMessage = t('memberships.errors.validationError', 'Validation error. Please check your input and try again.');
         }

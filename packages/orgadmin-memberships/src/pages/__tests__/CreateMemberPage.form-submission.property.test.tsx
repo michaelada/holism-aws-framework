@@ -11,8 +11,8 @@
  * "membership_application".
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 import CreateMemberPage from '../CreateMemberPage';
@@ -55,6 +55,16 @@ vi.mock('@aws-web-framework/components', () => ({
 }));
 
 describe('Feature: manual-member-addition, Property 9: Form Submission Creation', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const testI18n = createTestI18n('en-GB');
   
   // Add translations
@@ -149,6 +159,7 @@ describe('Feature: manual-member-addition, Property 9: Form Submission Creation'
     membershipType: any,
     mockExecute: any
   ) => {
+    cleanup(); // previous property iteration's render
     vi.mocked(useApiModule.useApi).mockReturnValue({
       execute: mockExecute,
       data: null,
@@ -165,7 +176,7 @@ describe('Feature: manual-member-addition, Property 9: Form Submission Creation'
 
     return render(
       <I18nextProvider i18n={testI18n}>
-        <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${membershipType.id}`]}>
+        <MemoryRouter initialEntries={[`/members/create?typeId=${membershipType.id}`]}>
           <CreateMemberPage />
         </MemoryRouter>
       </I18nextProvider>
@@ -278,8 +289,15 @@ describe('Feature: manual-member-addition, Property 9: Form Submission Creation'
           // Property: Form submission should contain the user ID
           expect(capturedFormSubmissionData.userId).toBe(mockCurrentUser.id);
 
-          // Property: Form submission should have contextId "manual-creation"
-          expect(capturedFormSubmissionData.contextId).toBe('manual-creation');
+          /*
+           * The context is the membership type the submission is *for*.
+           *
+           * This asserted the literal string "manual-creation", which
+           * `form_submissions.context_id` could never hold — the column is a
+           * `uuid`, so that value would not survive an insert. The page sends
+           * the membership type's id, and that is what the column is for.
+           */
+          expect(capturedFormSubmissionData.contextId).toBe(membershipType.id);
 
           // Property: Form submission should contain all entered data
           expect(capturedFormSubmissionData.submissionData).toBeDefined();

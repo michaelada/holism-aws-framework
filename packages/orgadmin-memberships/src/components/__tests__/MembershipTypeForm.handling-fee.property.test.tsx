@@ -12,8 +12,8 @@
  * Card-based methods: 'stripe', 'card'
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
 import fc from 'fast-check';
 import { I18nextProvider } from 'react-i18next';
 import { createTestI18n } from '../../test/i18n-test-utils';
@@ -38,6 +38,16 @@ const feeArb = fc.oneof(
 );
 
 describe('Feature: payment-fee-configuration, Property 4: Handling fee toggle visibility', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const defaultFormData: CreateMembershipTypeDto = {
     name: '',
     description: '',

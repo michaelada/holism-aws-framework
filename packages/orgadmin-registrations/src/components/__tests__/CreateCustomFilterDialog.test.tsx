@@ -39,7 +39,8 @@ vi.mock('@mui/x-date-pickers/AdapterDateFns', () => ({
   AdapterDateFns: class {},
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (k: string) => k,
   }),

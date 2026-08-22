@@ -19,6 +19,29 @@ import type { ElectronicTicket } from '../types/ticketing.types';
  * shared code (CLAUDE.md §1.5).
  */
 
+/*
+ * Without these, the pages reach the real shell — whose i18n is never
+ * initialised in a unit test, so every label rendered as a key path — and the
+ * real `useApi`, which fired an XHR at a server that is not running.
+ */
+vi.mock('@aws-web-framework/orgadmin-shell', async () =>
+  (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
+);
+
+vi.mock('@aws-web-framework/orgadmin-core', () => ({
+  useApi: () => ({
+    execute: vi.fn().mockResolvedValue([]),
+    data: null,
+    error: null,
+    loading: false,
+    reset: vi.fn(),
+  }),
+  useOrganisation: () => ({
+    organisation: { id: 'org-1', name: 'Test Organisation' },
+    setOrganisation: vi.fn(),
+  }),
+}));
+
 // Mock data
 const mockTicket: ElectronicTicket = {
   id: '1',

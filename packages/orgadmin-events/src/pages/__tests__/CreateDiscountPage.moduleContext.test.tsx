@@ -43,7 +43,8 @@ vi.mock('@aws-web-framework/orgadmin-core', () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   usePageHelp: vi.fn(),
   useOnboarding: () => ({
     setCurrentModule: vi.fn(),
@@ -265,17 +266,28 @@ describe('CreateDiscountPage - Module Context', () => {
     it('should preserve moduleType when editing discount in events context', async () => {
       const user = userEvent.setup();
       mockParams.id = '123';
-      mockExecute
-        .mockResolvedValueOnce({
-          id: '123',
-          name: 'Existing Discount',
-          discountType: 'percentage',
-          discountValue: 10,
-          applicationScope: 'item',
-          status: 'active',
-          moduleType: 'events',
-        })
-        .mockResolvedValueOnce({ id: '123', name: 'Updated Discount' });
+      /*
+       * Answer by URL, not by call order — the page also loads membership types
+       * and user groups, and those consumed the queued responses, leaving the
+       * discount undefined and the save blocked by validation.
+       */
+      mockExecute.mockImplementation(({ url, method }: { url: string; method: string }) => {
+        if (method === 'GET' && url.includes('/discounts/123')) {
+          return Promise.resolve({
+            id: '123',
+            name: 'Existing Discount',
+            discountType: 'percentage',
+            discountValue: 10,
+            applicationScope: 'item',
+            status: 'active',
+            moduleType: 'events',
+          });
+        }
+        if (method === 'PUT') {
+          return Promise.resolve({ id: '123', name: 'Updated Discount' });
+        }
+        return Promise.resolve([]);
+      });
 
       render(
         <BrowserRouter>
@@ -287,18 +299,8 @@ describe('CreateDiscountPage - Module Context', () => {
         expect(screen.getByText('Edit Discount')).toBeInTheDocument();
       });
 
-      // Navigate to last step
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /discount configuration/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /eligibility criteria/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /validity & limits/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /review & confirm/i }));
-
-      // Click Update
-      await user.click(screen.getByRole('button', { name: /update discount/i }));
+      // Editing opens as one form with a sticky save bar; Publish saves it.
+      await user.click(screen.getByRole('button', { name: /^publish$/i }));
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith(
@@ -316,17 +318,28 @@ describe('CreateDiscountPage - Module Context', () => {
     it('should preserve moduleType when editing discount in memberships context', async () => {
       const user = userEvent.setup();
       mockParams.id = '123';
-      mockExecute
-        .mockResolvedValueOnce({
-          id: '123',
-          name: 'Existing Discount',
-          discountType: 'percentage',
-          discountValue: 10,
-          applicationScope: 'item',
-          status: 'active',
-          moduleType: 'memberships',
-        })
-        .mockResolvedValueOnce({ id: '123', name: 'Updated Discount' });
+      /*
+       * Answer by URL, not by call order — the page also loads membership types
+       * and user groups, and those consumed the queued responses, leaving the
+       * discount undefined and the save blocked by validation.
+       */
+      mockExecute.mockImplementation(({ url, method }: { url: string; method: string }) => {
+        if (method === 'GET' && url.includes('/discounts/123')) {
+          return Promise.resolve({
+            id: '123',
+            name: 'Existing Discount',
+            discountType: 'percentage',
+            discountValue: 10,
+            applicationScope: 'item',
+            status: 'active',
+            moduleType: 'memberships',
+          });
+        }
+        if (method === 'PUT') {
+          return Promise.resolve({ id: '123', name: 'Updated Discount' });
+        }
+        return Promise.resolve([]);
+      });
 
       render(
         <BrowserRouter>
@@ -338,18 +351,8 @@ describe('CreateDiscountPage - Module Context', () => {
         expect(screen.getByText('Edit Discount')).toBeInTheDocument();
       });
 
-      // Navigate to last step
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /discount configuration/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /eligibility criteria/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /validity & limits/i }));
-      await user.click(screen.getByRole('button', { name: /next/i }));
-      await waitFor(() => screen.getByRole('heading', { name: /review & confirm/i }));
-
-      // Click Update
-      await user.click(screen.getByRole('button', { name: /update discount/i }));
+      // Editing opens as one form with a sticky save bar; Publish saves it.
+      await user.click(screen.getByRole('button', { name: /^publish$/i }));
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith(

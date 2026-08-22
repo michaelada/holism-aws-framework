@@ -16,6 +16,14 @@ export enum FieldDatatype {
   EMAIL = 'email',
   URL = 'url',
   /**
+   * Application-form fields only — the builder offers a phone field and the
+   * validator has always known how to check one, but the datatype was never
+   * named here. `applicationField.ts` referred to `FieldDatatype.PHONE`, got
+   * `undefined`, and every phone field fell through to plain text: a phone
+   * number field that accepted a sentence.
+   */
+  PHONE = 'phone',
+  /**
    * Application-form fields only — the metadata repository has no upload type,
    * but `FieldRenderer` has rendered `document_upload` since file and image
    * fields were added to the form builder. Named here so callers can reach it

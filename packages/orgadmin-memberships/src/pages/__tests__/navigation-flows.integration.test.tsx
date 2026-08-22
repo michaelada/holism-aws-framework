@@ -24,6 +24,12 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
   };
 });
 
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
+
 vi.mock('../../../orgadmin-shell/src/context/OnboardingProvider', () => ({
   useOnboarding: vi.fn(() => ({
     checkModuleVisit: vi.fn(),
@@ -75,13 +81,13 @@ describe('Navigation Flows Integration Tests', () => {
         <MemoryRouter
           initialEntries={[
             {
-              pathname: '/orgadmin/memberships/members',
+              pathname: '/members',
               state: { filterState },
             },
           ]}
         >
           <Routes>
-            <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
+            <Route path="/members" element={<MembersDatabasePage />} />
           </Routes>
         </MemoryRouter>
       </I18nextProvider>
@@ -120,4 +126,38 @@ describe('Navigation Flows Integration Tests', () => {
 
     const { unmount } = render(
       <I18nextProvider i18n={testI18n}>
-        <MemoryRouter initialEntries={['/orgadmin/memberships/members/creat
+        <MemoryRouter initialEntries={['/members/create?typeId=type-1']}>
+          <Routes>
+            <Route path="/members/create" element={<CreateMemberPage />} />
+          </Routes>
+        </MemoryRouter>
+      </I18nextProvider>
+    );
+
+    /*
+     * The point of the route carrying `typeId`: the page goes straight to that
+     * membership type and its form, rather than asking which type to use.
+     *
+     * This test was committed truncated — the file ended mid-string here, so
+     * the whole suite failed to parse and neither of its two tests ran. The
+     * assertions below are the ones its own mock setup was written for.
+     */
+    await waitFor(() => {
+      expect(
+        mockExecute.mock.calls.some(([{ url }]: [{ url: string }]) =>
+          url.includes('/membership-types/type-1')
+        )
+      ).toBe(true);
+    });
+
+    await waitFor(() => {
+      expect(
+        mockExecute.mock.calls.some(([{ url }]: [{ url: string }]) =>
+          url.includes('/application-forms')
+        )
+      ).toBe(true);
+    });
+
+    unmount();
+  });
+});

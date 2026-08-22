@@ -89,7 +89,8 @@ vi.mock('@aws-web-framework/orgadmin-core', () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: {
@@ -110,7 +111,10 @@ vi.mock('@aws-web-framework/components', () => ({
   DiscountSelector: vi.fn(({ discounts, label }) => (
     <div data-testid="discount-selector">
       <label>{label}</label>
-      <div>Discounts: {discounts.length}</div>
+      {/* The section passes `fetchDiscounts` and lets the selector load its
+          own list, so `discounts` is undefined here — reading `.length` off it
+          took the render down before the assertion. */}
+      <div>Discounts: {discounts?.length ?? 0}</div>
     </div>
   )),
 }));

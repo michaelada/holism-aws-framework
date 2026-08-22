@@ -10,8 +10,8 @@
  * if and only if the user has the Organization Administrator role (admin role).
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { render, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 import MembersDatabasePage from '../MembersDatabasePage';
@@ -29,13 +29,23 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({
-    checkModuleVisit: vi.fn(),
-  }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
 describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibility', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const testI18n = createTestI18n('en-GB');
   
   // Add translation for the Add Member button
@@ -63,6 +73,7 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
    * Helper function to render MembersDatabasePage with mocked API responses
    */
   const renderMembersDatabasePage = (userRoles: Array<{ id: string; name: string; displayName: string }>) => {
+    cleanup(); // previous property iteration's render
     const mockExecute = vi.fn().mockImplementation(({ url }) => {
       if (url.includes('/membership-types')) {
         // Always return at least one membership type so we can test role-based visibility
@@ -144,7 +155,7 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
   });
 
   it('should display Add Member button when user has admin role', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.array(roleArbitrary, { minLength: 1, maxLength: 5 }),
         async (roles) => {
@@ -172,7 +183,7 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
   });
 
   it('should hide Add Member button when user does not have admin role', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.array(roleArbitrary, { minLength: 0, maxLength: 5 }),
         async (roles) => {
@@ -197,7 +208,7 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
   });
 
   it('should correctly toggle button visibility based on admin role presence', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.boolean(), // Whether to include admin role
         fc.array(roleArbitrary, { minLength: 0, maxLength: 3 }),
@@ -228,7 +239,13 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not a hundred. Every iteration mounts the whole page, waits on
+       * four requests and sleeps — a hundred of those cannot finish inside a
+       * test timeout. Both branches of the one boolean this property varies are
+       * covered many times over at this count.
+       */
+      { numRuns: 10 }
     );
   });
 
@@ -236,14 +253,15 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
     const roles = [{ id: 'admin-role-id', name: 'admin', displayName: 'Administrator' }];
     const { container } = renderMembersDatabasePage(roles);
 
+    /*
+     * Wait for the button itself, not merely for the API to have been *called*.
+     * The button appears only once the roles response has resolved and state
+     * has settled; asserting straight after "execute was called" was a race
+     * that happened to pass.
+     */
     await waitFor(() => {
-      const mockExecute = vi.mocked(useApiModule.useApi).mock.results[0]?.value.execute;
-      expect(mockExecute).toHaveBeenCalled();
+      expect(isAddMemberButtonVisible(container)).toBe(true);
     }, { timeout: 3000 });
-
-    // Property: Button should be visible with only admin role
-    const buttonVisible = isAddMemberButtonVisible(container);
-    expect(buttonVisible).toBe(true);
   });
 
   it('should handle boundary case: user with no roles', async () => {
@@ -275,7 +293,7 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
   });
 
   it('should maintain button visibility invariant across multiple renders with same roles', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.boolean(),
         async (hasAdminRole) => {
@@ -317,7 +335,7 @@ describe('Feature: manual-member-addition, Property 15: Role-Based Button Visibi
   });
 
   it('should verify admin role name is case-sensitive', async () => {
-    fc.assert(
+    await fc.assert(
       fc.asyncProperty(
         fc.constantFrom('Admin', 'ADMIN', 'AdMiN', 'aDmIn'),
         async (roleName) => {

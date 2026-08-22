@@ -38,7 +38,8 @@ vi.mock('react-quill', () => ({
     <textarea data-testid="react-quill" value={value || ''} onChange={(e: any) => onChange?.(e.target.value)} />
   ),
 }));
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
   useCapabilities: () => ({ hasCapability: (cap: string) => cap === 'registration-discounts' }),
 }));

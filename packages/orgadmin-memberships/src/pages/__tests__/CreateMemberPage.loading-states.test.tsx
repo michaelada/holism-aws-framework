@@ -127,7 +127,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
       });
 
       // Fill in name field
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       fireEvent.change(nameInput, { target: { value: 'John Doe' } });
 
       // Click submit
@@ -173,7 +173,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
       });
 
       // Fill in name field
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       fireEvent.change(nameInput, { target: { value: 'John Doe' } });
 
       // Click submit
@@ -218,7 +218,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
       });
 
       // Fill in name field
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       fireEvent.change(nameInput, { target: { value: 'John Doe' } });
 
       // Click submit
@@ -370,7 +370,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
       });
 
       // Fill in name field
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       fireEvent.change(nameInput, { target: { value: 'John Doe' } });
 
       // Click submit
@@ -420,7 +420,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
       });
 
       // Fill in name field
-      const nameInput = screen.getByTestId('name-input');
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       fireEvent.change(nameInput, { target: { value: 'John Doe' } });
 
       // Click submit
@@ -465,6 +465,14 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
     });
 
     it('should display error when no membership type is selected', async () => {
+      /*
+       * Arriving without a `typeId` is no longer an error. The page loads the
+       * club's membership types and either picks the only one, offers a
+       * chooser, or — with none at all — says so. The one genuine dead end is
+       * the last, and it is the only one that shows an alert.
+       */
+      mockExecute.mockResolvedValueOnce([]); // the club has no membership types
+
       render(
         <MemoryRouter initialEntries={['/members/create']}>
           <CreateMemberPage />
@@ -475,7 +483,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
         expect(screen.getByTestId('error-alert')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('No membership type selected')).toBeInTheDocument();
+      expect(screen.getByText('No membership types available')).toBeInTheDocument();
     });
   });
 
@@ -572,7 +580,7 @@ describe('CreateMemberPage - Loading States and User Feedback (Task 13)', () => 
       expect(submitButton).toHaveTextContent('Create Member');
 
       // Fill in name and submit
-      fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'John Doe' } });
+      fireEvent.change((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement), { target: { value: 'John Doe' } });
       fireEvent.click(submitButton);
 
       // Wait for transition to submitting state

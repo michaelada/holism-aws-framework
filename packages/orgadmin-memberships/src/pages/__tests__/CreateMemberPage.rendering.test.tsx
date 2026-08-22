@@ -136,7 +136,7 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify membership type is displayed
@@ -172,7 +172,7 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify membership type is displayed
@@ -442,7 +442,7 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify all fields are rendered
@@ -913,10 +913,10 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('name-input')).toBeInTheDocument();
+        expect((screen.getByTestId('name-field').querySelector('input') as HTMLInputElement)).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByTestId('name-input') as HTMLInputElement;
+      const nameInput = (screen.getByTestId('name-field').querySelector('input') as HTMLInputElement);
       const emailInput = screen.getByTestId('input-email') as HTMLInputElement;
 
       // Both should start empty
@@ -996,7 +996,7 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify all field types are rendered
@@ -1107,7 +1107,7 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Should have name field + 1 dynamic field
@@ -1147,7 +1147,7 @@ describe('CreateMemberPage - Complete Rendering Flow (Task 5.8)', () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('skeleton-title')).not.toBeInTheDocument();
       });
 
       // Verify all page elements

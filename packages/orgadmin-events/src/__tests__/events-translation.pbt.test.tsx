@@ -140,7 +140,19 @@ describe('Events Module Translation Property-Based Tests', () => {
       fc.assert(
         fc.property(
           fc.constantFrom('fr-FR', 'es-ES', 'it-IT', 'de-DE', 'pt-PT'),
-          fc.string({ minLength: 5, maxLength: 30 }).map(s => `events.nonexistent.${s}`),
+          /*
+           * Key-shaped suffixes only. An unconstrained string produced
+           * `events.nonexistent.    :`, and i18next reads `:` as the namespace
+           * separator — so it looked up an empty key in a namespace that does
+           * not exist and returned '', failing a property about fallback with
+           * an input no key could ever have.
+           */
+          fc
+            .array(fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789'.split('')), {
+              minLength: 5,
+              maxLength: 30,
+            })
+            .map((chars) => `events.nonexistent.${chars.join('')}`),
           (locale, missingKey) => {
             // Change to non-English locale
             testI18n.changeLanguage(locale);

@@ -126,6 +126,7 @@
     "noEventsFound": "No events yet. Create your first event to get started.",
     "noMatchingEvents": "No events match your filters",
     "loadingEvents": "Loading events...",
+    "loadingEvent": "Loading event...",
     "failedToLoad": "Failed to load events",
     "failedToSave": "Failed to save event",
     "fixValidationErrors": "Please fix the validation errors before saving",

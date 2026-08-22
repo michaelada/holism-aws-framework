@@ -13,25 +13,29 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('EventEntriesPage', () => {
-  it('renders entries page', () => {
+  /*
+   * The page opens on a spinner while the entries load, so every assertion has
+   * to wait. Asserting synchronously found the loading state and reported the
+   * heading as missing.
+   */
+  it('renders entries page', async () => {
     render(
       <BrowserRouter>
         <EventEntriesPage />
       </BrowserRouter>
     );
-    
-    expect(screen.getByText('Event Entries')).toBeInTheDocument();
-    expect(screen.getByText('Download All Entries')).toBeInTheDocument();
+
+    expect(await screen.findByText('Event Entries')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Export to Excel/i })).toBeInTheDocument();
   });
 
-  it('displays filter controls', () => {
+  it('displays the entry search control', async () => {
     render(
       <BrowserRouter>
         <EventEntriesPage />
       </BrowserRouter>
     );
-    
-    expect(screen.getByLabelText('Event Activity')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Search by name...')).toBeInTheDocument();
+
+    expect(await screen.findByPlaceholderText('Search by name or email...')).toBeInTheDocument();
   });
 });

@@ -47,7 +47,8 @@ vi.mock('react-quill', () => ({
   default: () => <div data-testid="react-quill" />,
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
+  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({ t: (k: string) => k }),
   useCapabilities: () => ({ hasCapability: mockHasCapability }),
   usePageHelp: () => ({ setPageHelp: vi.fn() }),

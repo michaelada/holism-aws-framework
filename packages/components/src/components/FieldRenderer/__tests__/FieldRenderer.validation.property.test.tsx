@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FieldRenderer } from '../FieldRenderer';
 import { FieldDatatype, ValidationType, type FieldDefinition, type ValidationRule } from '../../../types';
@@ -49,6 +49,20 @@ const validationRuleArbitrary = fc.oneof(
   })
 );
 
+/**
+ * One rule of each kind.
+ *
+ * A field carrying two `max_value` rules is not something the form builder can
+ * produce, but the generator made them — and the validator chains them into one
+ * schema, where the last written wins. The property then chose the first rule,
+ * entered a value the second allowed, and failed over a field that was in fact
+ * valid.
+ */
+function withOneRulePerType(rules: ValidationRule[]): ValidationRule[] {
+  const seen = new Set<ValidationType>();
+  return rules.filter((rule) => (seen.has(rule.type) ? false : (seen.add(rule.type), true)));
+}
+
 const textFieldWithValidationArbitrary = fc
   .record({
     shortName: fc.stringOf(fc.char(), { minLength: 3, maxLength: 20 }),
@@ -60,6 +74,7 @@ const textFieldWithValidationArbitrary = fc
   .map((base) => {
     const field: FieldDefinition = {
       ...base,
+      validationRules: withOneRulePerType(base.validationRules as ValidationRule[]),
       datatype: FieldDatatype.TEXT,
       datatypeProperties: {},
     };
@@ -91,6 +106,7 @@ const numberFieldWithValidationArbitrary = fc
   .map((base) => {
     const field: FieldDefinition = {
       ...base,
+      validationRules: withOneRulePerType(base.validationRules as ValidationRule[]),
       datatype: FieldDatatype.NUMBER,
       datatypeProperties: {},
     };
@@ -100,11 +116,10 @@ const numberFieldWithValidationArbitrary = fc
 describe('FieldRenderer Validation Property Tests', () => {
   describe('Property 35: Validation Rule Enforcement (Client)', () => {
     it('should validate field on blur and display error for invalid values', async () => {
-      fc.assert(
+      await fc.assert(
         fc.asyncProperty(
           textFieldWithValidationArbitrary,
           async (fieldDef) => {
-            const user = userEvent.setup();
             let currentValue = '';
             const handleChange = (value: any) => {
               currentValue = value;
@@ -132,8 +147,7 @@ describe('FieldRenderer Validation Property Tests', () => {
             if (minLengthRule && minLengthRule.value) {
               // Enter text shorter than min length
               const invalidValue = 'a'.repeat(Math.max(0, minLengthRule.value - 1));
-              await user.clear(input);
-              await user.type(input, invalidValue);
+              fireEvent.change(input, { target: { value: invalidValue } });
               
               // Rerender with new value
               rerender(
@@ -144,22 +158,31 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur by focusing out
-              input.blur();
+              /*
+               * `fireEvent.blur`, not `input.blur()`. React listens for the
+               * event at the root, and a native `blur()` on an element that was
+               * never focused dispatches nothing — so the renderer's `onBlur`
+               * never ran and no validation error was ever produced.
+               */
+              fireEvent.blur(input);
 
               // Wait for validation error to appear
+              /*
+               * That the field is reported invalid, not the words used to say
+               * so. A generated rule may carry its own `message` — the
+               * generator produces things like " " — and the validator quite
+               * correctly shows that instead of the default wording.
+               */
               await waitFor(
                 () => {
-                  const errorText = container.textContent;
-                  expect(errorText).toMatch(/minimum|min|length|required/i);
+                  expect(input).toHaveAttribute('aria-invalid', 'true');
                 },
                 { timeout: 1000 }
               );
             } else if (maxLengthRule && maxLengthRule.value) {
               // Enter text longer than max length
               const invalidValue = 'a'.repeat(maxLengthRule.value + 5);
-              await user.clear(input);
-              await user.type(input, invalidValue);
+              fireEvent.change(input, { target: { value: invalidValue } });
               
               // Rerender with new value
               rerender(
@@ -170,14 +193,24 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur by focusing out
-              input.blur();
+              /*
+               * `fireEvent.blur`, not `input.blur()`. React listens for the
+               * event at the root, and a native `blur()` on an element that was
+               * never focused dispatches nothing — so the renderer's `onBlur`
+               * never ran and no validation error was ever produced.
+               */
+              fireEvent.blur(input);
 
               // Wait for validation error to appear
+              /*
+               * That the field is reported invalid, not the words used to say
+               * so. A generated rule may carry its own `message` — the
+               * generator produces things like " " — and the validator quite
+               * correctly shows that instead of the default wording.
+               */
               await waitFor(
                 () => {
-                  const errorText = container.textContent;
-                  expect(errorText).toMatch(/maximum|max|length/i);
+                  expect(input).toHaveAttribute('aria-invalid', 'true');
                 },
                 { timeout: 1000 }
               );
@@ -186,14 +219,13 @@ describe('FieldRenderer Validation Property Tests', () => {
         ),
         { numRuns: 20 }
       );
-    });
+    }, 20000);
 
     it('should validate number fields against min/max value rules', async () => {
-      fc.assert(
+      await fc.assert(
         fc.asyncProperty(
           numberFieldWithValidationArbitrary,
           async (fieldDef) => {
-            const user = userEvent.setup();
             let currentValue: number | null = null;
             const handleChange = (value: any) => {
               currentValue = value;
@@ -221,8 +253,7 @@ describe('FieldRenderer Validation Property Tests', () => {
             if (minValueRule && minValueRule.value !== undefined) {
               // Enter value less than min
               const invalidValue = minValueRule.value - 10;
-              await user.clear(input);
-              await user.type(input, invalidValue.toString());
+              fireEvent.change(input, { target: { value: invalidValue.toString() } });
               
               // Rerender with new value
               rerender(
@@ -233,22 +264,31 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur by focusing out
-              input.blur();
+              /*
+               * `fireEvent.blur`, not `input.blur()`. React listens for the
+               * event at the root, and a native `blur()` on an element that was
+               * never focused dispatches nothing — so the renderer's `onBlur`
+               * never ran and no validation error was ever produced.
+               */
+              fireEvent.blur(input);
 
               // Wait for validation error to appear
+              /*
+               * That the field is reported invalid, not the words used to say
+               * so. A generated rule may carry its own `message` — the
+               * generator produces things like " " — and the validator quite
+               * correctly shows that instead of the default wording.
+               */
               await waitFor(
                 () => {
-                  const errorText = container.textContent;
-                  expect(errorText).toMatch(/minimum|min|value/i);
+                  expect(input).toHaveAttribute('aria-invalid', 'true');
                 },
                 { timeout: 1000 }
               );
             } else if (maxValueRule && maxValueRule.value !== undefined) {
               // Enter value greater than max
               const invalidValue = maxValueRule.value + 10;
-              await user.clear(input);
-              await user.type(input, invalidValue.toString());
+              fireEvent.change(input, { target: { value: invalidValue.toString() } });
               
               // Rerender with new value
               rerender(
@@ -259,14 +299,24 @@ describe('FieldRenderer Validation Property Tests', () => {
                 />
               );
 
-              // Trigger blur by focusing out
-              input.blur();
+              /*
+               * `fireEvent.blur`, not `input.blur()`. React listens for the
+               * event at the root, and a native `blur()` on an element that was
+               * never focused dispatches nothing — so the renderer's `onBlur`
+               * never ran and no validation error was ever produced.
+               */
+              fireEvent.blur(input);
 
               // Wait for validation error to appear
+              /*
+               * That the field is reported invalid, not the words used to say
+               * so. A generated rule may carry its own `message` — the
+               * generator produces things like " " — and the validator quite
+               * correctly shows that instead of the default wording.
+               */
               await waitFor(
                 () => {
-                  const errorText = container.textContent;
-                  expect(errorText).toMatch(/maximum|max|value/i);
+                  expect(input).toHaveAttribute('aria-invalid', 'true');
                 },
                 { timeout: 1000 }
               );
@@ -275,10 +325,10 @@ describe('FieldRenderer Validation Property Tests', () => {
         ),
         { numRuns: 20 }
       );
-    });
+    }, 20000);
 
     it('should display validation errors inline near the field', async () => {
-      fc.assert(
+      await fc.assert(
         fc.asyncProperty(
           fc.record({
             shortName: fc.constant('test_field'),
@@ -345,7 +395,7 @@ describe('FieldRenderer Validation Property Tests', () => {
     });
 
     it('should clear validation error when valid value is entered', async () => {
-      fc.assert(
+      await fc.assert(
         fc.asyncProperty(
           fc.record({
             shortName: fc.constant('test_field'),

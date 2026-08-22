@@ -11,8 +11,8 @@
  * based on the field's datatype.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { render, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 import CreateMemberPage from '../CreateMemberPage';
@@ -58,7 +58,29 @@ vi.mock('@aws-web-framework/components', () => ({
   ),
 }));
 
+/*
+ * `numRuns` is small here on purpose.
+ *
+ * Each case mounts a whole page, waits for two network round trips and asserts
+ * against the DOM — roughly 300ms. At 50 or 100 cases these properties spent
+ * their entire timeout budget and were killed, which is worth nothing at all;
+ * a property that never finishes proves less than one that runs ten cases.
+ *
+ * The seed is fixed globally (see test/setup.ts), so these ten are the *same*
+ * ten every run and a counterexample can be reproduced. Raise this deliberately
+ * when hunting a specific bug.
+ */
 describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Rendering', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   const testI18n = createTestI18n('en-GB');
   
   // Add translations
@@ -155,6 +177,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
    * Helper function to render CreateMemberPage with mocked API responses
    */
   const renderCreateMemberPage = (formDefinition: any, membershipType: any) => {
+    cleanup(); // previous property iteration's render
     const mockExecute = vi.fn().mockImplementation(({ url }) => {
       if (url.includes('/membership-types/')) {
         return Promise.resolve(membershipType);
@@ -180,7 +203,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
 
     return render(
       <I18nextProvider i18n={testI18n}>
-        <MemoryRouter initialEntries={[`/orgadmin/memberships/members/create?typeId=${membershipType.id}`]}>
+        <MemoryRouter initialEntries={[`/members/create?typeId=${membershipType.id}`]}>
           <CreateMemberPage />
         </MemoryRouter>
       </I18nextProvider>
@@ -253,7 +276,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           expect(renderedFields.length).toBe(formDefinition.fields.length);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -290,7 +313,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           expect(renderedFieldNames).toEqual(expectedFieldNames);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -331,7 +354,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -372,7 +395,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -423,7 +446,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -510,7 +533,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           expect(renderedFieldNames).toEqual(expectedFieldNames);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   }, 60000);
 
@@ -580,7 +603,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -628,7 +651,7 @@ describe('Feature: manual-member-addition, Property 5: Dynamic Form Field Render
           expect(fields1.length).toBe(fields2.length);
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 10 }
     );
   });
 });

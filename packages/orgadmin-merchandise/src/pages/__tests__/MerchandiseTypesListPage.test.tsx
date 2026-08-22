@@ -16,6 +16,15 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+/*
+ * The page reads onboarding, page help and capabilities from the shell, and the
+ * real `useOnboarding` throws outside its provider. The shared stand-in covers
+ * the whole shell surface so a hook added later does not break this suite.
+ */
+vi.mock('@aws-web-framework/orgadmin-shell', async () =>
+  (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
+);
+
 vi.mock('@aws-web-framework/orgadmin-core', () => ({
   useApi: () => ({ execute: vi.fn().mockResolvedValue([]) }),
   useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Test Org' } }),
@@ -29,7 +38,8 @@ describe('MerchandiseTypesListPage', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText('Merchandise Types')).toBeInTheDocument();
+    // The page heading is `merchandise.title` — "Merchandise".
+    expect(screen.getByRole('heading', { name: 'Merchandise' })).toBeInTheDocument();
   });
 
   it('should render create button', () => {

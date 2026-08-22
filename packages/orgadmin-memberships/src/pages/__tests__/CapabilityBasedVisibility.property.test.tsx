@@ -6,7 +6,13 @@
  * 
  * **Validates: Requirements 1.4, 4.7**
  * 
- * For any organization and any component requiring the 'entry-discounts' capability,
+ * For any organization and any component requiring the 'membership-discounts' capability,
+ *
+ * NOTE: `membership-discounts`, not `entry-discounts`. There is one discount
+ * capability per area, and the pages under test here — the single and group
+ * membership type forms — gate on the memberships one. Asserting the events
+ * capability meant the property could never hold, whatever the code did.
+
  * the component should be visible if and only if the organization has that capability enabled.
  */
 
@@ -18,13 +24,18 @@ import CreateSingleMembershipTypePage from '../CreateSingleMembershipTypePage';
 import CreateGroupMembershipTypePage from '../CreateGroupMembershipTypePage';
 
 // Mock the dependencies
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useCapabilities: vi.fn(),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // The suite drives `useCapabilities` itself; everything else comes from the
+  // shared mock so a new shell hook cannot break it.
+  const { shellMock } = await import('../../test/shell-mock');
+  return { ...shellMock(), useCapabilities: vi.fn() };
+});
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
-  useOrganisation: vi.fn(),
-}));
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  const { coreMock } = await import('../../test/core-mock');
+  return { ...actual, ...coreMock(), useOrganisation: vi.fn() };
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -54,20 +65,20 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
     enabledCapabilities: fc.array(fc.string(), { minLength: 0, maxLength: 10 }),
   });
 
-  // Arbitrary for generating capability arrays that may or may not include 'entry-discounts'
+  // Arbitrary for generating capability arrays that may or may not include 'membership-discounts'
   const capabilitiesArb = fc.oneof(
-    fc.constant(['entry-discounts']), // Has the capability
+    fc.constant(['membership-discounts']), // Has the capability
     fc.constant([]), // No capabilities
-    fc.array(fc.string().filter(s => s !== 'entry-discounts'), { minLength: 0, maxLength: 5 }) // Other capabilities
+    fc.array(fc.string().filter(s => s !== 'membership-discounts'), { minLength: 0, maxLength: 5 }) // Other capabilities
   );
 
-  it('should show discount selector in single membership form if and only if entry-discounts capability is enabled', async () => {
+  it('should show discount selector in single membership form if and only if membership-discounts capability is enabled', async () => {
     await fc.assert(
       fc.asyncProperty(
         organisationArb,
         capabilitiesArb,
         async (organisation, capabilities) => {
-          const hasEntryDiscounts = capabilities.includes('entry-discounts');
+          const hasEntryDiscounts = capabilities.includes('membership-discounts');
 
           // Mock the hooks
           vi.mocked(useCapabilities).mockReturnValue({
@@ -85,6 +96,7 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
             refetch: vi.fn(),
           });
 
+          cleanup(); // previous iteration's render is still in document.body
           const { container } = render(
             <MemoryRouter>
               <CreateSingleMembershipTypePage />
@@ -107,13 +119,13 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
     );
   });
 
-  it('should show discount selector in group membership form if and only if entry-discounts capability is enabled', async () => {
+  it('should show discount selector in group membership form if and only if membership-discounts capability is enabled', async () => {
     await fc.assert(
       fc.asyncProperty(
         organisationArb,
         capabilitiesArb,
         async (organisation, capabilities) => {
-          const hasEntryDiscounts = capabilities.includes('entry-discounts');
+          const hasEntryDiscounts = capabilities.includes('membership-discounts');
 
           // Mock the hooks
           vi.mocked(useCapabilities).mockReturnValue({
@@ -131,6 +143,7 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
             refetch: vi.fn(),
           });
 
+          cleanup(); // previous iteration's render is still in document.body
           const { container } = render(
             <MemoryRouter>
               <CreateGroupMembershipTypePage />
@@ -159,7 +172,7 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
         organisationArb,
         capabilitiesArb,
         async (organisation, capabilities) => {
-          const hasEntryDiscounts = capabilities.includes('entry-discounts');
+          const hasEntryDiscounts = capabilities.includes('membership-discounts');
 
           // Mock the hooks
           const mockCapabilities = {
@@ -179,6 +192,10 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
 
           vi.mocked(useCapabilities).mockReturnValue(mockCapabilities);
           vi.mocked(useOrganisation).mockReturnValue(mockOrganisation);
+
+          // The previous iteration ended with the *group* form rendered; without
+          // this, that leftover is what the single-form query would find.
+          cleanup();
 
           // Render single membership form
           const { container: singleContainer } = render(
@@ -219,9 +236,9 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
     await fc.assert(
       fc.asyncProperty(
         organisationArb,
-        fc.array(fc.string().filter(s => s !== 'entry-discounts'), { minLength: 0, maxLength: 10 }),
+        fc.array(fc.string().filter(s => s !== 'membership-discounts'), { minLength: 0, maxLength: 10 }),
         async (organisation, otherCapabilities) => {
-          // Ensure 'entry-discounts' is NOT in the capabilities
+          // Ensure 'membership-discounts' is NOT in the capabilities
           const capabilities = otherCapabilities;
 
           vi.mocked(useCapabilities).mockReturnValue({
@@ -239,6 +256,7 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
             refetch: vi.fn(),
           });
 
+          cleanup(); // previous iteration's render is still in document.body
           const { container } = render(
             <MemoryRouter>
               <CreateSingleMembershipTypePage />
@@ -260,8 +278,8 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
         organisationArb,
         fc.array(fc.string(), { minLength: 0, maxLength: 10 }),
         async (organisation, otherCapabilities) => {
-          // Ensure 'entry-discounts' IS in the capabilities
-          const capabilities = ['entry-discounts', ...otherCapabilities];
+          // Ensure 'membership-discounts' IS in the capabilities
+          const capabilities = ['membership-discounts', ...otherCapabilities];
 
           vi.mocked(useCapabilities).mockReturnValue({
             capabilities,
@@ -277,6 +295,10 @@ describe('Feature: membership-discount-integration, Property 8: Capability-Based
             error: null,
             refetch: vi.fn(),
           });
+
+          // Without this, iteration two finds iteration one's render as well and
+          // `queryByText` throws on the duplicate rather than returning it.
+          cleanup();
 
           render(
             <MemoryRouter>

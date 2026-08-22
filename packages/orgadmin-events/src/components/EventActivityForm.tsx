@@ -88,7 +88,13 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
         method: 'GET',
         url: `/api/orgadmin/organisations/${organisation.id}/application-forms`,
       });
-      setApplicationForms(response || []);
+      /*
+       * Only an array is usable here. An error body (`{ error: ... }`) is
+       * truthy, so `response || []` would store an object and the render below
+       * died on `.map` — a blank activity form where a failed load should have
+       * shown an empty picker.
+       */
+      setApplicationForms(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Failed to load application forms:', error);
       setApplicationForms([]);

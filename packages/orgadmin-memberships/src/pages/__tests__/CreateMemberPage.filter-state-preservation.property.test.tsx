@@ -9,8 +9,8 @@
  * Validates: Requirements 6.5
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import * as fc from 'fast-check';
@@ -30,11 +30,11 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
 });
 
 // Mock onboarding context
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
-  useOnboarding: () => ({
-    checkModuleVisit: vi.fn(),
-  }),
-}));
+vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+  // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
+  const { shellMock } = await import('../../test/shell-mock');
+  return shellMock();
+});
 
 // Mock FieldRenderer component
 vi.mock('@aws-web-framework/components', () => ({
@@ -52,6 +52,16 @@ vi.mock('@aws-web-framework/components', () => ({
 }));
 
 describe('Property Test: Filter State Preservation', () => {
+
+/*
+ * Torn down after every property iteration.
+ *
+ * `fc.assert` runs its body many times inside a single test, and React Testing
+ * Library only cleans up between *tests*. Each iteration therefore left its
+ * render in the document — counts grew case by case, and the accumulated DOM
+ * eventually made the run time out rather than fail with anything readable.
+ */
+afterEach(() => cleanup());
   let testI18n: any;
 
   beforeEach(async () => {
@@ -116,10 +126,10 @@ describe('Property Test: Filter State Preservation', () => {
         // Render the app with both pages
         const { unmount } = render(
           <I18nextProvider i18n={testI18n}>
-            <MemoryRouter initialEntries={['/orgadmin/memberships/members']}>
+            <MemoryRouter initialEntries={['/members']}>
               <Routes>
-                <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
-                <Route path="/orgadmin/memberships/members/create" element={<CreateMemberPage />} />
+                <Route path="/members" element={<MembersDatabasePage />} />
+                <Route path="/members/create" element={<CreateMemberPage />} />
               </Routes>
             </MemoryRouter>
           </I18nextProvider>
@@ -167,7 +177,7 @@ describe('Property Test: Filter State Preservation', () => {
             <MemoryRouter
               initialEntries={[
                 {
-                  pathname: '/orgadmin/memberships/members',
+                  pathname: '/members',
                   state: {
                     successMessage: 'Member created successfully',
                     createdMemberName: 'Test Member',
@@ -177,7 +187,7 @@ describe('Property Test: Filter State Preservation', () => {
               ]}
             >
               <Routes>
-                <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
+                <Route path="/members" element={<MembersDatabasePage />} />
               </Routes>
             </MemoryRouter>
           </I18nextProvider>
@@ -225,13 +235,13 @@ describe('Property Test: Filter State Preservation', () => {
           <MemoryRouter
             initialEntries={[
               {
-                pathname: '/orgadmin/memberships/members',
+                pathname: '/members',
                 state: filterState ? { filterState } : undefined,
               },
             ]}
           >
             <Routes>
-              <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
+              <Route path="/members" element={<MembersDatabasePage />} />
             </Routes>
           </MemoryRouter>
         </I18nextProvider>
@@ -283,13 +293,13 @@ describe('Property Test: Filter State Preservation', () => {
               <MemoryRouter
                 initialEntries={[
                   {
-                    pathname: '/orgadmin/memberships/members',
+                    pathname: '/members',
                     state: { filterState },
                   },
                 ]}
               >
                 <Routes>
-                  <Route path="/orgadmin/memberships/members" element={<MembersDatabasePage />} />
+                  <Route path="/members" element={<MembersDatabasePage />} />
                 </Routes>
               </MemoryRouter>
             </I18nextProvider>

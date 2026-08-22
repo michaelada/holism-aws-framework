@@ -12,6 +12,16 @@ import * as organizationApi from '../services/organizationApi';
 // Mock the organization API
 vi.mock('../services/organizationApi');
 
+/*
+ * The details page reads the admin API client from `ApiContext`, which is
+ * provided by `App` and needs Keycloak behind it. Standing that up for a page
+ * that only lists the organisations of a type is more than the test needs, so
+ * the hook is stubbed with the one call the page makes.
+ */
+vi.mock('../context/ApiContext', () => ({
+  useApi: () => ({ api: { getOrganizationsByType: vi.fn().mockResolvedValue([]) } }),
+}));
+
 // Mock useParams for route parameters
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
