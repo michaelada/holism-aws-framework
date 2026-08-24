@@ -15,7 +15,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -30,7 +29,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 
 interface EventEntry {
   id: string;
@@ -192,7 +191,7 @@ const EventEntriesPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -227,7 +226,7 @@ const EventEntriesPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       <Button
         variant="outlined"

@@ -3,6 +3,7 @@
     "actions": {
       "save": "Save",
       "cancel": "Cancel",
+      "retry": "Try again",
       "delete": "Delete",
       "edit": "Edit",
       "create": "Create",

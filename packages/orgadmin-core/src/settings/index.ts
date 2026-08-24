@@ -20,7 +20,7 @@ export const settingsModule: ModuleRegistration = {
     title: 'modules.settings.title',
     description: 'modules.settings.description',
     icon: SettingsIcon,
-    color: '#757575',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/settings',
   },
   routes: [

@@ -249,6 +249,11 @@ aws ssm start-session --target $(tofu output -raw instance_id) --region eu-west-
 
 
 cd /opt/holism
+
+# deploy latets code (takes a minute or so)
+./scripts/deploy/update.sh
+
+# reset db
 sudo docker compose -f docker-compose.deploy.yml --env-file .env.deploy \
   --profile tools run --rm tools npm run seed:demo -- --reset
 

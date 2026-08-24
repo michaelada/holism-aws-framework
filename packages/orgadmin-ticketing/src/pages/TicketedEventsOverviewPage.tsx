@@ -17,7 +17,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Tooltip,
@@ -30,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { TicketedEventSummary } from '../types/ticketing.types';
 
 const TicketedEventsOverviewPage: React.FC = () => {
@@ -124,7 +123,7 @@ const TicketedEventsOverviewPage: React.FC = () => {
           {t('ticketing.overview.noTicketedEvents')}
         </Typography>
       ) : (
-        <TableContainer component={Paper}>
+        <ResponsiveTable identityColumn={t('ticketing.overview.columns.eventName')} component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -181,7 +180,7 @@ const TicketedEventsOverviewPage: React.FC = () => {
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </ResponsiveTable>
       )}
     </Box>
   );

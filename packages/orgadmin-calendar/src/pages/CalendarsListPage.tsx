@@ -18,7 +18,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -40,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { Calendar, CalendarStatus } from '../types/calendar.types';
 
 const CalendarsListPage: React.FC = () => {
@@ -200,7 +199,7 @@ const CalendarsListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('calendar.table.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -286,7 +285,7 @@ const CalendarsListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

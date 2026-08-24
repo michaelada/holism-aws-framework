@@ -133,7 +133,7 @@ fi
 # 4. Build and start
 # ---------------------------------------------------------------------------
 log "Building images (a few minutes on a small instance)"
-$COMPOSE build
+$COMPOSE --profile tools build
 
 log "Starting Postgres and Keycloak"
 $COMPOSE up -d postgres keycloak

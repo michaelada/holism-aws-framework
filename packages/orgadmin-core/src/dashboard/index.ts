@@ -20,7 +20,7 @@ export const dashboardModule: ModuleRegistration = {
     title: 'modules.dashboard.title',
     description: 'modules.dashboard.description',
     icon: DashboardIcon,
-    color: '#1976d2',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/dashboard',
   },
   routes: [

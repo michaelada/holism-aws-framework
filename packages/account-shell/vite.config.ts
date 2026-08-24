@@ -179,13 +179,47 @@ export default defineConfig({
   },
 
   test: {
+    /*
+     * Twenty seconds, not the five-second default.
+     *
+     * This repository's property-based tests mount a whole page once per
+     * generated case, and under coverage instrumentation that is slower again.
+     * The default is sized for a unit test, so these failed intermittently —
+     * always the same class of test, never the same one twice, and only when
+     * the machine was busy. Raising the ceiling fixes the whole class without
+     * cutting any property's run count, which is what actually buys coverage.
+     */
+    testTimeout: 20000,
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/test/', '**/*.d.ts', '**/*.config.*', '**/*.test.{ts,tsx}'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/*.test.{ts,tsx}',
+        /*
+         * Vite's virtual modules. Their ids begin with a null byte, and the
+         * html reporter tries to write a file named after each one — which Node
+         * refuses, taking the whole coverage run down with
+         * `ERR_INVALID_ARG_VALUE` after the summary has already printed.
+         */
+        '**/\u0000*',
+      ],
+      /*
+       * The floor the whole repo is held to, so `test:coverage` fails when a
+       * change drops below it rather than reporting a number nobody reads.
+       */
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 60,
+        statements: 60,
+      },
     },
     /**
      * See CLAUDE.md §3.4 — this must be `server.deps.inline`, not the

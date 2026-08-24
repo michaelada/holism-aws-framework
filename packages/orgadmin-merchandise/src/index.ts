@@ -34,7 +34,7 @@ export const merchandiseModule: ModuleRegistration = {
     title: 'modules.merchandise.title',
     description: 'modules.merchandise.description',
     icon: MerchandiseIcon,
-    color: '#ed6c02',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/merchandise',
   },
   routes: [

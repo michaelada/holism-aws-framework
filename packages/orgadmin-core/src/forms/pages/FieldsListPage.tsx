@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ResponsiveTable } from '../../components';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,7 +19,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -234,7 +234,7 @@ const FieldsListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('forms.fields.table.label')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -299,7 +299,7 @@ const FieldsListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm">

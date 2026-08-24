@@ -3,6 +3,7 @@
     "actions": {
       "save": "Enregistrer",
       "cancel": "Annuler",
+      "retry": "Réessayer",
       "delete": "Supprimer",
       "edit": "Modifier",
       "create": "Créer",

@@ -88,6 +88,27 @@ const MerchandiseTypeDetailsPage: React.FC = () => {
     );
   }
 
+  // A request that failed and an item that was deleted look identical from
+  // here, but not to the club: one is worth retrying, the other means the item
+  // is gone. Reporting a network failure as "not found" sends them looking for
+  // something they never deleted, with no way to try again.
+  if (error && !merchandiseType) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={loadMerchandiseType}>
+              {t('common.actions.retry')}
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+
   if (notFound || !merchandiseType) {
     return (
       <Box sx={{ p: 3 }}>

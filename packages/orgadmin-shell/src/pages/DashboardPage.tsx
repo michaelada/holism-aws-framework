@@ -112,8 +112,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ modules }) => {
       {sortedModules.length > 0 ? (
         <Box sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2.5}>
+            {/*
+              Four across at the widest, not six. At six a card was ~170px on a
+              1440 laptop, which clipped the description on eight of the twelve
+              cards mid-word — and English is the shortest of the six locales
+              this ships in.
+            */}
             {sortedModules.map((module) => (
-              <Grid item xs={12} sm={6} md={3} lg={2} key={module.id}>
+              <Grid item xs={12} sm={6} md={4} lg={3} key={module.id}>
                 <DashboardCardIllustration module={module} />
               </Grid>
             ))}

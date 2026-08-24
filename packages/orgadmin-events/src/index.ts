@@ -35,7 +35,7 @@ export const eventsModule: ModuleRegistration = {
     title: 'modules.events.title',
     description: 'modules.events.description',
     icon: EventIcon,
-    color: '#e53935',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/events',
   },
   routes: [

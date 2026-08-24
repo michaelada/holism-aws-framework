@@ -35,7 +35,7 @@ export const calendarModule: ModuleRegistration = {
     title: 'modules.calendar.title',
     description: 'modules.calendar.description',
     icon: CalendarIcon,
-    color: '#00897b', // Teal
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/calendar',
   },
   routes: [

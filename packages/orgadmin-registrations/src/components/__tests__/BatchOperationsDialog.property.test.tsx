@@ -22,7 +22,8 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   useTranslation: () => ({ t: (k: string, params?: any) => params ? `${k} ${JSON.stringify(params)}` : k }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
 }));
 

@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ResponsiveTable } from '../../components';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,7 +20,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -262,7 +262,7 @@ const PaymentsListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('payments.table.customer')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -332,7 +332,7 @@ const PaymentsListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

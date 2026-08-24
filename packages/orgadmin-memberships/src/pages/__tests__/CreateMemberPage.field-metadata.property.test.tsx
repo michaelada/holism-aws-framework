@@ -273,9 +273,16 @@ afterEach(() => cleanup());
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should display field descriptions when provided in the form definition', async () => {
     await fc.assert(
@@ -328,9 +335,16 @@ afterEach(() => cleanup());
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should display empty description when field has no description in form definition', async () => {
     await fc.assert(
@@ -405,9 +419,16 @@ afterEach(() => cleanup());
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should display required indicator for mandatory fields', async () => {
     await fc.assert(
@@ -456,9 +477,16 @@ afterEach(() => cleanup());
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should display all metadata consistently across different field types', async () => {
     await fc.assert(
@@ -522,9 +550,16 @@ afterEach(() => cleanup());
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should handle fields with special characters in labels and descriptions', async () => {
     await fc.assert(
@@ -604,9 +639,16 @@ afterEach(() => cleanup());
           }
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should maintain metadata display consistency across multiple renders', async () => {
     await fc.assert(
@@ -661,9 +703,16 @@ afterEach(() => cleanup());
           expect(metadata1).toEqual(metadata2);
         }
       ),
-      { numRuns: 50 }
+      /*
+       * Ten, not fifty or a hundred. Every case mounts the whole Create Member
+       * page — the consistency property mounts it twice — and a hundred of
+       * those cannot finish inside any sane timeout. The space these properties
+       * vary over is the shape of a form definition, which ten generated forms
+       * cover many times over.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should handle empty form definitions without errors', async () => {
     const formDefinition = {

@@ -20,7 +20,7 @@ export const reportingModule: ModuleRegistration = {
     title: 'modules.reporting.title',
     description: 'modules.reporting.description',
     icon: ReportingIcon,
-    color: '#3949ab',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/reporting',
   },
   routes: [

@@ -38,6 +38,9 @@ import {
   Typography,
   Alert,
   Snackbar,
+  Divider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -105,6 +108,17 @@ const MembersDatabasePage: React.FC = () => {
   const { t } = useTranslation();
   const { checkModuleVisit } = useOnboarding();
   const { organisation } = useOrganisation();
+
+  /*
+   * Below `md` the ten-column grid becomes one record per row.
+   *
+   * A 997px table in a 390px window is not a table any more: nine of its ten
+   * columns are off-screen behind a horizontal scroll, under a pinned Actions
+   * column that covers the name while you drag. Every column is still here —
+   * they are read down the row instead of across it.
+   */
+  const theme = useTheme();
+  const stacked = useMediaQuery(theme.breakpoints.down('md'));
 
   // Register page for contextual help
   usePageHelp('list');
@@ -608,6 +622,160 @@ const MembersDatabasePage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {stacked ? (
+        /*
+         * One row per member. Rows live inside the same Paper the table used
+         * rather than becoming twelve separate cards — the surface is the list,
+         * and a card per record would nest a card inside a card and lose the
+         * hairline rhythm the desktop table reads by.
+         */
+        <Paper>
+          {loading ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+              {t('memberships.loadingMembers')}
+            </Box>
+          ) : filteredMembers.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+              {t('memberships.noMembersFound')}
+            </Box>
+          ) : (
+            filteredMembers.map((member, index) => {
+              const selected = selectedMembers.includes(member.id);
+              return (
+                <Box key={member.id}>
+                  {index > 0 && <Divider />}
+                  <Box
+                    sx={{
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 1,
+                      backgroundColor: selected ? 'action.selected' : 'transparent',
+                      transition: 'background-color 0.2s ease',
+                    }}
+                  >
+                    <Checkbox
+                      checked={selected}
+                      onChange={() => handleSelectMember(member.id)}
+                      /* Level with the name, not floating in the middle of the row */
+                      sx={{ mt: -0.75, ml: -1.5 }}
+                      inputProps={{
+                        'aria-label': member.name || `${member.firstName} ${member.lastName}`,
+                      }}
+                    />
+
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      {/*
+                        The name owns its line. Sharing it with the status chip
+                        left about 180px for the name on a 390px screen, so
+                        "Aoife McNamara" broke across two lines while the chip
+                        sat in the space it had taken.
+                      */}
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                        {member.name || `${member.firstName} ${member.lastName}`}
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: 1,
+                          mb: 1,
+                        }}
+                      >
+                        {/* Wraps rather than truncating — "400009 · Associa…" tells
+                            an administrator less than two short lines do. */}
+                        <Typography variant="body2" color="text.secondary">
+                          {member.membershipNumber}
+                          {' · '}
+                          {member.membershipTypeName || member.membershipTypeId}
+                        </Typography>
+                        <Chip
+                          label={member.status}
+                          color={getStatusColor(member.status)}
+                          size="small"
+                          sx={{ flexShrink: 0 }}
+                        />
+                      </Box>
+
+                      {/*
+                        The dates keep their column names. Stripped of the header
+                        row, "16 Aug 2026" beside "11 Aug 2027" says nothing about
+                        which is the renewal and which is the expiry.
+                      */}
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'auto 1fr',
+                          columnGap: 1.5,
+                          rowGap: 0.25,
+                          mb: member.labels.length ? 1 : 0,
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {t('memberships.table.dateLastRenewed')}
+                        </Typography>
+                        <Typography variant="caption">
+                          {formatDateLocale(member.dateLastRenewed)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('memberships.table.validUntil')}
+                        </Typography>
+                        <Typography variant="caption">
+                          {formatDateLocale(member.validUntil)}
+                        </Typography>
+                      </Box>
+
+                      {member.labels.length > 0 && (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+                          {member.labels.map((label) => (
+                            <Chip key={label} label={label} size="small" />
+                          ))}
+                        </Box>
+                      )}
+
+                      {/*
+                        The three row actions, spelled out. On the desktop table
+                        these are icons in a column an administrator learns; on a
+                        phone, met once in a while, they carry their names.
+                      */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: -1 }}>
+                        <Tooltip title={t('memberships.table.processed')}>
+                          <IconButton
+                            onClick={() => handleToggleProcessed(member.id, member.processed)}
+                            aria-label={t('memberships.table.processed')}
+                            aria-pressed={member.processed}
+                          >
+                            {member.processed ? <ProcessedIcon color="success" /> : <UnprocessedIcon />}
+                          </IconButton>
+                        </Tooltip>
+                        <Box sx={{ flex: 1 }} />
+                        <Button
+                          size="small"
+                          startIcon={<ViewIcon />}
+                          onClick={() => handleViewMember(member.id)}
+                          sx={{ px: 1.25, whiteSpace: 'nowrap', minWidth: 0 }}
+                        >
+                          {t('memberships.tooltips.viewDetails')}
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<EditIcon />}
+                          onClick={() => handleEditMember(member.id)}
+                          sx={{ px: 1.25, whiteSpace: 'nowrap', minWidth: 0 }}
+                        >
+                          {t('memberships.tooltips.edit')}
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              );
+            })
+          )}
+        </Paper>
+      ) : (
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -700,7 +868,12 @@ const MembersDatabasePage: React.FC = () => {
                       {member.processed ? <ProcessedIcon color="success" /> : <UnprocessedIcon />}
                     </IconButton>
                   </TableCell>
-                  <TableCell align="right">
+                  {/*
+                    The two actions stay on one line. Left to wrap they stacked,
+                    which is what made every row of this table 101px tall — on
+                    the screen an administrator scans most often.
+                  */}
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                     <IconButton
                       size="small"
                       onClick={() => handleViewMember(member.id)}
@@ -722,6 +895,7 @@ const MembersDatabasePage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      )}
 
       <Dialog open={Boolean(filterToDelete)} onClose={() => setFilterToDelete(null)}>
         <DialogTitle>{t('memberships.customFilter.deleteConfirmTitle')}</DialogTitle>

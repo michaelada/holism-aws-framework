@@ -24,7 +24,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -46,7 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { Registration, RegistrationFilter, RegistrationType } from '../types/registration.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
@@ -475,7 +474,7 @@ const RegistrationsDatabasePage: React.FC = () => {
       </Card>
 
       {/* Registrations table */}
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('registrations.table.entityName')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -574,7 +573,7 @@ const RegistrationsDatabasePage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       {/* Create Custom Filter Dialog */}
       <CreateCustomFilterDialog

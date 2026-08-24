@@ -304,9 +304,15 @@ afterEach(() => cleanup());
           expect(capturedFormSubmissionData.submissionData.name).toBe(memberName);
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not a hundred. Each case mounts the whole Create Member page, and
+       * under coverage instrumentation — which is slower again — a hundred of
+       * them cannot finish inside any sane timeout. Ten generated form
+       * definitions cover what this property varies over many times.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   it('should include all form field data in submission', async () => {
     await fc.assert(
@@ -410,9 +416,15 @@ afterEach(() => cleanup());
           expect(capturedFormSubmissionData.submissionData.name).toBe(memberName);
         }
       ),
-      { numRuns: 100 }
+      /*
+       * Ten, not a hundred. Each case mounts the whole Create Member page, and
+       * under coverage instrumentation — which is slower again — a hundred of
+       * them cannot finish inside any sane timeout. Ten generated form
+       * definitions cover what this property varies over many times.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
 
 

@@ -2,12 +2,29 @@ import { createTheme } from '@mui/material/styles';
 
 /**
  * Warm Theme for ItsPlainSailing
- * 
+ *
  * Inspired by the marketing site design with warm orange/gold gradients,
  * clean typography, and modern aesthetics.
- * 
+ *
+ * ## The two oranges
+ *
+ * Every orange here is either *flare* or *signal*, and the difference is
+ * whether it has to be read:
+ *
+ * - **Flare** (#FF9800) measures **2.16:1 on white** and decorates only —
+ *   tints, hover washes, selected-row fills, input borders, icon grounds. It is
+ *   `primary.light`, never `primary.main`.
+ * - **Signal** (#D24400, **4.60:1**) is the lightest orange in the family that
+ *   clears the normal-text threshold, so it is what MUI paints text, icons,
+ *   selected navigation and focus rings with. It is `primary.main`.
+ *
+ * Flare used to be `primary.main`, which put 2.16:1 under the selected
+ * navigation label, the primary button's left half, and every icon MUI tints
+ * with the primary colour. See DESIGN.md, "The Two Oranges Rule".
+ *
  * Color Palette:
- * - Primary: Orange (#FF9800) to Amber (#E65100) gradient
+ * - Primary: Signal Orange #D24400, deepening to #BF360C
+ * - Flare Orange #FF9800 — decoration only
  * - Gold accent: #FFC107
  * - Charcoal: #1A1E2E
  * - Warm backgrounds: #FAF8F5, #F1EDE8
@@ -16,36 +33,46 @@ export const warmTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#FF9800', // Orange
-      light: '#FFB74D',
-      dark: '#F57C00',
+      main: '#D24400', // Signal Orange — 4.60:1 on white, the orange that speaks
+      light: '#FF9800', // Flare Orange — 2.16:1, decoration only
+      dark: '#BF360C', // 5.60:1 — hover and pressed
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#FFC107', // Gold
-      light: '#FFD54F',
-      dark: '#FFA000',
-      contrastText: '#1A1E2E',
+      /*
+       * Signal Gold, because `secondary.main` is a *text* colour wherever MUI
+       * uses it — outlined chips, most of all. Flare Gold #FFC107 measures
+       * **1.63:1 on white**, the lowest-contrast value in the system, and it
+       * was labelling the discount chips on the events table.
+       */
+      main: '#A15C00', // 5.19:1
+      light: '#FFC107', // Flare Gold — decoration only
+      dark: '#7C4700',
+      contrastText: '#ffffff',
     },
     error: {
-      main: '#EF4444',
+      main: '#D32F2F', // 4.98:1
       light: '#F87171',
-      dark: '#DC2626',
+      dark: '#991B1B',
+      contrastText: '#ffffff',
     },
     warning: {
-      main: '#F59E0B',
+      main: '#A15C00', // 5.19:1
       light: '#FBBF24',
-      dark: '#D97706',
+      dark: '#92400E',
+      contrastText: '#ffffff',
     },
     success: {
-      main: '#22C55E',
+      main: '#15803D', // 5.02:1
       light: '#4ADE80',
-      dark: '#16A34A',
+      dark: '#166534',
+      contrastText: '#ffffff',
     },
     info: {
-      main: '#3B82F6',
+      main: '#1D4ED8', // 6.70:1
       light: '#60A5FA',
-      dark: '#2563EB',
+      dark: '#1E40AF',
+      contrastText: '#ffffff',
     },
     background: {
       default: '#FFFFFF',
@@ -152,33 +179,72 @@ export const warmTheme = createTheme({
         },
       },
     },
+    /*
+     * Headings take Ink; everything else keeps the muted body colour.
+     *
+     * `typography.body1.color` is applied to `<body>` by CssBaseline, so every
+     * element without a colour of its own inherited #64748B — including page
+     * titles. "Members Database" was rendering at 4.76:1 in the *secondary*
+     * text colour, which made the most important label on an operational
+     * screen the faintest heading in the system.
+     */
+    MuiTypography: {
+      styleOverrides: {
+        h1: { color: '#1E293B' },
+        h2: { color: '#1E293B' },
+        h3: { color: '#1E293B' },
+        h4: { color: '#1E293B' },
+        h5: { color: '#1E293B' },
+        h6: { color: '#1E293B' },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           borderRadius: '60px',
-          padding: '0.85rem 2rem',
+          /*
+           * The horizontal padding relaxes on a phone. At 2rem a pill needs
+           * ~190px before its label stops wrapping, and two of them side by
+           * side on a 390px screen turned "Export to Excel" and "Add Member"
+           * into four lines of text in two 76px-tall lozenges.
+           */
+          padding: '0.85rem 1.25rem',
+          '@media (min-width:600px)': {
+            padding: '0.85rem 2rem',
+          },
           fontSize: '0.95rem',
           fontWeight: 600,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           textTransform: 'none',
         },
+        /*
+         * Lift and press belong to every contained button; the *colour* does
+         * not. This block used to hard-code the orange gradient here, which
+         * overrode `color` — so `<Button variant="contained" color="error">`
+         * on seven delete confirmations rendered orange with an orange glow.
+         * Orange is this product's invitation colour; using it to confirm a
+         * deletion spends the one vocabulary the interface has for danger.
+         */
         contained: {
-          background: 'linear-gradient(135deg, #FF9800, #E65100)',
-          color: '#ffffff',
-          boxShadow: '0 8px 30px rgba(255,152,0,0.25)',
           '&:hover': {
-            background: 'linear-gradient(135deg, #F57C00, #D84315)',
             transform: 'translateY(-2px)',
-            boxShadow: '0 12px 35px rgba(255,152,0,0.35)',
           },
           '&:active': {
             transform: 'translateY(0)',
           },
         },
         containedPrimary: {
-          background: 'linear-gradient(135deg, #FF9800, #E65100)',
+          /*
+           * Both stops clear 4.5:1 against white text. The old gradient opened
+           * on Flare Orange at 2.16:1, so the left half of every primary button
+           * in the product failed contrast.
+           */
+          background: 'linear-gradient(135deg, #D24400, #BF360C)',
+          color: '#ffffff',
+          boxShadow: '0 8px 30px rgba(255,152,0,0.25)',
           '&:hover': {
-            background: 'linear-gradient(135deg, #F57C00, #D84315)',
+            background: 'linear-gradient(135deg, #BF360C, #9A3412)',
+            boxShadow: '0 12px 35px rgba(255,152,0,0.35)',
           },
         },
         outlined: {
@@ -195,7 +261,7 @@ export const warmTheme = createTheme({
           color: '#64748B',
           '&:hover': {
             backgroundColor: 'rgba(255, 152, 0, 0.08)',
-            color: '#FF9800',
+            color: '#D24400',
           },
         },
       },
@@ -314,15 +380,36 @@ export const warmTheme = createTheme({
           '&:hover': {
             backgroundColor: 'rgba(255, 152, 0, 0.08)',
           },
+          /*
+           * Deep Orange, measured against the wash it actually sits on.
+           *
+           * The selected item is the single most-read label in the product and
+           * it was set in Flare Orange — #FF9800 on its own 12% tint is about
+           * 2:1, so the one item telling an administrator where they are was
+           * the hardest thing on screen to read. Signal Orange fixes that but
+           * only reaches 4.23:1 here: its quoted 4.60:1 is against white, and
+           * this label is never on white. #BF360C clears 4.5:1 on the tint.
+           */
           '&.Mui-selected': {
             backgroundColor: 'rgba(255, 152, 0, 0.12)',
-            color: '#FF9800',
+            color: '#BF360C',
             fontWeight: 600,
             '&:hover': {
               backgroundColor: 'rgba(255, 152, 0, 0.16)',
             },
             '& .MuiListItemIcon-root': {
-              color: '#FF9800',
+              color: '#BF360C',
+            },
+            /*
+             * The label needs saying explicitly. The rail renders it as a
+             * `body2` Typography, and `typography.body2` carries a colour — so
+             * the label kept the muted body colour on the selected wash
+             * (2.2:1) while the icon beside it turned orange. Selection was
+             * being carried by the ground and the icon, but not by the word.
+             */
+            '& .MuiListItemText-primary': {
+              color: '#BF360C',
+              fontWeight: 600,
             },
           },
         },

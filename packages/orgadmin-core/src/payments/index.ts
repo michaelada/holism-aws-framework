@@ -24,7 +24,7 @@ export const paymentsModule: ModuleRegistration = {
     title: 'modules.payments.title',
     description: 'modules.payments.description',
     icon: PaymentIcon,
-    color: '#f9a825',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/payments',
   },
   routes: [

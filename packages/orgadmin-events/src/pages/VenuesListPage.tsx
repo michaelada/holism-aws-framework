@@ -16,7 +16,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -36,7 +35,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ConfirmDialog } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ConfirmDialog, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 
 interface Venue {
   id: string;
@@ -233,7 +232,7 @@ const VenuesListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('events.venues.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -292,7 +291,7 @@ const VenuesListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingVenue ? 'Edit Venue' : 'Create Venue'}</DialogTitle>

@@ -117,7 +117,7 @@ exports.up = (pgm) => {
     END $$
   `);
 
-  pgm.sql(`CREATE TABLE audit_events_default PARTITION OF audit_events DEFAULT`);
+  pgm.sql(`CREATE TABLE IF NOT EXISTS audit_events_default PARTITION OF audit_events DEFAULT`);
 
   /*
    * Carry the old rows across.
@@ -128,28 +128,41 @@ exports.up = (pgm) => {
    *
    * The actor is left null: the old row's `user_id` was already null, for the
    * reason this whole table exists.
+   *
+   * Guarded on the source table existing, and the drops below tolerate its
+   * absence. Written unguarded, this migration could only ever run against a
+   * database that still had both old tables: if it failed anywhere after the
+   * drops — or was reversed, or the table was lost some other way — every
+   * re-run died on `relation "organization_audit_log" does not exist`, leaving
+   * an environment with no audit table and no way to build one. That is
+   * precisely the state itsps.org was in.
    */
   pgm.sql(`
-    INSERT INTO audit_events (
-      occurred_at, actor_user_type, organisation_id,
-      category, action, outcome, entity_type, entity_id, changes, search_text
-    )
-    SELECT
-      created_at,
-      'system',
-      organization_id,
-      'security',
-      action,
-      'success',
-      entity_type,
-      entity_id::text,
-      changes,
-      concat_ws(' ', action, entity_type, changes::text)
-    FROM organization_audit_log
+    DO $$
+    BEGIN
+      IF to_regclass('public.organization_audit_log') IS NOT NULL THEN
+        INSERT INTO audit_events (
+          occurred_at, actor_user_type, organisation_id,
+          category, action, outcome, entity_type, entity_id, changes, search_text
+        )
+        SELECT
+          created_at,
+          'system',
+          organization_id,
+          'security',
+          action,
+          'success',
+          entity_type,
+          entity_id::text,
+          changes,
+          concat_ws(' ', action, entity_type, changes::text)
+        FROM organization_audit_log;
+      END IF;
+    END $$
   `);
 
-  pgm.dropTable('organization_audit_log');
-  pgm.dropTable('admin_audit_log');
+  pgm.dropTable('organization_audit_log', { ifExists: true });
+  pgm.dropTable('admin_audit_log', { ifExists: true });
 };
 
 exports.down = (pgm) => {

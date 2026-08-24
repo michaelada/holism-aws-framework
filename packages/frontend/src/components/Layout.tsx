@@ -47,9 +47,14 @@ export function Layout({ children, onLogout, userName }: LayoutProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
         <Toolbar>
+          {/*
+            Named, because it is the only way to reach the navigation in this
+            app and an unlabelled icon button is announced as just "button".
+          */}
           <IconButton
             color="inherit"
             edge="start"
+            aria-label="Open navigation menu"
             onClick={toggleDrawer}
             sx={{ mr: 2 }}
           >

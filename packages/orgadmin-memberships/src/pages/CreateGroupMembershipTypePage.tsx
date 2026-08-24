@@ -374,8 +374,9 @@ const CreateGroupMembershipTypePage: React.FC = () => {
 
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>Membership Form</InputLabel>
+                  <InputLabel id="membership-form-label">Membership Form</InputLabel>
                   <Select
+                    labelId="membership-form-label"
                     value={formData.membershipFormId}
                     label="Membership Form"
                     onChange={(e) => handleChange('membershipFormId', e.target.value)}
@@ -391,8 +392,9 @@ const CreateGroupMembershipTypePage: React.FC = () => {
 
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>Membership Status</InputLabel>
+                  <InputLabel id="membership-status-label">Membership Status</InputLabel>
                   <Select
+                    labelId="membership-status-label"
                     value={formData.membershipStatus}
                     label="Membership Status"
                     onChange={(e) => handleChange('membershipStatus', e.target.value)}
@@ -620,8 +622,9 @@ const CreateGroupMembershipTypePage: React.FC = () => {
 
               <Grid item xs={12}>
                 <FormControl fullWidth required>
-                  <InputLabel>Supported Payment Methods</InputLabel>
+                  <InputLabel id="supported-payment-methods-label">Supported Payment Methods</InputLabel>
                   <Select
+                    labelId="supported-payment-methods-label"
                     multiple
                     value={formData.supportedPaymentMethods}
                     label="Supported Payment Methods"

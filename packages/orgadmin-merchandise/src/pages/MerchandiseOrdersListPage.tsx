@@ -19,7 +19,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -36,7 +35,7 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatCurrency, formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import BatchOrderOperationsDialog from '../components/BatchOrderOperationsDialog';
 import type { MerchandiseOrder, OrderStatus, PaymentStatus } from '../types/merchandise.types';
 
@@ -243,7 +242,7 @@ const MerchandiseOrdersListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('merchandise.table.orderId')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -309,7 +308,7 @@ const MerchandiseOrdersListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       <BatchOrderOperationsDialog
         open={batchDialogOpen}

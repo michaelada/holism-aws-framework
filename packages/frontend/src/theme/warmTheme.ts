@@ -25,18 +25,27 @@ export const warmTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      // Amber 900. 4.6:1 on white, so contained buttons and primary text
-      // affordances meet WCAG AA. The brighter #FF9800 fails at 2.1:1 and is
-      // kept below as `light`, for tints only.
-      main: '#E65100',
+      /*
+       * Signal Orange, measured at **4.60:1** against white text.
+       *
+       * This was `#E65100` under a comment claiming 4.6:1. It measures
+       * **3.79:1** — the very number DESIGN.md's Measured Value Rule was
+       * written about, still shipping here because the correction was made in
+       * `orgadmin-shell`'s copy of this theme and not in this one. The
+       * brighter #FF9800 fails at 2.16:1 and stays below as `light`, for tints
+       * only.
+       */
+      main: '#D24400',
       light: '#FF9800',
       dark: '#BF360C',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#B26A00', // Gold, darkened to carry white text
+      // Signal Gold, 5.19:1. `#B26A00` measured 4.24:1 — short of AA with the
+      // white text this palette declares for it.
+      main: '#A15C00',
       light: '#FFC107',
-      dark: '#8D5300',
+      dark: '#7C4700',
       contrastText: '#ffffff',
     },
     error: {
@@ -45,9 +54,9 @@ export const warmTheme = createTheme({
       dark: '#B71C1C',
     },
     warning: {
-      main: '#B26A00',
+      main: '#A15C00', // 5.19:1
       light: '#F59E0B',
-      dark: '#8D5300',
+      dark: '#7C4700',
     },
     success: {
       main: '#15803D',
@@ -176,7 +185,7 @@ export const warmTheme = createTheme({
         // A visible focus ring everywhere, in the brand colour rather than the
         // UA default, so keyboard position is never ambiguous.
         ':focus-visible': {
-          outline: '2px solid #E65100',
+          outline: '2px solid #D24400',
           outlineOffset: '2px',
         },
       },
@@ -247,7 +256,7 @@ export const warmTheme = createTheme({
             },
             '&:hover fieldset': { borderColor: 'rgba(15,23,42,0.32)' },
             '&.Mui-focused fieldset': {
-              borderColor: '#E65100',
+              borderColor: '#D24400',
               borderWidth: '2px',
             },
             '&.Mui-error fieldset': { borderColor: '#D32F2F' },
@@ -307,12 +316,17 @@ export const warmTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
+          /*
+           * Deep Orange on the tint, not Signal. Signal's 4.60:1 is against
+           * white, and this label never sits on white — on its own 10% wash it
+           * is 4.3:1. Measured against the ground it is actually painted on.
+           */
           '&.Mui-selected': {
-            backgroundColor: 'rgba(230, 81, 0, 0.10)',
-            color: '#E65100',
+            backgroundColor: 'rgba(210, 68, 0, 0.10)',
+            color: '#BF360C',
             fontWeight: 600,
-            '&:hover': { backgroundColor: 'rgba(230, 81, 0, 0.14)' },
-            '& .MuiListItemIcon-root': { color: '#E65100' },
+            '&:hover': { backgroundColor: 'rgba(210, 68, 0, 0.14)' },
+            '& .MuiListItemIcon-root': { color: '#BF360C' },
           },
         },
       },

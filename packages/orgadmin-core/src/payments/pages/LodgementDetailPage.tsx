@@ -17,6 +17,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { ResponsiveTable } from '../../components';
 import {
   Alert,
   Box,
@@ -32,7 +33,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Typography,
@@ -243,7 +243,7 @@ const LodgementDetailPage: React.FC = () => {
         {t('payments.lodgements.paymentsIn')}
       </Typography>
 
-      <TableContainer component={Card} sx={{ overflowX: 'auto' }}>
+      <ResponsiveTable identityColumn={t('payments.lodgements.columnMember')} component={Card} sx={{ overflowX: 'auto' }}>
         <Table>
           <TableHead>
             <TableRow>
@@ -375,7 +375,7 @@ const LodgementDetailPage: React.FC = () => {
             </TableRow>
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

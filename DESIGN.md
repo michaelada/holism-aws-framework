@@ -214,6 +214,11 @@ only vocabulary it has for danger.
 above carries its measured ratio against white; the incumbent code claimed 4.6:1 for a colour that
 measures 3.79:1, and that claim shipped. Measure, then write the number down.
 
+*Against white is not always the right background.* Signal Orange is 4.60:1 on white and **4.23:1**
+on the selected navigation item's own 12% flare wash, which is where that label actually lives — so
+the selected rail item is **Deep Orange** (#BF360C, 5.16:1 on the wash), not Signal. A ratio quoted
+against white is only a claim about text on white.
+
 ## Typography
 
 **Display Font:** Sora (with Roboto, Helvetica, Arial, sans-serif)
@@ -277,6 +282,18 @@ phone first.
 **The Reachable Not Optimised Rule.** On a phone, an administrator must be able to complete any task
 and must never be blocked. They are not entitled to the same efficiency — a bulk action that takes
 three taps instead of one is acceptable; a bulk action that cannot be reached is not.
+
+**The Stacked Row Rule.** Below `md` a list table is not a table: each record becomes a block and
+each cell a label/value pair, the label being the column heading the cell lost.
+`orgadmin-core`'s `ResponsiveTable` does this for any table by reading the headings out of the DOM,
+so no call site describes its columns twice.
+
+**Every list names its identity column.** `identityColumn` marks the column that says *which record
+this is* — a member's name, an event's title, an order's reference. It leads the stacked row as a
+heading and carries no label, because a name captioned "Name" tells the reader nothing. It is never
+the same position twice, so it cannot be inferred and has to be said; a list that genuinely has no
+single identifying column (two halves of a person's name in separate columns) leaves it out rather
+than leading on half an answer.
 
 ## Elevation & Depth
 
@@ -372,9 +389,11 @@ approached.
 
 The rail is white, 248px, with a `hairline` right edge. Items are 8px-radius rows at 8px × 12px with
 a 2px × 8px margin. Resting items are `ink-muted`; hover washes to `rgba(255,152,0,0.08)`; the
-selected item takes `rgba(255,152,0,0.12)` with an `orange-signal` label at 600 and a matching icon.
-Selection is carried by ground and colour together, never by colour alone. Below `md` the rail
-becomes a temporary drawer with `keepMounted`.
+selected item takes `rgba(255,152,0,0.12)` with an **`orange-deep`** label at 600 and a matching
+icon — `orange-signal` reaches only 4.23:1 on that wash. Selection is carried by ground and colour
+together, never by colour alone, and the colour has to reach the **label**, not just the icon: the
+rail renders its labels as `body2`, which carries a colour of its own and quietly won. Below `md`
+the rail becomes a temporary drawer with `keepMounted`.
 
 ### Tables
 
@@ -428,11 +447,14 @@ This file is normative; the code is not yet. Recorded so the gap is a task list,
 
 | Where | Current | Required |
 |---|---|---|
-| `packages/orgadmin-shell` primary fill | `#FF9800 → #E65100` gradient, white text at 2.16:1 | `#D24400 → #BF360C`, 4.60:1 |
-| `packages/orgadmin-shell` status colours | #EF4444 / #22C55E / #3B82F6 / #F59E0B, all below 4.5:1 | #D32F2F / #15803D / #1D4ED8 / #A15C00 |
 | `packages/admin` form language | flat, `disableElevation`, radius 8, fixed type scale | pills, gradient, lift, glow, radius 12 |
 | `packages/frontend` | Sora not linked in `index.html`; falls back to Roboto | link Sora, as the other three apps do |
 | Theme location | three near-identical copies in three packages | one theme in `packages/components` |
+| Org-admin list tables below `md` | ~~horizontally scrolling grids~~ — done, via `orgadmin-core`'s `ResponsiveTable` | — |
+
+`packages/orgadmin-shell` was brought onto this file on 23 August 2026 — palette,
+status colours, contained-button colour handling, selected navigation and heading
+colour. See [docs/ORGADMIN_DESIGN_SYSTEM_ALIGNMENT.md](docs/ORGADMIN_DESIGN_SYSTEM_ALIGNMENT.md).
 
 `packages/account-shell` is deliberately outside this table. It themes per club at runtime from the
 organisation's primary colour, and its job is to carry the *club's* identity, not the platform's.

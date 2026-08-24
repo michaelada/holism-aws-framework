@@ -15,7 +15,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Typography,
@@ -28,7 +27,7 @@ import {
   CalendarMonth as CalendarViewIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatDate, formatCurrency, usePageHelp, useLocale } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { Booking, BookingsFilterOptions } from '../types/calendar.types';
 
 const BookingsListPage: React.FC = () => {
@@ -109,7 +108,7 @@ const BookingsListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('calendar.table.bookingReference')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -163,7 +162,7 @@ const BookingsListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

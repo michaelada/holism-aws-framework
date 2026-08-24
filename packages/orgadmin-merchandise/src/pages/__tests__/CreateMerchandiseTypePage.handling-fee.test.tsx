@@ -41,7 +41,8 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useOrganisation: () => ({
     organisation: { id: 'org-1', currency: 'EUR' },
   }),

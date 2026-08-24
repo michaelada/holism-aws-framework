@@ -29,7 +29,8 @@ vi.mock('@aws-web-framework/components', () => ({
   DiscountSelector: () => <div data-testid="discount-selector" />,
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: vi.fn().mockResolvedValue([]),
   }),

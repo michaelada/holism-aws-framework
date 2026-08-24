@@ -128,7 +128,12 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { card } = module;
-  const accent = card.color || '#FF9800';
+  /*
+   * Signal Orange, not Flare. The accent paints the "Go" affordance as well as
+   * the illustration, and Flare Orange is 2.16:1 — unreadable at the 0.8rem
+   * that label runs at.
+   */
+  const accent = card.color || '#D24400';
   const illustration = illustrations[module.id] ?? illustrations.default;
 
   const handleClick = () => navigate(card.path);
@@ -154,6 +159,14 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
       onKeyDown={handleKeyDown}
       sx={{
         height: '100%',
+        /*
+         * A column, so the "Go" affordance can be pushed to the foot of the
+         * card. Descriptions run to one line or two depending on the module and
+         * the locale, which left the twelve links scattered across two
+         * different heights in every row.
+         */
+        display: 'flex',
+        flexDirection: 'column',
         cursor: 'pointer',
         position: 'relative',
         overflow: 'hidden',
@@ -197,7 +210,17 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
       </Box>
 
       {/* Content */}
-      <Box sx={{ px: '1.25rem', pt: '1rem', pb: '1.25rem' }}>
+      <Box
+        sx={{
+          px: '1.25rem',
+          pt: '1rem',
+          pb: '1.25rem',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+        }}
+      >
         {/*
           Rendered as an h5, not the h6 the variant implies: the page title
           above is an h4, and a screen reader announcing a jump from h4 to h6
@@ -230,6 +253,7 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
         <Box
           className="illus-arrow"
           sx={{
+            mt: 'auto', // sits on the card's floor, level with its neighbours
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.3rem',

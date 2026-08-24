@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ResponsiveTable } from '../../components';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -17,7 +18,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -197,7 +197,7 @@ const AccountUsersListPage: React.FC = () => {
         Account users can enter events, purchase merchandise, make bookings, and register for programmes.
       </Typography>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('users.fields.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -263,7 +263,7 @@ const AccountUsersListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

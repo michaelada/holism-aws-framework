@@ -278,7 +278,7 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 
   it('should render fields in the correct order based on field.order property', async () => {
     await fc.assert(
@@ -315,7 +315,7 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 
   it('should render each field with the correct datatype mapping', async () => {
     await fc.assert(
@@ -356,7 +356,7 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 
   it('should render required fields with required attribute', async () => {
     await fc.assert(
@@ -397,7 +397,7 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 
   it('should render all field types correctly', async () => {
     await fc.assert(
@@ -448,7 +448,7 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 
   it('should handle empty form definitions gracefully', async () => {
     const formDefinition = {
@@ -605,7 +605,7 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 
   it('should maintain field rendering consistency across multiple renders', async () => {
     await fc.assert(
@@ -653,5 +653,5 @@ afterEach(() => cleanup());
       ),
       { numRuns: 10 }
     );
-  });
+  }, 30000);
 });

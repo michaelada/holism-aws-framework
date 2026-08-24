@@ -17,7 +17,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -45,7 +44,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { Event } from '../types/event.types';
 import { useDiscountService } from '../hooks/useDiscountService';
 
@@ -329,7 +328,7 @@ const EventsListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('events.table.eventName')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -438,7 +437,7 @@ const EventsListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       <Dialog
         open={deleteDialogOpen}

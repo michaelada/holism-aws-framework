@@ -163,8 +163,9 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
             </FormControl>
 
             <FormControl fullWidth>
-              <InputLabel>{t('calendar.fields.status')}</InputLabel>
+              <InputLabel id="calendar-status-label">{t('calendar.fields.status')}</InputLabel>
               <Select
+                labelId="calendar-status-label"
                 value={formData.status}
                 label={t('calendar.fields.status')}
                 onChange={(e) => handleChange('status', e.target.value)}
@@ -174,8 +175,9 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel>{t('calendar.fields.applicationForm')}</InputLabel>
+              <InputLabel id="calendar-application-form-label">{t('calendar.fields.applicationForm')}</InputLabel>
               <Select
+                labelId="calendar-application-form-label"
                 value={formData.applicationFormId || ''}
                 label={t('calendar.fields.applicationForm')}
                 onChange={(e) => handleChange('applicationFormId', e.target.value || undefined)}
@@ -249,8 +251,9 @@ const CalendarForm: React.FC<CalendarFormProps> = ({ formData, onChange, payment
           <Typography variant="h6" gutterBottom>{t('calendar.sections.paymentConfiguration')}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <FormControl fullWidth>
-              <InputLabel>{t('calendar.fields.supportedPaymentMethods')}</InputLabel>
+              <InputLabel id="calendar-payment-methods-label">{t('calendar.fields.supportedPaymentMethods')}</InputLabel>
               <Select
+                labelId="calendar-payment-methods-label"
                 multiple
                 value={formData.supportedPaymentMethods}
                 label={t('calendar.fields.supportedPaymentMethods')}

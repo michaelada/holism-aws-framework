@@ -12,6 +12,7 @@
  * already approve this person?" without a search.
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import { ResponsiveTable } from '../../components';
 import {
   Alert,
   Box,
@@ -30,7 +31,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Tabs,
@@ -201,7 +201,7 @@ const RegistrationsPage: React.FC = () => {
               </Typography>
             )
           ) : (
-            <TableContainer>
+            <ResponsiveTable identityColumn={t('users.registrations.columns.name')}>
               <Table size="small" sx={{ minWidth: 650 }}>
                 <TableHead>
                   <TableRow>
@@ -268,7 +268,7 @@ const RegistrationsPage: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </ResponsiveTable>
           )}
         </CardContent>
       </Card>

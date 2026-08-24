@@ -28,7 +28,8 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () =>
   (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
 );
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: vi.fn().mockResolvedValue([]),
     data: null,

@@ -24,7 +24,16 @@ vi.mock('react-router-dom', () => ({
 }));
 
 vi.mock('date-fns', () => ({}));
-vi.mock('date-fns/locale', () => ({ enGB: {} }));
+/*
+ * The whole locale module, with `enGB` stubbed — not `enGB` alone. The
+ * date pickers reach for whichever locale the organisation is set to, so a
+ * mock listing one name fails on `fr` or `de` the moment anything upstream
+ * loads a second locale.
+ */
+vi.mock('date-fns/locale', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  enGB: {},
+}));
 
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
   DatePicker: ({ label, value, onChange }: any) => (
@@ -59,7 +68,8 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   useCapabilities: () => ({ hasCapability: (cap: string) => cap === 'registration-discounts' }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Test Org' } }),
 }));

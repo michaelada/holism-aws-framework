@@ -15,6 +15,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { ResponsiveTable } from '../../components';
 import {
   Alert,
   Box,
@@ -27,7 +28,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Typography,
@@ -232,7 +232,7 @@ const LodgementsPage: React.FC = () => {
           ) : (
             <>
               {/* Scrolls within itself; the page never scrolls sideways. */}
-              <TableContainer component={Card} sx={{ overflowX: 'auto' }}>
+              <ResponsiveTable identityColumn={t('payments.lodgements.columnDate')} component={Card} sx={{ overflowX: 'auto' }}>
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -277,7 +277,7 @@ const LodgementsPage: React.FC = () => {
                     ))}
                   </TableBody>
                 </Table>
-              </TableContainer>
+              </ResponsiveTable>
 
               {/*
                 Stripe gives a cursor and no total, so there is no page count to

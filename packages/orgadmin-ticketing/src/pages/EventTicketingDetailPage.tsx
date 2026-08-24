@@ -27,7 +27,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -45,7 +44,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { ElectronicTicket, TicketSalesSummary } from '../types/ticketing.types';
 import TicketingStatsCards from '../components/TicketingStatsCards';
 import TicketDetailsDialog from '../components/TicketDetailsDialog';
@@ -394,7 +393,7 @@ const EventTicketingDetailPage: React.FC = () => {
       )}
 
       {/* Tickets Table — no event name column */}
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('ticketing.table.ticketReference')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -465,7 +464,7 @@ const EventTicketingDetailPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       {/* Dialogs */}
       {selectedTicket && (

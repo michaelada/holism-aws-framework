@@ -20,7 +20,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -47,7 +46,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatCurrency, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { MerchandiseType, StockLevel } from '../types/merchandise.types';
 
 const MerchandiseTypesListPage: React.FC = () => {
@@ -345,7 +344,7 @@ const MerchandiseTypesListPage: React.FC = () => {
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('merchandise.table.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -440,7 +439,7 @@ const MerchandiseTypesListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
 
       <Dialog
         open={deleteDialogOpen}

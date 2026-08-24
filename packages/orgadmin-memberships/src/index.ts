@@ -32,7 +32,7 @@ export const membershipsModule: ModuleRegistration = {
     title: 'modules.memberships.title',
     description: 'modules.memberships.description',
     icon: MembershipIcon,
-    color: '#6d4c41',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/members',
   },
   routes: [

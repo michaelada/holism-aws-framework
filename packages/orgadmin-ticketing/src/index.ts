@@ -36,7 +36,7 @@ export const ticketingModule: ModuleRegistration = {
     title: 'modules.ticketing.title',
     description: 'modules.ticketing.description',
     icon: TicketIcon,
-    color: '#7b1fa2',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/tickets',
   },
   routes: [

@@ -21,7 +21,7 @@ export const formsModule: ModuleRegistration = {
     title: 'modules.forms.title',
     description: 'modules.forms.description',
     icon: FormIcon,
-    color: '#2e7d32',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/forms',
   },
   routes: [

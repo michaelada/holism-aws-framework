@@ -17,7 +17,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -38,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { MembershipType } from '../types/membership.types';
 
 const MembershipTypesListPage: React.FC = () => {
@@ -201,8 +200,9 @@ const MembershipTypesListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>{t('memberships.filters.status')}</InputLabel>
+              <InputLabel id="membership-status-filter-label">{t('memberships.filters.status')}</InputLabel>
               <Select
+                labelId="membership-status-filter-label"
                 value={statusFilter}
                 label={t('memberships.filters.status')}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -213,8 +213,9 @@ const MembershipTypesListPage: React.FC = () => {
               </Select>
             </FormControl>
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>{t('memberships.filters.type')}</InputLabel>
+              <InputLabel id="membership-type-filter-label">{t('memberships.filters.type')}</InputLabel>
               <Select
+                labelId="membership-type-filter-label"
                 value={categoryFilter}
                 label={t('memberships.filters.type')}
                 onChange={(e) => setCategoryFilter(e.target.value as any)}
@@ -228,7 +229,7 @@ const MembershipTypesListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('memberships.table.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -312,7 +313,7 @@ const MembershipTypesListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

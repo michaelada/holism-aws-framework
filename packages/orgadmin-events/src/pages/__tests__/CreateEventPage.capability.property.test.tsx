@@ -83,7 +83,8 @@ vi.mock('@mui/x-date-pickers/AdapterDateFns', () => ({
   AdapterDateFns: class {},
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: mockExecute,
     data: null,

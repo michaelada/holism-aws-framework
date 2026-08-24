@@ -21,7 +21,7 @@ export const registrationsModule: ModuleRegistration = {
     title: 'modules.registrations.title',
     description: 'modules.registrations.description',
     icon: RegistrationIcon,
-    color: '#1565c0',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/registrations',
   },
   routes: [

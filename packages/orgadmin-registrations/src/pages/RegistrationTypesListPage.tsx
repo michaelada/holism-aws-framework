@@ -17,7 +17,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -35,7 +34,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import type { RegistrationType } from '../types/registration.types';
 
 const RegistrationTypesListPage: React.FC = () => {
@@ -176,7 +175,7 @@ const RegistrationTypesListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('registrations.table.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -257,7 +256,7 @@ const RegistrationTypesListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

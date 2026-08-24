@@ -55,6 +55,23 @@ const testTranslations = {
             message: 'Remove labels from {{count}} selected member(s)?',
           },
         },
+        // The column names, which the stacked small-screen layout repeats as
+        // field labels — without them those rows assert against key paths.
+        table: {
+          membershipType: 'Membership Type',
+          name: 'Name',
+          membershipNumber: 'Membership Number',
+          dateLastRenewed: 'Date Last Renewed',
+          status: 'Status',
+          validUntil: 'Valid Until',
+          labels: 'Labels',
+          processed: 'Processed',
+          actions: 'Actions',
+        },
+        tooltips: {
+          viewDetails: 'View Details',
+          edit: 'Edit',
+        },
         actions: {
           execute: 'Execute',
           exportToExcel: 'Export to Excel',

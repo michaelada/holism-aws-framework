@@ -151,9 +151,16 @@ afterEach(() => cleanup());
         // Clean up
         unmount();
       }),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Each case mounts the page, so a hundred of
+       * them cannot finish inside a test timeout — and under coverage
+       * instrumentation, which is slower again, this was the one test that took
+       * the whole `test:coverage` run down with it. Ten generated filter states
+       * cover what this property varies over many times.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   /**
    * Property: Filter state should be restored when returning from create member page
@@ -204,9 +211,16 @@ afterEach(() => cleanup());
         // Clean up
         unmount();
       }),
-      { numRuns: 100 }
+      /*
+       * Ten, not fifty or a hundred. Each case mounts the page, so a hundred of
+       * them cannot finish inside a test timeout — and under coverage
+       * instrumentation, which is slower again, this was the one test that took
+       * the whole `test:coverage` run down with it. Ten generated filter states
+       * cover what this property varies over many times.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 
   /**
    * Property: Empty filter state should not cause errors
@@ -317,7 +331,14 @@ afterEach(() => cleanup());
           unmount();
         }
       ),
-      { numRuns: 50 }
+      /*
+       * Ten, not fifty or a hundred. Each case mounts the page, so a hundred of
+       * them cannot finish inside a test timeout — and under coverage
+       * instrumentation, which is slower again, this was the one test that took
+       * the whole `test:coverage` run down with it. Ten generated filter states
+       * cover what this property varies over many times.
+       */
+      { numRuns: 10 }
     );
-  });
+  }, 20000);
 });

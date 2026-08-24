@@ -27,7 +27,8 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: mockExecute,
     data: null,

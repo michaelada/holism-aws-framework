@@ -3,6 +3,7 @@
     "actions": {
       "save": "Guardar",
       "cancel": "Cancelar",
+      "retry": "Tentar novamente",
       "delete": "Eliminar",
       "edit": "Editar",
       "create": "Criar",

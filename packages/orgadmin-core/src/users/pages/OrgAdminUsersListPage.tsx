@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { ResponsiveTable } from '../../components';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -17,7 +18,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -179,7 +179,7 @@ const OrgAdminUsersListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn={t('users.fields.name')} component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -251,7 +251,7 @@ const OrgAdminUsersListPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </ResponsiveTable>
     </Box>
   );
 };

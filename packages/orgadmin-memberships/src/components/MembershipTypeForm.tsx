@@ -98,8 +98,9 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
 
         <Grid item xs={12} md={6}>
           <FormControl fullWidth required>
-            <InputLabel>{t('memberships.fields.membershipForm')}</InputLabel>
+            <InputLabel id="membership-form-label">{t('memberships.fields.membershipForm')}</InputLabel>
             <Select
+              labelId="membership-form-label"
               value={formData.membershipFormId}
               label={t('memberships.fields.membershipForm')}
               onChange={(e) => onChange('membershipFormId', e.target.value)}
@@ -115,8 +116,9 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
 
         <Grid item xs={12} md={6}>
           <FormControl fullWidth required>
-            <InputLabel>{t('memberships.fields.membershipStatus')}</InputLabel>
+            <InputLabel id="membership-status-label">{t('memberships.fields.membershipStatus')}</InputLabel>
             <Select
+              labelId="membership-status-label"
               value={formData.membershipStatus}
               label={t('memberships.fields.membershipStatus')}
               onChange={(e) => onChange('membershipStatus', e.target.value)}
@@ -188,8 +190,9 @@ const MembershipTypeForm: React.FC<MembershipTypeFormProps> = ({
 
         <Grid item xs={12}>
           <FormControl fullWidth required>
-            <InputLabel>{t('memberships.fields.supportedPaymentMethods')}</InputLabel>
+            <InputLabel id="supported-payment-methods-label">{t('memberships.fields.supportedPaymentMethods')}</InputLabel>
             <Select
+              labelId="supported-payment-methods-label"
               multiple
               value={formData.supportedPaymentMethods}
               label={t('memberships.fields.supportedPaymentMethods')}

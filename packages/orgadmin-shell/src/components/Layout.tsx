@@ -227,31 +227,23 @@ export const Layout: React.FC<LayoutProps> = ({
     );
   }, [location.pathname, sortedModules]);
 
-  // Create gradient background based on module color (same as DashboardCard)
-  const getGradientBackground = (color: string) => {
-    // Lighten the color for gradient effect
-    const lightenColor = (hex: string, percent: number) => {
-      const num = parseInt(hex.replace('#', ''), 16);
-      const amt = Math.round(2.55 * percent);
-      const R = (num >> 16) + amt;
-      const G = (num >> 8 & 0x00FF) + amt;
-      const B = (num & 0x0000FF) + amt;
-      return '#' + (
-        0x1000000 +
-        (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-        (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-        (B < 255 ? (B < 1 ? 0 : B) : 255)
-      ).toString(16).slice(1);
-    };
-
-    const lightColor = lightenColor(color, 40);
-    // Use the same opacity values as the card: 15 (~8% opacity) and 25 (~15% opacity)
-    return `linear-gradient(135deg, ${color}15 0%, ${lightColor}25 100%)`;
-  };
-
-  // Get the current module's color for theming
-  const moduleColor = currentModule?.card?.color;
-  const moduleGradient = moduleColor ? getGradientBackground(moduleColor) : undefined;
+  /*
+   * The rail and the app bar carry no module tint.
+   *
+   * There used to be a `linear-gradient(135deg, ${color}15, ${lightColor}25)`
+   * on both, built from the current module's card colour. The `15` and `25`
+   * are alpha — 8% and 15% — and on `.MuiDrawer-paper` that *replaced* the
+   * opaque white the theme sets. The permanent rail got away with it by
+   * sitting against a white page; the temporary drawer on a phone is an
+   * overlay, so the page showed straight through the menu.
+   *
+   * Removed rather than made opaque, for two reasons. DESIGN.md is explicit
+   * that the rail is white and "never a tinted sidebar — the warmth in this
+   * system comes from the page, not from a coloured chrome". And now that
+   * every module shares one accent, a per-module tint is the same tint
+   * everywhere: it distinguishes nothing and costs the app bar the 95%-white
+   * blur the design specifies.
+   */
 
   /** Sub-items the organisation's capabilities actually allow. */
   const visibleSubItems = React.useCallback(
@@ -445,9 +437,6 @@ export const Layout: React.FC<LayoutProps> = ({
         sx={{
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           ml: { md: `${DRAWER_WIDTH}px` },
-          ...(moduleGradient && {
-            background: moduleGradient,
-          }),
         }}
       >
         <Toolbar>
@@ -551,9 +540,6 @@ export const Layout: React.FC<LayoutProps> = ({
               '& .MuiDrawer-paper': {
                 boxSizing: 'border-box',
                 width: DRAWER_WIDTH,
-                ...(moduleGradient && {
-                  background: moduleGradient,
-                }),
               },
             }}
           >
@@ -568,9 +554,6 @@ export const Layout: React.FC<LayoutProps> = ({
               '& .MuiDrawer-paper': {
                 boxSizing: 'border-box',
                 width: DRAWER_WIDTH,
-                ...(moduleGradient && {
-                  background: moduleGradient,
-                }),
               },
             }}
             open

@@ -78,8 +78,18 @@ echo "  now at $(git rev-parse --short HEAD) — $(git log -1 --format=%s)"
 # ---------------------------------------------------------------------------
 # The front-end bundles carry PUBLIC_URL, so `web` is rebuilt whenever anything
 # changes rather than only when its Dockerfile does.
+#
+# `--profile tools` matters. Compose only builds services whose profiles are
+# active, and `tools` is behind one — so a plain `$COMPOSE build` rebuilt the
+# application and left the tools image exactly as first boot created it. The
+# migrations are baked into that image, so `node-pg-migrate up` below ran
+# against a months-old copy of the directory, found nothing new to do, reported
+# "Migrations complete!" and returned 0. On itsps.org that silently held the
+# database at migration 029 through every deployment after the first, while the
+# code moved on — which surfaced as the audit log 500ing on a table no migration
+# had ever created.
 log "Rebuilding"
-$COMPOSE build
+$COMPOSE --profile tools build
 
 log "Migrating"
 $TOOLS npx node-pg-migrate up -m migrations

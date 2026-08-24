@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { ResponsiveTable } from '../../components';
 import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
@@ -18,7 +19,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Paper,
@@ -255,7 +255,7 @@ const MembersReportPage: React.FC = () => {
           )}
 
           {!loading && data && membershipTypes.length > 0 && (
-            <TableContainer component={Paper} variant="outlined">
+            <ResponsiveTable identityColumn={t('reporting.members.table.membershipType')} component={Paper} variant="outlined">
               <Table>
                 <TableHead>
                   <TableRow>
@@ -301,7 +301,7 @@ const MembersReportPage: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </ResponsiveTable>
           )}
 
           {!loading && data && membershipTypes.length === 0 && (

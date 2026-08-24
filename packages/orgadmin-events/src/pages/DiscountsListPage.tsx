@@ -24,7 +24,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -53,7 +52,7 @@ import {
   ToggleOff as DeactivateIcon,
   Assessment as StatsIcon,
 } from '@mui/icons-material';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
 import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
 import type { Discount, DiscountStatus, DiscountType, ApplicationScope } from '../types/discount.types';
 
@@ -371,7 +370,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
+      <ResponsiveTable identityColumn="Name" component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -490,7 +489,7 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
-      </TableContainer>
+      </ResponsiveTable>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

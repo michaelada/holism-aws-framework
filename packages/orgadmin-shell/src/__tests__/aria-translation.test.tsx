@@ -13,7 +13,8 @@ import { initializeI18n, DEFAULT_LOCALE } from '../i18n/config';
  */
 
 // Mock OrganisationContext
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useOrganisation: () => ({
     organisation: {
       id: 'test-org',

@@ -23,7 +23,7 @@ export const auditModule: ModuleRegistration = {
     title: 'modules.audit.title',
     description: 'modules.audit.description',
     icon: AuditIcon,
-    color: '#546e7a',
+    color: '#D24400', // the one accent; modules are told apart by their illustration
     path: '/audit',
   },
   routes: [

@@ -26,7 +26,13 @@ describe('Landing page card visibility', () => {
     expect(card.title).toBeTruthy();
     expect(card.description).toBeTruthy();
     expect(card.icon).toBeDefined();
-    expect(card.color).toBe('#1565c0');
+    /*
+     * That a colour is set, not which one. The requirement this test cites asks
+     * the card to define a colour; pinning the literal value made it a
+     * change-detector for a palette decision, and it failed the day the module
+     * accents moved onto the design system's single warm accent.
+     */
+    expect(card.color).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 
   it('should be hidden when capability is absent (Req 1.3)', () => {
