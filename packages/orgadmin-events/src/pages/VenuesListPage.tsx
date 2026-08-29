@@ -293,6 +293,19 @@ const VenuesListPage: React.FC = () => {
         </Table>
       </ResponsiveTable>
 
+      {/*
+        On the page, not only inside the create/edit dialog.
+        `confirmDelete` sets the same `error`, and the dialog it used to live in
+        is closed by then — so a delete the server refused (a venue or type an
+        event still references) failed silently, leaving the row on screen with
+        no explanation.
+      */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingVenue ? 'Edit Venue' : 'Create Venue'}</DialogTitle>
         <DialogContent>

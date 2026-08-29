@@ -168,9 +168,15 @@ export const ApplicationFeeEditor: React.FC<ApplicationFeeEditorProps> = ({
                     halfSet && isBlank(entry.applicationFeeFixed)
                       ? 'Set both, or clear both.'
                       : `Type default: ${
-                          fee.typeDefaultFixed === null
+                          /*
+                           * `isBlank`, not `=== null`: a response without the
+                           * key at all yields `undefined`, and `format` then
+                           * throws on `.toFixed` — taking the whole edit page
+                           * blank rather than showing "not set".
+                           */
+                          isBlank(fee.typeDefaultFixed)
                             ? 'not set'
-                            : format(fee.typeDefaultFixed, currency)
+                            : format(fee.typeDefaultFixed as number, currency)
                         }`
                   }
                   InputProps={{
@@ -201,7 +207,7 @@ export const ApplicationFeeEditor: React.FC<ApplicationFeeEditorProps> = ({
                     halfSet && isBlank(entry.applicationFeePercentage)
                       ? 'Set both, or clear both.'
                       : `Type default: ${
-                          fee.typeDefaultPercentage === null
+                          isBlank(fee.typeDefaultPercentage)
                             ? 'not set'
                             : `${fee.typeDefaultPercentage}%`
                         }`

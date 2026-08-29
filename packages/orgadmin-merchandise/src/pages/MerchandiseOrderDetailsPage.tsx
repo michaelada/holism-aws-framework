@@ -106,6 +106,29 @@ const MerchandiseOrderDetailsPage: React.FC = () => {
     );
   }
 
+  /*
+   * A request that failed and an order that does not exist are different
+   * problems: one is worth retrying, the other is not. Reporting a network
+   * failure as "order not found" sends a club looking for an order that is
+   * still there, with no way to try again.
+   */
+  if (error && !order) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={loadOrder}>
+              {t('common.actions.retry')}
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+
   if (notFound || !order) {
     return (
       <Box sx={{ p: 3 }}>
@@ -183,7 +206,7 @@ const MerchandiseOrderDetailsPage: React.FC = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography color="text.secondary">{t('merchandise.orders.selectedOptions')}:</Typography>
                   <Typography>
-                    {Object.entries(order.selectedOptions).map(([key, value]) => `${key}: ${value}`).join(', ') || 'N/A'}
+                    {Object.entries(order.selectedOptions ?? {}).map(([key, value]) => `${key}: ${value}`).join(', ') || 'N/A'}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

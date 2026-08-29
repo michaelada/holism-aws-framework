@@ -35,8 +35,9 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   return (
     <Box>
       <FormControl fullWidth>
-        <InputLabel>Roles</InputLabel>
+        <InputLabel id="role-selector-label">Roles</InputLabel>
         <Select
+          labelId="role-selector-label"
           multiple={multiple}
           value={multiple ? selectedRoleIds : selectedRoleIds[0] || ''}
           onChange={handleChange}

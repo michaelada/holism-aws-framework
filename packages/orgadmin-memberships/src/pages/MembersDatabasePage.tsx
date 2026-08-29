@@ -55,7 +55,7 @@ import {
   DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
+import { formatDate } from '@aws-web-framework/orgadmin-shell';
 import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { useApi } from '@aws-web-framework/orgadmin-core';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';

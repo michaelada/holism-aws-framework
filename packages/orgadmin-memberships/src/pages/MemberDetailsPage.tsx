@@ -34,8 +34,8 @@ import {
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '../../../orgadmin-shell/src/utils/dateFormatting';
-import { useApi } from '../../../orgadmin-core/src/hooks/useApi';
+import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@aws-web-framework/orgadmin-core';
 import type { Member } from '../types/membership.types';
 
 const MemberDetailsPage: React.FC = () => {
@@ -235,8 +235,9 @@ const MemberDetailsPage: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <FormControl fullWidth>
-                    <InputLabel>{t('memberships.fields.status')}</InputLabel>
+                    <InputLabel id="member-status-label">{t('memberships.fields.status')}</InputLabel>
                     <Select
+                      labelId="member-status-label"
                       value={member.status}
                       label={t('memberships.fields.status')}
                       onChange={(e) => handleStatusChange(e.target.value)}

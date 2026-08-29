@@ -220,8 +220,9 @@ const InviteAdminUserPage: React.FC = () => {
 
               <Grid item xs={12}>
                 <FormControl fullWidth required>
-                  <InputLabel>{t('users.fields.roles')}</InputLabel>
+                  <InputLabel id="invite-roles-label">{t('users.fields.roles')}</InputLabel>
                   <Select
+                    labelId="invite-roles-label"
                     multiple
                     value={selectedRoles}
                     onChange={(e) => setSelectedRoles(e.target.value as string[])}

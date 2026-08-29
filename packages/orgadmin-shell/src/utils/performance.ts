@@ -15,7 +15,17 @@ export function measurePageLoad(): void {
   window.addEventListener('load', () => {
     // Wait for all resources to load
     setTimeout(() => {
+      /*
+       * `performance.timing` is deprecated and already absent in some
+       * environments. Reading through it unguarded throws inside a `load`
+       * listener, where nothing catches it — an uncaught error on every page
+       * load, in exchange for a console message nobody asked for.
+       */
       const perfData = window.performance.timing;
+      if (!perfData) {
+        return;
+      }
+
       const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
       const connectTime = perfData.responseEnd - perfData.requestStart;
       const renderTime = perfData.domComplete - perfData.domLoading;

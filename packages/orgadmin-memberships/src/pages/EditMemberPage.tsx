@@ -856,8 +856,9 @@ const EditMemberPage: React.FC = () => {
 
                 {/* Status */}
                 <FormControl fullWidth sx={{ mb: 3 }}>
-                  <InputLabel>{t('memberships.fields.status')}</InputLabel>
+                  <InputLabel id="member-status-label">{t('memberships.fields.status')}</InputLabel>
                   <Select
+                    labelId="member-status-label"
                     value={state.status}
                     label={t('memberships.fields.status')}
                     onChange={(e) => setState(prev => ({ ...prev, status: e.target.value as MemberStatus }))}

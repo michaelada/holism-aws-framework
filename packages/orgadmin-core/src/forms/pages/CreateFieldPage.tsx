@@ -111,7 +111,13 @@ const CreateFieldPage: React.FC = () => {
 
     // Validation: Check if label contains at least one alphanumeric character
     const generatedName = generateFieldName(fieldLabel);
-    if (!generatedName) {
+    /*
+     * Not `!generatedName`: a label of pure punctuation ("!!! ???") survives
+     * that check, because the spaces between the discarded characters become
+     * separators and leave a name of "_". Every answer to the field would then
+     * be keyed on an underscore.
+     */
+    if (!/[a-z0-9]/.test(generatedName)) {
       setError(t('forms.fields.validation.labelAlphanumeric'));
       return;
     }
@@ -288,8 +294,9 @@ const CreateFieldPage: React.FC = () => {
 
                   <Grid item xs={12}>
                     <FormControl fullWidth required>
-                      <InputLabel>{t('forms.fields.fieldType')}</InputLabel>
+                      <InputLabel id="field-type-label">{t('forms.fields.fieldType')}</InputLabel>
                       <Select
+                        labelId="field-type-label"
                         value={fieldType}
                         onChange={(e) => {
                           setFieldType(e.target.value);

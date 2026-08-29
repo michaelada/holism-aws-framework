@@ -159,14 +159,20 @@ export const UserGroupsPage: React.FC = () => {
         url: `/api/orgadmin/user-groups/${deleting.id}`,
       });
       setDeleting(null);
-      // Deleting a group does not rewrite discounts that name it, so say so
-      // rather than leaving a silently broken rule behind.
+      await loadGroups();
+      /*
+       * Deleting a group does not rewrite discounts that name it, so say so
+       * rather than leaving a silently broken rule behind.
+       *
+       * After the reload, not before: `loadGroups` clears `error` when it
+       * succeeds, so a warning set first was wiped a moment later and the
+       * club never saw it.
+       */
       if (result?.usedByDiscounts > 0) {
         setError(
           t('users.groups.deletedButReferenced', { count: result.usedByDiscounts })
         );
       }
-      await loadGroups();
     } catch {
       setError(t('users.groups.errors.deleteFailed'));
     }

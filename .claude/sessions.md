@@ -20323,3 +20323,361 @@ Documented in [docs/COVERAGE_BASELINE.md](docs/COVERAGE_BASELINE.md). Everything
 ## 2026-08-24 13:27:32 — Prompt
 
 Are you able to bring the unt test coverage up to 80% or more ? is that worth it ?
+
+### Assistant
+
+Short answer: yes, I can — but I'd push back on 80% as a flat number, and here's the arithmetic behind that.
+
+**What it would cost.** To reach 80% on all four metrics everywhere: **+352 functions and +6,669 statements**. That's roughly 25–35 more suites of the size I wrote today — call it 1.5–2× this session's work. Tractable, not trivial.
+
+**Where the gap actually is.** 83 files have *zero* tests, holding 10,411 statements. They break down like this:
+
+| | files | statements |
+|---|---|---|
+| pages | 23 | 4,480 |
+| components | 28 | 3,321 |
+| theme / routes / App | 21 | 1,939 |
+| utils + hooks | 6 | 416 |
+| services + api | 4 | 254 |
+
+**Why I'd not chase 80% flat.** v8 counts every JSX line as a statement, so in this repo statement coverage largely measures *"did a test render this component"*, not *"is this logic checked"*. Going 66% → 80% on statements mostly buys render-and-assert-a-heading tests — the ineffective kind you asked me to avoid. `orgadmin-shell/theme/warmTheme.ts` is 460 uncovered "statements" that are an object literal; `account-shell/App.tsx` is 477 more that are routing.
+
+**Where the real risk is.** It's concentrated, not spread. Among the zero-coverage files are core flows with no test at all: `EditMemberPage` (885 stmts), `MemberDetailsPage`, `admin/OrganizationDetailsPage` (777), `CreateRegistrationPage` (589), `EventDetailsPage`. Those deserve tests on their own merits — and covering them alone would drag the repo to roughly 72–76% as a side effect. Separately, only 10 files across `utils/`, `hooks/`, `services/` and `api/` are untested (~670 statements); that's cheap to test and where bugs actually hide, so it should be at 80–90%.
+
+Vitest takes per-glob thresholds, so "80% where logic lives, 60–70% elsewhere" is enforceable rather than a convention.
+
+Starting with the logic modules — cheapest and highest value. Reading the three untested admin services:
+
+Now the shell utilities — `pageMapping` and `performance`, both at 0%:
+
+`performance.timing` is deprecated and absent in some environments — the helper reads it unguarded and throws inside a load listener. Adding the guard:
+
+Next, the events hooks — `useSectionObserver` (0%) and the branch gaps in `useEventForm`:
+
+Now the two `components` logic modules — `ticketGeneration` (38.5%) and `api/client` (36.8%):
+
+Logic modules are done. Now the untested core flows, starting with memberships:
+
+Now the two remaining memberships pages — `MemberDetailsPage` and `MembershipTypeDetailsPage`:
+
+That page reaches across packages by relative path, which is why the mock misses it. Checking how its siblings import:
+
+Both symbols are exported from their packages' entry points — the relative paths are just bypassing the boundary. Fixing the imports:
+
+Memberships jumped to 87.2% statements. Now the admin pages — starting with the two largest:
+
+Now `OrganizationDetailsPage` — the largest untested file in the repo at 777 statements:
+
+Now the remaining admin pages — `AddOrganizationAdminUserPage`, `CreateOrganizationRolePage` and `DashboardPage`:
+
+Same unlabelled-`Select` pattern in the shared `RoleSelector` — fixing it and pointing the test at the combobox:
+
+Admin is at 83.5% statements now. Continuing with orgadmin-core's untested pages:
+
+The existing suite asserts on the source file as text and never renders the page. Adding a behavioural one:
+
+A label of only punctuation generates the field name `_` and saves — the alphanumeric check doesn't catch it. Fixing:
+
+Now the core users pages — `UserGroupsPage`, `InviteAdminUserPage`, `CreateAccountUserPage` — and `FieldsListPage`:
+
+The alert is real but sits inside the region MUI marks `aria-hidden` while a dialog is open — and the "still referenced" warning is wiped by the reload that follows it:
+
+Now the two remaining core users pages — `InviteAdminUserPage` and `CreateAccountUserPage`:
+
+orgadmin-core is at 93.6% statements. Now the events pages:
+
+A failed *delete* sets an error that only renders inside the create/edit dialog — so the club never sees why the delete was refused. Fixing both pages:
+
+Now `EditEventPage` and `EventDetailsPage`:
+
+Events done. Now the remaining single pages — registrations, ticketing, calendar, merchandise and frontend:
+
+Now ticketing, calendar, merchandise and frontend — the last four:
+
+Last two: merchandise order details and the frontend instance pages.
+
+Same defect as the type-details page — a failed load falls through to "not found". Applying the same fix:
+
+Last one — the frontend instance pages:
+
+All the target pages are covered. Now setting the split thresholds and running the full verification sweep:
+
+The glob thresholds split the report, so the non-logic remainder is now judged on its own — 58.5% in admin, 56.3% in frontend. Closing those:
+
+Now `EditOrganizationPage` (23 uncovered) and frontend's `CreateEditObjectPage` (20):
+
+`typeDefaultFixed === null` misses `undefined`, and `format` then throws — blanking the whole edit page. Fixing:
+
+Now the frontend's `CreateEditObjectPage` gap, then the final sweep:
+
+Final verification sweep across all twelve packages plus the backend:
+
+0.05% short in admin. Adding the capability-permission selector — pure handlers, and it decides what a role can do:
+
+All gates pass. Final full run — every front-end package plus the backend:
+
+Everything green. Updating the documentation:
+
+Done — risk-first, with split thresholds.
+
+**Where it landed.** All twelve packages pass their gates, zero threshold errors, every suite green:
+
+| Package | Stmts | Branch | Funcs | Lines | Tests |
+|---|---|---|---|---|---|
+| account-shell | 91.6 | 85.4 | 76.2 | 91.6 | 673 |
+| admin | 84.2 | 82.2 | 67.7 | 84.2 | 548 |
+| components | 69.8 | 78.0 | 74.5 | 69.8 | 453 |
+| frontend | 83.4 | 89.2 | 71.7 | 83.4 | 189 |
+| orgadmin-calendar | 81.8 | 84.2 | 68.6 | 81.8 | 229 |
+| orgadmin-core | 93.6 | 85.9 | 65.7 | 93.6 | 865 |
+| orgadmin-events | 85.8 | 73.7 | 72.3 | 85.8 | 321 |
+| orgadmin-memberships | 87.2 | 78.1 | 65.0 | 87.2 | 526 |
+| orgadmin-merchandise | 83.1 | 82.2 | 65.6 | 83.1 | 143 |
+| orgadmin-registrations | 91.5 | 85.2 | 70.9 | 91.5 | 259 |
+| orgadmin-shell | 79.7 | 86.5 | 71.5 | 79.7 | 746 |
+| orgadmin-ticketing | 91.7 | 87.1 | 70.5 | 91.7 | 115 |
+
+Backend unchanged and passing: 168 suites, 3,226 tests. Statements went from a 63–91 spread to 70–94; several packages moved 20+ points (memberships 69.6 → 87.2, core 83.5 → 93.6, admin 63.8 → 84.2).
+
+**Thresholds are now split**, as recommended: 60% package-wide, 80% under `src/{services,api,hooks,utils}` (70% branches). Worth knowing: a glob threshold *partitions* the report, so the package-wide number is judged on the remainder only — which is what caught admin at 59.95% and needed one more suite.
+
+**What I covered.** Every untested service, hook and util across the repo, plus the core flows that had no test at all — member edit/view, organisations with their administrators and roles, registration creation, the per-event gate list, the bookings calendar, field definitions, user groups, venues and event types, event editing, merchandise orders, and the metadata instance pages.
+
+**Eight real defects fell out of it**, all fixed with the test that found them:
+
+- Two detail pages reported a *failed load* as "not found" — error state set, no branch rendering it. Now distinct, with a retry (`common.actions.retry` added to all six locales).
+- `UserGroupsPage` warned that a deleted group was still referenced by discounts, then wiped the warning with its own reload a tick later.
+- `VenuesListPage`/`EventTypesListPage` rendered delete errors *inside* the create dialog — which is shut when a delete fails, so it failed silently.
+- `CreateFieldPage` accepted a label of pure punctuation and generated the field name `_`; every answer would key on an underscore.
+- Two blank-page crashes: `ApplicationFeeEditor` tested `=== null` where `undefined` arrives and hit `.toFixed`; `MerchandiseOrderDetailsPage` did `Object.entries(null)`.
+- `measurePageLoad` read deprecated `performance.timing` unguarded inside a `load` listener — an uncaught error on every page load where it's absent.
+- Ten forms had `InputLabel`/`Select` pairs with no `id`/`labelId`, so screen readers got an unnamed combobox.
+- `MemberDetailsPage` and `MembersDatabasePage` imported across packages by relative path into another package's `src/`.
+
+One thing to flag: `components` sits at 69.8% statements — the lowest, and its remaining gap is `VirtualizedMetadataTable`, `ImageUpload` and similar presentational components. That's exactly the material I argued isn't worth chasing, so I left it.
+
+Documented in [docs/COVERAGE_BASELINE.md](docs/COVERAGE_BASELINE.md). Everything is uncommitted in the working tree.
+
+---
+
+
+## 2026-08-25 08:30:36 — Prompt
+
+how many tests overall are there now
+
+### Assistant
+
+**8,340 tests**, all passing.
+
+| Runner | Where | Tests |
+|---|---|---|
+| Vitest | 12 front-end packages | 5,067 |
+| Jest | `packages/backend` | 3,226 |
+| Jest | repo root (`__tests__/`) | 47 |
+
+The front-end 5,067 breaks down as: orgadmin-core 865, orgadmin-shell 746, account-shell 673, admin 548, orgadmin-memberships 526, components 453, orgadmin-events 321, orgadmin-registrations 259, orgadmin-calendar 229, frontend 189, orgadmin-merchandise 143, orgadmin-ticketing 115.
+
+For reference, the front-end count was 4,163 at the start of today's coverage work — the risk-first pass added about 900 tests. The backend and root suites are untouched by it.
+
+---
+
+
+## 2026-08-29 12:10:33 — Prompt
+
+can you rnu the database reset command for me
+
+### Assistant
+
+I'll find what the database reset command actually does before running anything.
+
+Confirmed the target is local (`127.0.0.1:5432/aws_framework`, Keycloak on `localhost:8080`, `NODE_ENV=development`). Running the reset — this wipes all application data plus the seeded Keycloak users and rebuilds the demo fixture.
+
+Keycloak isn't up, so the seed aborted before touching anything. Checking the containers:
+
+Keycloak had only just come up (5s ago) when the seed ran. It's healthy now — retrying:
+
+Done — the reset completed successfully.
+
+`npm run seed:demo -- --reset` dropped all application data plus the seeded Keycloak users, then rebuilt the demo fixture against local Postgres (`127.0.0.1/aws_framework`) and Keycloak (`localhost:8080`, realm `aws-framework`).
+
+What's in there now:
+- **4 pony clubs** — Kildare, Laois, Ward Union, and Meath Hunt (`mhpc`, which holds all 22 capabilities)
+- **31 members** across the clubs for the current season, 4 due for renewal in the next 30 days
+- Shop (Kildare, Meath), bookings (Laois, Meath), horse registrations (Meath), e-tickets, and 30 discounts
+- Org admin logins at `admin@<club>.test`, member logins at `<name>@example.test`
+
+One note: the first attempt failed with "Could not reach Keycloak" — the container had only come up ~5 seconds earlier and wasn't accepting connections yet. The seed checks reachability before touching anything, so nothing was half-written; the retry ran clean.
+
+---
+
+
+## 2026-08-29 12:21:40 — Prompt
+
+When I make a change to one field in an event, the audit log message is showing that I changed the open date and closing date for entries. Is it possible that there is some TZ issue like there was with the created_at and updted_at so it looks like the value has changed when in fact it hasn't.
+
+### Assistant
+
+Good hypothesis to check — let me look at how the audit diff is computed and how event dates round-trip.
+
+The read side is fixed, but the write side depends on what the browser sends back. Let me check both the round-trip and the front-end serialization.
+
+Machine is `IST +0100`, so this bug class is live here. Let me check the column types and run a real round-trip.
+
+Column types line up exactly with the symptom — the two fields the user sees are the only `timestamp without time zone` ones; `start_date`/`end_date` are `date`. Now a real round-trip, rolled back so nothing is written:
+
+Round-trip is stable and the diff is empty — so the ISO-string path is not drifting. The TZ hypothesis doesn't hold for these fields. Let me look at what the form actually holds when the event has no entry dates:
+
+That's a real bug — but a null-fallback, not a TZ one. Let me now simulate the **whole** PUT payload the browser sends after loading an event, and diff it exactly as the middleware does:
+
+Decisive. Let me check how the audit viewer labels these fields, since that determines which bug the user is actually seeing:
+
+The audit log survived the reset — and it has the actual evidence. Let me check whether `startDate` ever drifts in the real trail:
+
+Two of those rows are the *old* bug (17:23→16:23, exactly the +1h offset, pre-dating your fix). The two current ones are `from: null`. Let me confirm why `startDate` doesn't drift in practice, since my probe said it should:
+
+Short answer: **no, it's not a timezone issue this time** — but there is a real bug, and I found the evidence in your actual audit trail.
+
+## What the audit log shows
+
+Your `audit_events` table survived the reset, so the history is intact. Filtering event updates:
+
+```
+2026-08-29 11:20  Christmas Fun Day   opendate {"to": "2026-08-29T11:19:50.760Z", "from": null}
+2026-08-21 16:47  Christmas Fun Day   opendate {"to": "2026-08-21T15:47:14.704Z", "from": null}
+2026-08-21 12:58  Spring Dressage     opendate {"to": "...T16:23:46.254Z", "from": "...T17:23:46.254Z"}
+2026-08-21 12:38  Winter Dressage     opendate {"to": "...T16:23:46.269Z", "from": "...T17:23:46.269Z"}
+```
+
+Two distinct causes, and they're clearly separable:
+
+- The **Aug 21 pair** is the old TZ bug — exactly one hour backwards, the Dublin offset. Both pre-date commit `15ccffd`. That one is genuinely fixed.
+- The **current ones** are `from: null`. Nothing drifted; the field had no value and the save invented one. Note the timestamp — `11:19:50`, about 12 seconds before the save at `11:20:02`. That's the moment the edit page finished loading.
+
+## The actual cause
+
+[useEventForm.ts:188-194](packages/orgadmin-events/src/hooks/useEventForm.ts#L188-L194):
+
+```ts
+openDateEntries: response.openDateEntries ? new Date(response.openDateEntries) : new Date(),
+entriesClosingDate: response.entriesClosingDate ? new Date(response.entriesClosingDate) : new Date(),
+```
+
+An event with no entry dates loads with both fields set to *now*. `handleSave` sends the whole `formData`, so editing the name writes two timestamps the user never entered. The same fallback sits in `DEFAULT_FORM_DATA` at [useEventForm.ts:42-45](packages/orgadmin-events/src/hooks/useEventForm.ts#L42-L45), where `new Date()` is evaluated once at module import — so those defaults are also stale by however long the tab has been open.
+
+It's a one-shot per event (null → now, then stable), which is why it looks intermittent.
+
+## I ruled the TZ theory out directly
+
+I round-tripped a real event through the driver and ran the middleware's own `diff()` over the result — the browser's payload, the same parameter binding [event.service.ts:444-451](packages/backend/src/services/event.service.ts#L444-L451) uses, rolled back afterwards:
+
+```
+stored wall-clock:  2026-08-19 12:12:34.758
+browser sends:      2026-08-19T12:12:34.758Z
+after write-back:   2026-08-19 12:12:34.758
+audit diff:         {}
+```
+
+Stable, on this machine at `IST +0100`. Your `pool.ts` parser is holding.
+
+## One thing worth a second look
+
+`start_date` and `end_date` are `date` (OID 1082) — the type `15ccffd` deliberately left alone. That column does **not** survive the same round trip:
+
+```
+stored:                    2026-09-19
+read back / sent by browser: "2026-09-18T23:00:00.000Z"
+stored after no-op save:   2026-09-18
+```
+
+One day backwards per save. But — and this is why I'm flagging it rather than asserting it — `startDate` never appears in your audit trail, not even in the Aug 21 rows where `openDateEntries` was visibly drifting. So something in the real request path is preventing it that my probe didn't reproduce, and I couldn't pin down what. Worth one real save through the UI to settle it before treating it as live.
+
+## Suggested fix
+
+Keep null null, in both places:
+
+```ts
+openDateEntries: response.openDateEntries ? new Date(response.openDateEntries) : undefined,
+entriesClosingDate: response.entriesClosingDate ? new Date(response.entriesClosingDate) : undefined,
+```
+
+The pickers already handle `null` ([EventDatesSection.tsx:104](packages/orgadmin-events/src/components/sections/EventDatesSection.tsx#L104) passes `formData.openDateEntries || null`), and the service maps falsy to `null` on write. `DEFAULT_FORM_DATA` needs the same treatment plus moving the remaining `new Date()` calls into a factory so a create form doesn't start with an import-time timestamp.
+
+I haven't made any changes — say the word and I'll apply the fix with tests.
+
+---
+
+
+## 2026-08-29 12:30:35 — Prompt
+
+Ok, maybe it is that they were null and now they have a value.
+
+Also, when I login and logout of the argadmin area, it is now showing this in the audit log messages, there is no login and no logout audit record.
+
+### Assistant
+
+Your first point matches the evidence exactly — `from: null` on both rows.
+
+Let me look at the login/logout side.
+
+`auth.login` **is** being recorded — 35 rows, the latest at 11:29 UTC, which is just now (your login). So the write works; the question is why you can't see them. Let me check the scoping:
+
+Both confirmed. Let me verify the viewer scoping to close the loop:
+
+Both explained, and they're separate problems.
+
+## 1. Login *is* recorded — it's just filed under no organisation for your account
+
+The rows exist. What differs is `organisation_id`:
+
+```
+11:29  (null)                                admin@kildarehunt.test
+11:27  0720cc06-a1a3-4290-abf6-a182419432cf  admin@meathhunt.test
+11:23  (null)                                admin@kildarehunt.test
+11:19  (null)                                admin@kildarehunt.test
+```
+
+Meath's admin gets a scoped row; Kildare's never does. The reason is in [audit-auth.middleware.ts:104](packages/backend/src/middleware/audit-auth.middleware.ts#L104):
+
+```ts
+organisationId: result.rows.length === 1 ? result.rows[0].organization_id : null,
+```
+
+In the reseeded data `admin@kildarehunt.test` administers **two** clubs — kildare-hunt-pony-club and laois-hunt-pony-club — so the count isn't 1 and the event is filed under nothing. The org-admin viewer then scopes hard on that column ([audit.query.ts:90-91](packages/backend/src/services/audit/audit.query.ts#L90-L91)):
+
+```ts
+if (query.organisationId !== 'all') add('a.organisation_id = ?', query.organisationId);
+```
+
+A NULL row matches no organisation, so it's invisible to every org admin. The comment above the code argues this deliberately — "somebody who administers three clubs has not signed in to any particular one" — which is sound reasoning about attribution, but the consequence wasn't followed through: a multi-org admin can never see their own sign-ins, and the event is only visible at platform level.
+
+The obvious fix is one row per organisation the user administers. Widening the viewer to include NULL-org security events would be simpler but leaks other admins' sign-ins across tenants, so I wouldn't.
+
+Note this is data-dependent — it'll behave differently depending on which login you use, which is probably why it looks inconsistent.
+
+## 2. Logout is never recorded at all
+
+`auth.logout` exists only as a *label*. It's in the permitted-action list at [audit.types.ts:116](packages/backend/src/services/audit/audit.types.ts#L116), in [auditLabels.ts:32](packages/components/src/utils/auditLabels.ts#L32), and translated into all six locales — but nothing anywhere emits it. [useAuth.ts:291-298](packages/orgadmin-shell/src/hooks/useAuth.ts#L291-L298) just redirects:
+
+```ts
+const logout = useCallback(() => {
+  if (authDisabled) window.location.href = '/';
+  else keycloak?.logout();
+}, [keycloak, authDisabled]);
+```
+
+The browser leaves for Keycloak and the backend is never told. So there is no logout record by construction — the UI was built ready to display an event that has no producer.
+
+**Related, and worth knowing:** `POST /api/audit/session` has no callers either. The backend comments at [audit-auth.middleware.ts:18](packages/backend/src/middleware/audit-auth.middleware.ts#L18) and [:68](packages/backend/src/middleware/audit-auth.middleware.ts#L68) say the applications report sign-in outcomes there — they don't; I grepped every package. That means `auth.login-failed` is never recorded, and the whole failed-sign-in half of the design is inert. The comments describe an intent that was never wired up.
+
+## On the reset
+
+Worth flagging: the reset changed all organisation UUIDs and Keycloak user ids, but `audit_events` was **not** wiped — 721 rows survived, including your pre-reset history. That's what let me diagnose the event-date question. The older rows now point at organisation ids that no longer exist, so they'll show unresolved in the viewer.
+
+Nothing changed on disk — the probe scripts are deleted. Want me to fix any of these? The three are independent: the null-date form fallback, the multi-org login attribution, and emitting logout.
+
+---
+
+
+## 2026-08-29 12:37:39 — Prompt
+
+can you deploy the latest code to itsps.org and reset all the data

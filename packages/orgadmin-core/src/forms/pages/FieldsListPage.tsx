@@ -216,8 +216,9 @@ const FieldsListPage: React.FC = () => {
               }}
             />
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>{t('forms.fields.fieldType')}</InputLabel>
+              <InputLabel id="field-type-filter-label">{t('forms.fields.fieldType')}</InputLabel>
               <Select
+                labelId="field-type-filter-label"
                 value={typeFilter}
                 label={t('forms.fields.fieldType')}
                 onChange={(e) => setTypeFilter(e.target.value)}

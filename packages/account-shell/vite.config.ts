@@ -214,11 +214,23 @@ export default defineConfig({
        * The floor the whole repo is held to, so `test:coverage` fails when a
        * change drops below it rather than reporting a number nobody reads.
        */
+      /*
+       * 60% is the floor for the package as a whole, and 80% where the logic
+       * lives. v8 counts every JSX line as a statement, so a package-wide 80%
+       * would mostly buy render-only tests over presentational components;
+       * services, hooks and utils are where a missed branch is a real defect.
+       */
       thresholds: {
         lines: 60,
         functions: 60,
         branches: 60,
         statements: 60,
+        'src/{services,api,hooks,utils}/**': {
+          lines: 80,
+          functions: 80,
+          branches: 70,
+          statements: 80,
+        },
       },
     },
     /**
