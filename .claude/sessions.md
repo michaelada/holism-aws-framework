@@ -21234,3 +21234,390 @@ Six tests in [scripts/__tests__/setup-test-db.test.ts](packages/backend/scripts/
 I left Docker and the `postgres` container running, since that's your normal dev setup — `docker compose stop postgres` if you'd rather not. Everything is uncommitted in the working tree.
 
 ---
+
+
+## 2026-08-31 12:06:16 — Prompt
+
+For the seed program, can you stop using the same name for forms across all organisations, I want to make sure that in KHPC I see a different form that in LHPC
+
+### Assistant
+
+Done. Each club now has its own name for every form.
+
+## What each club calls its forms
+
+| Shape | Kildare | Laois | Ward Union | Meath Hunt |
+|---|---|---|---|---|
+| `fullEntry` | Kildare championship entry | Ballyroan entry form | Ward Union rider entry | Meath Hunt full entry |
+| `campBooking` | Craddockstown camp booking | Ballyroan camp booking | Ward Union camp booking | Tara camp booking |
+| `shortEntry` | Kildare one-class entry | Ballyroan short form | Ward Union quick entry | Meath Hunt short entry |
+| `spectator` | Kildare gate list | Ballyroan visitor sign-in | Ward Union day ticket details | Meath Hunt spectator list |
+| `membershipSingle` | Kildare membership application | Laois membership form | Ward Union membership | Meath Hunt membership application |
+| `membershipFamily` | Kildare family membership | Laois family membership form | Ward Union household membership | Meath Hunt family application |
+| `horseRegistration` | Kildare horse passport record | Laois horse details | Ward Union horse register | Meath Hunt horse registration |
+
+28 names, all distinct. Each club's own vocabulary, and its own venue where the form has one — Craddockstown for Kildare's camp, Ballyroan for Laois, Tara for Meath. Open KHPC's Forms list and nothing on it could belong to LHPC.
+
+## How it's enforced
+
+`SeedForm.name` changed from `string` to `Record<SeedOrg['key'], string>` — [dataset.ts:421](packages/backend/scripts/seed/dataset.ts#L421). A form added without a name for one of the four clubs now fails to compile rather than quietly borrowing another's. The insert takes `form.name[org.key]`; the loop already wrote a separate row per organisation, so nothing else changed.
+
+Four tests in `scripts/seed/__tests__/dataset.test.ts`: every club names every form, no two clubs share a name for a form, no name repeats anywhere in the fixture, and each name mentions its own club, county or venue — that last one catches a column being shifted when the table is edited.
+
+I left the descriptions shared. They explain what each form shape is *for* ("the minimum a club can ask for", "uses every field type the builder offers"), which is documentation of the fixture rather than club-specific text. Say if you'd rather those varied too.
+
+Full backend suite: 174 suites, 3287 tests, all passing. Typecheck clean. Docs updated in [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md), which gained the table above.
+
+## Two things worth flagging
+
+**I haven't run the seed.** `npm run seed:demo` deletes the contents of the dev database and rebuilds it, and talks to Keycloak — destructive enough that I won't run it unprompted. Say the word and I'll run it and check the four Forms lists in the UI.
+
+**The 40 fields still share their labels across clubs** — every club has a "Rider name", a "Pony or horse name", and so on. Same shape of problem, and it shows in the Fields list and the form builder's picker. You asked about forms, so I've left fields alone; happy to give them per-club labels the same way.
+
+Unrelated, since you had it selected: [README.md:73](README.md#L73) labels `npm run dev:account` as "super admin". It's the account-user app on 5176 — super admin is `dev:admin` on 5174. One-line fix if you want it.
+
+---
+
+
+## 2026-08-31 12:26:34 — Prompt
+
+I just ran the seed demo command and had the error below:
+Can you fix this, also, should I be using the Accounts v2 ?
+
+PRI00001:Holism michaeladams$ npm run seed:demo
+
+> aws-web-app-framework@1.0.0 seed:demo
+> npm run seed:demo --workspace=packages/backend --
+
+
+> @aws-web-framework/backend@1.0.0 seed:demo
+> tsx scripts/seed/index.ts
+
+
+  Its Plain Sailing — events demo seed
+  database : 127.0.0.1/aws_framework
+  keycloak : http://localhost:8080 (realm aws-framework)
+  mode     : seed only
+
+  reconciled Keycloak client "account-password-check"
+
+  keycloak: super admin super.admin@itsplainsailing.test  [super-admin, admin]
+  keycloak: Kildare Hunt Pony Club — admin admin@kildarehunt.test
+  keycloak: Laois Hunt Pony Club — admin admin@laoishunt.test
+  keycloak: Ward Union Pony Club — admin admin@wardunion.test
+  keycloak: Meath Hunt Pony Club — admin admin@meathhunt.test
+  keycloak: 23 member logins
+
+(node:60726) Stripe: We recommend building your integration using Accounts v2. See https://docs.stripe.com/api/v2/core/accounts
+(Use `node --trace-warnings ...` to show where the warning was created)
+  stripe: Kildare Hunt Pony Club — acct_1UATJpS3DUPd6NWk
+(node:60726) Stripe: We recommend building your integration using Accounts v2. See https://docs.stripe.com/api/v2/core/accounts
+  stripe: Laois Hunt Pony Club — acct_1UATJt27K7XGqtQR
+(node:60726) Stripe: We recommend building your integration using Accounts v2. See https://docs.stripe.com/api/v2/core/accounts
+  stripe: Ward Union Pony Club — acct_1UATJwS3cQNQ713P
+(node:60726) Stripe: We recommend building your integration using Accounts v2. See https://docs.stripe.com/api/v2/core/accounts
+  stripe: Meath Hunt Pony Club — acct_1UATK12AJGXhgIaz
+  stripe: waiting for Stripe to finish verifying…
+
+
+✖ Seed failed: duplicate key value violates unique constraint "organization_types_name_key"
+error: duplicate key value violates unique constraint "organization_types_name_key"
+    at /Users/michaeladams/Work/Esker/Development/AI/Holism/node_modules/pg/lib/client.js:624:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async seedDatabase (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/scripts/seed/database.ts:314:22)
+    at async main (/Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend/scripts/seed/index.ts:404:20)
+npm error Lifecycle script `seed:demo` failed with error:
+npm error code 1
+npm error path /Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend
+npm error workspace @aws-web-framework/backend@1.0.0
+npm error location /Users/michaeladams/Work/Esker/Development/AI/Holism/packages/backend
+npm error command failed
+npm error command sh -c tsx scripts/seed/index.ts
+PRI00001:Holism michaeladams$
+
+### Assistant
+
+Confirmed the shape of the bug: the run creates Keycloak users and **four Stripe accounts** before it reaches the insert that fails. Let me look at the failing insert and the guard points:
+
+Now let me verify it actually catches the user's case, against their real database:
+
+Now tests for the guard:
+
+Now your second question. Let me check what the code actually uses:
+
+The seed error is fixed. On your Stripe question — the short answer is no, not now.
+
+## The seed failure
+
+You ran `npm run seed:demo` with no flag, against a database that already had a seed in it. The seed builds a fixture from an empty database; it doesn't merge into a populated one. So `--reset` is what you wanted.
+
+Two things were wrong with how it told you that:
+
+- **It reported a constraint, not the mistake.** `duplicate key value violates unique constraint "organization_types_name_key"` names the column that stopped it and says nothing about the flag that fixes it.
+- **It found out last.** That insert is the seed's *first* database write, but by the time it runs, the script has already reconciled every Keycloak user and created **four live Stripe test connected accounts**. Your log shows exactly that: `acct_1UATJp…`, `acct_1UATJt…`, `acct_1UATJw…`, `acct_1UATK1…`, and then it waited on Stripe's verification before failing. Every re-run stranded four more.
+
+Now it asks two queries before touching anything, and stops:
+
+```
+✖ 127.0.0.1/aws_framework already has the "irish-pony-clubs" organisation type and all 4 of its clubs.
+
+  The seed builds its fixture from an empty database; it does not merge into one
+  that already holds it. Choose one:
+
+    npm run seed:demo -- --reset        wipe all application data, then seed
+    npm run seed:demo -- --reset-only   wipe it and stop
+    npm run seed:demo -- --dry-run      show what a seed would write, and change nothing
+```
+
+That's the real output — I ran it against your database to check. No Keycloak pass, no Stripe accounts, nothing left behind. `existingSeedData` is in [database.ts](packages/backend/scripts/seed/database.ts), the guard in [index.ts](packages/backend/scripts/seed/index.ts), seven tests in `scripts/seed/__tests__/existing-seed-data.test.ts`. `--dry-run` is unaffected — it returns before the check. Full suite: 175 suites, 3294 tests, green.
+
+**Your stranded Stripe accounts**: `--reset` purges seeded test accounts by their metadata tag, so the four from this run (and any from earlier attempts) get cleaned up when you next reset.
+
+## Accounts v2
+
+That's the Stripe SDK warning on `accounts.create`, and it's advice for greenfield integrations rather than a deprecation. Three reasons to leave it:
+
+1. **It isn't only the seed.** [stripe-connect.service.ts:149](packages/backend/src/services/stripe-connect.service.ts#L149) creates a `type: 'standard'` account for a real club onboarding, and `accountLinks.create` drives the onboarding redirect. Moving to v2 means reworking the live Connect path — account creation, the onboarding link, the `account.updated` webhook and the `chargesEnabled`/`payoutsEnabled` state the Payment Settings screen reads — not just silencing a seed warning.
+2. **v1 isn't broken.** You're pinned to `2025-10-29.clover` on stripe-node 22.x, and the accounts you just created work.
+3. **The seed and the app must agree.** The seed makes `custom` accounts, the app makes `standard` ones. Migrating one and not the other would give you a fixture that no longer resembles what onboarding produces — which is most of the seed's value.
+
+Worth doing when you have a reason to: v2's unified account model (customer/merchant/recipient configurations) if you need it, or if Stripe puts a date on v1. Not to clear a console warning. I'd note it as a tracked item rather than work.
+
+## Two things I'd flag
+
+**Want me to run `--reset`?** It wipes the dev database, deletes the seeded Keycloak users, and removes those Stripe accounts, then rebuilds — including the new per-club form names. Destructive, so I haven't. Say the word.
+
+**A stale line in the docs I didn't touch**: [EVENTS_DEMO_SEED.md §5](docs/EVENTS_DEMO_SEED.md) still says "Stripe is enabled but not connected… no Connect account, so a card checkout will hit the 'club has not connected a payment account' refusal". Your run shows the seed now creates a connected account per club, so that limitation no longer holds. Outside what you asked, but it'll mislead someone.
+
+---
+
+
+## 2026-08-31 12:32:36 — Prompt
+
+I would like to move to stripe v2 now for everythihng, is that ok for this ?
+
+### Assistant
+
+This one I want to check properly before touching anything — v2 Accounts has availability constraints that would decide it. Let me look at both the codebase surface and the current API.
+
+v2 works on your key, but not the Accounts part. Let me confirm what that means against current docs:
+
+The docs say v2 Accounts is "generally available for Connect users", yet your key 404s. Let me pin down which it is:
+
+Definitive answer, from Stripe itself. Let me scope what the migration would involve so you can judge it:
+
+No — and it's blocked by Stripe, not by anything in the code. I checked against your live test key rather than guessing.
+
+## What Stripe says about your account
+
+`v2.core.accounts` 404s on your pinned API version. Unpinned, Stripe gives the real reason:
+
+```
+400  non_connect_platform_accounts_v2_access_blocked
+     Accounts v2 is not enabled for your livemode merchant acct_102ndU2lw1v
+```
+
+It isn't the SDK — stripe-node 22.4.0 has `v2.core.accounts` and `v2.core.accountLinks`, and other v2 namespaces work on your key right now (`v2.core.events` and `v2.core.eventDestinations` both returned OK). It's your platform account: Stripe classes it as a **non-Connect platform**, and per current docs Accounts v2 is "generally available for Connect users and in **public preview** for other Stripe users" — opt-in from the Dashboard under **Account previews and features**.
+
+So there are two gates, in order:
+
+1. **Enable Accounts v2** on `acct_102ndU2lw1v` in the Stripe Dashboard. Until then every v2 account call fails, in test mode too.
+2. **Bump the pinned API version.** You're on `2025-10-29.clover` in three places ([stripe-connect.service.ts:56](packages/backend/src/services/stripe-connect.service.ts#L56), [lodgement.service.ts:137](packages/backend/src/services/lodgement.service.ts#L137), `stripe.provider.ts`). That version doesn't route `/v2/core/accounts` at all — it's what turns the informative 400 into a bare 404. `2025-11-17.clover` doesn't either.
+
+I've stopped there. Writing the migration against an API I can't call once, in test mode, would be guesswork dressed as work.
+
+## What it involves once you're unblocked
+
+It's more than swapping `accounts.create`. The v1→v2 account model is a different shape:
+
+| Now | Under v2 |
+|---|---|
+| `accounts.create({type:'standard'})` — [stripe-connect.service.ts:149](packages/backend/src/services/stripe-connect.service.ts#L149), real club onboarding | `identity` + `configuration.merchant.capabilities` + `dashboard` + `defaults.responsibilities`. `type` is gone; `standard` vs `custom` becomes a dashboard/configuration choice |
+| `accounts.create({type:'custom'})` — the seed, [stripe.ts:120](packages/backend/scripts/seed/stripe.ts#L120) | Same rework, and it must stay consistent with the app's — a fixture that no longer resembles what onboarding produces is most of the seed's value gone |
+| `accountLinks.create` — the onboarding redirect | `v2.core.accountLinks`, different params |
+| `accounts.retrieve` ×2, `accounts.list`, `accounts.del` | v2 equivalents; `include[]` is explicit in v2, so anything reading `charges_enabled`/`payouts_enabled` needs its fields requested |
+| `account.updated` webhook — [webhook.service.ts:118](packages/backend/src/services/webhook.service.ts#L118), how a club's onboarding completion reaches Payment Settings | v2 uses **thin events** and event destinations, a different delivery model and payload. This is the piece most likely to bite |
+
+`paymentIntents` and `webhooks.constructEvent` are unaffected — v2 Accounts doesn't touch the payment path.
+
+One thing worth deciding early: **partial migration is worse than either end.** The seed and the app must produce the same kind of account, or your fixture stops representing reality.
+
+## What I'd suggest
+
+Enable it in the Dashboard, then tell me and I'll re-run the probe to confirm the 400 clears. If it does, I'll do the migration in one pass — services, seed, webhook, tests — and verify against test mode end to end. If Stripe won't enable it for a non-Connect platform, that's your answer and v1 stays.
+
+Separately: the seed fix from earlier is done and verified, and everything else is still green (175 suites, 3294 tests). Nothing I did in this turn changed any code — it was all read-only probing.
+
+---
+
+
+## 2026-08-31 12:36:25 — Prompt
+
+no its ok, I will stick with v1
+
+### Assistant
+
+Understood — v1 stays. No code changes needed for that; nothing in this turn touched anything, and the pinned `2025-10-29.clover` is fine where it is.
+
+The `We recommend building your integration using Accounts v2` line will keep printing on every seed run. It's the SDK's advice on `accounts.create`, not a deprecation warning, and it's harmless — worth knowing so it doesn't look like a new problem later.
+
+You still haven't got a successful seed run, though. The guard I added will now stop you cleanly instead of failing halfway, but what you actually want is:
+
+```bash
+npm run seed:demo -- --reset
+```
+
+That wipes the dev database, removes the seeded Keycloak users, deletes the seeded Stripe test accounts — including the four stranded by the run that failed — and rebuilds, with the new per-club form names. It's destructive to your dev data, so I've left it to you. Say the word and I'll run it and check the four Forms lists.
+
+Two small things still open from earlier, whenever you want them:
+
+- [EVENTS_DEMO_SEED.md §5](docs/EVENTS_DEMO_SEED.md) still claims the seed leaves clubs without a Connect account. It creates one per club now.
+- The 40 form fields still share their labels across all four clubs — same problem you spotted with forms, one layer down.
+
+---
+
+
+## 2026-08-31 12:38:30 — Prompt
+
+the form field names should be distibnuguishable so I. can make sure the system is not mixing field ownnership up.
+
+### Assistant
+
+Right — the Fields list displays `label`, so that's what has to differ. Let me look at the exact shape first:
+
+160 distinct labels. Now rewrite the dataset:
+
+Now tests, extending the ones I added for forms:
+
+Those regexes are unreadable and brittle. Let me assert something meaningful instead:
+
+Now docs and the full verification:
+
+All 160 field labels are now distinct — 40 fields × 4 clubs, no repeats anywhere.
+
+## Each club has its own vocabulary
+
+| | Person | Mount | Registration wording |
+|---|---|---|---|
+| **Kildare** | Rider | Pony | *Registered horse breed*, *Passport number* |
+| **Laois** | Competitor | Horse | *Breed of horse*, *Equine passport number* |
+| **Ward Union** | Member | Mount | *Breed on the register*, *Passport number on the register* |
+| **Meath Hunt** | Entrant | Pony or horse | *Breed of the registered horse*, *Number on the equine passport* |
+
+So `riderName` reads *Rider name* / *Competitor name* / *Member name* / *Entrant name*, and `yearsRiding` reads *Years riding* / *Years competing* / *Years in the saddle* / *How many years the entrant has ridden*. A field showing up under the wrong club announces itself immediately, which is what you asked for — you don't have to memorise a mapping, the house term tells you.
+
+## One decision I made
+
+**The machine `name` stays shared** — `rider_name` is `rider_name` at all four clubs. It's the platform's canonical key and what a submission's answers are stored under (`registrationSubmission` maps answers through it), so varying it would ripple into stored data for no gain: the Fields list and the builder's picker both render **label**, not name, so label is what makes ownership visible. Say if you'd rather names varied too — it's doable, it just means the answer-mapping becomes org-aware.
+
+## Something I found while doing it
+
+*Breed* and *Height (hands)* each appeared **twice within a single club** — once on the pony fields, once on the horse-registration fields. So even a correctly scoped list had two indistinguishable "Breed" rows. Now `ponyBreed` and `horseBreed` read differently in every club, and the test asserts no label repeats anywhere in the fixture rather than just across clubs.
+
+## Enforcement
+
+`SeedField.label` is `Record<SeedOrg['key'], string>` — a field added without a label for one club fails to compile rather than borrowing another's, same as `SeedForm.name`. Five tests in `scripts/seed/__tests__/dataset.test.ts`: every club labels every field; no two clubs share a label for a field; no label repeats anywhere; `name` stays one-per-field and snake_case; and each club keeps its own word for the person across the ten person-fields — that last one is the cheap guard against a column being shifted in the label table, where every entry names the four clubs positionally.
+
+Full backend suite: 175 suites, 3299 tests, green. Typecheck clean. [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) updated.
+
+You'll need `npm run seed:demo -- --reset` to see any of this — still your call, since it wipes the dev database.
+
+---
+
+
+## 2026-08-31 17:53:08 — Prompt
+
+Is it possible that I can sign in to the orgadmin in one tab on my browser, and then using a different email address sign in to my account admin of another organisation, without the users getting mixed up, so the orgadmin tab stays logged in to it, while the other tab stays logged into the accounts one without any mix up. Currently if I log into Orgadmin, and then try to go to accounts, it tries to log me into accounts using my orgadmin credentials/ token.
+
+### Assistant
+
+Good question, and it's two separate mechanisms. Let me check what's actually happening.
+
+Keycloak is up — let me verify the actual cookie behaviour rather than assert it:
+
+Short answer: **not in the same browser profile** — and it isn't a bug in the apps. Here's the precise mechanism, since it changes what the fix has to be.
+
+## Why the tabs mix
+
+Both front ends point at the **same Keycloak realm**, `aws-framework`, with different clients:
+
+| App | Client | Init mode |
+|---|---|---|
+| org-admin (:5175) | `orgadmin-client` | `onLoad: 'login-required'` |
+| account (:5176) | `account-app` | `onLoad: 'check-sso'` |
+
+Keycloak's SSO session is **one per browser, per realm** — a cookie on `localhost:8080`, shared by every client in that realm. So when the account tab runs `check-sso` ([useAuth.ts:111](packages/account-shell/src/hooks/useAuth.ts#L111)), Keycloak sees your org-admin session and silently hands back a token for *that* user. No prompt, by design: `check-sso` exists so the public directory renders for anonymous visitors and a returning member lands signed in.
+
+Worth ruling out explicitly, because it's the usual suspect: **the apps are not leaking tokens to each other.** Neither stores a token in `localStorage` — keycloak-js keeps them in memory, per tab. The only thing either persists is `orgadmin.currentOrganisationId`. The shared state is entirely Keycloak's cookie.
+
+## What you're hitting, step by step
+
+You arrive at the account app already authenticated as your org-admin identity, that identity isn't a member of the club, and you land on `NotConnectedPage` or `AwaitingApprovalPage` — which *do* offer "Sign in as someone else" (it calls `login({ prompt: 'login' })`). So the escape hatch exists, but only **after** you've been silently signed in as the wrong person and refused. There's no way to choose an identity beforehand.
+
+## What to do today
+
+**Use a separate browser profile, or a private window, for the second app.** The cookie jar is the isolation boundary, so that's the only thing that genuinely gives you two independent sessions. Firefox Multi-Account Containers works too, and is the least clumsy of the options.
+
+I'd avoid the in-app route as a way of holding two sessions at once, and this is the part worth knowing: `prompt=login` in the account tab creates a *new* Keycloak session and repoints the cookie. Your org-admin session survives on the server (this realm sets no session limit, idle 30 min / max 10 h) and its token refreshes fine — **until you reload that tab.** Org-admin inits with `login-required`, so a reload round-trips to Keycloak, Keycloak reads the *new* cookie, and the tab comes back silently signed in as the account user. Two tabs, no prompt, wrong identity. That's a worse failure than the one you have now, because nothing tells you it happened.
+
+## What I could change, if you want it
+
+1. **Ask before adopting a session** — on the organisation gateway, when a session exists that isn't a member of that club, offer "Continue as *name*" / "Sign in as someone else" *before* signing them in, instead of after the refusal. Small, and it removes the surprise.
+2. **Separate realms per app** — the only in-product way to get two live sessions in one browser, since realm cookies are scoped per realm. It's a real architectural change and it breaks the current model where one person can be both an org admin and a member on one identity. I wouldn't, unless dual sessions become a genuine requirement.
+
+Say which, if either. Nothing changed in this turn — it was all investigation.
+
+---
+
+
+## 2026-08-31 17:59:41 — Prompt
+
+1
+
+### Assistant
+
+Now the same on the awaiting-approval screen, and the six locales:
+
+Five locales got reformatted — §3.2 says keep the JSON diff minimal. Let me check and redo:
+
+The `register` key exists in two blocks — I hit the wrong one. Scoping it properly:
+
+Clean, targeted, and in the right block. Now tests:
+
+Now the docs — the module summary and the wireframes for A6/A8:
+
+Done. The identity is now stated before you can act on it.
+
+## What changed
+
+| | Before | Now |
+|---|---|---|
+| Whose session is this? | Never stated | `Signed in as Sam Rivers (member@example.com)`, above the body text |
+| Enrolment button | "Create an account" | "Create an account for Sam Rivers (member@example.com)" |
+
+On both screens you can reach as the wrong identity — `NotConnectedPage` (A6) and `AwaitingApprovalPage` (A8). New [SignedInAs.tsx](packages/account-shell/src/components/SignedInAs.tsx) renders the line; `describeUser` formats it.
+
+**The email is always shown, never dropped in favour of the name** — it's the part that tells you you're signed in as `admin@kildarehunt.test` rather than as yourself. That's the whole diagnosis in one line.
+
+**The button label matters as much as the banner.** As a bare "Create an account" it enrolled whoever the session happened to be into a club you were only looking at — the one action on that screen that's hard to undo. The existing code comments already lamented "offering to enrol the wrong person"; now the button can't do it by accident.
+
+## One thing I deliberately didn't do
+
+I didn't promote "Sign in as someone else" to the primary action. Two journeys end on A6 — a member of another club deliberately joining this one, and a mis-adopted session — and nothing in the request tells them apart. Making either primary is a guess. Naming the identity lets you decide in a glance, which you can do and the code can't.
+
+I also couldn't put this on the gateway as literally described: `OrganisationRoute` only renders A2 for the `anonymous` state, so an authenticated non-member never sees it. A6 *is* the first screen that knows the adopted identity doesn't fit the club — so that's where the choice now lives, before the enrolment offer rather than after it.
+
+## Scope note
+
+This makes the mix-up **legible**. It does not give you two simultaneous sessions — that remains impossible in one browser profile, for the cookie reason. Use a second profile or a private window. Both the doc and the wireframe say so explicitly now, including why `prompt=login` is a trap rather than a workaround.
+
+## Verification
+
+- 11 new tests (6 in `SignedInAs.test.tsx`, 3 in `NotConnectedPage`, 1 in `AwaitingApprovalPage`, plus the existing button-label assertion updated).
+- `renderWithProviders` now supplies a whole user rather than `{ id, email }`, matching what the real hook sets from token claims.
+- Six locales, two keys each — `common.signedInAs`, `notConnected.registerAs`. First attempt reformatted five files (unescaping `\uXXXX`) and hit the wrong `register` key, which lives under `gateway` too; redone as targeted insertions — **+3/−1 lines per file**, nothing else touched.
+- `npx tsc` clean; **58 files, 683 tests, all passing**.
+
+Docs: [ACCOUNT_ORGADMIN_SESSION_SHARING.md](docs/ACCOUNT_ORGADMIN_SESSION_SHARING.md) (new), plus A6's wireframe notes and [account-shell.md](.claude/modules/account-shell.md).
+
+---

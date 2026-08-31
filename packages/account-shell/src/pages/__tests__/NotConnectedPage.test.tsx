@@ -26,8 +26,43 @@ describe('NotConnectedPage (A6)', () => {
     const user = userEvent.setup();
     renderWithProviders(<NotConnectedPage />);
 
-    await user.click(screen.getByRole('button', { name: 'Create an account' }));
+    await user.click(screen.getByRole('button', { name: /create an account for/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/khpc/register');
+  });
+
+  /*
+   * Both halves of the identity problem.
+   *
+   * Keycloak's session is one cookie for the whole realm, shared with the
+   * org-admin app, and this shell adopts it silently on load. So a person can
+   * arrive here as somebody they never chose to be — an administrator who
+   * opened a club link in a second tab, most often. The screen used to describe
+   * only the club ("no record of you yet"), which is true and useless: nothing
+   * on it said whose account was being talked about.
+   */
+  it('names the identity it is signed in as', () => {
+    renderWithProviders(<NotConnectedPage />);
+
+    expect(screen.getByText(/signed in as sam rivers \(member@example\.com\)/i)).toBeInTheDocument();
+  });
+
+  /*
+   * And the enrolment button names them too. Unlabelled, "Create an account"
+   * enrolled whoever the session happened to be into a club they were only
+   * looking at — the one action here that is hard to undo.
+   */
+  it('says whose account the enrolment button would create', () => {
+    renderWithProviders(<NotConnectedPage />);
+
+    const join = screen.getByRole('button', { name: /create an account for/i });
+    expect(join).toHaveAccessibleName(expect.stringContaining('member@example.com'));
+  });
+
+  it('falls back to the plain label when there is no user to name', () => {
+    renderWithProviders(<NotConnectedPage />, { auth: { user: null } });
+
+    expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
+    expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
   });
 
   /*

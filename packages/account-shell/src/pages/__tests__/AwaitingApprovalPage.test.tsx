@@ -190,6 +190,17 @@ describe('AwaitingApprovalPage (A8)', () => {
    * member waiting on approval had no sign-out and, because Keycloak's session
    * is realm-wide, no way to arrive as anybody else.
    */
+  /*
+   * "Awaiting approval" reads as the club being slow. It is worth knowing which
+   * account is in the queue, because the realm-wide Keycloak session can have
+   * signed this person in as somebody else entirely — see `SignedInAs`.
+   */
+  it('names the identity that is waiting', () => {
+    renderWithProviders(<AwaitingApprovalPage />, { route: '/khpc/pending', path: '/:orgCode/pending' });
+
+    expect(screen.getByText(/signed in as sam rivers \(member@example\.com\)/i)).toBeInTheDocument();
+  });
+
   it('offers to sign in as somebody else', async () => {
     const signInAsSomeoneElse = vi.fn();
     const user = userEvent.setup();

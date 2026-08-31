@@ -14,7 +14,8 @@
     "signOut": "Esci",
     "search": "Cerca",
     "error": "Si è verificato un errore",
-    "signInAsSomeoneElse": "Accedi come un altro utente"
+    "signInAsSomeoneElse": "Accedi come un altro utente",
+    "signedInAs": "Accesso effettuato come {{name}}"
   },
   "offline": {
     "banner": "Sei offline. Puoi ancora vedere l’ultimo caricamento, ma non puoi acquistare, prenotare o modificare nulla.",
@@ -81,6 +82,7 @@
     "title": "Non hai ancora un account {{organisation}}",
     "body": "L'accesso è riuscito, ma questo club non ha ancora traccia di te.",
     "register": "Crea un account",
+    "registerAs": "Crea un account per {{name}}",
     "switch": "Vai a una delle tue organizzazioni"
   },
   "pending": {

@@ -153,6 +153,45 @@ export async function collectKnownEmails(client: PoolClient): Promise<string[]> 
 }
 
 /**
+ * What a previous seed has already left in the database.
+ *
+ * The seed builds a known fixture from an empty database; it does not merge
+ * into one that already holds it. Run twice without `--reset` it used to get as
+ * far as the very first insert and fail on
+ * `duplicate key value violates unique constraint "organization_types_name_key"`
+ * — a message that names a constraint rather than the mistake, and says nothing
+ * about the flag that fixes it.
+ *
+ * Worse, it got there **last**. By the time that insert runs the seed has
+ * already reconciled every Keycloak user and created four live Stripe test
+ * connected accounts, so each doomed re-run left four more of them behind.
+ * Checked up front, before any of that, so a re-run costs nothing.
+ *
+ * Returns a description of what is already there, or null for a clean database.
+ */
+export async function existingSeedData(client: PoolClient): Promise<string | null> {
+  const found: string[] = [];
+
+  const orgType = await client.query('SELECT 1 FROM organization_types WHERE name = $1', [
+    ORG_TYPE.name,
+  ]);
+  if (orgType.rowCount) found.push(`the "${ORG_TYPE.name}" organisation type`);
+
+  const orgs = await client.query('SELECT name FROM organizations WHERE name = ANY($1)', [
+    ORGS.map((o) => o.name),
+  ]);
+  if (orgs.rowCount) {
+    found.push(
+      orgs.rowCount === ORGS.length
+        ? `all ${ORGS.length} of its clubs`
+        : `${orgs.rowCount} of its ${ORGS.length} clubs`
+    );
+  }
+
+  return found.length > 0 ? found.join(' and ') : null;
+}
+
+/**
  * Clears all application data.
  *
  * Ordered child-to-parent. Several of these tables do have `ON DELETE CASCADE`
@@ -593,7 +632,7 @@ export async function seedDatabase(
         [
           orgIds[org.key],
           field.name,
-          field.label,
+          field.label[org.key],
           field.description ?? null,
           field.datatype,
           field.validation ? JSON.stringify(field.validation) : null,
@@ -608,7 +647,7 @@ export async function seedDatabase(
       const r = await client.query(
         `INSERT INTO application_forms (organisation_id, name, description, status)
          VALUES ($1,$2,$3,'active') RETURNING id`,
-        [orgIds[org.key], form.name, form.description]
+        [orgIds[org.key], form.name[org.key], form.description]
       );
       formIds[org.key][form.key] = r.rows[0].id;
       bump('application_forms');

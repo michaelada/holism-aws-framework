@@ -107,6 +107,14 @@ offered enrolment under the identity they had just left. `signInAsSomeoneElse` s
 `prompt: 'login'` to force re-authentication, and clears the offline response cache first for the
 same reason sign-out does.
 
+**Why am I signed in to the account app as my org-admin identity?** Because it is one Keycloak
+session. Both shells use realm `aws-framework`, the SSO session is a cookie per browser per realm,
+and this shell's `check-sso` adopts it silently. A6 and A8 therefore name the identity they are
+signed in as (`SignedInAs`), and A6's enrolment button says whose account it would create — without
+that, "Create an account" enrolled whoever the session happened to be. Two different users in two
+tabs of one browser is **not achievable**: use a separate browser profile. See
+docs/ACCOUNT_ORGADMIN_SESSION_SHARING.md.
+
 **Which screens must carry their own sign-out?** Every one rendered outside `AppShell` —
 `NotConnectedPage` (A6) and `AwaitingApprovalPage` (A8). `OrganisationRoute` only renders the shell
 in the `connected` state, so these screens have no navigation of their own; both wireframes specify

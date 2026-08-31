@@ -14,7 +14,8 @@
     "signOut": "Abmelden",
     "search": "Suchen",
     "error": "Etwas ist schiefgelaufen",
-    "signInAsSomeoneElse": "Als jemand anderes anmelden"
+    "signInAsSomeoneElse": "Als jemand anderes anmelden",
+    "signedInAs": "Angemeldet als {{name}}"
   },
   "offline": {
     "banner": "Sie sind offline. Zuletzt geladene Inhalte sind weiter sichtbar, aber Sie können nichts kaufen, buchen oder ändern.",
@@ -81,6 +82,7 @@
     "title": "Sie haben noch kein Konto für {{organisation}}",
     "body": "Ihre Anmeldung war erfolgreich, aber dieser Verein hat noch keinen Eintrag für Sie.",
     "register": "Konto erstellen",
+    "registerAs": "Konto für {{name}} erstellen",
     "switch": "Zu einer Ihrer Organisationen wechseln"
   },
   "pending": {

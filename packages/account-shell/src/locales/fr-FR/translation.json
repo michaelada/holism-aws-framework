@@ -14,7 +14,8 @@
     "signOut": "Se déconnecter",
     "search": "Rechercher",
     "error": "Une erreur est survenue",
-    "signInAsSomeoneElse": "Se connecter avec un autre compte"
+    "signInAsSomeoneElse": "Se connecter avec un autre compte",
+    "signedInAs": "Connecté en tant que {{name}}"
   },
   "offline": {
     "banner": "Vous êtes hors ligne. Vous voyez toujours les dernières données chargées, mais vous ne pouvez rien acheter, réserver ni modifier.",
@@ -81,6 +82,7 @@
     "title": "Vous n’avez pas encore de compte {{organisation}}",
     "body": "Votre connexion a réussi, mais ce club n'a pas encore de trace de vous.",
     "register": "Créer un compte",
+    "registerAs": "Créer un compte pour {{name}}",
     "switch": "Aller à l'une de vos organisations"
   },
   "pending": {

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PoweredBy } from '../components/PoweredBy';
+import { SignedInAs } from '../components/SignedInAs';
 import { useAuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -85,6 +86,15 @@ export const AwaitingApprovalPage: React.FC = () => {
         <Typography variant="h1" gutterBottom>
           {t(titleKey)}
         </Typography>
+
+        {/*
+          Who is waiting, named. A person can reach this screen as an identity
+          the realm session chose for them rather than one they typed, and
+          "awaiting approval" reads as the club being slow when it is really the
+          wrong account in the queue. See `SignedInAs`.
+        */}
+        <SignedInAs />
+
         <Typography color="text.secondary" sx={{ mb: 3 }}>
           {t(bodyKey, { organisation: orgCode })}
         </Typography>

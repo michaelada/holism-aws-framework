@@ -14,7 +14,8 @@
     "signOut": "Sign out",
     "search": "Search",
     "error": "Something went wrong",
-    "signInAsSomeoneElse": "Sign in as someone else"
+    "signInAsSomeoneElse": "Sign in as someone else",
+    "signedInAs": "Signed in as {{name}}"
   },
   "offline": {
     "banner": "You are offline. You can still see what was last loaded, but you cannot buy, book or change anything.",
@@ -81,6 +82,7 @@
     "title": "You do not have a {{organisation}} account yet",
     "body": "Your sign-in worked, but this club has no record of you yet.",
     "register": "Create an account",
+    "registerAs": "Create an account for {{name}}",
     "switch": "Go to one of your organisations"
   },
   "pending": {

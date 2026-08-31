@@ -7,8 +7,11 @@ that can wipe and rebuild that state on demand.
 npm run seed:demo -- --dry-run      # report what it would do, change nothing
 npm run seed:demo -- --reset        # wipe everything, then seed
 npm run seed:demo -- --reset-only   # wipe everything and stop
-npm run seed:demo                   # seed on top of what is there
+npm run seed:demo                   # seed into an empty database
 ```
+
+The bare form refuses to run against a database that already holds a seed, naming what it found
+and the flag to use instead. See §5.
 
 Source: [`packages/backend/scripts/seed/`](../packages/backend/scripts/seed/) — `index.ts` (CLI and
 guards), `dataset.ts` (what gets created), `database.ts` (SQL and the reset), `keycloak.ts` (users,
@@ -151,12 +154,60 @@ state the API can no longer produce. The seed asserts this before it writes
 ### Field types exercised
 
 `text`, `textarea`, `number`, `email`, `phone`, `date`, `time`, `datetime`, `boolean`, `select`,
-`multiselect`, `radio`, `checkbox` — across four forms: a three-step wizard with grouped sections
-(*Full competition entry*), a grouped single-page form (*Camp booking*), a two-field minimum
-(*Short entry*), and a no-pony form (*Spectator registration*).
+`multiselect`, `radio`, `checkbox` — across four form shapes: a three-step wizard with grouped
+sections (`fullEntry`), a grouped single-page form (`campBooking`), a two-field minimum
+(`shortEntry`), and a no-pony form (`spectator`).
 
 `file` and `image` are **deliberately absent**. They need the document-upload storage path
 configured, and a seeded form that half works is worse than one that does not claim to.
+
+### Every club names its forms differently
+
+Each of the four clubs gets its own `application_forms` row per shape — same fields, **different
+name**, in that club's own vocabulary and after its own venue where the form has one:
+
+| Shape | Kildare | Laois | Ward Union | Meath Hunt |
+|---|---|---|---|---|
+| `fullEntry` | Kildare championship entry | Ballyroan entry form | Ward Union rider entry | Meath Hunt full entry |
+| `campBooking` | Craddockstown camp booking | Ballyroan camp booking | Ward Union camp booking | Tara camp booking |
+| `shortEntry` | Kildare one-class entry | Ballyroan short form | Ward Union quick entry | Meath Hunt short entry |
+| `spectator` | Kildare gate list | Ballyroan visitor sign-in | Ward Union day ticket details | Meath Hunt spectator list |
+| `membershipSingle` | Kildare membership application | Laois membership form | Ward Union membership | Meath Hunt membership application |
+| `membershipFamily` | Kildare family membership | Laois family membership form | Ward Union household membership | Meath Hunt family application |
+| `horseRegistration` | Kildare horse passport record | Laois horse details | Ward Union horse register | Meath Hunt horse registration |
+
+They used to share one name each, and four identical *Camp booking* forms made it impossible to
+tell at a glance whether a list was correctly scoped or quietly showing every club's. The fixture
+should make a scoping bug obvious; instead it camouflaged one. A form seen under the wrong club now
+announces itself. `SeedForm.name` is typed as a record over every organisation key, so a form added
+without a name for one of the clubs fails to compile rather than borrowing another's.
+
+### And so does every field
+
+The same applies one layer down: **all 160 field labels are different** — the 40 fields × 4 clubs.
+The Fields list and the form builder's field picker both render the label, so identical labels hid
+a mis-scoped list just as effectively as identical form names did.
+
+Each club has its own vocabulary, which is what lets you attribute a stray field on sight:
+
+| | Person | Mount | Registration wording |
+|---|---|---|---|
+| Kildare | Rider | Pony | *Registered horse breed*, *Passport number* |
+| Laois | Competitor | Horse | *Breed of horse*, *Equine passport number* |
+| Ward Union | Member | Mount | *Breed on the register*, *Passport number on the register* |
+| Meath Hunt | Entrant | Pony or horse | *Breed of the registered horse*, *Number on the equine passport* |
+
+So `riderName` reads *Rider name* at Kildare, *Competitor name* at Laois, *Member name* at Ward
+Union and *Entrant name* at Meath; `yearsRiding` reads *Years riding*, *Years competing*, *Years in
+the saddle* and *How many years the entrant has ridden*.
+
+The machine `name` — `rider_name`, `pony_breed` — is deliberately **not** varied. It is the
+platform's canonical key and what a submission's answers are stored under, so it stays common to
+all four clubs; the label is the part a club sees and the part that identifies the row as its own.
+
+Tidied up in passing: *Breed* and *Height (hands)* each appeared twice within a single club, once
+for the pony and once for the registered horse. A label now identifies both the club and the
+field.
 
 ### Membership types and members
 
@@ -461,9 +512,27 @@ and purged. The developer database was not touched.
 
 ## 5. Known limits
 
-- **Not idempotent without `--reset`.** Running the seed twice without it creates a second
-  organisation type and a second set of everything. `--reset` is almost always what you want; the
-  bare form exists mainly for a first run on an empty database.
+- **Not idempotent: the bare form only seeds an empty database.** It builds a fixture rather than
+  merging into one, so a second run without `--reset` is refused up front:
+
+  ```
+  ✖ 127.0.0.1/aws_framework already has the "irish-pony-clubs" organisation type and all 4 of its clubs.
+
+    The seed builds its fixture from an empty database; it does not merge into one
+    that already holds it. Choose one:
+
+      npm run seed:demo -- --reset        wipe all application data, then seed
+      ...
+  ```
+
+  It used to discover this at its first `INSERT` and report
+  `duplicate key value violates unique constraint "organization_types_name_key"` — a message that
+  names a constraint rather than the mistake. And it got there **last**: by then the run had
+  reconciled every Keycloak user and created four live Stripe test connected accounts, so each
+  failed attempt stranded four more. `existingSeedData` now asks two queries before any of that
+  happens, so a mistaken re-run costs nothing and leaves nothing behind. (`--reset` deletes
+  previously seeded Stripe accounts by their metadata tag, including any stranded by the old
+  behaviour.) `--reset` is almost always what you want.
 - **No entries, payments or carts are seeded.** The events are open and ready to be entered, but
   nothing has been entered yet — so reporting screens and a member's "my entries" will be empty
   until you make an entry through the UI. Seeding entries convincingly means seeding form

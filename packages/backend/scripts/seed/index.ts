@@ -83,7 +83,7 @@ import {
   purgeSeededKeycloak,
   upsertUser,
 } from './keycloak';
-import { collectKnownEmails, resetDatabase, seedDatabase } from './database';
+import { collectKnownEmails, existingSeedData, resetDatabase, seedDatabase } from './database';
 import {
   SeededConnectAccount,
   StripeSeeder,
@@ -225,11 +225,42 @@ async function main(): Promise<void> {
     password: process.env.DATABASE_PASSWORD || 'framework_password',
   });
 
+  const client = await pool.connect();
+
+  /*
+   * Refuse a second seed into a database that already holds one — before
+   * Keycloak is touched and before Stripe creates anything.
+   *
+   * This used to be discovered by the first `INSERT` instead, several hundred
+   * lines and four live Stripe connected accounts later, and reported as
+   * `duplicate key value violates unique constraint "organization_types_name_key"`.
+   * The seed builds a fixture from an empty database rather than merging into a
+   * populated one, so the answer is always `--reset`; saying so here costs one
+   * query and saves the whole doomed run.
+   */
+  if (!RESET && !RESET_ONLY) {
+    const already = await existingSeedData(client).catch((error): never => {
+      client.release();
+      return fail(`Could not read the database at ${dbHost}/${dbName}: ${(error as Error).message}`);
+    });
+
+    if (already) {
+      client.release();
+      await pool.end();
+      fail(
+        `${dbHost}/${dbName} already has ${already}.\n\n` +
+          `  The seed builds its fixture from an empty database; it does not merge into one\n` +
+          `  that already holds it. Choose one:\n\n` +
+          `    npm run seed:demo -- --reset        wipe all application data, then seed\n` +
+          `    npm run seed:demo -- --reset-only   wipe it and stop\n` +
+          `    npm run seed:demo -- --dry-run      show what a seed would write, and change nothing`
+      );
+    }
+  }
+
   const keycloak = await connectKeycloak(keycloakConfigFromEnv()).catch((error): never =>
     fail(`Could not reach Keycloak at ${kcUrl}: ${(error as Error).message}`)
   );
-
-  const client = await pool.connect();
 
   try {
     /*

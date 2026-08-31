@@ -112,7 +112,12 @@ export function makeAuthContext(overrides: Partial<UseAuthReturn> = {}): UseAuth
     loading: false,
     error: null,
     token: 'test-token',
-    user: { id: TEST_ME.user.id, email: TEST_ME.user.email },
+    /*
+     * The whole identity, not just id and email: screens that name who is
+     * signed in (`SignedInAs`) read `firstName` and `lastName`, and the real
+     * hook always sets all four from the token's claims.
+     */
+    user: { ...TEST_ME.user },
     login: vi.fn(),
     signInAsSomeoneElse: vi.fn(),
     register: vi.fn(),

@@ -14,7 +14,8 @@
     "signOut": "Cerrar sesión",
     "search": "Buscar",
     "error": "Algo ha salido mal",
-    "signInAsSomeoneElse": "Iniciar sesión como otra persona"
+    "signInAsSomeoneElse": "Iniciar sesión como otra persona",
+    "signedInAs": "Sesión iniciada como {{name}}"
   },
   "offline": {
     "banner": "Está sin conexión. Puede ver lo último cargado, pero no puede comprar, reservar ni cambiar nada.",
@@ -81,6 +82,7 @@
     "title": "Todavía no tiene una cuenta de {{organisation}}",
     "body": "Su inicio de sesión ha funcionado, pero este club aún no tiene ningún registro suyo.",
     "register": "Crear una cuenta",
+    "registerAs": "Crear una cuenta para {{name}}",
     "switch": "Ir a una de sus organizaciones"
   },
   "pending": {

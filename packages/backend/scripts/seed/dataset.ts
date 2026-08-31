@@ -352,8 +352,34 @@ export type FieldType =
 
 export interface SeedField {
   key: string;
+  /**
+   * The machine name, shared by all four clubs.
+   *
+   * This is the platform's canonical name for the field and the key a
+   * submission's answers are stored under, so it stays common; the *label* is
+   * what a club sees, and what identifies the row as its own.
+   */
   name: string;
-  label: string;
+  /**
+   * What each club calls this field — **one label per organisation**, and all
+   * 160 of them are different.
+   *
+   * The Fields list and the form builder's field picker both show the label, so
+   * while every club's forty fields read identically there was no way to tell a
+   * correctly scoped list from one quietly showing all four clubs' — the
+   * fixture hiding exactly the kind of fault it exists to expose. See
+   * docs/CROSS_ORGANISATION_ACCESS_FIX.md.
+   *
+   * Each club has its own vocabulary, so a field under the wrong one announces
+   * itself: Kildare speaks of a **Rider** and a **Pony**, Laois of a
+   * **Competitor** and a **Horse**, Ward Union of a **Member**, a **Mount** and
+   * "the register", and Meath Hunt writes its fields out longhand around an
+   * **Entrant**.
+   *
+   * A `Record` over every org key, so a field added without a label for one of
+   * the clubs fails to compile rather than silently borrowing another's.
+   */
+  label: Record<SeedOrg['key'], string>;
   datatype: FieldType;
   description?: string;
   options?: string[];
@@ -367,31 +393,106 @@ export interface SeedField {
  * works is worse than one that does not claim to.
  */
 export const FIELDS: SeedField[] = [
-  { key: 'riderName', name: 'rider_name', label: 'Rider name', datatype: 'text', validation: { required: true, maxLength: 120 } },
-  { key: 'riderDob', name: 'rider_dob', label: 'Date of birth', datatype: 'date', validation: { required: true } },
-  { key: 'riderEmail', name: 'rider_email', label: 'Email address', datatype: 'email', validation: { required: true } },
-  { key: 'riderPhone', name: 'rider_phone', label: 'Mobile number', datatype: 'phone' },
-  { key: 'ageGroup', name: 'age_group', label: 'Age group', datatype: 'select', options: ['Under 12', '12–14', '15–17', '18+'], validation: { required: true } },
-  { key: 'ponyName', name: 'pony_name', label: 'Pony or horse name', datatype: 'text', validation: { required: true } },
-  { key: 'ponyHeight', name: 'pony_height', label: 'Height (hands)', datatype: 'number', description: 'To one decimal place, e.g. 14.2', validation: { min: 8, max: 19 } },
-  { key: 'ponyBreed', name: 'pony_breed', label: 'Breed', datatype: 'select', options: ['Connemara', 'Irish Sport Horse', 'Welsh', 'Thoroughbred', 'Other'] },
-  { key: 'vaccinated', name: 'vaccination_status', label: 'Vaccination status', datatype: 'radio', options: ['Up to date', 'Due within 30 days', 'Not vaccinated'], validation: { required: true } },
-  { key: 'gradeLevel', name: 'grade_level', label: 'Grade', datatype: 'radio', options: ['Grade 1', 'Grade 2', 'Grade 3', 'Ungraded'] },
-  { key: 'dietary', name: 'dietary_requirements', label: 'Dietary requirements', datatype: 'multiselect', options: ['None', 'Vegetarian', 'Vegan', 'Gluten free', 'Dairy free', 'Nut allergy'] },
-  { key: 'sessions', name: 'preferred_sessions', label: 'Preferred sessions', datatype: 'checkbox', options: ['Morning', 'Afternoon', 'Both'] },
-  { key: 'arrivalTime', name: 'arrival_time', label: 'Expected arrival time', datatype: 'time' },
-  { key: 'stablingFrom', name: 'stabling_from', label: 'Stabling required from', datatype: 'datetime' },
-  { key: 'medicalNotes', name: 'medical_notes', label: 'Medical notes', datatype: 'textarea', description: 'Anything the organisers should know on the day.' },
-  { key: 'transportNeeded', name: 'transport_needed', label: 'Transport required?', datatype: 'boolean' },
-  { key: 'firstAider', name: 'is_first_aider', label: 'Willing to help as a first aider', datatype: 'boolean' },
-  { key: 'emergencyName', name: 'emergency_contact_name', label: 'Emergency contact name', datatype: 'text', validation: { required: true } },
-  { key: 'emergencyPhone', name: 'emergency_contact_phone', label: 'Emergency contact number', datatype: 'phone', validation: { required: true } },
-  { key: 'yearsRiding', name: 'years_riding', label: 'Years riding', datatype: 'number', validation: { min: 0, max: 80 } },
-  { key: 'addressLine', name: 'address_line', label: 'Address', datatype: 'text', validation: { required: true, maxLength: 200 } },
-  { key: 'county', name: 'county', label: 'County', datatype: 'select', options: ['Kildare', 'Laois', 'Meath', 'Dublin', 'Other'], validation: { required: true } },
-  { key: 'guardianName', name: 'guardian_name', label: 'Parent or guardian', datatype: 'text', description: 'Required for members under 18.' },
-  { key: 'guardianPhone', name: 'guardian_phone', label: 'Parent or guardian number', datatype: 'phone' },
-  { key: 'photoConsent', name: 'photo_consent', label: 'Consent to photographs at club events', datatype: 'boolean' },
+  {
+    key: 'riderName', name: 'rider_name', datatype: 'text', validation: { required: true, maxLength: 120 },
+    label: { kildare: 'Rider name', laois: 'Competitor name', ward: 'Member name', meath: 'Entrant name' },
+  },
+  {
+    key: 'riderDob', name: 'rider_dob', datatype: 'date', validation: { required: true },
+    label: { kildare: 'Rider date of birth', laois: 'Competitor date of birth', ward: 'Member date of birth', meath: 'Entrant date of birth' },
+  },
+  {
+    key: 'riderEmail', name: 'rider_email', datatype: 'email', validation: { required: true },
+    label: { kildare: 'Rider email address', laois: 'Competitor email address', ward: 'Member email address', meath: 'Entrant email address' },
+  },
+  {
+    key: 'riderPhone', name: 'rider_phone', datatype: 'phone',
+    label: { kildare: 'Rider mobile number', laois: 'Competitor mobile number', ward: 'Member mobile number', meath: 'Entrant mobile number' },
+  },
+  {
+    key: 'ageGroup', name: 'age_group', datatype: 'select', options: ['Under 12', '12–14', '15–17', '18+'], validation: { required: true },
+    label: { kildare: 'Rider age group', laois: 'Competitor age group', ward: 'Member age group', meath: 'Entrant age group' },
+  },
+  {
+    key: 'ponyName', name: 'pony_name', datatype: 'text', validation: { required: true },
+    label: { kildare: 'Pony name', laois: 'Horse name', ward: 'Mount name', meath: 'Pony or horse name' },
+  },
+  {
+    key: 'ponyHeight', name: 'pony_height', datatype: 'number', description: 'To one decimal place, e.g. 14.2', validation: { min: 8, max: 19 },
+    label: { kildare: 'Pony height (hands)', laois: 'Horse height (hands)', ward: 'Mount height (hands)', meath: 'Pony height in hands' },
+  },
+  {
+    key: 'ponyBreed', name: 'pony_breed', datatype: 'select', options: ['Connemara', 'Irish Sport Horse', 'Welsh', 'Thoroughbred', 'Other'],
+    label: { kildare: 'Pony breed', laois: 'Horse breed', ward: 'Mount breed', meath: 'Pony or horse breed' },
+  },
+  {
+    key: 'vaccinated', name: 'vaccination_status', datatype: 'radio', options: ['Up to date', 'Due within 30 days', 'Not vaccinated'], validation: { required: true },
+    label: { kildare: 'Pony vaccination status', laois: 'Horse vaccination status', ward: 'Mount vaccination status', meath: 'Vaccination status of the pony' },
+  },
+  {
+    key: 'gradeLevel', name: 'grade_level', datatype: 'radio', options: ['Grade 1', 'Grade 2', 'Grade 3', 'Ungraded'],
+    label: { kildare: 'Rider grade', laois: 'Competitor grade', ward: 'Member grade', meath: 'Entrant grade' },
+  },
+  {
+    key: 'dietary', name: 'dietary_requirements', datatype: 'multiselect', options: ['None', 'Vegetarian', 'Vegan', 'Gluten free', 'Dairy free', 'Nut allergy'],
+    label: { kildare: 'Rider dietary requirements', laois: 'Competitor dietary requirements', ward: 'Member dietary requirements', meath: 'Entrant dietary requirements' },
+  },
+  {
+    key: 'sessions', name: 'preferred_sessions', datatype: 'checkbox', options: ['Morning', 'Afternoon', 'Both'],
+    label: { kildare: 'Preferred camp sessions', laois: 'Preferred sessions', ward: 'Sessions wanted', meath: 'Sessions the entrant prefers' },
+  },
+  {
+    key: 'arrivalTime', name: 'arrival_time', datatype: 'time',
+    label: { kildare: 'Expected arrival time', laois: 'Arrival time', ward: 'Time of arrival', meath: 'What time the entrant will arrive' },
+  },
+  {
+    key: 'stablingFrom', name: 'stabling_from', datatype: 'datetime',
+    label: { kildare: 'Stabling required from', laois: 'Stabling needed from', ward: 'Stabling from', meath: 'Stabling start date and time' },
+  },
+  {
+    key: 'medicalNotes', name: 'medical_notes', datatype: 'textarea', description: 'Anything the organisers should know on the day.',
+    label: { kildare: 'Rider medical notes', laois: 'Competitor medical notes', ward: 'Member medical notes', meath: 'Entrant medical notes' },
+  },
+  {
+    key: 'transportNeeded', name: 'transport_needed', datatype: 'boolean',
+    label: { kildare: 'Transport required?', laois: 'Transport needed?', ward: 'Needs transport?', meath: 'Does the entrant need transport?' },
+  },
+  {
+    key: 'firstAider', name: 'is_first_aider', datatype: 'boolean',
+    label: { kildare: 'Willing to help as a first aider', laois: 'Can help as a first aider', ward: 'Available as a first aider', meath: 'Happy to be called on as a first aider' },
+  },
+  {
+    key: 'emergencyName', name: 'emergency_contact_name', datatype: 'text', validation: { required: true },
+    label: { kildare: 'Emergency contact name', laois: 'Emergency contact — name', ward: 'Next of kin name', meath: 'Who to call in an emergency' },
+  },
+  {
+    key: 'emergencyPhone', name: 'emergency_contact_phone', datatype: 'phone', validation: { required: true },
+    label: { kildare: 'Emergency contact number', laois: 'Emergency contact — number', ward: 'Next of kin number', meath: 'Emergency telephone number' },
+  },
+  {
+    key: 'yearsRiding', name: 'years_riding', datatype: 'number', validation: { min: 0, max: 80 },
+    label: { kildare: 'Years riding', laois: 'Years competing', ward: 'Years in the saddle', meath: 'How many years the entrant has ridden' },
+  },
+  {
+    key: 'addressLine', name: 'address_line', datatype: 'text', validation: { required: true, maxLength: 200 },
+    label: { kildare: 'Rider address', laois: 'Competitor address', ward: 'Member address', meath: 'Entrant address' },
+  },
+  {
+    key: 'county', name: 'county', datatype: 'select', options: ['Kildare', 'Laois', 'Meath', 'Dublin', 'Other'], validation: { required: true },
+    label: { kildare: 'Rider county', laois: 'Competitor county', ward: 'Member county', meath: 'Entrant county' },
+  },
+  {
+    key: 'guardianName', name: 'guardian_name', datatype: 'text', description: 'Required for members under 18.',
+    label: { kildare: 'Parent or guardian', laois: 'Parent or guardian name', ward: 'Responsible adult', meath: 'Name of parent or guardian' },
+  },
+  {
+    key: 'guardianPhone', name: 'guardian_phone', datatype: 'phone',
+    label: { kildare: 'Parent or guardian number', laois: 'Parent or guardian telephone', ward: 'Responsible adult number', meath: 'Telephone for parent or guardian' },
+  },
+  {
+    key: 'photoConsent', name: 'photo_consent', datatype: 'boolean',
+    label: { kildare: 'Consent to photographs at club events', laois: 'Photography consent', ward: 'Consent to photographs at meets', meath: 'May we photograph the entrant?' },
+  },
 
   /*
    * Horse registration.
@@ -401,26 +502,87 @@ export const FIELDS: SeedField[] = [
    * than of a rider. It is the distinction the registrations module exists to
    * make, and reusing the rider fields would have hidden it.
    */
-  { key: 'horseName', name: 'horse_name', label: 'Horse or pony name', datatype: 'text', validation: { required: true, maxLength: 120 } },
-  { key: 'horseStableName', name: 'horse_stable_name', label: 'Stable name', datatype: 'text', description: 'What he answers to at home, if different.' },
-  { key: 'horseBreed', name: 'horse_breed', label: 'Breed', datatype: 'select', options: ['Irish Sports Horse', 'Connemara', 'Welsh Section B', 'Welsh Section D', 'Thoroughbred', 'Irish Draught', 'Cob', 'Other'], validation: { required: true } },
-  { key: 'horseColour', name: 'horse_colour', label: 'Colour', datatype: 'select', options: ['Bay', 'Chestnut', 'Grey', 'Black', 'Piebald', 'Skewbald', 'Dun', 'Palomino'], validation: { required: true } },
-  { key: 'horseSex', name: 'horse_sex', label: 'Sex', datatype: 'radio', options: ['Mare', 'Gelding', 'Stallion'], validation: { required: true } },
-  { key: 'horseYearFoaled', name: 'horse_year_foaled', label: 'Year foaled', datatype: 'number', validation: { required: true, min: 1990, max: 2026 } },
-  { key: 'horseHeight', name: 'horse_height', label: 'Height (hands)', datatype: 'number', description: 'To the nearest hand, e.g. 14.2 as 14.2.', validation: { required: true } },
-  { key: 'horsePassport', name: 'horse_passport', label: 'Passport number', datatype: 'text', description: 'As printed on the equine passport.', validation: { required: true, maxLength: 40 } },
-  { key: 'horseMicrochip', name: 'horse_microchip', label: 'Microchip number', datatype: 'text', validation: { maxLength: 20 } },
-  { key: 'horseOwner', name: 'horse_owner', label: 'Registered owner', datatype: 'text', validation: { required: true, maxLength: 120 } },
-  { key: 'horseFluVaccine', name: 'horse_flu_vaccine', label: 'Date of last flu vaccination', datatype: 'date', description: 'Must be within the last twelve months to compete.', validation: { required: true } },
-  { key: 'horseVetName', name: 'horse_vet_name', label: "Veterinary practice", datatype: 'text' },
-  { key: 'horseVetPhone', name: 'horse_vet_phone', label: 'Veterinary practice number', datatype: 'phone' },
-  { key: 'horseInsured', name: 'horse_insured', label: 'Insured for third-party liability', datatype: 'boolean' },
-  { key: 'horseNotes', name: 'horse_notes', label: 'Anything the club should know', datatype: 'textarea', description: 'Allergies, quirks, whether he loads.' },
+  {
+    key: 'horseName', name: 'horse_name', datatype: 'text', validation: { required: true, maxLength: 120 },
+    label: { kildare: 'Registered horse name', laois: 'Name of horse', ward: 'Horse name on the register', meath: 'Horse or pony name' },
+  },
+  {
+    key: 'horseStableName', name: 'horse_stable_name', datatype: 'text', description: 'What he answers to at home, if different.',
+    label: { kildare: 'Stable name', laois: 'Name at home', ward: 'Yard name', meath: 'Stable name at home' },
+  },
+  {
+    key: 'horseBreed', name: 'horse_breed', datatype: 'select', options: ['Irish Sports Horse', 'Connemara', 'Welsh Section B', 'Welsh Section D', 'Thoroughbred', 'Irish Draught', 'Cob', 'Other'], validation: { required: true },
+    label: { kildare: 'Registered horse breed', laois: 'Breed of horse', ward: 'Breed on the register', meath: 'Breed of the registered horse' },
+  },
+  {
+    key: 'horseColour', name: 'horse_colour', datatype: 'select', options: ['Bay', 'Chestnut', 'Grey', 'Black', 'Piebald', 'Skewbald', 'Dun', 'Palomino'], validation: { required: true },
+    label: { kildare: 'Registered horse colour', laois: 'Colour of horse', ward: 'Colour on the register', meath: 'Horse colour' },
+  },
+  {
+    key: 'horseSex', name: 'horse_sex', datatype: 'radio', options: ['Mare', 'Gelding', 'Stallion'], validation: { required: true },
+    label: { kildare: 'Registered horse sex', laois: 'Sex of horse', ward: 'Sex on the register', meath: 'Horse sex' },
+  },
+  {
+    key: 'horseYearFoaled', name: 'horse_year_foaled', datatype: 'number', validation: { required: true, min: 1990, max: 2026 },
+    label: { kildare: 'Year foaled', laois: 'Foaling year', ward: 'Year of foaling', meath: 'What year the horse was foaled' },
+  },
+  {
+    key: 'horseHeight', name: 'horse_height', datatype: 'number', description: 'To the nearest hand, e.g. 14.2 as 14.2.', validation: { required: true },
+    label: { kildare: 'Registered horse height (hands)', laois: 'Height of horse (hands)', ward: 'Height on the register (hands)', meath: 'Height of the registered horse (hands)' },
+  },
+  {
+    key: 'horsePassport', name: 'horse_passport', datatype: 'text', description: 'As printed on the equine passport.', validation: { required: true, maxLength: 40 },
+    label: { kildare: 'Passport number', laois: 'Equine passport number', ward: 'Passport number on the register', meath: 'Number on the equine passport' },
+  },
+  {
+    key: 'horseMicrochip', name: 'horse_microchip', datatype: 'text', validation: { maxLength: 20 },
+    label: { kildare: 'Microchip number', laois: 'Chip number', ward: 'Microchip on the register', meath: 'Microchip number of the horse' },
+  },
+  {
+    key: 'horseOwner', name: 'horse_owner', datatype: 'text', validation: { required: true, maxLength: 120 },
+    label: { kildare: 'Registered owner', laois: 'Owner of horse', ward: 'Owner on the register', meath: 'Name of the registered owner' },
+  },
+  {
+    key: 'horseFluVaccine', name: 'horse_flu_vaccine', datatype: 'date', description: 'Must be within the last twelve months to compete.', validation: { required: true },
+    label: { kildare: 'Date of last flu vaccination', laois: 'Last flu vaccination', ward: 'Flu vaccination date on the register', meath: 'When the horse last had a flu vaccination' },
+  },
+  {
+    key: 'horseVetName', name: 'horse_vet_name', datatype: 'text',
+    label: { kildare: 'Veterinary practice', laois: 'Vet practice', ward: 'Veterinary surgeon', meath: 'Name of the veterinary practice' },
+  },
+  {
+    key: 'horseVetPhone', name: 'horse_vet_phone', datatype: 'phone',
+    label: { kildare: 'Veterinary practice number', laois: 'Vet practice telephone', ward: 'Veterinary surgeon number', meath: 'Telephone for the veterinary practice' },
+  },
+  {
+    key: 'horseInsured', name: 'horse_insured', datatype: 'boolean',
+    label: { kildare: 'Insured for third-party liability', laois: 'Third-party insurance held', ward: 'Insured against third-party liability', meath: 'Is the horse insured for third-party liability?' },
+  },
+  {
+    key: 'horseNotes', name: 'horse_notes', datatype: 'textarea', description: 'Allergies, quirks, whether he loads.',
+    label: { kildare: 'Anything the club should know', laois: 'Anything we should know', ward: 'Notes for the organisers', meath: 'Anything Meath Hunt should know' },
+  },
 ];
 
 export interface SeedForm {
   key: string;
-  name: string;
+  /**
+   * What each club calls this form — **one name per organisation**, and they
+   * are all different.
+   *
+   * A form belongs to one club: the seed writes a separate `application_forms`
+   * row per organisation, and a `Record` here rather than a single string is
+   * what stops those rows sharing a name. When they did, four identical
+   * "Camp booking" forms made it impossible to tell at a glance whether a list
+   * was correctly scoped or quietly showing every club's — which is exactly the
+   * bug this fixture should have made obvious, and instead camouflaged. See
+   * docs/CROSS_ORGANISATION_ACCESS_FIX.md.
+   *
+   * Typed as a `Record` over every org key, so a form added without a name for
+   * one of the clubs fails to compile rather than silently reusing another's.
+   * Each club's own vocabulary, and its own venue where the form has one.
+   */
+  name: Record<SeedOrg['key'], string>;
   description: string;
   /** Field keys, in order. Grouped headings drive the form's sections. */
   fields: Array<{ field: string; group?: string; wizardStep?: number; wizardStepTitle?: string }>;
@@ -429,7 +591,12 @@ export interface SeedForm {
 export const FORMS: SeedForm[] = [
   {
     key: 'fullEntry',
-    name: 'Full competition entry',
+    name: {
+      kildare: 'Kildare championship entry',
+      laois: 'Ballyroan entry form',
+      ward: 'Ward Union rider entry',
+      meath: 'Meath Hunt full entry',
+    },
     description: 'Rider, pony and safety details. Uses every field type the builder offers.',
     fields: [
       { field: 'riderName', group: 'Rider', wizardStep: 1, wizardStepTitle: 'Rider' },
@@ -451,7 +618,12 @@ export const FORMS: SeedForm[] = [
   },
   {
     key: 'campBooking',
-    name: 'Camp booking',
+    name: {
+      kildare: 'Craddockstown camp booking',
+      laois: 'Ballyroan camp booking',
+      ward: 'Ward Union camp booking',
+      meath: 'Tara camp booking',
+    },
     description: 'Multi-day camp: sessions, stabling, dietary needs.',
     fields: [
       { field: 'riderName', group: 'Rider' },
@@ -467,13 +639,23 @@ export const FORMS: SeedForm[] = [
   },
   {
     key: 'shortEntry',
-    name: 'Short entry',
+    name: {
+      kildare: 'Kildare one-class entry',
+      laois: 'Ballyroan short form',
+      ward: 'Ward Union quick entry',
+      meath: 'Meath Hunt short entry',
+    },
     description: 'The minimum a club can ask for. Two required fields and nothing else.',
     fields: [{ field: 'riderName' }, { field: 'ponyName' }],
   },
   {
     key: 'spectator',
-    name: 'Spectator registration',
+    name: {
+      kildare: 'Kildare gate list',
+      laois: 'Ballyroan visitor sign-in',
+      ward: 'Ward Union day ticket details',
+      meath: 'Meath Hunt spectator list',
+    },
     description: 'No pony. Contact details only, for gate lists and catering numbers.',
     fields: [
       { field: 'riderName' },
@@ -484,7 +666,12 @@ export const FORMS: SeedForm[] = [
   },
   {
     key: 'membershipSingle',
-    name: 'Membership application',
+    name: {
+      kildare: 'Kildare membership application',
+      laois: 'Laois membership form',
+      ward: 'Ward Union membership',
+      meath: 'Meath Hunt membership application',
+    },
     description: 'What a club asks of one person joining for the season.',
     fields: [
       { field: 'riderName', group: 'Member', wizardStep: 1, wizardStepTitle: 'Member' },
@@ -504,7 +691,12 @@ export const FORMS: SeedForm[] = [
   },
   {
     key: 'membershipFamily',
-    name: 'Family membership application',
+    name: {
+      kildare: 'Kildare family membership',
+      laois: 'Laois family membership form',
+      ward: 'Ward Union household membership',
+      meath: 'Meath Hunt family application',
+    },
     description: 'Asked once of the household, then once per person on the membership.',
     fields: [
       { field: 'riderName', group: 'Person' },
@@ -521,7 +713,12 @@ export const FORMS: SeedForm[] = [
   },
   {
     key: 'horseRegistration',
-    name: 'Horse registration',
+    name: {
+      kildare: 'Kildare horse passport record',
+      laois: 'Laois horse details',
+      ward: 'Ward Union horse register',
+      meath: 'Meath Hunt horse registration',
+    },
     description:
       'Passport, vaccination and ownership details for a horse or pony registered with the club for the year.',
     fields: [

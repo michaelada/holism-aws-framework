@@ -620,6 +620,24 @@ A `status = 'pending'` row shows a third variant: "Your request is awaiting appr
   it. The Keycloak session is realm-wide (see [A7](#a7--organisation-switcher-)), so it returns
   immediately as whoever is already signed in, drawing no form. "Sign in as someone else" therefore
   sends `prompt=login`, which forces re-authentication whatever session exists.
+- **The screen names who it is signed in as**, above the body text — `Signed in as Sam Rivers
+  (member@example.com)`. The realm-wide session is shared with the **org-admin app**, and this shell
+  initialises with `check-sso`, so a person can arrive here as an identity they never chose: an
+  administrator who opens a club link in a second tab is silently authenticated as their admin
+  account. The old screen described only the club — "this club has no record of you yet" — which is
+  true and no help at all in working out that the identity was the problem. The email is always
+  shown, not just the name: it is the part that distinguishes an admin account from the same
+  person's member account.
+- **The enrolment button names them too** — "Create an account for Sam Rivers
+  (member@example.com)". As a bare "Create an account" it enrolled whoever the session happened to
+  be into a club they were only looking at, which is the one action on this screen that is hard to
+  undo. Nothing in the request distinguishes a member deliberately joining a new club from a
+  mis-adopted session, so the screen does not guess a primary action for one case over the other —
+  it states the identity and lets both routes read plainly.
+- **What this does not fix**: two different people signed in at once, in two tabs of the same
+  browser. Keycloak's session is one cookie per browser per realm, so that is not achievable in the
+  product as it stands — use a second browser profile or a private window. See
+  docs/ACCOUNT_ORGADMIN_SESSION_SHARING.md.
 
 ---
 
