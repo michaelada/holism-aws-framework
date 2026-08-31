@@ -43,6 +43,7 @@ migrations/       node-pg-migrate migrations (the schema's source of truth)
 | `/api/orgadmin/files` | `file-upload.routes` |
 | `/api/orgadmin/users` | `user-management.routes` |
 | `/api/orgadmin` | `user-group.routes` — account-user groups, used by discount eligibility |
+| `/api/audit` | `audit.routes` (`sessionReportRouter`) — `POST /session` reports a sign-in outcome (unauthenticated, for the failure case; **no caller today**), `POST /session/logout` reports a sign-out (**authenticated** — the actor comes from the token, never the body) |
 | `/api/user-preferences` | `user-preferences.routes` |
 | `/api/public` | `public.routes` — **unauthenticated**, backs the account app's organisation directory and sign-in gateway, plus the email-change confirmation whose link is opened with no session |
 | `/api/account` | `account.routes` — account-user application; the organisation comes from the URL, not the token |
@@ -138,7 +139,7 @@ registry — ~90 actions in 11 categories), `audit.query` (keyset paging, organi
 | `account-auth.middleware` | `resolveAccountOrganisation()`, `requireAccountCapability()` — the account-user equivalent |
 | `organisation-scope.middleware` | `scopeToOrganisation()` and its shorthands — **which organisation a request concerns, and whether the caller may act there.** Required on every org-admin route; a structural test enforces it |
 | `audit.middleware` | `audited({...})` — records a route without touching its handler. Loads the before-row for an update or delete, captures the response as the after-row, records on `finish`. On 101 mutating routes |
-| `audit-auth.middleware` | `noteAuthenticatedRequest()`, `auditRefusals()` — logins and access refusals |
+| `audit-auth.middleware` | `noteAuthenticatedRequest()`, `auditRefusals()` — logins and access refusals. Also `recordSessionEvent()` / `forgetSession()`, shared with the sign-out endpoint. A session event is filed as **one row per organisation the person belongs to** — filing it under nothing when there was more than one candidate made it invisible, because the org-admin viewer scopes hard on `organisation_id`. See [docs/AUDIT_SESSION_EVENTS_FIX.md](../../docs/AUDIT_SESSION_EVENTS_FIX.md) |
 | `field-capability.middleware` | Capability gating at field granularity |
 | `input-validation.middleware`, `xss-protection.middleware`, `csrf.middleware`, `rate-limit.middleware` | Request hardening |
 | `request-logger.middleware`, `metrics.middleware` | Observability |

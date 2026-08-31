@@ -200,7 +200,16 @@
       "openDateEntriesTooltip": "La date et l'heure d'ouverture des inscriptions - les personnes ne peuvent pas soumettre d'inscriptions avant cette heure",
       "entriesClosingDate": "Date de clôture des inscriptions",
       "entriesClosingDateHelper": "Doit être après la date d'ouverture des inscriptions",
-      "entriesClosingDateTooltip": "La date et l'heure de fermeture des inscriptions - les inscriptions se fermeront automatiquement à cette heure"
+      "entriesClosingDateTooltip": "La date et l'heure de fermeture des inscriptions - les inscriptions se fermeront automatiquement à cette heure",
+      "notSet": "Non défini",
+      "validation": {
+        "startDateRequired": "La date de début de l’événement est obligatoire",
+        "endDateRequired": "La date de fin de l’événement est obligatoire",
+        "openDateEntriesRequired": "La date d’ouverture des inscriptions est obligatoire",
+        "entriesClosingDateRequired": "La date de clôture des inscriptions est obligatoire",
+        "endBeforeStart": "La date de fin doit être identique ou postérieure à la date de début",
+        "closingBeforeOpening": "Les inscriptions doivent se clôturer après leur ouverture"
+      }
     },
     "ticketing": {
       "title": "Paramètres de billetterie",

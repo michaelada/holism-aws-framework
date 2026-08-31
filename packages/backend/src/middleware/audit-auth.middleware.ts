@@ -56,6 +56,64 @@ function rememberSession(sessionId: string): boolean {
 }
 
 /**
+ * Forget a session, so the next token presented under a new one is a fresh
+ * sign-in. Called on sign-out.
+ */
+export function forgetSession(sessionId: string): void {
+  seenSessions.delete(sessionId);
+}
+
+/**
+ * File a sign-in or sign-out under **every** organisation the person belongs
+ * to, as one row each.
+ *
+ * The token does not say which club a session is "for", and for a person who
+ * administers three it genuinely is not for any one of them. The previous
+ * answer was to attribute the event only when there was exactly one candidate
+ * and record `null` otherwise — honest about attribution, but it made the event
+ * invisible: the org-admin viewer scopes hard on `organisation_id`
+ * (`audit.query.ts`), so a null row appears in nobody's trail. A multi-club
+ * admin could never see their own sign-ins, which is precisely the audit
+ * question ("was that me?") that this event exists to answer.
+ *
+ * One row per organisation instead. Each club's trail then correctly shows that
+ * an administrator of theirs signed in, which is true of every one of them, and
+ * no club is shown anything about a club it has no relationship with. The cost
+ * is N rows for an N-club admin, once per session — bounded by `rememberSession`
+ * above, and small next to what a null row costs in usefulness.
+ *
+ * Somebody who belongs to no organisation — a platform admin — still gets a
+ * single unattributed row, visible at platform level.
+ */
+export async function recordSessionEvent(
+  action: 'auth.login' | 'auth.logout',
+  keycloakUserId: string,
+  actor: ReturnType<typeof actorFromRequest>,
+  context: Record<string, unknown>
+): Promise<void> {
+  const unattributed = () => audit.record({ category: 'security', action, actor, context });
+
+  try {
+    const result = await db.query(
+      `SELECT DISTINCT organization_id FROM organization_users
+        WHERE keycloak_user_id = $1 AND organization_id IS NOT NULL`,
+      [keycloakUserId]
+    );
+
+    const organisationIds: string[] = result.rows.map((row: any) => row.organization_id);
+    if (organisationIds.length === 0) return void unattributed();
+
+    for (const organisationId of organisationIds) {
+      audit.record({ category: 'security', action, actor, organisationId, context });
+    }
+  } catch (error) {
+    // Still record it, unattributed, rather than losing the event entirely.
+    logger.warn('Could not resolve organisations for a session event', { action, error });
+    unattributed();
+  }
+}
+
+/**
  * Record the first request a session makes as a sign-in.
  *
  * Called from inside `authenticateToken`, at the point `req.user` is set —
@@ -65,10 +123,10 @@ function rememberSession(sessionId: string): boolean {
  *
  * Does nothing for an anonymous request: a public page is not a sign-in.
  *
- * Belt and braces with `POST /api/audit/session`, which the applications call.
- * That endpoint catches the *failed* sign-ins this cannot see; this catches
- * sessions established by any route, including ones an application forgets to
- * report. `rememberSession` keeps them from producing two events.
+ * Belt and braces with `POST /api/audit/session`. That endpoint catches the
+ * *failed* sign-ins and the sign-outs this cannot see; this catches sessions
+ * established by any route, including ones an application forgets to report.
+ * `rememberSession` keeps them from producing two events.
  */
 export function noteAuthenticatedRequest(req: Request, application?: string): void {
   try {
@@ -79,38 +137,7 @@ export function noteAuthenticatedRequest(req: Request, application?: string): vo
     const actor = actorFromRequest(req);
     const context = { ...contextFromRequest(req), application };
 
-    /*
-     * Which organisation to file this under.
-     *
-     * A sign-in is a security event an org admin should see in *their* trail,
-     * so it needs an organisation — but the token does not carry one. Resolved
-     * once per session (not per request) by the `rememberSession` guard above.
-     *
-     * Only when the person belongs to exactly one: somebody who administers
-     * three clubs has not signed in to any particular one, and picking would put
-     * the event in a trail it does not belong to. Null is the honest answer, and
-     * the event stays visible at platform level.
-     */
-    void db
-      .query(
-        `SELECT DISTINCT organization_id FROM organization_users
-          WHERE keycloak_user_id = $1 AND organization_id IS NOT NULL`,
-        [user.userId]
-      )
-      .then((result) => {
-        audit.record({
-          category: 'security',
-          action: 'auth.login',
-          actor,
-          organisationId: result.rows.length === 1 ? result.rows[0].organization_id : null,
-          context,
-        });
-      })
-      .catch((error) => {
-        // Still record it, unattributed, rather than losing the sign-in.
-        logger.warn('Could not resolve an organisation for a sign-in event', { error });
-        audit.record({ category: 'security', action: 'auth.login', actor, context });
-      });
+    void recordSessionEvent('auth.login', user.userId, actor, context);
   } catch {
     /*
      * Silent by design. This runs inside authentication: an audit problem must

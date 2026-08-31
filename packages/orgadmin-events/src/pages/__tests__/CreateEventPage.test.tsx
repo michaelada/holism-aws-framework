@@ -111,6 +111,28 @@ const selectDiscount = async (label: RegExp, discountName: RegExp, index = 0) =>
   fireEvent.keyDown(listbox, { key: 'Escape' });
 };
 
+/**
+ * Fill the four dates on the wizard's second step.
+ *
+ * The wizard will not advance past that step until all four are set — see
+ * `validateDates` in useEventValidation. These tests are about discounts, so
+ * the dates are scaffolding; the pickers are mocked above as native inputs.
+ */
+const fillEventDates = () => {
+  fireEvent.change(screen.getByLabelText('Event Start Date'), {
+    target: { value: '2026-09-19' },
+  });
+  fireEvent.change(screen.getByLabelText('Event End Date'), {
+    target: { value: '2026-09-20' },
+  });
+  fireEvent.change(screen.getByLabelText('Open Date Entries'), {
+    target: { value: '2026-08-19T12:00' },
+  });
+  fireEvent.change(screen.getByLabelText('Entries Closing Date'), {
+    target: { value: '2026-09-12T12:00' },
+  });
+};
+
 describe('CreateEventPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -325,7 +347,8 @@ describe('CreateEventPage', () => {
 
       // Navigate through steps
       const nextButton = screen.getByRole('button', { name: /Next/i });
-      await user.click(nextButton); // Step 2
+      await user.click(nextButton); // Step 2 – Event Dates
+      fillEventDates();
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
 
@@ -425,7 +448,8 @@ describe('CreateEventPage', () => {
       await user.type(descriptionInputs[0], 'Test Description');
 
       const nextButton = screen.getByRole('button', { name: /Next/i });
-      await user.click(nextButton); // Step 2
+      await user.click(nextButton); // Step 2 – Event Dates
+      fillEventDates();
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
 
@@ -461,7 +485,8 @@ describe('CreateEventPage', () => {
       await user.type(descriptionInputs[0], 'Test Description');
 
       const nextButton = screen.getByRole('button', { name: /Next/i });
-      await user.click(nextButton); // Step 2
+      await user.click(nextButton); // Step 2 – Event Dates
+      fillEventDates();
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
 
@@ -527,7 +552,8 @@ describe('CreateEventPage', () => {
       await user.type(descriptionInputs[0], 'Test Description');
 
       const nextButton = screen.getByRole('button', { name: /Next/i });
-      await user.click(nextButton); // Step 2
+      await user.click(nextButton); // Step 2 – Event Dates
+      fillEventDates();
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
 
@@ -593,7 +619,8 @@ describe('CreateEventPage', () => {
       await user.type(descriptionInputs[0], 'Test Description');
 
       const nextButton = screen.getByRole('button', { name: /Next/i });
-      await user.click(nextButton); // Step 2
+      await user.click(nextButton); // Step 2 – Event Dates
+      fillEventDates();
       await user.click(nextButton); // Step 3
       await user.click(nextButton); // Step 4
 

@@ -198,7 +198,16 @@
       "openDateEntriesTooltip": "Das Datum und die Uhrzeit, zu der die Registrierung öffnet - Personen können vor diesem Zeitpunkt keine Anmeldungen einreichen",
       "entriesClosingDate": "Anmeldeschluss",
       "entriesClosingDateHelper": "Muss nach dem Anmeldungsbeginn liegen",
-      "entriesClosingDateTooltip": "Das Datum und die Uhrzeit, zu der die Registrierung schließt - Anmeldungen werden zu diesem Zeitpunkt automatisch geschlossen"
+      "entriesClosingDateTooltip": "Das Datum und die Uhrzeit, zu der die Registrierung schließt - Anmeldungen werden zu diesem Zeitpunkt automatisch geschlossen",
+      "notSet": "Nicht festgelegt",
+      "validation": {
+        "startDateRequired": "Startdatum der Veranstaltung ist erforderlich",
+        "endDateRequired": "Enddatum der Veranstaltung ist erforderlich",
+        "openDateEntriesRequired": "Öffnungsdatum für Anmeldungen ist erforderlich",
+        "entriesClosingDateRequired": "Schlussdatum für Anmeldungen ist erforderlich",
+        "endBeforeStart": "Das Enddatum muss am oder nach dem Startdatum liegen",
+        "closingBeforeOpening": "Anmeldungen müssen nach der Öffnung schließen"
+      }
     },
     "ticketing": {
       "title": "Ticketing-Einstellungen",

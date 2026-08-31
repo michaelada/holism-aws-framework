@@ -40,3 +40,4 @@ export * from './utils/formatting';
 export * from './utils/ticketGeneration';
 export * from './utils/applicationField';
 export * from './utils/auditLabels';
+export * from './utils/signOutReport';

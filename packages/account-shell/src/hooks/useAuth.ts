@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
+import { reportSignOut } from '@aws-web-framework/components';
 import { forgetResponses } from '../offline/responseCache';
 
 export interface AccountUser {
@@ -260,6 +261,11 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
       window.location.href = ACCOUNT_ROOT;
       return;
     }
+
+    // Reported before the redirect — the server never sees the request that
+    // ends the session. See reportSignOut.
+    reportSignOut({ token: keycloak?.token, application: 'account-app' });
+
     keycloak?.logout({ redirectUri: `${window.location.origin}${ACCOUNT_ROOT}` });
   }, [keycloak, authDisabled]);
 

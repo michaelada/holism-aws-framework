@@ -136,5 +136,7 @@ Several `docs/EVENT_*.md` and `docs/DISCOUNT_*.md` files record specific fixes.
 | "Why won't the event save / the wizard advance?" | `hooks/useEventValidation.ts` |
 | "Where is this field on the activity form?" | `components/EventActivityForm.tsx` |
 | "How is form state managed?" | `hooks/useEventForm.ts` |
+| "Why does an event have entry dates nobody set?" | It used to. `useEventForm` filled an absent entry window with `new Date()`, so opening an event and saving anything wrote the load time into both columns. Now absent stays absent. `docs/EVENT_ENTRY_DATE_INVENTION_FIX.md` |
+| "Which event dates are required?" | **All four** — start, end, entry opening, entry closing. `useEventValidation.validateDates` on save and on the wizard's step 1; `eventService.createEvent` refuses a create missing any, and `updateEvent` refuses to clear one. The **columns stay nullable**: pre-rule events and the seed's deliberately ungated `Ward Union Open Day` still read correctly, and a null window still means *unbounded* in `public-event.service` |
 | "Which page owns this URL?" | The route table in `src/index.ts` |
 | "How do discounts attach to an activity?" | `services/discount.service.ts` + `DiscountSelector` from `packages/components` |

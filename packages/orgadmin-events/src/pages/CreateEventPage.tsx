@@ -107,6 +107,13 @@ const CreateEventPage: React.FC = () => {
         // Navigate to the first step with errors
         if (errors.name || errors.description) {
           setActiveStep(0);
+        } else if (
+          errors.startDate ||
+          errors.endDate ||
+          errors.openDateEntries ||
+          errors.entriesClosingDate
+        ) {
+          setActiveStep(1);
         } else if (errors.activities) {
           setActiveStep(3);
         }
@@ -181,7 +188,9 @@ const CreateEventPage: React.FC = () => {
         return (
           <EventDatesSection
             formData={formData}
+            fieldErrors={fieldErrors}
             onChange={handleChange}
+            onClearFieldError={handleClearFieldError}
           />
         );
       case 2:
@@ -278,7 +287,9 @@ const CreateEventPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={8}>
               <Typography variant="body2">
-                {formData.openDateEntries?.toLocaleString('en-GB')}
+                {formData.openDateEntries
+                  ? formData.openDateEntries.toLocaleString('en-GB')
+                  : t('events.dates.notSet')}
               </Typography>
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -286,7 +297,9 @@ const CreateEventPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} sm={8}>
               <Typography variant="body2">
-                {formData.entriesClosingDate?.toLocaleString('en-GB')}
+                {formData.entriesClosingDate
+                  ? formData.entriesClosingDate.toLocaleString('en-GB')
+                  : t('events.dates.notSet')}
               </Typography>
             </Grid>
           </Grid>

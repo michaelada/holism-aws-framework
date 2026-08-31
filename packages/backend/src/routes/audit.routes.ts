@@ -1,6 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, requireRole } from '../middleware/auth.middleware';
-import { audit, auditQueryService, actorFromRequest, queryFromRequest } from '../services/audit';
+import {
+  audit,
+  auditQueryService,
+  actorFromRequest,
+  contextFromRequest,
+  queryFromRequest,
+} from '../services/audit';
+import { recordSessionEvent, forgetSession } from '../middleware/audit-auth.middleware';
 import { sessionService } from '../services/session.service';
 import { logger } from '../config/logger';
 
@@ -214,5 +221,49 @@ sessionReportRouter.post('/session', async (req: Request, res: Response) => {
     return res.status(202).send();
   }
 });
+
+/**
+ * @swagger
+ * /api/audit/session/logout:
+ *   post:
+ *     summary: An application reporting a sign-out
+ *     description: >
+ *       A sign-out is a redirect to Keycloak, so the server never sees the
+ *       request that ends the session and cannot observe it the way it observes
+ *       a sign-in. The application reports it here on the way out.
+ *
+ *       Authenticated, unlike the sign-in report: the token is still valid at
+ *       this point, and the actor must come from it rather than from the body,
+ *       or anybody could write a sign-out naming anybody.
+ *     tags: [Audit]
+ */
+sessionReportRouter.post(
+  '/session/logout',
+  authenticateToken(),
+  async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { application } = req.body ?? {};
+
+      await recordSessionEvent('auth.logout', user.userId, actorFromRequest(req), {
+        ...contextFromRequest(req),
+        application: typeof application === 'string' ? application : undefined,
+      });
+
+      /*
+       * The session is over, so drop it from the sign-in memo. Keycloak issues
+       * a new `sid` on the next sign-in and would record it anyway; this keeps
+       * the map from holding dead sessions for its full 12 hours.
+       */
+      if (user?.sessionId) forgetSession(user.sessionId);
+
+      return res.status(202).send();
+    } catch (error) {
+      logger.error('Error in POST /audit/session/logout:', error);
+      // Never fail the caller: a failed report must not block signing out.
+      return res.status(202).send();
+    }
+  }
+);
 
 export default router;

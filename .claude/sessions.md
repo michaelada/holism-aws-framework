@@ -20681,3 +20681,303 @@ Nothing changed on disk — the probe scripts are deleted. Want me to fix any of
 ## 2026-08-29 12:37:39 — Prompt
 
 can you deploy the latest code to itsps.org and reset all the data
+
+### Assistant
+
+Before I touch a production host, let me understand what itsps.org actually is and how deploys work here.
+
+Before I do anything to a live host, two things need settling — and one of them is a real problem.
+
+**The data reset is guarded against on purpose.** Three separate refusals in [seed/index.ts:139-159](packages/backend/scripts/seed/index.ts#L139-L159):
+
+- `NODE_ENV=production` — refused outright, explicitly *"with no override"*
+- non-local database — needs `SEED_ALLOW_REMOTE_DB=yes`
+- non-local Keycloak — needs `SEED_ALLOW_REMOTE_KEYCLOAK=yes`
+- and a live Stripe key is refused with no override
+
+[update.sh](scripts/deploy/update.sh) reinforces it: *"Keeps the database and the Keycloak realm exactly as they are... it never re-imports the realm or re-seeds."* The deploy path is deliberately non-destructive. Resetting itsps.org means deliberately defeating guards someone wrote to prevent exactly this, and `--reset` deletes all application data plus the Keycloak users — irreversibly, including any real clubs, members, or payment records.
+
+**"Latest code" is also ambiguous.** `HEAD` is level with `origin/main` (nothing unpushed), so a deploy right now ships `c89facd`. But you have 56 modified/untracked files in the working tree — the test-coverage work, `ApplicationFeeEditor`, `RoleSelector`, the vite configs. None of that is committed, so none of it would deploy. Getting it there needs a commit and push, which I won't do off my own bat.
+
+The deploy half is straightforward and I can start it as soon as you've picked. Access is there — AWS CLI is authenticated to account `195810096194`.
+
+Understood — you've reaffirmed both, so I'll proceed: commit and push the working tree, deploy, then reset. Your selecting "my current working tree" is the go-ahead for the git operations.
+
+Two things first — I'm going to look at the target before wiping it, and see what's actually in that working tree.
+
+itsps.org → `63.32.80.204` → instance `i-047af81d9696e0684`, tagged **`holism-testing`**. That's a testing box, not a customer-facing production system — which makes the reset far less alarming than the guards implied.
+
+Let me confirm access and look at what data is actually on it before wiping anything.
+
+Server is on `fbb9969`, one commit behind local. Now let me look at the data before I wipe it:
+
+No real data: 4 seeded pony clubs created 2026-08-22, counts matching the demo fixture exactly, 2 payments totalling £81.70, 25 audit rows, instance tagged `holism-testing`. Safe to reset.
+
+Now the commit. Let me see exactly what would go in:
+
+Empty file — I'll leave `.claude/CLAUDE.md` out. Every `vite.config.ts` changed, and those affect the build, so let me verify it compiles before pushing:
+
+Those are inside the `test.coverage` block — build-irrelevant. Still, a build check gates the push. Starting it now:
+
+Build fails in `packages/frontend` — but `CreateEditObjectPage.tsx` isn't one of my changed files, so this looks pre-existing. Let me confirm that and check what the deploy actually builds:
+
+The Dockerfile documents it explicitly: *"`tsc` currently fails in this repository for reasons that have nothing to do with deploying it — pre-existing"*. The deploy runs `npx vite build` directly, bypassing `tsc`, which is why the server built fine on `fbb9969`. Not a blocker, and not something my changes caused.
+
+Committing and pushing:
+
+Pushed `c89facd..5ec9dad`. Now the deploy:
+
+Deploy succeeded — and `update.sh` prints the sanctioned reseed command for this environment, `--no-stripe` included. Let me verify the deployed commit and health, then reseed:
+
+`5ec9dad` live, site returning 200, all containers healthy. Now the destructive step — the reseed:
+
+Reseed completed. You need Stripe too — the sanctioned command used `--no-stripe`, so no connected accounts were created. Let me check what Stripe key that box has, without printing the secret:
+
+Understood — the Stripe **test** connected accounts the seed creates. That last check was blocked by a transient classifier error; let me retry it more narrowly.
+
+Test key confirmed (`sk_test_`), so the seed will create the connected accounts rather than refuse. Re-running the reset with Stripe enabled:
+
+All four clubs got test connected accounts. Final verification:
+
+Stripe ids aren't a column — they live in the `settings` JSONB. Let me confirm on the host:
+
+All four Stripe test accounts are stored against their clubs, matching the ids the seed reported.
+
+## Done
+
+**Deployed** — `5ec9dad` is live on itsps.org.
+
+I committed your working tree (55 files: the new test suites, the per-directory coverage thresholds, and the `data-testid` tweaks) and pushed `c89facd..5ec9dad`. Then ran `update.sh` on the host: pull, rebuild, migrate ("No migrations to run!"), restart. Site returns 200 on both `/` and `/orgadmin/`, all four containers healthy.
+
+**Reset** — done twice, and the second one is the state you have.
+
+The first pass used the `--no-stripe` command `update.sh` recommends. When you said you needed Stripe I checked the platform key, found `sk_test_`, and re-ran the full reset with Stripe enabled. It removed the 4 stale seeded accounts and created fresh ones:
+
+| Club | Account |
+|---|---|
+| Kildare Hunt | `acct_1U9kt428bRVPsJQ1` |
+| Laois Hunt | `acct_1U9kt8S7CY1o8uTO` |
+| Ward Union | `acct_1U9ktDS2GEAy4Rz5` |
+| Meath Hunt | `acct_1U9ktH27RaJEVca7` |
+
+Final state: 4 orgs, 31 members, 18 events, all `admin@<club>.test` logins rebuilt in Keycloak.
+
+## Two things to know
+
+**On my earlier warning** — I was wrong to frame it as production risk. The host is tagged `holism-testing`, and the data was the demo fixture from a 2026-08-22 seed: no real clubs, members, or payments. `update.sh` even prints the reseed command itself. The guards in `seed/index.ts` are there to stop an accidental run against a real environment, not to mark this one off-limits. You were right to push past it.
+
+**A pre-existing build failure**, which I did not cause and did not fix: `npm run build:all` fails on `tsc` in `packages/frontend/src/pages/CreateEditObjectPage.tsx` — a missing `order` on `WizardStep`, plus a possibly-undefined access at line 290. `Dockerfile.web` already documents this and deliberately runs `npx vite build` directly to bypass `tsc`, so the deploy is unaffected. But `npm run build:all` is red on `main` and will stay red until someone fixes those two errors.
+
+**Audit log survived** both resets — 25 rows on the host, still pointing at the now-deleted organisation ids from before, so they'll show unresolved in the viewer.
+
+I haven't touched the three bugs from earlier (null date fallback, multi-org login attribution, missing logout event) — say the word and I'll take them.
+
+---
+
+
+## 2026-08-29 13:02:46 — Prompt
+
+Take them
+
+### Assistant
+
+Taking all three. Let me read the relevant code first.
+
+Entry dates aren't validated at all, so dropping the invented values is safe. But I need to know what a *null* entry window means before I make it the default:
+
+Confirmed — `NULL` means "unbounded" on that side. That also means the current create default (both dates = module-load time) makes a brand-new event's entries **close immediately**. Same defect, worse consequence. Fixing both.
+
+Now the load path — the actual reported bug:
+
+`start_date`/`end_date` are `NOT NULL`, so their fallback is correct defensive code — leaving those. Entry dates are nullable, confirming the fix. But the review step now renders blank for unset dates. Let me check for an existing i18n key:
+
+Adding the key to all six locales (§3.2):
+
+Minimal diffs. Now the review step:
+
+Fix 1 done. Now the login attribution:
+
+Now fix 3 — the logout event. Extending the session endpoint:
+
+Now the front end — making logout actually report before it redirects:
+
+Four logout sites across three apps. Per §1.5 the reporting belongs in the shared library. Let me check account-shell too:
+
+Creating the shared reporter in `packages/components` (§1.5):
+
+Now wiring it into the logout paths:
+
+`components` is already in the orgadmin graph via orgadmin-core, so the barrel import adds nothing to the bundle. Declaring the dependency properly:
+
+Now the other three logout sites:
+
+`admin` and `frontend` already import from components with alias-only resolution — no declared dep. My `package.json` edit would desync `package-lock.json`, and `Dockerfile.web` runs `npm ci`, which fails on a mismatch. Reverting it to match the existing convention:
+
+`ApiContext.tsx` logs out on a 401 — the token is already rejected there, so the report couldn't authenticate and it's a session expiry, not a sign-out. Leaving that one. The metadata UI and account app:
+
+Let me typecheck the backend before writing tests:
+
+Good pattern to follow. Writing the backend tests:
+
+8/8. Now the logout route:
+
+Now the front-end tests — the shared reporter and the event form:
+
+6/6. Now the event form — the bug you actually reported:
+
+6/6. Now checking for regressions in the suites I touched:
+
+All front-end suites green. Now the backend audit tests:
+
+All green — 108 backend audit tests. Now documentation (§1.4, §3.6):
+
+Writing the fix docs:
+
+Updating §2.2 of the design doc, which currently claims logout is covered:
+
+Now the module summaries (§3.6):
+
+Final verification — typechecking each package I touched:
+
+Two of those are mine — `reportSignOut` not found. `tsc` resolves `@aws-web-framework/components` to its built `dist` types, which are stale. Rebuilding:
+
+`dist` is gitignored and `App.tsx` is untouched, so those two remaining errors are pre-existing. Last check — the actual deploy build path (`npx vite build`, as `Dockerfile.web` runs it):
+
+All three fixed, tested, and documented. Left uncommitted in the working tree.
+
+## 1. Event form invented entry dates
+
+[useEventForm.ts](packages/orgadmin-events/src/hooks/useEventForm.ts) — absent entry dates now stay `undefined` instead of becoming `new Date()`. A null window means *unbounded* to the server (`open_date_entries IS NULL OR open_date_entries <= NOW()`), so inventing a value was a data change, not a default.
+
+While fixing it I found the same fault on the **create** path, with a worse result: `DEFAULT_FORM_DATA` set both dates to the same `new Date()`, so a new event whose entry dates were never touched was **closed to entries a second after creation** (`entries_closing_date >= NOW()` fails immediately). That constant was also evaluated once at module import, so a tab left open overnight opened its next Create Event form on yesterday's date. It's now `createDefaultFormData()`, called per form.
+
+`startDate`/`endDate` keep their fallback — those columns are `NOT NULL`, so there it's correct.
+
+The review step rendered an empty cell for an unset date; it now reads "Not set — entries always open" via a new key added to all six locales (§3.2).
+
+**Events already affected keep their timestamps.** They're indistinguishable from dates someone meant to set, so nothing is corrected automatically — noted in the doc.
+
+## 2. Multi-club admins couldn't see their own sign-ins
+
+[audit-auth.middleware.ts](packages/backend/src/middleware/audit-auth.middleware.ts) — a new `recordSessionEvent` files **one row per organisation** the person belongs to. The old `rows.length === 1 ? ... : null` was defensible about attribution but made the event invisible, since the viewer scopes hard on `organisation_id`. No organisations still yields one unattributed row; a failed lookup still records the event.
+
+## 3. Sign-out was never recorded
+
+New authenticated `POST /api/audit/session/logout`, plus a shared `reportSignOut` in `packages/components` wired into all four front ends. `keepalive: true` matters — the redirect to Keycloak starts immediately and would otherwise cancel the request. All errors are swallowed: a lost log row beats a blocked sign-out.
+
+I deliberately left `admin`'s `ApiContext` 401-triggered logout alone — the token is already rejected there, so the report couldn't authenticate, and a session expiry isn't a sign-out.
+
+**Also worth knowing:** `POST /api/audit/session` still has no callers, so `auth.login-failed` remains unrecorded. I didn't fix that — it needs a Keycloak event listener, which is a separate piece of work — but I corrected the code comments and design doc that claimed the applications already call it.
+
+## Verification
+
+- **New tests:** 19 across three files — 8 backend middleware, 5 logout route, 6 `reportSignOut`, plus 6 for the event form.
+- **Regression runs, all green:** orgadmin-events 327, orgadmin-shell 746, components 459, admin 548, account-shell 673, frontend 189, backend audit 108.
+- **Deploy build path** (`npx vite build`, as `Dockerfile.web` runs it) passes for all four apps.
+
+Two `tsc` errors remain in `orgadmin-shell/src/App.tsx` — pre-existing, in a file I didn't touch, from stale sibling-package `dist` types. Same known condition the Dockerfile documents. I did rebuild `packages/components/dist` so `reportSignOut` resolves for typechecking; `dist` is gitignored.
+
+Docs: `EVENT_ENTRY_DATE_INVENTION_FIX.md`, `AUDIT_SESSION_EVENTS_FIX.md`, plus §2.2 of `AUDIT_TRAIL_AND_SESSIONS.md` and three module summaries (§3.6).
+
+Nothing committed or deployed — say the word if you want either.
+
+---
+
+
+## 2026-08-29 14:02:45 — Prompt
+
+Note, it should not be possible to create an event without an event start and end date, and an open and closing date,,
+
+### Assistant
+
+Understood — that changes the rule. All four dates are mandatory, so the form must *block* the save rather than quietly leave them null. Let me look at the validation layer.
+
+Adding date validation following the existing `events.<section>.validation.*` pattern:
+
+Now the six translation files:
+
+Now the errors need to surface on the fields. Checking `EventDatesSection`'s props:
+
+`EditEventPage` scrolls to the first section with errors, but doesn't know about dates:
+
+Now the backend guard, so the rule holds regardless of client:
+
+Before adding the guard, checking the seed — it had one event with a null entry date:
+
+The seed's null-window event is inserted via raw SQL (`database.ts:732`), not the service, and it's deliberate — "entries are never gated by date". So a service guard won't break it. Adding it:
+
+Now the update path — an edit shouldn't be able to clear a required date:
+
+Now correcting the review-step label — "entries always open" no longer describes a new event:
+
+`CreateEventPage.handleSave` jumps to the first step with errors but doesn't know about dates either:
+
+Now tests for the new rule:
+
+Now backend tests for the service guards:
+
+17/17. Now checking the whole suite for fallout — existing validation tests use fixtures with no dates:
+
+5 failures in `CreateEventPage.test.tsx` — the wizard now blocks on the dates step. Let me look:
+
+Confirmed — the tests walk the wizard to the Activities step, and `Next` now correctly refuses at the dates step. Let me see their navigation helper:
+
+The tests click `Next` three times; step 1 now blocks. Let me find how other tests in this repo fill MUI pickers:
+
+Formats confirmed. Adding a helper to the test file:
+
+The test file already mocks the pickers as native inputs, so filling them is straightforward. Let me check the five call sites are identical:
+
+342/342. Now the backend event suites:
+
+These fixtures predate the rule. Updating them (§1.2):
+
+All green. Updating the earlier test's framing, now that the rule has changed:
+
+Now the doc, which currently frames unset dates as a supported state:
+
+Checking whether the wireframes describe the dates step (§1.4):
+
+The wireframe marks start/end as required but not the entry dates. Updating it:
+
+Final verification across everything I've touched:
+
+Done. All four dates are now mandatory, enforced in three places.
+
+## What changed
+
+**Validation** — [useEventValidation.ts](packages/orgadmin-events/src/hooks/useEventValidation.ts) gains `validateDates`: all four required, plus `endDate >= startDate` and `entriesClosingDate > openDateEntries`. Wired into `validateAll` (save) and `validateStep(1)` — the dates step previously had *no validation at all*, so Next always advanced.
+
+It treats `null`, `''` and an unparseable `Date` as missing. That last one matters: a half-typed value in the picker's text input produces `Invalid Date`, which would otherwise pass a truthiness check and reach the server.
+
+**Backend** — [event.service.ts](packages/backend/src/services/event.service.ts): `createEvent` refuses a create missing any of the four (naming all of them in one message), and `updateEvent` refuses an explicit `null`/`''`. `undefined` still means "not part of this update", so partial updates keep working.
+
+**Where errors show** — `EventDatesSection` took no `fieldErrors` at all, so a required-date message had nowhere to appear. Each picker now shows its own and clears it when a date is chosen. Both pages jump to the first section/step with errors, and neither knew about dates — a date error would have been reported with nothing on screen to explain it.
+
+Six new i18n keys across all six locales.
+
+## Two judgement calls worth your sign-off
+
+**The columns stay nullable.** Making them `NOT NULL` would need a migration and would break the seed's `Ward Union Open Day` — deliberately created with no entry window, "entries are never gated by date", to keep the unbounded path testable. So I read your rule as *what may be written*, not *what the table can hold*. Pre-rule events still read back correctly and `public-event.service`'s `IS NULL` handling is untouched. Say the word if you want a migration and the fixture changed too.
+
+**Editing a legacy event now demands dates.** `validateDates` runs on every save, not just create, so the first edit of an event with a null window will ask for one. That seemed right — the alternative is a form that silently preserves a state new events can't reach — but it does mean a club editing an old event hits a prompt they didn't expect.
+
+## Tests
+
+**32 new** (15 validation, 17 service), and I fixed two sets the change legitimately broke:
+
+- Five `CreateEventPage` discount tests walked the wizard to Activities; `Next` now correctly refuses at the dates step. Added a `fillEventDates()` helper.
+- Four `event.service` create fixtures had no entry dates, so they failed on the new error instead of the one they were asserting.
+
+Green: orgadmin-events 342, orgadmin-shell 746, backend 371 across 22 suites. Backend typecheck clean, all six locales parse with matching keys, orgadmin-shell deploy build passes.
+
+Docs updated — `EVENT_ENTRY_DATE_INVENTION_FIX.md` has a new "The rule" section, the wireframe now marks all four required, and the module summary answers "which event dates are required?".
+
+Still uncommitted, and itsps.org is still running `5ec9dad` — none of today's three fixes or this rule are deployed.
+
+---
+
+
+## 2026-08-31 07:51:12 — Prompt
+
+Can you update the seed program so that events created always have a start+end date, and always have an opening and closing date.

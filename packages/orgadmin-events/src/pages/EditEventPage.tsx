@@ -125,6 +125,15 @@ const EditEventPage: React.FC = () => {
   const findFirstErrorSection = (errors: Record<string, string>): string | null => {
     // Basic info fields
     if (errors.name || errors.description) return 'basic-info';
+    // Dates — all four are required, so this is a common first failure
+    if (
+      errors.startDate ||
+      errors.endDate ||
+      errors.openDateEntries ||
+      errors.entriesClosingDate
+    ) {
+      return 'event-dates';
+    }
     // Activities
     if (errors.activities) return 'activities';
     return null;
@@ -203,7 +212,9 @@ const EditEventPage: React.FC = () => {
     },
     'event-dates': {
       formData,
+      fieldErrors,
       onChange: handleChange,
+      onClearFieldError: handleClearFieldError,
     },
     ticketing: {
       formData,

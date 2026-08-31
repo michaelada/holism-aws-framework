@@ -112,8 +112,8 @@ describe('EventService', () => {
         email_notifications: 'admin@example.com',
         start_date: new Date('2024-07-01'),
         end_date: new Date('2024-07-05'),
-        open_date_entries: null,
-        entries_closing_date: null,
+        open_date_entries: new Date('2024-06-01T12:00:00.000Z'),
+        entries_closing_date: new Date('2024-06-25T12:00:00.000Z'),
         limit_entries: false,
         entries_limit: null,
         add_confirmation_message: false,
@@ -150,6 +150,8 @@ describe('EventService', () => {
         emailNotifications: 'admin@example.com',
         startDate: new Date('2024-07-01'),
         endDate: new Date('2024-07-05'),
+        openDateEntries: new Date('2024-06-01T12:00:00.000Z'),
+        entriesClosingDate: new Date('2024-06-25T12:00:00.000Z'),
         limitEntries: true,
         entriesLimit: 100,
         addConfirmationMessage: true,
@@ -193,6 +195,8 @@ describe('EventService', () => {
         eventOwner: 'user-1',
         startDate: new Date('2024-07-05'),
         endDate: new Date('2024-07-01'),
+        openDateEntries: new Date('2024-06-01T12:00:00.000Z'),
+        entriesClosingDate: new Date('2024-06-25T12:00:00.000Z'),
       };
 
       await expect(service.createEvent(invalidEvent)).rejects.toThrow(
@@ -208,6 +212,8 @@ describe('EventService', () => {
         eventOwner: 'user-1',
         startDate: new Date('2024-07-01'),
         endDate: new Date('2024-07-05'),
+        openDateEntries: new Date('2024-06-01T12:00:00.000Z'),
+        entriesClosingDate: new Date('2024-06-25T12:00:00.000Z'),
         limitEntries: true,
       };
 
@@ -224,6 +230,8 @@ describe('EventService', () => {
         eventOwner: 'user-1',
         startDate: new Date('2024-07-01'),
         endDate: new Date('2024-07-05'),
+        openDateEntries: new Date('2024-06-01T12:00:00.000Z'),
+        entriesClosingDate: new Date('2024-06-25T12:00:00.000Z'),
         addConfirmationMessage: true,
       };
 

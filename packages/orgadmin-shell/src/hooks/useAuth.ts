@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
 import axios from 'axios';
 import { Organisation } from '@aws-web-framework/orgadmin-core';
+import { reportSignOut } from '@aws-web-framework/components';
 
 interface UseAuthReturn {
   keycloak: Keycloak | null;
@@ -293,6 +294,10 @@ export const useAuth = (keycloakConfig: KeycloakConfig): UseAuthReturn => {
       // In dev mode with auth disabled, just reload the page
       window.location.href = '/';
     } else {
+      // Reported before the redirect, because once Keycloak has the browser
+      // the server never sees the end of this session. Fire-and-forget with
+      // `keepalive` — signing out is never held up by the audit trail.
+      reportSignOut({ token: keycloak?.token, application: 'orgadmin-client' });
       keycloak?.logout();
     }
   }, [keycloak, authDisabled]);

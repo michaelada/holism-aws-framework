@@ -34,15 +34,30 @@ export interface UseEventFormReturn {
   loadEvent: (eventId: string) => Promise<void>;
 }
 
-const DEFAULT_FORM_DATA: EventFormData = {
+/**
+ * A blank form.
+ *
+ * A function, not a constant: `new Date()` in a module-level literal is
+ * evaluated once, when the bundle is first imported, so a tab left open
+ * overnight opened its next Create Event form on yesterday's date.
+ *
+ * The two entry dates start **undefined** rather than "now". A null entry
+ * window means unbounded to the server — `open_date_entries IS NULL OR
+ * open_date_entries <= NOW()` in public-event.service — so leaving them unset
+ * is "entries always open", which is the sane default for a new event. Seeding
+ * them with `new Date()` set the closing date to the moment the form loaded,
+ * which made every untouched new event closed to entries a second after it was
+ * created.
+ */
+const createDefaultFormData = (): EventFormData => ({
   name: '',
   description: '',
   eventOwner: '',
   emailNotifications: '',
   startDate: new Date(),
   endDate: new Date(),
-  openDateEntries: new Date(),
-  entriesClosingDate: new Date(),
+  openDateEntries: undefined,
+  entriesClosingDate: undefined,
   limitEntries: false,
   entriesLimit: undefined,
   addConfirmationMessage: false,
@@ -65,7 +80,7 @@ const DEFAULT_FORM_DATA: EventFormData = {
   ticketBackgroundColor: '#ffffff',
   // Discount configuration
   discountIds: [],
-};
+});
 
 const DEFAULT_PAYMENT_METHODS = [
   { id: 'pay-offline', name: 'Pay Offline' },
@@ -78,7 +93,7 @@ export function useEventForm(): UseEventFormReturn {
   const { execute } = useApi();
   const { organisation } = useOrganisation();
 
-  const [formData, setFormData] = useState<EventFormData>({ ...DEFAULT_FORM_DATA });
+  const [formData, setFormData] = useState<EventFormData>(createDefaultFormData);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,12 +201,20 @@ export function useEventForm(): UseEventFormReturn {
           confirmationMessage: response.confirmationMessage || '',
           startDate: response.startDate ? new Date(response.startDate) : new Date(),
           endDate: response.endDate ? new Date(response.endDate) : new Date(),
+          /*
+           * Absent stays absent. Falling back to `new Date()` here meant an
+           * event with no entry window acquired one just by being opened: the
+           * form sent the load time back on the next save, and the audit trail
+           * recorded an entry-date change against somebody who had only edited
+           * the name. A null entry window is meaningful — it is "unbounded" to
+           * the server — so inventing a value is a data change, not a default.
+           */
           openDateEntries: response.openDateEntries
             ? new Date(response.openDateEntries)
-            : new Date(),
+            : undefined,
           entriesClosingDate: response.entriesClosingDate
             ? new Date(response.entriesClosingDate)
-            : new Date(),
+            : undefined,
           activities: Array.isArray(response.activities) ? response.activities : [],
           discountIds: response.discountIds || [],
           // Coerced rather than spread: an older event predating the columns

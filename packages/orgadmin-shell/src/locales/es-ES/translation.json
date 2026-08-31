@@ -200,7 +200,16 @@
       "openDateEntriesTooltip": "La fecha y hora en que se abre el registro - las personas no pueden enviar inscripciones antes de esta hora",
       "entriesClosingDate": "Fecha de cierre de inscripciones",
       "entriesClosingDateHelper": "Debe ser después de la fecha de apertura de inscripciones",
-      "entriesClosingDateTooltip": "La fecha y hora en que se cierra el registro - las inscripciones se cerrarán automáticamente a esta hora"
+      "entriesClosingDateTooltip": "La fecha y hora en que se cierra el registro - las inscripciones se cerrarán automáticamente a esta hora",
+      "notSet": "Sin definir",
+      "validation": {
+        "startDateRequired": "La fecha de inicio del evento es obligatoria",
+        "endDateRequired": "La fecha de fin del evento es obligatoria",
+        "openDateEntriesRequired": "La fecha de apertura de inscripciones es obligatoria",
+        "entriesClosingDateRequired": "La fecha de cierre de inscripciones es obligatoria",
+        "endBeforeStart": "La fecha de fin debe ser igual o posterior a la de inicio",
+        "closingBeforeOpening": "Las inscripciones deben cerrarse después de abrirse"
+      }
     },
     "ticketing": {
       "title": "Configuración de entradas",

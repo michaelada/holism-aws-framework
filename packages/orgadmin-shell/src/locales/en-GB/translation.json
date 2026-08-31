@@ -207,7 +207,16 @@
       "openDateEntriesTooltip": "The date and time when registration opens - people cannot submit entries before this time",
       "entriesClosingDate": "Entries Closing Date",
       "entriesClosingDateHelper": "Must be after entries opening date",
-      "entriesClosingDateTooltip": "The date and time when registration closes - entries will automatically close at this time"
+      "entriesClosingDateTooltip": "The date and time when registration closes - entries will automatically close at this time",
+      "notSet": "Not set",
+      "validation": {
+        "startDateRequired": "Event start date is required",
+        "endDateRequired": "Event end date is required",
+        "openDateEntriesRequired": "Entry opening date is required",
+        "entriesClosingDateRequired": "Entry closing date is required",
+        "endBeforeStart": "End date must be on or after the start date",
+        "closingBeforeOpening": "Entries must close after they open"
+      }
     },
     "ticketing": {
       "title": "Ticketing Settings",

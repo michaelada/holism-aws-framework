@@ -198,7 +198,16 @@
       "openDateEntriesTooltip": "A data e hora em que o registo abre - as pessoas não podem submeter inscrições antes desta hora",
       "entriesClosingDate": "Data de fecho de inscrições",
       "entriesClosingDateHelper": "Deve ser após a data de abertura de inscrições",
-      "entriesClosingDateTooltip": "A data e hora em que o registo fecha - as inscrições fecharão automaticamente a esta hora"
+      "entriesClosingDateTooltip": "A data e hora em que o registo fecha - as inscrições fecharão automaticamente a esta hora",
+      "notSet": "Não definido",
+      "validation": {
+        "startDateRequired": "A data de início do evento é obrigatória",
+        "endDateRequired": "A data de fim do evento é obrigatória",
+        "openDateEntriesRequired": "A data de abertura das inscrições é obrigatória",
+        "entriesClosingDateRequired": "A data de encerramento das inscrições é obrigatória",
+        "endBeforeStart": "A data de fim deve ser igual ou posterior à data de início",
+        "closingBeforeOpening": "As inscrições devem encerrar depois de abrirem"
+      }
     },
     "ticketing": {
       "title": "Definições de bilheteira",

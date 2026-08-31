@@ -81,8 +81,13 @@ This document provides visual wireframes and detailed descriptions of all screen
 │  │  Event Start Date *        Event End Date *                 │    │
 │  │  [📅 15/06/2024 10:00]    [📅 16/06/2024 17:00]            │    │
 │  │                                                              │    │
-│  │  Open Date Entries         Entries Closing Date             │    │
+│  │  Open Date Entries *       Entries Closing Date *           │    │
 │  │  [📅 01/06/2024 00:00]    [📅 14/06/2024 23:59]            │    │
+│  │                                                              │    │
+│  │  All four dates are required. An empty one blocks Save and   │    │
+│  │  the wizard's Next, and shows its message under that field:  │    │
+│  │  "Entry opening date is required". A null entry window means │    │
+│  │  unbounded to the server, so it is never a usable default.   │    │
 │  │                                                              │    │
 │  │  ☐ Limit Number Of Event Entries                            │    │
 │  │                                                              │    │

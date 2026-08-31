@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
+import { reportSignOut } from '@aws-web-framework/components';
 
 interface AuthContextValue {
   keycloak: Keycloak | null;
@@ -119,6 +120,9 @@ export function AuthProvider({ children, keycloakConfig }: AuthProviderProps) {
   }, [keycloak]);
 
   const logout = useCallback(() => {
+    // Reported before the redirect — the server never sees the request that
+    // ends the session. See reportSignOut.
+    reportSignOut({ token: keycloak?.token, application: 'aws-framework-frontend' });
     keycloak?.logout();
   }, [keycloak]);
 

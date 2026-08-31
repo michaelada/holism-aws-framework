@@ -302,9 +302,40 @@ export class EventService {
    */
   async createEvent(data: CreateEventDto): Promise<Event> {
     try {
+      /*
+       * All four dates are required to create an event.
+       *
+       * An event runs between two dates and takes entries between two others,
+       * and none of them has a sensible default: a null entry window means
+       * *unbounded* to `public-event.service`, so an event created without one
+       * is permanently open to entries, which nobody sets out to do. The form
+       * used to paper over this by filling absent entry dates with the current
+       * time, which created events closed to entries instead. See
+       * docs/EVENT_ENTRY_DATE_INVENTION_FIX.md.
+       *
+       * Checked here as well as in the form, because the form is not the only
+       * way in. The columns stay nullable: events created before this rule —
+       * and the seed's deliberately ungated one — still read correctly.
+       */
+      const REQUIRED_DATES = [
+        ['startDate', data.startDate],
+        ['endDate', data.endDate],
+        ['openDateEntries', data.openDateEntries],
+        ['entriesClosingDate', data.entriesClosingDate],
+      ] as const;
+
+      const missing = REQUIRED_DATES.filter(([, value]) => !value).map(([field]) => field);
+      if (missing.length > 0) {
+        throw new Error(`Missing required date${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`);
+      }
+
       // Validate dates
       if (new Date(data.endDate) < new Date(data.startDate)) {
         throw new Error('End date must be after start date');
+      }
+
+      if (new Date(data.entriesClosingDate!) <= new Date(data.openDateEntries!)) {
+        throw new Error('Entries closing date must be after the entries opening date');
       }
 
       // Validate entries limit
@@ -380,11 +411,42 @@ export class EventService {
         throw new Error('Event not found');
       }
 
+      /*
+       * An update may leave a date alone, but it may not clear one.
+       *
+       * `undefined` means "not part of this update" — that is how a partial
+       * update of one field works, and it must keep working. An explicit null
+       * or empty string is a request to remove a required value, which is the
+       * state the create rule above exists to prevent; allowing an edit to
+       * reach it by the back door would make the rule decorative.
+       *
+       * An event that predates the rule and already has no entry window is left
+       * as it is: unchanged fields are never examined here.
+       */
+      const cleared = (['startDate', 'endDate', 'openDateEntries', 'entriesClosingDate'] as const)
+        .filter((field) => field in data && !data[field])
+        .map((field) => String(field));
+      if (cleared.length > 0) {
+        throw new Error(
+          `Cannot clear required date${cleared.length > 1 ? 's' : ''}: ${cleared.join(', ')}`
+        );
+      }
+
       // Validate dates if provided
       const startDate = data.startDate || existing.startDate;
       const endDate = data.endDate || existing.endDate;
       if (new Date(endDate) < new Date(startDate)) {
         throw new Error('End date must be after start date');
+      }
+
+      const openDateEntries = data.openDateEntries ?? existing.openDateEntries;
+      const entriesClosingDate = data.entriesClosingDate ?? existing.entriesClosingDate;
+      if (
+        openDateEntries &&
+        entriesClosingDate &&
+        new Date(entriesClosingDate) <= new Date(openDateEntries)
+      ) {
+        throw new Error('Entries closing date must be after the entries opening date');
       }
 
       // Validate entries limit

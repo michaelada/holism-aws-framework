@@ -169,7 +169,8 @@ Three mechanisms, deliberately, because one does not fit everything:
 |---|---|---|
 | **Explicit `audit.record(…)` in services** | Everything with before/after values | Only the service knows the old row. Middleware sees `PUT /events/123` and a body; it cannot know what changed |
 | **A `withAudit` wrapper for CRUD services** | The repetitive create/update/delete cases | Reads the row before, calls through, diffs after. Removes most of the boilerplate the explicit approach would otherwise create |
-| **Auth middleware hook** | login, logout, failed login, denied access | These have no service call to hang off; they happen in `authenticateToken` and in Keycloak |
+| **Auth middleware hook** | login, denied access | These have no service call to hang off; they happen in `authenticateToken` and in Keycloak |
+| **`POST /api/audit/session/logout`** | logout | A sign-out is a redirect to Keycloak, so no request reaches this process as the session ends. The front ends report it on the way out, via `reportSignOut` in `packages/components` |
 
 **Not database triggers.** They see the row change but not the person, the
 intent, or the request; recovering the actor inside a trigger means smuggling it
@@ -187,6 +188,23 @@ its own event log. Two options, and I recommend the second:
 
 Either way this is the one category we do not fully control, and the design
 should say so rather than imply completeness.
+
+**As built, option 2 is only half done.** `POST /api/audit/session` exists and
+accepts a reported outcome, but no front end calls it, so `auth.login-failed`
+is never recorded and the Keycloak event listener was never wired up. Sign-ins
+are caught server-side instead, by `noteAuthenticatedRequest` on the first
+request a session makes; sign-outs are reported by the applications through
+`POST /api/audit/session/logout`. Failed sign-ins remain unrecorded — see
+`docs/AUDIT_SESSION_EVENTS_FIX.md`.
+
+**Which organisation a session event is filed under.** A token does not say
+which club a session is "for", and for somebody who administers three it is not
+for any one of them. `recordSessionEvent` writes **one row per organisation the
+person belongs to**, so the event appears in each of their trails; somebody who
+belongs to none gets a single unattributed row. Filing it under nothing when
+there was more than one candidate — the original behaviour — made the event
+invisible to precisely the people most likely to look for it, because the
+org-admin viewer scopes hard on `organisation_id`.
 
 ### 2.3 Categories and actions
 
