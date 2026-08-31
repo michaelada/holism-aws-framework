@@ -143,9 +143,17 @@ edits, never a reformat of the whole file.
 
 ### 3.3 Test suite health
 
-Several suites carry pre-existing failures unrelated to current work — most often tests asserting
-English text while the mocked `t()` returns raw i18n keys, and property-based tests with unseeded
-generators that fail intermittently. When a suite fails:
+**Check the test database before diagnosing a backend failure.** Around a dozen backend suites are
+integration tests: they connect to `aws_framework_test` rather than mocking the pool, and without it
+they all fail together with `Failed to connect to database: AggregateError`, which names no cause.
+That is an environment that is not set up, not a broken test. Fix it with `docker compose up -d
+postgres` and `npm run test:db --workspace @aws-web-framework/backend`. With the database up the
+backend suite is **green in full** — 173 suites, 3277 tests — so a backend failure is worth taking
+seriously rather than assuming it pre-dates the change.
+
+Front-end suites do carry pre-existing failures unrelated to current work — most often tests
+asserting English text while the mocked `t()` returns raw i18n keys, and property-based tests with
+unseeded generators that fail intermittently. When a suite fails:
 
 1. Check whether the same tests fail on unmodified sources.
 2. Treat a failure as yours only if it is new, or if your change explains it.
@@ -176,6 +184,8 @@ generators that fail intermittently. When a suite fails:
 Everything except the app under development normally runs in Docker.
 
 ```bash
+docker compose up -d postgres     # the database, needed by the backend integration suites
+npm run test:db -w @aws-web-framework/backend   # create + migrate aws_framework_test, once
 docker compose stop backend       # frees :3000 when running the API locally
 npm run dev:backend               # http://localhost:3000  (reads packages/backend/.env)
 npm run dev:orgadmin              # http://localhost:5175  (org admin)

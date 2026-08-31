@@ -1137,9 +1137,16 @@ export interface SeedEvent {
   /** Days from now. */
   startDays: number;
   endDays: number;
-  /** Null leaves the column empty, which means "no window configured". */
-  openDays: number | null;
-  closeDays: number | null;
+  /**
+   * The entry window, in days from now. Both are required.
+   *
+   * `event.service` refuses to create an event without all four dates, and a
+   * null entry window reads as *unbounded* to `public-event.service` — an
+   * event permanently open to entries, which nobody sets out to configure.
+   * See docs/EVENT_ENTRY_DATE_INVENTION_FIX.md.
+   */
+  openDays: number;
+  closeDays: number;
   status: 'draft' | 'published';
   /**
    * Public listing. Omitted means not public, which is what most events are.
@@ -1171,6 +1178,29 @@ export interface SeedEvent {
   activities: SeedActivity[];
 }
 
+/**
+ * The four dates every seeded event must have, and in the right order.
+ *
+ * `eventService.createEvent` enforces this for anything that comes in through
+ * the API, but the seed writes its rows with raw SQL and never meets that
+ * guard. Without a check of its own the fixture is free to drift back to a
+ * shape the API would now reject — an unbounded entry window, which
+ * `public-event.service` reads as permanently open, or an event that ends
+ * before it starts. See docs/EVENT_ENTRY_DATE_INVENTION_FIX.md.
+ */
+export const assertEventDates = (event: SeedEvent): void => {
+  if (event.endDays < event.startDays) {
+    throw new Error(
+      `"${event.name}" ends before it starts (${event.startDays} → ${event.endDays}).`
+    );
+  }
+  if (event.closeDays <= event.openDays) {
+    throw new Error(
+      `"${event.name}" closes to entries before it opens (${event.openDays} → ${event.closeDays}).`
+    );
+  }
+};
+
 export const EVENT_TYPES = ['Show Jumping', 'Cross Country', 'Dressage', 'Camp', 'Rally', 'Fun Day'];
 
 /**
@@ -1197,7 +1227,7 @@ export const VENUES: Record<
 };
 
 /**
- * Thirteen events covering every entry-window state, both limit mechanisms,
+ * Eighteen events covering every entry-window state, both limit mechanisms,
  * quantity, all three payment arrangements and each form.
  *
  * The window states are the ones worth naming:
@@ -1206,7 +1236,6 @@ export const VENUES: Record<
  *   open       openDays  < 0, closeDays > 14      open, closing in a while
  *   closing    openDays  < 0, closeDays 1–3       closing soon
  *   closed     closeDays < 0                      closed to entries
- *   no-window  openDays and closeDays both null   never gated
  */
 /*
  * ## Which of these are public, and why that spread
@@ -1220,7 +1249,7 @@ export const VENUES: Record<
  *   clubs    all four, so the Club filter is worth opening
  *   regions  Co. Kildare, Co. Laois and Co. Meath
  *   types    Show Jumping, Cross Country, Dressage, Camp, Rally, Fun Day
- *   windows  open, closing in days, not yet open, closed, no window, finished
+ *   windows  open, closing in days, not yet open, closed, finished
  *
  * **Three are club-page-only** — Kildare's Members' Cup, Laois's closed event
  * and Meath's summer camp. Without them the two flags would always agree and a
@@ -1409,8 +1438,8 @@ export const EVENTS: SeedEvent[] = [
     venue: 'Craddockstown Equestrian',
     startDays: 120,
     endDays: 120,
-    openDays: null,
-    closeDays: null,
+    openDays: 60, // not open yet
+    closeDays: 110,
     status: 'draft',
     activities: [
       { name: 'Fancy dress', description: 'Best turned out pony and rider.', fee: 10, payment: 'offline' },
@@ -1559,16 +1588,16 @@ export const EVENTS: SeedEvent[] = [
 
   /* ------------------------------------------------------------- Ward */
   {
-    key: 'wupc-open-no-window',
+    key: 'wupc-open-day',
     org: 'ward',
     name: 'Ward Union Open Day',
-    description: 'No entry window configured at all — entries are never gated by date.',
+    description: 'Open to entries for most of the run-up — a long window rather than none at all.',
     eventType: 'Fun Day',
     venue: 'Ward Union Grounds',
     startDays: 45,
     endDays: 45,
-    openDays: null,
-    closeDays: null,
+    openDays: -60,
+    closeDays: 42,
     status: 'published',
     showOnOrganisationPage: true,
     showOnPlatformPage: true,
@@ -2484,7 +2513,7 @@ export const MERCHANDISE: SeedMerchandise[] = [
       {
         name: 'Size',
         values: [
-          { name: 'One size', price: 18, sku: 'MH-CAP-OS', stock: null },
+          { name: 'One size', price: 18, sku: 'MH-CAP-OS' },
         ],
       },
     ],

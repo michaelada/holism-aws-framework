@@ -105,7 +105,7 @@ every event shares a club, a county and a type gives each filter one option and 
 | Clubs | all four |
 | Regions | Co. Kildare (4), Co. Laois (3), Co. Meath (5) |
 | Event types | Show Jumping (3), Cross Country (3), Dressage (2), Fun Day (2), Camp (1), Rally (1) |
-| Entry windows | open, closing in days, not yet open, closed, no window at all, finished |
+| Entry windows | open, closing in days, not yet open, closed, finished |
 
 **Three are club-page-only** — Kildare's Members' Cup, Laois's closed event, Meath's summer camp.
 Without them the two flags would always agree and a bug that ignored one would pass unnoticed.
@@ -124,16 +124,21 @@ grounds are in Co. Meath despite the club's name. Filtering location by club nam
 
 ### Events cover every entry-window state
 
+Every event has all four dates — starts, ends, opens to entries and closes to entries. None is
+left ungated: `eventService.createEvent` refuses an event missing any of them, and a null entry
+window reads as *unbounded* to `public-event.service`, so a fixture carrying one would describe a
+state the API can no longer produce. The seed asserts this before it writes
+(`scripts/seed/database.ts`), so the dataset cannot drift back. See
+[EVENT_ENTRY_DATE_INVENTION_FIX.md](EVENT_ENTRY_DATE_INVENTION_FIX.md).
+
 | State | Count | Example |
 |---|---|---|
-| Open, closing in a while | 3 | Spring Show Jumping League (closes in 14 days) |
+| Open, closing in a while | 8 | Spring Show Jumping League (closes in 14 days) |
 | **Closing soon** | 3 | Autumn Rally (closes tomorrow), Autumn Hunter Trial (2 days), Hunt Ball (3 days) |
-| Not open yet | 2 | Summer Camp (opens in 21 days) |
-| Closed to entries | 3 | Winter Dressage — Round 3 |
-| No window configured | 1 | Ward Union Open Day |
-| Draft | 1 | Christmas Fun Day |
-
-Plus one event already in the past, for reporting and for a member's completed entries.
+| Not open yet | 3 | Summer Camp (opens in 21 days) |
+| Closed to entries | 2 | Winter Dressage — Round 3 |
+| Draft | 1 | Christmas Fun Day (opens in 60 days) |
+| Already past | 1 | Summer Show — for reporting and a member's completed entries |
 
 ### Settings coverage across the 29 activities
 

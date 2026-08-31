@@ -20981,3 +20981,256 @@ Still uncommitted, and itsps.org is still running `5ec9dad` — none of today's 
 ## 2026-08-31 07:51:12 — Prompt
 
 Can you update the seed program so that events created always have a start+end date, and always have an opening and closing date.
+
+### Assistant
+
+I'll find the seed program first.
+
+Now the edits. First the type and the doc comments:
+
+Now `database.ts` — write the dates unconditionally, plus a guard so the seed can't drift back:
+
+Now typecheck and run the seed tests:
+
+Now the docs that describe the old fixture:
+
+Now the fix doc's claim that the seed keeps a deliberately ungated event, and the same claim in the service comment:
+
+Done. Every event the seed writes now gets all four dates.
+
+**`packages/backend/scripts/seed/dataset.ts`**
+- `SeedEvent.openDays` / `closeDays` are `number` instead of `number | null` — the entry window is no longer optional, and the comment says why (a null window reads as *unbounded* to `public-event.service`, and `eventService.createEvent` refuses to create one).
+- The two ungated events now have real windows:
+  - `khpc-fun-day-draft` (Christmas Fun Day) — opens in 60 days, closes in 110, ahead of its 120-day start.
+  - `wupc-open-no-window` → renamed `wupc-open-day` (Ward Union Open Day) — opens 60 days ago, closes 42 days out, three days before the event. Its description no longer advertises "no entry window configured at all".
+- New exported `assertEventDates()`: an event may not end before it starts, and entries may not close on or before they open.
+- Dropped a stray `stock: null` on Meath's show cap. It was a pre-existing type error (`stock?: number`) that nothing caught because no typecheck ever reached `dataset.ts`; importing the file from a test does reach it, and the suite wouldn't run until it was gone. The product has `trackStock: false`, so the value meant nothing.
+
+**`packages/backend/scripts/seed/database.ts`** — the insert writes `dayOffset(...)` for both entry dates unconditionally, and calls `assertEventDates(event)` first. The seed writes with raw SQL and never meets the service's guard, so without this the fixture is free to drift back to a shape the API would reject.
+
+**`packages/backend/scripts/seed/__tests__/dataset.test.ts`** (new) — asserts all 18 seeded events carry four numeric dates and pass the guard, plus the guard's own failure cases.
+
+**Docs** — [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) loses the "no window configured" row and gets corrected counts for the current 18 events (8 open, 3 closing soon, 3 not open yet, 2 closed, 1 draft, 1 past); [EVENT_ENTRY_DATE_INVENTION_FIX.md](docs/EVENT_ENTRY_DATE_INVENTION_FIX.md) and the comment in [event.service.ts:317](packages/backend/src/services/event.service.ts#L317) no longer claim the seed keeps a deliberately ungated event.
+
+Seed suites pass (62 tests), `event.service` suites pass (40), and the project typecheck is clean. Changes are in the working tree, uncommitted.
+
+---
+
+
+## 2026-08-31 07:57:32 — Prompt
+
+Can I double check, the forms that are created in the seed data generator by one organisations are not shown to other organisations ? Because when I look at the seed data it looks like Kildare, Laois and Meath all have the same forms, is this a bug, or did you create separate forms with the same names, one for each organisation. Note: forms and form fields created by organisation 1, should not be seen by organisation 2.
+
+### Assistant
+
+Checked. Two separate answers here.
+
+## The seed is not a bug — they're separate rows
+
+[database.ts:584-639](packages/backend/scripts/seed/database.ts#L584-L639) loops `for (const org of ORGS)` and inserts a fresh `application_fields` and `application_forms` row **per organisation**, each stamped with that org's `organisation_id` and getting its own uuid:
+
+| | Per org | Total written |
+|---|---|---|
+| Organisations | — | 4 (Kildare, Laois, Ward, Meath) |
+| `application_fields` | 40 | 160 |
+| `application_forms` | 7 | 28 |
+
+`FIELDS` and `FORMS` in `dataset.ts` are the *template*, not the rows. The id maps are keyed org-first — `fieldIds[org.key][field.key]`, `formIds[org.key][form.key]` — and every downstream reference picks from the owning org's map: `formIds[event.org]`, `formIds[member.org]`, `formIds[type.org]`, `formIds[item.org]`. So no cross-org form id ever lands on an event, membership type, registration type or merchandise item. Same names, four independent sets.
+
+## Your instinct did find a real leak, though — in the API
+
+**`GET /api/orgadmin/application-fields` returns every organisation's fields.** [application-form.routes.ts:331](packages/backend/src/routes/application-form.routes.ts#L331) calls `getAllApplicationFields()` with no argument, and the service's org filter is optional — [application-form.service.ts:555](packages/backend/src/services/application-form.service.ts#L555) only adds `WHERE organisation_id = $1` when a value is passed. `byCurrentOrganisation()` runs on the route and sets `req.organisationId`, but the handler never reads it.
+
+Two org-admin pages call it: [FieldsListPage.tsx:110](packages/orgadmin-core/src/forms/pages/FieldsListPage.tsx#L110) and the Form Builder's field picker, [FormBuilderPage.tsx:165](packages/orgadmin-core/src/forms/pages/FormBuilderPage.tsx#L165). Against the seed, a Kildare admin's Fields list shows all 160 — each of the 40 names four times — and the builder offers Laois's and Meath's fields as choices. If that's the screen you were looking at, that's what you saw, and it's the API rather than the fixture.
+
+**Two routes have no scope guard at all** — only `authenticateToken()`, then they trust the path parameter:
+
+- `GET /organisations/:organisationId/application-forms` — [line 50](packages/backend/src/routes/application-form.routes.ts#L50)
+- `GET /organisations/:organisationId/form-submissions` — [line 649](packages/backend/src/routes/application-form.routes.ts#L649)
+
+Every other route in that file carries `byResource(...)` or `byCurrentOrganisation()`. These two don't, and the routers are mounted with no parent guard ([index.ts:359-362](packages/backend/src/index.ts#L359-L362) — "every route establishes and verifies its organisation for itself"). So any signed-in org admin can read another club's forms, and its **submitted form data**, by putting that club's id in the URL. The UI doesn't do this — `FormsListPage` passes its own org id — but nothing stops a hand-made request.
+
+The fields one is three characters (`getAllApplicationFields(req.organisationId)`); the other two are a `byParam('organisationId')` each, matching the convention the rest of the file already follows. Want me to fix all three, with tests?
+
+---
+
+
+## 2026-08-31 08:07:59 — Prompt
+
+yes please
+
+### Assistant
+
+Now the three fixes:
+
+Now tests. Let me see the existing route-test conventions:
+
+I'll add service-level tests to the existing file, plus a new route-scoping test:
+
+Now the route-scoping test, driving the real guard against a mocked database:
+
+Now check nothing else regressed, and the front end doesn't rely on the old unfiltered list:
+
+Before documenting, I checked why the structural test didn't catch these — and it turned up more:
+
+All three are fixed, with tests that fail on the unfixed code.
+
+## What changed
+
+**[application-form.service.ts:547](packages/backend/src/services/application-form.service.ts#L547)** — `getAllApplicationFields(organisationId: string)` is now required, and the `WHERE organisation_id = $1` unconditional; called with nothing it throws. This is the one that mattered most — it was the *optionality* that made the leak possible, not the route.
+
+**[application-form.routes.ts](packages/backend/src/routes/application-form.routes.ts)**
+- `GET /application-fields` passes `req.organisationId` — the value `byCurrentOrganisation()` had been establishing and the handler was ignoring — and 403s if the guard is ever removed from the route.
+- `GET /organisations/:organisationId/application-forms` and `GET /organisations/:organisationId/form-submissions` each gained `byParam('organisationId')`.
+
+**Tests** — `src/__tests__/routes/application-form.routes.scoping.test.ts` (new, 10 cases) mounts the router as `index.ts` does, bare then scoped, and runs the *real* `organisation-scope.middleware` against a stubbed database, so it asserts the refusal rather than the presence of a middleware in a list. Four cases added to `application-form.service.test.ts`. I reverted both source files and re-ran: exactly seven fail, one per fault. With the fixes back: 434 backend tests pass across the route/middleware/service suites, `orgadmin-core`'s 219 forms tests pass, project typecheck clean. The 11 suites failing elsewhere are the DB-integration ones — Docker isn't running here, they fail with `Failed to connect to database` on untouched files too.
+
+**Docs** — [FORM_SCOPING_FIX.md](docs/FORM_SCOPING_FIX.md) (new), plus [backend.md](.claude/modules/backend.md) and [core-forms.md](.claude/modules/core-forms.md).
+
+## One thing you should see before deciding it's closed
+
+While checking why `orgadmin-routes-are-scoped.test.ts` — the test that exists precisely to catch missing org checks — passed on these two routes, I found the reason. It has this clause:
+
+```ts
+route.path.includes(':organisationId') ||   // counts as scoped
+```
+
+A path that *names* an organisation is treated as one that *verifies* it. It doesn't: the id comes from the caller. Every route the clause exempts takes an organisation id from an untrusted URL.
+
+**Twenty-one routes are sitting in that exemption with no organisation check at all** — `authenticateToken()`, then `req.params.organisationId` straight into the query:
+
+| Router | Routes |
+|---|---|
+| `discount` | discounts list |
+| `membership` | membership types, **members** |
+| `merchandise` | types, orders, orders export |
+| `calendar` | calendars, bookings |
+| `registration` | types, registrations, **`POST` registrations**, export, filters |
+| `ticketing` | ticketed events |
+| `payment` | **payments, payments export** |
+| `reporting` | dashboard, events, members, revenue, export |
+
+Same fault as the two I just fixed, but on member records, payments and a write. Each is one `byParam('organisationId')`; once they're all in, that clause can be deleted and the structural test holds the line by itself. I've left them alone — that's a materially bigger change than the three you approved. Say the word and I'll do them in the same pass, with the structural test tightened so it can't happen again.
+
+---
+
+
+## 2026-08-31 08:54:09 — Prompt
+
+please fix these also
+
+### Assistant
+
+Now let me see each of the 21 route heads precisely:
+
+All 21. Now the imports:
+
+Now close the hole in the structural test itself:
+
+The tightened test does catch a missing guard, by name. Now the full non-DB suite:
+
+Now the docs — the fix is much broader than the file I named earlier:
+
+All 21 are done, plus the test that let them through.
+
+## The 21 routes
+
+`byParam('organisationId')` on each, placed after `authenticateToken()` and ahead of everything else — so a refused request is turned away before a capability lookup, and on the reporting routes before `audited` records a report view that never happened.
+
+| Router | Routes guarded |
+|---|---|
+| [discount](packages/backend/src/routes/discount.routes.ts) | discounts |
+| [membership](packages/backend/src/routes/membership.routes.ts) | membership-types, members |
+| [merchandise](packages/backend/src/routes/merchandise.routes.ts) | types, orders, orders export |
+| [calendar](packages/backend/src/routes/calendar.routes.ts) | calendars, bookings |
+| [registration](packages/backend/src/routes/registration.routes.ts) | types, registrations (GET + POST), export, filters |
+| [ticketing](packages/backend/src/routes/ticketing.routes.ts) | ticketed-events |
+| [payment](packages/backend/src/routes/payment.routes.ts) | payments, payments export |
+| [reporting](packages/backend/src/routes/reporting.routes.ts) | dashboard, events, members, revenue, export |
+
+## Something I found while doing it, worth knowing
+
+Fifteen of those 21 *did* carry a guard — `requireMembershipsCapability`, `requireMerchandiseCapability`, `requireCalendarBookingsCapability`, `requireRegistrationsCapability`, `requireEventTicketingCapability` — which is why the omission read as deliberate rather than forgotten. Each is a local function in its own router, and each does only this:
+
+```ts
+const organisationId = req.params.organisationId || req.body.organisationId;
+`SELECT enabled_capabilities FROM organizations WHERE id = $1`
+```
+
+Whether *that organisation* has the capability enabled. Never whether *the caller* administers it — none of the five reads `req.user` at all. So a club with memberships turned on was readable by any administrator of any other club. I left them in place; they still do the job they're named for, and `byParam` now supplies the question they were never asking. It's flagged in [backend.md](.claude/modules/backend.md) because they look like scope guards in a route head and aren't.
+
+## The structural test
+
+The exemption clause is deleted from [orgadmin-routes-are-scoped.test.ts:109](packages/backend/src/routes/__tests__/orgadmin-routes-are-scoped.test.ts#L109). All 195 org-admin routes are now held to a real guard. I checked it bites: removing one `byParam` from `payment.routes.ts` fails the test naming `GET /api/orgadmin/organisations/:organisationId/payments`.
+
+## Test fallout
+
+One existing suite broke, correctly — `reporting-export.routes.test.ts` drove the export route with `org-1` and no database, which the new guard reads as "not yours". Updated to stub the membership lookup, and given a case asserting another club's export is refused; an export being the bulk read that matters most. 10 pass.
+
+`orgadmin-workflows.integration.test.ts` hits two of the newly guarded routes but already creates the active `org-admin` row the guards require (its own comment says so), so it needs no change — though it can't run here, since Docker is down.
+
+## State
+
+Typecheck clean. 1,896 tests pass across routes, middleware, services and the seed. The 11 failing suites are the pre-existing ones — all `Failed to connect to database: AggregateError`, unchanged at 112 failures before and after.
+
+Docs: [CROSS_ORGANISATION_ACCESS_FIX.md](docs/CROSS_ORGANISATION_ACCESS_FIX.md) (renamed from the narrower `FORM_SCOPING_FIX.md` I wrote earlier, since the fix outgrew it), [backend.md](.claude/modules/backend.md), [core-forms.md](.claude/modules/core-forms.md).
+
+Everything is in the working tree, uncommitted. Worth running the integration suites against a live database before this goes anywhere — that's the one thing I couldn't verify here.
+
+---
+
+
+## 2026-08-31 09:03:11 — Prompt
+
+can you fix the 11 failing suites are the pre-existing
+
+### Assistant
+
+All 11 are real database integration tests — none mocks the pool, all call `db.initialize()`. They need Postgres, which isn't up. Let me start it:
+
+All 11 pass with the database up. Now let me run the full backend suite — including the integration tests I couldn't verify earlier:
+
+The whole backend suite passes — 173 suites, 3277 tests, zero failures. So no code fault; they needed Postgres. But there's a real gap behind that:
+
+The script exists but never runs migrations — it hand-writes 3 of the 74 tables. Let me fix it properly:
+
+Now a test for the script, and the docs:
+
+The `process.exit` stub lets execution fall through. Better to make the script testable rather than fake it:
+
+Now the docs:
+
+Now CLAUDE.md §3.3 and §3.5, which told me those failures were pre-existing:
+
+Both documented commands work. Full verification run:
+
+The 11 suites now pass — and so does everything else. **174 suites, 3283 tests, zero failures.**
+
+## They weren't broken — there was no database
+
+All 11 are genuine integration tests: none mocks the pool, all call `db.initialize()`. Postgres wasn't running. I started Docker and the `postgres` container, and all 11 went green immediately. No code fault in any of them.
+
+That also let me verify what I flagged as unverifiable last time: `orgadmin-workflows.integration.test.ts` and the security suite exercise the 23 routes I added `byParam` to, against a real database. Both pass.
+
+## But the reason they were unrunnable is a real bug
+
+`aws_framework_test` appears nowhere in the repo except `.env.test`. On this machine it existed because someone made it by hand; on a fresh checkout it wouldn't. And the setup script meant to fix that — `scripts/setup-test-db.sh` — didn't:
+
+- **It never ran the migrations**, despite its own documentation saying it does. It created the database, then hand-wrote three tables (`field_definitions`, `object_definitions`, `object_fields`) copied out of migration `1707000000000`. The schema has **74**. Every suite touching any of the other 71 would fail on a missing relation. [TEST_FIXES_SUMMARY.md:12](docs/TEST_FIXES_SUMMARY.md#L12) records a previous round of this — the copied DDL drifted from the migrations and was patched in place rather than deleted.
+- **It required `psql` and `pg_isready` on the PATH.** This machine has neither: Postgres runs in Docker. The script's first act would have been to exit with "PostgreSQL is not running" on a machine where it plainly was.
+
+Replaced with [scripts/setup-test-db.ts](packages/backend/scripts/setup-test-db.ts), run as `npm run test:db`. It connects with `pg` (already a dependency), creates the database only if absent, and runs `node-pg-migrate up` against it. Idempotent, and it refuses to run against `aws_framework` so a mistyped `.env.test` can't migrate a developer's own data.
+
+Verified end to end: pointed at a scratch name it created the database and built **74 tables**, matching the real test DB exactly; the scratch database is dropped. Re-running against the existing one reports "already exists / No migrations to run". The dev-database guard trips.
+
+Six tests in [scripts/__tests__/setup-test-db.test.ts](packages/backend/scripts/__tests__/setup-test-db.test.ts) cover create, skip-if-present, migrations-are-the-schema, connection cleanup on failure, and both refusals. The script exports its function and only self-runs under `require.main === module`, so a guard that ends the process is still testable.
+
+## Docs
+
+[TEST_DATABASE_SETUP.md](docs/TEST_DATABASE_SETUP.md) rewritten where it described the old script and told you to run individual migration files by hand. The two historical summaries that pointed at the deleted `.sh` carry a superseded note. [CLAUDE.md §3.3](CLAUDE.md#L143) previously told you backend failures were probably pre-existing — it now says to check the database first, and records that the backend suite is green in full, so a backend failure is worth taking seriously.
+
+## One thing to note
+
+I left Docker and the `postgres` container running, since that's your normal dev setup — `docker compose stop postgres` if you'd rather not. Everything is uncommitted in the working tree.
+
+---

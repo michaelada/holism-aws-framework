@@ -35,10 +35,19 @@ Tests now use a separate test database (`aws_framework_test`) that is completely
 
 ### 4. Database Setup Script
 
-**File**: `packages/backend/scripts/setup-test-db.sh`
-- Creates `aws_framework_test` database
-- Runs migrations on test database
-- Can be run anytime to reset test database
+**File**: `packages/backend/scripts/setup-test-db.ts`, run as `npm run test:db`
+- Creates `aws_framework_test` if it is not already there
+- **Runs the migrations against it** — this is the schema, all 74 tables
+- Safe to re-run: an existing database is left alone and applied migrations are skipped
+- Refuses to run against `aws_framework`, the development database
+
+It replaces `setup-test-db.sh`, which claimed to run migrations and did not. That script created
+the database and then hand-wrote three tables — `field_definitions`, `object_definitions`,
+`object_fields` — copied out of migration `1707000000000`. Every suite touching any of the other 71
+failed on a missing relation, and the copied DDL was one more place for the schema to drift. It
+also required `psql` and `pg_isready` on the PATH, and exited with "PostgreSQL is not running" on
+machines where Postgres runs in Docker and the client tools are not installed. The replacement
+connects with `pg`, which the backend already depends on.
 
 ## How It Works
 
@@ -68,25 +77,19 @@ Each test file that uses the database:
 
 ### First Time Setup
 
-1. **Create the test database**:
+1. **Start Postgres**, if it is not already running:
+   ```bash
+   docker compose up -d postgres
+   ```
+
+2. **Create and migrate the test database**:
    ```bash
    cd packages/backend
-   chmod +x scripts/setup-test-db.sh
-   ./scripts/setup-test-db.sh
+   npm run test:db
    ```
 
-   Or manually:
-   ```bash
-   psql -U framework_user -d postgres -c "CREATE DATABASE aws_framework_test"
-   ```
-
-2. **Run migrations on test database** (if you have migrations):
-   ```bash
-   export DATABASE_NAME=aws_framework_test
-   export NODE_ENV=test
-   node migrations/1707000000000_create-metadata-tables.js
-   node migrations/1707000000001_remove-field-mandatory.js
-   ```
+   One command does both. Without it, every database-backed suite fails at once with
+   `Failed to connect to database: AggregateError`, which does not say what is missing.
 
 ### Running Tests
 
@@ -107,12 +110,10 @@ The test setup will automatically:
 If your test database gets into a bad state:
 
 ```bash
-# Drop and recreate
-psql -U framework_user -d postgres -c "DROP DATABASE IF EXISTS aws_framework_test"
-./scripts/setup-test-db.sh
-
-# Or just truncate tables
-psql -U framework_user -d aws_framework_test -c "TRUNCATE field_definitions, object_definitions, object_fields CASCADE"
+# Drop and rebuild from the migrations
+docker compose exec postgres psql -U framework_user -d postgres \
+  -c "DROP DATABASE IF EXISTS aws_framework_test"
+npm run test:db
 ```
 
 ## Verification
@@ -198,32 +199,23 @@ In CI/CD pipelines, ensure:
 
 ### Test Database Doesn't Exist
 
-**Symptom**: Tests fail with "database does not exist"
+**Symptom**: Tests fail with "database does not exist", or with
+`Failed to connect to database: AggregateError`
 
 **Solution**:
 ```bash
-./scripts/setup-test-db.sh
-```
-
-### Permission Denied on Script
-
-**Symptom**: `./scripts/setup-test-db.sh: Permission denied`
-
-**Solution**:
-```bash
-chmod +x packages/backend/scripts/setup-test-db.sh
+docker compose up -d postgres   # if Postgres itself is down
+npm run test:db
 ```
 
 ### Tables Don't Exist in Test Database
 
 **Symptom**: Tests fail with "relation does not exist"
 
-**Solution**:
-Run migrations on test database:
+**Solution**: the migrations have not been applied to it — the usual cause of a database that
+exists but is empty. The same command fixes it:
 ```bash
-export DATABASE_NAME=aws_framework_test
-export NODE_ENV=test
-# Run your migration scripts
+npm run test:db
 ```
 
 ## Best Practices

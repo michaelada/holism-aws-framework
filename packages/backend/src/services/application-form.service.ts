@@ -545,21 +545,23 @@ export class ApplicationFormService {
   }
 
   /**
-   * Get all application fields for an organisation
+   * Get all application fields for an organisation.
+   *
+   * The organisation is **required**. It used to be optional, and omitting it
+   * dropped the `WHERE` clause and returned every field of every club — which
+   * is what the one caller did. A filter that can be left off is a filter that
+   * eventually is, so the hole is closed here rather than only at the route.
    */
-  async getAllApplicationFields(organisationId?: string): Promise<ApplicationField[]> {
+  async getAllApplicationFields(organisationId: string): Promise<ApplicationField[]> {
     try {
-      let query = 'SELECT * FROM application_fields';
-      const params: any[] = [];
-
-      if (organisationId) {
-        query += ' WHERE organisation_id = $1';
-        params.push(organisationId);
+      if (!organisationId) {
+        throw new Error('An organisation is required to list application fields');
       }
 
-      query += ' ORDER BY created_at DESC';
-
-      const result = await db.query(query, params);
+      const result = await db.query(
+        'SELECT * FROM application_fields WHERE organisation_id = $1 ORDER BY created_at DESC',
+        [organisationId]
+      );
       return result.rows.map(row => this.rowToField(row));
     } catch (error) {
       logger.error('Error getting all application fields:', error);

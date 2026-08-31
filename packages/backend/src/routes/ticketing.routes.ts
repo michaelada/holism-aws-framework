@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ticketingService } from '../services/ticketing.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import {
+  byParam,
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
@@ -77,6 +78,7 @@ async function requireEventTicketingCapability(
 router.get(
   '/organisations/:organisationId/ticketed-events',
   authenticateToken(),
+  byParam('organisationId'),
   requireEventTicketingCapability,
   async (req: Request, res: Response) => {
     try {

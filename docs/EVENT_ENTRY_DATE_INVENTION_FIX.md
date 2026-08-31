@@ -84,10 +84,14 @@ Enforced in three places, because the form is not the only way in:
 
 **The columns stay nullable.** This is a rule about what may be written, not
 about what the table can hold: events created before the rule still have to read
-back correctly, and the seed's `Ward Union Open Day` is deliberately ungated —
-"No entry window configured at all — entries are never gated by date" — to keep
-the unbounded path testable. `public-event.service`'s `IS NULL` handling stays
-exactly as it is.
+back correctly, so `public-event.service`'s `IS NULL` handling stays exactly as
+it is.
+
+The seed no longer carries an ungated event. `Ward Union Open Day` was the one
+exception — "no entry window configured at all" — and it now has a long window
+instead of none, so every seeded event is a shape the API would accept today.
+`scripts/seed/database.ts` asserts all four dates before it inserts, because the
+seed writes with raw SQL and never meets `createEvent`'s guard.
 
 ## The fix
 

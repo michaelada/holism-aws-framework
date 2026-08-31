@@ -31,6 +31,7 @@ import {
   SUPER_ADMIN,
   SeedOrg,
   VENUES,
+  assertEventDates,
 } from './dataset';
 
 /**
@@ -728,6 +729,8 @@ export async function seedDatabase(
     const orgId = orgIds[event.org];
     const eventDiscountIds = discountIdsFor(event.org, event.discounts);
 
+    assertEventDates(event);
+
     const r = await client.query(
       `INSERT INTO events
          (organisation_id, name, description, event_owner, start_date, end_date,
@@ -744,8 +747,8 @@ export async function seedDatabase(
         orgAdminRowIds[event.org],
         dateOnly(event.startDays),
         dateOnly(event.endDays),
-        event.openDays === null ? null : dayOffset(event.openDays),
-        event.closeDays === null ? null : dayOffset(event.closeDays),
+        dayOffset(event.openDays),
+        dayOffset(event.closeDays),
         event.limitEntries ?? false,
         event.entriesLimit ?? null,
         event.addConfirmationMessage ?? false,

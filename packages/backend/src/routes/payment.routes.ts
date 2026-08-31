@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { paymentService } from '../services/payment.service';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { byResource } from '../middleware/organisation-scope.middleware';
+import { byParam, byResource } from '../middleware/organisation-scope.middleware';
 import { OrganisationRequest } from '../middleware/capability.middleware';
 import { logger } from '../config/logger';
 import { audited } from '../middleware/audit.middleware';
@@ -71,6 +71,7 @@ const router = Router({ mergeParams: true });
 router.get(
   '/organisations/:organisationId/payments',
   authenticateToken(),
+  byParam('organisationId'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -320,6 +321,7 @@ router.post(
 router.get(
   '/organisations/:organisationId/payments/export',
   authenticateToken(),
+  byParam('organisationId'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;

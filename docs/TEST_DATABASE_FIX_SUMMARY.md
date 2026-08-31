@@ -1,5 +1,10 @@
 # Test Database Fix - Summary
 
+> **Superseded.** `scripts/setup-test-db.sh` no longer exists. Creating and migrating the
+> test database is now `npm run test:db` (`scripts/setup-test-db.ts`), which runs the
+> migrations instead of hand-writing tables — see TEST_DATABASE_SETUP.md. This file is kept
+> for the history of what went wrong.
+
 ## Problem Solved ✅
 
 Tests were deleting all data from the development database (`aws_framework`), including manually created field definitions, object definitions, and instances.
@@ -29,7 +34,7 @@ Tests now use a completely separate test database (`aws_framework_test`) that is
 - Warns if accidentally using development database
 
 ### 4. Created Database Setup Script
-**File**: `packages/backend/scripts/setup-test-db.sh`
+**File**: `packages/backend/scripts/setup-test-db.sh` (since replaced)
 - Creates `aws_framework_test` database
 - Creates all required tables
 - Can be run anytime to reset test database
@@ -46,7 +51,7 @@ Tests now use a completely separate test database (`aws_framework_test`) that is
 Run the setup script once:
 
 ```bash
-./packages/backend/scripts/setup-test-db.sh
+npm run test:db --workspace @aws-web-framework/backend
 ```
 
 This creates the test database and tables.
@@ -70,7 +75,7 @@ You'll see confirmation that the test database is being used:
 If needed, run the setup script again:
 
 ```bash
-./packages/backend/scripts/setup-test-db.sh
+npm run test:db --workspace @aws-web-framework/backend
 ```
 
 ## Verification
@@ -147,7 +152,7 @@ If you see `aws_framework` instead, the setup didn't work. Try:
 
 3. Run setup script again:
    ```bash
-   ./packages/backend/scripts/setup-test-db.sh
+   npm run test:db --workspace @aws-web-framework/backend
    ```
 
 ### Test Database Doesn't Exist
@@ -155,7 +160,7 @@ If you see `aws_framework` instead, the setup didn't work. Try:
 Run the setup script:
 
 ```bash
-./packages/backend/scripts/setup-test-db.sh
+npm run test:db --workspace @aws-web-framework/backend
 ```
 
 ## Summary

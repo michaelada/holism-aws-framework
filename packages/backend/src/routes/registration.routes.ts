@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import {
   byBodyOrCurrent,
   byCurrentOrganisation,
+  byParam,
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
@@ -103,6 +104,7 @@ async function requireRegistrationsCapability(
 router.get(
   '/organisations/:organisationId/registration-types',
   authenticateToken(),
+  byParam('organisationId'),
   requireRegistrationsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -380,6 +382,7 @@ router.delete(
 router.get(
   '/organisations/:organisationId/registrations',
   authenticateToken(),
+  byParam('organisationId'),
   requireRegistrationsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -454,6 +457,7 @@ router.get(
 router.post(
   '/organisations/:organisationId/registrations',
   authenticateToken(),
+  byParam('organisationId'),
   requireRegistrationsCapability,
   audited({ action: 'registration.submitted', resource: 'registration', entityType: 'registration' }),
   async (req: Request, res: Response) => {
@@ -819,6 +823,7 @@ router.post(
 router.get(
   '/organisations/:organisationId/registrations/export',
   authenticateToken(),
+  byParam('organisationId'),
   requireRegistrationsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -883,6 +888,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/registrations/filters',
   authenticateToken(),
+  byParam('organisationId'),
   requireRegistrationsCapability,
   async (req: Request, res: Response) => {
     try {

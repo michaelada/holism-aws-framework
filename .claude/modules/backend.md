@@ -389,6 +389,30 @@ Things worth knowing before touching any of it:
   `src/routes/__tests__/orgadmin-routes-are-scoped.test.ts` enumerates every
   org-admin route and fails, by name, on any scoped by authentication alone.
 
+- **A path that names an organisation does not verify one**, and that test used
+  to think it did. `route.path.includes(':organisationId')` exempted 23 routes —
+  discounts, membership types, members, merchandise types and orders, calendars,
+  bookings, registrations (including a `POST` that writes), ticketed events,
+  payments, all five reports, and two form routes — every one reading
+  `req.params.organisationId` after `authenticateToken()` alone. The id comes
+  from the caller, so naming a club in the URL is the claim, not the check. All
+  23 now carry `byParam('organisationId')` and the exemption is deleted; see
+  docs/CROSS_ORGANISATION_ACCESS_FIX.md.
+
+- **The per-router `require<Capability>Capability` helpers do not scope a
+  request.** `membership`, `merchandise`, `calendar`, `registration` and
+  `ticketing` each define one locally, and each asks only whether *the
+  organisation named in the path* has the capability enabled — never whether the
+  caller administers it. None reads `req.user`. They look like guards in a route
+  head and are not; pair them with a scope guard.
+
+- **A list endpoint has to scope its query, not only its route.**
+  `GET /application-fields` carried `byCurrentOrganisation()` and then called
+  `getAllApplicationFields()` with no argument, whose organisation filter was
+  optional — so it returned every club's fields to the Fields list and the form
+  builder's field picker. The parameter is now required. Prefer a service that
+  cannot be asked for everything over a handler that remembers to ask correctly.
+
   Ownership is resolved by **joining** to the parent (a booking through its
   calendar, a ticket through its event) rather than by a denormalised column, so
   the answer stays true if a resource moves. A resource in another club and a

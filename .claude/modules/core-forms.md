@@ -92,7 +92,7 @@ included — the quickest way to check grouping and step configuration.
 
 | Endpoint | Use |
 |---|---|
-| `GET /api/orgadmin/application-fields` | Field catalogue |
+| `GET /api/orgadmin/application-fields` | Field catalogue — scoped to the organisation being worked in |
 | `GET /api/orgadmin/application-forms` | Forms list |
 | `GET /api/orgadmin/application-forms/:id/with-fields` | Form plus its fields |
 | `PUT /api/orgadmin/application-forms/:id` | Save |
@@ -100,6 +100,13 @@ included — the quickest way to check grouping and step configuration.
 
 Backend: `application-form.routes` → `application-form.service`; submissions via
 `form-submission.service` into `form_submissions` / `form_submission_files`.
+
+**Forms and fields belong to one organisation.** Every form and field row carries an
+`organisation_id`, and the demo seed writes a separate set per club — same names, different rows.
+Until recently three endpoints did not honour that: the field catalogue queried without an
+organisation at all, and the two `/organisations/:orgId/...` reads trusted the id in the path. See
+docs/CROSS_ORGANISATION_ACCESS_FIX.md, which also covers the 21 routes elsewhere in the API that
+had the second fault.
 
 ## Where to look for what
 

@@ -30,10 +30,20 @@ jest.mock('../../middleware/auth.middleware', () => ({
   },
 }));
 
+/*
+ * The real `byParam('organisationId')` runs here, so the membership lookup it
+ * makes has to answer. This administrator has `ORG` and nothing else — which
+ * also lets the last test below check that another club's id is refused rather
+ * than exported.
+ */
+jest.mock('../../database/pool', () => ({ db: { query: jest.fn() } }));
+
 import { reportingService } from '../../services/reporting.service';
+import { db } from '../../database/pool';
 import reportingRoutes from '../reporting.routes';
 
 const mockReporting = reportingService as jest.Mocked<typeof reportingService>;
+const mockQuery = db.query as jest.Mock;
 
 const app = express();
 app.use(express.json());
@@ -49,12 +59,26 @@ afterAll((done) => {
   server.close(done);
 });
 
-const ORG = 'org-1';
+/** A uuid, because the scope guard reads a malformed id as "not yours". */
+const ORG = '11111111-1111-4111-8111-111111111111';
+const OTHER_ORG = '22222222-2222-4222-8222-222222222222';
 const url = `/api/orgadmin/organisations/${ORG}/reports/export`;
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockReporting.exportReport.mockResolvedValue(Buffer.from('workbook'));
+  mockQuery.mockImplementation(async (sql: string, params: any[] = []) => {
+    if (/organization_users/.test(sql)) {
+      const asked = params.length > 1 ? params[1] : ORG;
+      return {
+        rows:
+          asked === ORG
+            ? [{ user_id: 'ou-1', organization_id: ORG, enabled_capabilities: [], org_status: 'active' }]
+            : [],
+      };
+    }
+    return { rows: [] };
+  });
 });
 
 describe('GET /organisations/:organisationId/reports/export', () => {
@@ -118,6 +142,21 @@ describe('GET /organisations/:organisationId/reports/export', () => {
     const response = await request(server).get(url);
 
     expect(response.status).toBe(400);
+    expect(mockReporting.exportReport).not.toHaveBeenCalled();
+  });
+
+  /**
+   * An export is a bulk read of a club's data, so it is exactly the request
+   * that must not be answerable for somebody else's club. The route trusted
+   * `:organisationId` until `byParam` was added to it — see
+   * docs/CROSS_ORGANISATION_ACCESS_FIX.md.
+   */
+  it('refuses to export a club the caller does not administer', async () => {
+    const response = await request(server)
+      .get(`/api/orgadmin/organisations/${OTHER_ORG}/reports/export`)
+      .query({ reportType: 'members' });
+
+    expect(response.status).toBe(403);
     expect(mockReporting.exportReport).not.toHaveBeenCalled();
   });
 

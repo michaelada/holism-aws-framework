@@ -6,6 +6,7 @@ import { authenticateToken } from '../middleware/auth.middleware';
 import {
   byBodyOrCurrent,
   byCurrentOrganisation,
+  byParam,
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
@@ -89,6 +90,7 @@ async function requireMerchandiseCapability(
 router.get(
   '/organisations/:organisationId/merchandise-types',
   authenticateToken(),
+  byParam('organisationId'),
   requireMerchandiseCapability,
   async (req: Request, res: Response) => {
     try {
@@ -349,6 +351,7 @@ router.delete(
 router.get(
   '/organisations/:organisationId/merchandise-orders',
   authenticateToken(),
+  byParam('organisationId'),
   requireMerchandiseCapability,
   async (req: Request, res: Response) => {
     try {
@@ -475,6 +478,7 @@ router.put(
 router.get(
   '/organisations/:organisationId/merchandise-orders/export',
   authenticateToken(),
+  byParam('organisationId'),
   requireMerchandiseCapability,
   async (req: Request, res: Response) => {
     try {

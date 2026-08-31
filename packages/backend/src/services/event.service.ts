@@ -314,8 +314,8 @@ export class EventService {
        * docs/EVENT_ENTRY_DATE_INVENTION_FIX.md.
        *
        * Checked here as well as in the form, because the form is not the only
-       * way in. The columns stay nullable: events created before this rule —
-       * and the seed's deliberately ungated one — still read correctly.
+       * way in. The columns stay nullable so events created before this rule
+       * still read correctly.
        */
       const REQUIRED_DATES = [
         ['startDate', data.startDate],

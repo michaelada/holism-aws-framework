@@ -3,6 +3,7 @@ import { calendarService } from '../services/calendar.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import {
   byBodyOrCurrent,
+  byParam,
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
@@ -107,6 +108,7 @@ async function requireCalendarBookingsCapability(
 router.get(
   '/organisations/:organisationId/calendars',
   authenticateToken(),
+  byParam('organisationId'),
   requireCalendarBookingsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -350,6 +352,7 @@ router.delete(
 router.get(
   '/organisations/:organisationId/bookings',
   authenticateToken(),
+  byParam('organisationId'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;

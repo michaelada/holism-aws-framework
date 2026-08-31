@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import { applicationFormService } from '../services/application-form.service';
 import { formSubmissionService } from '../services/form-submission.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { OrganisationRequest } from '../middleware/capability.middleware';
 import {
   byCurrentOrganisation,
+  byParam,
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
@@ -49,6 +51,7 @@ const FIELD_INTERNALS = new Set(['name']);
 router.get(
   '/organisations/:organisationId/application-forms',
   authenticateToken(),
+  byParam('organisationId'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
@@ -326,9 +329,28 @@ router.get(
   '/application-fields',
   authenticateToken(),
   byCurrentOrganisation(),
-  async (_req: Request, res: Response) => {
+  async (req: OrganisationRequest, res: Response) => {
     try {
-      const fields = await applicationFormService.getAllApplicationFields();
+      /*
+       * Scoped by the organisation the guard established, rather than left to
+       * the service's optional filter.
+       *
+       * `getAllApplicationFields()` with no argument returns every field of
+       * every club, and this route is what the Fields list and the form
+       * builder's field picker both call — so the omission put other clubs'
+       * fields on the screen and offered them as choices when building a form.
+       */
+      const organisationId = req.organisationId;
+      if (!organisationId) {
+        // `byCurrentOrganisation()` refuses the request unless it can set this,
+        // so reaching here means the guard was removed from the route.
+        logger.error('GET /application-fields ran with no organisation established');
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: 'You do not administer this organisation' },
+        });
+      }
+
+      const fields = await applicationFormService.getAllApplicationFields(organisationId);
       return res.json(fields);
     } catch (error) {
       logger.error('Error in GET /application-fields:', error);
@@ -648,6 +670,7 @@ router.delete(
 router.get(
   '/organisations/:organisationId/form-submissions',
   authenticateToken(),
+  byParam('organisationId'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;

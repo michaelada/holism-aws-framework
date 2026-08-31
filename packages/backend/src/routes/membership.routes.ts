@@ -4,6 +4,7 @@ import { memberFilterService } from '../services/member-filter.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import {
   byCurrentOrganisation,
+  byParam,
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { requireOrgAdmin } from '../middleware/orgadmin-role.middleware';
@@ -148,6 +149,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/membership-types',
   authenticateToken(),
+  byParam('organisationId'),
   requireMembershipsCapability,
   async (req: Request, res: Response) => {
     try {
@@ -406,6 +408,7 @@ router.delete(
 router.get(
   '/organisations/:organisationId/members',
   authenticateToken(),
+  byParam('organisationId'),
   requireMembershipsCapability,
   async (req: Request, res: Response) => {
     try {

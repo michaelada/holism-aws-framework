@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { reportingService } from '../services/reporting.service';
 import { authenticateToken } from '../middleware/auth.middleware';
+import { byParam } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
 import { audited } from '../middleware/audit.middleware';
 
@@ -37,6 +38,7 @@ const router = Router({ mergeParams: true });
 router.get(
   '/organisations/:organisationId/reports/dashboard',
   authenticateToken(),
+  byParam('organisationId'),
   audited({ action: 'report.viewed', entityType: 'report', label: () => 'Dashboard', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
@@ -92,6 +94,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/events',
   authenticateToken(),
+  byParam('organisationId'),
   audited({ action: 'report.viewed', entityType: 'report', label: () => 'Events', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
@@ -159,6 +162,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/members',
   authenticateToken(),
+  byParam('organisationId'),
   audited({ action: 'report.viewed', entityType: 'report', label: () => 'Members', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
@@ -221,6 +225,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/revenue',
   authenticateToken(),
+  byParam('organisationId'),
   audited({ action: 'report.viewed', entityType: 'report', label: () => 'Revenue', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {
@@ -303,6 +308,7 @@ router.get(
 router.get(
   '/organisations/:organisationId/reports/export',
   authenticateToken(),
+  byParam('organisationId'),
   audited({ action: 'export.downloaded', entityType: 'report', label: () => 'Export', kind: 'action', values: (req) => ({ ...req.query }) }),
   async (req: Request, res: Response) => {
     try {

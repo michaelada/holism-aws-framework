@@ -90,10 +90,24 @@ function routesIn(file: string): Route[] {
   return found;
 }
 
+/*
+ * A path that *names* an organisation does not count.
+ *
+ * It used to. `route.path.includes(':organisationId')` sat in this expression
+ * and exempted 21 routes across discounts, memberships, merchandise, calendars,
+ * registrations, ticketing, payments and reporting — every one of them reading
+ * `req.params.organisationId` after `authenticateToken()` and nothing else.
+ * Naming a club in the URL is the *claim* being made, and the id comes from the
+ * caller; the guard is what checks the caller may make it. The exemption
+ * excused precisely the routes that most needed checking.
+ *
+ * Several of them did carry a capability middleware, which is why the omission
+ * read as deliberate — but those helpers ask whether *the organisation* has the
+ * capability enabled, never whether *the caller* administers it. None of them
+ * so much as reads `req.user`. See docs/CROSS_ORGANISATION_ACCESS_FIX.md.
+ */
 const isScoped = (route: Route, routerLevelGuard: boolean): boolean =>
-  routerLevelGuard ||
-  route.path.includes(':organisationId') ||
-  SCOPE_MARKERS.some((marker) => route.head.includes(marker));
+  routerLevelGuard || SCOPE_MARKERS.some((marker) => route.head.includes(marker));
 
 describe('every org-admin route establishes its organisation', () => {
   const unscoped: string[] = [];

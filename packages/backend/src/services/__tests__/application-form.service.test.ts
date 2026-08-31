@@ -296,6 +296,64 @@ describe('ApplicationFormService', () => {
     });
   });
 
+  /*
+   * A field belongs to one club, and the list has to say so.
+   *
+   * The organisation used to be optional here: called with nothing, the query
+   * lost its `WHERE` and returned every field of every club — which is what
+   * the route did, so the Fields list and the form builder's field picker both
+   * showed other clubs' fields.
+   */
+  describe('getAllApplicationFields', () => {
+    it('filters by the organisation it is given', async () => {
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+
+      await service.getAllApplicationFields('org-1');
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE organisation_id = $1'),
+        ['org-1']
+      );
+    });
+
+    it('never issues an unfiltered query', async () => {
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+
+      await service.getAllApplicationFields('org-1');
+
+      const [sql] = mockDb.query.mock.calls[0];
+      expect(sql).toMatch(/FROM application_fields\s+WHERE organisation_id/);
+    });
+
+    it('refuses to run without an organisation, rather than returning everything', async () => {
+      await expect(service.getAllApplicationFields('')).rejects.toThrow(
+        /organisation is required/i
+      );
+      expect(mockDb.query).not.toHaveBeenCalled();
+    });
+
+    it('returns only the rows the query gave back', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [
+          {
+            id: 'f-1',
+            organisation_id: 'org-1',
+            name: 'rider_name',
+            label: 'Rider name',
+            datatype: 'text',
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        ],
+      } as any);
+
+      const result = await service.getAllApplicationFields('org-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].organisationId).toBe('org-1');
+    });
+  });
+
   describe('updateApplicationField', () => {
     it('should update a field', async () => {
       const existingField = {

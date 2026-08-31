@@ -1,5 +1,10 @@
 # Test Fixes Summary
 
+> **Superseded.** `scripts/setup-test-db.sh` no longer exists. Creating and migrating the
+> test database is now `npm run test:db` (`scripts/setup-test-db.ts`), which runs the
+> migrations instead of hand-writing tables — see TEST_DATABASE_SETUP.md. This file is kept
+> for the history of what went wrong.
+
 ## Problem
 36 tests were failing with database schema errors after implementing the separate test database. The main issues were:
 
@@ -9,7 +14,7 @@
 4. **Auth Middleware Tests**: Tests were failing because they didn't explicitly disable the `DISABLE_AUTH` environment variable
 
 ## Root Cause
-The test database setup script (`packages/backend/scripts/setup-test-db.sh`) was manually creating tables with an outdated schema that didn't match the actual migration files. The code expected:
+The test database setup script (`packages/backend/scripts/setup-test-db.sh` (since replaced)) was manually creating tables with an outdated schema that didn't match the actual migration files. The code expected:
 - `object_fields.field_id` (UUID foreign key to `field_definitions.id`)
 
 But the test database had:
@@ -20,7 +25,7 @@ This caused all queries joining `object_fields` with `field_definitions` to fail
 ## Solution
 
 ### 1. Fixed Test Database Schema
-Updated `packages/backend/scripts/setup-test-db.sh` to create tables matching the actual migration schema:
+Updated `packages/backend/scripts/setup-test-db.sh` (since replaced) to create tables matching the actual migration schema:
 
 **Key Changes:**
 - Changed `field_short_name VARCHAR(255)` to `field_id UUID` with proper foreign key constraint
@@ -49,7 +54,7 @@ Dropped and recreated the test database with correct schema:
 PGPASSWORD="framework_password" psql -h localhost -p 5432 -U framework_user -d aws_framework_test \
   -c "DROP TABLE IF EXISTS object_fields CASCADE; DROP TABLE IF EXISTS object_definitions CASCADE; DROP TABLE IF EXISTS field_definitions CASCADE;"
 
-bash packages/backend/scripts/setup-test-db.sh
+npm run test:db --workspace @aws-web-framework/backend
 ```
 
 ## Results
@@ -59,7 +64,7 @@ bash packages/backend/scripts/setup-test-db.sh
 ✅ No data loss in development database
 
 ## Files Modified
-1. `packages/backend/scripts/setup-test-db.sh` - Fixed schema creation
+1. `packages/backend/scripts/setup-test-db.sh` (since replaced) - Fixed schema creation
 2. `packages/backend/src/__tests__/jest.setup.js` - Renamed and converted to CommonJS
 3. `packages/backend/jest.config.js` - Updated setup file reference
 4. `packages/backend/src/middleware/__tests__/auth.middleware.test.ts` - Added DISABLE_AUTH cleanup

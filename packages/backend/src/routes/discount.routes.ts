@@ -6,6 +6,7 @@ import {
   authenticateToken,
   byBodyOrCurrent,
   byCurrentOrganisation,
+  byParam,
   byResource,
   requireOrgAdminCapability,
 } from '../middleware';
@@ -83,6 +84,7 @@ function getCapabilityForModule(moduleType: ModuleType): string {
 router.get(
   '/organisations/:organisationId/discounts',
   authenticateToken(),
+  byParam('organisationId'),
   async (req: Request, res: Response) => {
     try {
       const { organisationId } = req.params;
