@@ -962,6 +962,27 @@ The four availability states — open / filling / not yet open / closed — are 
 ([G8](#g8--eligibility-rules-need-a-server-side-answer)) and colour-coded consistently everywhere
 they appear.
 
+**Notes**
+- Events render **collapsed**. A club with three is fine either way; one with eighteen becomes a
+  wall of activities, and the dates — the thing an events list is actually scanned for — get pushed
+  apart by screenfuls. Collapsed the page is a programme; expanded it is a catalogue.
+- **`/:orgCode/browse/events/:eventId` is the same screen showing one event**, drawn as a card
+  rather than an accordion: the date, the entry status, the description and every activity with its
+  entry button. It is where a teaser points — the home page's "Upcoming events", and anything else
+  that names one event — because a member arriving from one has already chosen, and landing them on
+  the collapsed programme makes them choose again. It carries an "All events" link back, since
+  there is usually nothing useful behind it in the member's history.
+- An event id that is no longer in the catalogue says so and offers the list. A teaser can outlive
+  the event it points at, and a link from a month-old notification is the ordinary way to arrive.
+- **Each activity shows its description** under its name, above the fee — "Grade 1 — 80cm" then
+  "Introductory round for newer combinations." A club's class names are shorthand, and this is the
+  screen where the choice between four of them is made; the entry page (D7) and the public event
+  page have always shown it, so the browse row was the only place it was dropped. The fee and the
+  places count keep a line of their own beneath it: they are what the row is scanned for.
+- `?event={id}` on the list is a different thing and stays: it expands that row in place and scrolls
+  to it, which is what the public event pages link to and what a member is returned to after signing
+  in.
+
 ---
 
 ### D2 — Event detail

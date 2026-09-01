@@ -311,3 +311,46 @@ describe('EventsListPage — deleting an event', () => {
     await waitFor(() => expect(rowFor('Winter Dressage')).toBeTruthy());
   });
 });
+
+/**
+ * How many people have entered.
+ *
+ * A club looking at its programme wants to know which events are filling and
+ * which nobody has taken up, and was having to open each one to find out.
+ */
+describe('EventsListPage — entry counts', () => {
+  const entriesCell = (row: Element) => row.querySelectorAll('td')[3]?.textContent ?? '';
+
+  it('shows the count against each event', async () => {
+    await renderList([
+      event({ id: 'ev-1', name: 'Winter Dressage', entryCount: 12 }),
+      event({ id: 'ev-2', name: 'Spring League', entryCount: 0 }),
+    ]);
+
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+    expect(entriesCell(rows[0])).toBe('12');
+    expect(entriesCell(rows[1])).toBe('0');
+  });
+
+  /*
+   * Absent is not none. A column that renders "not counted" as 0 tells a club
+   * nobody has entered an event that may well be full.
+   */
+  it('shows a dash, not a zero, when the count was not returned', async () => {
+    await renderList([event({ id: 'ev-1', name: 'Winter Dressage' })]);
+
+    const [row] = Array.from(document.querySelectorAll('tbody tr'));
+    expect(entriesCell(row)).toBe('—');
+  });
+
+  it('keeps the entry limit in its own column beside it', async () => {
+    await renderList([
+      event({ id: 'ev-1', name: 'Winter Dressage', entryCount: 12, limitEntries: true, entriesLimit: 40 }),
+    ]);
+
+    const [row] = Array.from(document.querySelectorAll('tbody tr'));
+    // Entered, then the cap — two different questions, two columns.
+    expect(entriesCell(row)).toBe('12');
+    expect(row.querySelectorAll('td')[4]?.textContent).toContain('40');
+  });
+});

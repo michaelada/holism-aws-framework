@@ -276,6 +276,13 @@ export class AccountDashboardService {
                  WHERE mine.id = $2
                    AND theirs.organization_id = o.id
                    AND theirs.status = 'active'
+                   -- Joined *as a member*. Administering a club is not being a
+                   -- member of it, and since migration 1709000000038 a person
+                   -- can be either, both, or neither, so this has to say which
+                   -- it means. Otherwise a club the member only administers
+                   -- reads as one they have already joined, and the offer to
+                   -- join it never appears.
+                   AND theirs.user_type = 'account-user'
               ) AS already_joined
          FROM events e
          JOIN organizations o ON o.id = e.organisation_id

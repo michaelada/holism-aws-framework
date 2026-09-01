@@ -318,6 +318,18 @@ describe('POST /api/account/:orgCode/register', () => {
     expect(mocked.resolveMembership).not.toHaveBeenCalled();
   });
 
+  it('still reports an unexpected failure as a 500', async () => {
+    mocked.getOrganisationIdByCode.mockResolvedValue('org-1');
+    mockedRegistration.register.mockRejectedValue(new Error('connection reset'));
+
+    const res = await request(server)
+      .post('/api/account/khpc/register')
+      .set('x-test-user', 'kc-1')
+      .send({});
+
+    expect(res.status).toBe(500);
+  });
+
   it('connects a member whose browser sent no body at all', async () => {
     /*
      * The regression this exists for. "Connect to this club" is a single

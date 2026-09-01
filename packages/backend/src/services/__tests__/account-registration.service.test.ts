@@ -152,6 +152,65 @@ describe('AccountRegistrationService', () => {
       });
     });
 
+    /*
+     * One email address, both applications.
+     *
+     * The unique constraint used to be `(organization_id, keycloak_user_id)`,
+     * so an administrator of this club could not also hold a member account
+     * here: this insert collided and the member was told their account could
+     * not be created. Migration `1709000000038` put `user_type` in the key.
+     * Running a club and taking part in it are ordinary things for one person
+     * to do. See docs/ONE_EMAIL_BOTH_APPS.md.
+     */
+    it('registers an identity that already administers the club', async () => {
+      withSettings(true);
+
+      const result = await service.register(ORG, identity);
+
+      expect(result.outcome).toBe('active');
+      const [sql] = mockDb.query.mock.calls[2];
+      expect(String(sql)).toContain("'account-user'");
+    });
+
+    it('looks only for a member row, which is what the constraint keys on', async () => {
+      // Guard and constraint have to agree. Narrower than the constraint is how
+      // the old 500 happened; wider would refuse a registration that is allowed.
+      withSettings(true);
+      await service.register(ORG, identity);
+
+      const [sql] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain("user_type = 'account-user'");
+    });
+
+    /*
+     * A double-tapped button. The check above settles the sequential case; two
+     * requests in flight together need the insert itself to be forgiving, or
+     * the loser reports a failure at the moment it succeeded.
+     */
+    it('treats a racing duplicate as the repeat registration it is', async () => {
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [] } as any) // no membership yet
+        .mockResolvedValueOnce({ rows: [{ settings: {} }] } as any)
+        .mockResolvedValueOnce({ rows: [] } as any) // insert lost the race
+        .mockResolvedValueOnce({
+          rows: [{ id: 'ou-winner', status: 'active' }],
+        } as any);
+
+      await expect(service.register(ORG, identity)).resolves.toEqual({
+        outcome: 'active',
+        organisationUserId: 'ou-winner',
+      });
+    });
+
+    it('does not let the insert fail on a duplicate', async () => {
+      withSettings(true);
+      await service.register(ORG, identity);
+
+      const [sql] = mockDb.query.mock.calls[2];
+      expect(String(sql)).toContain('ON CONFLICT');
+      expect(String(sql)).toContain('DO NOTHING');
+    });
+
     it('records the registration in the audit log', async () => {
       withSettings(true);
       await service.register(ORG, identity);

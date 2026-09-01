@@ -2176,6 +2176,132 @@ export interface SeedMembershipType {
  * rows are written — Ward Union has no Stripe, and every type there falls back
  * to offline.
  */
+/* ---------------------------------------------------------------- entries */
+
+export interface SeedEntry {
+  /** The account that made the entry — whose login it sits under. */
+  email: string;
+  org: SeedOrg['key'];
+  /** An `EVENTS` key, and the activity's name within that event. */
+  event: string;
+  activity: string;
+  /**
+   * Who the entry is *for*.
+   *
+   * Not always the account holder: a parent enters each of their children, and
+   * a secretary enters a friend who has no login at all. Where the name matches
+   * one of that account's seeded memberships the entry is linked to it by
+   * `member_id`; where it does not, the entry carries the name alone, which is
+   * what an open activity allows.
+   */
+  firstName: string;
+  lastName: string;
+  paymentStatus: 'paid' | 'pending';
+  payment: 'card' | 'offline';
+  /** Days ago the entry was made. Drives `entry_date`, and so the recent order. */
+  enteredDaysAgo: number;
+}
+
+/**
+ * Entries that have already been made.
+ *
+ * The seed used to create none, and "no entries, payments or carts are seeded"
+ * was a documented limit rather than an oversight. It cost more than it looked
+ * like: a club with eighteen events and not one entrant cannot show a member's
+ * own history, cannot exercise an organiser's entrant list, and — since the
+ * entry form began offering the names an account has used before — cannot
+ * demonstrate that at all.
+ *
+ * **Weighted towards events that have finished or closed.** An entry against a
+ * live activity is a place taken, and on a members-only one a member who can no
+ * longer be entered; a fixture that quietly consumed the thing it exists to let
+ * you test would be worse than none. The past show and the closed dressage
+ * carry the history; two live events carry an entrant apiece so an organiser's
+ * list is not empty either.
+ *
+ * Áine McGrath is the one to look at: four memberships, four names entered, and
+ * a fifth for a friend with no login — five distinct names on one account,
+ * which is what the entry form's "used before" list is sized for.
+ */
+export const ENTRIES: SeedEntry[] = [
+  /* ---- Kildare: Áine's household, on events that have been and gone ---- */
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Áine', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 70 },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Rónán', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 70 },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '1.00m', firstName: 'Conor', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 69 },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Preliminary 1', firstName: 'Éabha', lastName: 'McGrath', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 21 },
+  /*
+   * A name with no membership behind it, and the most recent of the five.
+   *
+   * Open activities accept a typed name, and this is what one looks like once
+   * it has been used: offered back as a suggestion, with nothing to link it to.
+   */
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Novice 2', firstName: 'Tadhg', lastName: 'Nolan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 12 },
+
+  /* ---- Kildare: other members, so an entrant list has more than one name -- */
+  { email: 'cillian.murphy@example.test', org: 'kildare', event: 'khpc-past-event', activity: '1.00m', firstName: 'Cillian', lastName: 'Murphy', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 68 },
+  { email: 'saoirse.brennan@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Saoirse', lastName: 'Brennan', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 66 },
+  /* Entered and not yet paid — what an organiser chasing money is looking at. */
+  { email: 'orla.kavanagh@example.test', org: 'kildare', event: 'khpc-hunter-trial', activity: 'Pairs class', firstName: 'Órla', lastName: 'Kavanagh', paymentStatus: 'pending', payment: 'offline', enteredDaysAgo: 3 },
+  { email: 'niamh.walsh@example.test', org: 'kildare', event: 'khpc-spring-league', activity: 'Grade 2 — 90cm', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 1 },
+
+  /* ---- The rest of Kildare and Laois, on events already run or shut ----- */
+  { email: 'padraig.quinn@example.test', org: 'kildare', event: 'khpc-past-event', activity: '1.00m', firstName: 'Pádraig', lastName: 'Quinn', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 67 },
+  { email: 'sinead.gallagher@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Preliminary 1', firstName: 'Sinéad', lastName: 'Gallagher', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 25 },
+  /* Entered while their own membership application was still pending. */
+  { email: 'fionn.doyle@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Fionn', lastName: 'Doyle', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 65 },
+  { email: 'oisin.farrell@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Oisín', lastName: 'Farrell', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 18 },
+  { email: 'clodagh.moran@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Clodagh', lastName: 'Moran', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 16 },
+  { email: 'darragh.otoole@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: "Darragh", lastName: "O'Toole", paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 15 },
+
+  /*
+   * ---- Ward and Meath -------------------------------------------------
+   *
+   * Neither club has an event that has finished or closed, so these sit on
+   * live ones — and every activity used here is **uncapped**, so an entry
+   * takes nothing from the limited classes those events exist to demonstrate.
+   */
+  { email: 'tadhg.nolan@example.test', org: 'ward', event: 'wupc-league-open', activity: 'Senior track', firstName: 'Tadhg', lastName: 'Nolan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 9 },
+  { email: 'grainne.duffy@example.test', org: 'ward', event: 'wupc-league-open', activity: 'Senior track', firstName: 'Gráinne', lastName: 'Duffy', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 8 },
+  { email: 'eoin.brady@example.test', org: 'ward', event: 'wupc-closing-soon', activity: 'Individual ticket', firstName: 'Eoin', lastName: 'Brady', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 7 },
+  { email: 'maire.flynn@example.test', org: 'ward', event: 'wupc-open-day', activity: 'Family ticket', firstName: 'Máire', lastName: 'Flynn', paymentStatus: 'pending', payment: 'offline', enteredDaysAgo: 6 },
+  /*
+   * Lorcán holds his children's memberships and none of his own, so the entry
+   * on his account is in a child's name. An account whose entries are never
+   * the account holder's is the case a screen headed by the login gets wrong.
+   */
+  { email: 'lorcan.hayes@example.test', org: 'ward', event: 'wupc-open-day', activity: 'Family ticket', firstName: 'Cathal', lastName: 'Hayes', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 5 },
+  { email: 'colm.fitzgerald@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Junior class', firstName: 'Colm', lastName: 'Fitzgerald', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 11 },
+  { email: 'aoibhinn.regan@example.test', org: 'meath', event: 'mhpc-summer-camp', activity: 'Day ticket', firstName: 'Aoibhínn', lastName: 'Regan', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 10 },
+  { email: 'seamus.donnelly@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Open class', firstName: 'Séamus', lastName: 'Donnelly', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 9 },
+  { email: 'maeve.kiernan@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Spectator car pass', firstName: 'Maeve', lastName: 'Kiernan', paymentStatus: 'pending', payment: 'offline', enteredDaysAgo: 8 },
+
+  /*
+   * ---- The second club, for the people who belong to more than one ------
+   *
+   * An entry belongs to an account's row in **one** organisation
+   * (`event_entries.user_id`), so a member of three clubs who has entered at
+   * one still sees an empty "My entries" at the other two. That reads as
+   * broken rather than as empty, and it is the screen an organisation switch
+   * lands on. Every login now has something to look at in every club it
+   * belongs to.
+   */
+  { email: 'cillian.murphy@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Cillian', lastName: 'Murphy', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 14 },
+  { email: 'cillian.murphy@example.test', org: 'ward', event: 'wupc-open-day', activity: 'Family ticket', firstName: 'Cillian', lastName: 'Murphy', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 4 },
+  { email: 'darragh.otoole@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Open class', firstName: "Darragh", lastName: "O'Toole", paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 13 },
+  { email: 'darragh.otoole@example.test', org: 'ward', event: 'wupc-closing-soon', activity: 'Individual ticket', firstName: "Darragh", lastName: "O'Toole", paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 3 },
+  { email: 'fionn.doyle@example.test', org: 'ward', event: 'wupc-open-day', activity: 'Family ticket', firstName: 'Fionn', lastName: 'Doyle', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 2 },
+  { email: 'niamh.walsh@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 17 },
+  { email: 'niamh.walsh@example.test', org: 'meath', event: 'mhpc-summer-camp', activity: 'Day ticket', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 12 },
+  { email: 'niamh.walsh@example.test', org: 'ward', event: 'wupc-league-open', activity: 'Senior track', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'pending', payment: 'offline', enteredDaysAgo: 2 },
+  { email: 'orla.kavanagh@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Órla', lastName: 'Kavanagh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 19 },
+  { email: 'sinead.gallagher@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Sinéad', lastName: 'Gallagher', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 20 },
+
+  /* ---- Laois and Meath, so Kildare is not the only club with a history --- */
+  { email: 'ruairi.kelly@example.test', org: 'laois', event: 'lhpc-league', activity: '70cm', firstName: 'Ruairí', lastName: 'Kelly', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 5 },
+  { email: 'eoin.sheridan@example.test', org: 'laois', event: 'lhpc-league', activity: 'Spectator pass', firstName: 'Eoin', lastName: 'Sheridan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 4 },
+  { email: 'brid.mcnamara@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Open class', firstName: 'Bríd', lastName: 'McNamara', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 6 },
+];
+
 export const MEMBERSHIP_TYPES: SeedMembershipType[] = [
   {
     key: 'junior',
@@ -2337,6 +2463,17 @@ export const MEMBERS: SeedMember[] = [
   { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 110, household: 'mcgrath', firstName: 'Éabha', lastName: 'McGrath' },
   { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 95, firstName: 'Rónán', lastName: 'McGrath' },
 
+  /*
+   * Three more active members, so the clubs are not one household deep.
+   *
+   * Niamh and Cillian give Kildare and Ward a member apiece whose login holds
+   * exactly one membership — the ordinary case, and the one the entry form's
+   * suggestions are simplest to read against. Órla's Laois membership makes her
+   * a member of two clubs at once, which is what the federation-wide entry
+   * option is for: a name that is eligible somewhere else.
+   */
+  { email: 'niamh.walsh@example.test', org: 'kildare', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 52 },
+
   /* -------------------------------------------------------------- Laois */
   { email: 'niamh.walsh@example.test', org: 'laois', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 74 },
   { email: 'ruairi.kelly@example.test', org: 'laois', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 52 },
@@ -2344,6 +2481,7 @@ export const MEMBERS: SeedMember[] = [
   { email: 'oisin.farrell@example.test', org: 'laois', type: 'junior', status: 'active', paymentStatus: 'pending', payment: 'pay-offline', season: 'current', renewedDaysAgo: 30 },
   { email: 'clodagh.moran@example.test', org: 'laois', type: 'senior', status: 'active', paymentStatus: 'refunded', payment: 'stripe', season: 'current', renewedDaysAgo: 66 },
   { email: 'eoin.sheridan@example.test', org: 'laois', type: 'associate', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 20 },
+  { email: 'orla.kavanagh@example.test', org: 'laois', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 27 },
   // Last season's member who has not come back.
   { email: 'darragh.otoole@example.test', org: 'laois', type: 'senior', status: 'elapsed', paymentStatus: 'paid', payment: 'stripe', season: 'previous', renewedDaysAgo: 400 },
 
@@ -2351,6 +2489,7 @@ export const MEMBERS: SeedMember[] = [
   { email: 'eoin.brady@example.test', org: 'ward', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 58 },
   { email: 'grainne.duffy@example.test', org: 'ward', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 41 },
   { email: 'maire.flynn@example.test', org: 'ward', type: 'associate', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 15 },
+  { email: 'cillian.murphy@example.test', org: 'ward', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'pay-offline', season: 'current', renewedDaysAgo: 33 },
   /*
    * A second parent, and the other renewal that is due. Lorcán holds two of his
    * children's memberships and nothing of his own, which is the case where a

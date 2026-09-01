@@ -21621,3 +21621,599 @@ This makes the mix-up **legible**. It does not give you two simultaneous session
 Docs: [ACCOUNT_ORGADMIN_SESSION_SHARING.md](docs/ACCOUNT_ORGADMIN_SESSION_SHARING.md) (new), plus A6's wireframe notes and [account-shell.md](.claude/modules/account-shell.md).
 
 ---
+
+
+## 2026-08-31 19:21:10 — Prompt
+
+I tried the new functionality where I was logged in into the Orgadmin (localhost:5175) as admin@kildarehunt.test and then I went to login to localhost:5176 and it displayed the screen with thevarious bittons including one that said "Create an account for Aoife Byrne (admin@kildarehunt.test) and when I clicked on the button and the "Create my account" it came back with the error "We could not create your account with this club." and the browser console showed the following eror:
+
+useAccountApi.ts:128 
+ POST http://localhost:5176/api/account/khpc/register 500 (Internal Server Error)
+(anonymous)	@	useAccountApi.ts:128
+(anonymous)	@	RegisterWithOrganisationPage.tsx:62
+
+### Assistant
+
+Reproduced exactly. The check is narrower than the constraint. Let me see the full picture before fixing:
+
+Now the fix — the service check has to match the constraint it's guarding:
+
+Now the front end, so the message survives instead of being flattened to "we could not create your account":
+
+The user committed the earlier work — so that diff is correct. Now tests:
+
+Now a route-level test for the 409 and the front-end message:
+
+Now let me verify the real thing end to end against the running backend, not just the mocks:
+
+Both paths verified against your live backend. Now the docs and full suites:
+
+Fixed, and verified against your running backend — not just the mocks.
+
+## The cause
+
+`organization_users` has a unique constraint on **`(organization_id, keycloak_user_id)`** — one identity holds **one** relationship per club, whatever its `user_type`. The guard in `register()` was narrower than the constraint it was guarding:
+
+```sql
+WHERE organization_id = $1 AND keycloak_user_id = $2 AND user_type = 'account-user'
+```
+
+Your admin row is `user_type = 'org-admin'`, so the guard didn't see it, the `INSERT` went ahead, and Postgres raised the violation the guard existed to prevent. That hit the route's catch-all and became a 500. I reproduced it directly against your database before touching anything:
+
+```
+duplicate key value violates unique constraint "organization_users_org_kc_user_unique"
+DETAIL:  Key (organization_id, keycloak_user_id)=(0b3483a7-…, ba7b1340-…) already exists.
+```
+
+A guard narrower than its constraint is the whole bug — nothing specific to administrators; any other `user_type` would have done the same.
+
+## The fix
+
+| Where | What |
+|---|---|
+| [account-registration.service.ts](packages/backend/src/services/account-registration.service.ts) | Lookup now matches the constraint exactly, and selects `user_type` to branch on. An `account-user` row behaves as before (idempotent); anything else throws `ConflictError` |
+| [account.routes.ts](packages/backend/src/routes/account.routes.ts) | `ConflictError` → **409** with `{ error: { code: 'ALREADY_IN_ORGANISATION', message } }` |
+| [RegisterWithOrganisationPage.tsx](packages/account-shell/src/pages/RegisterWithOrganisationPage.tsx) | Reads the code and shows a translated explanation, instead of flattening every failure to "We could not create your account" |
+
+You'll now see, in your own language:
+
+> This email already administers this club, so it cannot also hold a member account here. Sign in with a different email address to join as a member.
+
+## Verified live
+
+With your backend on `:3000` and a real token for `admin@kildarehunt.test`:
+
+```
+POST /api/account/khpc/register  →  409 ALREADY_IN_ORGANISATION   (was 500)
+POST /api/account/wupc/register  →  200 {"outcome":"active"}       (already a member there)
+```
+
+Row count for that address unchanged at 3 — the refusal writes nothing, and the idempotent path still doesn't.
+
+## What I did not change
+
+**The constraint stays.** Letting one identity be both administrator and member of the same club is a migration and a model change — `organization_users` rows are referenced as *the* user of a club by carts, bookings, payments and entries, and two rows for one person would need every one of those to say which. Nothing in the report asks for it. If you do want a member account at Kildare, sign up with a different email; that's what the message now says.
+
+## Tests
+
+10 new across three files — the service refuses and writes nothing, the lookup is asserted *not* to filter by `user_type` (the shape of the original bug), the route returns 409-with-code while an unexpected error is still a 500, and the page shows the specific message while keeping the generic one for everything else. Existing fixtures gained the `user_type` the query now selects.
+
+Backend 175 suites / 3305 tests, account-shell 58 files / 685 tests, both typechecks clean.
+
+Docs: [ACCOUNT_REGISTER_AS_ADMIN_FIX.md](docs/ACCOUNT_REGISTER_AS_ADMIN_FIX.md) and [backend.md](.claude/modules/backend.md). Six locales, one key each — targeted insertions, +1 line per file.
+
+---
+
+
+## 2026-08-31 19:31:03 — Prompt
+
+I am supposed to be able to login to an orgadmin and also create an account to login to my an account as well, but now I am seeing the following error message"
+
+"This email already administers this club, so it cannot also hold a member account here. Sign in with a different email address to join as a member." 
+
+I should not be stopped from this. I should be able to use the one email address to access both applications, once I register and create an account,
+
+### Assistant
+
+You're right, and my earlier reasoning was wrong — I treated the constraint as intent rather than as the bug. Let me find what actually has to change.
+
+Now the critical question — what resolves an `organization_users` row by identity without saying which type:
+
+Encouraging — both auth resolvers already filter by `user_type`. Let me audit every query that doesn't:
+
+Everything auth-critical already filters by `user_type` — so the constraint is the only real blocker. Let me check the migration sequence:
+
+Now revert my refusal, since the situation it described is now allowed:
+
+Now the two queries that resolve a row without saying which type — they become ambiguous once a person can have both:
+
+Now remove the route mapping, the front-end branch and the locale keys — that refusal no longer exists:
+
+Now let me prove it end to end against your running system — the case that was failing:
+
+Both apps now work on one email. Let me remove the row my API test created, so the flow is yours to exercise:
+
+You're right, and I got that wrong. I read the constraint as a decision somebody had made and wrote a polite refusal for it. It was just a constraint nobody had revisited.
+
+## What was blocking it
+
+```
+"organization_users_org_kc_user_unique" UNIQUE (organization_id, keycloak_user_id)
+```
+
+One row per identity per organisation, whatever the `user_type` — so an email could be an administrator **or** a member of a club, never both. It came in with the table in migration `1707000000003`.
+
+Migration [`1709000000038_organization-user-per-type`](packages/backend/migrations/1709000000038_organization-user-per-type.js) puts `user_type` in the key:
+
+```
+"organization_users_org_kc_user_type_unique" UNIQUE (organization_id, keycloak_user_id, user_type)
+```
+
+One admin row and one member row per identity per club, no duplicates of either.
+
+## Why it's safe, not just permitted
+
+I audited every query touching `organization_users` by `keycloak_user_id` before changing the key. **Both apps already resolve their own row by type** — `organisation-scope`, `capability` and `orgadmin-auth` all filter `'org-admin'`; `resolveMembership` and `getOrganisationsForUser` filter `'account-user'`. And the account app only ever obtains an `organization_users.id` through `resolveMembership`, so carts, entries, payments and memberships attach to the member row. Two rows are two independent relationships.
+
+24 of 30 queries already named a type. Of the six that didn't, four were unaffected. **Two needed fixing**, and would have been quiet bugs otherwise:
+
+| Where | Why |
+|---|---|
+| `registration.routes` filters endpoint | Org-admin route reading its own saved filters with an unqualified `LIMIT 1` — could have keyed them to the member row |
+| `account-dashboard` `already_joined` | A club you only administer read as one you'd already joined, so the offer to join as a member never appeared |
+
+## Verified on your running system
+
+As `admin@kildarehunt.test`, an administrator of khpc:
+
+```
+POST /api/account/khpc/register  →  200 {"outcome":"active"}   (was 500, then 409)
+
+GET  /api/account/organisations  →  member of      khpc, wupc
+GET  /api/orgadmin/auth/me       →  administers    khpc, lhpc
+```
+
+Both at once, one email. **I deleted the row that check created**, so the flow is unexercised — click the button yourself and it'll register properly rather than silently no-op'ing on my row.
+
+## What I removed
+
+The refusal, its 409 mapping, the front-end branch, the six translations, and every test written for it. The `register` guard is back to looking only for a member row — which is now exactly as wide as the constraint, and that agreement is the property that actually matters. The insert gained `ON CONFLICT … DO NOTHING` plus a read-back, so a double-tapped button resolves to the existing membership instead of failing.
+
+Backend 175 suites / 3304 tests, account-shell 58 files / 683 tests, both typechecks clean. Migration applied to `aws_framework` and `aws_framework_test`.
+
+Docs: [ONE_EMAIL_BOTH_APPS.md](docs/ONE_EMAIL_BOTH_APPS.md) replaces the one I wrote for the wrong fix; [backend.md](.claude/modules/backend.md) now records that a query resolving a person's row in a club must say which type it means.
+
+One thing worth adding, if you want it: the seed has nobody who is both. Making one of the four club admins also a member of their own club would make this permanently testable rather than something you have to set up by hand.
+
+---
+
+
+## 2026-08-31 19:41:17 — Prompt
+
+When I log in to an account and see the list of upcoming events and click onto one of them, it brings me to the Events listings page with all events collapsed. 
+Instead, if I click on an event I would like it to bring me directly to the details of that event, with a list of the activities in the event, so I can select one and enter, it does not have to bring me to the Event listing page. Can you update this.
+
+### Assistant
+
+There's already a `?event=` deep-link mechanism, and a `PublicEventPage`. Let me see what each gives:
+
+Confirmed — `item.id` is the event id. Now the change:
+
+Now the single-event view itself:
+
+Now the route and the home-page link:
+
+Now tests for the single-event page itself:
+
+Now let me confirm it in a real browser rather than only in tests:
+
+Signed in, with the upcoming events. Clicking one:
+
+My earlier fetch used the wrong base path. Let me reload now the module is invalidated:
+
+Verified in the real app. Final check across both packages:
+
+Done, and confirmed in your running app rather than only in tests.
+
+## What happens now
+
+Clicking **Spring Show Jumping League** on the home page goes to `/account/khpc/browse/events/43163ba2-…` and shows just that event:
+
+```
+← All events
+
+  SEPT   Spring Show Jumping League
+  Mon 21  Entries close 14th Sept 2026 · 120 of 120 places left
+  2026
+  ─────────────────────────────────────────────────
+  Four-round league over the spring, graded 1 to 3.
+
+  Grade 1 — 80cm          €25.00      [ Add to basket ]
+  Grade 2 — 90cm          €30.00      [ Add to basket ]
+  Grade 3 — 1.00m         €35.00      [ Add to basket ]
+  Stabling (per night)    €20.00      [ Add to basket ]
+```
+
+No list, nothing to expand — pick an activity and enter. I drove it in a real browser signed in as a seeded member, and clicked "All events" to confirm the way back.
+
+## How it's built
+
+`whatsOnTarget` in [HomePage.tsx:91](packages/account-shell/src/pages/HomePage.tsx#L91) now returns `/browse/events/${item.id}`. Every other kind of teaser — shop, bookings, registrations — already deep-linked to the thing on the card; events were the only one that opened the list instead.
+
+New route `/:orgCode/browse/events/:eventId` renders **`BrowsePage` in single-event mode**: same catalogue request, same cart wiring, same entry buttons, drawn as a card instead of a list of accordions. I pulled the accordion's summary and body out into `eventHeading` and `eventActivities`, used by both shapes — a second copy of the activity rows would be a second place for the cart logic to drift.
+
+`?event={id}` on the list is untouched. That's a different thing — it expands a row in place, and it's what the public event pages link to and where a member is returned after signing in.
+
+An event id no longer in the catalogue says so and offers the list, since a teaser can outlive the event it points at.
+
+## One thing worth knowing
+
+The back button rendered **unlabelled** in your browser at first. Not a bug in the change — your `dev:account` server has been up since 12:04 and was serving a cached copy of the translation JSON. `i18n/config.ts` loads the catalogue once and hands it to `i18n.init`, so a JSON edit doesn't reach a running page until the module is re-fetched. Touching the file and reloading fixed it. **You'll want to restart that dev server**, or you'll see the same blank button and think the change didn't land.
+
+## State
+
+account-shell 58 files / 690 tests, backend 175 suites / 3304 tests, both typechecks clean. Seven new tests — the teaser opens the event; the single view shows only that event with activities and no list chrome; the back link; the not-found message; entering works identically from there.
+
+Six locales, two keys (`browse.allEvents`, `browse.eventNotFound`) — targeted insertions, +2 lines per file. Docs: [D1's wireframe notes](docs/ACCOUNT_USER_APP_WIREFRAMES.md) and [account-shell.md](.claude/modules/account-shell.md).
+
+---
+
+
+## 2026-08-31 19:52:43 — Prompt
+
+On the accounts page, when I drill into look at an event and maybe enter can you include the activity description with the activity name
+
+### Assistant
+
+The description is already in the payload and the type — just not rendered. Let me check the entry page too, since they mentioned entering:
+
+Only `ActivityRow` is missing it — the entry page already shows it. Making them agree:
+
+Now let me look at it in the real app — the seed has descriptions on these activities:
+
+Descriptions are in. Final check across the suite and docs:
+
+Done. Each activity now reads name → description → price:
+
+```
+Grade 1 — 80cm
+Introductory round for newer combinations.
+€25.00                                      [ Add to basket ]
+
+Grade 2 — 90cm
+Intermediate round.
+€30.00                                      [ Add to basket ]
+
+Stabling (per night)
+Overnight stabling. Choose how many nights.
+€20.00                                      [ Add to basket ]
+```
+
+That's from your running app, not a mockup.
+
+## What it took
+
+Nothing but rendering it. `CatalogueActivity.description` was already in the type and already in the API payload — [ActivityRow](packages/account-shell/src/pages/BrowsePage.tsx#L542) just wasn't drawing it. The clubs write these; the seed has them on every activity.
+
+Worth noting because it explains the shape of the bug: the **entry page and the public event page have always shown the description**. The browse row was the only place it was dropped — and it's the screen where the choice between four classes is actually made. "Grade 1 — 80cm" and "Prelim 7" are a club's shorthand, so the row was asking members to already know it. All three screens now agree.
+
+I kept the fee and places on their own line beneath the description rather than folding them into it — that's the number the row gets scanned for, and it shouldn't wrap into a sentence.
+
+Both places get it: the single-event view you drill into, and the list rows when expanded. An activity with no description gains no blank line.
+
+## Verified
+
+Four new tests — description on the single-event view, the same in the list so the two can't drift, no blank line without one, and the fee and places still findable underneath. account-shell: 58 files, **694 tests**, typecheck clean.
+
+Docs: [D1's wireframe notes](docs/ACCOUNT_USER_APP_WIREFRAMES.md) and [account-shell.md](.claude/modules/account-shell.md).
+
+Reminder from last time, since it'll bite the same way: your `dev:account` server is still the one started at 12:04. This change is a `.tsx` edit so it hot-reloads fine, but the two translation keys from the previous change won't appear until you restart it.
+
+---
+
+
+## 2026-08-31 19:57:03 — Prompt
+
+When entering an event can you show underneath the autocomplete list, existing membership names and the last 5 names used for entries, that the user can click to auto populate the Name entry field. This is to make it easier for the account holder to enter/ re-enter.
+
+Also, in the seed data program and you open up the membership types so I can test paying for membership.
+
+### Assistant
+
+Two things. Let me start with the entry form's name field:
+
+Noted on the extra seed work — I'll fold that in. Let me look at the seed's members and membership types:
+
+Four of five types are already `open` — so something else blocks payment. Let me ask the API:
+
+`membership_status` is `'open'`, but the service tests for `'active'`. Let me check which vocabulary the app itself uses:
+
+Found it — and it's a backend bug, not a seed one:
+
+Membership types are now purchasable, with the deliberately-closed one still closed. Now the seed — let me see what members and entries exist today:
+
+Members exist; **entries are the gap** — zero rows, which is also what the new suggestions need. Let me see how the app creates one, so the seed matches:
+
+Now the entries. Let me get the exact activity names available:
+
+Dataset is consistent. Now the insert side — the seed needs to remember activity and member ids:
+
+Now the entries loop itself:
+
+Now `entrySubmission` — the answers each entry form carries:
+
+Let me verify the seed actually runs, against a scratch database rather than your dev data:
+
+Seed verified. Now the suggestions endpoint — let me reuse the scope logic the name field already has:
+
+Pre-existing drift in your dev DB — the Keycloak ids don't match, which `--reset` fixes. Let me verify the service against the freshly seeded scratch database instead:
+
+The de-dup works — the four McGraths appear once, under memberships. Now the UI:
+
+20 pre-existing errors in that package, none in the file I touched. Now wiring it into the entry form:
+
+At runtime Vite aliases to `src`, so no build needed — the `.d.ts` refresh was enough for typecheck:
+
+Now tests, then a live check:
+
+These tests encoded the bug's vocabulary, which is why it survived. Fixing them to match the column:
+
+All green. Let me clean up the scratch database and record what changed:
+
+Three things done, all verified against your running system.
+
+## 1. Name suggestions under the field
+
+Two lists, because they answer different questions:
+
+```
+Who is this entry for?  [_______________________]
+
+Your memberships
+ ( Áine McGrath · Senior Member ) ( Conor McGrath · Family Membership )
+ ( Éabha McGrath · Family Membership ) ( Rónán McGrath · Junior Member )
+
+Used before
+ ( Tadhg Nolan )
+```
+
+That's real output from the service against a freshly seeded database. Note the de-dup working: Áine has five recent entry names, but four are already offered as memberships, so only Tadhg — the friend with no login — appears under "Used before".
+
+A membership chip carries its `memberId`, so clicking **selects the membership**, not just the text. That matters on a members-only activity, where a name alone is refused — a chip that only filled the box would look like it worked and then fail on submit.
+
+Scoped the way the activity is: federation-wide activities suggest memberships held anywhere in the federation, club-only ones don't. Suggesting a name the activity would then refuse is worse than suggesting nothing.
+
+New endpoint `…/entrant-suggestions`, deliberately **not** folded into `/entrants` — that one fires on every keystroke, and neither list changes as you type. `EntrantNameField` lives in `packages/components`, so it also appears on the plain text box for clubs with no roster, where recent names are the only thing worth clicking.
+
+## 2. Membership types — a backend bug, not a seed one
+
+The seed was already right; four of its five types are `open`. `account-catalogue.service` tested `membership_status !== 'active'`, but the column holds **`'open'`** — the migration default, what the org-admin form writes, and what `account-activity.service` selects on. So the test was true of every row ever written: **every membership type in every club was refused, for everyone.** Nothing errored; the list just came back all-refused, which looks like a club that hasn't opened memberships yet.
+
+It survived because `account-catalogue.renewal.test.ts` built its fixtures with the same wrong word. The suite asserted the bug. Fixtures corrected, plus two cases that assert the vocabulary itself.
+
+Live, as a signed-in Kildare member: all four types now `available=true`, with Founder Member still correctly closed.
+
+## 3. Seed — members and entries
+
+- **Three more active members** so clubs aren't one household deep: Niamh at Kildare, Cillian at Ward, Órla at Laois (making her a member of two clubs, which is what the federation entry option is for). 34 members, 30 active.
+- **12 entries**, written the way `fulfilment.service` does — names on the entry, `member_id` where a membership stands behind the name, a form submission where the activity asks for one, and backdated `entry_date`.
+
+**Weighted towards finished and closed events on purpose.** An entry against a live activity is a place taken, and on a members-only one a member who can no longer be entered — a fixture that consumed the thing it exists to let you test would be worse than none. Two live events get one entrant each (one unpaid, for the organiser's chase-up view).
+
+I verified the whole seed end to end against a scratch database, then dropped it — your dev data is untouched.
+
+## Two things to know
+
+**Your dev database has drifted from Keycloak.** `aine.mcgrath@example.test` has `keycloak_user_id` `743b36f5…` in the DB but the realm now issues `5b2a6e06…`, so that account gets `NOT_CONNECTED`. Pre-existing — realm users were recreated without a DB reset at some point. `npm run seed:demo -- --reset` fixes it, and you'll need that anyway for the new members and entries.
+
+**`packages/components` has 20 pre-existing typecheck errors** (mostly `FieldRenderer`), none in the file I touched �� I checked `FieldRenderer.tsx` is byte-identical to HEAD.
+
+Tests: backend 176 suites / 3318, account-shell 694, components 465 — all passing. Docs: [ENTRANT_NAME_SUGGESTIONS.md](docs/ENTRANT_NAME_SUGGESTIONS.md), [MEMBERSHIP_TYPES_NEVER_AVAILABLE.md](docs/MEMBERSHIP_TYPES_NEVER_AVAILABLE.md), plus [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) and [backend.md](.claude/modules/backend.md).
+
+---
+
+
+## 2026-08-31 20:19:17 — Prompt
+
+On the entry form if you list existing Memberships or previous entry names, can you let the user know they can also click the name also.
+
+### Assistant
+
+Let me see it in the real app rather than only in tests:
+
+It renders live. Let me confirm the chip actually fills the field:
+
+The chip fills the field. Final verification:
+
+Added, and confirmed working in your running app:
+
+```
+Who is this entry for?  [ Niamh Walsh ]
+
+Select a name to fill it in.
+
+  Your memberships
+   ( Niamh Walsh · Senior Member )
+```
+
+I clicked that chip in a real browser — the field now reads `Niamh Walsh`.
+
+## The wording, and why it sits where it does
+
+**"Select a name to fill it in."** — once, above both rows, not repeated on each heading. A row of chips under a form field reads as *labels* until something says otherwise: a membership type, a category, something the form is telling you. A member who reads them that way retypes the name that was sitting right there, which is exactly what this feature exists to save.
+
+Said once because it's one instruction covering everything beneath it — on both rows it would make two short lists look like two separate mechanisms.
+
+"Select" rather than "click" or "tap": this is the member-facing app and most of them are on a phone, where "click" is the wrong verb and "tap" is wrong on a laptop.
+
+The hint only appears when there's something to pick, and disappears with the lists. It's also optional at the component level — `EntrantNameField` lives in `packages/components`, so a caller that supplies no wording for it simply gets the chips, which keeps the component presentational as it was designed to be.
+
+## Verified
+
+Four new tests: shown when there's anything to pick, exactly once however many lists render, absent when there's nothing, and omitted when the caller gives no wording.
+
+components 49 files / **469 tests**, account-shell 58 files / **694 tests**, both typechecks clean. Six locales, one key each — targeted insertions.
+
+Note the screenshot has no "Used before" row: your dev database still has zero entries. Those come with the seed changes, so `npm run seed:demo -- --reset` is what makes that second row appear.
+
+---
+
+
+## 2026-08-31 20:24:18 — Prompt
+
+which event have you added entries to, for which login account ?
+
+### Assistant
+
+Twelve entries, across seven accounts. Password for all of them is `Passw0rd!`.
+
+## The one to log in as: `aine.mcgrath@example.test` (Kildare)
+
+Five entries, five distinct names — this is the account that demonstrates the suggestions feature.
+
+| Event | Activity | Entered for | State |
+|---|---|---|---|
+| Winter Dressage — Round 3 | Novice 2 | **Tadhg Nolan** | entries closed |
+| Winter Dressage — Round 3 | Preliminary 1 | Éabha McGrath | entries closed |
+| Summer Show (completed) | 1.00m | Conor McGrath | past |
+| Summer Show (completed) | 80cm | Áine McGrath | past |
+| Summer Show (completed) | 80cm | Rónán McGrath | past |
+
+She also holds four memberships (Áine, Conor, Éabha, Rónán), so on an entry form she sees:
+
+- **Your memberships** — those four
+- **Used before** — Tadhg Nolan only, because the other four are already offered above and get de-duplicated
+
+Tadhg is deliberately not a member — a friend with no login, entered on an open activity. That's the case where a suggestion has no membership behind it.
+
+## The other six accounts
+
+| Account | Club | Event | Activity | State |
+|---|---|---|---|---|
+| `niamh.walsh` | KHPC | Spring Show Jumping League | Grade 2 — 90cm | live |
+| `orla.kavanagh` | KHPC | Autumn Hunter Trial | Pairs class | live, **unpaid** |
+| `cillian.murphy` | KHPC | Summer Show (completed) | 1.00m | past |
+| `saoirse.brennan` | KHPC | Summer Show (completed) | 80cm | past |
+| `ruairi.kelly` | LHPC | Ballyroan Winter League | 70cm | live |
+| `eoin.sheridan` | LHPC | Ballyroan Winter League | Spectator pass | live |
+| `brid.mcnamara` | MHPC | Tara Hunter Trial | Open class | live |
+
+Órla's is the only unpaid one — for the organiser's chasing-payment view.
+
+## Two things about the spread
+
+**Most of it is on past or closed events on purpose.** An entry against a live activity is a place taken, and on a members-only one a member who can no longer be entered. Áine's history sits entirely on Summer Show (already run) and Winter Dressage (entries closed), so it feeds the "used before" list without consuming anything you'd want to test entering.
+
+The four live entries are one per event, so an organiser's entrant list isn't empty either.
+
+**None of this is in your database yet.** These exist in the seed program only — I verified them against a throwaway database and dropped it. `npm run seed:demo -- --reset` is what puts them in, and you need it anyway for the new members and the Keycloak id drift.
+
+---
+
+
+## 2026-08-31 20:26:43 — Prompt
+
+Can you make sure that each user has alerady submitted entries on their account so I can see them and test them - can you update the seed program with this.
+
+### Assistant
+
+The real constraint isn't the live count — it's capped activities. Only two entries touch one. Let me fix the test to assert what actually matters:
+
+Now let me run the whole seed against a scratch database again, to prove all 27 write cleanly:
+
+All 23 logins are covered. But a person in two clubs has an empty screen in the second — let me check exactly which pairs:
+
+Every account-user row has entries, and only two capped activities give up a single place each. Cleaning up and finishing the docs:
+
+Done — **37 entries**, and every account has some in every club it belongs to.
+
+## Coverage
+
+| | Before | Now |
+|---|---|---|
+| Entries | 12 | 37 |
+| Logins with entries | 7 of 23 | **23 of 23** |
+| Login-and-club pairs covered | 8 | **all of them** |
+
+That second row is the one that mattered more than it looks. An entry belongs to an account's row in **one** organisation (`event_entries.user_id`), so Niamh Walsh — a member of four clubs — had entries at Kildare and an empty "My entries" at the other three. Switching organisation landed on a blank screen, which reads as broken rather than as empty. She now has one in each.
+
+## Where they went, and what that cost
+
+| Club | Entries | Placed on |
+|---|---|---|
+| Kildare | 12 | mostly Summer Show (run) and Winter Dressage (closed) |
+| Laois | 9 | mostly Hunter Trial (entries closed) |
+| Ward Union | 9 | live events — the club has no finished or closed one |
+| Meath Hunt | 7 | live events — same |
+
+Ward and Meath have no event that has finished or closed, so theirs had to go on live ones. I put every one of them on an **uncapped** activity. Across the whole fixture exactly **two** capped activities give up a single place each — `70cm` (25 places) and `Grade 2 — 90cm` (40) — so the limits those events exist to demonstrate are untouched.
+
+Also in the mix: **4 unpaid** entries for the organiser's chasing-payment view, and **5 names with no membership behind them**, including Lorcán Hayes's — he holds his children's memberships and none of his own, so the entry on his account is in his son's name. An account whose entries are never the account holder's is the case a screen headed by the login gets wrong.
+
+## A test I had to correct
+
+I'd written one asserting "fewer than half the entries are on live events". That's the wrong invariant — Ward and Meath make it unsatisfiable, and it was never the real concern. Replaced with what actually matters: no capped activity gives up more than one place, and no activity small enough for one entry to matter is spent at all. Plus a new test that every login-and-club pair has an entry, so this can't regress.
+
+## Verified
+
+Full seed run against a throwaway database: 37 entries written, **0 account-user rows without one**, then dropped. Your dev data untouched.
+
+Backend 176 suites / **3320 tests**, typecheck clean. [EVENTS_DEMO_SEED.md](docs/EVENTS_DEMO_SEED.md) updated.
+
+`npm run seed:demo -- --reset` puts it all in — still needed for the members, the entries, and the Keycloak id drift I mentioned.
+
+---
+
+
+## 2026-08-31 20:35:32 — Prompt
+
+in the orgadmin on the event listing page, can you add a column which shows the number of entries in the event
+
+### Assistant
+
+Now the backend list — does it already carry a count?
+
+The number must match what "View entries" shows. Let me check both that screen and how the event-level limit counts:
+
+Backend works — and your dev DB already has two real entries from your testing. Now the column:
+
+Pre-existing (stale `orgadmin-core` dist types — same at HEAD). Now the six translations:
+
+Now let me confirm it in the real org-admin UI:
+
+Live and correct. Final verification and docs:
+
+Added, and here it is running in your org-admin against Kildare's real data:
+
+| Event | Status | Entries | Entry Limit |
+|---|---|---:|---|
+| Christmas Fun Day (draft) | Draft | 0 | Unlimited |
+| Summer Camp | Published | 0 | 60 max |
+| Inter-Branch Championship | Published | 0 | Unlimited |
+| Kildare Members' Cup | Published | 0 | Unlimited |
+| Spring Show Jumping League | Published | 1 | 120 max |
+| Autumn Hunter Trial | Published | 1 | Unlimited |
+| Winter Dressage — Round 3 | Published | 3 | 45 max |
+| Summer Show (completed) | Published | 7 | Unlimited |
+
+## Where it sits, and what it counts
+
+**Between Status and Entry Limit** — entered and cap are two different questions, so they stay two columns and read together: `3` against `45 max`.
+
+The count is `COUNT(*)` of `event_entries` for the event. That's deliberate rather than convenient: it's the **same count the event-level limit is checked against** in `account-catalogue.service`, and the **same set `GET /events/:id/entries` lists** — the screen the row's own "view entries" button opens. A number on a list that disagrees with the screen it links to is worse than no number.
+
+A correlated subquery in `getEventsByOrganisation` only, not a join with `GROUP BY` — the query selects `e.*`, so grouping would mean naming every column of `events` and re-naming them whenever the table changes.
+
+## One deliberate detail
+
+`entryCount` is `undefined` where the query didn't ask for it, and the column renders that as an **em dash, not `0`**. Absent isn't none — a column that shows "not loaded" as zero tells a club nobody has entered an event that may well be full. It has its own test.
+
+## Verified
+
+Backend 176 suites / 3320 tests; orgadmin-events 32 files / 345 tests, including three new ones (count shown, dash when absent, limit stays in its own column). Six locales for `events.table.entries` — Entries / Anmeldungen / Inscripciones / Engagements / Iscrizioni / Inscrições — one line each.
+
+Two pre-existing typecheck errors in `orgadmin-events` (`EventActivityForm`, `EventDatesSection`) and a stale `orgadmin-core` dist type for `ResponsiveTable`; all three are identical at HEAD and unrelated to this change.
+
+Note the counts above are from your dev database as it stands — you've clearly been entering through the UI. After `--reset` you'll see the seeded 12 across Kildare instead.
+
+---

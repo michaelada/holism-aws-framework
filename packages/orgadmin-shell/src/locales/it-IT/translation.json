@@ -141,6 +141,7 @@
       "eventName": "Nome evento",
       "dates": "Date",
       "status": "Stato",
+      "entries": "Iscrizioni",
       "entryLimit": "Limite iscrizioni",
       "actions": "Azioni"
     },

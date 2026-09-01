@@ -8,6 +8,20 @@ import {
   Typography,
 } from '@mui/material';
 
+/**
+ * A name offered under the field, ready to click.
+ *
+ * Mirrors the server's `EntrantSuggestion`. `memberId` is null for a name that
+ * was typed rather than held as a membership — it is still worth offering back,
+ * and is often the one the member wants.
+ */
+export interface EntrantSuggestion {
+  name: string;
+  memberId: string | null;
+  /** The membership type, or the club it is with. Shown beside the name. */
+  detail?: string | null;
+}
+
 /** One person the entry could be for. Mirrors the server's `EntrantCandidate`. */
 export interface EntrantOption {
   memberId: string;
@@ -51,6 +65,18 @@ export interface EntrantNameFieldProps {
   /** Shown once the member has left a field they have not satisfied. */
   error?: string | null;
   onBlur?: () => void;
+  /**
+   * Names to offer beneath the field, one click away.
+   *
+   * Two lists rather than one because they answer different questions — who
+   * this account *may* enter, and who it *has* entered — and a merged list
+   * would have to pick which a name was. Either may be empty; both empty
+   * renders nothing at all.
+   */
+  suggestions?: {
+    memberships?: EntrantSuggestion[];
+    recent?: EntrantSuggestion[];
+  };
   labels: {
     label: string;
     placeholder?: string;
@@ -58,6 +84,18 @@ export interface EntrantNameFieldProps {
     noMatches?: string;
     alreadyEntered?: string;
     loading?: string;
+    /** Headings for the two suggestion rows. */
+    yourMemberships?: string;
+    usedBefore?: string;
+    /**
+     * That the names below can be clicked.
+     *
+     * Said once, in words, rather than left to the chips looking clickable.
+     * They are read as labels — a membership type, a category, something the
+     * form is telling you — until something says otherwise, and a member who
+     * reads them that way types the name that was sitting right there.
+     */
+    suggestionsHint?: string;
   };
 }
 
@@ -91,6 +129,7 @@ export const EntrantNameField: React.FC<EntrantNameFieldProps> = ({
   disabled = false,
   error,
   onBlur,
+  suggestions,
   labels,
 }) => {
   /*
@@ -99,8 +138,25 @@ export const EntrantNameField: React.FC<EntrantNameFieldProps> = ({
    * A club that does not run memberships has nothing to offer, and an
    * Autocomplete that never suggests anything is a text field that also spins.
    */
+  /*
+   * The suggestion rows, under whichever field is drawn.
+   *
+   * Offered for a plain box too: a club with no roster still has the names this
+   * account entered last time, and those are exactly the ones worth a click
+   * when there is nothing to complete against.
+   */
+  const suggestionRows = (
+    <SuggestionRows
+      suggestions={suggestions}
+      disabled={disabled}
+      onPick={onChange}
+      labels={labels}
+    />
+  );
+
   if (!autocomplete) {
     return (
+      <Box>
       <TextField
         fullWidth
         required
@@ -114,6 +170,8 @@ export const EntrantNameField: React.FC<EntrantNameFieldProps> = ({
         onChange={(event) => onChange({ memberId: null, name: event.target.value })}
         inputProps={{ maxLength: 255 }}
       />
+      {suggestionRows}
+      </Box>
     );
   }
 
@@ -125,6 +183,7 @@ export const EntrantNameField: React.FC<EntrantNameFieldProps> = ({
     : null;
 
   return (
+    <Box>
     <Autocomplete<EntrantOption, false, false, true>
       freeSolo={allowFreeText as true}
       disabled={disabled}
@@ -218,6 +277,72 @@ export const EntrantNameField: React.FC<EntrantNameFieldProps> = ({
         />
       )}
     />
+      {suggestionRows}
+    </Box>
+  );
+};
+
+/**
+ * The names offered beneath the field.
+ *
+ * Chips rather than another list: they sit under the field without competing
+ * with the autocomplete's own dropdown, and a row of four reads as "these are
+ * the ones you mean" where four more list rows would read as more to search
+ * through.
+ *
+ * A membership chip carries its `memberId`, so clicking it selects the
+ * membership rather than merely typing the name — which matters on a
+ * members-only activity, where a name alone is not an answer.
+ */
+const SuggestionRows: React.FC<{
+  suggestions?: { memberships?: EntrantSuggestion[]; recent?: EntrantSuggestion[] };
+  disabled: boolean;
+  onPick: (value: EntrantValue) => void;
+  labels: { yourMemberships?: string; usedBefore?: string; suggestionsHint?: string };
+}> = ({ suggestions, disabled, onPick, labels }) => {
+  const memberships = suggestions?.memberships ?? [];
+  const recent = suggestions?.recent ?? [];
+
+  if (memberships.length === 0 && recent.length === 0) return null;
+
+  const row = (heading: string | undefined, items: EntrantSuggestion[]) =>
+    items.length === 0 ? null : (
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+          {heading}
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+          {items.map((item) => (
+            <Chip
+              key={`${item.memberId ?? 'typed'}-${item.name}`}
+              size="small"
+              variant="outlined"
+              clickable
+              disabled={disabled}
+              label={item.detail ? `${item.name} · ${item.detail}` : item.name}
+              onClick={() => onPick({ memberId: item.memberId, name: item.name })}
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+
+  return (
+    <>
+      {/*
+        Once, above both rows, rather than repeated on each heading.
+        
+        It is one instruction and it covers everything below it; saying it twice
+        makes two short lists look like two separate mechanisms.
+      */}
+      {labels.suggestionsHint && (
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1.5 }}>
+          {labels.suggestionsHint}
+        </Typography>
+      )}
+      {row(labels.yourMemberships, memberships)}
+      {row(labels.usedBefore, recent)}
+    </>
   );
 };
 

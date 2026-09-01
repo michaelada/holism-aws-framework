@@ -250,6 +250,26 @@ export const App: React.FC = () => (
             }
           />
           {/*
+          One event, by id.
+
+          A teaser — the home page's "Upcoming events", a notification — points
+          here rather than at the list: the member has already chosen, and
+          landing them on eighteen collapsed rows makes them choose again.
+          Declared **before** `:itemId/enter` is irrelevant (the paths differ in
+          length), but it must come before nothing else: `browse/events` above
+          is an exact match and does not swallow it.
+        */}
+          <Route
+            path="/:orgCode/browse/events/:eventId"
+            element={
+              <OrganisationRoute>
+                <CapabilityGate anyOf={['event-management']}>
+                  <BrowsePage section="events" />
+                </CapabilityGate>
+              </OrganisationRoute>
+            }
+          />
+          {/*
           Entering is a page, not a dialog: club application forms can be long,
           and the terms a member has to agree to have to be readable without an
           overlay. Addressable by id so the page survives a reload.

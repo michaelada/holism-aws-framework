@@ -306,6 +306,8 @@
     "collapseAll": "Contraer todo",
     "loadError": "No hemos podido cargar la oferta disponible.",
     "noEvents": "No hay eventos abiertos en este momento.",
+    "allEvents": "Todos los eventos",
+    "eventNotFound": "Ese evento ya no aparece en la lista. Puede que haya terminado o que el club lo haya retirado.",
     "noMembershipTypes": "No hay membresías abiertas en este momento.",
     "noActivities": "Este evento no tiene actividades abiertas.",
     "addToBasket": "Añadir a la cesta",
@@ -535,6 +537,9 @@
       "noMatches": "No se han encontrado miembros.",
       "alreadyEntered": "Ya inscrito",
       "searching": "Buscando…",
+      "suggestionsHint": "Seleccione un nombre para rellenarlo.",
+      "yourMemberships": "Sus membresías",
+      "usedBefore": "Usados anteriormente",
       "required": "Introduzca el nombre de la persona a la que corresponde esta inscripción.",
       "mustBeMember": "Seleccione un miembro activo de la lista."
     },

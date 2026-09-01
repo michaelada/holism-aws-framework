@@ -832,7 +832,19 @@ export class AccountCatalogueService {
 
         let reason: UnavailableReason | null = null;
 
-        if (row.membership_status !== 'active') {
+        /*
+         * `'open'`, which is the word this column actually uses.
+         *
+         * The column defaults to `'open'` (migration `1707000000006`), the
+         * org-admin form writes `'open'` and `'closed'`, and
+         * `account-activity.service` selects on `membership_status = 'open'`.
+         * This line alone tested for `'active'`, so it was true of every row —
+         * every membership type in every club read as not open for
+         * applications, and no member could apply for or pay for one. A
+         * vocabulary used in one place and checked in another is how that
+         * survives: nothing fails, the list simply comes back all-refused.
+         */
+        if (row.membership_status !== 'open') {
           reason = 'not-open-for-applications';
         } else if (row.valid_until && new Date(row.valid_until) < today) {
           // The period this type covers has already ended.

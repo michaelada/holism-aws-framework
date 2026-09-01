@@ -24,7 +24,11 @@ import {
   formatCurrency,
   validateApplicationField,
 } from '@aws-web-framework/components';
-import type { EntrantOption, EntrantValue } from '@aws-web-framework/components';
+import type {
+  EntrantOption,
+  EntrantSuggestion,
+  EntrantValue,
+} from '@aws-web-framework/components';
 import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -99,6 +103,10 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const { execute: executeForm } = useAccountApi<any>();
   const { execute: executeSubmit } = useAccountApi<{ id: string }>();
   const { execute: executeAdd } = useAccountApi<unknown>();
+  const { execute: executeSuggestions } = useAccountApi<{
+    memberships: EntrantSuggestion[];
+    recent: EntrantSuggestion[];
+  }>();
   const { execute: executeEntrants } = useAccountApi<{
     autocomplete: boolean;
     allowFreeText: boolean;
@@ -138,6 +146,17 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
     allowFreeText: boolean;
   } | null>(null);
   const [entrantOptions, setEntrantOptions] = useState<EntrantOption[]>([]);
+  /**
+   * Names offered under the field: this account's memberships, and the last
+   * few it has entered.
+   *
+   * Fetched once, not per keystroke — neither list changes as the member types,
+   * and the search endpoint is called on every character.
+   */
+  const [suggestions, setSuggestions] = useState<{
+    memberships: EntrantSuggestion[];
+    recent: EntrantSuggestion[];
+  }>({ memberships: [], recent: [] });
   const [entrantLoading, setEntrantLoading] = useState(false);
   const [entrantQuery, setEntrantQuery] = useState('');
   /** Errors on this field wait until the member has left it once. */
@@ -266,6 +285,36 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
       clearTimeout(timer);
     };
   }, [kind, orgCode, itemId, entrantQuery, executeEntrants]);
+
+  /*
+   * The suggestions, once.
+   *
+   * Quiet on failure, like the search above it: a form that can be filled in by
+   * typing must not be blocked by a convenience that did not load.
+   */
+  useEffect(() => {
+    if (kind !== 'event' || !orgCode || !itemId) return undefined;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await executeSuggestions({
+          url: `/api/account/${orgCode}/catalogue/activities/${itemId}/entrant-suggestions`,
+        });
+        if (cancelled || !result) return;
+        setSuggestions({
+          memberships: result.memberships ?? [],
+          recent: result.recent ?? [],
+        });
+      } catch {
+        if (!cancelled) setSuggestions({ memberships: [], recent: [] });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, orgCode, itemId, executeSuggestions]);
 
   const terms: string | null = item?.termsAndConditions ?? null;
   const fields = useMemo(
@@ -532,6 +581,7 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
             allowFreeText={entrantMode.allowFreeText}
             disabled={saving}
             onBlur={() => setEntrantTouched(true)}
+            suggestions={suggestions}
             error={
               entrantTouched && !entrantSatisfied
                 ? entrantMode.allowFreeText
@@ -550,6 +600,9 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
               noMatches: t('form.entrant.noMatches'),
               alreadyEntered: t('form.entrant.alreadyEntered'),
               loading: t('form.entrant.searching'),
+              yourMemberships: t('form.entrant.yourMemberships'),
+              usedBefore: t('form.entrant.usedBefore'),
+              suggestionsHint: t('form.entrant.suggestionsHint'),
             }}
           />
         </Paper>

@@ -494,6 +494,22 @@ describe('HomePage (B3)', () => {
       expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/browse/events`);
     });
 
+    /*
+     * The reported behaviour. Every other kind of teaser opens the thing on the
+     * card; an event opened the programme it belonged to, with every row
+     * collapsed — so a member who had just chosen an event was asked to find it
+     * again among eighteen dates.
+     */
+    it('opens the event itself, not the list it is in', async () => {
+      renderWithProviders(<HomePage />);
+
+      await userEvent.click(await screen.findByText('Summer Camp'));
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `/${contextValue.orgCode}/browse/events/event-1`
+      );
+    });
+
     it('dates an event teaser with a calendar tile', async () => {
       renderWithProviders(<HomePage />);
 

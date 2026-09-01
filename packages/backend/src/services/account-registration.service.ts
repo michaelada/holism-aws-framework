@@ -204,6 +204,18 @@ export class AccountRegistrationService {
       throw new ValidationError('First and last name are required');
     }
 
+    /*
+     * The member row for this identity at this club, if there is one.
+     *
+     * Scoped to `account-user`, which is exactly as wide as
+     * `organization_users_org_kc_user_type_unique` — the guard and the
+     * constraint agree, which is the property that matters. They did not
+     * always: while the constraint was `(organization_id, keycloak_user_id)`
+     * this same query hit it whenever the identity already administered the
+     * club, and the insert below failed with a 500. Migration
+     * `1709000000038` put `user_type` in the key, so an administrator of this
+     * club may hold a member account here too — see docs/ONE_EMAIL_BOTH_APPS.md.
+     */
     const existing = await db.query(
       `SELECT id, status FROM organization_users
        WHERE organization_id = $1 AND keycloak_user_id = $2 AND user_type = 'account-user'
@@ -222,10 +234,21 @@ export class AccountRegistrationService {
     const { autoRegistration } = await this.getSettings(organisationId);
     const status: RegistrationOutcome = autoRegistration ? 'active' : 'pending';
 
+    /*
+     * `ON CONFLICT DO NOTHING`, then read back what is there.
+     *
+     * The check above settles all but one case: two requests racing, which a
+     * double-tapped button produces easily enough. Without this the loser hits
+     * the unique constraint and the member is told their account could not be
+     * created, at the moment it was. Registering twice is not an error and has
+     * never been treated as one — the early return above says the same thing
+     * for the sequential case.
+     */
     const created = await db.query(
       `INSERT INTO organization_users
         (organization_id, keycloak_user_id, user_type, email, first_name, last_name, phone, status)
        VALUES ($1, $2, 'account-user', $3, $4, $5, $6, $7)
+       ON CONFLICT (organization_id, keycloak_user_id, user_type) DO NOTHING
        RETURNING id`,
       [
         organisationId,
@@ -237,6 +260,20 @@ export class AccountRegistrationService {
         status,
       ]
     );
+
+    if (created.rows.length === 0) {
+      const winner = await db.query(
+        `SELECT id, status FROM organization_users
+         WHERE organization_id = $1 AND keycloak_user_id = $2 AND user_type = 'account-user'
+         LIMIT 1`,
+        [organisationId, identity.keycloakUserId]
+      );
+      const row = winner.rows[0];
+      return {
+        outcome: row.status === 'active' ? 'active' : 'pending',
+        organisationUserId: row.id,
+      };
+    }
 
     await this.audit(organisationId, created.rows[0].id, 'account_user.registered', {
       status,

@@ -89,7 +89,13 @@ export const HomePage: React.FC = () => {
   const whatsOnTarget = (item: DashboardWhatsOn): string => {
     switch (item.kind) {
       case 'event':
-        return `/${orgCode}/browse/events`;
+        /*
+          The event itself, not the programme it is in. Every other kind here
+          has always deep-linked to the thing on the card; events alone landed
+          on the list with all rows collapsed, so the member arrived having
+          chosen an event and was asked to find it again.
+        */
+        return `/${orgCode}/browse/events/${item.id}`;
       case 'merchandise':
         return `/${orgCode}/shop/${item.id}`;
       case 'calendar':

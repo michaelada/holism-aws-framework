@@ -406,6 +406,23 @@ Things worth knowing before touching any of it:
   caller administers it. None reads `req.user`. They look like guards in a route
   head and are not; pair them with a scope guard.
 
+- **One identity may be both an administrator and a member of the same club.**
+  `organization_users_org_kc_user_type_unique` is `(organization_id, keycloak_user_id, user_type)` —
+  one row per identity *per type* per organisation. It was `(organization_id, keycloak_user_id)`
+  until migration `1709000000038`, which made the two applications mutually exclusive on one email
+  address. Two rows are two independent relationships: every resolver names the type it wants
+  (`org-admin` in `organisation-scope`/`capability`/`orgadmin-auth`, `account-user` in
+  `account-organisation`), and the account app only ever gets an `organization_users.id` through
+  `resolveMembership`, so carts, entries and payments belong to the member row. **A query that
+  resolves a person's row in a club must say which type it means.** See
+  docs/ONE_EMAIL_BOTH_APPS.md.
+
+- **`membership_types.membership_status` is `'open'` / `'closed'`.** Not `'active'`.
+  `account-catalogue.service` tested for `'active'`, which is true of every row ever written, so
+  every membership type in every club read as not open for applications and no member could apply
+  for or pay for one — and the suite agreed, because its fixtures used the same wrong word. See
+  docs/MEMBERSHIP_TYPES_NEVER_AVAILABLE.md.
+
 - **A list endpoint has to scope its query, not only its route.**
   `GET /application-fields` carried `byCurrentOrganisation()` and then called
   `getAllApplicationFields()` with no argument, whose organisation filter was

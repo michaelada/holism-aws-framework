@@ -903,9 +903,19 @@ router.get(
           return res.status(401).json({ error: 'User not authenticated' });
         }
 
+        /*
+         * The administrator's row, said explicitly.
+         *
+         * This is an org-admin route reading that administrator's own saved
+         * filters. One identity may now hold both an `org-admin` and an
+         * `account-user` row at the same club (migration `1709000000038`), so
+         * an unqualified `LIMIT 1` would pick whichever Postgres returned
+         * first and could key the filters to the wrong one of the two.
+         */
         const orgUserResult = await db.query(
           `SELECT id FROM organization_users 
-           WHERE keycloak_user_id = $1 AND organization_id = $2 AND status = 'active'
+           WHERE keycloak_user_id = $1 AND organization_id = $2
+             AND user_type = 'org-admin' AND status = 'active'
            LIMIT 1`,
           [user.userId, organisationId]
         );

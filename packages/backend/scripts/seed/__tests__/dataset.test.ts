@@ -1,4 +1,14 @@
-import { EVENTS, FIELDS, FORMS, ORGS, SeedEvent, assertEventDates } from '../dataset';
+import {
+  ACCOUNT_USERS,
+  ENTRIES,
+  EVENTS,
+  FIELDS,
+  FORMS,
+  MEMBERS,
+  ORGS,
+  SeedEvent,
+  assertEventDates,
+} from '../dataset';
 
 /**
  * The seed's events, checked against the rule `eventService.createEvent`
@@ -187,6 +197,119 @@ describe('seed fields', () => {
       for (const org of ORGS) {
         expect(field!.label[org.key]).toContain(houseTerm[org.key]);
       }
+    }
+  });
+});
+
+/**
+ * Entries that have already been made.
+ *
+ * Every one names an event, an activity within it and an account that belongs
+ * to that club — three references the dataset cannot check for itself, and
+ * three ways to write a row the seed will refuse at run time.
+ */
+describe('seed entries', () => {
+  it('names an event and an activity that exist', () => {
+    for (const entry of ENTRIES) {
+      const event = EVENTS.find((e) => e.key === entry.event);
+      expect(event).toBeDefined();
+      expect(event!.activities.map((a) => a.name)).toContain(entry.activity);
+    }
+  });
+
+  it('is made by an account user of that club', () => {
+    for (const entry of ENTRIES) {
+      const user = ACCOUNT_USERS.find((u) => u.email === entry.email);
+      expect(user).toBeDefined();
+      expect(user!.orgs).toContain(entry.org);
+    }
+  });
+
+  /*
+   * The point of the fixture. Five distinct names on one account is what the
+   * entry form's "used before" list is sized for, and fewer would leave it
+   * unexercised.
+   */
+  it('gives one account five distinct names to have used', () => {
+    const byAccount = new Map<string, Set<string>>();
+    for (const entry of ENTRIES) {
+      const names = byAccount.get(entry.email) ?? new Set<string>();
+      names.add(`${entry.firstName} ${entry.lastName}`);
+      byAccount.set(entry.email, names);
+    }
+
+    const most = Math.max(...[...byAccount.values()].map((n) => n.size));
+    expect(most).toBeGreaterThanOrEqual(5);
+  });
+
+  /*
+   * One entry with no membership behind the name, which is what an open
+   * activity allows and what a suggestion with nothing to link to comes from.
+   */
+  it('includes a name that no membership stands behind', () => {
+    const memberNames = new Set(
+      MEMBERS.map((m) => `${m.org}|${m.firstName ?? ''} ${m.lastName ?? ''}`.trim())
+    );
+
+    const unlinked = ENTRIES.filter(
+      (e) => !memberNames.has(`${e.org}|${e.firstName} ${e.lastName}`)
+    );
+
+    expect(unlinked.length).toBeGreaterThan(0);
+  });
+
+  /*
+   * Every login, in every club it belongs to.
+   *
+   * An entry belongs to an account's row in one organisation, so a member of
+   * three clubs who has entered at one still sees an empty "My entries" at the
+   * other two — which reads as broken rather than as empty, and is the screen
+   * an organisation switch lands on.
+   */
+  it('gives every account something to look at in every club it belongs to', () => {
+    const entered = new Set(ENTRIES.map((e) => `${e.email}|${e.org}`));
+
+    const missing = ACCOUNT_USERS.flatMap((user) =>
+      user.orgs.filter((org) => !entered.has(`${user.email}|${org}`)).map((org) => `${user.email} at ${org}`)
+    );
+
+    expect(missing).toEqual([]);
+  });
+
+  /*
+   * The constraint that actually matters, which is not "few live entries".
+   *
+   * Ward Union and Meath Hunt have no event that has finished or closed, so
+   * every entry on those accounts is on a live one and always will be. What
+   * must not happen is a seeded entry quietly eating the places that a capped
+   * activity exists to demonstrate — so the rule is about caps, not dates.
+   */
+  it('takes at most one place from any activity that caps them', () => {
+    const takenPerActivity = new Map<string, number>();
+
+    for (const entry of ENTRIES) {
+      const event = EVENTS.find((e) => e.key === entry.event)!;
+      const activity = event.activities.find((a) => a.name === entry.activity)!;
+      if (activity.applicantsLimit == null) continue;
+
+      const key = `${entry.event}|${entry.activity}`;
+      takenPerActivity.set(key, (takenPerActivity.get(key) ?? 0) + 1);
+    }
+
+    for (const [activity, taken] of takenPerActivity) {
+      expect({ activity, taken }).toEqual({ activity, taken: 1 });
+    }
+  });
+
+  it('leaves a capped activity nearly all of its places', () => {
+    for (const entry of ENTRIES) {
+      const event = EVENTS.find((e) => e.key === entry.event)!;
+      const activity = event.activities.find((a) => a.name === entry.activity)!;
+      if (activity.applicantsLimit == null) continue;
+
+      // A cap small enough for one seeded entry to matter is a cap the fixture
+      // should not be spending at all.
+      expect(activity.applicantsLimit).toBeGreaterThanOrEqual(10);
     }
   });
 });

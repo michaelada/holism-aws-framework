@@ -306,6 +306,8 @@
     "collapseAll": "Collapse all",
     "loadError": "We could not load what is available.",
     "noEvents": "There are no events open at the moment.",
+    "allEvents": "All events",
+    "eventNotFound": "That event is no longer listed. It may have finished, or the club may have taken it down.",
     "noMembershipTypes": "There are no memberships open at the moment.",
     "noActivities": "This event has no activities open to enter.",
     "addToBasket": "Add to basket",
@@ -534,6 +536,9 @@
       "noMatches": "No members found.",
       "alreadyEntered": "Already entered",
       "searching": "Searching…",
+      "suggestionsHint": "Select a name to fill it in.",
+      "yourMemberships": "Your memberships",
+      "usedBefore": "Used before",
       "required": "Enter the name of the person this entry is for.",
       "mustBeMember": "Choose an active member from the list."
     },

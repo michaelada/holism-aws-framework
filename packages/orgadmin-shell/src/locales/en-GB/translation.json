@@ -143,6 +143,7 @@
       "eventName": "Event Name",
       "dates": "Dates",
       "status": "Status",
+      "entries": "Entries",
       "entryLimit": "Entry Limit",
       "hasDiscounts": "Discounts",
       "discountApplied": "Discount",

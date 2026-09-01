@@ -143,6 +143,7 @@
       "eventName": "Nom de l'événement",
       "dates": "Périodes",
       "status": "Statut",
+      "entries": "Engagements",
       "entryLimit": "Limite d'inscription",
       "actions": "Actions"
     },

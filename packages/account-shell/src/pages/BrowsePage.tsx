@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Accordion,
@@ -18,6 +18,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandAllIcon from '@mui/icons-material/UnfoldMore';
 import CollapseAllIcon from '@mui/icons-material/UnfoldLess';
@@ -100,6 +101,23 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
    */
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedEvent = searchParams.get('event');
+
+  /**
+   * One event, named in the path: `/{orgCode}/browse/events/{eventId}`.
+   *
+   * Where a member arrives from a teaser — the home page's "Upcoming events",
+   * a notification — they have already chosen an event, and the programme is
+   * not what they asked for. That link used to land on the whole list with
+   * every row collapsed, so the thing they had just clicked was somewhere in a
+   * column of eighteen dates with nothing to mark it. Named in the path, the
+   * page is that event: its details, its activities, and the entry buttons.
+   *
+   * Same data, same cart wiring, and `?event=` still works for the public
+   * pages that use it — this is a different *shape* of the same screen, not a
+   * second implementation of it.
+   */
+  const { eventId } = useParams<{ eventId?: string }>();
+  const singleEvent = eventId ? events.find((event) => event.id === eventId) : undefined;
 
   /** Every event open — decides whether the control offers to expand or collapse. */
   const allOpen = events.length > 0 && events.every((event) => openEvents.has(event.id));
@@ -226,14 +244,130 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
     }
   };
 
+  /*
+   * The two halves of an event, as functions rather than inline JSX.
+   *
+   * Both the list — where they are an accordion's summary and details — and the
+   * single-event page below render exactly the same thing, and a second copy of
+   * the activity rows would be a second place for the cart wiring to drift.
+   */
+  const eventHeading = (event: CatalogueEvent) => (
+    <>
+      {/*
+        The date leads: an events list is scanned for *when*, and a tile is read
+        at a glance where another line of prose has to be parsed row by row.
+      */}
+      <EventDateTile date={event.startDate} endDate={event.endDate} locale={locale} size="small" />
+
+      <Box sx={{ flexGrow: 1, minWidth: 0, ml: 2 }}>
+        <Typography fontWeight={600} gutterBottom>
+          {event.name}
+        </Typography>
+
+        {/*
+          Window and capacity together. `EntryStatus` suppresses the places
+          count when the window is shut, so a closed event never advertises
+          places a member cannot take.
+        */}
+        <EntryStatus event={event} />
+      </Box>
+
+      {/*
+        The server's own refusal, kept alongside: it is the authoritative
+        answer, and covers reasons the dates do not explain — already entered,
+        event full.
+      */}
+      {!event.available &&
+        event.unavailableReason !== 'entries-not-open' &&
+        event.unavailableReason !== 'entries-closed' && (
+          <Chip
+            size="small"
+            color="default"
+            sx={{ alignSelf: 'center' }}
+            label={t(`browse.reason.${event.unavailableReason}`, {
+              date: formatDisplayDate(event.entriesClosingDate, locale),
+              defaultValue: t('browse.reason.unavailable'),
+            })}
+          />
+        )}
+    </>
+  );
+
+  const eventActivities = (event: CatalogueEvent) => (
+    <>
+      {event.description && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {event.description}
+        </Typography>
+      )}
+      {event.activities.length === 0 ? (
+        <Typography variant="body2">{t('browse.noActivities')}</Typography>
+      ) : (
+        <Stack divider={<Divider />} spacing={1}>
+          {event.activities.map((activity) => (
+            <ActivityRow
+              key={activity.id}
+              activity={activity}
+              currency={currency}
+              locale={locale}
+              busy={adding === activity.id}
+              onAdd={() =>
+                requestAdd(
+                  activity.id,
+                  {
+                    itemType: 'event_entry' satisfies CartItemType,
+                    contextRef: { activityId: activity.id, eventId: event.id },
+                    description: `${event.name} — ${activity.name}`,
+                    unitFee: activity.fee,
+                    handlingFeeIncluded: activity.handlingFeeIncluded,
+                    supportedPaymentMethodIds: activity.supportedPaymentMethodIds,
+                  },
+                  {
+                    formId: activity.applicationFormId,
+                    termsAndConditions: activity.termsAndConditions,
+                    itemId: activity.id,
+                    kind: 'event',
+                  }
+                )
+              }
+            />
+          ))}
+        </Stack>
+      )}
+    </>
+  );
+
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
-      <Typography variant="h1" gutterBottom>
-        {section === 'events' ? t('browse.eventsTitle') : t('browse.membershipsTitle')}
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        {section === 'events' ? t('browse.eventsSubtitle') : t('browse.membershipsSubtitle')}
-      </Typography>
+      {eventId ? (
+        /*
+          A way back to the programme, because this page is usually arrived at
+          from a teaser rather than from the list — so there is no "back" in the
+          member's history that leads anywhere useful.
+
+          Not while the event is missing: that case carries its own, beside the
+          explanation, and two identical buttons on one screen is one too many.
+        */
+        singleEvent && (
+        <Button
+          size="small"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/${orgCode}/browse/events`)}
+          sx={{ mb: 1, ml: -1 }}
+        >
+          {t('browse.allEvents')}
+        </Button>
+        )
+      ) : (
+        <>
+          <Typography variant="h1" gutterBottom>
+            {section === 'events' ? t('browse.eventsTitle') : t('browse.membershipsTitle')}
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            {section === 'events' ? t('browse.eventsSubtitle') : t('browse.membershipsSubtitle')}
+          </Typography>
+        </>
+      )}
 
       {failed && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -255,6 +389,32 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
           <CircularProgress aria-label={t('common.loading')} />
         </Box>
+      ) : eventId ? (
+        /*
+          The single event. A missing one is said plainly rather than left as an
+          empty page: a teaser can outlive the event it points at, and a link
+          from a month-old notification is the ordinary way to get here.
+        */
+        !singleEvent ? (
+          !failed && (
+            <Box sx={{ py: 4 }}>
+              <Typography gutterBottom>{t('browse.eventNotFound')}</Typography>
+              <Button onClick={() => navigate(`/${orgCode}/browse/events`)}>
+                {t('browse.allEvents')}
+              </Button>
+            </Box>
+          )
+        ) : (
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                {eventHeading(singleEvent)}
+              </Box>
+              <Divider sx={{ mb: 2 }} />
+              {eventActivities(singleEvent)}
+            </CardContent>
+          </Card>
+        )
       ) : tab === 'events' ? (
         events.length === 0 ? (
           !failed && <Typography sx={{ py: 4 }}>{t('browse.noEvents')}</Typography>
@@ -285,90 +445,9 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
               onChange={() => toggleEvent(event.id)}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                {/*
-                  The date leads: an events list is scanned for *when*, and a
-                  tile is read at a glance where another line of prose has to be
-                  parsed row by row.
-                */}
-                <EventDateTile
-                  date={event.startDate}
-                  endDate={event.endDate}
-                  locale={locale}
-                  size="small"
-                />
-
-                <Box sx={{ flexGrow: 1, minWidth: 0, ml: 2 }}>
-                  <Typography fontWeight={600} gutterBottom>
-                    {event.name}
-                  </Typography>
-
-                  {/*
-                    Window and capacity together. `EntryStatus` suppresses the
-                    places count when the window is shut, so a closed event
-                    never advertises places a member cannot take.
-                  */}
-                  <EntryStatus event={event} />
-                </Box>
-
-                {/*
-                  The server's own refusal, kept alongside: it is the
-                  authoritative answer, and covers reasons the dates do not
-                  explain — already entered, event full.
-                */}
-                {!event.available && event.unavailableReason !== 'entries-not-open' &&
-                  event.unavailableReason !== 'entries-closed' && (
-                    <Chip
-                      size="small"
-                      color="default"
-                      sx={{ alignSelf: 'center' }}
-                      label={t(`browse.reason.${event.unavailableReason}`, {
-                        date: formatDisplayDate(event.entriesClosingDate, locale),
-                        defaultValue: t('browse.reason.unavailable'),
-                      })}
-                    />
-                  )}
+                {eventHeading(event)}
               </AccordionSummary>
-              <AccordionDetails>
-                {event.description && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {event.description}
-                  </Typography>
-                )}
-                {event.activities.length === 0 ? (
-                  <Typography variant="body2">{t('browse.noActivities')}</Typography>
-                ) : (
-                  <Stack divider={<Divider />} spacing={1}>
-                    {event.activities.map((activity) => (
-                      <ActivityRow
-                        key={activity.id}
-                        activity={activity}
-                        currency={currency}
-                        locale={locale}
-                        busy={adding === activity.id}
-                        onAdd={() =>
-                          requestAdd(
-                            activity.id,
-                            {
-                              itemType: 'event_entry' satisfies CartItemType,
-                              contextRef: { activityId: activity.id, eventId: event.id },
-                              description: `${event.name} — ${activity.name}`,
-                              unitFee: activity.fee,
-                              handlingFeeIncluded: activity.handlingFeeIncluded,
-                              supportedPaymentMethodIds: activity.supportedPaymentMethodIds,
-                            },
-                            {
-                              formId: activity.applicationFormId,
-                              termsAndConditions: activity.termsAndConditions,
-                              itemId: activity.id,
-                              kind: 'event',
-                            }
-                          )
-                        }
-                      />
-                    ))}
-                  </Stack>
-                )}
-              </AccordionDetails>
+              <AccordionDetails>{eventActivities(event)}</AccordionDetails>
             </Accordion>
             ))}
           </>
@@ -478,6 +557,29 @@ const ActivityRow: React.FC<{
     >
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography>{activity.name}</Typography>
+
+        {/*
+          What the activity actually is, under its name.
+          
+          "Grade 1 — 80cm" and "Prelim 7" are a club's shorthand, and a member
+          choosing between four of them was being asked to know it: the name,
+          the price and the places were all on the row, and the one line saying
+          what the class *is* was the one left out. The clubs write it — it is
+          on the activity already, and both the entry page and the public event
+          page have always shown it, so the only screen that hid it was the one
+          the choice is made on.
+        */}
+        {activity.description && (
+          <Typography variant="body2" color="text.secondary">
+            {activity.description}
+          </Typography>
+        )}
+
+        {/*
+          The money on its own line, below the description rather than beside
+          it: it is what the row is scanned for, and a fee that wraps into a
+          sentence stops being findable.
+        */}
         <Typography variant="body2" color="text.secondary">
           {formatCurrency(activity.fee / 100, currency, locale)}
           {/*

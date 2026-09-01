@@ -306,6 +306,8 @@
     "collapseAll": "Tout réduire",
     "loadError": "Nous n'avons pas pu charger les offres disponibles.",
     "noEvents": "Aucun événement n'est ouvert pour le moment.",
+    "allEvents": "Tous les événements",
+    "eventNotFound": "Cet événement n'est plus proposé. Il est peut-être terminé, ou le club l'a retiré.",
     "noMembershipTypes": "Aucune adhésion n'est ouverte pour le moment.",
     "noActivities": "Cet événement n'a aucune activité ouverte aux inscriptions.",
     "addToBasket": "Ajouter au panier",
@@ -535,6 +537,9 @@
       "noMatches": "Aucun membre trouvé.",
       "alreadyEntered": "Déjà inscrit",
       "searching": "Recherche en cours…",
+      "suggestionsHint": "Sélectionnez un nom pour le renseigner.",
+      "yourMemberships": "Vos adhésions",
+      "usedBefore": "Déjà utilisés",
       "required": "Saisissez le nom de la personne concernée par cette inscription.",
       "mustBeMember": "Choisissez un membre actif dans la liste."
     },

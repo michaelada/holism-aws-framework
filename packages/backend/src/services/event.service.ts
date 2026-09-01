@@ -39,6 +39,18 @@ export interface Event {
   showOnOrganisationPage: boolean;
   showOnPlatformPage: boolean;
   entriesLimit?: number;
+  /**
+   * How many entries the event has, where the query asked for it.
+   *
+   * `COUNT(*)` of `event_entries`, which is the same count the event-level
+   * limit is checked against in `account-catalogue.service` and the same set
+   * `GET /events/:id/entries` lists. A number on a list that disagrees with the
+   * screen it links to is worse than no number.
+   *
+   * Undefined rather than 0 where the query did not ask, so "none yet" and "not
+   * loaded" stay distinguishable.
+   */
+  entryCount?: number;
   addConfirmationMessage: boolean;
   confirmationMessage?: string;
   status: 'draft' | 'published' | 'cancelled' | 'completed';
@@ -191,6 +203,9 @@ export class EventService {
       deletedBy: row.deleted_by,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      // Only the list asks for this; `undefined` elsewhere means "not counted",
+      // which is not the same answer as none.
+      entryCount: row.entry_count === undefined ? undefined : Number(row.entry_count),
     };
 
     // Add event type if joined
@@ -229,7 +244,10 @@ export class EventService {
            v.name as venue_name,
            v.address as venue_address,
            v.latitude as venue_latitude,
-           v.longitude as venue_longitude
+           v.longitude as venue_longitude,
+           -- A correlated subquery rather than a join and a GROUP BY: e.* is
+           -- selected here, so grouping would mean naming every column of it.
+           (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_id = e.id) AS entry_count
          FROM events e
          LEFT JOIN event_types et ON e.event_type_id = et.id
          LEFT JOIN venues v ON e.venue_id = v.id

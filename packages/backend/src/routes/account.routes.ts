@@ -1262,6 +1262,51 @@ router.get(
 
 /**
  * @swagger
+ * /api/account/{orgCode}/catalogue/activities/{activityId}/entrant-suggestions:
+ *   get:
+ *     summary: Names this account is likely to enter — its memberships, and the names it used last
+ *     tags: [Account]
+ *     responses:
+ *       200:
+ *         description: Two lists, memberships and recently used names
+ */
+router.get(
+  '/:orgCode/catalogue/activities/:activityId/entrant-suggestions',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  requireAccountCapability('event-management'),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationId, organisationUserId } = req.account!;
+
+      /*
+       * Its own endpoint rather than more of the `/entrants` response.
+       *
+       * That one is called on every keystroke — it is the search — and these
+       * two lists do not change as the member types. Folding them in would
+       * re-send a fixed answer per character. It is also not needed to draw the
+       * field, which is the reason `/entrants` answers mode and matches
+       * together; this arrives when it arrives and the form fills in.
+       */
+      const suggestions = await entrantService.entrantSuggestions(
+        organisationId,
+        organisationUserId,
+        req.params.activityId
+      );
+
+      return res.json(suggestions);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error('Error in GET /account/:orgCode/catalogue/activities/:activityId/entrant-suggestions:', error);
+      return res.status(500).json({ error: 'Failed to load suggestions' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/account/{orgCode}/catalogue/activities/{activityId}/entrants:
  *   get:
  *     summary: Who this entry could be for

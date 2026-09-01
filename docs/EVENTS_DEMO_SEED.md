@@ -533,10 +533,30 @@ and purged. The developer database was not touched.
   happens, so a mistaken re-run costs nothing and leaves nothing behind. (`--reset` deletes
   previously seeded Stripe accounts by their metadata tag, including any stranded by the old
   behaviour.) `--reset` is almost always what you want.
-- **No entries, payments or carts are seeded.** The events are open and ready to be entered, but
-  nothing has been entered yet — so reporting screens and a member's "my entries" will be empty
-  until you make an entry through the UI. Seeding entries convincingly means seeding form
-  submissions and payments to match, which is a larger job than this.
+- **Thirty-seven entries are seeded; payments and carts still are not.** `ENTRIES` in `dataset.ts` names
+  who entered what, and the seed writes them the way `fulfilment.service` does — the names on the
+  entry, a `member_id` where a membership stands behind the name, and a form submission wherever the
+  activity asks for one. `entry_date` is backdated, which is the one thing a real entry cannot do
+  and what makes "most recently used" mean anything.
+
+  **Every login has entries, in every club it belongs to.** An entry belongs to an account's row in
+  one organisation (`event_entries.user_id`), so a member of three clubs who has entered at one
+  would still see an empty "My entries" at the other two — which reads as broken rather than as
+  empty, and is the screen an organisation switch lands on. All 23 account users are covered, and
+  so is every login-and-club pair.
+
+  **Placed so nothing testable is consumed.** Kildare and Laois carry their history on events that
+  have finished or closed. Ward Union and Meath Hunt have no such event, so theirs sit on live ones
+  — on **uncapped** activities. Across the whole fixture exactly two capped activities give up a
+  single place each, out of 25 and 40, so the limits those events exist to demonstrate are
+  untouched. Four entries are unpaid, for the organiser's chasing-payment view, and five carry a
+  name with no membership behind it.
+
+  Áine McGrath is the account to look at for the entry form: four memberships, four names entered,
+  and a fifth for a friend with no login — five distinct names, which is what the "used before" list
+  is sized for. See docs/ENTRANT_NAME_SUGGESTIONS.md.
+
+  Payments and carts remain unseeded, so payment screens are still empty until you buy something.
 - **Stripe is enabled but not connected.** Kildare and Laois have the Stripe payment method switched
   on, but no Connect account, so a card checkout will hit the "club has not connected a payment
   account" refusal. That is a faithful state — it is what a real club looks like before onboarding —

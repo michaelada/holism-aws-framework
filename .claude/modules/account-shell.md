@@ -97,6 +97,21 @@ links to them, so "Request to join" would loop back to itself.
 own. It drops items whose capabilities are absent, then drops sections left empty. An item listing
 several capabilities shows if **any** is enabled.
 
+**Where does a teaser send a member?** To the thing on the card. `whatsOnTarget` in `HomePage`
+deep-links every kind — `/shop/:id`, `/book/:id`, `/register-interest/:id`, and now
+`/browse/events/:eventId`. Events alone used to open `/browse/events`, the whole programme with
+every row collapsed, so a member who had already chosen an event was asked to find it again.
+
+**What an activity row shows:** name, description, then fee and places. `ActivityRow` in
+`BrowsePage` renders all three; the description comes straight off `CatalogueActivity.description`,
+which the catalogue has always carried and `EntryFormPage` and `PublicEventPage` have always shown.
+
+**One event on its own:** `/:orgCode/browse/events/:eventId` renders `BrowsePage` in single-event
+mode — the same page, the same catalogue request and the same cart wiring, drawn as one card
+instead of a list of accordions. `eventHeading` and `eventActivities` are shared by both shapes so
+the entry buttons cannot drift apart. `?event={id}` on the list still works and is unrelated: it
+expands a row in place, which is what the public pages link to.
+
 **Is switching organisations a re-login?** No. The Keycloak token is realm-wide, so A7 navigates to
 `/:newOrgCode` and the context re-resolves capabilities, theme and locale.
 

@@ -335,6 +335,7 @@ const EventsListPage: React.FC = () => {
               <TableCell>{t('events.table.eventName')}</TableCell>
               <TableCell>{t('events.table.dates')}</TableCell>
               <TableCell>{t('events.table.status')}</TableCell>
+              <TableCell align="right">{t('events.table.entries')}</TableCell>
               <TableCell>{t('events.table.entryLimit')}</TableCell>
               <TableCell align="center">{t('events.table.hasDiscounts')}</TableCell>
               <TableCell align="right">{t('events.table.actions')}</TableCell>
@@ -343,13 +344,13 @@ const EventsListPage: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   {t('events.loadingEvents')}
                 </TableCell>
               </TableRow>
             ) : filteredEvents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   {searchTerm || statusFilter !== 'all'
                     ? t('events.noMatchingEvents')
                     : t('events.noEventsFound')}
@@ -372,6 +373,18 @@ const EventsListPage: React.FC = () => {
                       color={getStatusColor(event.status)}
                       size="small"
                     />
+                  </TableCell>
+                  {/*
+                    How many people have entered. `COUNT(*)` of the entries the
+                    "view entries" button opens, so the number and the screen it
+                    leads to agree.
+
+                    An em dash where the count is absent, not a zero: absent
+                    means the list did not ask for it, and rendering that as `0`
+                    would tell a club nobody has entered an event that is full.
+                  */}
+                  <TableCell align="right">
+                    {event.entryCount === undefined ? '—' : event.entryCount}
                   </TableCell>
                   <TableCell>
                     {event.limitEntries && event.entriesLimit

@@ -92,6 +92,13 @@ const render = (section: 'events' | 'memberships' = 'events') =>
     path: '/:orgCode/browse/:section',
   });
 
+/** The same page addressed at one event: `/khpc/browse/events/{id}`. */
+const renderOne = (eventId = 'event-1') =>
+  renderWithProviders(<BrowsePage section="events" />, {
+    route: `/khpc/browse/events/${eventId}`,
+    path: '/:orgCode/browse/events/:eventId',
+  });
+
 
 /**
  * Open an event so its activities are reachable.
@@ -481,4 +488,152 @@ describe('BrowsePage (D1/D4)', () => {
     });
   });
 
+});
+
+/**
+ * What an activity *is*, not only what it is called and what it costs.
+ *
+ * "Grade 1 — 80cm" and "Prelim 7" are a club's shorthand. The description is on
+ * the activity already, and both the entry page and the public event page show
+ * it — the browse row was the one place it was dropped, which is the screen the
+ * choice is actually made on.
+ */
+describe('BrowsePage — activity descriptions', () => {
+  beforeEach(() => {
+    mockExecute.mockReset();
+    mockNavigate.mockReset();
+    contextValue = withCapabilities(['event-management', 'memberships']);
+  });
+
+  it('shows the description beside the activity name on a single event', async () => {
+    respond([
+      event({
+        activities: [activity({ description: 'Jumping at 80cm. Graded riders only.' })],
+      }),
+    ]);
+
+    renderOne();
+
+    expect(await screen.findByText('Junior Single Sculls')).toBeInTheDocument();
+    expect(screen.getByText('Jumping at 80cm. Graded riders only.')).toBeInTheDocument();
+  });
+
+  it('shows it in the list too, so the two screens agree', async () => {
+    const user = userEvent.setup();
+    respond([
+      event({
+        activities: [activity({ description: 'Jumping at 80cm. Graded riders only.' })],
+      }),
+    ]);
+
+    render();
+    await openFirstEvent(user);
+
+    expect(
+      await screen.findByText('Jumping at 80cm. Graded riders only.')
+    ).toBeInTheDocument();
+  });
+
+  /* Most clubs fill it in; a row without one must not gain a blank line. */
+  it('leaves the row alone when there is no description', async () => {
+    respond([event({ activities: [activity({ description: null })] })]);
+
+    renderOne();
+
+    await screen.findByText('Junior Single Sculls');
+    expect(screen.getByText('€25.00')).toBeInTheDocument();
+  });
+
+  it('keeps the fee and the places on their own line under it', async () => {
+    respond([
+      event({
+        activities: [activity({ description: 'Graded riders only.', placesRemaining: 2 })],
+      }),
+    ]);
+
+    renderOne();
+
+    // The description must not swallow the numbers the row is scanned for.
+    expect(await screen.findByText('Graded riders only.')).toBeInTheDocument();
+    expect(screen.getByText(/€25\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/2 places left/i)).toBeInTheDocument();
+  });
+});
+
+/**
+ * One event, addressed directly.
+ *
+ * A member arriving from a teaser has already chosen; the programme is not what
+ * they asked for. This shape of the page is that event — its details, its
+ * activities and the entry buttons — with no list around it.
+ */
+describe('BrowsePage — a single event', () => {
+  beforeEach(() => {
+    mockExecute.mockReset();
+    mockNavigate.mockReset();
+    contextValue = withCapabilities(['event-management', 'memberships']);
+    respond();
+  });
+
+  it('shows the event and its activities without anything to expand', async () => {
+    renderOne();
+
+    expect(await screen.findByText('Summer Regatta')).toBeInTheDocument();
+    // The activities are simply there — no accordion to open first.
+    expect(screen.getByText('Junior Single Sculls')).toBeInTheDocument();
+  });
+
+  it('shows only the event that was asked for', async () => {
+    respond([event(), event({ id: 'event-2', name: 'Autumn Head' })]);
+
+    renderOne('event-2');
+
+    expect(await screen.findByText('Autumn Head')).toBeInTheDocument();
+    expect(screen.queryByText('Summer Regatta')).not.toBeInTheDocument();
+  });
+
+  it('drops the list chrome — no page title, no expand-all', async () => {
+    respond([event(), event({ id: 'event-2', name: 'Autumn Head' })]);
+
+    renderOne();
+
+    await screen.findByText('Summer Regatta');
+    expect(screen.queryByRole('button', { name: /expand all/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('browse.eventsSubtitle')).not.toBeInTheDocument();
+  });
+
+  /*
+   * Usually arrived at from a teaser rather than from the list, so there is no
+   * useful "back" in the member's history.
+   */
+  it('offers a way to the rest of the programme', async () => {
+    const user = userEvent.setup();
+    renderOne();
+
+    await user.click(await screen.findByRole('button', { name: 'All events' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/khpc/browse/events');
+  });
+
+  /* A teaser can outlive the event it points at. */
+  it('says so when the event is no longer listed', async () => {
+    renderOne('event-gone');
+
+    expect(await screen.findByText(/no longer listed/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All events' })).toBeInTheDocument();
+  });
+
+  it('enters an activity from here exactly as the list does', async () => {
+    const user = userEvent.setup();
+    respond([
+      event({
+        activities: [activity({ applicationFormId: null, termsAndConditions: 'Be careful.' })],
+      }),
+    ]);
+    renderOne();
+
+    await user.click(await screen.findByRole('button', { name: 'Add to basket' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/khpc/browse/events/act-1/enter');
+  });
 });

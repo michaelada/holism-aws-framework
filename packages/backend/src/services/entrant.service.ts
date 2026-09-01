@@ -1,5 +1,9 @@
 import { db } from '../database/pool';
 import { ValidationError } from '../middleware/errors';
+import {
+  activeMembershipsAcrossType,
+  activeMembershipsFor,
+} from './account-catalogue.service';
 
 /**
  * Who an event entry is *for*.
@@ -78,6 +82,36 @@ export interface EntrantCandidate {
   alreadyEntered: boolean;
 }
 
+/** A name the account has used before, or holds a membership for. */
+export interface EntrantSuggestion {
+  name: string;
+  /**
+   * The membership behind the name, when there is one — so the form can select
+   * it rather than only fill the box in. Null for a name that was typed.
+   */
+  memberId: string | null;
+  /** Shown beside the name: the membership type, or the club it is with. */
+  detail: string | null;
+}
+
+/**
+ * The names one account is likely to want, offered without typing.
+ *
+ * Two lists, because they answer different questions. The memberships are who
+ * this account may enter — mostly a parent's children, and stable from one
+ * event to the next. The recent names are who it *has* entered, which is the
+ * better answer when the same rider comes back every fortnight and the better
+ * answer for anyone who is entered but not a member at all.
+ *
+ * Kept apart rather than merged so the form can label them: "Your memberships"
+ * and "Used before" mean different things, and a single ranked list would have
+ * to pick which one a name was.
+ */
+export interface EntrantSuggestions {
+  memberships: EntrantSuggestion[];
+  recent: EntrantSuggestion[];
+}
+
 /**
  * How the name field should behave for one activity.
  *
@@ -113,6 +147,15 @@ export const MIN_QUERY = 2;
 
 /** Enough to choose from; few enough that the list is not the point. */
 const MAX_RESULTS = 20;
+
+/**
+ * How many previously used names to offer.
+ *
+ * Five covers a family and the friend they bring, and stops short of becoming a
+ * history of the account — which is a different screen, and one the member did
+ * not ask for while filling in a name.
+ */
+const RECENT_ENTRANTS = 5;
 
 type Eligibility = 'all' | 'members' | 'org-type-members';
 
@@ -273,6 +316,79 @@ class EntrantService {
    * definition of active, so anything the field would not have offered is
    * refused here.
    */
+  /**
+   * Names to offer under the field, for this account and this activity.
+   *
+   * **Memberships come from the same source the catalogue uses**, and are
+   * scoped the same way the search is: an activity open to the whole
+   * federation suggests memberships held anywhere in it, one open to the club
+   * suggests only the club's. Suggesting a name the activity would then refuse
+   * is worse than suggesting nothing.
+   *
+   * Recent names are per club, because `event_entries.user_id` is the account's
+   * row in *this* organisation — which is the right scope anyway: who somebody
+   * enters at their own club is not much of a guide to who they enter at
+   * another.
+   */
+  async entrantSuggestions(
+    organisationId: string,
+    organisationUserId: string,
+    activityId: string,
+    today: Date = new Date()
+  ): Promise<EntrantSuggestions> {
+    const scope = scopeFor(await eligibilityOf(organisationId, activityId));
+
+    const memberships =
+      scope === 'organisation-type'
+        ? await activeMembershipsAcrossType(organisationId, organisationUserId, today)
+        : await activeMembershipsFor(organisationId, organisationUserId, today);
+
+    /*
+     * One row per distinct name, dated by the last time it was used.
+     *
+     * `DISTINCT ON` has to order by what it is distinguishing, so the ordering
+     * that matters — most recently used first — is applied outside it. Compared
+     * case-insensitively: "Rónán" typed once with a capital and once without is
+     * one person offered twice, and the suggestion list is short enough that a
+     * duplicate costs a fifth of it.
+     */
+    const recent = await db.query(
+      `SELECT first_name, last_name, member_id
+         FROM (
+           SELECT DISTINCT ON (lower(first_name), lower(last_name))
+                  first_name, last_name, member_id, entry_date
+             FROM event_entries
+            WHERE user_id = $1
+            ORDER BY lower(first_name), lower(last_name), entry_date DESC
+         ) AS names
+        ORDER BY entry_date DESC
+        LIMIT ${RECENT_ENTRANTS}`,
+      [organisationUserId]
+    );
+
+    const named = new Set(memberships.map((m) => m.name.trim().toLowerCase()));
+
+    return {
+      memberships: memberships.map((m) => ({
+        name: m.name,
+        memberId: m.id,
+        detail: m.organisationName ?? m.membershipTypeName,
+      })),
+      /*
+       * Anything already offered as a membership is dropped from here. The two
+       * lists sit one above the other, and the same name in both reads as two
+       * different people.
+       */
+      recent: recent.rows
+        .map((row: any) => ({
+          name: `${row.first_name} ${row.last_name}`.trim(),
+          memberId: row.member_id ?? null,
+          detail: null,
+        }))
+        .filter((s: EntrantSuggestion) => !named.has(s.name.toLowerCase())),
+    };
+  }
+
   async resolveEntrant(
     organisationId: string,
     activityId: string,

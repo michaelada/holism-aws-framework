@@ -11,6 +11,7 @@ import {
 import {
   ACCOUNT_USERS,
   DISCOUNTS,
+  ENTRIES,
   EVENTS,
   EVENT_TYPES,
   FIELDS,
@@ -21,6 +22,7 @@ import {
   MERCHANDISE,
   REGISTRATIONS,
   REGISTRATION_TYPES,
+  SeedEntry,
   SeedMember,
   SeedRegistration,
   capabilitiesFor,
@@ -112,6 +114,34 @@ const memberSubmission = (member: SeedMember): Record<string, unknown> => {
     emergency_contact_phone: '+353 87 222 2222',
     medical_notes: '',
     photo_consent: true,
+  };
+};
+
+/**
+ * Answers for an entry's application form.
+ *
+ * Keyed by field `name`, like every other submission the seed writes. The
+ * entrant's own name leads — an entry is *about* the person named on it, not
+ * about whoever's login it sits under, and a form filled in with the account
+ * holder's name for every child would misrepresent the one thing these rows
+ * exist to demonstrate.
+ *
+ * Deliberately partial. The seeded entry forms ask for more than this, and a
+ * submission that answers only what it plausibly knows is the honest fixture:
+ * `shortEntry` is satisfied, `fullEntry` is not, and a screen that renders a
+ * missing answer as blank is worth having something to render it against.
+ */
+const entrySubmission = (entry: SeedEntry): Record<string, unknown> => {
+  const county = { kildare: 'Kildare', laois: 'Laois', ward: 'Meath', meath: 'Meath' }[entry.org];
+
+  return {
+    rider_name: `${entry.firstName} ${entry.lastName}`,
+    rider_email: entry.email,
+    rider_phone: '+353 87 000 0000',
+    pony_name: 'Cloud',
+    county,
+    emergency_contact_name: 'Emergency contact on file',
+    emergency_contact_phone: '+353 87 222 2222',
   };
 };
 
@@ -764,6 +794,15 @@ export async function seedDatabase(
   }
 
   /* --- events and activities -------------------------------------------- */
+  /**
+   * Event and activity ids, keyed the way `ENTRIES` names them.
+   *
+   * Event keys are unique across all four clubs, so this needs no organisation
+   * level; activity names are unique within their event.
+   */
+  const eventIds: Record<string, string> = {};
+  const activityIds: Record<string, Record<string, string>> = {};
+
   for (const event of EVENTS) {
     const orgId = orgIds[event.org];
     const eventDiscountIds = discountIdsFor(event.org, event.discounts);
@@ -803,6 +842,8 @@ export async function seedDatabase(
       ]
     );
     const eventId = r.rows[0].id as string;
+    eventIds[event.key] = eventId;
+    activityIds[event.key] = {};
     bump('events');
 
     /*
@@ -899,6 +940,7 @@ export async function seedDatabase(
           activity.entryEligibility ?? 'all',
         ]
       );
+      activityIds[event.key][activity.name] = ar.rows[0].id as string;
       bump('event_activities');
 
       for (const discountKey of activity.discounts ?? []) {
@@ -991,6 +1033,17 @@ export async function seedDatabase(
     ORG_TYPE.initialMembershipNumber + ORGS.findIndex((o) => o.key === orgKey) * 100000;
 
   const nextNumber: Record<string, number> = {};
+  /**
+   * Member row ids by club and full name, for linking an entry to the
+   * membership it was made under.
+   *
+   * By name because that is what `ENTRIES` has: an entry names a person, and
+   * whether a membership stands behind that name is the question being asked.
+   * Two members of one club with the same name would collide here — the seed
+   * has none, and a real collision is a data problem the fixture should not
+   * pretend to solve.
+   */
+  const memberRowIds: Record<string, string> = {};
   const householdIds: Record<string, string> = {};
   const householdSlots: Record<string, number> = {};
 
@@ -1047,12 +1100,13 @@ export async function seedDatabase(
       ? dateOnly(-member.renewedDaysAgo + type.rolling.months * 30)
       : membershipEnd(member.season);
 
-    await client.query(
+    const memberRow = await client.query(
       `INSERT INTO members
          (organisation_id, membership_type_id, user_id, membership_number, first_name, last_name,
           form_submission_id, date_last_renewed, status, valid_until, labels, processed,
           payment_status, payment_method, group_membership_id, person_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       RETURNING id`,
       [
         orgIds[member.org],
         membershipTypeIds[member.org][member.type],
@@ -1072,6 +1126,7 @@ export async function seedDatabase(
         personSlot,
       ]
     );
+    memberRowIds[`${member.org}|${firstName} ${lastName}`] = memberRow.rows[0].id as string;
     bump('members');
   }
 
@@ -1084,6 +1139,90 @@ export async function seedDatabase(
       [orgTypeId, orgIds[orgKey], next]
     );
     bump('membership_number_sequences');
+  }
+
+  /* --- entries ------------------------------------------------------------ */
+
+  /*
+   * Entries that have already been made, mirroring what `fulfilment.service`
+   * writes when a basket is paid for: the names travel on the entry itself, a
+   * `member_id` links it to the membership when there is one behind the name,
+   * and a form submission is created wherever the activity asks for one.
+   *
+   * `entry_date` is backdated, which is the only part a real entry cannot do.
+   * It is what makes the order meaningful — an account's most recently used
+   * names are the ones the entry form offers back first.
+   */
+  for (const entry of ENTRIES) {
+    const eventId = eventIds[entry.event];
+    const activityId = activityIds[entry.event]?.[entry.activity];
+
+    if (!activityId) {
+      throw new Error(
+        `Entry for ${entry.firstName} ${entry.lastName} names "${entry.activity}" in ` +
+          `"${entry.event}", which has no such activity.`
+      );
+    }
+
+    const orgUserId = accountUserRowIds[entry.org]?.[entry.email];
+    if (!orgUserId) {
+      throw new Error(
+        `${entry.email} entered ${entry.event} but is not an account user of ${entry.org}. ` +
+          `Add the organisation to their entry in ACCOUNT_USERS.`
+      );
+    }
+
+    const activity = EVENTS.find((e) => e.key === entry.event)!.activities.find(
+      (a) => a.name === entry.activity
+    )!;
+
+    /*
+     * Null where the name has no membership behind it — a friend entered on an
+     * open activity. Not an error: it is the case the `member_id` column is
+     * nullable for, and the one an entrant suggestion with nothing to link to
+     * comes from.
+     */
+    const memberId = memberRowIds[`${entry.org}|${entry.firstName} ${entry.lastName}`] ?? null;
+
+    let submissionId: string | null = null;
+    if (activity.form) {
+      const submission = await client.query(
+        `INSERT INTO form_submissions
+           (form_id, organisation_id, user_id, submission_type, context_id, submission_data, status)
+         VALUES ($1,$2,$3,'event_entry',$4,$5,'approved')
+         RETURNING id`,
+        [
+          formIds[entry.org][activity.form],
+          orgIds[entry.org],
+          orgUserId,
+          activityId,
+          JSON.stringify(entrySubmission(entry)),
+        ]
+      );
+      submissionId = submission.rows[0].id;
+      bump('form_submissions');
+    }
+
+    await client.query(
+      `INSERT INTO event_entries
+         (event_id, event_activity_id, user_id, first_name, last_name, email,
+          form_submission_id, quantity, payment_status, payment_method, member_id, entry_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,1,$8,$9,$10,$11)`,
+      [
+        eventId,
+        activityId,
+        orgUserId,
+        entry.firstName,
+        entry.lastName,
+        entry.email,
+        submissionId,
+        entry.paymentStatus,
+        entry.payment,
+        memberId,
+        dayOffset(-entry.enteredDaysAgo),
+      ]
+    );
+    bump('event_entries');
   }
 
   /* --- registrations ------------------------------------------------------ */

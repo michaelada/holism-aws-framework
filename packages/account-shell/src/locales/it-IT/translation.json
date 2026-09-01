@@ -306,6 +306,8 @@
     "collapseAll": "Comprimi tutto",
     "loadError": "Non è stato possibile caricare le offerte disponibili.",
     "noEvents": "Al momento non ci sono eventi aperti.",
+    "allEvents": "Tutti gli eventi",
+    "eventNotFound": "Questo evento non è più in elenco. Potrebbe essersi concluso oppure il club lo ha rimosso.",
     "noMembershipTypes": "Al momento non ci sono tesseramenti aperti.",
     "noActivities": "Questo evento non ha attività aperte alle iscrizioni.",
     "addToBasket": "Aggiungi al carrello",
@@ -535,6 +537,9 @@
       "noMatches": "Nessun socio trovato.",
       "alreadyEntered": "Già iscritto",
       "searching": "Ricerca in corso…",
+      "suggestionsHint": "Seleziona un nome per inserirlo.",
+      "yourMemberships": "Le tue iscrizioni",
+      "usedBefore": "Usati in precedenza",
       "required": "Inserisci il nome della persona a cui si riferisce questa iscrizione.",
       "mustBeMember": "Scegli un socio attivo dall'elenco."
     },

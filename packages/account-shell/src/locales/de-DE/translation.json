@@ -306,6 +306,8 @@
     "collapseAll": "Alle einklappen",
     "loadError": "Das Angebot konnte nicht geladen werden.",
     "noEvents": "Derzeit sind keine Veranstaltungen geöffnet.",
+    "allEvents": "Alle Veranstaltungen",
+    "eventNotFound": "Diese Veranstaltung wird nicht mehr aufgeführt. Sie ist möglicherweise beendet oder der Verein hat sie entfernt.",
     "noMembershipTypes": "Derzeit sind keine Mitgliedschaften geöffnet.",
     "noActivities": "Diese Veranstaltung hat keine offenen Aktivitäten.",
     "addToBasket": "In den Warenkorb",
@@ -535,6 +537,9 @@
       "noMatches": "Keine Mitglieder gefunden.",
       "alreadyEntered": "Bereits angemeldet",
       "searching": "Suche läuft…",
+      "suggestionsHint": "Wählen Sie einen Namen aus, um ihn zu übernehmen.",
+      "yourMemberships": "Ihre Mitgliedschaften",
+      "usedBefore": "Zuletzt verwendet",
       "required": "Geben Sie den Namen der Person ein, für die diese Anmeldung gilt.",
       "mustBeMember": "Wählen Sie ein aktives Mitglied aus der Liste."
     },

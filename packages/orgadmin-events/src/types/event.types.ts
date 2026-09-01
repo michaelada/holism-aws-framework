@@ -17,6 +17,14 @@ export interface Event {
   entriesClosingDate?: Date | string;  // When entries close
   limitEntries: boolean;               // Limit Number Of Event Entries
   entriesLimit?: number;               // Entry limit if limitEntries is true
+  /**
+   * How many entries the event has. Present on the list, absent elsewhere.
+   *
+   * `undefined` where the endpoint did not count, which is not the same answer
+   * as none — a column that renders "not loaded" as `0` tells the club nobody
+   * has entered.
+   */
+  entryCount?: number;
   addConfirmationMessage: boolean;     // Add Message To Confirmation Email
   confirmationMessage?: string;        // Message text if addConfirmationMessage is true
   status: 'draft' | 'published' | 'cancelled' | 'completed';
