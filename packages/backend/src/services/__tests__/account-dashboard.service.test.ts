@@ -58,6 +58,7 @@ describe('AccountDashboardService', () => {
     id: 'entry-1',
     eventName: 'Spring Hunter Trials',
     activityName: 'Class 2',
+    entrantName: 'Rónán McGrath',
     startDate: '2026-09-14',
     status: 'confirmed',
     ...over,
@@ -142,6 +143,41 @@ describe('AccountDashboardService', () => {
         'Court 1',
         'Spring Hunter Trials',
       ]);
+    });
+
+    /*
+     * Who each one is for.
+     *
+     * A parent's four children in the same class produce four rows here that
+     * are otherwise identical — same event, same class, same date.
+     */
+    it('carries the entrant name through to the card', async () => {
+      activity.listEntries.mockResolvedValue([entry()] as any);
+
+      const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
+
+      expect(dashboard.comingUp?.[0]).toMatchObject({
+        title: 'Spring Hunter Trials',
+        detail: 'Class 2',
+        entrantName: 'Rónán McGrath',
+      });
+    });
+
+    /* A booking is the account holder's own; there is nobody else to name. */
+    it('leaves a booking without one', async () => {
+      activity.listBookings.mockResolvedValue([booking()] as any);
+
+      const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
+
+      expect(dashboard.comingUp?.[0]).toMatchObject({ kind: 'booking', entrantName: null });
+    });
+
+    it('reports a nameless entry as having none, rather than as a blank', async () => {
+      activity.listEntries.mockResolvedValue([entry({ entrantName: '' })] as any);
+
+      const dashboard = await service.build(ORG, MEMBER, ALL, 'EUR', TODAY);
+
+      expect(dashboard.comingUp?.[0].entrantName).toBeNull();
     });
 
     /** This card is about what to turn up to. */

@@ -560,3 +560,127 @@ describe('HomePage (B3)', () => {
     expect(await screen.findByText(/could not load your home page/i)).toBeInTheDocument();
   });
 });
+
+/**
+ * The "Coming up" card lines up with the rows beneath it.
+ *
+ * `Stack` sets `margin: 0` on every direct child, which cancels the negative
+ * margin a spaced `Grid container` relies on. The container was a direct child
+ * of the page's `Stack`, so its item kept `padding-left: 16px` with nothing to
+ * take it back and the card sat 16px right of every other section. jsdom
+ * computes no layout, so this asserts the structure that caused it rather than
+ * the pixels: the container must sit inside something, not directly under the
+ * Stack.
+ */
+describe('HomePage — Coming up alignment', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+    mockExecute.mockResolvedValue(dashboard());
+  });
+
+  it('does not hang a grid container directly off the page Stack', async () => {
+    renderWithProviders(<HomePage />);
+
+    await screen.findByText('Coming up');
+
+    const containers = document.querySelectorAll('.MuiGrid-container');
+    expect(containers.length).toBeGreaterThan(0);
+
+    for (const container of containers) {
+      expect(container.parentElement?.classList.contains('MuiStack-root')).toBe(false);
+    }
+  });
+
+  it('wraps it the way the sections below it are wrapped', async () => {
+    renderWithProviders(<HomePage />);
+
+    const heading = await screen.findByText('Coming up');
+    const container = heading.closest('.MuiGrid-container');
+
+    expect(container).not.toBeNull();
+    // A plain Box, exactly as "Upcoming events" and "Shop" already do it.
+    expect(container!.parentElement?.className).toContain('MuiBox-root');
+  });
+});
+
+/**
+ * Who the entry is for, on the home page.
+ *
+ * A parent holds every entry in the household on one login. Four children in
+ * the same class made four rows reading "Spring Hunter Trials · Class 2" and
+ * nothing else — the child was the only thing that told them apart, and the
+ * only thing the row did not say.
+ */
+describe('HomePage — who the entry is for', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+  });
+
+  it('names the entrant beside the class', async () => {
+    mockExecute.mockResolvedValue(
+      dashboard({
+        comingUp: [
+          {
+            kind: 'entry',
+            id: 'entry-1',
+            title: 'Spring Hunter Trials',
+            detail: 'Class 2',
+            entrantName: 'Rónán McGrath',
+            on: '2026-09-14',
+            startTime: null,
+            status: 'confirmed',
+          },
+        ],
+      })
+    );
+
+    renderWithProviders(<HomePage />);
+
+    expect(await screen.findByText(/Rónán McGrath/)).toBeInTheDocument();
+    expect(screen.getByText(/Class 2/)).toBeInTheDocument();
+  });
+
+  it('tells two entries in the same class apart', async () => {
+    mockExecute.mockResolvedValue(
+      dashboard({
+        comingUp: [
+          { kind: 'entry', id: 'e-1', title: 'Spring Hunter Trials', detail: 'Class 2', entrantName: 'Rónán McGrath', on: '2026-09-14', startTime: null, status: 'confirmed' },
+          { kind: 'entry', id: 'e-2', title: 'Spring Hunter Trials', detail: 'Class 2', entrantName: 'Éabha McGrath', on: '2026-09-14', startTime: null, status: 'confirmed' },
+        ],
+      })
+    );
+
+    renderWithProviders(<HomePage />);
+
+    expect(await screen.findByText(/Rónán McGrath/)).toBeInTheDocument();
+    expect(screen.getByText(/Éabha McGrath/)).toBeInTheDocument();
+  });
+
+  /* A booking is made by the account holder, so there is nobody else to name. */
+  it('adds nothing to a booking', async () => {
+    mockExecute.mockResolvedValue(
+      dashboard({
+        comingUp: [
+          {
+            kind: 'booking',
+            id: 'booking-1',
+            title: 'Court 1',
+            detail: '10:00–11:00',
+            entrantName: null,
+            on: '2026-09-15',
+            startTime: '10:00',
+            status: 'confirmed',
+          },
+        ],
+      })
+    );
+
+    renderWithProviders(<HomePage />);
+
+    const line = await screen.findByText(/10:00–11:00/);
+    // The date and the time, and no trailing separator where a name would be.
+    expect(line.textContent).not.toMatch(/·\s*$/);
+  });
+});

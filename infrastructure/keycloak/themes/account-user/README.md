@@ -60,3 +60,14 @@ own. See [docs/ACCOUNT_APP_KEYCLOAK_SETUP.md](../../../docs/ACCOUNT_APP_KEYCLOAK
 Themes are mounted into the container by `docker-compose.yml`
 (`./infrastructure/keycloak/themes:/opt/keycloak/themes`) and Keycloak runs with `start-dev`, so
 edits appear on reload with no restart.
+
+## Naming the club
+
+`login/resources/js/club.js` adds a line under the heading: *Signing in to Meath Hunt Pony Club*.
+
+The club is read from `redirect_uri` on this page's own URL and its name fetched from
+`/api/public/organisations/:code`. It is stashed in `sessionStorage` because a failed password
+re-renders the form at a URL that no longer carries `redirect_uri`. Any failure leaves the line
+hidden, and the name is written with `textContent`.
+
+See `docs/KEYCLOAK_LOGIN_NAMES_THE_CLUB.md`.

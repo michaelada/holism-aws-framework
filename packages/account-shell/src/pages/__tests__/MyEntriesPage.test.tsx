@@ -44,6 +44,7 @@ const ENTRY = {
   id: 'entry-1',
   eventId: 'event-1',
   eventName: 'Summer Regatta',
+  entrantName: 'Rónán McGrath',
   activityId: 'activity-1',
   activityName: 'Junior Single Sculls',
   startDate: '2026-07-01',
@@ -108,7 +109,8 @@ describe('MyEntriesPage (C1)', () => {
     render();
 
     expect(await screen.findByText('Summer Regatta')).toBeInTheDocument();
-    expect(screen.getByText('Junior Single Sculls')).toBeInTheDocument();
+    // The class, and who it is for — see "who the entry is for" below.
+    expect(screen.getByText(/Junior Single Sculls/)).toBeInTheDocument();
   });
 
   it('shows the shared status vocabulary rather than the raw payment status', async () => {
@@ -148,10 +150,11 @@ describe('MyEntriesPage (C1)', () => {
   });
 
   it('keeps each kind’s own detail', async () => {
-    // An entry names its activity; a booking names its time and its length.
+    // An entry names its activity and its entrant; a booking names its time
+    // and its length, and has nobody else to name.
     render();
 
-    expect(await screen.findByText('Junior Single Sculls')).toBeInTheDocument();
+    expect(await screen.findByText(/Junior Single Sculls/)).toBeInTheDocument();
     expect(screen.getByText(/09:00–10:00/)).toBeInTheDocument();
     expect(screen.getByText(/60 min/)).toBeInTheDocument();
   });
@@ -361,5 +364,47 @@ describe('MyEntriesPage — cancelling a booking', () => {
     expect(await screen.findByText(/need at least 2 days/)).toBeInTheDocument();
     // Still open, so the member can read it.
     expect(screen.getByText('Cancel this booking?')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Who each entry is for.
+ *
+ * A parent holds the whole household's entries on one login, so a list headed
+ * by the event and the class alone gives four identical rows — and the child,
+ * the only thing that distinguishes them, was the one thing missing.
+ */
+describe('MyEntriesPage — who the entry is for', () => {
+  const listing = (entries: unknown[]) => {
+    mockExecute.mockReset();
+    mockNavigate.mockReset();
+    contextValue = withCapabilities(['event-management', 'calendar-bookings']);
+    mockExecute.mockImplementation((request: { url: string }) =>
+      request.url.endsWith('/bookings') ? Promise.resolve([]) : Promise.resolve(entries)
+    );
+  };
+
+  it('names the entrant beside the class', async () => {
+    listing([ENTRY]);
+    render();
+
+    expect(await screen.findByText(/Junior Single Sculls · Rónán McGrath/)).toBeInTheDocument();
+  });
+
+  it('tells two entries in the same class apart', async () => {
+    listing([ENTRY, { ...ENTRY, id: 'entry-2', entrantName: 'Éabha McGrath' }]);
+    render();
+
+    expect(await screen.findByText(/Junior Single Sculls · Rónán McGrath/)).toBeInTheDocument();
+    expect(screen.getByText(/Junior Single Sculls · Éabha McGrath/)).toBeInTheDocument();
+  });
+
+  /* An entry with no name recorded keeps the class, not a dangling separator. */
+  it('leaves the class alone when there is no name', async () => {
+    listing([{ ...ENTRY, entrantName: '' }]);
+    render();
+
+    const detail = await screen.findByText('Junior Single Sculls');
+    expect(detail.textContent).toBe('Junior Single Sculls');
   });
 });

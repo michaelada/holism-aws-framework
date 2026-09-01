@@ -102,6 +102,11 @@ deep-links every kind — `/shop/:id`, `/book/:id`, `/register-interest/:id`, an
 `/browse/events/:eventId`. Events alone used to open `/browse/events`, the whole programme with
 every row collapsed, so a member who had already chosen an event was asked to find it again.
 
+**Why is a grid one gutter out of line?** Because it is a direct child of a `Stack`. A spaced
+`Grid container` works by taking a negative margin that its items' padding gives back, and `Stack`
+sets `margin: 0` on every direct child — so the padding stays and the row starts a gutter in. Wrap
+the container in a `Box`, as every section of `HomePage` does. See docs/HOME_COMING_UP_ALIGNMENT.md.
+
 **What an activity row shows:** name, description, then fee and places. `ActivityRow` in
 `BrowsePage` renders all three; the description comes straight off `CatalogueActivity.description`,
 which the catalogue has always carried and `EntryFormPage` and `PublicEventPage` have always shown.

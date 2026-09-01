@@ -88,6 +88,22 @@
     <div id="kc-content">
         <div id="kc-content-wrapper">
             <h2 class="kc-account-login-heading"><#nested "header"></h2>
+
+            <#--
+              Which club this sign-in is for, filled in by club.js.
+
+              Hidden until it has a name, so a page that cannot work out the
+              club — or cannot reach the API — is exactly the page it was
+              before rather than one with an empty line in it. The wording is a
+              translated template because the theme has its own message bundle;
+              `%organisation%` is substituted in JavaScript, as text — not a
+              MessageFormat `{0}`, which Keycloak would try to parse itself.
+            -->
+            <p class="kc-login-club"
+               id="ips-club"
+               hidden
+               data-api-base="${properties.ipsApiBase!''}"
+               data-template="${msg("signingInTo")}"></p>
             <#if displayDescription>
                 <p class="kc-login-description">${msg("loginDescription")}</p>
             </#if>

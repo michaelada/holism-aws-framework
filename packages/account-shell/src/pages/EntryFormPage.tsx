@@ -600,7 +600,6 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
               noMatches: t('form.entrant.noMatches'),
               alreadyEntered: t('form.entrant.alreadyEntered'),
               loading: t('form.entrant.searching'),
-              yourMemberships: t('form.entrant.yourMemberships'),
               usedBefore: t('form.entrant.usedBefore'),
               suggestionsHint: t('form.entrant.suggestionsHint'),
             }}

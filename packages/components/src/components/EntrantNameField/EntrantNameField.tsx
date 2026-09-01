@@ -84,8 +84,16 @@ export interface EntrantNameFieldProps {
     noMatches?: string;
     alreadyEntered?: string;
     loading?: string;
-    /** Headings for the two suggestion rows. */
-    yourMemberships?: string;
+    /**
+     * Heading for the second suggestion row only.
+     *
+     * The memberships have none. The hint above them already says what to do
+     * with the whole block, and a heading between the two would have been a
+     * label on the obvious — these are the names on the account, and the chips
+     * carry the membership type anyway. "Used before" earns its heading
+     * because it says something the names cannot: that they were typed on a
+     * previous entry rather than held as a membership.
+     */
     usedBefore?: string;
     /**
      * That the names below can be clicked.
@@ -298,7 +306,7 @@ const SuggestionRows: React.FC<{
   suggestions?: { memberships?: EntrantSuggestion[]; recent?: EntrantSuggestion[] };
   disabled: boolean;
   onPick: (value: EntrantValue) => void;
-  labels: { yourMemberships?: string; usedBefore?: string; suggestionsHint?: string };
+  labels: { usedBefore?: string; suggestionsHint?: string };
 }> = ({ suggestions, disabled, onPick, labels }) => {
   const memberships = suggestions?.memberships ?? [];
   const recent = suggestions?.recent ?? [];
@@ -308,9 +316,11 @@ const SuggestionRows: React.FC<{
   const row = (heading: string | undefined, items: EntrantSuggestion[]) =>
     items.length === 0 ? null : (
       <Box sx={{ mt: 1 }}>
-        <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-          {heading}
-        </Typography>
+        {heading && (
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+            {heading}
+          </Typography>
+        )}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
           {items.map((item) => (
             <Chip
@@ -340,7 +350,7 @@ const SuggestionRows: React.FC<{
           {labels.suggestionsHint}
         </Typography>
       )}
-      {row(labels.yourMemberships, memberships)}
+      {row(undefined, memberships)}
       {row(labels.usedBefore, recent)}
     </>
   );

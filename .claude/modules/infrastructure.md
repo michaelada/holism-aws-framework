@@ -68,6 +68,18 @@ the app and cleared on sign-out, and a second copy would outlive that.
     Keycloak under `/auth/` and the API under `/api/` on one origin. In development it detects port
     8080 and falls back to `http://localhost:3000`; `ipsApiBase` in `theme.properties` overrides
     both for a split-host setup. Nothing to configure in a normal deployment.
+  - The **account-user** theme names the club being signed in to — `Signing in to Meath Hunt Pony
+    Club`, under the heading (`club.js`, `#ips-club`). All four clubs share the `account-app`
+    client, so `${client.name}` cannot answer it and `kc_org` is Keycloak 26 while this is 23; the
+    code is parsed out of `redirect_uri` and the name fetched from `/api/public/organisations/:code`.
+    **A wrong password re-renders at `/login-actions/authenticate`, which carries no
+    `redirect_uri`** — hence the `sessionStorage` stash, without which the club would vanish exactly
+    when a member most needs to know where they are. Any failure leaves the line hidden. See
+    docs/KEYCLOAK_LOGIN_NAMES_THE_CLUB.md.
+  - **A theme message must not use `{...}` for anything Keycloak will not substitute.** Every
+    message goes through Java's `MessageFormat`; `{organisation}` failed the whole template with
+    `can't parse argument number` and a 500 page. `signingInTo` uses `%organisation%`, substituted
+    in JavaScript.
   - The **account-user** theme also carries a `Powered by ItsPlainSailing.com` footer under the
     card — small logo plus caption, linked with `target="_blank" rel="noopener"` so a half-filled
     registration form is not lost to a click. It lives in `template.ftl` inside `.ips-login-col`,

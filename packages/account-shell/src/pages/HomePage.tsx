@@ -239,9 +239,21 @@ export const HomePage: React.FC = () => {
               not, and the page reads as slightly broken without it being
               obvious why.
             */}
-            <Grid container spacing={2}>
-              {dashboard.comingUp && dashboard.comingUp.length > 0 && (
-                <Grid item xs={12} md={6}>
+            {/*
+              Wrapped, because a `Grid container` cannot be a direct child of a
+              `Stack`.
+
+              `Stack` sets `margin: 0` on every direct child, which cancels the
+              negative margin a spaced `Grid container` relies on — the item
+              keeps its `padding-left: 16px` and nothing takes it back, so this
+              card sat 16px right of every row beneath it. The sections below
+              are each inside a `Box` already, which is why this was the only
+              one out of line. See docs/HOME_COMING_UP_ALIGNMENT.md.
+            */}
+            <Box>
+              <Grid container spacing={2}>
+                {dashboard.comingUp && dashboard.comingUp.length > 0 && (
+                  <Grid item xs={12} md={6}>
                   <Card sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="h2" sx={{ fontSize: '1.125rem' }} gutterBottom>
@@ -259,6 +271,16 @@ export const HomePage: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               {formatDisplayDate(item.on, locale)}
                               {item.detail ? ` · ${item.detail}` : ''}
+                              {/*
+                                Who it is for, last.
+                                
+                                A parent's four children in the same class made
+                                four identical rows here; the name is the only
+                                thing that told them apart, and it was the one
+                                thing missing. Absent on bookings, which are
+                                nobody else's.
+                              */}
+                              {item.entrantName ? ` · ${item.entrantName}` : ''}
                             </Typography>
                           </Box>
                         ))}
@@ -272,9 +294,10 @@ export const HomePage: React.FC = () => {
                       </Button>
                     </CardContent>
                   </Card>
-                </Grid>
-              )}
-            </Grid>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
 
             {/*
               Two rows, not one. Bookings are a different kind of thing from a

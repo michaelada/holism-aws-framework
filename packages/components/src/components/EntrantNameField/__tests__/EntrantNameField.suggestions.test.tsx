@@ -12,13 +12,12 @@ import { EntrantNameField } from '../EntrantNameField';
  */
 const labels = {
   label: 'Who is this entry for?',
-  yourMemberships: 'Your memberships',
   usedBefore: 'Used before',
   suggestionsHint: 'Select a name to fill it in.',
 };
 
 describe('EntrantNameField suggestions', () => {
-  it('offers memberships and recent names under their own headings', () => {
+  it('offers memberships and recent names, the second under its own heading', () => {
     render(
       <EntrantNameField
         value={{ memberId: null, name: '' }}
@@ -31,7 +30,6 @@ describe('EntrantNameField suggestions', () => {
       />
     );
 
-    expect(screen.getByText('Your memberships')).toBeInTheDocument();
     expect(screen.getByText('Rónán McGrath · Junior Member')).toBeInTheDocument();
     expect(screen.getByText('Used before')).toBeInTheDocument();
     expect(screen.getByText('Tadhg Nolan')).toBeInTheDocument();
@@ -100,6 +98,31 @@ describe('EntrantNameField suggestions', () => {
     expect(screen.getByText('Tadhg Nolan')).toBeInTheDocument();
   });
 
+  /*
+   * The memberships carry no heading of their own.
+   *
+   * The hint above the block already says what to do with every name under it,
+   * and these are simply the names on the account — a heading there would have
+   * been a label on the obvious, with the membership type already on each chip.
+   * "Used before" keeps its heading because it says something the names cannot:
+   * that they were typed on a previous entry rather than held as a membership.
+   */
+  it('heads the memberships with nothing at all', () => {
+    render(
+      <EntrantNameField
+        value={{ memberId: null, name: '' }}
+        onChange={vi.fn()}
+        labels={labels}
+        suggestions={{ memberships: [{ name: 'Rónán McGrath', memberId: 'm-1' }] }}
+      />
+    );
+
+    expect(screen.getByText('Rónán McGrath')).toBeInTheDocument();
+    expect(screen.queryByText(/your memberships/i)).not.toBeInTheDocument();
+    // And nothing empty left in its place.
+    expect(screen.queryByText('Used before')).not.toBeInTheDocument();
+  });
+
   it('renders nothing when there is nothing to offer', () => {
     render(
       <EntrantNameField
@@ -110,7 +133,6 @@ describe('EntrantNameField suggestions', () => {
       />
     );
 
-    expect(screen.queryByText('Your memberships')).not.toBeInTheDocument();
     expect(screen.queryByText('Used before')).not.toBeInTheDocument();
   });
 

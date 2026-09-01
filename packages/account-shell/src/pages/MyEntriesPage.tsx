@@ -147,7 +147,14 @@ export const MyEntriesPage: React.FC = () => {
         icon: null,
         colour: null,
         title: entry.eventName,
-        detail: entry.activityName,
+        /*
+          The class, then who it is for.
+          
+          A parent holds every entry in the household on one login, so four
+          rows reading "Spring League · Grade 1" differ only in the child — and
+          the child was the one thing the row did not say.
+        */
+        detail: [entry.activityName, entry.entrantName].filter(Boolean).join(' · '),
         /** Sorted on; an entry with no date sorts as far future rather than 1970. */
         on: entry.startDate ? Date.parse(entry.startDate) : Number.MAX_SAFE_INTEGER,
         when: formatDateRange(entry.startDate, entry.endDate, locale),

@@ -28,6 +28,8 @@ const entryRow = (over: Record<string, any> = {}) => ({
   start_date: '2026-07-01',
   end_date: '2026-07-02',
   activity_name: 'Junior Single Sculls',
+  first_name: 'Rónán',
+  last_name: 'McGrath',
   fee: '25.00',
   ...over,
 });
@@ -66,6 +68,39 @@ describe('AccountActivityService', () => {
         activityName: 'Junior Single Sculls',
         fee: 25,
       });
+    });
+
+    /*
+     * Who the entry is for, which is not always whose account it is under.
+     *
+     * A parent holds the household's entries on one login, so a list headed by
+     * the event and the class alone gives four identical rows.
+     */
+    it('names the entrant', async () => {
+      mockDb.query.mockResolvedValue({ rows: [entryRow()] } as any);
+
+      const [entry] = await service.listEntries(ORG, MEMBER, TODAY);
+
+      expect(entry.entrantName).toBe('Rónán McGrath');
+    });
+
+    it('asks the query for the name', async () => {
+      mockDb.query.mockResolvedValue({ rows: [] } as any);
+      await service.listEntries(ORG, MEMBER, TODAY);
+
+      const [sql] = mockDb.query.mock.calls[0];
+      expect(String(sql)).toContain('ee.first_name');
+      expect(String(sql)).toContain('ee.last_name');
+    });
+
+    it('does not leave a stray space when only one part is recorded', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [entryRow({ first_name: 'Rónán', last_name: null })],
+      } as any);
+
+      const [entry] = await service.listEntries(ORG, MEMBER, TODAY);
+
+      expect(entry.entrantName).toBe('Rónán');
     });
 
     /**

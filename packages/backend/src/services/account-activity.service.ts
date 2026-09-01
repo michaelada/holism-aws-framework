@@ -82,6 +82,16 @@ export interface AccountEntry {
   id: string;
   eventId: string;
   eventName: string;
+  /**
+   * Who the entry is *for*, which is not always whose account it sits under.
+   *
+   * A parent holds four entries on one login and the screens listing them were
+   * headed by the event and the class alone — four rows reading identically
+   * where the only thing distinguishing them is the child. The name is already
+   * on the row (`event_entries.first_name`/`last_name`); it simply was not
+   * being selected.
+   */
+  entrantName: string;
   activityId: string;
   activityName: string;
   startDate: string | null;
@@ -266,6 +276,7 @@ export class AccountActivityService {
         `SELECT
            ee.id, ee.event_id, ee.event_activity_id, ee.quantity,
            ee.payment_status, ee.payment_method, ee.entry_date,
+           ee.first_name, ee.last_name,
            e.name AS event_name, e.start_date, e.end_date,
            ea.name AS activity_name, ea.fee
          FROM event_entries ee
@@ -830,6 +841,7 @@ export class AccountActivityService {
       id: row.id,
       eventId: row.event_id,
       eventName: row.event_name,
+      entrantName: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim(),
       activityId: row.event_activity_id,
       activityName: row.activity_name,
       startDate: row.start_date ?? null,

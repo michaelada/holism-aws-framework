@@ -186,6 +186,27 @@ body {
   margin: 0 0 8px;
 }
 
+/*
+ * Which club is being signed in to.
+ *
+ * Sits between the heading and the supporting line, and carries the weight the
+ * heading does not: the club is the thing a member checks, and "Member Login"
+ * is the thing they already know. `[hidden]` is honoured explicitly because
+ * this rule sets `display`, which would otherwise win over the attribute.
+ */
+.kc-login-club {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mui-text-primary);
+  text-align: center;
+  margin: 0 0 8px;
+  display: block;
+}
+
+.kc-login-club[hidden] {
+  display: none;
+}
+
 /* The gateway's supporting line: body1 in text.secondary. */
 .kc-login-description {
   font-size: 1rem;

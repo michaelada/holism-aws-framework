@@ -22217,3 +22217,284 @@ Two pre-existing typecheck errors in `orgadmin-events` (`EventActivityForm`, `Ev
 Note the counts above are from your dev database as it stands — you've clearly been entering through the UI. After `--reset` you'll see the seeded 12 across Kildare instead.
 
 ---
+
+
+## 2026-09-01 07:50:47 — Prompt
+
+when I log into http://localhost:5176/account/khpc for Niamh Walsh the home page shows one Coming up event entry that she has, but it does not left align properly with the other sections rows underneath, can you fix this.
+
+### Assistant
+
+Let me look at the actual rendered page rather than guess:
+
+Signed in. Now let me measure the left edges precisely:
+
+The other rows sit at **312**; "Coming up" sits at **328** — exactly 16px, the grid spacing. Let me find which rule is missing:
+
+Root cause proven: MUI `Stack` sets `margin: 0` on its direct children, cancelling the Grid container's `-16px`. Every other section wraps its Grid in a `<Box>`; this one doesn't:
+
+Now let me verify in the browser that the edges actually line up:
+
+Fixed — the card now sits at **312**, exactly with every row below it. Let me check it holds on mobile too:
+
+Both edges match on mobile too (16 → 374). Now a regression test, so this can't come back:
+
+Let me confirm the tests actually catch the bug by reverting the fix:
+
+Both tests fail on the unfixed code and pass on the fixed. Final check and docs:
+
+Fixed. The card now starts at **312**, the same as every row beneath it.
+
+## What was wrong
+
+A spaced MUI `Grid container` doesn't add space — it *removes* it and gives it back:
+
+```
+.MuiGrid-container  { margin-left: -16px }
+.MuiGrid-item       { padding-left:  16px }
+```
+
+Those cancel, and content lands flush. Unless something takes the negative margin away — and `Stack` does exactly that to its direct children:
+
+```
+.MuiStack-root > :not(style):not(style) { margin: 0 }
+```
+
+I read the matched CSS rules straight off the live element and both were there: the Stack's `margin: 0`, overriding the Grid's `-16px`. The item kept its `padding-left` with nothing left to take it back, so the card started 16px in.
+
+**Every other section on that page wraps its grid in a `Box`**, so its container is a child of the Box rather than the Stack and keeps its negative margin. "Coming up" was written without the wrapper — which is why it alone was out of line, and why the misalignment was exactly one gutter.
+
+## The fix
+
+Wrapped the container in a `Box`, the same as the sections below it. No spacing values changed — the alignment they describe was always right, it was being cancelled.
+
+Measured after the change, at 1512px: Coming up **312**, Upcoming events **312**, Memberships **312**, Shop **312**. At 390px both edges match too (16 → 374), so the mobile single-column layout is unaffected.
+
+## The test
+
+jsdom computes no layout, so asserting pixels would prove nothing. The two tests assert the *structure* that caused it: no `Grid container` on the page is a direct child of a `MuiStack-root`, and this one's parent is a `Box`. I reverted the fix and confirmed both fail, then restored it.
+
+The first test is deliberately about the whole page rather than this one card — **a spaced `Grid container` must never be a direct child of a `Stack`** is the general rule, so the next section added this way fails immediately rather than shipping 16px out.
+
+account-shell: 58 files, **696 tests**, typecheck clean. Docs: [HOME_COMING_UP_ALIGNMENT.md](docs/HOME_COMING_UP_ALIGNMENT.md) and a Q&A line in [account-shell.md](.claude/modules/account-shell.md).
+
+---
+
+
+## 2026-09-01 07:57:49 — Prompt
+
+On the event entry page, where the user can “select a name to fill it in. “ underneath that line it has another title called “Your Memberships”, I don’t think we need the second title where it says “Your memberships”, can you remove this and update associated tests.
+
+In the coming up section on the home page where it shows upcoming entries, can you also include the entered persons name. And the same when you drill into “My entries & bookings” can you show the entered persons name/
+
+### Assistant
+
+Three changes. Starting with the heading:
+
+Now the entrant name on "Coming up" and "My entries". Let me see what the backend returns today:
+
+Now the backend — the entrant name on the list, then both screens:
+
+Now the two screens:
+
+All pass, but the fixtures have no `entrantName` so nothing exercises it. Adding tests:
+
+Two existing tests assert the old exact text — expected. Let me update them:
+
+Now let me see all three changes in the real app:
+
+Now the entry form, to confirm the heading is gone:
+
+That id is stale (the page 400s on a missing activity). Let me get a current one:
+
+All three confirmed in the running app. Final run across the front ends:
+
+All three done, and confirmed in your running app.
+
+## 1. "Your memberships" heading removed
+
+The block now reads:
+
+```
+Select a name to fill it in.
+ ( Niamh Walsh · Senior Member )
+
+Used before
+ ( Tadhg Nolan )
+```
+
+I kept **"Used before"**. The hint already covers every name below it, and the membership chips carry their type — so that heading was a label on the obvious, and having two made two short rows read as two separate mechanisms. "Used before" earns its heading because it says something the names can't: that they were typed on a previous entry rather than held as a membership.
+
+The component now takes no heading for that row at all rather than an empty string, so nothing is left in its place. Six locales lost the key; tests updated, plus one asserting the heading is *absent* so it doesn't creep back.
+
+## 2 & 3. The entrant's name on both lists
+
+```
+Coming up      Spring Show Jumping League
+               22 Sept 2026 · Grade 2 — 90cm · Niamh Walsh
+
+My entries     Spring Show Jumping League
+               Grade 2 — 90cm · Niamh Walsh          22 Sept 2026    €30.00
+```
+
+Both from the live app.
+
+**The name was already on the row** — `event_entries.first_name`/`last_name` are written on every entry, and the single-entry detail screen has always shown them. The *list* query just never selected them. So this is three added columns and two `·` joins, not new data.
+
+Worth stating why it matters: Áine McGrath holds four memberships, so four children in the same class gave four rows reading `Spring Hunter Trials · Class 2` and nothing else. The child was the only thing telling them apart and the only thing missing.
+
+**Bookings get no name.** A booking is made by the account holder, so there's nobody else to name — `entrantName` is null and the separator is dropped rather than left dangling. Same when an entry has no name recorded: it reads exactly as before.
+
+## Verified
+
+Backend 176 suites / **3326 tests**; account-shell **702**; components **470**. All typechecks clean.
+
+11 new tests, including the ones that would have caught this: two entries in the same class are distinguishable on each screen, and a booking gains no trailing separator. Two existing `MyEntriesPage` assertions moved from an exact match on the class to one allowing the name after it — expected fallout, not a workaround.
+
+Docs: [ENTRANT_NAME_ON_ACTIVITY.md](docs/ENTRANT_NAME_ON_ACTIVITY.md), and [ENTRANT_NAME_SUGGESTIONS.md](docs/ENTRANT_NAME_SUGGESTIONS.md) updated for the dropped heading.
+
+One aside: the entry-form URL I'd used earlier now 400s — that activity id no longer exists in your dev database, so something re-created those events since. Current ids work fine; just don't reuse the old link.
+
+---
+
+
+## 2026-09-01 08:09:53 — Prompt
+
+If I am on the Meath Hunt Pony Club page where it shows the buttons "Sign In" or "Create an account". If I click he Sign In button and it brings me to the page where I enter my email address and password. On that page is it possible to show the name of the organisations I am logging into, ot is that not possible because it is Keycloak ?
+
+### Assistant
+
+Good question, and the answer depends on your Keycloak version. Let me check what you're actually running:
+
+You already ship custom Keycloak themes, which changes the answer. Let me see what's in the account one:
+
+Let me verify the one thing that would make or break it — whether the club is still knowable after a failed password:
+
+The login URL carries `redirect_uri=...*/account/mhpc*`. Now the critical test — does it survive a failed password?
+
+Yes — and more cheaply than you'd expect, because two of the three pieces already exist.
+
+## Why it's possible
+
+Keycloak renders that page, but **you already ship a custom login theme for it**: `infrastructure/keycloak/themes/account-user/`, wired to the `account-app` client via `login_theme`. And that theme already calls your API — `posts.js` fetches `/api/public/posts` to draw the announcements column beside the form.
+
+So the question isn't "can we change the page", it's "can the page know which club". It can, from its own URL. Clicking Sign in on the Meath gateway sends the browser to:
+
+```
+…/protocol/openid-connect/auth?client_id=account-app
+  &redirect_uri=http%3A%2F%2Flocalhost%3A5176%2Faccount%2Fmhpc
+  &code_challenge=…
+```
+
+`mhpc` is right there. And `GET /api/public/organisations/mhpc` is anonymous and returns `displayName: "Meath Hunt Pony Club"` — I checked, 200 without a token. Same fetch pattern the theme already uses.
+
+## The one thing that would break a naive version
+
+I tested it rather than assuming. Enter a **wrong password** and Keycloak re-renders at:
+
+```
+…/login-actions/authenticate?execution=…&client_id=account-app&tab_id=CScbOBpPVt0
+```
+
+**No `redirect_uri`.** A script that just reads the URL would show the club name, then lose it the moment someone mistypes their password — the worst possible moment.
+
+The fix is small: stash the code in `sessionStorage` on first render. That page is Keycloak's own origin, so it survives the re-render in the same tab. Worth knowing up front, because it's the difference between this working and looking broken.
+
+## What `client.name` can't do
+
+The obvious server-side answer — `${client.name}` in the template — doesn't work here, because all four clubs share one `account-app` client. It would say "account-app" for everyone.
+
+## The alternatives, honestly
+
+| Approach | Verdict |
+|---|---|
+| **Theme JS + `redirect_uri`** | ~40 lines in the existing theme, no new infrastructure. Needs the sessionStorage detail above |
+| **A Keycloak client per organisation** | `${client.name}` server-side, no JS at all. But N clients to create and keep in step, the account app must pick one per club, and the token audience changes per club |
+| **Keycloak Organizations (`kc_org`)** | Purpose-built for exactly this — and it's Keycloak 26. You're on **23.0.7**, so it's a major upgrade away |
+| **Custom Authenticator SPI** | The "proper" server-side route: a Java extension setting a form attribute. A jar to build, deploy and version alongside Keycloak |
+
+## What I'd do
+
+The theme-JS route. It reuses the theme you already have and the public endpoint you already have, and the failure mode is benign — the existing `posts.js` already establishes the rule that everything on that page is wrapped so a failed fetch leaves the panel empty and never touches the sign-in form. Worst case you get today's page.
+
+One caution if we do it: the club name must go in with `textContent`, never `innerHTML`. It arrives via a URL parameter, so it's attacker-controllable, and the login page is the one page where an injection matters most.
+
+Want me to build it? I'd add it to `account-user/login/template.ftl` with its own small script, and check it in the browser at both moments — first load, and after a deliberately wrong password.
+
+---
+
+
+## 2026-09-01 08:14:54 — Prompt
+
+yes please
+
+### Assistant
+
+Now the script. It follows `posts.js`'s established rules — never able to break the form:
+
+Now the two moments that matter. First load:
+
+Keycloak runs messages through Java's `MessageFormat`, which requires numbered placeholders. Let me sidestep it entirely:
+
+Working on first load. Now the moment that would have broken a naive version — a wrong password:
+
+The line survives — that's the case that would have broken. Now: does the form still work, and does another club show its own name?
+
+Sign-in still works. Now a second club, and a bad code:
+
+Kildare shows its own name, and the stash updated. Now the degradation case — an unknown club:
+
+Unknown club → line stays hidden, form untouched. Let me record it:
+
+Done. The sign-in page now names the club:
+
+```
+                    Account Login
+
+           Signing in to Meath Hunt Pony Club
+
+   Welcome! Please enter your email and password…
+
+   Email    [                              ]
+   Password [                              ]
+```
+
+## How it knows
+
+From the page's own URL. Your gateway sends `redirect_uri=…/account/mhpc`, so `club.js` reads `mhpc` out of it and asks `GET /api/public/organisations/mhpc` — anonymous, and already what the gateway itself uses — for the display name.
+
+`${client.name}` couldn't have done it: all four clubs share the `account-app` client, so it'd say the same for every one. And `kc_org` is Keycloak 26 — you're on 23.0.7.
+
+The theme was already doing this kind of work, which is why it was cheap: `posts.js` fetches your API for the announcements column, so the fetch, the API-base resolution and the failure discipline were all established.
+
+## The part I checked before writing anything
+
+**A wrong password loses `redirect_uri`.** Keycloak re-renders at `/login-actions/authenticate?execution=…&tab_id=…`, and the parameter is gone. A URL-only script would name the club on the first attempt and drop it the instant someone mistyped — the worst moment for a sign-in page to look unsure where it is. Hence the `sessionStorage` stash on first render.
+
+## Verified in the browser
+
+| | Result |
+|---|---|
+| Meath gateway → Sign in | `Signing in to Meath Hunt Pony Club` |
+| **Wrong password** | Line still shown, `redirect_uri` gone from the URL, "Invalid email or password." as usual |
+| Correct password | Signs in, lands on Meath's home page |
+| Kildare gateway | `Signing in to Kildare Hunt Pony Club`, stash updated |
+| Unknown club code | Line hidden; form and password field untouched |
+
+## Two decisions worth knowing
+
+**No fallback to the code.** If the name can't be fetched the line stays away rather than reading "Signing in to mhpc", which tells a member less than silence and reads as a fault.
+
+**`%organisation%`, not `{0}`.** My first attempt used `{organisation}` and Keycloak returned a 500: every theme message goes through Java's `MessageFormat`, which claims anything in braces — `can't parse argument number: organisation`. A percent-delimited placeholder is invisible to it. That one's in the module doc, since it'll bite anyone adding a message here.
+
+The name goes in with `textContent`, never `innerHTML` — it originates in a public URL parameter, and this is the page where an injection would be worth mounting.
+
+## Note
+
+**Theme changes need Keycloak restarted** — `docker compose restart keycloak`. I've already done that, so it's live now.
+
+Untouched: the org-admin and super-admin login pages have their own themes, and neither starts from a club-branded page, so neither has the problem.
+
+Files: [club.js](infrastructure/keycloak/themes/account-user/login/resources/js/club.js) (new), plus `template.ftl`, `theme.properties`, the message bundle and `account.css`. Docs in [KEYCLOAK_LOGIN_NAMES_THE_CLUB.md](docs/KEYCLOAK_LOGIN_NAMES_THE_CLUB.md), the theme README, and [infrastructure.md](.claude/modules/infrastructure.md).
+
+---

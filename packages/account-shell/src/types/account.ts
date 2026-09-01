@@ -126,6 +126,8 @@ export interface AccountEntry {
   id: string;
   eventId: string;
   eventName: string;
+  /** Who the entry is for — not always whose account it sits under. */
+  entrantName: string;
   activityId: string;
   activityName: string;
   startDate: string | null;
@@ -379,6 +381,8 @@ export interface DashboardComingUp {
   id: string;
   title: string;
   detail: string | null;
+  /** Who the entry is for. Null on a booking, which is nobody else's. */
+  entrantName: string | null;
   /** `YYYY-MM-DD`. */
   on: string;
   startTime: string | null;

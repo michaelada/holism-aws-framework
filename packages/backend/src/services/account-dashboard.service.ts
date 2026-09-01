@@ -62,6 +62,15 @@ export interface DashboardComingUp {
   id: string;
   title: string;
   detail: string | null;
+  /**
+   * Who the entry is for. Null on a booking, which is made by the account
+   * holder rather than on somebody's behalf.
+   *
+   * A parent with four children entered in the same class saw four identical
+   * rows here — same event, same class, and nothing to say which child each
+   * one was.
+   */
+  entrantName: string | null;
   /** `YYYY-MM-DD` — what the card sorts and prints. */
   on: string;
   startTime: string | null;
@@ -380,6 +389,7 @@ export class AccountDashboardService {
         id: entry.id,
         title: entry.eventName,
         detail: entry.activityName,
+        entrantName: entry.entrantName || null,
         on: toDateKey(entry.startDate as string),
         startTime: null,
         status: entry.status,
@@ -395,6 +405,7 @@ export class AccountDashboardService {
         id: booking.id,
         title: booking.calendarName,
         detail: `${booking.startTime}–${booking.endTime}`,
+        entrantName: null,
         on: toDateKey(booking.bookingDate),
         startTime: booking.startTime,
         status: booking.status,

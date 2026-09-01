@@ -16,8 +16,15 @@ decide which a name was:
 
 | | What it is | Where it comes from |
 |---|---|---|
-| **Your memberships** | Who this account *may* enter — mostly a parent's children, stable from one event to the next | `activeMembershipsFor` / `activeMembershipsAcrossType`, the same source the catalogue uses |
+| *(no heading)* | The memberships — who this account *may* enter, mostly a parent's children | `activeMembershipsFor` / `activeMembershipsAcrossType`, the same source the catalogue uses |
 | **Used before** | Who it *has* entered, most recent first, five of them | `event_entries` for this account in this club |
+
+**Only the second row is headed.** The memberships had a "Your memberships" heading and it was
+removed: the hint above already says what to do with every name below it, these are simply the names
+on the account, and each chip carries its membership type — a heading there was a label on the
+obvious, and a second one between two short rows made them read as two separate mechanisms. "Used
+before" keeps its heading because it says something the names cannot: that they were typed on a
+previous entry rather than held as a membership.
 
 **The screen says they can be clicked** — "Select a name to fill it in.", once, above both rows. A
 row of chips under a form field reads as labels until something says otherwise — a membership type,
