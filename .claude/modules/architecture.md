@@ -105,7 +105,8 @@ Capabilities currently seeded:
 additional-feature          calendar-bookings       calendar-discounts
 discounts                   document-management     document-uploads
 email-notifications         entry-discounts         entry-restrictions
-event-document-management   event-management        event-ticketing
+equestrian-disciplines      event-document-management
+event-management            event-scheduling        event-ticketing
 event-types                 membership-discounts    membership-document-management
 memberships                 merchandise             merchandise-discounts
 multi-area-discounts        org-announcements       organisation-level-members

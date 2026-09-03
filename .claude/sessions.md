@@ -26050,3 +26050,40 @@ That shape forced a second decision worth knowing about: uniqueness is **two par
 Next is **S0-2** — the two capability rows, following the announcements migration exactly. Nothing committed.
 
 ---
+
+
+## 2026-09-03 13:28:50 — Prompt
+
+ok start SO-2
+
+### Assistant
+
+`capability_permissions` is an object rather than an array — let me confirm the operators do what I intend on it.
+
+Now the reverse — which for this migration is the part that can silently strand a grant.
+
+The reverse cleans all three places. Re-applying and adding the test.
+
+S0-2 done. Migration `1709000000047_scheduling-capabilities.js` plus 4 tests.
+
+**Two capabilities, kept separate on purpose**
+
+`event-scheduling` answers *may this club build a running order at all?* — it will gate the module, its routes and its menu, exactly as `event-ticketing` gates ticketing. `equestrian-disciplines` answers a different question: *which templates may this club see?*, read against `event_type_templates.capability` from S0-1.
+
+Collapsing them into one would mean every club that can schedule anything is offered every discipline the platform has ever defined — the opposite of what a capability is for. A tennis club gets scheduling without being shown Eventing, and a later discipline adds a capability beside this one and changes nothing else.
+
+Both are `additional-feature` and held by nobody. Nothing is gated yet, because the module doesn't exist — the rows exist so that granting becomes *possible*, and that ordering matters: `strip-unknown-capabilities` deletes any name from an organisation this table doesn't describe, silently and long after whoever granted it stopped looking.
+
+**The `down` migration cleans three places, not the one I planned**
+
+My own task said "removes both from `capabilities` and from every organisation's `enabled_capabilities`". That's incomplete. A capability name is also written into `organization_types.default_capabilities` **and** `organization_admin_roles.capability_permissions` — and a role still naming a deleted capability is precisely the fault recorded in the announcements summary as *"the club has the capability and the menu item is missing"*.
+
+So I granted both capabilities in all three places, ran the reverse, and confirmed **zero stranded** in each. Then re-applied.
+
+One thing I checked rather than assumed: `capability_permissions` is a jsonb **object** (`{"venues": "admin", …}`), not an array like the other two. The `?` and `-` operators behave identically on objects and arrays, which is why one form of SQL serves all three columns — but that's worth knowing before writing it, not after.
+
+**Verified:** backend **3,676 tests** green, typecheck clean, applied to dev and test databases. Architecture summary's capability list updated; task doc records the three-place cleanup.
+
+S0-3 next — settings resolution, which the breakdown calls the one piece of logic in S0 and the one most likely to get reimplemented by accident later. Nothing committed.
+
+---

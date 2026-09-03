@@ -89,15 +89,31 @@ event_types
   migrations, and there are **no `event_types` at all**. A fixture read from seed data passes on a
   developer's machine and fails in CI; build what you need inside the transaction.
 
-### S0-2 · Migration: the capabilities
+### S0-2 · Migration: the capabilities ✅ **done**
 
-`1709000000047_scheduling-capabilities.js`, following `1709000000040_org-announcements.js` exactly.
+`1709000000047_scheduling-capabilities.js`, with
+`src/__tests__/migrations/scheduling-capabilities-migration.test.ts` (4 tests).
 
-- `event-scheduling` — gates the module.
-- `equestrian-disciplines` — gates the equestrian templates.
-- Rows in `capabilities` **first**: `1709000000027_strip-unknown-capabilities` deletes any name from
-  an organisation that is not in that table, so a capability that skips this row is silently removed.
-- `down` removes both from `capabilities` and from every organisation's `enabled_capabilities`.
+- ✅ `event-scheduling` — *may this club build a running order at all?* Gates the module, its routes
+  and its menu.
+- ✅ `equestrian-disciplines` — *which templates may this club see?* Read against
+  `event_type_templates.capability`. Kept separate deliberately: one capability would mean every club
+  that can schedule is offered every discipline the platform has ever defined.
+- ✅ Both `additional-feature` and inactive for everyone until granted. Nothing is gated yet, because
+  the module does not exist — the rows exist so that granting is *possible*.
+- ✅ Rows in `capabilities` first, so `1709000000027_strip-unknown-capabilities` cannot silently
+  delete a grant.
+
+**`down` cleans three places, not one.** The plan said `capabilities` and every organisation's
+`enabled_capabilities`. A capability name is also written into `organization_types.default_capabilities`
+**and** `organization_admin_roles.capability_permissions` — and a role still naming a deleted
+capability is the exact fault behind *"the club has the capability and the menu item is missing"*
+recorded in the announcements module summary. All three are cleaned, and the reverse was **run
+against real grants in all three** to prove nothing is stranded.
+
+Note `capability_permissions` is a jsonb **object** (`{"venues": "admin", …}`), not an array. The
+`?` and `-` operators behave identically on both, which is why the same SQL serves all three
+columns — checked rather than assumed.
 
 ### S0-3 · Settings resolution
 
