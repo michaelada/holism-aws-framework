@@ -14,11 +14,11 @@ import LodgementDetailPage from '../LodgementDetailPage';
 import * as useApiModule from '../../../hooks/useApi';
 import { renderWithProviders } from '../../../test/renderWithProviders';
 
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 vi.mock('../../../hooks/useApi');
 

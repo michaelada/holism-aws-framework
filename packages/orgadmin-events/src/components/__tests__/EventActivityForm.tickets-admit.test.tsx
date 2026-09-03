@@ -26,18 +26,18 @@ vi.mock('react-quill', () => ({
 }));
 vi.mock('react-quill/dist/quill.snow.css', () => ({}));
 
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   DiscountSelector: () => <div data-testid="discount-selector" />,
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: stableExecute }),
   useOrganisation: () => ({ organisation: stableOrganisation }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en-GB' } }),
   useLocale: () => ({ locale: 'en-GB' }),
   formatCurrency: (value: number, currency: string) => `${currency} ${value.toFixed(2)}`,

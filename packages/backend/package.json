@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/backend",
+  "name": "@itsplainsailing/backend",
   "version": "1.0.0",
   "description": "Backend service for AWS Web Application Framework",
   "main": "dist/index.js",

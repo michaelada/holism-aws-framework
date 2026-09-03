@@ -6,11 +6,11 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@aws-web-framework/components': path.resolve(__dirname, '../components/src'),
+      '@itsplainsailing/components': path.resolve(__dirname, '../components/src'),
     },
   },
   optimizeDeps: {
-    exclude: ['@aws-web-framework/components'],
+    exclude: ['@itsplainsailing/components'],
   },
   server: {
     port: 5174,

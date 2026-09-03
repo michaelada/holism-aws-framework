@@ -28,9 +28,9 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
 import { Save as SaveIcon, Cancel as CancelIcon, Publish as PublishIcon } from '@mui/icons-material';
-import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { DiscountSelector } from '@aws-web-framework/components';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation, useCapabilities } from '@itsplainsailing/orgadmin-shell';
+import { DiscountSelector } from '@itsplainsailing/components';
+import { useOrganisation, useApi } from '@itsplainsailing/orgadmin-core';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 

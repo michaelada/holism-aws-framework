@@ -1,4 +1,4 @@
-// Mock module for @aws-web-framework/orgadmin-calendar
+// Mock module for @itsplainsailing/orgadmin-calendar
 // Used in tests when the actual package is not built
 
 export const calendarModule = {

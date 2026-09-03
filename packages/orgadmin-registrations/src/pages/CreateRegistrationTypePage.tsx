@@ -8,8 +8,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import RegistrationTypeForm from '../components/RegistrationTypeForm';
 import type { RegistrationTypeFormData } from '../types/registration.types';
 

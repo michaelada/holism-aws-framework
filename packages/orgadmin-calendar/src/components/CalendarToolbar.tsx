@@ -22,7 +22,7 @@ import {
   ChevronRight,
   CalendarToday,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { Calendar } from '../types/calendar.types';
 
 interface CalendarToolbarProps {

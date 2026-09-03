@@ -55,10 +55,10 @@ import {
   DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useApi, SortableTableCell, useTableSort } from '@aws-web-framework/orgadmin-core';
-import { useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
+import { useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
+import { useApi, SortableTableCell, useTableSort } from '@itsplainsailing/orgadmin-core';
+import { useOrganisation } from '@itsplainsailing/orgadmin-core';
 import type { Member, MemberFilter, CreateMemberFilterDto } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';

@@ -28,9 +28,9 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { enGB } from 'date-fns/locale';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { AnnouncementCard } from '@aws-web-framework/components';
-import { useApi } from '@aws-web-framework/orgadmin-core';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { AnnouncementCard } from '@itsplainsailing/components';
+import { useApi } from '@itsplainsailing/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import { Announcement, IMAGE_PLACEMENTS, ImagePlacement } from '../types/announcement.types';
 
 /**

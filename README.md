@@ -1,18 +1,38 @@
-# Application Framework
+# Its Plain Sailing
 
-A comprehensive base framework for deploying web applications to AWS with a Metadata Repository System that enables generic CRUD operations and UI components based on object definitions.
+The platform clubs and membership organisations run on. One organisation record carries events and
+entries, memberships, a merchandise shop, facility bookings, registrations, ticketing and the
+payments through all of them — with an administrator console for the club and a branded app for the
+member.
+
+- **What it is and who it is for** — [PRODUCT.md](PRODUCT.md)
+- **How it looks** — [DESIGN.md](DESIGN.md)
+- **How it is built**, package by package — [.claude/modules/](.claude/modules/)
+- **Feature records and wireframes** — [docs/](docs/)
+
+> This repository began as an "AWS Web Application Framework" and became the new development of Its
+> Plain Sailing. One scaffold name remains: the working directory is still `Holism`, which is an
+> operating-system path rather than a product name.
 
 ## Project Structure
 
 ```
-aws-web-app-framework/
+itsplainsailing/
 ├── packages/
-│   ├── backend/          # Node.js/TypeScript backend service
-│   ├── frontend/         # React/TypeScript frontend application
-│   └── components/       # React component library
-├── infrastructure/       # Docker, Nginx, Prometheus, Grafana configs
-├── terraform/           # Infrastructure as Code (to be implemented)
-└── .github/             # CI/CD workflows (to be implemented)
+│   ├── backend/          # Express + TypeScript API — the only server
+│   ├── components/       # Shared React component library
+│   ├── frontend/         # Metadata-repository UI
+│   ├── admin/            # Super-admin console
+│   ├── orgadmin-shell/   # Org-admin host application
+│   ├── orgadmin-core/    # Always-on org-admin features
+│   ├── orgadmin-*/       # Capability modules: events, memberships, merchandise,
+│   │                     #   calendar, registrations, ticketing, announcements
+│   └── account-shell/    # The member's app — a PWA
+├── docs/                 # Feature documentation and wireframes
+├── marketing/            # Promotion, launch plans and collateral
+├── infrastructure/       # Docker, Nginx, Keycloak, Prometheus, Grafana configs
+├── terraform/            # Infrastructure as Code (staging, production)
+└── .github/              # CI/CD workflows
 ```
 
 ## Prerequisites
@@ -67,10 +87,10 @@ npm run dev:backend
 ### Frontend Development
 
 ```bash
-npm run dev:frontend
+npm run dev:frontend    # metadata UI  → http://localhost:5173
 npm run dev:admin       # super admin  → http://localhost:5174
 npm run dev:orgadmin    # org admin    → http://localhost:5175
-npm run dev:account       # super admin  → http://localhost:5176
+npm run dev:account     # account user → http://localhost:5176
 ```
 
 ### Running Tests

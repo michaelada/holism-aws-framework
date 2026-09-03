@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import { useTranslation, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatCurrency, useLocale } from '@itsplainsailing/orgadmin-shell';
 import type { CalendarSlotView, Booking } from '../types/calendar.types';
 
 interface BookingDetailsPanelProps {

@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import DiscountsListPage from '../DiscountsListPage';
-import * as useApiModule from '@aws-web-framework/orgadmin-core';
+import * as useApiModule from '@itsplainsailing/orgadmin-core';
 import type { Discount } from '../../types/discount.types';
 
 // Mock useNavigate

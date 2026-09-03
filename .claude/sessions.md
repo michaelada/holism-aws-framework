@@ -25426,3 +25426,99 @@ No stale `sales/` paths anywhere — the four substantive background files never
 One thing worth flagging while it's fresh: the background is written almost entirely for **collateral**, not for **planning**. It'll serve you well for a feature sheet or a comparison table; for a launch strategy it's thinner, because the things a plan turns on — pricing, timing, the sunset question, which organisation types you're selling into, what support looks like — are all in `facts.md` §4 under "what nobody has written down". Those are decisions rather than research, so I can't close them from the repo. When you come to the launch plan, that section is the list of things I'll need from you first.
 
 ---
+
+
+## 2026-09-03 07:57:21 — Prompt
+
+The overall project is called Holism, however this is incorrect and the new application should be called "Its Plain Sailing", or "ItsPlainSailing" without spaces. Is it possible to update this in the prject configration, however I don't want to break anything with this change so pleasde be careful.
+
+### Assistant
+
+Let me find exactly where the name lives before changing anything.
+
+Here's what I found, sorted by what's safe to touch and what isn't.
+
+Now proving nothing broke.
+
+The clarification helps — that reframes the scaffold names as genuinely obsolete rather than something to preserve. Let me adjust the wording I just wrote, then finish verifying.
+
+Done, and nothing broke. Six files, 54 lines.
+
+**What I changed**
+
+- **`package.json`** — `"name": "aws-web-app-framework"` → `"itsplainsailing"`, with a description that says what the product is. It's `private: true` and never published, and nothing imports the root package name, so this is inert.
+- **`package-lock.json`** — regenerated with `--package-lock-only`. I checked the diff: **exactly two lines, both the name field.** No dependency churn.
+- **`README.md`** — the stale "Application Framework" heading is gone; the project tree now shows the fourteen packages that actually exist rather than the three from the scaffold. I also fixed a copy-paste error while I was in there: `dev:account` was labelled "super admin".
+- **`CLAUDE.md`**, **`PRODUCT.md`**, **`.claude/marketing/messaging.md`** — updated to say the repository began as an application framework and became this, rather than treating the framework framing as a second identity it still has.
+
+**Verified:** backend 188 suites / 3,639 tests, orgadmin-core 962, account-shell 766, orgadmin-shell 754, components 537 — all green. `npm ls --workspaces` resolves all fourteen. Backend typecheck clean.
+
+**What I deliberately did not touch**
+
+Three things carry the old names and would have broken something:
+
+- **`/opt/holism`, `/var/log/holism-bootstrap.log`, `/etc/nginx/conf.d/holism.conf`, and the SSM parameter `/holism/testing/github-token`** in `terraform/environments/testing/`. These are paths on a *running* instance and a parameter that already exists in AWS. Renaming them means the next deploy writes to new paths while the old ones linger, and the SSM lookup fails outright until someone recreates the parameter by hand.
+- **`container_name: aws-framework-*`** in docker-compose, and the databases `aws_framework` / `aws_framework_test`. Renaming orphans your existing containers and volumes.
+- **`docs/conversation/*` and `.claude/sessions.md`** — historical transcripts. Never rewrite those.
+
+**The one piece left, and my recommendation**
+
+The npm scope **`@aws-web-framework/`** is imported by **362 files**. It's the last place the framework name is load-bearing, and given that the project *is* ItsPlainSailing now, it should go — but it's a big mechanical diff landing on a working tree that already has ~290 modified files, and you asked me to be careful.
+
+It is safe to do: the string is unambiguous, so it's a find-and-replace across imports, the fourteen `package.json` names, the Vite aliases in `packages/vite.config.shared.ts`, the tsconfig paths, and the `vi.mock()` calls in tests — then typecheck every package and run all six suites, which is the same verification I just ran.
+
+My recommendation is **not now**. Not because it's risky in itself, but because it would be indistinguishable from the gate-scanning, sorting and signed-token work sitting uncommitted beside it. Commit what's there first, then the rename is a clean, reviewable diff on its own — and if it does go wrong, you can see exactly what it touched. Say the word whenever you'd like it done.
+
+---
+
+
+## 2026-09-03 08:07:25 — Prompt
+
+no its ok please do it now.
+
+### Assistant
+
+The `./` prefix assumption in my filter was wrong — history files slipped into the list. Rebuilding it.
+
+Two survivors, both where the scope isn't followed by a plain `/` — including a live test assertion.
+
+Now relink `node_modules` so the workspace symlinks move to the new scope.
+
+Now the verification sweep — typecheck every package, then every suite.
+
+Both are pre-existing (those packages have never had `dist/index.d.ts`; Vite aliases them to source at runtime). Now the full suite sweep.
+
+The identical probe passed before the rename — but `npm install` also ran in between. Let me isolate which.
+
+Decisive: the **old** scope name fails identically. The rename is exonerated — that's the pre-existing flaky suite I identified earlier. Finishing the sweep.
+
+All that's left is history. Now correcting the notes I wrote earlier that said the scope was still unchanged.
+
+The bulk rename rewrote those notes too, leaving them self-contradictory. Fixing with the actual current text.
+
+Final verification of the packages whose docs and configs I touched last.
+
+Done. Every workspace is now `@itsplainsailing/`.
+
+**The change**
+
+- **878 occurrences across 414 files** rewritten — every import, all 14 `package.json` names, the Vite aliases in `packages/vite.config.shared.ts` and in five per-package configs, the `optimizeDeps.exclude` lists, and every `vi.mock()` string in the test suites.
+- Two occurrences the bulk pass missed, because the scope wasn't followed by a plain `/`. One was a **live test assertion** in `EditFieldPage.test.tsx` that reads a source file and matches `/from.*@aws-web-framework\/orgadmin-shell/` — it would have gone red. Both fixed by hand.
+- `npm install` relinked `node_modules`; I removed the empty `@aws-web-framework` directory it left behind, and re-emitted `orgadmin-core`'s declarations so consumers typecheck against the new names.
+- The three stray per-package lockfiles were updated too — they're unused under workspaces, but a lockfile whose name contradicts its `package.json` would break anyone running `npm ci` inside that directory.
+
+**Verified**
+
+Backend **3,639** · orgadmin-core **962** · account-shell **766** · orgadmin-shell **754** · admin **548** · components **537** · memberships **534** · events **423** · registrations **259** · calendar **229** · frontend **189** · ticketing **151** · merchandise **143** · announcements **50**. Typechecks clean across all seven typechecked packages. I also ran a production build of all four front ends, because a broken alias shows up there and not in tests — all four built.
+
+**One failing suite, and it isn't this change.** `AuditLogPage.test.tsx` fails to load — the same intermittent `vi.importActual` resolution failure I identified and proved pre-existing earlier today. I didn't want to hand you that on trust after a 414-file rename, so I tested it properly: I temporarily aliased the **old** scope name alongside the new one and ran the identical probe through it. It fails identically under `@aws-web-framework/components`. The rename is exonerated; the config change was reverted.
+
+**What I left alone**
+
+The old scope survives in **43 places, all history**: `.claude/sessions.md` and `.kiro/specs/`, which CLAUDE.md §1.9 treats as background rather than current requirements. Rewriting history would make those records lie about what was actually written at the time. `docs/conversation/` likewise.
+
+I also had to fix something the bulk pass created: the notes I'd written an hour earlier saying "the packages are still scoped `@aws-web-framework/`" got substituted along with everything else, leaving CLAUDE.md, PRODUCT.md and README.md each asserting the scope "hasn't been renamed yet — `@itsplainsailing/`". All four corrected.
+
+**The last scaffold name** is the working directory, `Holism`. That one genuinely isn't project configuration — it's an OS path held absolutely by `.claude/settings.json`, your Claude project memory directory, and any IDE workspace file. Renaming it is a `mv` plus repointing those, and it's your call whether it's worth the disruption. Nothing is committed.
+
+---

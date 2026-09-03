@@ -35,7 +35,7 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation, useLocale, useOnboarding, usePageHelp, formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, useOnboarding, usePageHelp, formatDate } from '@itsplainsailing/orgadmin-shell';
 
 /**
  * A payment, named the way the API names one.

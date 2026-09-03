@@ -48,8 +48,8 @@ vi.mock('@mui/x-date-pickers/AdapterDateFns', () => ({
   AdapterDateFns: class {},
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (k: string, params?: any) => (params ? `${k} ${JSON.stringify(params)}` : k),
     i18n: { language: 'en' },
@@ -59,7 +59,7 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   usePageHelp: () => ({ setPageHelp: vi.fn() }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({

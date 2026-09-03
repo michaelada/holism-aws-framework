@@ -17,7 +17,7 @@ import MembersDatabasePage from '../MembersDatabasePage';
  * this file overrides it per test rather than changing it for everyone.
  */
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
   const { shellMock } = await import('../../test/shell-mock');
   return shellMock();
 });
@@ -41,7 +41,7 @@ const { MEMBERS } = vi.hoisted(() => ({ MEMBERS: [
   },
 ] }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   const { coreMock } = await import('../../test/core-mock');
   return { ...actual, ...coreMock({ responses: { '/members': MEMBERS } }) };

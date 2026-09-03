@@ -33,7 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport, ReportType } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell/hooks/useTranslation';
 
 /**
  * Reporting dashboard metrics data structure

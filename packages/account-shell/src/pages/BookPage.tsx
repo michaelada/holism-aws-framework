@@ -13,7 +13,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { CalendarIcon } from '@aws-web-framework/components';
+import { CalendarIcon } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { CatalogueCalendar } from '../types/account';

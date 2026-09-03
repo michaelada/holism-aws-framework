@@ -22,9 +22,9 @@ import {
   ArrowBack as BackIcon,
   People as EntriesIcon,
 } from '@mui/icons-material';
-import { useTranslation, useLocale, formatCurrency } from '@aws-web-framework/orgadmin-shell';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useTranslation, useLocale, formatCurrency } from '@itsplainsailing/orgadmin-shell';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
+import { useApi, useOrganisation } from '@itsplainsailing/orgadmin-core';
 import CollapsibleSection from '../components/CollapsibleSection';
 import type { Event, EventActivity } from '../types/event.types';
 import type { Discount } from '../types/discount.types';

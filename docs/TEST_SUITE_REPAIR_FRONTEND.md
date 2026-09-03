@@ -30,7 +30,7 @@ passes 3212 tests unchanged.
 ## The single biggest cause: partial mocks of the shell
 
 Roughly 490 of the failures came from one shape of mistake. Each suite wrote its
-own `vi.mock('@aws-web-framework/orgadmin-shell', () => ({ ... }))` listing only
+own `vi.mock('@itsplainsailing/orgadmin-shell', () => ({ ... }))` listing only
 the hooks its page happened to call when the test was written. When
 `usePageHelp`, `useOnboarding`, `useLocale` and `useCapabilities` were later
 added to pages, every one of those mocks became incomplete at once and Vitest
@@ -44,8 +44,8 @@ provides `createShellMock()`, a stand-in covering the shell's whole export
 surface. A suite starts from it and overrides only what it cares about:
 
 ```ts
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useCapabilities: () => ({ hasCapability: () => false, capabilities: [] }),
 }));
 ```

@@ -5,7 +5,7 @@
  * File and image upload field types require the 'document-management' capability.
  */
 
-import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { useCapabilities } from '@itsplainsailing/orgadmin-shell';
 
 /**
  * Returns an array of field types available to the current organization.

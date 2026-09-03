@@ -10,7 +10,7 @@ import { DEFAULT_LOCALE, localeForLanguage, SupportedLocale } from '../i18n/conf
  * The date/time picker localisation context, for any screen that renders a
  * `FieldRenderer`.
  *
- * `DateRenderer` in `@aws-web-framework/components` deliberately does not carry
+ * `DateRenderer` in `@itsplainsailing/components` deliberately does not carry
  * its own `LocalizationProvider` — in this monorepo Vite can load a second copy
  * of `@mui/x-date-pickers` through the source alias, and a provider inside the
  * library would then belong to a different module instance than the pickers the

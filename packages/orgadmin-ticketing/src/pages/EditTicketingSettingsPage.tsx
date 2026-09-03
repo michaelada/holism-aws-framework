@@ -40,8 +40,8 @@ import {
   HelpOutline as HelpIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import {
   renderTicketHTML,
   generateQRCodeDataURL,
@@ -49,7 +49,7 @@ import {
   TICKET_LAYOUTS,
   type TicketImagePlacement,
   type TicketLayout,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import type { EventTicketingConfig } from '../types/ticketing.types';
 
 /** Fields sent to PUT /events/:eventId/ticketing-config */

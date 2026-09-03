@@ -10,13 +10,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import CreateMemberPage from '../CreateMemberPage';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 // Mock dependencies
 const mockExecute = vi.fn();
 const mockNavigate = vi.fn();
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: { id: 'org-1' } }),
@@ -37,7 +37,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Mock FieldRenderer to verify it receives correct metadata
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   FieldRenderer: vi.fn(({ fieldDefinition, value, onChange, required }) => (
     <div data-testid={`field-${fieldDefinition.shortName}`}>
       <label data-testid={`label-${fieldDefinition.shortName}`}>

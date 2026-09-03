@@ -52,7 +52,7 @@ vi.mock('../../context', async (importOriginal) => ({
  * The table and the form are shared components with their own suites; these
  * stand-ins record what these pages hand them.
  */
-vi.mock('@aws-web-framework/components', async (importOriginal) => ({
+vi.mock('@itsplainsailing/components', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   MetadataTable: (props: Record<string, any>) => {
     tableProps.current = props;

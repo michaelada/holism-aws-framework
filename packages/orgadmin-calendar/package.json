@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/orgadmin-calendar",
+  "name": "@itsplainsailing/orgadmin-calendar",
   "version": "1.0.0",
   "description": "ItsPlainSailing Organisation Admin Calendar Module (Calendar Bookings Management)",
   "type": "module",

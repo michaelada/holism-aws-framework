@@ -16,14 +16,14 @@ import TicketingDashboardPage from '../TicketingDashboardPage';
 
 const { execute } = vi.hoisted(() => ({ execute: vi.fn() }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute, data: null, error: null, loading: false, reset: vi.fn() }),
   useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Meath' }, setOrganisation: vi.fn() }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
-  const { createShellMock } = await import('@aws-web-framework/orgadmin-core/test/shellMock');
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
+  const { createShellMock } = await import('@itsplainsailing/orgadmin-core/test/shellMock');
   return createShellMock();
 });
 

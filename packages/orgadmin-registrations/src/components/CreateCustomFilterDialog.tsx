@@ -31,7 +31,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { RegistrationFilter } from '../types/registration.types';
 
 interface CreateCustomFilterDialogProps {

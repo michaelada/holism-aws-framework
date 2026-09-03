@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/orgadmin-announcements",
+  "name": "@itsplainsailing/orgadmin-announcements",
   "version": "1.0.0",
   "description": "ItsPlainSailing Organisation Admin Announcements Module (notices shown to members)",
   "type": "module",
@@ -15,7 +15,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
-    "@aws-web-framework/components": "*",
+    "@itsplainsailing/components": "*",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.9",

@@ -62,7 +62,7 @@ payments* everywhere in the module.
 - **Seeing any of this in a sandbox** — a fresh test environment has no payouts and no way to make
   one by waiting: connected accounts start empty, test charges land in `pending`, and the seeded
   accounts pay out daily with a **seven-day** delay.
-  `npm run test:lodgements -w @aws-web-framework/backend -- --club=khpc` funds the platform balance
+  `npm run test:lodgements -w @itsplainsailing/backend -- --club=khpc` funds the platform balance
   with `pm_card_bypassPending`, makes destination charges to the club and pays them out. **A payout
   made by hand cannot be itemised** — Stripe only breaks down payouts it made on the schedule — so
   the detail screen answers `LODGEMENT_NOT_ITEMISED` (422) and says so; `--fund-only` leaves the

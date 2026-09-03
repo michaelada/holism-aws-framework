@@ -13,7 +13,7 @@ import { render, screen } from '@testing-library/react';
 
 // Mock the events module BEFORE any dynamic imports of wrapper components.
 // vi.mock is hoisted to the top of the file by vitest.
-vi.mock('@aws-web-framework/orgadmin-events', () => ({
+vi.mock('@itsplainsailing/orgadmin-events', () => ({
   DiscountsListPage: (props: any) => (
     <div data-testid="events-discounts-list-page" data-module-type={props.moduleType}>
       EventsDiscountsListPage

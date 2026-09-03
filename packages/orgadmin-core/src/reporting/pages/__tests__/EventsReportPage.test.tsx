@@ -13,18 +13,18 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options),
     i18n: { language: 'en-GB' },
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell/utils/currencyFormatting', () => ({
   formatCurrency: (value: number, currency: string) => formatCurrencyMock(value, currency),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell/utils/dateFormatting', () => ({
   formatDate: (date: Date) => date.toISOString().split('T')[0],
 }));
 

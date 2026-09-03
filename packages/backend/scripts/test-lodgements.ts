@@ -47,9 +47,9 @@ import { db } from '../src/database/pool';
  * ## Use
  *
  * ```bash
- * npm run test:lodgements -w @aws-web-framework/backend -- --club=khpc
- * npm run test:lodgements -w @aws-web-framework/backend -- --club=khpc --amount=250 --charges=3
- * npm run test:lodgements -w @aws-web-framework/backend -- --club=khpc --fund-only
+ * npm run test:lodgements -w @itsplainsailing/backend -- --club=khpc
+ * npm run test:lodgements -w @itsplainsailing/backend -- --club=khpc --amount=250 --charges=3
+ * npm run test:lodgements -w @itsplainsailing/backend -- --club=khpc --fund-only
  * ```
  *
  * Test keys only — it refuses to run against a live one.

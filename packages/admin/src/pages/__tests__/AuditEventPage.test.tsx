@@ -31,7 +31,7 @@ vi.mock('../../components/PageHeader', () => ({
     </div>
   ),
 }));
-vi.mock('@aws-web-framework/components', async () => ({
+vi.mock('@itsplainsailing/components', async () => ({
   ...(await vi.importActual<Record<string, unknown>>('../../../../components/src/utils/auditLabels')),
   ...(await vi.importActual<Record<string, unknown>>(
     '../../../../components/src/components/AuditChanges/AuditChanges'

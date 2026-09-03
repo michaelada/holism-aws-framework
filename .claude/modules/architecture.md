@@ -170,7 +170,7 @@ Replacing it wholesale silently destroys another feature's configuration.
 - The active locale comes from the organisation's `language`, falling back to its organisation
   type's `defaultLocale`, then `en-GB`. i18n is initialised before the app renders.
 - Components consume `useTranslation` / `useLocale` / `formatCurrency` / `formatDate` re-exported
-  from `@aws-web-framework/orgadmin-shell`.
+  from `@itsplainsailing/orgadmin-shell`.
 
 ## Cross-cutting feature patterns
 

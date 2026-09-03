@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { DiscountUsagePage as EventsDiscountUsagePage } from '@aws-web-framework/orgadmin-events';
+import { DiscountUsagePage as EventsDiscountUsagePage } from '@itsplainsailing/orgadmin-events';
 
 const DiscountUsagePage: React.FC = () => <EventsDiscountUsagePage moduleType="merchandise" />;
 

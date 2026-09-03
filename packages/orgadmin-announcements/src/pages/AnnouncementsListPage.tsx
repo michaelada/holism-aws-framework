@@ -26,8 +26,8 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
-import { useApi, SortableTableCell, useTableSort } from '@aws-web-framework/orgadmin-core';
-import { useTranslation, formatDateTime, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useApi, SortableTableCell, useTableSort } from '@itsplainsailing/orgadmin-core';
+import { useTranslation, formatDateTime, useLocale } from '@itsplainsailing/orgadmin-shell';
 import { Announcement, AnnouncementState, announcementState } from '../types/announcement.types';
 
 /** One array, so a page that has not loaded yet does not re-sort every render. */

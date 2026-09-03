@@ -7,7 +7,7 @@ import { shellMock } from '../shell-mock';
  * The shared shell mock must cover everything the shell exports.
  *
  * This test is the reason the mock is worth having. Seven suites once carried
- * their own partial mock of `@aws-web-framework/orgadmin-shell`; adding
+ * their own partial mock of `@itsplainsailing/orgadmin-shell`; adding
  * `usePageHelp` to two pages broke all seven at once, with 57 failing
  * assertions about a hook none of them cared about.
  *

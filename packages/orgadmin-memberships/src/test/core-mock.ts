@@ -11,7 +11,7 @@ import { vi } from 'vitest';
  * wrong within a week. Suites spread these over the real module instead:
  *
  * ```ts
- * vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+ * vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => {
  *   const actual = await importOriginal<Record<string, unknown>>();
  *   const { coreMock } = await import('../../test/core-mock');
  *   return { ...actual, ...coreMock() };

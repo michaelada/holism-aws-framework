@@ -42,8 +42,8 @@ import {
   NavigateBefore as BackIcon,
   HelpOutline as HelpIcon,
 } from '@mui/icons-material';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { usePageHelp, useOnboarding, formatCurrency, useLocale, useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi, useOrganisation } from '@itsplainsailing/orgadmin-core';
+import { usePageHelp, useOnboarding, formatCurrency, useLocale, useTranslation } from '@itsplainsailing/orgadmin-shell';
 import CollapsibleSection from '../components/CollapsibleSection';
 import StickySaveBar from '../components/StickySaveBar';
 import type { CreateDiscountDto, DiscountStatus, ApplicationScope } from '../../../backend/src/types/discount.types';

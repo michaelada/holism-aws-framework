@@ -25,8 +25,8 @@ import {
 import { Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import type { CalendarFormData } from '../types/calendar.types';
 import CalendarForm from '../components/CalendarForm';
-import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { usePageHelp } from '@itsplainsailing/orgadmin-shell';
+import { useOrganisation, useApi } from '@itsplainsailing/orgadmin-core';
 
 interface PaymentMethod {
   id: string;

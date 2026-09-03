@@ -107,9 +107,9 @@ vi.mock('../context/OnboardingContext', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-core', async () => {
+vi.mock('@itsplainsailing/orgadmin-core', async () => {
   const actual = await vi.importActual<Record<string, unknown>>(
-    '@aws-web-framework/orgadmin-core'
+    '@itsplainsailing/orgadmin-core'
   );
   return {
     ...actual,

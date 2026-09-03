@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/orgadmin-events",
+  "name": "@itsplainsailing/orgadmin-events",
   "version": "1.0.0",
   "description": "ItsPlainSailing Organisation Admin Events Module (Event Management)",
   "type": "module",

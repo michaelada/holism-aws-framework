@@ -34,8 +34,8 @@ import {
   Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { Member } from '../types/membership.types';
 
 const MemberDetailsPage: React.FC = () => {

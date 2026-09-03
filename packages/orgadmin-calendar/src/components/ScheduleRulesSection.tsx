@@ -23,7 +23,7 @@ import {
   AccordionDetails,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 
 interface ScheduleRule {
   startDate: Date;

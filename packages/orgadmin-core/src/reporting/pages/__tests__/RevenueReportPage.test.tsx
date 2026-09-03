@@ -19,7 +19,7 @@ vi.mock('react-router-dom', async () => {
 
 // The page resolves its copy through the shell's i18n; returning the key keeps
 // these assertions stable and independent of translation wording.
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
       options && 'count' in options ? `${key}:${options.count}` : key,
@@ -27,7 +27,7 @@ vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell/utils/currencyFormatting', () => ({
   formatCurrency: (value: number, currency: string) => `${currency} ${value.toFixed(2)}`,
 }));
 

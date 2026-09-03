@@ -5,7 +5,7 @@ User Interface) could reuse belongs here** rather than in one app.
 
 - **Consumed by:** `frontend`, `admin`, `orgadmin-*` (aliased to `src` in dev, so no rebuild).
 - **Tests:** Vitest — `npm run test:components` (~33 test files).
-- **Package name:** `@aws-web-framework/components`.
+- **Package name:** `@itsplainsailing/components`.
 
 ## Public surface (`src/index.ts`)
 

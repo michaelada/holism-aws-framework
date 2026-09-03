@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/components",
+  "name": "@itsplainsailing/components",
   "version": "1.0.0",
   "description": "React component library for AWS Web Application Framework",
   "main": "dist/index.js",

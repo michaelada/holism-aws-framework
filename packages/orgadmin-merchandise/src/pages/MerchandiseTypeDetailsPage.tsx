@@ -21,8 +21,8 @@ import {
   DialogActions,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { useTranslation, formatCurrency } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation, formatCurrency } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { MerchandiseType } from '../types/merchandise.types';
 
 const MerchandiseTypeDetailsPage: React.FC = () => {

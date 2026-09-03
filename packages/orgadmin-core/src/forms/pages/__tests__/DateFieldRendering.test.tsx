@@ -51,7 +51,7 @@ describe('Date Field Rendering Tests', () => {
 
       // Verify FieldRenderer is imported and used
       expect(fileContent).toContain('FieldRenderer');
-      expect(fileContent).toContain("from '@aws-web-framework/components'");
+      expect(fileContent).toContain("from '@itsplainsailing/components'");
       expect(fileContent).toContain('<FieldRenderer');
       expect(fileContent).toContain('fieldDefinition={');
     });

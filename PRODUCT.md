@@ -146,9 +146,19 @@ merchandise and orders, bookings, registrations, payments, profile and dashboard
   same asset everywhere — `packages/admin/public/logo.png`, `packages/admin/public/favicon.png`, and
   the four Keycloak login themes under `infrastructure/keycloak/themes/*/login/resources/img/`.
   Treat it as settled, not as a placeholder awaiting a designed replacement.
-- The repository names **Holism** (the working directory) and **"Application Framework"** (the root
-  README, a stale scaffold heading) are internal artefacts, not product names. They must not surface
-  in any user-facing string.
+- **The project is named for the product.** The root `package.json` is `itsplainsailing` and the
+  root README is headed *Its Plain Sailing*; the README's "Application Framework" heading was stale
+  scaffold and is gone.
+- **The repository began as an "AWS Web Application Framework" and is no longer one.** It became the
+  new development of Its Plain Sailing, and that is what it is; the framework framing is history,
+  not a second identity the product also has.
+- **Every workspace is scoped `@itsplainsailing/`.** The `@aws-web-framework/` scope the repository
+  was scaffolded with is gone from the source; it survives only in session logs and `.kiro/specs`,
+  which are history and are not rewritten.
+- One scaffold name remains: the **working directory** is still `Holism`. That is an operating-system
+  path several tools hold absolutely, so renaming it is an OS-level move rather than a
+  project-configuration change. It is not a product name and may never surface in a user-facing
+  string.
 - `.claude/sessions.md` records the mark as an unresolved placeholder. That note is **superseded**;
   see the confirmation above.
 - **The warm world is the one, and the neumorphic theme is gone.** An earlier teal-and-grey

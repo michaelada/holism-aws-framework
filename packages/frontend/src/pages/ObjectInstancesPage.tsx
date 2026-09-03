@@ -13,7 +13,7 @@ import {
   MetadataTable,
   ObjectDefinition,
   FieldDefinition,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { ApiError, NetworkError } from '../api';
 
 export default function ObjectInstancesPage() {

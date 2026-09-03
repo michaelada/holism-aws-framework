@@ -36,7 +36,7 @@ Added `setCurrentModule('events')` call to both discount pages to properly set t
 ### Files Modified
 
 1. **packages/orgadmin-events/src/pages/DiscountsListPage.tsx**
-   - Added import: `useOnboarding` from `@aws-web-framework/orgadmin-shell`
+   - Added import: `useOnboarding` from `@itsplainsailing/orgadmin-shell`
    - Added hook: `const { setCurrentModule } = useOnboarding();`
    - Added useEffect to set module:
      ```tsx
@@ -46,7 +46,7 @@ Added `setCurrentModule('events')` call to both discount pages to properly set t
      ```
 
 2. **packages/orgadmin-events/src/pages/CreateDiscountPage.tsx**
-   - Added import: `useOnboarding` from `@aws-web-framework/orgadmin-shell`
+   - Added import: `useOnboarding` from `@itsplainsailing/orgadmin-shell`
    - Added hook: `const { setCurrentModule } = useOnboarding();`
    - Added useEffect to set module:
      ```tsx
@@ -63,7 +63,7 @@ When implementing contextual help for any page, you need to:
 
 Example:
 ```tsx
-import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp, useOnboarding } from '@itsplainsailing/orgadmin-shell';
 
 const MyPage: React.FC = () => {
   usePageHelp('mypage');

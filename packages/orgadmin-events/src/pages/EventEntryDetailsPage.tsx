@@ -37,8 +37,8 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
-} from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-shell';
+import { useApi, useOrganisation } from '@itsplainsailing/orgadmin-core';
 import EditEntryAnswersDialog from '../components/EditEntryAnswersDialog';
 
 /** One entry, as `GET /events/:eventId/entries/:entryId` returns it. */

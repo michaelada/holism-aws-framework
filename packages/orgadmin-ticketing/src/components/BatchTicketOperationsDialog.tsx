@@ -21,8 +21,8 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { BatchTicketOperationResult } from '../types/ticketing.types';
 
 interface BatchTicketOperationsDialogProps {

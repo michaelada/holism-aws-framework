@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { PostCard } from '@aws-web-framework/components';
+import { PostCard } from '@itsplainsailing/components';
 import { useAuthContext } from '../context/AuthContext';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { usePlatformPosts } from '../hooks/usePlatformPosts';

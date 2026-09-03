@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import MembersDatabasePage from '../MembersDatabasePage';
-import * as useApiModule from '@aws-web-framework/orgadmin-core';
+import * as useApiModule from '@itsplainsailing/orgadmin-core';
 import { createTestI18n } from '../../test/i18n-test-utils';
 
 /**
@@ -23,13 +23,13 @@ vi.mock('react-router-dom', async () => ({
   useNavigate: vi.fn(),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async () => ({
-  ...(await vi.importActual('@aws-web-framework/orgadmin-core')),
+vi.mock('@itsplainsailing/orgadmin-core', async () => ({
+  ...(await vi.importActual('@itsplainsailing/orgadmin-core')),
   useApi: vi.fn(),
   useOrganisation: vi.fn(),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
   // Shared, so a new shell hook cannot break this suite — see test/shell-mock.ts
   const { shellMock } = await import('../../test/shell-mock');
   return shellMock();

@@ -16,12 +16,12 @@ import { I18nextProvider } from 'react-i18next';
 import * as fc from 'fast-check';
 import CreateMemberPage from '../CreateMemberPage';
 import MembersDatabasePage from '../MembersDatabasePage';
-import * as useApiModule from '@aws-web-framework/orgadmin-core';
+import * as useApiModule from '@itsplainsailing/orgadmin-core';
 import { createTestI18n } from '../../test/i18n-test-utils';
 
 // Mock the hooks
-vi.mock('@aws-web-framework/orgadmin-core', async () => {
-  const actual = await vi.importActual('@aws-web-framework/orgadmin-core');
+vi.mock('@itsplainsailing/orgadmin-core', async () => {
+  const actual = await vi.importActual('@itsplainsailing/orgadmin-core');
   return {
     ...actual,
     useApi: vi.fn(),
@@ -30,14 +30,14 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
 });
 
 // Mock onboarding context
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
   // Shared, so a new shell hook does not break this suite — see test/shell-mock.ts
   const { shellMock } = await import('../../test/shell-mock');
   return shellMock();
 });
 
 // Mock FieldRenderer component
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   FieldRenderer: ({ fieldDefinition, value, onChange }: any) => (
     <div data-testid={`field-${fieldDefinition.shortName}`}>
       <label>{fieldDefinition.displayName}</label>

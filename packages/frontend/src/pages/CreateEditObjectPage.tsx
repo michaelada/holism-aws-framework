@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMetadataApi } from '../context';
-import { FieldDefinition } from '@aws-web-framework/components';
+import { FieldDefinition } from '@itsplainsailing/components';
 import { ApiError, NetworkError } from '../api';
 
 interface TabPanelProps {

@@ -47,7 +47,7 @@ import { useApi } from '../../hooks/useApi';
  * package's standing type errors, and there is no reason to add another.
  * The locale comes from i18next, which is already in hand.
  */
-import { formatDisplayDate } from '@aws-web-framework/components';
+import { formatDisplayDate } from '@itsplainsailing/components';
 
 export interface PendingRegistration {
   id: string;

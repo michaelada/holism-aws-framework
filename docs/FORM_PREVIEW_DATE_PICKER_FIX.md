@@ -9,7 +9,7 @@ Uncaught Error: MUI: Can not find utils in context. It looks like you forgot to 
 This causes the form preview page to show a blank screen.
 
 ## Root Cause
-The `DateRenderer` component in the `@aws-web-framework/components` package already wraps date pickers in `LocalizationProvider`. However, there may be an issue with how the LocalizationProvider is being instantiated or a version mismatch.
+The `DateRenderer` component in the `@itsplainsailing/components` package already wraps date pickers in `LocalizationProvider`. However, there may be an issue with how the LocalizationProvider is being instantiated or a version mismatch.
 
 ## Current Implementation
 The `DateRenderer` component (packages/components/src/components/FieldRenderer/renderers/DateRenderer.tsx) already includes:
@@ -63,7 +63,7 @@ Then restart the dev server for orgadmin-core.
 Verify that the FormPreviewPage is correctly importing from the components package:
 
 ```typescript
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 ```
 
 ### Solution 3: Add LocalizationProvider at App Level (Alternative)

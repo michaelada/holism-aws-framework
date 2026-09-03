@@ -23,12 +23,12 @@ import {
   emptyValueForField,
   formatCurrency,
   validateApplicationField,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import type {
   EntrantOption,
   EntrantSuggestion,
   EntrantValue,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import FormLocalizationProvider from '../components/FormLocalizationProvider';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';

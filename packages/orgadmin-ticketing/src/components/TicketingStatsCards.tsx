@@ -19,8 +19,8 @@ import {
   RadioButtonUnchecked as NotScannedIcon,
   Schedule as TimeIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { formatTime, formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { formatTime, formatDate } from '@itsplainsailing/orgadmin-shell';
 import type { ElectronicTicket } from '../types/ticketing.types';
 
 interface TicketingStatsCardsProps {

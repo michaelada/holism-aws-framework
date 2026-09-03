@@ -7,7 +7,7 @@ import {
   ModuleId,
   DEFAULT_PREFERENCES 
 } from './OnboardingContext';
-import { AuthTokenContext } from '@aws-web-framework/orgadmin-core';
+import { AuthTokenContext } from '@itsplainsailing/orgadmin-core';
 import { WelcomeDialog } from '../components/WelcomeDialog';
 import { HelpDrawer } from '../components/HelpDrawer';
 import { ModuleIntroductionDialog } from '../components/ModuleIntroductionDialog';

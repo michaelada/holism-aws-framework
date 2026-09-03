@@ -24,13 +24,13 @@ import type { ElectronicTicket } from '../types/ticketing.types';
  * initialised in a unit test, so every label rendered as a key path — and the
  * real `useApi`, which fired an XHR at a server that is not running.
  */
-vi.mock('@aws-web-framework/orgadmin-shell', async () =>
-  (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
+vi.mock('@itsplainsailing/orgadmin-shell', async () =>
+  (await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock()
 );
 
 const { batchExecute } = vi.hoisted(() => ({ batchExecute: vi.fn().mockResolvedValue([]) }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: batchExecute,

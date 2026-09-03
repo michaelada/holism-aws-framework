@@ -22,8 +22,8 @@ import {
   Star as StarIcon,
   StarBorder as StarBorderIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 
 interface ImageGalleryUploadProps {
   /** S3 keys (or legacy base64/http URLs) */

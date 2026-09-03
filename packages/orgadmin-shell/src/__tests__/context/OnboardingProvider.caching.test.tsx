@@ -20,7 +20,7 @@ vi.mock('axios');
 const mockedAxios = axios as any;
 
 // Mock AuthTokenContext
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   AuthTokenContext: React.createContext(() => 'mock-token-123'),
 }));

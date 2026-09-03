@@ -48,9 +48,9 @@ vi.mock('react-router-dom', async () => {
  * screen work with no signal. Stubbed so the test asserts that the payload
  * reaches the renderer, without depending on canvas in jsdom.
  */
-vi.mock('@aws-web-framework/components', async () => {
-  const actual = await vi.importActual<typeof import('@aws-web-framework/components')>(
-    '@aws-web-framework/components'
+vi.mock('@itsplainsailing/components', async () => {
+  const actual = await vi.importActual<typeof import('@itsplainsailing/components')>(
+    '@itsplainsailing/components'
   );
   return {
     ...actual,

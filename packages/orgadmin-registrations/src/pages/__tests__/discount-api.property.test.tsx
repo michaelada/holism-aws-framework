@@ -51,14 +51,14 @@ vi.mock('react-quill', () => ({
   default: () => <div data-testid="react-quill" />,
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
   useCapabilities: () => ({ hasCapability: mockHasCapability }),
   usePageHelp: () => ({ setPageHelp: vi.fn() }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Test Org' } }),
@@ -69,7 +69,7 @@ let capturedFetchDiscounts: any = null;
 let capturedModuleType: string | null = null;
 let capturedSelectedIds: string[] = [];
 
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   DiscountSelector: (props: any) => {
     capturedFetchDiscounts = props.fetchDiscounts;
     capturedModuleType = props.moduleType;
@@ -87,7 +87,7 @@ vi.mock('@aws-web-framework/components', () => ({
 // Track moduleType passed to events module discount pages
 let capturedEventsModuleType: string | null = null;
 
-vi.mock('@aws-web-framework/orgadmin-events', () => ({
+vi.mock('@itsplainsailing/orgadmin-events', () => ({
   DiscountsListPage: (props: any) => {
     capturedEventsModuleType = props.moduleType;
     return <div data-testid="events-discounts-list" data-module-type={props.moduleType} />;

@@ -1,7 +1,7 @@
 {
-  "name": "aws-web-app-framework",
+  "name": "itsplainsailing",
   "version": "1.0.0",
-  "description": "AWS Web Application Framework with Metadata Repository System",
+  "description": "Its Plain Sailing — the platform clubs and membership organisations run on: events and entries, memberships, merchandise, facility bookings, registrations, ticketing and the payments through all of them.",
   "private": true,
   "workspaces": [
     "packages/backend",

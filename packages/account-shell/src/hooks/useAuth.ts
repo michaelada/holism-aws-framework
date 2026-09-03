@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
-import { reportSignOut } from '@aws-web-framework/components';
+import { reportSignOut } from '@itsplainsailing/components';
 import { forgetResponses } from '../offline/responseCache';
 
 export interface AccountUser {

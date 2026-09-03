@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/orgadmin-ticketing",
+  "name": "@itsplainsailing/orgadmin-ticketing",
   "version": "1.0.0",
   "description": "ItsPlainSailing Organisation Admin Ticketing Module (Event Ticketing with QR Codes)",
   "type": "module",
@@ -15,7 +15,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
-    "@aws-web-framework/components": "*",
+    "@itsplainsailing/components": "*",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.9",

@@ -21,8 +21,8 @@ import {
   Close as CloseIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
-import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale } from '@itsplainsailing/orgadmin-shell';
+import { formatDateTime } from '@itsplainsailing/orgadmin-shell';
 import type { EventEntry } from '../types/event.types';
 
 interface EventEntryDetailsDialogProps {

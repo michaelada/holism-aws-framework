@@ -32,9 +32,9 @@ import {
 } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { useTranslation, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
-import { DiscountSelector, type Discount } from '@aws-web-framework/components';
+import { useApi, useOrganisation } from '@itsplainsailing/orgadmin-core';
+import { useTranslation, formatCurrency, useLocale } from '@itsplainsailing/orgadmin-shell';
+import { DiscountSelector, type Discount } from '@itsplainsailing/components';
 import type { EventActivityFormData } from '../types/event.types';
 
 interface EventActivityFormProps {

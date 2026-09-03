@@ -18,7 +18,7 @@ import {
   formatDateRange,
   formatDisplayDateTime,
   formatFormAnswer,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountEntryDetail } from '../types/account';

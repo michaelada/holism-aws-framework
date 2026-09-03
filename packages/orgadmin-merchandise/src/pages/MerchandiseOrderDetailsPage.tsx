@@ -19,8 +19,8 @@ import {
   Typography,
 } from '@mui/material';
 import { Edit as EditIcon, Print as PrintIcon } from '@mui/icons-material';
-import { useTranslation, formatCurrency, formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation, formatCurrency, formatDate } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import OrderStatusUpdateDialog from '../components/OrderStatusUpdateDialog';
 import type { MerchandiseOrder, OrderStatus } from '../types/merchandise.types';
 

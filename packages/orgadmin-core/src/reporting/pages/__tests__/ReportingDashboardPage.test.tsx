@@ -6,14 +6,14 @@ import * as useApiModule from '../../../hooks/useApi';
 import { TEST_ORGANISATION } from '../../../test/renderWithProviders';
 import { OrganisationProvider } from '../../../context/OrganisationContext';
 
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/utils/currencyFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/utils/dateFormatting', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/context/LocaleContext', () => import('../../../test/orgadminShellMock'));
 
 // Shell hooks (translations, onboarding, page help, capabilities, locale)
 // are mocked rather than provided — see test/orgadminShellMock.
-vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 // Mock the useApi hook
 vi.mock('../../../hooks/useApi');

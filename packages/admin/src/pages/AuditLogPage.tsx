@@ -22,7 +22,7 @@ import { getAuditEvents, getAuditFilters, getAuditHealth } from '../services/aud
 import type { AuditEvent, AuditFilterOptions, AuditHealth } from '../types/audit.types';
 import { PageHeader } from '../components/PageHeader';
 import { useNotification } from '../context/NotificationContext';
-import { auditActionLabel } from '@aws-web-framework/components';
+import { auditActionLabel } from '@itsplainsailing/components';
 
 /**
  * The platform-wide audit trail.

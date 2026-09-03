@@ -4,7 +4,7 @@ import EventIcon from '@mui/icons-material/Event';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import { CalendarIcon } from '@aws-web-framework/components';
+import { CalendarIcon } from '@itsplainsailing/components';
 import { CartItemType } from '../types/account';
 
 /**

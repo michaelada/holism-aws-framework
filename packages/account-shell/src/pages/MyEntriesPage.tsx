@@ -26,7 +26,7 @@ import {
   formatCurrency,
   formatDateRange,
   formatDisplayDate,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountBooking, AccountEntry, ActivityStatus } from '../types/account';

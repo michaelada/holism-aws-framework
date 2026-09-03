@@ -29,7 +29,7 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useParams: () => params.current,
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute, data: null, error: null, loading: false, reset: vi.fn() }),
   useOrganisation: () => ({

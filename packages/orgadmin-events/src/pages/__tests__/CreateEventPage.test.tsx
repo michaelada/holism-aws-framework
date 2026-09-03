@@ -52,8 +52,8 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-core', async () => {
-  const actual = await vi.importActual('@aws-web-framework/orgadmin-core');
+vi.mock('@itsplainsailing/orgadmin-core', async () => {
+  const actual = await vi.importActual('@itsplainsailing/orgadmin-core');
   return {
     ...actual,
     useApi: () => ({

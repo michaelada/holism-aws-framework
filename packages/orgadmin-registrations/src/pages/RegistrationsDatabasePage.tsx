@@ -43,15 +43,15 @@ import {
   FilterList as FilterIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
 import {
   useOrganisation,
   useApi,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { Registration, RegistrationFilter, RegistrationType } from '../types/registration.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';

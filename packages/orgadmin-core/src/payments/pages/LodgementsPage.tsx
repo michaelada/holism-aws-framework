@@ -36,7 +36,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { useCurrency } from '../../hooks/useCurrency';
-import { useTranslation, useLocale, formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, formatDate } from '@itsplainsailing/orgadmin-shell';
 
 export interface Lodgement {
   id: string;

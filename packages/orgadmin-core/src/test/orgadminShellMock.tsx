@@ -1,12 +1,12 @@
 /**
- * Test double for `@aws-web-framework/orgadmin-shell`.
+ * Test double for `@itsplainsailing/orgadmin-shell`.
  *
  * Pages in this package read translations, onboarding, page help, capabilities
  * and locale from the shell. Standing up the shell's real providers in a unit
  * test means initialising i18next and a provider stack for what is usually a
  * single assertion, so the module is mocked instead:
  *
- *     vi.mock('@aws-web-framework/orgadmin-shell', () =>
+ *     vi.mock('@itsplainsailing/orgadmin-shell', () =>
  *       import('../../../test/orgadminShellMock'));
  *
  * Two things this file is careful about, both of which cause silent, confusing

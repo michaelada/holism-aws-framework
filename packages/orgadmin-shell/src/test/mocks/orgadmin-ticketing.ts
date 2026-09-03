@@ -1,4 +1,4 @@
-// Mock module for @aws-web-framework/orgadmin-ticketing
+// Mock module for @itsplainsailing/orgadmin-ticketing
 // Used in tests when the actual package is not built
 
 export const ticketingModule = {

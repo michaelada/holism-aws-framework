@@ -43,13 +43,13 @@ Updated 7 files to import `formatCurrency` from the correct module:
 
 Changed from:
 ```typescript
-import { formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
+import { formatDate, formatCurrency } from '@itsplainsailing/orgadmin-shell/utils/dateFormatting';
 ```
 
 Changed to:
 ```typescript
-import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell/utils/currencyFormatting';
+import { formatDate } from '@itsplainsailing/orgadmin-shell/utils/dateFormatting';
+import { formatCurrency } from '@itsplainsailing/orgadmin-shell/utils/currencyFormatting';
 ```
 
 ### Solution 2: Fixed i18n Initialization Timing

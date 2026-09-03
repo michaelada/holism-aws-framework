@@ -10,7 +10,7 @@
  */
 
 import { useCallback } from 'react';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { EventFormData } from '../types/event.types';
 
 export interface UseEventValidationReturn {

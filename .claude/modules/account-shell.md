@@ -215,7 +215,7 @@ the other covers them. The Renew button used to point at `/:orgCode/join`, which
 **`CapabilityGate`** guards the routes. Hiding a menu item is presentation, not access control — a
 member can still type the URL.
 
-**Formatting** comes from `@aws-web-framework/components` (`formatCurrency`, `formatDisplayDate`,
+**Formatting** comes from `@itsplainsailing/components` (`formatCurrency`, `formatDisplayDate`,
 `formatDateRange`). `orgadmin-shell` keeps its own older copies; they were deliberately not merged.
 
 ## Catalogue, basket and checkout (phase 8)

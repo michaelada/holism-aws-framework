@@ -34,7 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useCapabilities } from '@itsplainsailing/orgadmin-shell';
 import { useFilteredFieldTypes } from '../hooks/useFilteredFieldTypes';
 
 const EditFieldPage: React.FC = () => {

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
-import { reportSignOut } from '@aws-web-framework/components';
+import { reportSignOut } from '@itsplainsailing/components';
 
 interface AuthContextValue {
   keycloak: Keycloak | null;

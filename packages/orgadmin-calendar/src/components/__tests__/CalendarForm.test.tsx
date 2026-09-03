@@ -17,18 +17,18 @@ import type { CalendarFormData } from '../../types/calendar.types';
  * saved against a calendar that can no longer take a card.
  */
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: vi.fn().mockResolvedValue({ discounts: [] }) }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-shell', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en-GB' } }),
   useCapabilities: () => ({ hasCapability: () => true }),
 }));
 
-vi.mock('@aws-web-framework/components', async (importOriginal) => ({
+vi.mock('@itsplainsailing/components', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   DiscountSelector: () => <div data-testid="discount-selector" />,
 }));

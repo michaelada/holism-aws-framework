@@ -31,7 +31,7 @@ vi.mock('date-fns/locale', () => ({
 
 // Mock FieldRenderer to test multiple date fields rendering
 // This simulates the behavior of the real FieldRenderer with date fields
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   FieldRenderer: ({ fieldDefinition, value, onChange }: any) => {
     return (
       <div data-testid={`field-renderer-${fieldDefinition.shortName}`}>

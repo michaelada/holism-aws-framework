@@ -1,4 +1,12 @@
-# Holism — Project Rules for Claude
+# Its Plain Sailing — Project Rules for Claude
+
+> **The product is Its Plain Sailing** (`ItsPlainSailing` without spaces). The repository began as
+> an application framework and became this; the framework framing is history, not a second identity.
+> The root package is `itsplainsailing` and every workspace is scoped **`@itsplainsailing/`**.
+>
+> One scaffold name survives: the working directory is still `Holism`. It is an operating-system
+> path several tools hold absolutely, it is not a product name, and it may never reach a
+> user-facing string.
 
 **Read the relevant module summary in [.claude/modules/](.claude/modules/) before opening source
 files.** The summaries exist so most questions can be answered without reading code. Delve into the
@@ -167,7 +175,7 @@ edits, never a reformat of the whole file.
 integration tests: they connect to `aws_framework_test` rather than mocking the pool, and without it
 they all fail together with `Failed to connect to database: AggregateError`, which names no cause.
 That is an environment that is not set up, not a broken test. Fix it with `docker compose up -d
-postgres` and `npm run test:db --workspace @aws-web-framework/backend`. With the database up the
+postgres` and `npm run test:db --workspace @itsplainsailing/backend`. With the database up the
 backend suite is **green in full** — 173 suites, 3277 tests — so a backend failure is worth taking
 seriously rather than assuming it pre-dates the change.
 
@@ -207,7 +215,7 @@ unseeded generators that fail intermittently. When a suite fails:
   list tables sort by their columns now, and several open on a column rather than on arrival order.
   Find the row by something in it — `screen.getByText('John Doe').closest('tr')` — and click inside
   it with `within`.
-- A `vi.mock('@aws-web-framework/orgadmin-core', …)` factory that does not spread `importOriginal()`
+- A `vi.mock('@itsplainsailing/orgadmin-core', …)` factory that does not spread `importOriginal()`
   breaks the moment a page uses anything else from the package. Spread it and replace only `useApi`.
 
 ### 3.5 Running things locally
@@ -216,7 +224,7 @@ Everything except the app under development normally runs in Docker.
 
 ```bash
 docker compose up -d postgres     # the database, needed by the backend integration suites
-npm run test:db -w @aws-web-framework/backend   # create + migrate aws_framework_test, once
+npm run test:db -w @itsplainsailing/backend   # create + migrate aws_framework_test, once
 docker compose stop backend       # frees :3000 when running the API locally
 npm run dev:backend               # http://localhost:3000  (reads packages/backend/.env)
 npm run dev:orgadmin              # http://localhost:5175  (org admin)

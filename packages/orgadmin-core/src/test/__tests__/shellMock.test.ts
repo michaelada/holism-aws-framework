@@ -8,7 +8,7 @@ import { createShellMock, translateToKey } from '../shellMock';
  * The shared shell mock must cover everything the shell exports.
  *
  * This test is the reason the mock is worth having. Five org-admin packages
- * each carried their own partial mock of `@aws-web-framework/orgadmin-shell`;
+ * each carried their own partial mock of `@itsplainsailing/orgadmin-shell`;
  * adding `usePageHelp`, `useOnboarding` and `useCapabilities` to pages broke
  * them all at once, with hundreds of failing assertions about hooks none of
  * those tests cared about.

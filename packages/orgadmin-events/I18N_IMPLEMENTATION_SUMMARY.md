@@ -94,7 +94,7 @@ Updated all Events module components to use translations:
 
 ### Translation Hook Usage
 ```typescript
-import { useTranslation, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale } from '@itsplainsailing/orgadmin-shell';
 
 const { t } = useTranslation();
 const { locale } = useLocale();
@@ -108,7 +108,7 @@ const activityLabel = t('events.activities.activity.activityNumber', { number: 5
 
 ### Date Formatting
 ```typescript
-import { formatDate, formatDateTime } from '@aws-web-framework/orgadmin-shell';
+import { formatDate, formatDateTime } from '@itsplainsailing/orgadmin-shell';
 
 // Format date according to locale
 const formattedDate = formatDate(event.startDate, 'dd MMM yyyy', locale);
@@ -119,7 +119,7 @@ const formattedDateTime = formatDateTime(entry.entryDate, locale);
 
 ### Currency Formatting (Prepared)
 ```typescript
-import { formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { formatCurrency } from '@itsplainsailing/orgadmin-shell';
 
 // Format currency according to locale
 const formattedAmount = formatCurrency(activity.fee, 'EUR', locale);

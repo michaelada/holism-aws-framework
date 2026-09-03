@@ -24,7 +24,7 @@ import {
   Dashboard as DashboardIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation } from '@itsplainsailing/orgadmin-core';
 import { useTranslation } from '../hooks/useTranslation';
 import { ModuleRegistration } from '../types/module.types';
 import { HelpButton } from './HelpButton';

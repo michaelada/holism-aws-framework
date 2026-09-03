@@ -17,7 +17,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { Booking, CancellationValidation } from '../types/calendar.types';
 
 interface CancelBookingDialogProps {

@@ -1,4 +1,4 @@
-// Mock module for @aws-web-framework/orgadmin-registrations
+// Mock module for @itsplainsailing/orgadmin-registrations
 // Used in tests when the actual package is not built
 
 export const registrationsModule = {

@@ -36,9 +36,9 @@ import 'react-quill/dist/quill.snow.css';
 import type { CreateMembershipTypeDto, FieldConfiguration } from '../types/membership.types';
 import FieldConfigurationTable from '../components/FieldConfigurationTable';
 import PersonConfigurationSection from '../components/PersonConfigurationSection';
-import { DiscountSelector } from '@aws-web-framework/components';
-import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { DiscountSelector } from '@itsplainsailing/components';
+import { useCapabilities } from '@itsplainsailing/orgadmin-shell';
+import { useOrganisation, useApi } from '@itsplainsailing/orgadmin-core';
 
 interface ApplicationForm {
   id: string;

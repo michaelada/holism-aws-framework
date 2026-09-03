@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/frontend",
+  "name": "@itsplainsailing/frontend",
   "version": "1.0.0",
   "description": "Frontend application for AWS Web Application Framework",
   "type": "module",

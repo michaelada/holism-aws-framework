@@ -37,8 +37,8 @@ import {
   useOrganisation,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
-import { useTranslation, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
+} from '@itsplainsailing/orgadmin-core';
+import { useTranslation, formatCurrency, useLocale } from '@itsplainsailing/orgadmin-shell';
 import type { Discount, DiscountStatus } from '../types/discount.types';
 
 export interface DiscountUsage {

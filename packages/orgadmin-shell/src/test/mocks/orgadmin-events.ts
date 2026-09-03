@@ -1,4 +1,4 @@
-// Mock module for @aws-web-framework/orgadmin-events
+// Mock module for @itsplainsailing/orgadmin-events
 // Used in development when the actual package is not built
 
 import { lazy } from 'react';

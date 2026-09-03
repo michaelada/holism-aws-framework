@@ -125,7 +125,7 @@ Any component using `DateRenderer` must now wrap it in `LocalizationProvider`:
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enGB}>
   <FieldRenderer fieldDefinition={...} ... />

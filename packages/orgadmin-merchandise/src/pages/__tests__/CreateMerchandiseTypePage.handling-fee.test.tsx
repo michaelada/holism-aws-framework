@@ -26,8 +26,8 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string>) => {
       if (key === 'payment.handlingFeeIncluded') return 'Handling fee included';
@@ -41,7 +41,7 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useOrganisation: () => ({
     organisation: { id: 'org-1', currency: 'EUR' },

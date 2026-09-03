@@ -24,14 +24,14 @@ import CreateSingleMembershipTypePage from '../CreateSingleMembershipTypePage';
 import CreateGroupMembershipTypePage from '../CreateGroupMembershipTypePage';
 
 // Mock the dependencies
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
   // The suite drives `useCapabilities` itself; everything else comes from the
   // shared mock so a new shell hook cannot break it.
   const { shellMock } = await import('../../test/shell-mock');
   return { ...shellMock(), useCapabilities: vi.fn() };
 });
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   const { coreMock } = await import('../../test/core-mock');
   return { ...actual, ...coreMock(), useOrganisation: vi.fn() };
@@ -46,8 +46,8 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useCapabilities } from '@itsplainsailing/orgadmin-shell';
+import { useOrganisation } from '@itsplainsailing/orgadmin-core';
 
 describe('Feature: membership-discount-integration, Property 8: Capability-Based Component Visibility', () => {
   beforeEach(() => {

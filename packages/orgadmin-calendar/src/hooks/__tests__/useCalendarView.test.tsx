@@ -18,7 +18,7 @@ const { execute, organisation } = vi.hoisted(() => ({
   organisation: { current: { id: 'org-1', name: 'Meath Hunt Pony Club' } as { id: string } | null },
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute, data: null, error: null, loading: false, reset: vi.fn() }),
   useOrganisation: () => ({ organisation: organisation.current, setOrganisation: vi.fn() }),

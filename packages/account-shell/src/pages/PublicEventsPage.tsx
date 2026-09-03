@@ -14,7 +14,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { EventDateTile, formatCurrency } from '@aws-web-framework/components';
+import { EventDateTile, formatCurrency } from '@itsplainsailing/components';
 import EntryStatus from '../components/EntryStatus';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';

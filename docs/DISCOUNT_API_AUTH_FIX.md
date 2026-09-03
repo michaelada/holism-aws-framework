@@ -74,7 +74,7 @@ Updated `DiscountsListPage.tsx` to use the `useApi` hook directly instead of the
 
 ## How useApi Works
 
-The `useApi` hook from `@aws-web-framework/orgadmin-core` provides:
+The `useApi` hook from `@itsplainsailing/orgadmin-core` provides:
 
 1. **Automatic authentication**: Gets the token from `AuthTokenContext` (provided by the shell)
 2. **Retry logic**: Automatically retries failed requests with exponential backoff

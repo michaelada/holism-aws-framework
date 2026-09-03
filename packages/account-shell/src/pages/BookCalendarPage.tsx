@@ -22,7 +22,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { RichText, formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
+import { RichText, formatCurrency, formatDisplayDate } from '@itsplainsailing/components';
 import { HoldCountdown } from '../components/HoldCountdown';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';

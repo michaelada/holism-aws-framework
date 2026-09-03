@@ -33,14 +33,14 @@ import {
   Visibility as ViewIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
 import {
   useApi,
   useOrganisation,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { RegistrationType } from '../types/registration.types';
 
 const RegistrationTypesListPage: React.FC = () => {

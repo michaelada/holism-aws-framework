@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 
 interface InviteUserDialogProps {
   open: boolean;

@@ -33,11 +33,11 @@ import {
   RadioButtonUnchecked as NotScannedIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi, SortableTableCell, useTableSort } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi, SortableTableCell, useTableSort } from '@itsplainsailing/orgadmin-core';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
-import { renderTicketHTML } from '@aws-web-framework/components';
+import { renderTicketHTML } from '@itsplainsailing/components';
 import type { ElectronicTicket, TicketScanHistory } from '../types/ticketing.types';
 
 interface TicketDetailsDialogProps {

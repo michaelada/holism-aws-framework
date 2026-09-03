@@ -35,7 +35,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation, useLocale, formatDate, formatCurrency } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, formatDate, formatCurrency } from '@itsplainsailing/orgadmin-shell';
 
 interface OfflinePaymentLine {
   description: string;

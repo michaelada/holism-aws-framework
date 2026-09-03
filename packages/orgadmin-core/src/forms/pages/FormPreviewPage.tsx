@@ -30,7 +30,7 @@ import {
   FieldRenderer,
   applicationFieldToFieldDefinition,
   emptyValueForField,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { useApi } from '../../hooks/useApi';
 
 interface ApplicationForm {

@@ -24,7 +24,7 @@ const shell = vi.hoisted(() => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell', () => ({
   useOnboarding: () => shell.onboarding,
   usePageHelp: () => undefined,
   // No i18next instance in tests, so t() returns the key — assertions below

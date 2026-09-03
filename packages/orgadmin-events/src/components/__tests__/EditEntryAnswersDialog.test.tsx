@@ -17,7 +17,7 @@ import EditEntryAnswersDialog, { isRequired } from '../EditEntryAnswersDialog';
 
 const { execute } = vi.hoisted(() => ({ execute: vi.fn() }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute, data: null, error: null, loading: false, reset: vi.fn() }),
 }));

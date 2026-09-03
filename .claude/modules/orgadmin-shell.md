@@ -99,7 +99,7 @@ Full record: [docs/ORGADMIN_MULTI_ORGANISATION.md](../../docs/ORGADMIN_MULTI_ORG
 `ALL_MODULES` in `App.tsx` is the single list of everything mountable:
 
 - **Core (always available):** `dashboardModule`, `formsModule`, `settingsModule`, `paymentsModule`,
-  `reportingModule`, `usersModule`, `auditModule` — all from `@aws-web-framework/orgadmin-core`.
+  `reportingModule`, `usersModule`, `auditModule` — all from `@itsplainsailing/orgadmin-core`.
 - **Capability-gated:** `eventsModule`, `membershipsModule`, `merchandiseModule`, `calendarModule`,
   `registrationsModule`, `ticketingModule`.
 
@@ -141,7 +141,7 @@ their suites — it only shows up in a browser.
 
 ## Vite configuration worth knowing
 
-- Aliases `@aws-web-framework/{components,orgadmin-core,orgadmin-events,…}` to each package's
+- Aliases `@itsplainsailing/{components,orgadmin-core,orgadmin-events,…}` to each package's
   `src`, so module edits hot-reload with no rebuild.
 - `fs.strict: false` so files outside the package root can be served.
 - `dedupe: ['react','react-dom','@mui/material','@mui/x-date-pickers','date-fns']` — duplicate

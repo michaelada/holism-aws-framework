@@ -26,14 +26,14 @@ import {
   FileDownload as ExportIcon,
   CalendarMonth as CalendarViewIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatDate, formatCurrency, usePageHelp, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatDate, formatCurrency, usePageHelp, useLocale } from '@itsplainsailing/orgadmin-shell';
 import {
   useOrganisation,
   useApi,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { Booking, BookingsFilterOptions } from '../types/calendar.types';
 
 const BookingsListPage: React.FC = () => {

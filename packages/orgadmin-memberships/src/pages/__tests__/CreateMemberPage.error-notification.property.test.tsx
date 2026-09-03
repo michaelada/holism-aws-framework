@@ -15,13 +15,13 @@ import { render, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fc from 'fast-check';
 import CreateMemberPage from '../CreateMemberPage';
-import * as useApiModule from '@aws-web-framework/orgadmin-core';
+import * as useApiModule from '@itsplainsailing/orgadmin-core';
 import { I18nextProvider } from 'react-i18next';
 import { createTestI18n } from '../../test/i18n-test-utils';
 
 // Mock the hooks
-vi.mock('@aws-web-framework/orgadmin-core', async () => {
-  const actual = await vi.importActual('@aws-web-framework/orgadmin-core');
+vi.mock('@itsplainsailing/orgadmin-core', async () => {
+  const actual = await vi.importActual('@itsplainsailing/orgadmin-core');
   return {
     ...actual,
     useApi: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('@aws-web-framework/orgadmin-core', async () => {
 });
 
 // Mock FieldRenderer component
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   FieldRenderer: ({ fieldDefinition, value, onChange, onBlur, disabled, required, error }: any) => (
     <div
       data-testid={`field-${fieldDefinition.shortName}`}

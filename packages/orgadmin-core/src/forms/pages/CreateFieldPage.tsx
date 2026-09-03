@@ -38,8 +38,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation, useOnboarding } from '@aws-web-framework/orgadmin-shell';
-import { FieldRenderer, applicationFieldToFieldDefinition } from '@aws-web-framework/components';
+import { useTranslation, useOnboarding } from '@itsplainsailing/orgadmin-shell';
+import { FieldRenderer, applicationFieldToFieldDefinition } from '@itsplainsailing/components';
 import { useFilteredFieldTypes } from '../hooks/useFilteredFieldTypes';
 
 const CreateFieldPage: React.FC = () => {

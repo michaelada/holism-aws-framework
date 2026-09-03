@@ -22,8 +22,8 @@ import {
   Print as PrintIcon,
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
-import { useApi } from '@aws-web-framework/orgadmin-core';
-import { useTranslation, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
+import { useTranslation, formatCurrency, useLocale } from '@itsplainsailing/orgadmin-shell';
 import type { Booking } from '../types/calendar.types';
 
 const BookingDetailsPage: React.FC = () => {

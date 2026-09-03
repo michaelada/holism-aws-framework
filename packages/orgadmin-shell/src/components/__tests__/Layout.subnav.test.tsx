@@ -17,7 +17,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { Layout } from '../Layout';
-import { OrganisationProvider } from '@aws-web-framework/orgadmin-core';
+import { OrganisationProvider } from '@itsplainsailing/orgadmin-core';
 import { OnboardingProvider } from '../../context/OnboardingProvider';
 import type { ModuleRegistration } from '../../types/module.types';
 

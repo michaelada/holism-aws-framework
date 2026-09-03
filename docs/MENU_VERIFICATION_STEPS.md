@@ -67,7 +67,7 @@ If you still don't see the menu items after a hard refresh:
 1. Stop the dev server (Ctrl+C)
 2. Clear node_modules cache:
    ```bash
-   rm -rf packages/orgadmin-shell/node_modules/@aws-web-framework
+   rm -rf packages/orgadmin-shell/node_modules/@itsplainsailing
    ```
 3. Reinstall:
    ```bash

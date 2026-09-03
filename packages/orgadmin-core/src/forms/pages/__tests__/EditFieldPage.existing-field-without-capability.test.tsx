@@ -36,7 +36,7 @@ vi.mock('../../../context/OrganisationContext', () => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),

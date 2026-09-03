@@ -1,4 +1,4 @@
-// Mock module for @aws-web-framework/orgadmin-merchandise
+// Mock module for @itsplainsailing/orgadmin-merchandise
 // Used in tests when the actual package is not built
 
 export const merchandiseModule = {

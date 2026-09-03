@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
-import { formatDisplayDate } from '@aws-web-framework/components';
+import { formatDisplayDate } from '@itsplainsailing/components';
 import { AccountDashboard } from '../types/account';
 
 type Membership = NonNullable<AccountDashboard['memberships']>[number];

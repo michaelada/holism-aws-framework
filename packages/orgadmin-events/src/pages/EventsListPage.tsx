@@ -42,15 +42,15 @@ import {
   LocalOffer as DiscountIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
 import {
   useApi,
   useOrganisation,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { Event } from '../types/event.types';
 import { useDiscountService } from '../hooks/useDiscountService';
 

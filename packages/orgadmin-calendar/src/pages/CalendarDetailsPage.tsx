@@ -21,8 +21,8 @@ import {
   Delete as DeleteIcon,
   CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
-import { useApi } from '@aws-web-framework/orgadmin-core';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { Calendar } from '../types/calendar.types';
 import EmbeddedCalendarView from '../components/EmbeddedCalendarView';
 

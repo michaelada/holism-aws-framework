@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -39,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useApi, AuthTokenContext } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp } from '@itsplainsailing/orgadmin-shell';
 
 interface User {
   id: string;

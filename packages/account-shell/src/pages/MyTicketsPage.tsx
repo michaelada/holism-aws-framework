@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
-import { formatDisplayDate } from '@aws-web-framework/components';
+import { formatDisplayDate } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountTicketSummary, TicketState } from '../types/account';

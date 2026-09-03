@@ -17,8 +17,8 @@ import enGB from '../../../orgadmin-shell/src/locales/en-GB/translation.json';
 import frFR from '../../../orgadmin-shell/src/locales/fr-FR/translation.json';
 
 // Mock the hooks
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
-  const actual = await vi.importActual('@aws-web-framework/orgadmin-shell');
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
+  const actual = await vi.importActual('@itsplainsailing/orgadmin-shell');
   return {
     ...actual,
     useTranslation: () => ({
@@ -48,7 +48,7 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: vi.fn().mockResolvedValue([]),

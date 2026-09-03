@@ -46,7 +46,7 @@ vi.mock('../../hooks/useCalendarView', () => ({
 }));
 
 // The page reads the locale to format times; the real hook needs a provider.
-vi.mock('@aws-web-framework/orgadmin-shell', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-shell', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en-GB' } }),
   useLocale: () => ({ locale: 'en-GB', setLocale: vi.fn(), dateLocale: undefined }),

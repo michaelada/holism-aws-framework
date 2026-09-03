@@ -11,7 +11,7 @@ import RefundDialog, { amountFor, refundableOn, RefundableLine } from '../Refund
  * while calling it one line of it, and the status would follow the label.
  */
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
 
 const line = (over: Partial<RefundableLine> = {}): RefundableLine => ({
   id: 'line-1',

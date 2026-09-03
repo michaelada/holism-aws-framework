@@ -14,7 +14,7 @@ To use date pickers in your page, you must wrap your content in a `LocalizationP
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 export function MyFormPage() {
   return (
@@ -114,7 +114,7 @@ Use this exact configuration:
 The `FieldRenderer` component automatically renders the appropriate date picker based on the field definition's `datatype`:
 
 ```typescript
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 // Date field
 <FieldRenderer 
@@ -453,7 +453,7 @@ import { Box, Button } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 export function EventRegistrationPage() {
   const [eventDate, setEventDate] = useState<Date | null>(null);
@@ -494,7 +494,7 @@ import { Box, Stack } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 export function AppointmentBookingPage() {
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -556,7 +556,7 @@ import { Box, FormControlLabel, Switch } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
+import { FieldRenderer } from '@itsplainsailing/components';
 
 export function ConditionalFormPage() {
   const [showDateField, setShowDateField] = useState(false);

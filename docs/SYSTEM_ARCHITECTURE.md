@@ -875,10 +875,10 @@ optimizeDeps: {
     '@mui/x-date-pickers/AdapterDateFns',
   ],
   exclude: [
-    '@aws-web-framework/components',
-    '@aws-web-framework/orgadmin-core',
-    '@aws-web-framework/orgadmin-events',
-    '@aws-web-framework/orgadmin-memberships',
+    '@itsplainsailing/components',
+    '@itsplainsailing/orgadmin-core',
+    '@itsplainsailing/orgadmin-events',
+    '@itsplainsailing/orgadmin-memberships',
   ],
 }
 ```

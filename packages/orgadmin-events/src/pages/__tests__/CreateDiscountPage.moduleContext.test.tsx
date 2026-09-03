@@ -27,7 +27,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: mockExecute,
@@ -44,8 +44,8 @@ vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   usePageHelp: vi.fn(),
   useOnboarding: () => ({
     setCurrentModule: vi.fn(),

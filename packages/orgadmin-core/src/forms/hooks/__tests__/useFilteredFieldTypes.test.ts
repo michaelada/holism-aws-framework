@@ -15,11 +15,11 @@ import { renderHook } from '@testing-library/react';
 import { useFilteredFieldTypes } from '../useFilteredFieldTypes';
 
 // Mock the dependencies
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell', () => ({
   useCapabilities: vi.fn(),
 }));
 
-import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
+import { useCapabilities } from '@itsplainsailing/orgadmin-shell';
 
 describe('useFilteredFieldTypes Hook', () => {
   beforeEach(() => {

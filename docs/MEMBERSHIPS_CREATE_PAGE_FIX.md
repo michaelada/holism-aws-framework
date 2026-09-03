@@ -91,7 +91,7 @@ After the fix:
 - These are mock implementations that will be replaced with actual API calls once the backend endpoints are implemented
 - The mock returns empty arrays for forms since no forms exist yet in the system
 - The mock returns default payment methods (Pay Offline and Stripe) for testing purposes
-- When real API integration is added, these mock hooks should be replaced with the actual `useApi` hook from `@aws-web-framework/orgadmin-core`
+- When real API integration is added, these mock hooks should be replaced with the actual `useApi` hook from `@itsplainsailing/orgadmin-core`
 
 ## Related Files
 - `packages/orgadmin-memberships/src/pages/CreateSingleMembershipTypePage.tsx`

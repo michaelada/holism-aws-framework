@@ -27,15 +27,15 @@ import {
   Refresh as RefreshIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
-import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
 import {
   useApi,
   useOrganisation,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { TicketedEventSummary } from '../types/ticketing.types';
 
 const TicketedEventsOverviewPage: React.FC = () => {

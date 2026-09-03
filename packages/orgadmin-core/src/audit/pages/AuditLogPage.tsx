@@ -25,7 +25,7 @@ import {
   AuditChanges,
   auditActionLabel,
   auditFieldLabel,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';

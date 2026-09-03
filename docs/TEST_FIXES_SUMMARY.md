@@ -54,7 +54,7 @@ Dropped and recreated the test database with correct schema:
 PGPASSWORD="framework_password" psql -h localhost -p 5432 -U framework_user -d aws_framework_test \
   -c "DROP TABLE IF EXISTS object_fields CASCADE; DROP TABLE IF EXISTS object_definitions CASCADE; DROP TABLE IF EXISTS field_definitions CASCADE;"
 
-npm run test:db --workspace @aws-web-framework/backend
+npm run test:db --workspace @itsplainsailing/backend
 ```
 
 ## Results

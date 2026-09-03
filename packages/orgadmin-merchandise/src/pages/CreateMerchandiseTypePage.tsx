@@ -27,9 +27,9 @@ import {
 import { Save as SaveIcon } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
-import { DiscountSelector } from '@aws-web-framework/components';
+import { useTranslation, useCapabilities } from '@itsplainsailing/orgadmin-shell';
+import { useOrganisation, useApi } from '@itsplainsailing/orgadmin-core';
+import { DiscountSelector } from '@itsplainsailing/components';
 import ImageGalleryUpload from '../components/ImageGalleryUpload';
 import OptionsConfigurationSection from '../components/OptionsConfigurationSection';
 import StockManagementSection from '../components/StockManagementSection';

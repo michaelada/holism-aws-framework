@@ -73,7 +73,7 @@ vi.mock('@mui/x-date-pickers/AdapterDateFns', () => ({
   AdapterDateFns: class {},
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
     execute: mockExecute,
@@ -90,8 +90,8 @@ vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
   }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: {
@@ -108,7 +108,7 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
 }));
 
 // Mock the DiscountSelector to track if it's rendered
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   DiscountSelector: vi.fn(({ discounts, label }) => (
     <div data-testid="discount-selector">
       <label>{label}</label>
@@ -121,7 +121,7 @@ vi.mock('@aws-web-framework/components', () => ({
 }));
 
 // Import the mocked DiscountSelector to track calls
-import { DiscountSelector as MockedDiscountSelector } from '@aws-web-framework/components';
+import { DiscountSelector as MockedDiscountSelector } from '@itsplainsailing/components';
 
 describe('CreateEventPage - Preservation Property Tests', () => {
   beforeEach(() => {

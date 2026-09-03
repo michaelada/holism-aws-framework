@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Stack, Typography } from '@mui/material';
-import { AnnouncementCard } from '@aws-web-framework/components';
+import { AnnouncementCard } from '@itsplainsailing/components';
 import { DashboardAnnouncement } from '../types/account';
 
 /**

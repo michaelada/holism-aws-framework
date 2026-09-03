@@ -1,4 +1,4 @@
-# @aws-web-framework/orgadmin-announcements
+# @itsplainsailing/orgadmin-announcements
 
 A club's own announcements, shown to its members on the account application's home page.
 

@@ -46,7 +46,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { useCurrency } from '../../hooks/useCurrency';
-import { useTranslation, useLocale, formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, formatDate } from '@itsplainsailing/orgadmin-shell';
 import type { Lodgement } from './LodgementsPage';
 
 interface BasketItem {

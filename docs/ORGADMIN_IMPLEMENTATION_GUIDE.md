@@ -20,7 +20,7 @@ npm init -y
 1. `packages/orgadmin-shell/package.json`
 ```json
 {
-  "name": "@aws-web-framework/orgadmin-shell",
+  "name": "@itsplainsailing/orgadmin-shell",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -36,7 +36,7 @@ npm init -y
     "@mui/material": "^5.14.0",
     "@mui/icons-material": "^5.14.0",
     "keycloak-js": "^23.0.0",
-    "@aws-web-framework/components": "*"
+    "@itsplainsailing/components": "*"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

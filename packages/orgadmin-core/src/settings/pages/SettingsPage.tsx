@@ -25,7 +25,7 @@ import {
   Palette as BrandingIcon,
   HowToReg as HowToRegIcon,
 } from '@mui/icons-material';
-import { useOnboarding, usePageHelp, useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useOnboarding, usePageHelp, useTranslation } from '@itsplainsailing/orgadmin-shell';
 import OrganisationDetailsTab from '../components/OrganisationDetailsTab';
 import PaymentSettingsTab from '../components/PaymentSettingsTab';
 import EmailTemplatesTab from '../components/EmailTemplatesTab';

@@ -14,7 +14,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { formatDisplayDate } from '@aws-web-framework/components';
+import { formatDisplayDate } from '@itsplainsailing/components';
 import ActivityStatusChip from '../components/ActivityStatusChip';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';

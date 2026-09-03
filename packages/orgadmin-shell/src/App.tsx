@@ -7,7 +7,7 @@ import {
   AuthTokenContext,
   OrganisationIdContext,
   OrganisationProvider,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import { Layout } from './components/Layout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ModuleRegistration } from './types/module.types';
@@ -24,22 +24,22 @@ import {
   reportingModule,
   auditModule,
   usersModule,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 
 // Import all capability module registrations
-import { eventsModule } from '@aws-web-framework/orgadmin-events';
+import { eventsModule } from '@itsplainsailing/orgadmin-events';
 // @ts-ignore - Module may not have type declarations
-import { membershipsModule } from '@aws-web-framework/orgadmin-memberships';
+import { membershipsModule } from '@itsplainsailing/orgadmin-memberships';
 // @ts-ignore - Module may not have type declarations
-import { merchandiseModule } from '@aws-web-framework/orgadmin-merchandise';
+import { merchandiseModule } from '@itsplainsailing/orgadmin-merchandise';
 // @ts-ignore - Module may not have type declarations
-import { calendarModule } from '@aws-web-framework/orgadmin-calendar';
+import { calendarModule } from '@itsplainsailing/orgadmin-calendar';
 // @ts-ignore - Module may not have type declarations
-import { registrationsModule } from '@aws-web-framework/orgadmin-registrations';
+import { registrationsModule } from '@itsplainsailing/orgadmin-registrations';
 // @ts-ignore - Module may not have type declarations
-import { ticketingModule } from '@aws-web-framework/orgadmin-ticketing';
+import { ticketingModule } from '@itsplainsailing/orgadmin-ticketing';
 // @ts-ignore - Module may not have type declarations
-import { announcementsModule } from '@aws-web-framework/orgadmin-announcements';
+import { announcementsModule } from '@itsplainsailing/orgadmin-announcements';
 
 // Debug: Log memberships module on import
 console.log('Memberships module imported:', {

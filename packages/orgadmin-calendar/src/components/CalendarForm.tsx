@@ -20,16 +20,16 @@ import {
   Switch,
   Typography,
 } from '@mui/material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useCapabilities } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import {
   CALENDAR_ICON_KEYS,
   CALENDAR_ICON_LABELS,
   CalendarIcon,
   type CalendarIconKey,
-} from '@aws-web-framework/components';
-import { DiscountSelector } from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
+import { DiscountSelector } from '@itsplainsailing/components';
 import type { CalendarFormData } from '../types/calendar.types';
 import ScheduleRulesSection from './ScheduleRulesSection';
 import TimeSlotConfigurationSection from './TimeSlotConfigurationSection';

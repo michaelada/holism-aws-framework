@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useMetadataApi } from '../context';
-import { ObjectDefinition } from '@aws-web-framework/components';
+import { ObjectDefinition } from '@itsplainsailing/components';
 import { ApiError, NetworkError } from '../api';
 
 export default function ObjectDefinitionsPage() {

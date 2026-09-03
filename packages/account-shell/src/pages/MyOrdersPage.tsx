@@ -14,7 +14,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
+import { formatCurrency, formatDisplayDate } from '@itsplainsailing/components';
 import ActivityStatusChip from '../components/ActivityStatusChip';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useSearchParams } from 'react-router-dom';

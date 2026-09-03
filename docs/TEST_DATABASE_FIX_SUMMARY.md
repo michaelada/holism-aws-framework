@@ -51,7 +51,7 @@ Tests now use a completely separate test database (`aws_framework_test`) that is
 Run the setup script once:
 
 ```bash
-npm run test:db --workspace @aws-web-framework/backend
+npm run test:db --workspace @itsplainsailing/backend
 ```
 
 This creates the test database and tables.
@@ -75,7 +75,7 @@ You'll see confirmation that the test database is being used:
 If needed, run the setup script again:
 
 ```bash
-npm run test:db --workspace @aws-web-framework/backend
+npm run test:db --workspace @itsplainsailing/backend
 ```
 
 ## Verification
@@ -152,7 +152,7 @@ If you see `aws_framework` instead, the setup didn't work. Try:
 
 3. Run setup script again:
    ```bash
-   npm run test:db --workspace @aws-web-framework/backend
+   npm run test:db --workspace @itsplainsailing/backend
    ```
 
 ### Test Database Doesn't Exist
@@ -160,7 +160,7 @@ If you see `aws_framework` instead, the setup didn't work. Try:
 Run the setup script:
 
 ```bash
-npm run test:db --workspace @aws-web-framework/backend
+npm run test:db --workspace @itsplainsailing/backend
 ```
 
 ## Summary

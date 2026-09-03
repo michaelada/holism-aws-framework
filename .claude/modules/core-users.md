@@ -66,7 +66,7 @@ router and `OrganisationProvider` — rendering a page bare throws
 suites still fail.
 
 The pages also read `useOnboarding`, `usePageHelp` and `useTranslation` from
-`@aws-web-framework/orgadmin-shell`. Those are **mocked at module level** rather than provided, which
+`@itsplainsailing/orgadmin-shell`. Those are **mocked at module level** rather than provided, which
 avoids standing up the shell's providers in a unit test. Two things matter in that mock:
 
 - Return **stable references** (`vi.hoisted`). `useOnboarding` feeds a `useEffect` dependency array,

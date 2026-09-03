@@ -20,7 +20,7 @@ import {
   LinearProgress,
   Box,
 } from '@mui/material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { OrderStatus } from '../types/merchandise.types';
 
 interface BatchOrderOperationsDialogProps {

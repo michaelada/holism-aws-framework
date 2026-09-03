@@ -15,7 +15,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { formatCurrency } from '@aws-web-framework/components';
+import { formatCurrency } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { CatalogueMerchandise } from '../types/account';

@@ -30,8 +30,8 @@ import {
   RadioButtonUnchecked as UnprocessedIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation, formatDate } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { Registration } from '../types/registration.types';
 
 const RegistrationDetailsPage: React.FC = () => {

@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { DashboardPage } from '../DashboardPage';
 // The app wraps in the shared provider from orgadmin-core, and that is the
 // context the page reads — the shell's own copy is a different one.
-import { OrganisationProvider } from '@aws-web-framework/orgadmin-core';
+import { OrganisationProvider } from '@itsplainsailing/orgadmin-core';
 import { CapabilityProvider } from '../../context/CapabilityContext';
 import { ModuleRegistration } from '../../types/module.types';
 import enGB from '../../locales/en-GB/translation.json';

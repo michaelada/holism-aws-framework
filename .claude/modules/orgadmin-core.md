@@ -158,7 +158,7 @@ organisation (`id`, `name`, `currency`, `enabledCapabilities`, …). Most data l
 - `utils/validation.ts` — composable rules (`required`, `email`, `minLength`, `maxLength`, `min`,
   `max`, `pattern`, `url`, `phone`, `date`, `custom`) plus `validate` / `validateObject`.
 
-Locale-aware display formatting is usually taken from `@aws-web-framework/orgadmin-shell` instead,
+Locale-aware display formatting is usually taken from `@itsplainsailing/orgadmin-shell` instead,
 which binds the organisation's locale.
 
 ## Conventions
@@ -186,14 +186,14 @@ Most pages need the current organisation and several shell hooks. Three shared h
   throws "useOrganisation must be used within an OrganisationProvider", which was the single largest
   cause of failures in this package.
 - **`src/test/orgadminShellMock.tsx`** — a module double for
-  `@aws-web-framework/orgadmin-shell`. Mock **every specifier the page imports**, not just the
+  `@itsplainsailing/orgadmin-shell`. Mock **every specifier the page imports**, not just the
   package root: pages also import from `/hooks/useTranslation`, `/utils/currencyFormatting`,
   `/utils/dateFormatting` and `/context/LocaleContext`, and mocking only the root leaves the real
   module loaded.
 
 ```ts
-vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useTranslation', () => import('../../../test/orgadminShellMock'));
 // …and the other deep specifiers the page uses
 ```
 
@@ -219,8 +219,8 @@ the time, so adding `usePageHelp` or `useOnboarding` to a page broke hundreds of
 assertions at once with *"No `usePageHelp` export is defined on the mock"*.
 
 ```ts
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useCapabilities: () => ({ hasCapability: () => false, capabilities: [] }),   // override what matters
 }));
 ```

@@ -25,7 +25,7 @@ const execute = vi.fn();
 const API = { execute, loading: false, error: null, reset: vi.fn() };
 const ORGANISATION = { id: 'org-1', name: 'Kildare Hunt Pony Club' };
 
-vi.mock('@aws-web-framework/orgadmin-core', () => ({
+vi.mock('@itsplainsailing/orgadmin-core', () => ({
   useApi: () => API,
   useOrganisation: () => ({ organisation: ORGANISATION }),
 }));

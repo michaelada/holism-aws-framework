@@ -32,7 +32,7 @@ const renderAt = (entry = '/settings') =>
 // under test here.
 const mockSetCurrentModule = vi.fn();
 const mockCheckModuleVisit = vi.fn();
-vi.mock('@aws-web-framework/orgadmin-shell', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell', () => ({
   useOnboarding: () => ({
     setCurrentModule: mockSetCurrentModule,
     checkModuleVisit: mockCheckModuleVisit,

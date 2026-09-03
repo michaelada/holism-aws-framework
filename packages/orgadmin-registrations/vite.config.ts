@@ -34,7 +34,7 @@ export default defineConfig({
     ...getModuleResolveConfig(__dirname),
     alias: {
       ...getModuleResolveConfig(__dirname).alias,
-      '@aws-web-framework/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
+      '@itsplainsailing/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
     },
   },
   

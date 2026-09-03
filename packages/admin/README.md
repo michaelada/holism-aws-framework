@@ -140,7 +140,7 @@ The admin portal uses the same neumorphic theme as the main frontend for consist
 
 ## Components Library
 
-The admin portal can reuse components from the shared components library (`@aws-web-framework/components`) for consistent UI elements like tables, forms, and dialogs.
+The admin portal can reuse components from the shared components library (`@itsplainsailing/components`) for consistent UI elements like tables, forms, and dialogs.
 
 ## API Integration
 

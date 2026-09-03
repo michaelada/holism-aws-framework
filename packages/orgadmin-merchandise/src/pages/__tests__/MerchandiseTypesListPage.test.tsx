@@ -21,11 +21,11 @@ vi.mock('react-router-dom', async () => {
  * real `useOnboarding` throws outside its provider. The shared stand-in covers
  * the whole shell surface so a hook added later does not break this suite.
  */
-vi.mock('@aws-web-framework/orgadmin-shell', async () =>
-  (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
+vi.mock('@itsplainsailing/orgadmin-shell', async () =>
+  (await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock()
 );
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: vi.fn().mockResolvedValue([]) }),
   useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Test Org' } }),

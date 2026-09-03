@@ -5,7 +5,7 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 import GroupIcon from '@mui/icons-material/Group';
-import { formatOrdinalDateTime } from '@aws-web-framework/components';
+import { formatOrdinalDateTime } from '@itsplainsailing/components';
 import { capacityFor, entryWindowFor } from '../utils/entryWindow';
 import { DashboardWhatsOn } from '../types/account';
 

@@ -29,10 +29,10 @@ import {
   InputLabel,
 } from '@mui/material';
 import { HelpOutline as HelpIcon } from '@mui/icons-material';
-import { useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { useTranslation, useCapabilities } from '@aws-web-framework/orgadmin-shell';
-import { DiscountSelector } from '@aws-web-framework/components';
-import type { Discount } from '@aws-web-framework/components';
+import { useOrganisation } from '@itsplainsailing/orgadmin-core';
+import { useTranslation, useCapabilities } from '@itsplainsailing/orgadmin-shell';
+import { DiscountSelector } from '@itsplainsailing/components';
+import type { Discount } from '@itsplainsailing/components';
 import type { EventFormData } from '../../types/event.types';
 
 export interface EventBasicInfoSectionProps {

@@ -38,19 +38,19 @@ vi.mock('react-router-dom', async () => {
 const mockUseApi = vi.fn();
 const mockUseOrganisation = vi.fn();
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, useApi: () => mockUseApi(), useOrganisation: () => mockUseOrganisation() };
 });
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
   const { shellMock } = await import('../../test/shell-mock');
   return shellMock();
 });
 
 
 // Mock modules
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useNotification', () => ({
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useNotification', () => ({
   useNotification: () => ({
     showNotification: vi.fn(),
   }),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { PoweredByFooter } from '@aws-web-framework/components';
+import { PoweredByFooter } from '@itsplainsailing/components';
 
 /**
  * The attribution footer, wired up for this application.

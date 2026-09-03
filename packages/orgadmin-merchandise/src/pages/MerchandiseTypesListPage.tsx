@@ -45,14 +45,14 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatCurrency, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatCurrency, useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
 import {
   useOrganisation,
   useApi,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { MerchandiseType, StockLevel } from '../types/merchandise.types';
 
 /** Worst first, so one click on Stock brings what needs restocking to the top. */

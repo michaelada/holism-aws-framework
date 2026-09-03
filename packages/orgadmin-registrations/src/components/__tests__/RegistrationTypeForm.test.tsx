@@ -59,19 +59,19 @@ vi.mock('react-quill', () => ({
   ),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
   useCapabilities: () => ({ hasCapability: (cap: string) => cap === 'registration-discounts' }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: { id: 'org-1', name: 'Test Org' } }),
 }));
 
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   DiscountSelector: () => <div data-testid="discount-selector" />,
 }));
 

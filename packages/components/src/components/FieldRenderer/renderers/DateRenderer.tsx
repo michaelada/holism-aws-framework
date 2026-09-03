@@ -31,7 +31,7 @@ export interface DateRendererProps {
  * import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
  * import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
  * import { enGB } from 'date-fns/locale';
- * import { DateRenderer } from '@aws-web-framework/components';
+ * import { DateRenderer } from '@itsplainsailing/components';
  * 
  * function MyFormPage() {
  *   return (

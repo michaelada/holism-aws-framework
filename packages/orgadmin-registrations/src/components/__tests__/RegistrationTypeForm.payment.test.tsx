@@ -60,8 +60,8 @@ vi.mock('react-quill', () => ({
   ),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string>) => {
       if (key === 'payment.fee' && opts?.currency) return `Fee (${opts.currency})`;
@@ -76,13 +76,13 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   useCapabilities: () => ({ hasCapability: () => false }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: mockOrganisation }),
 }));
 
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   DiscountSelector: () => <div data-testid="discount-selector" />,
 }));
 

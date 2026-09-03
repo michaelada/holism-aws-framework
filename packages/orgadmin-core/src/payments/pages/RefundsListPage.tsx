@@ -33,7 +33,7 @@ import { ResponsiveTable, SortableTableCell } from '../../components';
 import { useTableSort } from '../../hooks/useTableSort';
 import { useApi } from '../../hooks/useApi';
 import { useCurrency } from '../../hooks/useCurrency';
-import { useTranslation, useLocale, formatDateTime } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, useLocale, formatDateTime } from '@itsplainsailing/orgadmin-shell';
 
 /** A refund, named the way `GET /refunds` names one. */
 export interface Refund {

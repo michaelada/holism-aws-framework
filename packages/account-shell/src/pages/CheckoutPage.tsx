@@ -20,7 +20,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { formatCurrency } from '@aws-web-framework/components';
+import { formatCurrency } from '@itsplainsailing/components';
 import { HoldCountdown } from '../components/HoldCountdown';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
 import { notifyIfSettled } from '../cart/cartActivity';

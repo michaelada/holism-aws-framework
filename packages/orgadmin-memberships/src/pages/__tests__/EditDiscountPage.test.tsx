@@ -15,7 +15,7 @@ import EditDiscountPage from '../EditDiscountPage';
 // Mock the CreateDiscountPage from events module
 const mockCreateDiscountPage = vi.fn(() => <div>Mocked CreateDiscountPage</div>);
 
-vi.mock('@aws-web-framework/orgadmin-events', () => ({
+vi.mock('@itsplainsailing/orgadmin-events', () => ({
   CreateDiscountPage: (props: any) => {
     mockCreateDiscountPage(props);
     return <div data-testid="create-discount-page">CreateDiscountPage with moduleType: {props.moduleType}</div>;

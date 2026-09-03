@@ -50,7 +50,7 @@ export const translateFromCatalogue: Translator = (key, options) => {
 export const translateToKey: Translator = (key) => key;
 
 /**
- * A complete stand-in for `@aws-web-framework/orgadmin-shell`, in one place.
+ * A complete stand-in for `@itsplainsailing/orgadmin-shell`, in one place.
  *
  * ## Why this exists
  *
@@ -76,8 +76,8 @@ export const translateToKey: Translator = (key) => key;
  * ## Use
  *
  * ```ts
- * vi.mock('@aws-web-framework/orgadmin-shell', async () => {
- *   const { createShellMock } = await import('@aws-web-framework/orgadmin-core/test/shellMock');
+ * vi.mock('@itsplainsailing/orgadmin-shell', async () => {
+ *   const { createShellMock } = await import('@itsplainsailing/orgadmin-core/test/shellMock');
  *   return createShellMock();
  * });
  * ```

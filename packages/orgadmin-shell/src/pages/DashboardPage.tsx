@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Box, Typography, Grid } from '@mui/material';
-import { useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation } from '@itsplainsailing/orgadmin-core';
 import { useCapabilities } from '../context/CapabilityContext';
 // Active dashboard card style. Alternative treatments are kept as sibling
 // components for easy switching: DashboardCard (compact icon), DashboardCardHero

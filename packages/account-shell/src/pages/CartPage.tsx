@@ -25,7 +25,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ApplicationFormDialog from '../components/ApplicationFormDialog';
 import CartItemIcon from '../components/CartItemIcon';
 import { HoldCountdown } from '../components/HoldCountdown';
-import { formatCurrency, formatFormAnswer } from '@aws-web-framework/components';
+import { formatCurrency, formatFormAnswer } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';

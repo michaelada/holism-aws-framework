@@ -32,8 +32,8 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { FieldRenderer } from '@itsplainsailing/components';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import { useTranslation } from 'react-i18next';
 import type { Member, MemberStatus } from '../types/membership.types';
 

@@ -26,7 +26,7 @@ import {
   EventDateTile,
   formatCurrency,
   formatDisplayDate,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import EntryStatus from '../components/EntryStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';

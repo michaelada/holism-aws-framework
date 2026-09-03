@@ -1,5 +1,5 @@
 export { CapabilityProvider, useCapabilities } from './CapabilityContext';
-export { OrganisationProvider, useOrganisation, type Organisation } from '@aws-web-framework/orgadmin-core';
+export { OrganisationProvider, useOrganisation, type Organisation } from '@itsplainsailing/orgadmin-core';
 export {
   OnboardingContext,
   useOnboarding,

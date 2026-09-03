@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Card, CardActionArea, CardContent, Stack, Typography } from '@mui/material';
-import { CalendarIcon, EventDateTile, formatCurrency } from '@aws-web-framework/components';
+import { CalendarIcon, EventDateTile, formatCurrency } from '@itsplainsailing/components';
 import WhatsOnStatus from './WhatsOnStatus';
 import { DashboardWhatsOn } from '../types/account';
 

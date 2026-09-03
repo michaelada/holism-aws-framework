@@ -36,13 +36,13 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp, useOnboarding } from '@itsplainsailing/orgadmin-shell';
 import {
   useApi,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import type { MembershipType } from '../types/membership.types';
 
 const MembershipTypesListPage: React.FC = () => {

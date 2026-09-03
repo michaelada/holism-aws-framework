@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/account-shell",
+  "name": "@itsplainsailing/account-shell",
   "version": "1.0.0",
   "description": "ItsPlainSailing Account User Application shell",
   "type": "module",
@@ -19,7 +19,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
-    "@aws-web-framework/components": "*",
+    "@itsplainsailing/components": "*",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@fontsource/roboto": "^5.3.0",

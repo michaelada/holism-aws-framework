@@ -10,8 +10,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import type { Discount } from '@aws-web-framework/components';
+import { useApi, useOrganisation } from '@itsplainsailing/orgadmin-core';
+import type { Discount } from '@itsplainsailing/components';
 import type { EventFormData, EventActivityFormData } from '../types/event.types';
 
 export interface UseEventFormReturn {

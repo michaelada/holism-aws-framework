@@ -33,8 +33,8 @@ import { useNavigate } from 'react-router-dom';
 import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatDate } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell/hooks/useTranslation';
+import { formatDate } from '@itsplainsailing/orgadmin-shell/utils/dateFormatting';
 
 /**
  * Event report row, matching the backend reporting service shape

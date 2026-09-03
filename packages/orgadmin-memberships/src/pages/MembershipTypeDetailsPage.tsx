@@ -22,7 +22,7 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { MembershipType } from '../types/membership.types';
 
 const MembershipTypeDetailsPage: React.FC = () => {

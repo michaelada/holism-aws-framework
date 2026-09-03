@@ -49,7 +49,7 @@ vi.mock('react-i18next', () => ({
     },
   }),
 }));
-vi.mock('@aws-web-framework/components', async () => ({
+vi.mock('@itsplainsailing/components', async () => ({
   // The label maps are real: they are the English fallback the page relies on.
   ...(await vi.importActual<Record<string, unknown>>('../../../../../components/src/utils/auditLabels')),
   AuditChanges: ({ changes, formatField }: { changes: any; formatField?: (f: string) => string }) => (

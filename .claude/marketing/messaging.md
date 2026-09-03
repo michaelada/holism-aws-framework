@@ -87,7 +87,7 @@ naming individually because they are the ones most likely to be assumed:
 |---|---|
 | "Set sail", "on course", "all aboard", "plain sailing ahead", anchors, ropes, compasses, portholes, navy-and-rope palettes | **The name means "it's easy", not "sailing."** The product is for clubs of any kind, and nautical framing tells a tennis club it is not for them. The stylised sail mark is the *one* exception |
 | "Join the club" for creating an account | An account is not a membership. Blurring them makes a visitor think they must pay to enter an open event |
-| "Holism", "Application Framework" | Internal repository names, never user-facing |
+| "Holism", "Application Framework", "AWS Web Application Framework" | Scaffold names. The project is `itsplainsailing` and its packages are scoped `@itsplainsailing/`; only the working directory still reads `Holism`. Never user-facing |
 | Anything implying a neumorphic or teal-and-grey theme, or a choice of themes | One theme, settled, removed in August 2026 |
 | "Fully accessible", "WCAG AA compliant" | No standard has been agreed and nothing has been audited. WCAG AA is the **working floor**, and saying more is a claim we cannot support |
 | Anything dating the end of version 4 | Nothing in the repository says when. A club that fears a sunset shops around |

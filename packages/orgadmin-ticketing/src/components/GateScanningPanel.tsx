@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import {
   Alert,
   Box,
@@ -18,7 +18,7 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import BlockIcon from '@mui/icons-material/Block';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 
 /**
  * The club's side of gate scanning.

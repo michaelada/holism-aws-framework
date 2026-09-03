@@ -16,11 +16,11 @@ import type { ElectronicTicket } from '../../types/ticketing.types';
 
 const { execute } = vi.hoisted(() => ({ execute: vi.fn() }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () =>
-  (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
+vi.mock('@itsplainsailing/orgadmin-shell', async () =>
+  (await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock()
 );
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute, data: null, error: null, loading: false, reset: vi.fn() }),
   useOrganisation: () => ({ organisation: { id: 'org-1' }, setOrganisation: vi.fn() }),

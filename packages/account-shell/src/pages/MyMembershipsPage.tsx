@@ -19,7 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { formatDisplayDate, formatFormAnswer } from '@aws-web-framework/components';
+import { formatDisplayDate, formatFormAnswer } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountMembershipRecord } from '../types/account';

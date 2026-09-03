@@ -29,8 +29,8 @@ import {
   NavigateNext as NextIcon,
   NavigateBefore as BackIcon,
 } from '@mui/icons-material';
-import { useApi } from '@aws-web-framework/orgadmin-core';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import EventBasicInfoSection from '../components/sections/EventBasicInfoSection';
 import EventDatesSection from '../components/sections/EventDatesSection';
 import EventTicketingSection from '../components/sections/EventTicketingSection';

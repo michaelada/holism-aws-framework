@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { formatDisplayDate } from '@aws-web-framework/components';
+import { formatDisplayDate } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { changeLocale, localeForLanguage } from '../i18n/config';

@@ -1,5 +1,5 @@
 {
-  "name": "@aws-web-framework/orgadmin-registrations",
+  "name": "@itsplainsailing/orgadmin-registrations",
   "version": "1.0.0",
   "description": "ItsPlainSailing Organisation Admin Registrations Module (Entity Registration Management)",
   "type": "module",

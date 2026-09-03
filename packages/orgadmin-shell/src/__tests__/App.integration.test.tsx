@@ -21,8 +21,8 @@ vi.mock('../pages/DashboardPage', () => ({
 }));
 
 // Mock all core module registrations from orgadmin-core
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@aws-web-framework/orgadmin-core')>();
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@itsplainsailing/orgadmin-core')>();
   return {
     ...actual,
     // Override only the module registrations for testing

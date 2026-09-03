@@ -23,7 +23,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { CalendarSlotView } from '../types/calendar.types';
 
 interface ReservedSlotPanelProps {

@@ -23,8 +23,8 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { BatchOperationType } from '../types/registration.types';
 
 interface BatchOperationsDialogProps {

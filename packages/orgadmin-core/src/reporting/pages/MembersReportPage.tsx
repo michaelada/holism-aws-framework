@@ -35,7 +35,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApi, useApiGet } from '../../hooks/useApi';
 import { exportReport } from '../exportReport';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell/hooks/useTranslation';
 
 /**
  * Membership type report row, matching the backend reporting service shape

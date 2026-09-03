@@ -37,9 +37,9 @@ import { useApi } from '../../hooks/useApi';
 import RefundDialog, { RefundRequest } from '../components/RefundDialog';
 import { SortableTableCell } from '../../components';
 import { useTableSort } from '../../hooks/useTableSort';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell/hooks/useTranslation';
-import { formatDateTime } from '@aws-web-framework/orgadmin-shell/utils/dateFormatting';
-import { useLocale } from '@aws-web-framework/orgadmin-shell/context/LocaleContext';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell/hooks/useTranslation';
+import { formatDateTime } from '@itsplainsailing/orgadmin-shell/utils/dateFormatting';
+import { useLocale } from '@itsplainsailing/orgadmin-shell/context/LocaleContext';
 
 /**
  * A payment, named the way the API names one.

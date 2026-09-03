@@ -74,7 +74,7 @@ describe('the shell', () => {
      * makes everything else here pointless if it is missing: a module absent
      * from `ALL_MODULES` has no routes, no menu item and no way in.
      */
-    expect(app).toContain("from '@aws-web-framework/orgadmin-announcements'");
+    expect(app).toContain("from '@itsplainsailing/orgadmin-announcements'");
     expect(app).toMatch(/ALL_MODULES[\s\S]*announcementsModule/);
   });
 });

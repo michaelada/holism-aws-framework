@@ -24,7 +24,7 @@ import {
   Alert,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 import type { BatchOperationType } from '../types/membership.types';
 
 interface BatchOperationsDialogProps {

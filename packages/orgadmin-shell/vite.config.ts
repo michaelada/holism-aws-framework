@@ -25,16 +25,16 @@ export default defineConfig({
   // Path resolution
   resolve: {
     alias: {
-      '@aws-web-framework/components': path.resolve(__dirname, '../components/src'),
-      '@aws-web-framework/orgadmin-core': path.resolve(__dirname, '../orgadmin-core/src'),
+      '@itsplainsailing/components': path.resolve(__dirname, '../components/src'),
+      '@itsplainsailing/orgadmin-core': path.resolve(__dirname, '../orgadmin-core/src'),
       // Use actual capability modules
-      '@aws-web-framework/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
-      '@aws-web-framework/orgadmin-memberships': path.resolve(__dirname, '../orgadmin-memberships/src'),
-      '@aws-web-framework/orgadmin-registrations': path.resolve(__dirname, '../orgadmin-registrations/src'),
-      '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, '../orgadmin-merchandise/src'),
-      '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, '../orgadmin-calendar/src'),
-      '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, '../orgadmin-ticketing/src'),
-      '@aws-web-framework/orgadmin-announcements': path.resolve(__dirname, '../orgadmin-announcements/src'),
+      '@itsplainsailing/orgadmin-events': path.resolve(__dirname, '../orgadmin-events/src'),
+      '@itsplainsailing/orgadmin-memberships': path.resolve(__dirname, '../orgadmin-memberships/src'),
+      '@itsplainsailing/orgadmin-registrations': path.resolve(__dirname, '../orgadmin-registrations/src'),
+      '@itsplainsailing/orgadmin-merchandise': path.resolve(__dirname, '../orgadmin-merchandise/src'),
+      '@itsplainsailing/orgadmin-calendar': path.resolve(__dirname, '../orgadmin-calendar/src'),
+      '@itsplainsailing/orgadmin-ticketing': path.resolve(__dirname, '../orgadmin-ticketing/src'),
+      '@itsplainsailing/orgadmin-announcements': path.resolve(__dirname, '../orgadmin-announcements/src'),
     },
     
     /**
@@ -105,13 +105,13 @@ export default defineConfig({
       '@mui/x-date-pickers/AdapterDateFns',
     ],
     exclude: [
-      '@aws-web-framework/components', 
-      '@aws-web-framework/orgadmin-core', 
-      '@aws-web-framework/orgadmin-events', 
-      '@aws-web-framework/orgadmin-memberships',
-      '@aws-web-framework/orgadmin-registrations',
-      '@aws-web-framework/orgadmin-merchandise',
-      '@aws-web-framework/orgadmin-ticketing'
+      '@itsplainsailing/components', 
+      '@itsplainsailing/orgadmin-core', 
+      '@itsplainsailing/orgadmin-events', 
+      '@itsplainsailing/orgadmin-memberships',
+      '@itsplainsailing/orgadmin-registrations',
+      '@itsplainsailing/orgadmin-merchandise',
+      '@itsplainsailing/orgadmin-ticketing'
     ],
   },
   

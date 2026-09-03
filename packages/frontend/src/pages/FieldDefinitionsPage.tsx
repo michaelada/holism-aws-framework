@@ -17,7 +17,7 @@ import {
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useMetadataApi } from '../context';
-import { FieldDefinition } from '@aws-web-framework/components';
+import { FieldDefinition } from '@itsplainsailing/components';
 import { ApiError, NetworkError } from '../api';
 
 export default function FieldDefinitionsPage() {

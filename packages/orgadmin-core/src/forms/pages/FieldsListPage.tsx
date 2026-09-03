@@ -42,7 +42,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, usePageHelp } from '@itsplainsailing/orgadmin-shell';
 
 interface ApplicationField {
   id: string;

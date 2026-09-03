@@ -40,7 +40,7 @@ vi.mock('react-router-dom', () => ({
 vi.mock('../../components/PageHeader', () => ({
   PageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
 }));
-vi.mock('@aws-web-framework/components', async () => ({
+vi.mock('@itsplainsailing/components', async () => ({
   // The label maps are real — the page renders actions through them.
   ...(await vi.importActual<Record<string, unknown>>('../../../../components/src/utils/auditLabels')),
   AuditChanges: () => <div data-testid="changes" />,

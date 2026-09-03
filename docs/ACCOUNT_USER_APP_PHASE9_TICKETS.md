@@ -140,7 +140,7 @@ natively, brightness is the thing to add here.
 Per CLAUDE.md §1.5. Both front ends now render the same ticket, and two implementations of one
 ticket is exactly the drift that ends with a QR code that scans in one app and not the other.
 
-`orgadmin-ticketing` re-exports the same names from `@aws-web-framework/components`, so existing
+`orgadmin-ticketing` re-exports the same names from `@itsplainsailing/components`, so existing
 imports keep working — the module boundary changed, not the API. Its tests moved with it.
 
 The reference format now lives in two places by necessity: `validateTicketReference` on the client

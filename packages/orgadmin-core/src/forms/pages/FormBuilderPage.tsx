@@ -45,7 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { useTranslation, usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, usePageHelp } from '@itsplainsailing/orgadmin-shell';
 
 interface ApplicationForm {
   id?: string;

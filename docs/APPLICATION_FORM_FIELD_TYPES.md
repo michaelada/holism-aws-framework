@@ -33,7 +33,7 @@ One shared translation, in the package both front ends already depend on
 (CLAUDE.md §1.5): `packages/components/src/utils/applicationField.ts`.
 
 ```ts
-import { applicationFieldToFieldDefinition, emptyValueForField } from '@aws-web-framework/components';
+import { applicationFieldToFieldDefinition, emptyValueForField } from '@itsplainsailing/components';
 
 <FieldRenderer
   fieldDefinition={applicationFieldToFieldDefinition(field)}

@@ -91,8 +91,8 @@ export {
   generateMultipleTickets,
   validateTicketReference,
   parseTicketReference,
-} from '@aws-web-framework/components';
-export type { TicketPDFData } from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
+export type { TicketPDFData } from '@itsplainsailing/components';
 
 // Export types
 export * from './types/ticketing.types';

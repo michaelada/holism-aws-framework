@@ -26,7 +26,7 @@ import CreateMemberPage from '../CreateMemberPage';
 const mockExecute = vi.fn();
 const mockNavigate = vi.fn();
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: { id: 'org-1' } }),

@@ -17,7 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import { formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
+import { formatCurrency, formatDisplayDate } from '@itsplainsailing/components';
 import ActivityStatusChip from '../components/ActivityStatusChip';
 import MembershipCard from '../components/MembershipCard';
 import WhatsOnCard from '../components/WhatsOnCard';

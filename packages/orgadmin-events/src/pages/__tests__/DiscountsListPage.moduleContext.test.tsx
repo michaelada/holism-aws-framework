@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import DiscountsListPage from '../DiscountsListPage';
-import * as useApiModule from '@aws-web-framework/orgadmin-core';
+import * as useApiModule from '@itsplainsailing/orgadmin-core';
 import type { Discount } from '../../types/discount.types';
 
 // Mock useNavigate
@@ -25,8 +25,8 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock orgadmin-shell hooks
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   usePageHelp: vi.fn(),
   useOnboarding: () => ({
     setCurrentModule: vi.fn(),

@@ -29,9 +29,9 @@ import {
   Send as SendIcon,
 } from '@mui/icons-material';
 import { useApi } from '../../hooks/useApi';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import { useOrganisation } from '../../context/OrganisationContext';
-import { usePageHelp } from '@aws-web-framework/orgadmin-shell';
+import { usePageHelp } from '@itsplainsailing/orgadmin-shell';
 
 const InviteAdminUserPage: React.FC = () => {
   const { t } = useTranslation();

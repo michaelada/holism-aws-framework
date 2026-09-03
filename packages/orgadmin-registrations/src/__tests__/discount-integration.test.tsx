@@ -67,8 +67,8 @@ vi.mock('react-quill', () => ({
   ),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
-  ...(await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock(),
+vi.mock('@itsplainsailing/orgadmin-shell', async () => ({
+  ...(await import('@itsplainsailing/orgadmin-core/test/shellMock')).createShellMock(),
   useTranslation: () => ({
     t: (k: string) => k,
     i18n: { language: 'en' },
@@ -78,7 +78,7 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => ({
   usePageHelp: () => ({ setPageHelp: vi.fn() }),
 }));
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({
@@ -89,7 +89,7 @@ vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
 // Capture DiscountSelector props for assertions
 let capturedDiscountSelectorProps: any = null;
 
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   DiscountSelector: (props: any) => {
     capturedDiscountSelectorProps = props;
     return (
@@ -113,7 +113,7 @@ vi.mock('@aws-web-framework/components', () => ({
 let capturedEventsDiscountsListProps: any = null;
 let capturedEventsCreateDiscountProps: any = null;
 
-vi.mock('@aws-web-framework/orgadmin-events', () => ({
+vi.mock('@itsplainsailing/orgadmin-events', () => ({
   DiscountsListPage: (props: any) => {
     capturedEventsDiscountsListProps = props;
     return <div data-testid="events-discounts-list" data-module-type={props.moduleType} />;

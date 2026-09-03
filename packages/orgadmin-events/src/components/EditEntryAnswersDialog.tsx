@@ -34,9 +34,9 @@ import {
   applicationFieldToFieldDefinition,
   emptyValueForField,
   validateApplicationField,
-} from '@aws-web-framework/components';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/components';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
+import { useApi } from '@itsplainsailing/orgadmin-core';
 
 /** A field of the form, as `/application-forms/:id/with-fields` returns one. */
 export interface FormField {

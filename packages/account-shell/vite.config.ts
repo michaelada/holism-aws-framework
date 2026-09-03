@@ -94,7 +94,7 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '@aws-web-framework/components': path.resolve(__dirname, '../components/src'),
+      '@itsplainsailing/components': path.resolve(__dirname, '../components/src'),
     },
 
     /**
@@ -108,7 +108,7 @@ export default defineConfig({
 
   optimizeDeps: {
     // Left unbundled so edits to the shared library hot-reload.
-    exclude: ['@aws-web-framework/components'],
+    exclude: ['@itsplainsailing/components'],
   },
 
   server: {

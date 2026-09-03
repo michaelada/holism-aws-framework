@@ -11,7 +11,7 @@
 import React from 'react';
 import { Box, Button, Paper } from '@mui/material';
 import { Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 
 export interface StickySaveBarProps {
   onCancel: () => void;

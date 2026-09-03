@@ -60,7 +60,7 @@ describe('EditFieldPage - Component Rendering Tests', () => {
     it('should import useCapabilities hook', () => {
       // Verify the hook is imported from orgadmin-shell
       expect(fileContent).toContain('useCapabilities');
-      expect(fileContent).toMatch(/import.*useCapabilities.*from.*@aws-web-framework\/orgadmin-shell/);
+      expect(fileContent).toMatch(/import.*useCapabilities.*from.*@itsplainsailing\/orgadmin-shell/);
     });
 
     it('should call useCapabilities hook in component', () => {

@@ -82,8 +82,8 @@ Each module exports a `ModuleRegistration` object that includes:
 ## Dependencies
 
 This package depends on:
-- `@aws-web-framework/orgadmin-shell` - Shell types and utilities
-- `@aws-web-framework/components` - Shared UI components
+- `@itsplainsailing/orgadmin-shell` - Shell types and utilities
+- `@itsplainsailing/components` - Shared UI components
 - React, React Router, Material-UI
 
 ## License

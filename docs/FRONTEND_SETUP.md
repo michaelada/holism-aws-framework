@@ -2,7 +2,7 @@
 
 ## Issue with Docker
 
-The frontend cannot run properly in Docker because it's part of a monorepo and needs access to the `@aws-web-framework/components` package. Running it in Docker would require complex multi-stage builds or copying the entire monorepo.
+The frontend cannot run properly in Docker because it's part of a monorepo and needs access to the `@itsplainsailing/components` package. Running it in Docker would require complex multi-stage builds or copying the entire monorepo.
 
 ## Recommended Approach: Run Frontend Locally
 
@@ -110,7 +110,7 @@ Once the frontend is running:
 
 ### Troubleshooting
 
-#### Frontend won't start - "Cannot find module '@aws-web-framework/components'"
+#### Frontend won't start - "Cannot find module '@itsplainsailing/components'"
 
 **Solution**: Build the components package first:
 ```bash

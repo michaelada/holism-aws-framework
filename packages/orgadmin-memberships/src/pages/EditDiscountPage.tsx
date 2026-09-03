@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { CreateDiscountPage as EventsCreateDiscountPage } from '@aws-web-framework/orgadmin-events';
+import { CreateDiscountPage as EventsCreateDiscountPage } from '@itsplainsailing/orgadmin-events';
 
 const EditDiscountPage: React.FC = () => {
   // Pass moduleType='memberships' to the events create discount page

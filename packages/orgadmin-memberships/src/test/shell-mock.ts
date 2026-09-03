@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 /**
- * A stand-in for `@aws-web-framework/orgadmin-shell`, in one place.
+ * A stand-in for `@itsplainsailing/orgadmin-shell`, in one place.
  *
  * ## Why this exists
  *
@@ -26,7 +26,7 @@ import { vi } from 'vitest';
  * ## Use
  *
  * ```ts
- * vi.mock('@aws-web-framework/orgadmin-shell', async () => {
+ * vi.mock('@itsplainsailing/orgadmin-shell', async () => {
  *   const { shellMock } = await import('../../test/shell-mock');
  *   return shellMock();
  * });

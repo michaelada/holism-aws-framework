@@ -46,13 +46,13 @@ import {
   useTranslation,
   useLocale,
   formatDateTime,
-} from '@aws-web-framework/orgadmin-shell';
+} from '@itsplainsailing/orgadmin-shell';
 import {
   useApi,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 
 /** An entry, as `GET /events/:eventId/entries` returns one. */
 export interface EventEntry {

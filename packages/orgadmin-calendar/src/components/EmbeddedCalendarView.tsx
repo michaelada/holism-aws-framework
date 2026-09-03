@@ -19,7 +19,7 @@ import {
   endOfDay,
 } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 import { useCalendarView } from '../hooks/useCalendarView';

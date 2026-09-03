@@ -12,7 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { formatCurrency } from '@aws-web-framework/components';
+import { formatCurrency } from '@itsplainsailing/components';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
 import { notifyIfSettled } from '../cart/cartActivity';
 import { PaymentStatus } from '../types/account';

@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import registrationsTranslationKeys from '../i18n/en';
-import { formatDate } from '@aws-web-framework/orgadmin-shell';
+import { formatDate } from '@itsplainsailing/orgadmin-shell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

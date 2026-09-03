@@ -19,7 +19,7 @@ import {
   auditActionLabel,
   auditFieldLabel,
   formatAuditValue,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 import { getAuditEvent } from '../services/auditApi';
 import type { AuditEvent } from '../types/audit.types';
 import { PageHeader } from '../components/PageHeader';

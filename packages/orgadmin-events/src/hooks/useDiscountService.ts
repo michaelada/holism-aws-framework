@@ -6,7 +6,7 @@
  */
 
 import { useContext, useEffect } from 'react';
-import { AuthTokenContext, useOrganisation } from '@aws-web-framework/orgadmin-core';
+import { AuthTokenContext, useOrganisation } from '@itsplainsailing/orgadmin-core';
 import { discountService } from '../services/discount.service';
 
 /**

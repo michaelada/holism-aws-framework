@@ -141,4 +141,4 @@ npm run test:admin
 - Uses the same Keycloak realm as main frontend but different client ID
 - Requires 'admin' realm role for access
 - Shares neumorphic theme with main frontend for consistency
-- Can reuse components from @aws-web-framework/components package
+- Can reuse components from @itsplainsailing/components package

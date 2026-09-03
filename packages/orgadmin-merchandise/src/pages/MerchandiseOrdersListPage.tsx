@@ -34,14 +34,14 @@ import {
   Visibility as ViewIcon,
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
-import { useTranslation, formatCurrency, formatDate } from '@aws-web-framework/orgadmin-shell';
+import { useTranslation, formatCurrency, formatDate } from '@itsplainsailing/orgadmin-shell';
 import {
   useApi,
   useOrganisation,
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
+} from '@itsplainsailing/orgadmin-core';
 import BatchOrderOperationsDialog from '../components/BatchOrderOperationsDialog';
 import type { MerchandiseOrder, OrderStatus, PaymentStatus } from '../types/merchandise.types';
 

@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
-import { EventDateTile, formatCurrency } from '@aws-web-framework/components';
+import { EventDateTile, formatCurrency } from '@itsplainsailing/components';
 import EntryStatus from '../components/EntryStatus';
 import { useAccountApi } from '../hooks/useAccountApi';
 import usePageMetadata from '../hooks/usePageMetadata';

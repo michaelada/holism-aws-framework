@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAccountApi } from './useAccountApi';
-import type { PostCardPost } from '@aws-web-framework/components';
+import type { PostCardPost } from '@itsplainsailing/components';
 
 /**
  * The platform's announcements for one login surface.

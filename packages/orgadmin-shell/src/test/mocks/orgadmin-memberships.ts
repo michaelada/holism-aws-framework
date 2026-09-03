@@ -1,4 +1,4 @@
-// Mock module for @aws-web-framework/orgadmin-memberships
+// Mock module for @itsplainsailing/orgadmin-memberships
 // Used in development when the actual package is not built
 
 import { lazy } from 'react';

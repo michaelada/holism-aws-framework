@@ -58,8 +58,8 @@ import {
   ResponsiveTable,
   SortableTableCell,
   useTableSort,
-} from '@aws-web-framework/orgadmin-core';
-import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
+} from '@itsplainsailing/orgadmin-core';
+import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@itsplainsailing/orgadmin-shell';
 import type { Discount, DiscountStatus, DiscountType, ApplicationScope } from '../types/discount.types';
 
 interface DiscountsListPageProps {

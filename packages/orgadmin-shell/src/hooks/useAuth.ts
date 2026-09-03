@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Keycloak from 'keycloak-js';
 import axios from 'axios';
-import { Organisation } from '@aws-web-framework/orgadmin-core';
-import { reportSignOut } from '@aws-web-framework/components';
+import { Organisation } from '@itsplainsailing/orgadmin-core';
+import { reportSignOut } from '@itsplainsailing/components';
 
 interface UseAuthReturn {
   keycloak: Keycloak | null;

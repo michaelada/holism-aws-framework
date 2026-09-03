@@ -43,8 +43,8 @@ global.IntersectionObserver = class IntersectionObserver {
  * with "No `usePageHelp` export is defined on the mock". Only the two
  * formatters are overridden below, because assertions here read the raw value.
  */
-vi.mock('@aws-web-framework/orgadmin-shell', async () => {
-  const { createShellMock } = await import('@aws-web-framework/orgadmin-core/test/shellMock');
+vi.mock('@itsplainsailing/orgadmin-shell', async () => {
+  const { createShellMock } = await import('@itsplainsailing/orgadmin-core/test/shellMock');
   return {
     ...createShellMock(),
     formatDateTime: (date: any, _locale?: string) => String(date),
@@ -59,7 +59,7 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () => {
  * pages call — was simply absent, and `useContext(undefined)` took the page
  * down before any assertion ran.
  */
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: vi.fn(() => ({
     execute: vi.fn(),

@@ -28,17 +28,17 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
-vi.mock('@aws-web-framework/orgadmin-shell/hooks/useTranslation', () =>
+vi.mock('@itsplainsailing/orgadmin-shell', () => import('../../../test/orgadminShellMock'));
+vi.mock('@itsplainsailing/orgadmin-shell/hooks/useTranslation', () =>
   import('../../../test/orgadminShellMock')
 );
-vi.mock('@aws-web-framework/orgadmin-shell/utils/currencyFormatting', () =>
+vi.mock('@itsplainsailing/orgadmin-shell/utils/currencyFormatting', () =>
   import('../../../test/orgadminShellMock')
 );
-vi.mock('@aws-web-framework/orgadmin-shell/utils/dateFormatting', () =>
+vi.mock('@itsplainsailing/orgadmin-shell/utils/dateFormatting', () =>
   import('../../../test/orgadminShellMock')
 );
-vi.mock('@aws-web-framework/orgadmin-shell/context/LocaleContext', () =>
+vi.mock('@itsplainsailing/orgadmin-shell/context/LocaleContext', () =>
   import('../../../test/orgadminShellMock')
 );
 

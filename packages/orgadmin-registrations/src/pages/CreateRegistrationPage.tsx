@@ -30,9 +30,9 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { enGB } from 'date-fns/locale';
-import { FieldRenderer } from '@aws-web-framework/components';
-import { useApi, useOrganisation } from '@aws-web-framework/orgadmin-core';
-import { useTranslation } from '@aws-web-framework/orgadmin-shell';
+import { FieldRenderer } from '@itsplainsailing/components';
+import { useApi, useOrganisation } from '@itsplainsailing/orgadmin-core';
+import { useTranslation } from '@itsplainsailing/orgadmin-shell';
 import type { RegistrationType } from '../types/registration.types';
 
 interface ApplicationFormWithFields {

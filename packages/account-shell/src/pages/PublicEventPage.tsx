@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { EventDateTile, formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
+import { EventDateTile, formatCurrency, formatDisplayDate } from '@itsplainsailing/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import EventStructuredData from '../components/EventStructuredData';
 import EntryStatus from '../components/EntryStatus';

@@ -2,7 +2,7 @@ import { ApiClient } from './client';
 import {
   FieldDefinition,
   ObjectDefinition,
-} from '@aws-web-framework/components';
+} from '@itsplainsailing/components';
 
 export class MetadataApi {
   constructor(private client: ApiClient) {}

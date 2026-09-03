@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useOrganisation, useApi } from '@aws-web-framework/orgadmin-core';
+import { useOrganisation, useApi } from '@itsplainsailing/orgadmin-core';
 import { calculateAvailableSlots } from '../utils/slotAvailabilityCalculator';
 import type {
   Calendar,

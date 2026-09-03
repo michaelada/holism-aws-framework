@@ -1402,7 +1402,7 @@
   },
   "ticketing": {
     "scanning": {
-      "title": "Scanning at the gate",
+      "title": "Scanning at the gate/ door",
       "intro": "Create a link for whoever is on the gate. They open it on their own phone, give their name and the PIN, and start scanning. No account needed, and it expires by itself.",
       "lasts": "Lasts for",
       "hours": "{{count}} hour",

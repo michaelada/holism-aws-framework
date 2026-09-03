@@ -22,7 +22,7 @@ import CreateMemberPage from '../CreateMemberPage';
 const mockExecute = vi.fn();
 const mockNavigate = vi.fn();
 
-vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
+vi.mock('@itsplainsailing/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({ execute: mockExecute }),
   useOrganisation: () => ({ organisation: { id: 'org-1' } }),
@@ -43,7 +43,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Mock FieldRenderer component
-vi.mock('@aws-web-framework/components', () => ({
+vi.mock('@itsplainsailing/components', () => ({
   FieldRenderer: ({ fieldDefinition, value, onChange, required }: any) => (
     <div data-testid={`field-${fieldDefinition.shortName}`}>
       <label>{fieldDefinition.displayName}</label>
