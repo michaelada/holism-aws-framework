@@ -2287,6 +2287,36 @@
         "saved": "Registration settings saved."
       }
     },
+    "eventRules": {
+      "title": "Event rules",
+      "description": "How a discipline runs at this club — the platform's defaults, anything your organisation type has changed, and your own. Only what you change is stored, so a later improvement to a default still reaches you.",
+      "discipline": "Discipline",
+      "disciplineHelp": "The disciplines your organisation has been given.",
+      "columns": {
+        "setting": "Setting",
+        "value": "Value",
+        "from": "From"
+      },
+      "from": {
+        "template": "Platform default",
+        "organisationType": "Organisation type",
+        "organisation": "This organisation"
+      },
+      "changedHere": "Changed here",
+      "lockedBy": "Set by {{name}}",
+      "lockedByType": "Set by your organisation type",
+      "reset": "Reset to the inherited value",
+      "resetShort": "Reset",
+      "resetAll": "Reset all to inherited",
+      "inheritedNote": "Anything not changed here is inherited, and follows the default if it improves.",
+      "noTemplates": "No disciplines have been made available to this organisation yet.",
+      "noSettings": "This discipline has no settings to change.",
+      "messages": {
+        "loadFailed": "Could not load the event rules.",
+        "saveFailed": "Could not save the event rules.",
+        "saved": "Event rules saved."
+      }
+    },
     "stripeConnect": {
       "title": "Stripe payouts",
       "description": "Connect your Stripe account so card payments reach your club. Members cannot pay by card until this is complete.",

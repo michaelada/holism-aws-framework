@@ -22,6 +22,7 @@ import {
   DevicesOther as SessionsIcon,
   FactCheck as AuditIcon,
   Category as OrganisationTypesIcon,
+  EventNote as EventTemplatesIcon,
   ExitToApp as LogoutIcon,
   Menu as MenuIcon,
   People as UsersIcon,
@@ -82,6 +83,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Organisation Types', path: '/organization-types', icon: <OrganisationTypesIcon /> },
       { label: 'Organisations', path: '/organizations', icon: <OrganisationsIcon /> },
+      { label: 'Event type templates', path: '/event-type-templates', icon: <EventTemplatesIcon /> },
     ],
   },
   {

@@ -58,6 +58,7 @@ Five components carry the conventions; reach for them before hand-rolling.
 | `/organizations`, `/organizations/new`, `/:id`, `/:id/edit` | `OrganizationsPage`, `CreateOrganizationPage`, `OrganizationDetailsPage`, `EditOrganizationPage` |
 | `/organizations/:id/users/add` | `AddOrganizationAdminUserPage` |
 | `/organizations/:id/roles/create` | `CreateOrganizationRolePage` |
+| `/event-type-templates`, `/new`, `/:id/edit` | `EventTypeTemplatesPage`, `EditEventTypeTemplatePage` (one page for create and edit) |
 | `/posts`, `/posts/new`, `/posts/:id`, `/posts/:id/edit` | `PostsPage`, `CreatePostPage`, `PostDetailsPage`, `EditPostPage` |
 | `/sessions` | `SessionsPage` |
 | `/audit`, `/audit/:id` | `AuditLogPage`, `AuditEventPage` |
@@ -95,7 +96,7 @@ Five components carry the conventions; reach for them before hand-rolling.
 
 ## Navigation
 
-`components/Layout.tsx` is a persistent left rail carrying **all eleven** destinations, grouped
+`components/Layout.tsx` is a persistent left rail carrying **all twelve** destinations, grouped
 Platform / Configuration / Content / Oversight / Access, collapsing to a temporary `Drawer` below
 `md`. It marks the
 current section with `aria-current="page"` and keeps a section current inside its detail pages.
@@ -103,6 +104,30 @@ current section with `aria-current="page"` and keeps a section current inside it
 Adding a route means adding it to `routes/index.tsx` **and** to `NAV_GROUPS` in `Layout.tsx`. The
 rail listed three of eight for a long time, which left Users and Roles reachable only by
 typed URL — see `docs/PLATFORM_ADMIN_CRAFT_PASS.md`.
+
+## Event type templates
+
+The platform's definition of a discipline — its phases, what they run on, and the rules every club
+starts from. A club's own `event_types` row is free text with no behaviour; a discipline that knows
+how to schedule itself is defined once here. Task S0-5 of
+docs/EVENT_SCHEDULING_TASKS_S0_S1.md; the API is `/api/admin/event-type-templates`.
+
+`EditEventTypeTemplatePage` is one page for create and edit — the second is the first with an id, and
+a create form that diverges is how the two come to disagree about what a template is. It hosts two
+editors:
+
+- **`TemplateShapeEditor`** — the part a club cannot override. Phases reorder with **arrows, not
+  drag**, matching `PostsPage`'s decision rather than the wireframe's drawing. Removing a resource
+  kind a phase still runs on is refused, with the tooltip naming the phases.
+- **`TemplateSettingsEditor`** — the defaults, drawn by `describeSettings` from
+  `@itsplainsailing/components`, the same helper the org-admin's Event rules tab uses. Settings are a
+  flat map of dotted keys; the dots group them, the value's type picks the input, and
+  `shape.settingLabels` supplies the wording.
+
+Two rules the screen enforces and the server also enforces, because a screen is not a constraint:
+the **key** may be corrected while the template is a draft and never after (a published key is what
+saved schedules and results name), and **publishing** is its own act with its own confirmation,
+refused while there are no phases.
 
 ## Organisation type logos
 

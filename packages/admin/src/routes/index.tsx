@@ -22,6 +22,8 @@ import { AuditEventPage } from '../pages/AuditEventPage';
 import { CreatePostPage } from '../pages/CreatePostPage';
 import { EditPostPage } from '../pages/EditPostPage';
 import { PostDetailsPage } from '../pages/PostDetailsPage';
+import { EventTypeTemplatesPage } from '../pages/EventTypeTemplatesPage';
+import { EditEventTypeTemplatePage } from '../pages/EditEventTypeTemplatePage';
 
 function NotFoundPage() {
   const navigate = useNavigate();
@@ -138,6 +140,30 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrganizationTypeDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/event-type-templates"
+        element={
+          <ProtectedRoute>
+            <EventTypeTemplatesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/event-type-templates/new"
+        element={
+          <ProtectedRoute>
+            <EditEventTypeTemplatePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/event-type-templates/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditEventTypeTemplatePage />
           </ProtectedRoute>
         }
       />

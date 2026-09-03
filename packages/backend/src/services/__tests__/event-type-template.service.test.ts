@@ -421,3 +421,62 @@ describe('saving an organisation type’s rules', () => {
     expect(resolved.sources).toEqual({ arenaCount: 'organisation-type' });
   });
 });
+
+describe('correcting a template’s key', () => {
+  const row = (status: string, key = 'equestrian.eventing') => ({
+    id: TEMPLATE,
+    key,
+    display_name: 'Eventing',
+    description: null,
+    capability: null,
+    scheduler_kind: 'sequential-phases',
+    shape: {},
+    default_settings: {},
+    status,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+
+  it('lets a draft’s key be corrected', async () => {
+    // There is no delete endpoint, so a typo in a draft would otherwise be
+    // permanent.
+    query.mockReset();
+    query
+      .mockResolvedValueOnce({ rows: [row('draft', 'equestrain.eventing')] }) // getTemplate
+      .mockResolvedValueOnce({ rows: [] }) // the key update
+      .mockResolvedValueOnce({ rows: [{ id: TEMPLATE }] }) // the main update
+      .mockResolvedValueOnce({ rows: [row('draft')] }); // getTemplate, for the reply
+
+    await service.updateTemplate(TEMPLATE, { key: 'equestrian.eventing' });
+
+    expect(query.mock.calls[1][0]).toContain('SET key');
+    expect(query.mock.calls[1][1]).toEqual([TEMPLATE, 'equestrian.eventing']);
+  });
+
+  it('refuses to change a published template’s key', async () => {
+    // A saved event names it. Renaming would orphan the schedule and the
+    // results silently.
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [row('published')] });
+
+    await expect(
+      service.updateTemplate(TEMPLATE, { key: 'something.else' })
+    ).rejects.toMatchObject({ statusCode: 400 });
+
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not object when a published template is saved with its own key unchanged', async () => {
+    // The screen sends the whole form back, key included. Treating that as an
+    // attempted rename would make a published template unsaveable.
+    query.mockReset();
+    query
+      .mockResolvedValueOnce({ rows: [row('published')] })
+      .mockResolvedValueOnce({ rows: [{ id: TEMPLATE }] })
+      .mockResolvedValueOnce({ rows: [row('published')] });
+
+    await expect(
+      service.updateTemplate(TEMPLATE, { key: 'equestrian.eventing', displayName: 'Eventing' })
+    ).resolves.toBeDefined();
+  });
+});

@@ -2105,6 +2105,36 @@
         "saved": "Paramètres d'inscription enregistrés."
       }
     },
+    "eventRules": {
+      "title": "Règles d'événement",
+      "description": "Comment une discipline se déroule dans ce club : les valeurs par défaut de la plateforme, ce que votre type d'organisation a modifié, et les vôtres. Seul ce que vous modifiez est enregistré, afin qu'une amélioration ultérieure d'une valeur par défaut vous parvienne encore.",
+      "discipline": "Discipline",
+      "disciplineHelp": "Les disciplines mises à la disposition de votre organisation.",
+      "columns": {
+        "setting": "Paramètre",
+        "value": "Valeur",
+        "from": "Origine"
+      },
+      "from": {
+        "template": "Valeur par défaut de la plateforme",
+        "organisationType": "Type d'organisation",
+        "organisation": "Cette organisation"
+      },
+      "changedHere": "Modifié ici",
+      "lockedBy": "Défini par {{name}}",
+      "lockedByType": "Défini par votre type d'organisation",
+      "reset": "Rétablir la valeur héritée",
+      "resetShort": "Rétablir",
+      "resetAll": "Tout rétablir aux valeurs héritées",
+      "inheritedNote": "Tout ce qui n'est pas modifié ici est hérité et suit la valeur par défaut si celle-ci est améliorée.",
+      "noTemplates": "Aucune discipline n'a encore été mise à la disposition de cette organisation.",
+      "noSettings": "Cette discipline n'a aucun paramètre à modifier.",
+      "messages": {
+        "loadFailed": "Impossible de charger les règles d'événement.",
+        "saveFailed": "Impossible d'enregistrer les règles d'événement.",
+        "saved": "Règles d'événement enregistrées."
+      }
+    },
     "stripeConnect": {
       "title": "Versements Stripe",
       "description": "Connectez votre compte Stripe pour que les paiements par carte parviennent à votre club. Les membres ne peuvent pas payer par carte tant que ce n'est pas terminé.",

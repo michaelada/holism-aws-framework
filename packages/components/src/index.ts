@@ -43,3 +43,4 @@ export * from './utils/ticketRender';
 export * from './utils/applicationField';
 export * from './utils/auditLabels';
 export * from './utils/signOutReport';
+export * from './utils/eventSettings';

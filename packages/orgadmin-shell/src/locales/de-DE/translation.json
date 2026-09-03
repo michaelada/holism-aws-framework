@@ -2383,6 +2383,36 @@
         "saved": "Registrierungseinstellungen gespeichert."
       }
     },
+    "eventRules": {
+      "title": "Veranstaltungsregeln",
+      "description": "Wie eine Disziplin in diesem Verein abläuft — die Standardwerte der Plattform, Änderungen Ihres Organisationstyps und Ihre eigenen. Gespeichert wird nur, was Sie ändern, damit eine spätere Verbesserung eines Standardwerts Sie weiterhin erreicht.",
+      "discipline": "Disziplin",
+      "disciplineHelp": "Die Disziplinen, die Ihrer Organisation zur Verfügung stehen.",
+      "columns": {
+        "setting": "Einstellung",
+        "value": "Wert",
+        "from": "Quelle"
+      },
+      "from": {
+        "template": "Plattformstandard",
+        "organisationType": "Organisationstyp",
+        "organisation": "Diese Organisation"
+      },
+      "changedHere": "Hier geändert",
+      "lockedBy": "Festgelegt von {{name}}",
+      "lockedByType": "Von Ihrem Organisationstyp festgelegt",
+      "reset": "Auf den übernommenen Wert zurücksetzen",
+      "resetShort": "Zurücksetzen",
+      "resetAll": "Alle auf übernommene Werte zurücksetzen",
+      "inheritedNote": "Was hier nicht geändert wird, wird übernommen und folgt dem Standardwert, wenn dieser verbessert wird.",
+      "noTemplates": "Für diese Organisation wurden noch keine Disziplinen freigegeben.",
+      "noSettings": "Für diese Disziplin gibt es keine änderbaren Einstellungen.",
+      "messages": {
+        "loadFailed": "Die Veranstaltungsregeln konnten nicht geladen werden.",
+        "saveFailed": "Die Veranstaltungsregeln konnten nicht gespeichert werden.",
+        "saved": "Veranstaltungsregeln gespeichert."
+      }
+    },
     "stripeConnect": {
       "title": "Stripe-Auszahlungen",
       "description": "Verbinden Sie Ihr Stripe-Konto, damit Kartenzahlungen bei Ihrem Verein ankommen. Bis dahin können Mitglieder nicht mit Karte zahlen.",

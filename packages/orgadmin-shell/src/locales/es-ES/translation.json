@@ -2104,6 +2104,36 @@
         "saved": "Ajustes de registro guardados."
       }
     },
+    "eventRules": {
+      "title": "Reglas del evento",
+      "description": "Cómo se desarrolla una disciplina en este club: los valores predeterminados de la plataforma, lo que haya cambiado su tipo de organización y los suyos propios. Solo se guarda lo que usted cambia, de modo que una mejora posterior de un valor predeterminado le siga llegando.",
+      "discipline": "Disciplina",
+      "disciplineHelp": "Las disciplinas puestas a disposición de su organización.",
+      "columns": {
+        "setting": "Ajuste",
+        "value": "Valor",
+        "from": "Origen"
+      },
+      "from": {
+        "template": "Predeterminado de la plataforma",
+        "organisationType": "Tipo de organización",
+        "organisation": "Esta organización"
+      },
+      "changedHere": "Modificado aquí",
+      "lockedBy": "Fijado por {{name}}",
+      "lockedByType": "Fijado por su tipo de organización",
+      "reset": "Restablecer al valor heredado",
+      "resetShort": "Restablecer",
+      "resetAll": "Restablecer todo a lo heredado",
+      "inheritedNote": "Todo lo que no se modifique aquí se hereda y sigue el valor predeterminado si este mejora.",
+      "noTemplates": "Todavía no se ha puesto ninguna disciplina a disposición de esta organización.",
+      "noSettings": "Esta disciplina no tiene ajustes que modificar.",
+      "messages": {
+        "loadFailed": "No se han podido cargar las reglas del evento.",
+        "saveFailed": "No se han podido guardar las reglas del evento.",
+        "saved": "Reglas del evento guardadas."
+      }
+    },
     "stripeConnect": {
       "title": "Pagos de Stripe",
       "description": "Conecte su cuenta de Stripe para que los pagos con tarjeta lleguen a su club. Los miembros no podrán pagar con tarjeta hasta que lo complete.",

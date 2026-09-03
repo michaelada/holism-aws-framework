@@ -32,12 +32,32 @@ const renderAt = (entry = '/settings') =>
 // under test here.
 const mockSetCurrentModule = vi.fn();
 const mockCheckModuleVisit = vi.fn();
-vi.mock('@itsplainsailing/orgadmin-shell', () => ({
+/**
+ * The capabilities this club holds, controlled per test.
+ *
+ * Event rules is the first tab that is not always there, so the strip is now a
+ * function of what the organisation has been granted.
+ */
+const capabilities = { held: [] as string[] };
+
+vi.mock('@itsplainsailing/orgadmin-shell', async (importOriginal) => ({
+  /*
+   * Spread, not replaced. Without `importOriginal` this factory is the whole
+   * module, so the first thing the page imports from the shell that is not
+   * listed here fails at run time with "No X export is defined on the mock" —
+   * which is what happened when the page began reading capabilities
+   * (CLAUDE.md §3.4).
+   */
+  ...(await importOriginal<Record<string, unknown>>()),
   useOnboarding: () => ({
     setCurrentModule: mockSetCurrentModule,
     checkModuleVisit: mockCheckModuleVisit,
   }),
   usePageHelp: () => undefined,
+  useCapabilities: () => ({
+    capabilities: capabilities.held,
+    hasCapability: (capability: string) => capabilities.held.includes(capability),
+  }),
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => resolveTranslation(key, options),
     i18n: { language: 'en-GB' },
@@ -60,6 +80,16 @@ vi.mock('../../components/EmailTemplatesTab', () => ({
 vi.mock('../../components/BrandingTab', () => ({
   default: () => <div data-testid="branding-tab">Branding Tab</div>,
 }));
+
+vi.mock('../../components/EventRulesTab', () => ({
+  default: () => <div data-testid="event-rules-tab">Event Rules Tab</div>,
+}));
+
+beforeEach(() => {
+  // No capabilities by default, so the always-on tabs are what a test sees
+  // unless it grants one.
+  capabilities.held = [];
+});
 
 const TAB_LABEL_KEYS = [
   'settings.organisationDetails.title',
@@ -187,6 +217,58 @@ describe('SettingsPage', () => {
 
     // A slug, not an index: `?tab=payments` survives a tab being inserted ahead
     // of it, and it is a link somebody can read.
+    expect(screen.getByTestId('search')).toHaveTextContent('tab=payments');
+  });
+});
+
+describe('the Event rules tab', () => {
+  it('is absent without the event-scheduling capability', () => {
+    // Not rendered and not reachable — a tab filtered out of the list cannot be
+    // opened by index either.
+    renderAt('/settings');
+
+    expect(
+      screen.queryByRole('tab', { name: resolveTranslation('settings.eventRules.title') })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('event-rules-tab')).not.toBeInTheDocument();
+  });
+
+  it('appears once the organisation holds it', () => {
+    capabilities.held = ['event-scheduling'];
+    renderAt('/settings');
+
+    expect(
+      screen.getByRole('tab', { name: resolveTranslation('settings.eventRules.title') })
+    ).toBeInTheDocument();
+  });
+
+  it('opens from its own slug', () => {
+    capabilities.held = ['event-scheduling'];
+    renderAt('/settings?tab=event-rules');
+
+    expect(screen.getByTestId('event-rules-tab')).toBeInTheDocument();
+  });
+
+  it('falls back to the first tab when the capability has been withdrawn', () => {
+    // A stale bookmark to ?tab=event-rules should open Settings, not a blank
+    // panel where a tab used to be.
+    renderAt('/settings?tab=event-rules');
+
+    expect(
+      screen.getByRole('tab', { name: resolveTranslation('settings.organisationDetails.title') })
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByTestId('event-rules-tab')).not.toBeInTheDocument();
+  });
+
+  it('does not shift the other tabs’ slugs when it is added', () => {
+    // The slug travels with the tab, so inserting one cannot renumber the rest.
+    capabilities.held = ['event-scheduling'];
+    renderAt('/settings');
+
+    fireEvent.click(
+      screen.getByRole('tab', { name: resolveTranslation('settings.paymentSettings.title') })
+    );
+
     expect(screen.getByTestId('search')).toHaveTextContent('tab=payments');
   });
 });

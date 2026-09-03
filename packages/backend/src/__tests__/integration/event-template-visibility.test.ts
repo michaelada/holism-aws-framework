@@ -52,17 +52,38 @@ describe('Integration: which templates an organisation may see', () => {
     db.release();
   });
 
-  /** One club, with exactly the capabilities named and no others. */
-  const aClubHolding = async (...capabilities: string[]) => {
-    const rows = await db.query('SELECT id FROM organizations ORDER BY id LIMIT 1');
-    expect(rows.rows).toHaveLength(1);
-    const id = rows.rows[0].id as string;
-    await db.query('UPDATE organizations SET enabled_capabilities = $2::jsonb WHERE id = $1', [
-      id,
-      JSON.stringify(capabilities),
-    ]);
-    return id;
+  /**
+   * A club of its own, created inside the transaction.
+   *
+   * **Not one of the seeded clubs.** These tests change a club's capabilities,
+   * and Jest runs suites in parallel against one database — so mutating a
+   * shared row holds a lock on it for the length of the test and any other
+   * suite touching the same club waits, or fails. Own fixtures cost two inserts
+   * and remove the contention entirely.
+   */
+  const ownClub = async (capabilities: string[] = []) => {
+    const suffix = Math.random().toString(36).slice(2, 10);
+    const type = await db.query(
+      `INSERT INTO organization_types
+         (name, display_name, currency, language, default_locale,
+          membership_numbering, membership_number_uniqueness, initial_membership_number)
+       VALUES ($1, $1, 'GBP', 'en', 'en-GB', 'internal', 'organization', 1)
+       RETURNING id`,
+      [`probe-type-${suffix}`]
+    );
+    const org = await db.query(
+      `INSERT INTO organizations
+         (organization_type_id, keycloak_group_id, name, display_name, currency,
+          url_code, enabled_capabilities)
+       VALUES ($1, $2, $2, $2, 'GBP', $2, $3::jsonb)
+       RETURNING id, organization_type_id`,
+      [type.rows[0].id, `probe-${suffix}`, JSON.stringify(capabilities)]
+    );
+    return org.rows[0] as { id: string; organization_type_id: string };
   };
+
+  /** One club, with exactly the capabilities named and no others. */
+  const aClubHolding = async (...capabilities: string[]) => (await ownClub(capabilities)).id;
 
   const aTemplate = async (
     key: string,
@@ -129,8 +150,7 @@ describe('Integration: which templates an organisation may see', () => {
     // `enabled_capabilities` is nullable, and COALESCE is what stops a null
     // making the whole predicate null — which would hide nothing rather than
     // everything, the wrong way round for a gate.
-    const rows = await db.query('SELECT id FROM organizations ORDER BY id LIMIT 1');
-    const club = rows.rows[0].id as string;
+    const club = await aClubHolding();
     await db.query('UPDATE organizations SET enabled_capabilities = NULL WHERE id = $1', [club]);
     await aTemplate('probe.generic');
 

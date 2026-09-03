@@ -317,6 +317,38 @@ export class EventTypeTemplateService {
    * loaded.
    */
   async updateTemplate(templateId: string, input: Partial<TemplateInput>): Promise<EventTypeTemplate> {
+    /*
+     * The key may be corrected **while the template is a draft, and never
+     * after**.
+     *
+     * Once published a club's event type points at this template and a saved
+     * event was run under it, so the key is what a schedule, a score sheet and
+     * a result all name — renaming it would orphan them silently. Before that
+     * it is a typo nobody has seen, and there is no delete endpoint to undo one
+     * with. Enforced here rather than by disabling the input, because a screen
+     * is not a constraint.
+     */
+    if (input.key !== undefined) {
+      const current = await this.getTemplate(templateId);
+      /*
+       * Compared before it is refused. The editor posts the whole form back,
+       * key included, so treating "sent" as "renamed" would make every
+       * published template unsaveable — a change to its display name would be
+       * rejected for a key nobody touched.
+       */
+      if (input.key !== current.key) {
+        if (current.status !== 'draft') {
+          throw new BadRequestError(
+            'The key of a published template cannot be changed — events already reference it'
+          );
+        }
+        await db.query(
+          `UPDATE event_type_templates SET key = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [templateId, input.key]
+        );
+      }
+    }
+
     const result = await db.query(
       `UPDATE event_type_templates
           SET display_name     = COALESCE($2, display_name),

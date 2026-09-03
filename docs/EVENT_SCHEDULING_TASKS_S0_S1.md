@@ -237,27 +237,87 @@ create → publish → visible → type override with a lock → club write appl
 locked write refused with a 403 → reset removing the row → adding a capability gate hiding the
 template immediately. Cleaned up afterwards, with the count checked.
 
-### S0-5 · Platform admin UI
+### S0-5 · Platform admin UI ✅ **done**
 
-`packages/admin` — template list, the shape editor (§1 of the wireframes), the settings defaults.
+`packages/admin` — `EventTypeTemplatesPage` (list), `EditEventTypeTemplatePage` (create and edit),
+`TemplateShapeEditor`, `TemplateSettingsEditor`, `eventTemplateApi`, plus the route trio and a
+**Event type templates** entry in the Configuration group of the nav rail. 23 tests.
 
-**Acceptance**
+**Acceptance — all met**
 
-- Shape carries the sentence *"a club needing different phases needs a new template"* on the screen.
-- Phases reorder by drag; `key` is immutable once the template is published, because a saved event
-  references it.
-- Publishing a template is a deliberate action; a draft is invisible to clubs.
+- ✅ The shape panel carries *"Not overridable by a club. A club needing different phases needs a new
+  template"* on the screen, in front of the person who would otherwise be asked to make phases
+  editable.
+- ✅ The key is immutable once published, **enforced by the server** and not merely by a disabled
+  input.
+- ✅ Publishing is a deliberate act: its own button, its own confirmation naming what it means, and
+  refused while the template has no phases.
 
-### S0-6 · Org-admin settings screen
+**Phases reorder by arrows, not drag** — a deliberate departure from the acceptance criterion and
+from the wireframe, now corrected there too. `PostsPage` had already taken this decision in this app,
+with reasons that apply more strongly to three or four phases: arrows are keyboard-reachable and
+screen-reader-legible without any of the machinery drag needs. Two screens in one app that reorder
+differently is worse than either choice.
 
-`orgadmin-core` Settings — a new **Event rules** tab, visible only with `event-scheduling`.
+**Two things the plan did not specify.**
 
-**Acceptance**
+*Where the wording and the input type of a setting come from.* Nothing in the schema described a
+setting, yet both this screen and S0-6 must label one and choose a control for it. Rather than a
+second declaration of which settings exist — a list to forget to update, whose failure mode is a
+setting that resolves and is invisible — everything is derived from the flat dotted map that already
+exists: the **keys** say which settings there are, the **dots** group them, the **type of the value**
+picks the input, and only the wording is optional data (`shape.settingLabels`, falling back to a
+humanised key). One shared helper, `describeSettings` in `packages/components`, so the panel a
+platform administrator learns here is the panel a club sees in S0-6.
 
-- The `From` column on every row, and **Reset to template** per row and for all.
-- A locked setting is **removed** and replaced by a line naming who set it —
-  [ORGANISATION_TYPE_LOGO.md](ORGANISATION_TYPE_LOGO.md)'s rule, not a disabled input.
-- Six locales for every string.
+*Ordering.* Rows are sorted **by label**, because a jsonb column does not preserve the order its keys
+were written in — Postgres stores them shortest-first, then bytewise. Any "natural" order the screen
+appeared to show would be an accident of key length and would change when a key was renamed.
+
+**One backend addition.** `updateTemplate` never accepted a key at all, so a typo in a draft was
+unfixable — there is no delete endpoint. It now accepts one **while the template is a draft, and
+refuses a change after publication with a 400**. The test that mattered was the one for saving a
+*published* template with its own unchanged key: the editor posts the whole form back, so treating
+"sent" as "renamed" made every published template unsaveable, and a display-name change was rejected
+for a key nobody had touched.
+
+Three fields on that page are visibly labelled "Key" — the template's, each phase's and each resource
+kind's. The nested ones were given distinct accessible names, because hearing "Key, edit text" three
+times says nothing about which is which.
+
+### S0-6 · Org-admin settings screen ✅ **done**
+
+`orgadmin-core` — `EventRulesTab`, a sixth Settings tab shown only with `event-scheduling`. 19 tests
+on the page, 14 on the tab, 20 on the shared helper.
+
+**Acceptance — all met**
+
+- ✅ The `From` column on every row, naming the level the value came from — computed server-side,
+  because a club cannot see its federation's row. **Reset** per row and **Reset all to inherited**.
+- ✅ A locked setting has **no input at all**; the value stands with a sentence naming who fixed it
+  ("Set by Irish Pony Club"), per ORGANISATION_TYPE_LOGO.md's rule that a disabled control explains
+  nothing. A club with no organisation type name falls back to naming the type generically.
+- ✅ Every string an i18n key in all six locales.
+
+**Reset removes the club's value; it does not write the inherited one back.** The two look identical
+on screen and behave differently — writing the value back would stop the club following a later
+improvement to the default, which is the whole reason overrides store differences. So a reset marks
+the key for removal and `save` sends the club's settings *minus* it.
+
+**A locked key is never sent**, even alongside a setting that is being changed, because the API
+refuses one with a 403 and it would turn an unrelated save into a failure. Where a save *is* refused,
+the API's own words are shown — they name the key, which "Could not save" would not.
+
+**The tab strip became one list.** It was five fixed tabs described three times over: a slug array, a
+parallel array of icons and labels, and a parallel run of `<TabPanel index={n}>`. A conditional tab is
+exactly the change that makes three copies disagree, so slug, icon, label key, panel and required
+capability now travel together in one array that is filtered before anything renders — a tab that is
+not shown cannot be reached by index either, and a stale `?tab=event-rules` bookmark lands on the
+first tab rather than a blank panel.
+
+Updating `SettingsPage.test.tsx` also fixed a latent trap: its `vi.mock` of the shell did not spread
+`importOriginal()`, so the first thing the page imported from the shell that the factory did not list
+broke it — CLAUDE.md §3.4's warning, met in practice.
 
 ---
 

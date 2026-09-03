@@ -51,14 +51,37 @@ describe('Integration: writing setting overrides', () => {
     db.release();
   });
 
-  const aClub = async () => {
-    const rows = await db.query(
-      `SELECT id, organization_type_id FROM organizations
-        WHERE organization_type_id IS NOT NULL ORDER BY id LIMIT 1`
+  /**
+   * A club of its own, created inside the transaction.
+   *
+   * **Not one of the seeded clubs.** These tests change a club's capabilities,
+   * and Jest runs suites in parallel against one database — so mutating a
+   * shared row holds a lock on it for the length of the test and any other
+   * suite touching the same club waits, or fails. Own fixtures cost two inserts
+   * and remove the contention entirely.
+   */
+  const ownClub = async (capabilities: string[] = []) => {
+    const suffix = Math.random().toString(36).slice(2, 10);
+    const type = await db.query(
+      `INSERT INTO organization_types
+         (name, display_name, currency, language, default_locale,
+          membership_numbering, membership_number_uniqueness, initial_membership_number)
+       VALUES ($1, $1, 'GBP', 'en', 'en-GB', 'internal', 'organization', 1)
+       RETURNING id`,
+      [`probe-type-${suffix}`]
     );
-    expect(rows.rows).toHaveLength(1);
-    return rows.rows[0] as { id: string; organization_type_id: string };
+    const org = await db.query(
+      `INSERT INTO organizations
+         (organization_type_id, keycloak_group_id, name, display_name, currency,
+          url_code, enabled_capabilities)
+       VALUES ($1, $2, $2, $2, 'GBP', $2, $3::jsonb)
+       RETURNING id, organization_type_id`,
+      [type.rows[0].id, `probe-${suffix}`, JSON.stringify(capabilities)]
+    );
+    return org.rows[0] as { id: string; organization_type_id: string };
   };
+
+  const aClub = async () => ownClub();
 
   const aTemplate = async () =>
     (

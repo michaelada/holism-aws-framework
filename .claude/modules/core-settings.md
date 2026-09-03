@@ -25,9 +25,9 @@ regardless. See [docs/ORGANISATION_TYPE_LOGO.md](../../docs/ORGANISATION_TYPE_LO
 | 2 | Email Templates | `EmailTemplatesTab` | `GET`/`PUT /api/orgadmin/organisation/email-templates`, `DELETE .../email-templates/:name` |
 | 3 | Branding | `BrandingTab` | `GET`/`PUT /api/orgadmin/organisation/branding-settings`, `POST /api/orgadmin/files/branding-logo` |
 
-A fifth tab, **Event rules**, is planned as task S0-6 of
-docs/EVENT_SCHEDULING_TASKS_S0_S1.md. Its three endpoints already exist and are served by the same
-router (task S0-4):
+A sixth tab, **Event rules**, is shown only where the organisation holds **`event-scheduling`**
+(tasks S0-4 and S0-6 of docs/EVENT_SCHEDULING_TASKS_S0_S1.md). `EventRulesTab` reads three endpoints
+on this same router:
 
 | Method | Path | Returns |
 |---|---|---|
@@ -35,10 +35,23 @@ router (task S0-4):
 | `GET` | `/api/orgadmin/organisation/event-rules/:templateId` | `{ settings, sources, locked }` — the whole chain resolved |
 | `PUT` | `/api/orgadmin/organisation/event-rules/:templateId` | Saves the club's own differences; `{}` resets to the template |
 
-Two things the tab must not re-implement. `sources` is the `From` column, computed server-side
-because the front end cannot see the organisation type's row. A key in `locked` has been fixed by
-the federation and the write **refuses it with a 403** — so the tab should remove those rows rather
-than grey them out, per the wireframes.
+Four things the tab must not re-implement. `sources` is the `From` column, computed server-side
+because the front end cannot see the organisation type's row. A key in `locked` has been fixed by the
+federation: its **input is removed** and a sentence naming who set it stands in its place — a
+disabled control explains nothing (ORGANISATION_TYPE_LOGO.md's rule) — and the write refuses it with
+a 403 regardless. **Only differences are sent**, never the resolved values, or the club would freeze
+on whatever it inherited that day. And **reset removes** the club's value rather than writing the
+inherited one back: the two look identical and behave differently.
+
+Rows, groups, labels and input types all come from `describeSettings` in
+`@itsplainsailing/components` — the same helper the platform admin's template screen uses, so the two
+panels cannot drift.
+
+**The tab strip is one array, filtered before render.** Slug, icon, label key, panel and required
+capability travel together in `ALL_TABS`; a tab the club cannot see is not in the list, so it cannot
+be reached by index either, and an unknown or withdrawn `?tab=` slug lands on the first tab rather
+than a blank panel. It was previously three parallel descriptions of the same five tabs — the shape
+a conditional tab would have broken.
 
 Everything under `/api/orgadmin/organisation/` is served by `orgadmin-organisation.routes`, which is
 mounted **once, bare** — not organisation-scoped like the data routers. Two consequences worth

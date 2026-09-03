@@ -46,11 +46,11 @@ Super admin only. This is **shape** — the part a club cannot override (§2.1).
 │                                                                                │
 │  Phases                                                        [ + Add phase ] │
 │  ┌──────┬───────────────┬──────────────┬───────────────────────┬────────────┐  │
-│  │  ⠿   │ Key           │ Name         │ Runs on               │            │  │
+│  │Order │ Key           │ Name         │ Runs on               │            │  │
 │  ├──────┼───────────────┼──────────────┼───────────────────────┼────────────┤  │
-│  │  ⠿   │ dressage      │ Dressage     │ Arena                 │  Edit  ⌫   │  │
-│  │  ⠿   │ xc            │ Cross country│ Course                │  Edit  ⌫   │  │
-│  │  ⠿   │ sj            │ Show jumping │ Arena                 │  Edit  ⌫   │  │
+│  │ ↑ ↓  │ dressage      │ Dressage     │ ▾ Arena               │        ⌫   │  │
+│  │ ↑ ↓  │ xc            │ Cross country│ ▾ Course              │        ⌫   │  │
+│  │ ↑ ↓  │ sj            │ Show jumping │ ▾ Arena               │        ⌫   │  │
 │  └──────┴───────────────┴──────────────┴───────────────────────┴────────────┘  │
 │                                                                                │
 │  Phase order    ◉ Strict — in the order above                                  │
@@ -77,6 +77,17 @@ person who would otherwise be asked to make phases editable.
 
 **A club may reorder** is itself part of the shape — the platform decides whether reordering is a
 legitimate variation of this discipline, and the club then exercises it per event.
+
+**Arrows, not drag** — corrected when this was built (S0-5). The drawing showed drag handles; this
+app had already taken the opposite decision on `PostsPage`, for reasons that apply more strongly to
+a list of three or four phases: arrows are keyboard-reachable and screen-reader-legible without any
+of the machinery drag needs, and a drag would rarely be the faster thing. Two screens in one app
+that reorder differently is a worse outcome than either choice.
+
+**Editing is in the row**, not behind an `Edit` button. There are three fields and one of them is a
+dropdown of the resource kinds defined below, so a dialog would be a round trip for something that
+fits where it stands. Removing a resource kind a phase still runs on is **refused**, with the
+tooltip naming the phases — rather than removing it and leaving the phase pointing at nothing.
 
 ---
 

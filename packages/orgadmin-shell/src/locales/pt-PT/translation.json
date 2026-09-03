@@ -2383,6 +2383,36 @@
         "saved": "Definições de registo guardadas."
       }
     },
+    "eventRules": {
+      "title": "Regras do evento",
+      "description": "Como uma disciplina decorre neste clube — os valores predefinidos da plataforma, o que o seu tipo de organização alterou e os seus próprios. Apenas o que altera é guardado, para que uma melhoria posterior de um valor predefinido continue a chegar-lhe.",
+      "discipline": "Disciplina",
+      "disciplineHelp": "As disciplinas disponibilizadas à sua organização.",
+      "columns": {
+        "setting": "Definição",
+        "value": "Valor",
+        "from": "Origem"
+      },
+      "from": {
+        "template": "Predefinição da plataforma",
+        "organisationType": "Tipo de organização",
+        "organisation": "Esta organização"
+      },
+      "changedHere": "Alterado aqui",
+      "lockedBy": "Definido por {{name}}",
+      "lockedByType": "Definido pelo seu tipo de organização",
+      "reset": "Restaurar o valor herdado",
+      "resetShort": "Restaurar",
+      "resetAll": "Restaurar tudo para os valores herdados",
+      "inheritedNote": "Tudo o que não for alterado aqui é herdado e segue o valor predefinido se este melhorar.",
+      "noTemplates": "Ainda não foi disponibilizada nenhuma disciplina a esta organização.",
+      "noSettings": "Esta disciplina não tem definições para alterar.",
+      "messages": {
+        "loadFailed": "Não foi possível carregar as regras do evento.",
+        "saveFailed": "Não foi possível guardar as regras do evento.",
+        "saved": "Regras do evento guardadas."
+      }
+    },
     "stripeConnect": {
       "title": "Pagamentos Stripe",
       "description": "Ligue a sua conta Stripe para que os pagamentos com cartão cheguem ao seu clube. Os membros não podem pagar com cartão até concluir este passo.",
