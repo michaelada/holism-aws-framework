@@ -43,6 +43,9 @@ function restoreRichTextField(data: any, field: string): void {
 /**
  * Middleware to check if organisation has memberships capability
  */
+/** So a malformed id is refused here rather than by Postgres casting `uuid[]`. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function requireMembershipsCapability(
   req: Request,
   res: Response,
@@ -388,6 +391,85 @@ router.delete(
 // ============================================================================
 // Members Routes
 // ============================================================================
+
+/**
+ * @swagger
+ * /api/orgadmin/organisations/{organisationId}/members/export:
+ *   post:
+ *     summary: The member database as an Excel workbook
+ *     description: >
+ *       Takes the ids the screen is showing, because the member list is
+ *       filtered in the browser and there is no server-side query that could
+ *       reproduce a saved filter, a search box and a status tab. Send none and
+ *       every member of the organisation is exported.
+ *     tags: [Members]
+ *     parameters:
+ *       - in: path
+ *         name: organisationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               memberIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Excel file
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.post(
+  '/organisations/:organisationId/members/export',
+  authenticateToken(),
+  byParam('organisationId'),
+  requireMembershipsCapability,
+  async (req: Request, res: Response) => {
+    try {
+      const { organisationId } = req.params;
+
+      /*
+       * A POST, though it reads rather than writes. The list of ids is the
+       * whole point — a club with two thousand members would put 72KB of them
+       * in a query string, which is past what a URL may carry.
+       */
+      const requested = (req.body?.memberIds ?? []) as unknown;
+      const memberIds = Array.isArray(requested)
+        ? requested.filter((id): id is string => typeof id === 'string' && UUID.test(id))
+        : [];
+
+      /*
+       * Refuse a body that named ids and had none survive. Falling through to
+       * "export everything" would hand somebody the whole database when they
+       * asked for a filtered slice of it — the opposite of what they clicked.
+       */
+      if (Array.isArray(requested) && requested.length > 0 && memberIds.length === 0) {
+        return res.status(400).json({ error: 'No valid member ids were supplied' });
+      }
+
+      const buffer = await membershipService.exportMembersToExcel(organisationId, memberIds);
+
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', 'attachment; filename=members.xlsx');
+      return res.send(buffer);
+    } catch (error) {
+      logger.error('Error in POST /members/export:', error);
+      return res.status(500).json({ error: 'Failed to export members' });
+    }
+  }
+);
 
 /**
  * @swagger

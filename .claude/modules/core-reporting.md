@@ -40,7 +40,9 @@ a row-level total, the reduction in the page is where to look.
 Every report page downloads a **formatted Excel workbook built by the server** — the
 `/reports/export` endpoint, which had existed unused while all four buttons logged to the console.
 `reporting/exportReport.ts` makes the request (`responseType: 'blob'`, no retry) and saves the
-file; the pages supply the filters they are showing and display a failure rather than swallowing
+file; its `saveBlob` is **re-exported from the package root**, because the members database needed
+the same anchor-and-revoke dance and the second implementation is always the one that forgets to
+revoke the object URL (CLAUDE.md §1.5); the pages supply the filters they are showing and display a failure rather than swallowing
 it.
 
 The dashboard summarises the three reports and is not one itself, so its button opens a **menu of

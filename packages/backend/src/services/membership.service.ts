@@ -1,5 +1,7 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
+import { Workbook } from 'exceljs';
+import { formatAnswer } from '../utils/form-summary';
 import { FormSubmissionService } from './form-submission.service';
 
 /**
@@ -564,6 +566,281 @@ export class MembershipService {
       return result.rows.map(row => this.rowToMember(row));
     } catch (error) {
       logger.error('Error getting members by organisation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * A date-only value, as `yyyy-mm-dd`, from its **local** parts.
+   *
+   * `date_last_renewed` and `valid_until` are Postgres `date` columns, which
+   * node-postgres hands back as a Date at **local midnight** — so a renewal on
+   * 12 July in Ireland arrives as `2026-07-11T23:00:00.000Z`. Written into a
+   * cell as a Date, exceljs keeps that instant and Excel displays **11 July**:
+   * every renewal and expiry in the workbook a day early through the summer,
+   * and correct in the winter, which is the worst kind of wrong because it
+   * looks fine when you check it in January.
+   *
+   * A string of the local parts cannot shift, and `yyyy-mm-dd` still sorts
+   * chronologically as text. It is the same rule the audit viewer follows:
+   * render a date-only value without an invented midnight.
+   */
+  private static dateOnly(value: Date | string | null | undefined): string {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
+
+  /** The fields of each membership type's form, in the form's own order. */
+  private async formFieldsByMembershipType(
+    organisationId: string
+  ): Promise<Map<string, Array<{ name: string; label: string }>>> {
+    const result = await db.query(
+      `SELECT mt.id AS membership_type_id, af.name AS field_name, af.label
+         FROM membership_types mt
+         JOIN application_form_fields aff ON aff.form_id = mt.membership_form_id
+         JOIN application_fields af ON af.id = aff.field_id
+        WHERE mt.organisation_id = $1
+        ORDER BY mt.id, aff."order"`,
+      [organisationId]
+    );
+
+    const fields = new Map<string, Array<{ name: string; label: string }>>();
+    for (const row of result.rows) {
+      const forType = fields.get(row.membership_type_id) ?? [];
+      forType.push({ name: row.field_name, label: row.label || row.field_name });
+      fields.set(row.membership_type_id, forType);
+    }
+    return fields;
+  }
+
+  /** What each member's application holds, by submission id. */
+  private async membershipSubmissions(
+    submissionIds: Array<string | null | undefined>
+  ): Promise<Map<string, Record<string, unknown>>> {
+    const ids = [...new Set(submissionIds.filter(Boolean))] as string[];
+    if (ids.length === 0) return new Map();
+
+    const result = await db.query(
+      `SELECT id, submission_data FROM form_submissions WHERE id = ANY($1::uuid[])`,
+      [ids]
+    );
+
+    return new Map(result.rows.map((row: any) => [row.id, row.submission_data ?? {}]));
+  }
+
+  /**
+   * The member database as a workbook, **one sheet per membership type**.
+   *
+   * ## Why it is not one table
+   *
+   * Each sheet carries a column for **every field of that type's membership
+   * form**, and a row per member with what they answered. A club exporting its
+   * roster is nearly always after those answers — the dietary requirement, the
+   * emergency contact, the boat class — and the export used to carry twelve
+   * fixed columns and none of them.
+   *
+   * The columns therefore belong to the **form**, and two membership types may
+   * ask entirely different questions. One flat table could only hold the union
+   * of every form's fields, which gives every member a row of blanks under
+   * questions their own application never asked. So the workbook splits, on the
+   * same principle as the entries export
+   * (`eventEntryService.exportEntriesToExcel`, one sheet per activity).
+   *
+   * **Per type rather than per form.** Two types that share a form still get a
+   * sheet each. A membership type is the thing a club recognises and filters
+   * by; a sheet named after a form would be a name most administrators have
+   * never seen, and merging Adult with Family because they happen to share
+   * questions produces a table neither of them is.
+   *
+   * ## It exports what the administrator is looking at
+   *
+   * `memberIds` is the list the screen is showing — after its status filter,
+   * its search box and whichever saved filter is applied. Those are all
+   * evaluated **in the browser** over the members already loaded, so there is
+   * no server-side query that could reproduce them; re-deriving them here would
+   * mean a second implementation of every filter rule, and two implementations
+   * of one rule is how the two quietly stop agreeing.
+   *
+   * Absent or empty, every member of the organisation is exported — which is
+   * what an unfiltered screen is showing anyway.
+   *
+   * ## The ids are not trusted
+   *
+   * `organisation_id = $1` is in the statement, so an id belonging to another
+   * club selects nothing rather than exporting somebody else's member. The
+   * caller's right to this organisation is established before we get here; this
+   * is the second lock.
+   */
+  async exportMembersToExcel(organisationId: string, memberIds?: string[]): Promise<Buffer> {
+    try {
+      const narrowed = Array.isArray(memberIds) && memberIds.length > 0;
+
+      const result = await db.query(
+        `SELECT m.*, mt.name AS membership_type_name,
+                fs.submission_data->>'name' AS member_name
+           FROM members m
+           LEFT JOIN membership_types mt ON m.membership_type_id = mt.id
+           LEFT JOIN form_submissions fs ON m.form_submission_id = fs.id
+          WHERE m.organisation_id = $1
+            ${narrowed ? 'AND m.id = ANY($2::uuid[])' : ''}
+          ORDER BY m.date_last_renewed DESC`,
+        narrowed ? [organisationId, memberIds] : [organisationId]
+      );
+
+      const members = result.rows.map((row) => this.rowToMember(row));
+      const fieldsByType = await this.formFieldsByMembershipType(organisationId);
+      const submissions = await this.membershipSubmissions(
+        members.map((member) => member.formSubmissionId)
+      );
+
+      /*
+       * Grouped by membership type **id**, not name. Two types may share a
+       * name across a rename, and the columns come from the form — merging
+       * them would produce a sheet whose columns belong to neither.
+       */
+      const byType = new Map<string, { name: string; members: Member[] }>();
+      for (const member of members) {
+        const group = byType.get(member.membershipTypeId) ?? {
+          name: member.membershipTypeName || 'Unknown membership type',
+          members: [],
+        };
+        group.members.push(member);
+        byType.set(member.membershipTypeId, group);
+      }
+
+      const workbook = new Workbook();
+      workbook.creator = 'ItsPlainSailing';
+      workbook.created = new Date();
+
+      /*
+       * A workbook with no sheets cannot be opened. A club with no members yet,
+       * or a filter that matches none, is an ordinary thing to export — so it
+       * gets a sheet saying so rather than a file that will not open.
+       */
+      if (byType.size === 0) {
+        const empty = workbook.addWorksheet('Members');
+        empty.addRow(['Members']).font = { bold: true, size: 14 };
+        empty.addRow([]);
+        empty.addRow(['No members match the current filters.']);
+      }
+
+      /*
+       * Sheet names have to be unique and Excel caps them at 31 characters.
+       * Two types can share a name, and exceljs *throws* on the second — losing
+       * the whole export rather than a sheet.
+       */
+      const usedNames = new Set<string>();
+
+      for (const [membershipTypeId, group] of byType) {
+        // Excel forbids : \ / ? * [ ] in a sheet name, and caps it at 31.
+        const base = group.name.substring(0, 31).replace(/[:\\/?*[\]]/g, '_');
+        let sheetName = base || 'Members';
+        for (let suffix = 2; usedNames.has(sheetName); suffix += 1) {
+          const tail = ` (${suffix})`;
+          sheetName = `${base.substring(0, 31 - tail.length)}${tail}`;
+        }
+        usedNames.add(sheetName);
+
+        const worksheet = workbook.addWorksheet(sheetName);
+        const formFields = fieldsByType.get(membershipTypeId) ?? [];
+
+        /*
+         * What the sheet is *about* on the left, the administration on the
+         * right — the same order the entries export settled on. A club reading
+         * a roster wants the number, the name and the answers to its own
+         * questions; payment status and method are there to be looked up
+         * rather than scanned.
+         */
+        const headers = [
+          'Membership Number',
+          'Name',
+          'First Name',
+          'Last Name',
+          ...formFields.map((field) => field.label),
+          'Date Last Renewed',
+          'Status',
+          'Valid Until',
+          'Labels',
+          'Processed',
+          'Payment Status',
+          'Payment Method',
+        ];
+
+        const titleRow = worksheet.addRow([group.name]);
+        titleRow.font = { bold: true, size: 14 };
+        worksheet.mergeCells(1, 1, 1, Math.max(headers.length, 1));
+        titleRow.alignment = { horizontal: 'center' };
+
+        worksheet.addRow([]);
+        const headerRow = worksheet.addRow(headers);
+        headerRow.font = { bold: true };
+        headerRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE0E0E0' },
+        };
+
+        for (const member of group.members) {
+          const answers = member.formSubmissionId
+            ? (submissions.get(member.formSubmissionId) ?? {})
+            : {};
+
+          worksheet.addRow([
+            member.membershipNumber,
+            // What the table's Name column shows: the name on the application,
+            // falling back to the two parts where a membership predates it.
+            member.name || `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim(),
+            member.firstName,
+            member.lastName,
+            /*
+             * Blank where a question was not answered — the same helper the
+             * member's own screens format answers with, so a "Yes" here and a
+             * "Yes" there mean the same thing rather than being `true` in one
+             * place and "Yes" in the other.
+             */
+            ...formFields.map((field) => formatAnswer(answers[field.name])),
+            MembershipService.dateOnly(member.dateLastRenewed),
+            member.status,
+            MembershipService.dateOnly(member.validUntil),
+            (member.labels ?? []).join(', '),
+            member.processed ? 'Yes' : 'No',
+            member.paymentStatus,
+            member.paymentMethod || 'N/A',
+          ]);
+        }
+
+        worksheet.columns = [
+          { width: 20 },
+          { width: 28 },
+          { width: 18 },
+          { width: 18 },
+          ...formFields.map(() => ({ width: 22 })),
+          { width: 18 },
+          { width: 12 },
+          { width: 15 },
+          { width: 30 },
+          { width: 12 },
+          { width: 15 },
+          { width: 15 },
+        ];
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      logger.info(
+        `Exported ${members.length} members to Excel across ${Math.max(byType.size, 1)} sheet(s)`,
+        { organisationId }
+      );
+      // `Buffer.from`, not a cast: `writeBuffer` answers exceljs's own `Buffer`
+      // interface, which is not Node's.
+      return Buffer.from(buffer as ArrayBuffer);
+    } catch (error) {
+      logger.error('Error exporting members to Excel:', error);
       throw error;
     }
   }

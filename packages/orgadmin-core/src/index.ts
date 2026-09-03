@@ -28,6 +28,13 @@ export * from './forms';
 export * from './settings';
 export * from './payments';
 export * from './reporting';
+/*
+ * The download half of any export. It lived inside `reporting/` and was needed
+ * the moment a second module had a workbook to save (CLAUDE.md §1.5) — the
+ * alternative being a second `URL.createObjectURL` dance that forgets to
+ * revoke it.
+ */
+export { saveBlob } from './reporting/exportReport';
 export * from './audit';
 export * from './users';
 

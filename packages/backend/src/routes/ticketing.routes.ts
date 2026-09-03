@@ -8,6 +8,8 @@ import {
   byResource,
 } from '../middleware/organisation-scope.middleware';
 import { logger } from '../config/logger';
+import { AppError, NotFoundError } from '../middleware/errors';
+import { OrganisationRequest } from '../middleware/capability.middleware';
 import { db } from '../database/pool';
 
 /*
@@ -422,27 +424,49 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { ticketId } = req.params;
-      const { scanStatus, scanLocation, scannedBy } = req.body;
-      
+      const { scanStatus, scanLocation } = req.body;
+
       if (!scanStatus || !['scanned', 'not_scanned'].includes(scanStatus)) {
         return res.status(400).json({ error: 'Invalid scan status' });
       }
-      
+
+      /*
+       * Who admitted them, from the verified request rather than the body.
+       *
+       * `byResource` above has already established that this caller
+       * administers the ticket's organisation, and set their
+       * `organization_users.id` while doing it. A `scannedBy` in the payload
+       * used to be passed straight through — which meant the record of who let
+       * somebody in was whatever the client cared to say, and in practice the
+       * screen sent nothing at all, so every row read "-". This is the same
+       * rule a refund's `requestedBy` follows.
+       */
+      const scannedBy = (req as OrganisationRequest).organisationUserId;
+
       const ticket = await ticketingService.updateTicketScanStatus(
         ticketId,
         scanStatus,
         scanLocation,
         scannedBy
       );
-      
+
       return res.json(ticket);
     } catch (error) {
+      // A ticket with no room left is a refusal the screen must be able to
+      // word, not a 500 — see `updateTicketScanStatus`.
+      if (error instanceof AppError) {
+        return res
+          .status(error.statusCode)
+          .json({ error: { code: error.code, message: error.message } });
+      }
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
       logger.error('Error in PUT /tickets/:ticketId/scan-status:', error);
       if (error instanceof Error && error.message.includes('not found')) {
         return res.status(404).json({ error: error.message });
-      } else {
-        return res.status(500).json({ error: 'Failed to update ticket scan status' });
       }
+      return res.status(500).json({ error: 'Failed to update ticket scan status' });
     }
   }
 );

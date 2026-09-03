@@ -226,11 +226,12 @@ the duplicate a club actually wants to look at left no trace at all.
   │  ☐ Limit number of applicants                                       │
   │  ☐ Allow specify quantity                                           │
   │                                                                      │
-  │  ┌─ People admitted per ticket ──────┐                              │
+  │  ┌─ Scans allowed per ticket ────────┐                              │
   │  │ 4                                 │                              │
   │  └───────────────────────────────────┘                              │
-  │  How many people one of this activity's tickets lets through the    │
-  │  gate. 1 for a day ticket, 4 for a family ticket.                   │
+  │  How many times one of this activity's tickets can be scanned       │
+  │  before it is used up — which is how many people it lets through    │
+  │  the gate. 1 for a day ticket, 4 for a family ticket.               │
   │                                                                      │
   │  ☐ Use terms and conditions                                         │
   └──────────────────────────────────────────────────────────────────────┘
@@ -238,4 +239,5 @@ the duplicate a club actually wants to look at left no trace at all.
 
 Minimum 1 — an activity that admits nobody is a broken gate rather than a setting. The number is
 copied onto each ticket when it is issued, so raising it in March does not change what a ticket sold
-in February is worth.
+in February is worth. It is enforced by the gate **and** by the org-admin's own *Mark as scanned* —
+see [MARKING_A_TICKET_SCANNED.md](MARKING_A_TICKET_SCANNED.md).

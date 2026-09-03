@@ -45,9 +45,11 @@ src/
   entry on a ticketing event, written by `fulfilment.service` calling
   `ticketingService.issueTicketForEntry` after the entry is created.
 - **Scanning** — each scan is appended to `ticket_scan_history`, which drives the validity and
-  duplicate-use reporting. A gate's scans arrive through `/api/scan/*` and carry the steward's name
-  and, on a refusal, why; the club's own *Mark as Scanned* still goes through
-  `PUT /tickets/:id/scan-status`.
+  duplicate-use reporting. A gate's scans arrive through `/api/scan/*`; the club's own *Mark as
+  scanned* goes through `PUT /tickets/:id/scan-status`. **Both now record who did it and both
+  enforce the ticket's `admits` ceiling atomically** — the second did neither until
+  [MARKING_A_TICKET_SCANNED.md](../../docs/MARKING_A_TICKET_SCANNED.md). Undoing an admission
+  decrements the count rather than only relabelling, so a correction gives the place back.
 - **Scanning sessions** — a club creates a short-lived link with a PIN for one event
   (`GateScanningPanel`), sends it to whoever is on the gate, and can see who is scanning and stop the
   link. The scanner itself lives in `account-shell`. See
@@ -71,7 +73,9 @@ src/
 | "How does a club design its ticket?" | Ticketing settings: a **picture** with four placements — `header`, `footer`, `topRight`, `background` (darkened by a scrim, as an announcement's is) — and three **layouts**, `stacked`, `sideBySide`, `compact`. The screen shows a **live preview** rendered by `renderTicketHTML`, the same function that prints. See [TICKET_DESIGN.md](../../docs/TICKET_DESIGN.md) |
 | "What does a ticket with both a picture and a colour look like?" | The picture. A `background` placement **replaces** the colour and paints on near-black; the colour is kept for `header`, `footer` and `topRight`, where the picture sits *on* the ticket rather than being it. They used to be applied together, which left the colour showing round the picture and the picture lost under a heavy scrim |
 | "How does a gate scan tickets?" | A club creates a link and a PIN here (`GateScanningPanel`, above the ticket list); a steward opens it on their own phone at `/account/scan/:token`, gives their name, and scans. The gate's decision is one atomic `UPDATE` in `gate-scan.service` — see [GATE_SCANNING.md](../../docs/GATE_SCANNING.md). The options that were weighed first, including the ones not taken, are in [TICKET_SCANNING_OPTIONS.md](../../docs/TICKET_SCANNING_OPTIONS.md) |
-| "How many people does one ticket let in?" | `electronic_tickets.admits`, copied at issue from `event_activities.tickets_admit` (default 1, set per activity in `orgadmin-events`). Copied rather than joined: a club that changes the activity in March must not change what a February ticket is worth |
+| "How many scans does one ticket allow?" | `electronic_tickets.admits`, copied at issue from `event_activities.tickets_admit` (default 1, set per activity in `orgadmin-events` as **Scans allowed per ticket**). Copied rather than joined: a club that changes the activity in March must not change what a February ticket is worth. **Both the gate and the org-admin's Mark as scanned enforce it** — the second did not until [MARKING_A_TICKET_SCANNED.md](../../docs/MARKING_A_TICKET_SCANNED.md) |
+| "Why did the Scanned by column show a dash?" | `updateTicketScanStatus` wrote `scanned_by` — a foreign key — from `req.body.scannedBy`, which the dialog never sent, and never wrote `scanned_by_name`, which is the column the table renders. The administrator now comes from the verified request (`byResource` has already set their `organization_users.id`) and both are written: the id for the key, the name for a trail that has to outlive the row it points at |
+| "Why are both Mark as scanned and Mark as not scanned showing?" | The ticket admits more than one and has room. The buttons used to be keyed on `scanStatus`, so admitting the first of four left only *undo* and the other three could not be let in from this screen. Admitting is offered while there is room, undoing while anything has been used; a one-use ticket still shows exactly one |
 | "Who scanned a ticket?" | The Scanning tab's history, `scanned_by_name` — the steward's own typed name, written onto the row rather than joined, because the device is deleted with its session and the history has to outlive it |
 | "Where do I see the ticket a member actually gets?" | The ticket dialog's first tab, rendered by `renderTicketHTML` from the club's design — the same HTML the printer is handed. Scan status, dates, count and history are on the second tab; the holder's name and reference sit in the header, true on both |
 | "Why is a dark ticket readable?" | `isDark()` weighs the background by luminance and the whole ticket takes light text from it — a scrim and a club's own dark colour are the same problem. It used to key off the image placement alone, so a club whose ticket colour was a deep green got near-black text on it |

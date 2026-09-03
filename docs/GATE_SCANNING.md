@@ -39,8 +39,10 @@ tolerant browser scanner, with the three gaps that document names closed as part
 
 ### 2.1 How many a ticket admits
 
-`event_activities.tickets_admit`, **default 1**, is the club's setting: a day ticket admits one, a
-family ticket four, a car pass a carful. The number is **copied onto the ticket** at issue
+`event_activities.tickets_admit`, **default 1**, is the club's setting — *Scans allowed per ticket*
+on the activity form: a day ticket admits one, a family ticket four, a car pass a carful. The gate
+enforces it, and so does the org-admin's own *Mark as scanned*
+([MARKING_A_TICKET_SCANNED.md](MARKING_A_TICKET_SCANNED.md)). The number is **copied onto the ticket** at issue
 (`electronic_tickets.admits`) rather than read live through a join, because it is what the holder was
 sold: a club that changes the activity in March must not change what a ticket bought in February
 lets somebody through with.
@@ -157,7 +159,7 @@ Wireframes: [GATE_SCANNING_WIREFRAMES.md](GATE_SCANNING_WIREFRAMES.md).
 | The gate's surface — `POST /api/scan/:token/unlock`, `GET /api/scan/manifest`, `POST /api/scan/scans` | `packages/backend/src/routes/gate-scan.routes.ts` |
 | The club's surface — `POST`/`GET /api/orgadmin/events/:eventId/scan-sessions`, `DELETE /api/orgadmin/scan-sessions/:id` | `packages/backend/src/routes/scan-session.routes.ts` |
 | `admits` copied onto a ticket at issue | `ticketing.service.issueTicketForEntry` |
-| "People admitted per ticket" | `orgadmin-events` → `EventActivityForm` |
+| "Scans allowed per ticket" | `orgadmin-events` → `EventActivityForm` |
 | The scanner | `account-shell` → `/scan/:token`, `pages/GateScanPage.tsx` and `scan/gateScan.ts` |
 | The club's panel | `orgadmin-ticketing` → `components/GateScanningPanel.tsx`, on the event ticketing page |
 | Audit | `ticket-scanning.session-created`, `ticket-scanning.session-revoked` |

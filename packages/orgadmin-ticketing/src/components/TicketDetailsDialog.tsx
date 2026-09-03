@@ -67,6 +67,14 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
 }) => {
   const { execute } = useApi();
   const { t, i18n } = useTranslation();
+
+  /*
+   * How many this ticket admits, and whether it has room left. Absent on an
+   * older response means one — the value every ticket carried before an
+   * activity could say otherwise.
+   */
+  const admits = ticket?.admits ?? 1;
+  const hasRoom = (ticket?.scanCount ?? 0) < admits;
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [scanHistory, setScanHistory] = useState<TicketScanHistory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,11 +185,19 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
       });
       onUpdate();
       onClose();
-    } catch (failure) {
+    } catch (failure: any) {
+      /*
+       * The server's sentence, not axios's. A ticket with no room left comes
+       * back as a 409 carrying *"This ticket admits 4 and all 4 have been
+       * used"*; `failure.message` at this level is "Request failed with status
+       * code 409", which tells an administrator nothing they can act on.
+       */
+      const said = failure?.response?.data?.error;
       setError(
-        failure instanceof Error && failure.message
-          ? failure.message
-          : t('ticketing.errors.scanStatusFailed')
+        (typeof said === 'string' ? said : said?.message) ||
+          (failure instanceof Error && failure.message
+            ? failure.message
+            : t('ticketing.errors.scanStatusFailed'))
       );
     } finally {
       setLoading(false);
@@ -514,10 +530,17 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
               )}
               <Grid item xs={6}>
                 <Typography variant="caption" color="textSecondary">
-                  Scan Count
+                  {t('ticketing.details.scanCount')}
                 </Typography>
                 <Typography variant="body1">
-                  {ticket.scanCount}
+                  {/*
+                    "2 of 4" where the ticket admits more than one, and a bare
+                    count where it admits one — "1 of 1" is noise on the ordinary
+                    ticket, and the bare number is a mystery on the family one.
+                  */}
+                  {admits > 1
+                    ? t('ticketing.details.scanCountOf', { used: ticket.scanCount, admits })
+                    : ticket.scanCount}
                 </Typography>
               </Grid>
             </Grid>
@@ -590,7 +613,20 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
       <DialogActions>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', px: 2 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            {ticket.scanStatus === 'not_scanned' ? (
+            {/*
+              Both, where a ticket admits more than one.
+
+              This used to be one or the other, keyed on `scanStatus` — which is
+              right for a ticket that admits a single person and wrong for a
+              family ticket: the moment the first of four was admitted the
+              status became `scanned` and the only button left was *undo*, so
+              the other three could not be let in from this screen at all.
+
+              Admitting is offered while there is room; undoing while anything
+              has been used. For a one-use ticket exactly one of those holds at
+              a time, so nothing changes on the common case.
+            */}
+            {hasRoom && (
               <Button
                 variant="contained"
                 color="success"
@@ -600,7 +636,8 @@ const TicketDetailsDialog: React.FC<TicketDetailsDialogProps> = ({
               >
                 {t('ticketing.actions.markAsScanned')}
               </Button>
-            ) : (
+            )}
+            {ticket.scanCount > 0 && (
               <Button
                 variant="outlined"
                 color="warning"

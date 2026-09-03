@@ -368,72 +368,175 @@ describe('TicketingService', () => {
   });
 
   describe('updateTicketScanStatus', () => {
-    it('should update ticket to scanned status', async () => {
-      const mockClient = {
-        query: jest.fn(),
-        release: jest.fn(),
-      };
+    /*
+     * The club's own way in, for the ticket presented at a desk. It has to
+     * answer the same two questions the gate does — is there room, and who let
+     * them in — and until recently it answered neither: the count climbed with
+     * no ceiling, and the history recorded no name at all, so every row read
+     * "-".
+     */
+    const ticketRow = (over: Record<string, unknown> = {}) => ({
+      id: '1',
+      ticket_reference: 'TKT-2024-001',
+      qr_code: '123e4567-e89b-12d3-a456-426614174000',
+      event_id: 'event-1',
+      event_activity_id: 'activity-1',
+      event_entry_id: 'entry-1',
+      user_id: 'user-1',
+      customer_name: 'John Doe',
+      customer_email: 'john@example.com',
+      issue_date: new Date(),
+      valid_from: null,
+      valid_until: new Date(),
+      scan_status: 'scanned',
+      scan_date: new Date(),
+      scan_location: 'Main Entrance',
+      scan_count: 1,
+      admits: 1,
+      status: 'issued',
+      ticket_data: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+      ...over,
+    });
 
-      const mockUpdatedTicket = {
-        id: '1',
-        ticket_reference: 'TKT-2024-001',
-        qr_code: 'qr-1',
-        event_id: 'event-1',
-        event_activity_id: 'activity-1',
-        event_entry_id: 'entry-1',
-        user_id: 'user-1',
-        customer_name: 'John Doe',
-        customer_email: 'john@example.com',
-        issue_date: new Date(),
-        valid_from: null,
-        valid_until: new Date(),
-        scan_status: 'scanned',
-        scan_date: new Date(),
-        scan_location: 'Main Entrance',
-        scan_count: 1,
-        status: 'issued',
-        ticket_data: {},
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+    const client = () => {
+      const mock = { query: jest.fn(), release: jest.fn() };
+      mockDb.getClient = jest.fn().mockResolvedValue(mock);
+      return mock;
+    };
 
-      mockDb.getClient = jest.fn().mockResolvedValue(mockClient);
-      mockClient.query
+    /** The administrator's row, as the name lookup finds it. */
+    const ADMIN = { rows: [{ name: 'Ann Doyle', email: 'ann@club.test' }] };
+
+    it('admits, and records who did it by name', async () => {
+      const mock = client();
+      mock.query
         .mockResolvedValueOnce(undefined) // BEGIN
-        .mockResolvedValueOnce({ rows: [mockUpdatedTicket] }) // UPDATE
-        .mockResolvedValueOnce(undefined) // INSERT history
+        .mockResolvedValueOnce(ADMIN) // who is acting
+        .mockResolvedValueOnce({ rows: [ticketRow()] }) // the admitting UPDATE
+        .mockResolvedValueOnce(undefined) // the history row
         .mockResolvedValueOnce(undefined); // COMMIT
 
       const result = await service.updateTicketScanStatus(
         '1',
         'scanned',
         'Main Entrance',
-        'user-admin'
+        'org-user-1'
       );
 
       expect(result.scanStatus).toBe('scanned');
-      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
-      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
-      expect(mockClient.release).toHaveBeenCalled();
+
+      const [historySql, historyValues] = mock.query.mock.calls[3];
+      expect(historySql).toContain('scanned_by_name');
+      expect(historySql).toContain("'success'");
+      // The id for the foreign key, and the name for the trail that outlives it.
+      expect(historyValues).toEqual(expect.arrayContaining(['org-user-1', 'Ann Doyle']));
+      expect(mock.query).toHaveBeenCalledWith('COMMIT');
+      expect(mock.release).toHaveBeenCalled();
     });
 
-    it('should rollback on error', async () => {
-      const mockClient = {
-        query: jest.fn(),
-        release: jest.fn(),
-      };
+    it('falls back to the administrator’s email where they have no name', async () => {
+      const mock = client();
+      mock.query
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ rows: [{ name: '', email: 'ann@club.test' }] })
+        .mockResolvedValueOnce({ rows: [ticketRow()] })
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
 
-      mockDb.getClient = jest.fn().mockResolvedValue(mockClient);
-      mockClient.query
-        .mockResolvedValueOnce(undefined) // BEGIN
-        .mockRejectedValueOnce(new Error('Database error')); // UPDATE fails
+      await service.updateTicketScanStatus('1', 'scanned', undefined, 'org-user-1');
+
+      expect(mock.query.mock.calls[3][1]).toEqual(
+        expect.arrayContaining(['ann@club.test'])
+      );
+    });
+
+    it('enforces the ceiling in the statement, not after it', async () => {
+      const mock = client();
+      mock.query
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(ADMIN)
+        .mockResolvedValueOnce({ rows: [ticketRow({ scan_count: 2, admits: 4 })] })
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+
+      await service.updateTicketScanStatus('1', 'scanned', undefined, 'org-user-1');
+
+      // Whether a row comes back *is* whether there was room — the same rule
+      // the gate applies, rather than a count read and then incremented.
+      const [sql] = mock.query.mock.calls[2];
+      expect(sql).toContain('scan_count < admits');
+      expect(sql).toContain('scan_count = scan_count + 1');
+    });
+
+    it('refuses a ticket with no room left, and says so', async () => {
+      const mock = client();
+      mock.query
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(ADMIN)
+        .mockResolvedValueOnce({ rows: [] }) // the UPDATE admitted nobody
+        .mockResolvedValueOnce({ rows: [{ scan_count: 4, admits: 4 }] }) // why
+        .mockResolvedValueOnce(undefined) // the refusal, written down
+        .mockResolvedValueOnce(undefined); // COMMIT
 
       await expect(
-        service.updateTicketScanStatus('1', 'scanned')
+        service.updateTicketScanStatus('1', 'scanned', undefined, 'org-user-1')
+      ).rejects.toMatchObject({ code: 'TICKET_FULLY_USED', statusCode: 409 });
+
+      // A refusal at a desk is as much a fact about the ticket as an admission.
+      const [historySql, historyValues] = mock.query.mock.calls[4];
+      expect(historySql).toContain('ticket_scan_history');
+      expect(historySql).toContain("'refused'");
+      expect(historySql).toContain("'already_used'");
+      // Named, so the club can see who was turned away and by whom.
+      expect(historyValues).toEqual(expect.arrayContaining(['org-user-1', 'Ann Doyle']));
+    });
+
+    it('tells a missing ticket apart from a used-up one', async () => {
+      const mock = client();
+      mock.query
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(ADMIN)
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] }) // no such ticket
+        .mockResolvedValueOnce(undefined);
+
+      await expect(
+        service.updateTicketScanStatus('1', 'scanned', undefined, 'org-user-1')
+      ).rejects.toThrow('Ticket not found');
+    });
+
+    it('gives the place back when an admission is undone', async () => {
+      const mock = client();
+      mock.query
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(ADMIN)
+        .mockResolvedValueOnce({ rows: [ticketRow({ scan_count: 1, admits: 4 })] })
+        .mockResolvedValueOnce(undefined);
+
+      await service.updateTicketScanStatus('1', 'not_scanned', undefined, 'org-user-1');
+
+      const [sql] = mock.query.mock.calls[2];
+      // Decrements rather than merely relabelling: a mistake corrected has to
+      // return the place, or a family ticket loses one every time.
+      expect(sql).toContain('GREATEST(scan_count - 1, 0)');
+      // And the ticket stays "scanned" while any of its places are still used.
+      expect(sql).toContain("THEN 'scanned' ELSE 'not_scanned'");
+    });
+
+    it('rolls back on error, and lets the original failure through', async () => {
+      const mock = client();
+      mock.query
+        .mockResolvedValueOnce(undefined) // BEGIN
+        .mockRejectedValueOnce(new Error('Database error')); // the name lookup fails
+
+      await expect(
+        service.updateTicketScanStatus('1', 'scanned', undefined, 'org-user-1')
       ).rejects.toThrow('Database error');
 
-      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
-      expect(mockClient.release).toHaveBeenCalled();
+      expect(mock.query).toHaveBeenCalledWith('ROLLBACK');
+      expect(mock.release).toHaveBeenCalled();
     });
   });
 

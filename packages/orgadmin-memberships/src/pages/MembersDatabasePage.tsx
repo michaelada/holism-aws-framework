@@ -22,6 +22,7 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  Link,
   MenuItem,
   Paper,
   Select,
@@ -57,7 +58,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@itsplainsailing/orgadmin-shell';
 import { useOnboarding, usePageHelp } from '@itsplainsailing/orgadmin-shell';
-import { useApi, SortableTableCell, useTableSort } from '@itsplainsailing/orgadmin-core';
+import { useApi, SortableTableCell, useTableSort, saveBlob } from '@itsplainsailing/orgadmin-core';
 import { useOrganisation } from '@itsplainsailing/orgadmin-core';
 import type { Member, MemberFilter, CreateMemberFilterDto } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
@@ -168,6 +169,8 @@ const MembersDatabasePage: React.FC = () => {
 
   // Success notification state
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   // Check for success message from navigation state
@@ -455,12 +458,56 @@ const MembersDatabasePage: React.FC = () => {
     setBatchDialogOpen(true);
   };
 
+  /**
+   * Download the member database as a workbook.
+   *
+   * **It exports what is on screen.** The ids sent are the filtered list —
+   * after the status tabs, the search box and whichever saved filter is
+   * applied — because all three are evaluated here in the browser and no
+   * server-side query could reproduce them. The alternative was a second
+   * implementation of every filter rule on the server, which is how two
+   * implementations of one rule quietly stop agreeing.
+   *
+   * This replaces a stub: the button called `console.log('Exporting
+   * members...')` and returned. Nothing was built behind it, so nothing
+   * happened and nothing said so.
+   */
   const handleExport = async () => {
+    if (!organisation?.id) return;
+
     try {
-      // Export logic would go here
-      console.log('Exporting members...');
-    } catch (error) {
-      console.error('Failed to export members:', error);
+      setExporting(true);
+      setExportError(null);
+
+      const response = await execute({
+        method: 'POST',
+        url: `/api/orgadmin/organisations/${organisation.id}/members/export`,
+        data: { memberIds: sort.rows.map((member) => member.id) },
+        // Without this axios parses the workbook as text and corrupts it.
+        responseType: 'blob',
+        // A failed export should reach the administrator as a message rather
+        // than as a retry loop behind a spinner.
+        retryCount: 0,
+        throwOnError: true,
+      });
+
+      if (!(response instanceof Blob)) {
+        throw new Error(t('memberships.failedToExport'));
+      }
+
+      saveBlob(response, `members_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (failure: any) {
+      /*
+       * `execute` answers `null` on failure unless it is told to throw, which
+       * is what let the original stub's successor fail silently elsewhere in
+       * this product. The server's own words where it sent any.
+       */
+      const said = failure?.response?.data?.error;
+      setExportError(
+        (typeof said === 'string' ? said : said?.message) || t('memberships.failedToExport')
+      );
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -496,6 +543,9 @@ const MembersDatabasePage: React.FC = () => {
             variant="outlined"
             startIcon={<ExportIcon />}
             onClick={handleExport}
+            // Building a workbook for a large club takes a moment; a second
+            // click would start a second one.
+            disabled={exporting || sort.rows.length === 0}
           >
             {t('memberships.actions.exportToExcel')}
           </Button>
@@ -589,6 +639,11 @@ const MembersDatabasePage: React.FC = () => {
             that has not changed — indistinguishable from success, which is
             exactly how this looked when nothing was saved at all.
           */}
+          {exportError && (
+            <Alert severity="error" onClose={() => setExportError(null)} sx={{ mb: 2 }}>
+              {exportError}
+            </Alert>
+          )}
           {filterError && (
             <Alert severity="error" onClose={() => setFilterError(null)}>
               {filterError}
@@ -874,7 +929,28 @@ const MembersDatabasePage: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>{member.membershipTypeName || member.membershipTypeId}</TableCell>
-                  <TableCell>{member.name || `${member.firstName} ${member.lastName}`}</TableCell>
+                  {/*
+                    The name opens the member.
+
+                    The row's View button is pinned to the right of a table
+                    wide enough to scroll, so reaching it meant dragging the
+                    row sideways first. The name is the thing an administrator
+                    is already looking at and already pointing at. The button
+                    stays where it is — this is a second way in, not a
+                    replacement.
+                  */}
+                  <TableCell>
+                    <Link
+                      component="button"
+                      type="button"
+                      underline="hover"
+                      align="left"
+                      onClick={() => handleViewMember(member.id)}
+                      sx={{ textAlign: 'left', cursor: 'pointer' }}
+                    >
+                      {member.name || `${member.firstName} ${member.lastName}`}
+                    </Link>
+                  </TableCell>
                   <TableCell>{member.membershipNumber}</TableCell>
                   <TableCell>{formatDateLocale(member.dateLastRenewed)}</TableCell>
                   <TableCell>

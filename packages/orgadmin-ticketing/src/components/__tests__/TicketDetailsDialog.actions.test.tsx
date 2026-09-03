@@ -151,6 +151,92 @@ describe('admitting a ticket at the gate', () => {
   });
 });
 
+describe('a ticket that admits more than one', () => {
+  /*
+   * The family-ticket case, which the dialog used to make impossible.
+   *
+   * The two buttons were keyed on `scanStatus`, so the moment the first of four
+   * was admitted the ticket read `scanned` and the only control left was
+   * *undo* — the other three could not be let in from this screen at all. They
+   * are now keyed on whether there is room and whether anything has been used,
+   * which for a one-use ticket is the same one-or-the-other it always was.
+   */
+  it('offers both admitting and undoing while a family ticket has room', async () => {
+    execute.mockResolvedValue({});
+
+    render(
+      <TicketDetailsDialog
+        open
+        ticket={ticket({ scanStatus: 'scanned', scanCount: 2, admits: 4 })}
+        eventName="Autumn Gate Day"
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByRole('button', { name: /mark as scanned/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /mark as not scanned/i })).toBeInTheDocument();
+  });
+
+  it('stops offering to admit once every place is used', async () => {
+    execute.mockResolvedValue({});
+
+    render(
+      <TicketDetailsDialog
+        open
+        ticket={ticket({ scanStatus: 'scanned', scanCount: 4, admits: 4 })}
+        eventName="Autumn Gate Day"
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    await screen.findByRole('button', { name: /mark as not scanned/i });
+    expect(screen.queryByRole('button', { name: /mark as scanned/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps a one-use ticket to a single control, as before', async () => {
+    execute.mockResolvedValue({});
+
+    render(
+      <TicketDetailsDialog
+        open
+        ticket={ticket({ scanStatus: 'not_scanned', scanCount: 0, admits: 1 })}
+        eventName="Autumn Gate Day"
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    await screen.findByRole('button', { name: /mark as scanned/i });
+    expect(screen.queryByRole('button', { name: /mark as not scanned/i })).not.toBeInTheDocument();
+  });
+
+  it('says what the server said when the ticket is used up', async () => {
+    // A 409 carrying words an administrator can act on. `failure.message` here
+    // is "Request failed with status code 409", which is not one of them.
+    execute.mockRejectedValue({
+      response: { data: { error: { code: 'TICKET_FULLY_USED', message: 'This ticket admits 4 and all 4 have been used.' } } },
+    });
+
+    render(
+      <TicketDetailsDialog
+        open
+        ticket={ticket({ scanStatus: 'scanned', scanCount: 3, admits: 4 })}
+        eventName="Autumn Gate Day"
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /mark as scanned/i }));
+
+    expect(
+      await screen.findByText('This ticket admits 4 and all 4 have been used.')
+    ).toBeInTheDocument();
+  });
+});
+
 describe('printing the ticket', () => {
   it('builds the ticket here rather than fetching a file that does not exist', async () => {
     /*

@@ -213,7 +213,13 @@ describe('TicketDetailsDialog', () => {
   });
 
   it('shows mark as not scanned button for scanned tickets', () => {
-    const scannedTicket = { ...mockTicket, scanStatus: 'scanned' as const };
+    /*
+     * `scanCount` too, not just the status. Undoing is offered when something
+     * has actually been used — a ticket marked `scanned` with a count of zero
+     * is not a state the product can produce, and the button that undoes an
+     * admission has nothing to undo.
+     */
+    const scannedTicket = { ...mockTicket, scanStatus: 'scanned' as const, scanCount: 1 };
     render(
       <TicketDetailsDialog
         open={true}

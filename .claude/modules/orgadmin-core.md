@@ -43,6 +43,7 @@ with the question, cancel precedes it in the DOM, and `busy` prevents a double-s
 export * from './hooks';        // useApi, useCurrency, useTableSort, AuthTokenContext, OrganisationIdContext
 export * from './utils';        // formatting, validation + sorting helpers
 export * from './components';   // ConfirmDialog, ResponsiveTable, SortableTableCell
+export { saveBlob } from './reporting/exportReport';  // hand a workbook to the browser
 export { OrganisationProvider, useOrganisation } from './context/OrganisationContext';
 export * from './dashboard';    // dashboardModule
 export * from './forms';        // formsModule

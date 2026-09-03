@@ -192,7 +192,8 @@ Tables:
 ```
 organizations  organization_types  organization_users  organization_user_roles
 organization_admin_roles  audit_events (partitioned by month)  users  roles  capabilities
-events  event_activities  event_entries  event_ticketing_config  electronic_tickets
+events  event_activities  event_entries  event_types  event_type_templates
+event_type_setting_overrides  event_ticketing_config  electronic_tickets
 ticket_scan_history  ticket_scan_sessions  ticket_scan_devices  members  membership_types  member_filters
 registrations  registration_types  registration_filters
 merchandise_types  merchandise_orders  merchandise_order_history
@@ -537,6 +538,15 @@ Things worth knowing before touching any of it:
   `ticketingService.issueTicketForEntry` immediately after creating an event entry. It is wrapped: a
   ticketing failure is logged, never thrown, because the entry already exists. Issuance is
   idempotent on `event_entry_id`, because Stripe replays webhooks.
+- **Event type templates are the platform's; a club's event types point at one.** `event_types` is
+  club-owned free text with no behaviour, so a discipline that knows how to schedule or score itself
+  is defined once by the platform in `event_type_templates` and referenced by a **nullable**
+  `event_types.template_id` — null being what every row is today. A template splits into `shape`
+  (phases, order, resource kinds — **not** overridable, because a club needing different phases needs
+  a new template) and `default_settings` (minutes per competitor, gaps, breaks — overridable).
+  `event_type_setting_overrides` holds **only what differs** at the organisation-type or organisation
+  level, so raising a platform default reaches every club that never overrode it. Nothing reads these
+  yet: S0-1 of docs/EVENT_SCHEDULING_TASKS_S0_S1.md, migration `1709000000046`.
 - **A ticket's QR carries a signed token, not the bare identifier.** `ticket-token.service` mints
   and reads it: version, key id, ticket uuid, event uuid and expiry, under an HMAC-SHA256 truncated
   to 128 bits — 72 base64url characters. The key is `TICKET_SIGNING_KEYS` (`id:secret` pairs, newest

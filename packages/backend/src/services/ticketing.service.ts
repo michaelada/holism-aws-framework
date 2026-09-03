@@ -2,6 +2,7 @@ import { db } from '../database/pool';
 import { signTicketCode, ticketIdFromCode } from './ticket-token.service';
 import { logger } from '../config/logger';
 import { fileUploadService } from './file-upload.service';
+import { AppError, NotFoundError } from '../middleware/errors';
 
 /**
  * Event Ticketing Config interface
@@ -847,7 +848,32 @@ export class TicketingService {
   }
 
   /**
-   * Update ticket scan status
+   * Admit somebody by hand, or take that back.
+   *
+   * The club's own way in, for the ticket presented at a desk with no phone to
+   * hand. It answers the same two questions the gate does and must answer them
+   * the same way, because a ticket does not care which door it came through.
+   *
+   * ## The ceiling is in the statement
+   *
+   * `WHERE scan_count < admits` — so a ticket that admits four lets four people
+   * through here and refuses the fifth, exactly as it does at the gate. This
+   * used to be `scan_count = scan_count + 1` with no comparison at all, which
+   * meant the number an activity was configured with was enforced at the gate
+   * and ignored on this screen: an administrator could mark a one-use ticket
+   * scanned indefinitely and the count simply climbed.
+   *
+   * ## Who did it comes from the token
+   *
+   * `scannedBy` is the acting administrator's `organization_users.id`, taken by
+   * the route from the verified request and **never from the body** — it is the
+   * accountability record for letting somebody in, on the same rule as
+   * `requestedBy` on a refund. Their name is resolved here and written onto the
+   * history row as well as the id, because `scanned_by` is a foreign key and
+   * the history has to outlive the row it points at.
+   *
+   * Undoing decrements rather than merely relabelling, so a mistake corrected
+   * gives the place back.
    */
   async updateTicketScanStatus(
     ticketId: string,
@@ -855,64 +881,148 @@ export class TicketingService {
     scanLocation?: string,
     scannedBy?: string
   ): Promise<ElectronicTicket> {
+    const client = await db.getClient();
+
     try {
-      const client = await db.getClient();
+      await client.query('BEGIN');
 
-      try {
-        await client.query('BEGIN');
+      /*
+       * The administrator, by name. Looked up rather than passed in: the route
+       * has an id it verified, and a name a caller supplies is a name a caller
+       * chose. Absent where the id is (an older client, or a path that does not
+       * set it) — the row still records the id and the trail still reads.
+       */
+      let scannedByName: string | null = null;
+      if (scannedBy) {
+        const actor = await client.query(
+          `SELECT TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS name, email
+             FROM organization_users WHERE id = $1`,
+          [scannedBy]
+        );
+        const row = actor.rows[0];
+        scannedByName = (row?.name?.trim() || row?.email) ?? null;
+      }
 
-        // Update ticket
-        const updateResult = await client.query(
-          `UPDATE electronic_tickets 
-           SET scan_status = $1, 
-               scan_date = $2,
-               scan_location = $3,
-               scan_count = scan_count + $4,
-               updated_at = NOW()
-           WHERE id = $5
-           RETURNING *`,
-          [
-            scanStatus,
-            scanStatus === 'scanned' ? new Date() : null,
-            scanStatus === 'scanned' ? scanLocation : null,
-            scanStatus === 'scanned' ? 1 : 0,
-            ticketId,
-          ]
+      const scanned = scanStatus === 'scanned';
+
+      /*
+       * One statement for each direction, and in the admitting one the ceiling
+       * is part of it: whether a row comes back **is** whether there was room.
+       *
+       * `scan_status` follows the count rather than the button — a ticket that
+       * admits four and has been used twice is scanned, and only returns to
+       * not_scanned when the last of them is undone.
+       */
+      const updated = scanned
+        ? await client.query(
+            `UPDATE electronic_tickets
+                SET scan_count = scan_count + 1,
+                    scan_status = 'scanned',
+                    scan_date = NOW(),
+                    scan_location = COALESCE($2, scan_location),
+                    updated_at = NOW()
+              WHERE id = $1
+                AND scan_count < admits
+              RETURNING *`,
+            [ticketId, scanLocation ?? null]
+          )
+        : await client.query(
+            `UPDATE electronic_tickets
+                SET scan_count = GREATEST(scan_count - 1, 0),
+                    scan_status = CASE WHEN GREATEST(scan_count - 1, 0) > 0
+                                       THEN 'scanned' ELSE 'not_scanned' END,
+                    scan_date = CASE WHEN GREATEST(scan_count - 1, 0) > 0
+                                     THEN scan_date ELSE NULL END,
+                    updated_at = NOW()
+              WHERE id = $1
+              RETURNING *`,
+            [ticketId]
+          );
+
+      if (updated.rows.length === 0) {
+        /*
+         * Nothing came back. Either the ticket does not exist, or it does and
+         * has no room left — two different sentences for the administrator, so
+         * they are told apart rather than both reported as "not found".
+         */
+        const existing = await client.query(
+          'SELECT scan_count, admits FROM electronic_tickets WHERE id = $1',
+          [ticketId]
         );
 
-        if (updateResult.rows.length === 0) {
-          throw new Error('Ticket not found');
+        if (existing.rows.length === 0) {
+          await client.query('ROLLBACK');
+          throw new NotFoundError('Ticket not found');
         }
 
-        // Add scan history entry
-        if (scanStatus === 'scanned') {
-          await client.query(
-            `INSERT INTO ticket_scan_history 
-             (ticket_id, scan_location, scanned_by, scan_result, notes)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [
-              ticketId,
-              scanLocation || null,
-              scannedBy || null,
-              'success',
-              'Ticket scanned successfully',
-            ]
-          );
-        }
+        const { scan_count: used, admits } = existing.rows[0];
 
+        // Recorded, because a refusal at a desk is as much a fact about the
+        // ticket as an admission is.
+        await client.query(
+          `INSERT INTO ticket_scan_history
+             (ticket_id, scan_location, scanned_by, scanned_by_name, scan_result,
+              refusal_reason, scanned_at, notes)
+           VALUES ($1, $2, $3, $4, 'refused', 'already_used', NOW(), $5)`,
+          [
+            ticketId,
+            scanLocation ?? null,
+            scannedBy ?? null,
+            scannedByName,
+            `Refused: already used ${used} of ${admits}`,
+          ]
+        );
         await client.query('COMMIT');
 
-        logger.info(`Ticket scan status updated: ${ticketId} -> ${scanStatus}`);
-        return this.rowToTicket(updateResult.rows[0]);
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
+        throw new AppError(
+          409,
+          'TICKET_FULLY_USED',
+          admits === 1
+            ? 'This ticket has already been used.'
+            : `This ticket admits ${admits} and all ${admits} have been used.`
+        );
       }
+
+      if (scanned) {
+        await client.query(
+          `INSERT INTO ticket_scan_history
+             (ticket_id, scan_location, scanned_by, scanned_by_name, scan_result,
+              scanned_at, notes)
+           VALUES ($1, $2, $3, $4, 'success', NOW(), $5)`,
+          [
+            ticketId,
+            scanLocation ?? null,
+            scannedBy ?? null,
+            scannedByName,
+            `Admitted ${updated.rows[0].scan_count} of ${updated.rows[0].admits}`,
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      logger.info(`Ticket scan status updated: ${ticketId} -> ${scanStatus}`, {
+        used: updated.rows[0].scan_count,
+        admits: updated.rows[0].admits,
+      });
+      return this.rowToTicket(updated.rows[0]);
     } catch (error) {
+      /*
+       * A rollback that itself fails must not replace the error that caused it
+       * — the second exception would hide the first, which is the one worth
+       * reading. `try` rather than `.catch()` on the result, because a client
+       * is not obliged to hand back a promise.
+       */
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        /* Already unwound, or the connection is gone. */
+      }
+      if (error instanceof AppError || error instanceof NotFoundError) throw error;
       logger.error('Error updating ticket scan status:', error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 

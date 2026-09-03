@@ -86,6 +86,12 @@ export interface ElectronicTicket {
   scanDate?: Date;
   scanLocation?: string;
   scanCount: number;
+  /**
+   * How many times this ticket may be scanned before it is used up — set per
+   * activity and copied onto the ticket when it was issued. Absent on older
+   * responses, where it means one. See docs/GATE_SCANNING.md.
+   */
+  admits?: number;
   
   // Status
   status: TicketStatus;

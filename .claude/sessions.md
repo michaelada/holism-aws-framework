@@ -25522,3 +25522,531 @@ I also had to fix something the bulk pass created: the notes I'd written an hour
 **The last scaffold name** is the working directory, `Holism`. That one genuinely isn't project configuration — it's an OS path held absolutely by `.claude/settings.json`, your Claude project memory directory, and any IDE workspace file. Renaming it is a `mv` plus repointing those, and it's your call whether it's worth the disruption. Nothing is committed.
 
 ---
+
+
+## 2026-09-03 08:33:39 — Prompt
+
+When a ticket is scanned by the administrator in the Orgadmin, currently the ticket shows a record of the scanned ticket, but the Scanned by column in the Scan History table shows “-“. It should show the name of the logged in user that marked the ticket as scanned.
+
+When editing a ticketing event and its activities, for each activity it should be possible to configure how many scans are allowed on the ticket before it is considered used, this field should default to 1.
+If it is set to more than one, then the scanning should count the number of times the ticket is scanned and only block its future use once the number of scans reaches the configured limit.
+
+### Assistant
+
+Two things here, and the second one may already exist under a different name. Let me check both.
+
+Both of your points land in the same place. Let me start with the service, which is where the "-" and the missing limit both originate.
+
+Now the route — the administrator must come from the token, never the body.
+
+Now the dialog — it should show the count against the limit and surface the refusal.
+
+Now the locale keys, in all six.
+
+Everything's committed — good, the tree is clean. Now the activity field: it exists, but it's labelled in *people*, not *scans*, which is likely why you didn't find it.
+
+3 added / 2 changed per locale — exactly the two relabelled keys plus the new one. Now the tests.
+
+The tests caught a real fragility in my rollback. Fixing the service first.
+
+The `success`/`refused` literals are in the SQL, not the parameters — my assertions were looking in the wrong place.
+
+Now a test for the dialog's multi-scan behaviour, then the docs.
+
+The fixture says `scanStatus: 'scanned'` with `scanCount: 0` — a state the product can't produce. Making it coherent.
+
+Now the documentation.
+
+Both done — though the second one turned out to already exist under a name you'd never have found it by.
+
+**The "-" in Scanned by**
+
+`updateTicketScanStatus` wrote `scanned_by` from `req.body.scannedBy`. Two problems: the dialog never sent it, and `scanned_by` is a **foreign key to `organization_users`** — not the column the table renders. The column that renders is `scanned_by_name`, added for the gate, and this path never wrote it at all.
+
+The administrator now comes from the **verified request**, not the body: `byResource('ticket', 'ticketId')` has already established that the caller administers this ticket's organisation and set their `organization_users.id` while doing it. Both get written — the id for the key, the name for the trail, because `scanned_by` points at a row that can be deleted and the history has to outlive it. Same rule a refund's `requestedBy` follows, for the same reason: it's an accountability record, so it can't be something the client chooses.
+
+**The scan limit — it was already there**
+
+`event_activities.tickets_admit`, per activity, minimum 1, default 1, copied onto each ticket at issue. It shipped with gate scanning. You couldn't find it because:
+
+- **I'd labelled it in people, not scans** — *"People admitted per ticket"*. Same number, wrong end of the telescope. It now reads **"Scans allowed per ticket"**, with a helper covering both readings.
+- **The org-admin ignored it.** The gate enforced the ceiling; this screen ran `scan_count = scan_count + 1` with no comparison at all, so a limit of 4 could be blown straight past from the ticket dialog. If you tested there, it would have looked like the setting didn't exist.
+
+So no new column and no second field — a second setting meaning the same thing is how two answers to one question get into a product. What changed is that this screen now uses the gate's statement, where **whether a row comes back is whether there was room**, and refuses with a 409 saying *"This ticket admits 4 and all 4 have been used"* rather than a 500.
+
+**Three things I found while in there**
+
+- **The dialog couldn't admit the second person.** Both buttons were keyed on `scanStatus`, so admitting the first of four flipped the ticket to `scanned` and left only *undo* — the other three were unreachable from that screen. They're now keyed on the facts: admit while there's room, undo while anything's used. A one-use ticket behaves exactly as before.
+- **Undoing didn't give the place back.** It relabelled and left the count. Harmless at 1, but on a family ticket a corrected mistake cost a place permanently. It decrements now, and `scan_status` follows the count rather than the button.
+- **A refusal showed axios's words**, not the server's. `throwOnError` rejects with *"Request failed with status code 409"*; the useful sentence is in `response.data.error.message`.
+
+The count now reads **"2 of 4"** where a ticket admits more than one, and stays a bare number where it admits one.
+
+**Verified:** backend **188 suites / 3,644 tests**, orgadmin-core 962, account-shell 766, orgadmin-shell 754, events 423, ticketing 155 — all green. Two existing tests failed honestly along the way and both were worth it: one caught a rollback that assumed the client returns a promise, and one had a fixture describing a ticket that was `scanned` with a count of zero — a state the product can't produce.
+
+Docs: `docs/MARKING_A_TICKET_SCANNED.md`, plus the gate-scanning doc, its wireframes, and the ticketing and events module summaries. Nothing committed.
+
+---
+
+
+## 2026-09-03 09:15:00 — Prompt
+
+on the Members Database page I clicked on the Export To Excel button and nothing happened.
+
+### Assistant
+
+It's a stub — `console.log('Exporting members...')` and nothing else. Let me see the whole thing and what the backend offers.
+
+There's no members export, but `registrations/export` exists — and registrations is the structural twin of memberships. Let me follow that precedent exactly.
+
+The list is filtered entirely in the browser, so a server-side re-query would mean a second implementation of the filter rules. Let me look at how the reporting export downloads a workbook.
+
+Now the backend: the service, then the route.
+
+Noted — I'll do the clickable name on the same page once the export is working.
+
+Now the shared download helper, then both page changes together.
+
+Now both changes on the Members Database page — the working export, and the clickable name.
+
+Now the error key in all six locales.
+
+The convention here is flat `failedTo*` keys, not an `errors` block. Matching it.
+
+The key already exists — `memberships.failedToExport`, translated and unused, waiting for the error the stub never raised.
+
+Present in all six, and the tree is untouched (3/2 is the earlier label change). Now the tests.
+
+The button is correctly disabled until members load — my tests click too early.
+
+Both done.
+
+**Export to Excel did nothing because nothing was there**
+
+```ts
+// Export logic would go here
+console.log('Exporting members...');
+```
+
+A stub with a `catch` around nothing, which is what makes it read as finished — and no `/members/export` endpoint behind it either. Same shape as the ticket dialog's dead buttons and the four report exports: a control announcing a capability the product didn't have. The locale key for the failure, `memberships.failedToExport`, was already sitting there in all six languages, waiting for an error the stub could never raise.
+
+**The decision it turned on:** the member list is filtered *entirely in the browser* — status tabs, search box, saved filters. So either the server re-derives all of that (a second implementation of every filter rule — this codebase already carries two of those and both summaries warn that changing one means changing both), or the client sends the ids it's showing. I sent the ids, so the workbook **is** the table by construction and no rule is written twice.
+
+It's a POST despite being a read: two thousand members is 72KB of ids, past what a URL carries. The ids aren't trusted — `organisation_id = $1` sits alongside `id = ANY($2::uuid[])`, so an id from another club selects nothing. And a body that named ids and had none survive is a **400**, not an export of everything: falling through would hand someone the whole database when they'd asked for a filtered slice.
+
+The workbook is built server-side with `exceljs`, matching the registrations export column-for-column in approach — registrations being the structural twin of memberships. Columns are in the order the table shows them, because an export that reorders what you just looked at makes you check it line by line.
+
+`saveBlob` moved to `orgadmin-core`'s public surface rather than being written a second time — the second implementation is always the one that forgets to revoke the object URL.
+
+**The name is now a link**
+
+The View button is pinned to the right of a table wide enough to scroll, so reaching it meant dragging the row sideways past the name you were already pointing at. The button stays — a second way in, not a replacement. The phone's card layout is deliberately untouched: it already spells its three actions out in words, doesn't scroll horizontally, and the name is the card's heading.
+
+**Verified:** backend **189 suites / 3,650 tests** (6 new for the workbook — read back through `exceljs` so the assertions are about a real file), orgadmin-memberships **541** (7 new). Typechecks clean on the page and the backend.
+
+One test-writing note: my first attempt failed five ways because I clicked Export before the members loaded — the button is correctly disabled while there's nothing to export. The tests now wait for the table to fill, which is the behaviour rather than an obstacle to it.
+
+`orgadmin-core` still shows the pre-existing `AuditLogPage` suite-load failure — the intermittent one I proved twice today is unrelated.
+
+Docs: `docs/MEMBERS_EXPORT_AND_NAME_LINK.md`, plus the memberships, core and core-reporting summaries. Nothing committed.
+
+---
+
+
+## 2026-09-03 09:32:28 — Prompt
+
+In the members export file can you make sure that you include a column and associated values for all form fields in the membership form, for each of the membership types exported.
+It may need a restructuring of the excel to include different tables for different membership types if they use different forms.
+
+### Assistant
+
+Good instinct — that's exactly the shape of the entries export. Let me follow that precedent rather than invent a second one.
+
+Now I'll restructure the export: one sheet per membership type, with a column for every field of that type's form.
+
+The regex survived the escaping correctly. Now the tests, rewritten for the new structure.
+
+Now the documentation, updated for the new structure.
+
+Let me run the real thing against the seeded database — the strongest check that the sheets and columns come out right.
+
+That's the exact case you anticipated: **Family Membership uses a different form** — 20 columns against 23, with no rider email, mobile or medical notes. Let me check the date cells are real dates, not text.
+
+The two date columns are real dates but carry **no number format** — and there's a timezone trap here. Let me check the column types.
+
+Both are `date` columns — date-only. Let me confirm the off-by-one this causes before fixing it.
+
+Confirmed — every renewal and validity date would show a day early through the summer. Fixing it at the source.
+
+Every date in the file now matches the database exactly. Full sweep and docs.
+
+Done — and your instinct about restructuring was right, so I followed it.
+
+**One sheet per membership type**, each carrying a column for every field of *that type's* form, and a row per member with what they answered. Proven against your seeded Kildare club:
+
+```
+sheet "Junior Member"     — 4 members, 23 columns
+sheet "Associate Member"  — 1 member,  23 columns
+sheet "Senior Member"     — 3 members, 23 columns
+sheet "Family Membership" — 2 members, 20 columns   ← different form
+sheet "Founder Member"    — 1 member,  23 columns
+```
+
+Family Membership is exactly the case you anticipated: it uses a different form, so it has no *Rider email address*, *Rider mobile number* or *Rider medical notes*. A single flat table could only hold the union of every form, giving every member a row of blanks under questions their own application never asked.
+
+**Per type, not per form.** Two types sharing a form still get a sheet each — a membership type is the thing a club recognises and filters by, whereas a sheet named after a form carries a name most administrators have never seen. Grouped by type **id**, because two types can share a name. This is the same shape the entries export already uses (one sheet per activity), so the two features do the same job the same way.
+
+Columns are `Membership Number · Name · First Name · Last Name · ‹the form's own questions› · Date Last Renewed · Status · Valid Until · Labels · Processed · Payment Status · Payment Method` — what the sheet is about on the left, administration on the right. A question nobody answered still gets a column, because the club asked it. Answers go through `formatAnswer`, so consent reads `Yes` rather than `true`. *Membership Type* is gone as a column, because it's now the sheet.
+
+**One thing I found on the way, worth flagging.** `date_last_renewed` and `valid_until` are Postgres `date` columns, and node-postgres returns those as a JS Date at *local midnight* — so a 12 July renewal arrives as `2026-07-11T23:00:00.000Z`. Written as a Date, Excel would have displayed **11 July**. Every renewal and expiry a day early through the summer and correct through the winter, which is the worst kind of wrong because it looks fine if you check it in January. I verified it rather than assumed it:
+
+```
+the club means      : 2026-07-12
+excel would display : 2026-07-11        => OFF BY ONE
+```
+
+They're now written as `yyyy-mm-dd` from the local parts — can't shift, still sorts chronologically. I then re-ran the real export against the seeded club and compared all 11 members' dates against the database: **0 mismatched**.
+
+**Verified:** backend **189 suites / 3,658 tests** (14 for the export, including the timezone one), orgadmin-memberships 541. Typecheck clean. Docs updated in `docs/MEMBERS_EXPORT_AND_NAME_LINK.md` and the memberships and events summaries. Nothing committed.
+
+---
+
+
+## 2026-09-03 09:45:39 — Prompt
+
+Two new concepts controlled by new capabilities. 
+
+Event Scheduling - the idea behind this is that once all entries for an event have been received for each activity and entries are closed, in certain cases the person running the event might have to create a schedule for the event and each of its activities. The type of scheduling that might be needed would depend on the type of event that was being run, so for example 
+
+1. if it is an equestrian event then the competition could have multiple elements, for example: in show jumping a single round, or 2 rounds with a jump off…, or eventing where they do Dressage, then Cross Country and then Show Jumping, or sometimes it is Dressage, then Show Jumping and then Cross Country), or pure dressage with one test, or two tests. Also in equestrian sport, sometimes the one rider might compete on more than one horse, so the scheduling needs to make sure that the rider has time to change horses and worm up for each one. Typically other influencing factors on scheduling would be the available arenas/ courses, assigning different activity/ classes to different arenas/ course, different start times, different allowed time for each competitor, lunch breaks, breaks after every N riders.
+
+2. for other sports there could be other rules around how their events are scheduled
+
+So I am looking for a solution that allows me to configure scheduling rules associated with different event types and to have these predefined event types linked to a capability that can be given to an organisation type / organisation or not. And if an organisation/ type has one of these capabilities then the Event Type and associated scheduling functionality would be preconfigured for all organisations within that organisation type. 
+So I am hoping that, linked to the Event Type concept and an associated capability that we can build different scheduling functions, for different types of event and extend the system over time.
+
+So we could have different preconfigured Event Types like “Show Jumping”, “Dressage”, “Eventing”, all of which can be designed and configured to automate or assist in the scheduling of a specific event and its activities.
+
+Some additional points for this.
+
+1. It should be possible to publish the schedule for the event and have it display as a link on the account users dashboard/ home page.
+2. It should also be possible to publish the schedule externally providing a url that can be shared online, e.g. on social media, where logging in is not necessary.
+3. Ideally I would like the solution to be as flexible and configurable as possible, however I recognise that this will have limitations, and sometimes new types of scheduling will just require new code, but a low/ no code approach is ideal where new scheduling approaches can be configured rather than coded would be great.
+
+Event Scoring and Result Publishing
+Another extension I require for different event types is the ability to score an event and publish the results. Again as with scheduling, different event type can have different types of scoring mechanisms and result publishing formats. So like event scheduling I would like a solution that:
+
+1. The solution would need a scoring module for the event within the orgadmin
+2. It should be capability controlled and linked to the Event Type, so different event types can have different scoring tool configurations and result display default formats.
+3. It should be possible to publish the results for the event and have it display as a link on the account users dashboard/ home page.
+4. It should also be possible to publish the schedule externally providing a url that can be shared online, e.g. on social media, where logging in is not necessary.
+5. Ideally I would like the solution to be as flexible and configurable as possible, however I recognise that this will have limitations, and sometimes new types of scoring and results will just require new code, but a low/ no code approach is ideal where new scheduling approaches can be configured rather than coded would be great.
+
+I don’t want you to implement this, I would just like you to investigate these two areas and propose a solution that I can review.
+
+### Assistant
+
+Let me ground this in what already exists before proposing anything.
+
+`event_types` is **per-organisation** — that's a structural gap for "preconfigured for all organisations of a type". Let me check the rest.
+
+Scheduling needs to know rider *and* horse. Let me check how an entry identifies those.
+
+I have what I need. Two findings shape the whole proposal, so let me state them before writing it up.
+
+I've investigated both and written the proposal up as **[docs/EVENT_SCHEDULING_AND_SCORING_PROPOSAL.md](docs/EVENT_SCHEDULING_AND_SCORING_PROPOSAL.md)**. Nothing is built. Here's the shape of it.
+
+**Two findings changed the design before I started**
+
+**`event_types` is club-owned free text with no behaviour.** Kildare has its own *Show Jumping* row; Laois has a different row with the same name. There is no platform-level event type and nowhere to hang behaviour. So the spine of the proposal is a new platform-level **`event_type_templates`**, with `event_types.template_id` pointing at one — existing types keep working with a null, clubs keep owning their own list, and "preconfigured for every organisation of a type" falls straight out of `organization_types.default_capabilities`, which already exists.
+
+**The metadata repository is unused scaffold — zero rows.** The live low-code machinery is the **Form Builder**: 156 fields and 28 forms in the demo data alone, 15 datatypes, validation enforced on both client and server, a renderer, grouping, wizards. So score sheets should be forms, not a second field-type system built beside the one that works.
+
+**Scheduling: nearly all of what you described is parameters, not logic**
+
+Single round, two rounds plus jump-off, DR→XC→SJ, DR→SJ→XC, one dressage test or two — all of it is *how many phases, in what order, for how long, on which resource*. So one generic scheduler covers every case in the brief, and a new discipline is a row of configuration.
+
+Two judgements I'd defend:
+
+- **The schedule is a document the club owns, not a solver's verdict.** Generate a draft, let the organiser drag it, and after a manual move turn the constraints into *warnings* rather than refusals. Someone with a reason to break their own rule at 9pm the night before must be able to.
+- **Explainable beats optimal.** A list scheduler answers *"why is Mary at 10:40?"* A constraint solver produces a better timetable nobody can explain — the wrong trade at a pony club.
+
+**The one real modelling gap: nothing links an entry to a horse.** The rider is `member_id`; the horse's name lives in whatever form field the club happened to build. My proposal is that the template *names that field* — zero schema change, works with forms clubs already have — with a proper `registration_id` link as a later second source for the same question.
+
+**Scoring: named calculators, not a formula language**
+
+The template declares a score sheet per phase (a Form Builder form), a calculator by name with parameters — `dressage-percentage`, `showjumping-faults`, `eventing-penalties`, `points-table` — plus result columns and tie-breaks. A general expression evaluator over club-supplied strings is a security and support liability, and this codebase already refuses `javascript:` URLs on exactly that reasoning. If configuration-only extension later proves essential, a *restricted arithmetic* expression is the smallest safe step — a deliberate phase two, not something to slip in.
+
+**On "low-code": I've said plainly where it stops.** Configuration covers phases, order, durations, resources, breaks, gaps and draw order. New code is needed for a new *shape* — knockout brackets, heats with progression, pursuit starts computed from a previous phase, live rescheduling mid-event. So the template carries a `schedulerKind` and new shapes register a new kind behind a small seam. I would not promise a rules engine; every one I've seen in this position becomes a programming language with no debugger.
+
+**Publishing is the easy part** — the public event page, `schema.org`, Open Graph, anonymous requests and the dashboard-in-one-call all exist. But one thing needs a decision rather than a default: **a start list is personal data, often about children.** I'd have public publishing off by default, with the club choosing what a public page shows — full names, first name and initial, or numbers only — and the members-only version allowed to be fuller.
+
+**What I'd want from you before any of it gets built** — §8 has six, but three matter most: is the first customer equestrian or something else (it decides whether the generic scheduler is general enough on day one); does scheduling need to react *during* an event (much larger feature); and are results ever official in a governing-body sense (raises the bar on audit, and touches the Pelham gap).
+
+One scoping thought: **scheduling is independently valuable and results without scheduling is the less useful half.** It's worth deciding whether scheduling ships alone first rather than treating them as one delivery.
+
+---
+
+
+## 2026-09-03 10:45:10 — Prompt
+
+IN r4elation to the questions in section 8:
+
+1. the firsy customer will be equestrian, but we also have tennis and swimming clubs as other examples.
+
+2. One organiser at a laptop at any one time, but other orgadmin could also make changes over time.
+
+3. No scheduling is something posted before the event, and is not expected to change during the event.
+
+4. Results could potentially be official.
+
+5. Registered items, be they orses or something else, could be first class records, so if the registration is included in the entry form, then it should be possible to configure it as the horse, the boat... but also in cases where registration is not used, another field in the form should be seletable as the horse, or entity used for this purpose.
+
+6, yes a commercial decision for now, not commerical, but we might add additinal application fee for those organsiations/ types using it.
+
+### Assistant
+
+Several of those change the design materially. Let me check two things before revising.
+
+Both answered clearly. Now let me revise the proposal — three of your answers change the design rather than just confirming it.
+
+Now replacing §8 with your answers and what's genuinely still open.
+
+Proposal revised — **[docs/EVENT_SCHEDULING_AND_SCORING_PROPOSAL.md](docs/EVENT_SCHEDULING_AND_SCORING_PROPOSAL.md)**, revision 2. Three of your six answers changed the design rather than confirming it.
+
+**Tennis and swimming broke my model, and I'm glad they surfaced now.** I'd defined the unit as one competitor's turn. That's right for every equestrian discipline and wrong immediately for the other two: a swimming heat holds six to eight people in lanes, a tennis match holds two. So the unit is now a **slot** — a resource, a time, a duration, and *one or more* participants each with a position. Equestrian is the case where that number happens to be one.
+
+A participant can also be **derived** — *"winner of QF1"*, *"first two from Heat 3"* — which is what lets a draw be published in full before anyone competes. That costs almost nothing to model now and is a rewrite to retrofit, so it belongs in the first migration even though phase 1 only ever writes one participant per slot. `heats-and-finals` and `bracket` are now named future `schedulerKind`s with known requirements, not hypotheticals.
+
+**"Official" changed the requirements, not the architecture.** A `provisional → final → amended` lifecycle, stated on every screen. Every score change through the **existing** audit trail — which already has partitioned events, six-locale labels and a before/after diff renderer, so this needs four new action names and nothing else. Immutable published snapshots, so "what was published on the day" is a row rather than a memory. And a required reason when amending a final result, because it's the first thing anyone asks.
+
+**Registered items generalised well.** Not a horse mechanism — an **entity resolver** with two ordered sources: a registration where the club uses one, a nominated form field where it doesn't, and nothing at all for tennis or swimming. The registrations module already calls it an `entity_name`, so boat, dog or partner all read the same way. But it exposed a real gap I'd have hit in phase 2: **no form field type picks a registration, and nothing links an entry to one.** That's its own phase, and it's separable — equestrian clubs will run whole seasons on entity-by-form-field.
+
+**Two answers simplified things.** One organiser at a time means no concurrent editing — an optimistic version check on save is the entire requirement. And "posted before, doesn't change during" removes the single largest piece of work in the brief; a morning scratching is republishing, not logic.
+
+**On the fee — it needs nothing new.** The application fee is already configured per organisation type and inherited, with a per-organisation override table. An uplift is a commercial setting on an existing dial. Two things worth deciding deliberately though: it charges the club's *payers*, not the club, so an uplift lands on entry fees and a club that schedules but takes no card payments pays nothing — usage-based, which may be exactly right. And nothing today ties a fee to a capability automatically; that's small work, worth doing only if this is sold widely rather than negotiated per club.
+
+**Six smaller things are still open** in §9 — whose rules for show jumping faults, whether a schedule can span two days (it changes phase 1's scope), whether an official result needs to leave the system as a PDF or a feed. That last one runs straight into the PCUK/Pelham gap from the marketing background: official results and federation integration are the same conversation.
+
+My recommendation is unchanged and now more strongly held: **ship scheduling alone first.** It's independently valuable, and results without a schedule is the less useful half.
+
+---
+
+
+## 2026-09-03 11:06:32 — Prompt
+
+in relation to the questions in section 9.
+
+1. the rules could ave defaults but should be set per organisation type or individual organisation.
+
+2. Yes resourcs should havw the same treatment so they can be labelled Arena, ring, court, lane, pool etc
+
+3. Yes it is possible that a schedule could pan more than one day, e.g. eventing, Dressage day 1, show jumping + cross country day 2, or all 3 on separate days, or dressage on day 1 and 2, cross country day 3 and show jumping day 4
+
+4. Yes, posting results can allow a variable number of minutes for objections before they become official.
+
+5. Results should be exportable to Excel for downloading or PDF, e.g.  for printing
+
+6. yes
+
+### Assistant
+
+Let me verify two things I'm about to lean on.
+
+Now re-sequencing the delivery for scheduling-first, and replacing §9.
+
+Proposal is now at **revision 3**. Two of your six answers changed the model again; the rest tightened it or simplified it.
+
+**Multi-day was the significant one.** Your third example — dressage across days 1 *and* 2, cross country day 3, show jumping day 4 — breaks a naive design, because it means **a single phase can span more than one day**. So "day" can't be a property of a phase and "start time" can't be a property of a resource. A resource now has **sessions** (a date, opens-at, closes-at) and slots live in sessions. Two things then fall out for free, which is usually the sign a model is right: phase ordering spans days without knowing about days, and the competitor gap correctly stops mattering overnight. The editor becomes a day at a time — a four-day event is four readable screens rather than one enormous grid.
+
+**Rules per type or per club split the template in half.** Not one value but a chain — template → organisation type → club → event, storing only what differs, so improving a platform default reaches everyone who never overrode it. The important line is **shape versus settings**: phases, their order and which calculator runs are the platform's and are *not* overridable; minutes per competitor, gaps, time allowed and break rules are. If a club can redefine what eventing *is*, there are soon two hundred definitions and the calculators stop meaning anything. I've also borrowed the **lock** flag from the organisation-type logo, so a federation can fix a setting across its clubs — and a locked setting is *removed* from the club's screen rather than greyed out, which that document already settled.
+
+**The objections window simplified things rather than adding to them.** Derive "official" from `published_at + minutes`; don't store it as a status. That's the rule the announcements module already landed on — *"a status column alongside would make publishing two facts that can disagree"* — and it means **nothing has to run on a timer**. A page renders "Official" or "Provisional — objections close at 16:45" from two columns and the clock, and it's right even if nothing has touched the row.
+
+**Resources confirmed**, and they follow the bookings-menu rule: a club-chosen label is *not* translated, because it's a name the club chose rather than a word the product owns.
+
+**On export, one part needs your decision.** Excel is essentially free — it's the members-export pattern, sheet per class, and the date-as-text trap is already paid for from yesterday. But **there is no PDF engine in the backend**, and this product has been bitten by pretending otherwise: the ticket dialog's *Download PDF* called an endpoint that never existed and reported success anyway. The honest answer is a print view plus the browser's *Save as PDF*, exactly as the ticket now does — and it works from the public page, so anyone can print a running order without an account. A server-side renderer would cost a headless browser in the deployment, and that should be chosen because someone needs an *emailed* or *federation-submitted* PDF, not because "PDF" appeared in a requirement.
+
+**Scheduling-first is now structural**, not a recommendation: S0–S3 ship a complete scheduling product, R1–R3 follow.
+
+Three things remain genuinely open (§10) and none blocks starting: whose show-jumping rules by name, whether official results must leave in a *defined* format for a governing body, and what a "competitor" is when an entry is a team — worth knowing before scoring fixes the shape of a result.
+
+**Two things I'd want agreed before any code**, because they're free now and a migration later: shape-versus-settings, and that a slot holds participants *plural* in sessions. Both are invisible in the first phase, which only ever writes one participant into one session per day — and both are a rewrite if added afterwards.
+
+---
+
+
+## 2026-09-03 11:22:17 — Prompt
+
+for section 10, the answers:
+
+1. I don't understand this questions can you explain it to me
+
+2. for now it is just the human reading it
+
+3. If team scoring is used then extra work is needed.
+3.a. to assign entries / competitors to teams and name them, or to select the field in the form which names the team so it happens automatically.
+3.b. define if individual scoring still needed or just team scoring
+3.c. define the rules for team scores, e.g. best 3 to count
+
+### Assistant
+
+Question 1 was badly worded on my part — let me explain it properly, and answer most of it myself.
+
+Revision 4 is in. Taking your three in order.
+
+**1. My question was badly worded — here's what was behind it.**
+
+Everyone agrees a knocked fence is 4 faults. Beyond that, rule authorities differ:
+
+| | One rule set | Another |
+|---|---|---|
+| Second refusal | elimination | 8 faults, elimination on the third |
+| Over the time allowed | 1 fault per second started | 0.4 per second |
+
+I was asking whether `showjumping-faults` should be **one calculator with parameters**, or several. Every difference above is a *number or a threshold* — so my answer is **one parameterised calculator**, with the numbers living on the settings chain we already agreed, and a federation able to lock them. That makes a rule set configuration rather than code.
+
+The one thing that would break that assumption, and the narrower question genuinely worth your eye: a rule set where the **structure** differs rather than the numbers. The example to watch is a **jump-off** — if it's a separate phase scored on its own, the phase model already handles it; if it's a rule that changes how the *first round* is scored, that's a second calculator. Worth knowing only when we reach scoring; it doesn't touch scheduling.
+
+The smaller half was *time allowed*: typed in per class ("78 seconds") or derived from course length ÷ speed ("450m at 325 m/min"). I'd allow both — deriving it removes arithmetic somebody currently does on paper, with a direct override for the class that doesn't fit.
+
+**2. Human-readable only — closed.** Excel to download, print view for paper, nothing else. The seam that would reopen it is a governing body asking for a named layout, which is the same conversation as the Pelham gap.
+
+**3. Teams — and two of your three parts turned out to be shapes the design already had.**
+
+Your 3a is the **entity resolver** from §3.4 asked about a different question: a nominated form field, or assigned by hand, or neither. Same mechanism, not a second one. Worth one addition though — with a form field, teams appear as entries arrive, and the moment someone types "Kildare" and someone else "Kildare Hunt" you have two teams. So the screen shows the distinct values it found and lets an administrator **merge** two spellings.
+
+Your 3c is a **named calculator with parameters** — `best-n-of-m` — the same seam as every other calculator. Three details in there decide whether a club trusts the result, and none is obvious: what happens when a team loses one (three of four is a discard, three of *three* is no result); whether an eliminated rider is discarded or substituted with a maximum penalty; and that the tie-break is usually the **dropped score**, which means the system has to keep it rather than throw it away during aggregation — easy to design out by accident.
+
+Your 3b is a straightforward three-value setting, and `both` is the common case. One thing I'd make structural: **individual scores are always recorded**, even when only team results are published. It's what makes a team total explicable, and it lets a club publish individuals later without rescoring anything.
+
+Team *scheduling* — spreading a team through a running order — stays a separate `schedulerKind`. Team results work on whatever order the day ran in, so they ship without it.
+
+---
+
+**Everything the proposal raised is now answered, and S0 and S1 can begin.** Three things I'd want agreed explicitly before code, each cheap now and a migration later: shape-versus-settings, slots-hold-participants-in-sessions, and individual scores always recorded.
+
+If you want to proceed, the next artefact is a **wireframe set** — the scheduling editor, the member and public schedule pages, the scoring screen — per §1.3, before any implementation. That's where the day-at-a-time editor and the drag-with-warnings behaviour stop being a paragraph and become something you can react to.
+
+---
+
+
+## 2026-09-03 11:34:38 — Prompt
+
+In relation to Shape versus Settings I would like to have default shapes with ability to override default settings.
+
+A slot holds participants
+
+Individual scores are always recorded
+
+
+Please continue to the next phase
+
+### Assistant
+
+All three agreed — and one clarification worth pinning before I move on.
+
+Now the wireframes. Starting with the platform level and the scheduling editor, which is the screen the whole feature lives or dies on.
+
+Wireframes done — **[docs/EVENT_SCHEDULING_AND_SCORING_WIREFRAMES.md](docs/EVENT_SCHEDULING_AND_SCORING_WIREFRAMES.md)**, nine screens plus the three decisions recorded in the proposal.
+
+**One clarification I pinned first.** "Default shapes with ability to override default settings" reads two ways, so I made the consequence explicit: a club that needs a genuinely *different* shape — eventing with a fourth phase, dressage with three tests — is asking for **a new template**, which is a super-admin action taking minutes. What it isn't is a per-club edit of the phases, which is the thing that produces two hundred divergent definitions of eventing and a calculator that no longer knows what it's computing. The template screen says that sentence on the screen, in front of the person who'd otherwise be asked to make phases editable.
+
+**Nine things stopped being paragraphs and became decisions.** The ones worth your eye:
+
+**The `From` column on every setting.** Inheritance is invisible until something's wrong, and then the only question anyone asks is *"where did 20 minutes come from?"* Every row shows its source — Template, Type, or changed here — with **Reset to template** making an override reversible rather than a one-way door. A locked setting is *removed* from the club's screen with a line naming who set it, per the logo rule.
+
+**The draw is fixed once generated.** Regenerating rebuilds times but must not reshuffle numbers already printed. And regenerating tells you *how many* manual moves it will discard — the difference between a considered click and a lost evening.
+
+**Tab moves down the column, not across the row.** A scorer works one phase at a time from a pile of sheets in competitor order. Moving across is how a form behaves and not how scoring is done.
+
+**The member's schedule opens at their own rounds**, marked. A parent scrolling 54 rounds to find their child is the failure that avoids — and it's the one thing the member version can do that the public one can't.
+
+**The dropped score is shown on team results.** It's the tie-break so the system keeps it anyway, and showing it makes a team total something a club can check rather than take on trust. Alongside it, near-duplicate team names ("Kildare" and "Kildare Hunt" typed by two parents) are flagged **before the day** — without that, form-field teams aren't usable.
+
+Two screens carry the decisions from the proposal that most needed to be seen rather than described: the **publish dialog**, where public is off by default and the full-name / first-name-and-initial / number-only choice sits inside the public branch because it only means anything there; and the **editor**, where a manual move turns constraints into warnings that name the conflict in the club's words — *"Aoife Byrne is on Kilkea at 09:00 — 16 minutes apart, 20 required"* — with a line at the foot saying out loud that warnings don't stop you publishing.
+
+I deliberately **didn't** draw the `heats-and-finals` or `bracket` editors. The slot model is what has to hold; drawing an editor for a scheduler nobody has specified would be inventing requirements.
+
+**Next is the task breakdown for S0 and S1** — the spine and a one-day, one-phase schedule. Say the word and I'll write it; or if anything above looks wrong, better to move it now than in code.
+
+---
+
+
+## 2026-09-03 11:54:10 — Prompt
+
+Please continue
+
+### Assistant
+
+Two things to correct first — my wireframe drew tabs the event page doesn't have.
+
+The three artefacts are complete — **[docs/EVENT_SCHEDULING_TASKS_S0_S1.md](docs/EVENT_SCHEDULING_TASKS_S0_S1.md)** is the breakdown. Nothing is implemented.
+
+**One correction first.** My wireframe drew a tab strip on the event page — Overview │ Activities │ Entries │ Schedule. `EventDetailsPage` has no tabs; it's a single 520-line scrolling page. I've annotated the wireframe rather than leave a misleading drawing, and the breakdown specifies the real entry point: follow **ticketing's** precedent — its own menu item plus a button on the event, opening `schedule/:eventId`. Introducing a tab strip is a separate decision, worth taking deliberately if Schedule, Results and Ticketing all end up hanging off an event.
+
+**S0 is the spine and shows a club nothing** — six tasks: two migrations (templates plus the override chain, then the capabilities), settings resolution, CRUD and routes, the platform template editor, and the club's Event rules tab.
+
+**S1 makes a one-day, one-phase event schedulable** — seven tasks ending in tests and docs.
+
+**Four things in there I'd point at**
+
+**Settings resolution returns `sources`, not just values.** The wireframe's `From` column can't be derived on the front end, and the test that matters most is the one proving a changed template default reaches a club that never overrode it — that's the entire reason for storing differences rather than whole objects.
+
+**The scheduler is pure and deterministic.** No database, no clock. That's what makes "the draw is fixed once generated" true rather than aspirational, and it's what makes its tests readable. The seed is stored on the schedule so regenerating *times* never reshuffles *numbers* already printed.
+
+**Three schema decisions are load-bearing and invisible in S1.** `schedule_slot_participants` exists with a `position` from the first migration even though S1 writes one row per slot. Sessions carry `on_date` as a `date` and times as `time` — never `timestamptz`, because a running order is wall-clock time at a venue, and the members export was bitten by exactly this last week. And deleting an entry does *not* delete its slot: it leaves a gap the editor shows, because silent disappearance from a printed running order is worse than a visible hole.
+
+**The registry for `schedulerKind` is built in S1 with one entry.** A registry with one implementation is a guess — but adding it later means changing every call site, and it has two known future tenants.
+
+I've also listed what S0 and S1 **deliberately don't do**, so nobody builds it early or assumes it's missing by accident: multi-phase, multi-day, entities, breaks, all publishing, Excel and print, and everything about scoring.
+
+**The one ordering that matters:** S1-2 must not be written before S0-3, or the scheduler grows its own idea of where a setting comes from — and then there are two.
+
+Ready to start on S0-1 whenever you want. Nothing is committed.
+
+---
+
+
+## 2026-09-03 13:18:37 — Prompt
+
+start s0-1
+
+### Assistant
+
+Convention is clear and mixed — `organisation_id` but `organization_type_id`. Following the codebase rather than imposing a third spelling.
+
+Applied. Now proving each acceptance criterion against the real database rather than assuming.
+
+All six constraints hold. Now the delete behaviours, which are the ones that quietly destroy data if wrong.
+
+There is a migration-test convention. Let me follow it.
+
+The test database is schema-only — my last two tests leaned on seed data. Let me check and fix them to build their own fixtures.
+
+Now recording the one place I deviated from the plan, so the documents don't disagree.
+
+S0-1 is done. Migration `1709000000046_event-type-templates.js` plus 14 tests.
+
+**What it creates**
+
+`event_type_templates` — the platform's definition of a discipline, splitting `shape` (phases, order, resource kinds — not overridable) from `default_settings` (minutes per competitor, gaps, breaks — overridable). `event_type_setting_overrides` — one row per template per level, holding **only what differs**. And a **nullable** `event_types.template_id`, which is null for all 24 existing rows and stays that way for any club that never buys the capability.
+
+**One deliberate deviation from my own plan.** I specified a `scope` word plus an untyped `scope_id`; I built **two nullable foreign keys** with a check that exactly one is set. A polymorphic id has no referential integrity — delete an organisation type tomorrow and you have override rows pointing at nothing with no constraint noticing. Two real keys let the database cascade and let a reader see what a row refers to without decoding a string. Recorded in the task doc so the two documents don't disagree.
+
+That shape forced a second decision worth knowing about: uniqueness is **two partial indexes**, not one constraint across three columns. In Postgres a NULL never equals a NULL, so the obvious unique constraint would cheerfully accept two overrides for the same template and organisation. There's a test for exactly that.
+
+**I proved the behaviours rather than assuming them**, including the two that quietly destroy data:
+
+- Retiring a template **sets `template_id` null** and leaves the club's event type — which matters because `events.event_type_id` references that row, so a cascade would take events with it. Verified: 24 event types survive.
+- Retiring a template **does** take its own overrides. No orphans.
+- A club cannot lock a setting against itself — a check constraint, not a convention.
+- The `down` migration was **actually run**: tables and column gone, 24 event types intact, then re-applied. A migration whose reverse has never been executed gets found broken at the worst possible moment.
+
+**One thing that bit me, and is now written down for the next task.** Two of my tests read a fixture from `event_types` — which works on my machine and fails in CI, because the **test database is schema-only**: it has organisations and organisation types from the migrations and *no event types at all*. The tests now build what they need inside their transaction. That note is in the task doc under S0-1.
+
+**Verified:** backend **190 suites / 3,672 tests** all green, typecheck clean, applied to dev and test databases. Backend module summary updated with the new tables and the shape-versus-settings rule.
+
+Next is **S0-2** — the two capability rows, following the announcements migration exactly. Nothing committed.
+
+---
