@@ -37,9 +37,10 @@ migrations/       node-pg-migrate migrations (the schema's source of truth)
 | `/api/admin/capabilities` | `capability.routes` |
 | `/api/admin/payment-methods` | `payment-method.routes` |
 | `/api/admin/organization-types` | `organization-type.routes` |
+| `/api/admin/event-type-templates` | `event-type-template.routes` — templates and the rules an organisation type fixes on them |
 | `/api/admin/organizations` | `organization.routes`, `organization-payment-method.routes`, `organization-user.routes`, `organization-role.routes` |
 | `/api/orgadmin` | `orgadmin-auth`, `event`, `event-type`, `venue`, `discount`, `membership`, `merchandise`, `calendar`, `registration`, `ticketing`, `scan-session`, `application-form`, `payment`, `reporting` |
-| `/api/orgadmin/organisation` | `orgadmin-organisation.routes` — payment settings, branding, email templates, registration settings, offline payment settlement and the account-user approval queue |
+| `/api/orgadmin/organisation` | `orgadmin-organisation.routes` — payment settings, branding, email templates, registration settings, offline payment settlement, the account-user approval queue and the club's event rules |
 | `/api/orgadmin/files` | `file-upload.routes` |
 | `/api/orgadmin/users` | `user-management.routes` |
 | `/api/orgadmin` | `user-group.routes` — account-user groups, used by discount eligibility |
@@ -545,6 +546,17 @@ Things worth knowing before touching any of it:
   has fixed. Settings are a **flat map of dotted keys** (`minutesPerCompetitor.dressage`) precisely so
   that every setting has its own source and its own lock. A locked key ignores the club's row rather
   than refusing it — refusing belongs at the route, where there is somebody to tell.
+- **Which event type templates a club may see is a `WHERE` clause, not a screen.**
+  `listTemplatesForOrganisation` checks two capabilities — `event-scheduling` for the module and the
+  template's own for the discipline — and both the org-admin read and the org-admin write go through
+  it, so a template a club has not been granted is a **404** rather than something the UI hides. A
+  club holding `equestrian-disciplines` without the module sees nothing. The predicate and the two
+  `ON CONFLICT` upserts are **exported** from the service so the integration suites run what ships
+  rather than a copy of it (`__tests__/integration/event-template-visibility.test.ts`,
+  `…/event-template-overrides.test.ts`).
+- **A locked setting is refused, not discarded.** `saveOrganisationOverride` answers 403 naming
+  every key it refused; sending `{}` is "reset to template" and deletes the club's row rather than
+  storing an empty object.
 - **Event type templates are the platform's; a club's event types point at one.** `event_types` is
   club-owned free text with no behaviour, so a discipline that knows how to schedule or score itself
   is defined once by the platform in `event_type_templates` and referenced by a **nullable**

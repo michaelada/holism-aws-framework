@@ -235,3 +235,189 @@ describe('what it costs, and what it refuses', () => {
     );
   });
 });
+
+/**
+ * The write side (task S0-4).
+ *
+ * The pool is mocked, so what these prove is the **decisions**: which keys are
+ * refused, what an empty save leaves behind, and that a lock is reported rather
+ * than silently applied. That the gate itself holds is SQL, proved against a
+ * real database in `__tests__/integration/event-template-visibility.test.ts`.
+ */
+describe('saving a club’s own rules', () => {
+  const templateRow = {
+    id: TEMPLATE,
+    key: 'equestrian.eventing',
+    display_name: 'Eventing',
+    description: null,
+    capability: null,
+    scheduler_kind: 'sequential-phases',
+    shape: {},
+    default_settings: { competitorGapMinutes: 20 },
+    status: 'published',
+    created_at: new Date(),
+    updated_at: new Date(),
+  };
+
+  /**
+   * The three reads a save makes before it writes: the visibility list, the
+   * resolved chain, then the chain again for the reply.
+   */
+  const saveContext = ({ locked = [] as string[] } = {}) => {
+    query.mockReset();
+    const chainRow = {
+      id: TEMPLATE,
+      key: 'equestrian.eventing',
+      default_settings: { competitorGapMinutes: 20 },
+      type_settings: null,
+      type_locked: locked,
+      org_settings: null,
+    };
+    query
+      .mockResolvedValueOnce({ rows: [templateRow] }) // listTemplatesForOrganisation
+      .mockResolvedValueOnce({ rows: [chainRow] }) // resolveSettings, for the locks
+      .mockResolvedValueOnce({ rows: [] }) // the write
+      .mockResolvedValueOnce({ rows: [chainRow] }); // resolveSettings, for the reply
+  };
+
+  it('writes the club’s differences and answers with the resolved chain', async () => {
+    saveContext();
+
+    const resolved = await service.saveOrganisationOverride(TEMPLATE, ORGANISATION, {
+      competitorGapMinutes: 15,
+    });
+
+    const write = query.mock.calls[2];
+    expect(write[0]).toContain('INSERT INTO event_type_setting_overrides');
+    expect(write[1]).toEqual([TEMPLATE, ORGANISATION, JSON.stringify({ competitorGapMinutes: 15 })]);
+    expect(resolved.templateKey).toBe('equestrian.eventing');
+  });
+
+  it('refuses a locked key with a 403 that names it', async () => {
+    // Refused rather than discarded: a club shown its old value back cannot
+    // tell a federation's rule from a bug.
+    saveContext({ locked: ['competitorGapMinutes'] });
+
+    await expect(
+      service.saveOrganisationOverride(TEMPLATE, ORGANISATION, { competitorGapMinutes: 15 })
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    expect(query).toHaveBeenCalledTimes(2); // nothing was written
+  });
+
+  it('names every refused key, not merely the first', async () => {
+    saveContext({ locked: ['a', 'b'] });
+
+    await expect(
+      service.saveOrganisationOverride(TEMPLATE, ORGANISATION, { a: 1, b: 2 })
+    ).rejects.toThrow(/a, b/);
+  });
+
+  it('allows the keys that are not locked, alongside ones that are', async () => {
+    saveContext({ locked: ['competitorGapMinutes'] });
+
+    await service.saveOrganisationOverride(TEMPLATE, ORGANISATION, { arenaCount: 3 });
+
+    expect(query.mock.calls[2][0]).toContain('INSERT INTO');
+  });
+
+  it('deletes the row when nothing is left — "reset to template"', async () => {
+    saveContext();
+
+    await service.saveOrganisationOverride(TEMPLATE, ORGANISATION, {});
+
+    expect(query.mock.calls[2][0]).toContain('DELETE FROM event_type_setting_overrides');
+  });
+
+  it('is a 404, not a 403, for a template the club may not use', async () => {
+    // Not "forbidden", which would confirm the template exists.
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      service.saveOrganisationOverride(TEMPLATE, ORGANISATION, { a: 1 })
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('saving an organisation type’s rules', () => {
+  const TYPE = '33333333-3333-4333-8333-333333333333';
+  const templateRow = (defaults: Record<string, unknown>) => ({
+    id: TEMPLATE,
+    key: 'equestrian.eventing',
+    display_name: 'Eventing',
+    description: null,
+    capability: null,
+    scheduler_kind: 'sequential-phases',
+    shape: {},
+    default_settings: defaults,
+    status: 'published',
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+
+  it('accepts a lock on a key the type does not itself set', async () => {
+    // "The template's value, and no club may move it" — a real intention, and
+    // the reason locking and setting are separate lists.
+    query.mockReset();
+    query
+      .mockResolvedValueOnce({ rows: [templateRow({ competitorGapMinutes: 20 })] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: TEMPLATE,
+            key: 'equestrian.eventing',
+            default_settings: { competitorGapMinutes: 20 },
+            type_settings: null,
+            type_locked: ['competitorGapMinutes'],
+          },
+        ],
+      });
+
+    const resolved = await service.saveTypeOverride(TEMPLATE, TYPE, {
+      settings: {},
+      lockedKeys: ['competitorGapMinutes'],
+    });
+
+    expect(resolved.locked).toEqual(['competitorGapMinutes']);
+    expect(resolved.settings).toEqual({ competitorGapMinutes: 20 });
+    expect(resolved.sources).toEqual({ competitorGapMinutes: 'template' });
+  });
+
+  it('refuses to lock a setting the template does not define', async () => {
+    // A typo would otherwise sit in the database forbidding a setting nobody
+    // has, and surface as a club unable to change something for no reason.
+    query.mockReset();
+    query.mockResolvedValueOnce({ rows: [templateRow({ competitorGapMinutes: 20 })] });
+
+    await expect(
+      service.saveTypeOverride(TEMPLATE, TYPE, { settings: {}, lockedKeys: ['competitorGap'] })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('allows locking a key the type introduces in the same write', async () => {
+    query.mockReset();
+    query
+      .mockResolvedValueOnce({ rows: [templateRow({})] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: TEMPLATE,
+            key: 'equestrian.eventing',
+            default_settings: {},
+            type_settings: { arenaCount: 2 },
+            type_locked: ['arenaCount'],
+          },
+        ],
+      });
+
+    const resolved = await service.saveTypeOverride(TEMPLATE, TYPE, {
+      settings: { arenaCount: 2 },
+      lockedKeys: ['arenaCount'],
+    });
+
+    expect(resolved.sources).toEqual({ arenaCount: 'organisation-type' });
+  });
+});

@@ -160,24 +160,82 @@ service's `NotFoundError` correct rather than incidental.
 Also defensive about a jsonb column holding an array or a string: an unusable value is treated as no
 override rather than taking the resolution down.
 
-### S0-4 · CRUD and routes
+### S0-4 · CRUD and routes ✅ **done**
 
-`event-type-template.routes.ts` — super admin (`/api/admin/event-type-templates`), plus a read for
-org admins (`/api/orgadmin/event-type-templates`) returning **only templates whose capability the
-organisation holds**.
+`packages/backend/src/routes/event-type-template.routes.ts` (super admin, mounted at
+`/api/admin/event-type-templates`) plus three routes appended to
+`orgadmin-organisation.routes.ts` for the club's own half. 22 service unit tests, 25 route tests and
+12 integration tests.
 
-Settings overrides: `PUT /api/admin/organisation-types/:id/event-rules/:templateId` and
-`PUT /api/orgadmin/organisation/event-rules/:templateId`.
+| Method | Path | Who |
+|---|---|---|
+| `GET` | `/api/admin/event-type-templates` | super admin |
+| `GET` `POST` | `/api/admin/event-type-templates`, `/:id` | super admin |
+| `PUT` | `/api/admin/event-type-templates/:id` | super admin |
+| `GET` `PUT` | `/api/admin/event-type-templates/:id/rules/organisation-type/:organizationTypeId` | super admin |
+| `GET` | `/api/orgadmin/organisation/event-templates` | org admin |
+| `GET` `PUT` | `/api/orgadmin/organisation/event-rules/:templateId` | org admin |
 
-**Acceptance**
+**Three paths differ from the plan, deliberately.**
 
-- The org-admin read never returns a template the club has no capability for — the list is the gate,
-  not the UI.
-- `@openapi` annotations on every route, as the house requires.
-- The org-admin write refuses a **locked** key with a 403 naming the key, rather than accepting and
-  discarding it.
-- `audited()` on both writes with new actions `event-template.updated`, `event-rules.updated`, plus
-  labels in `auditLabels.ts` and the six locales.
+The organisation-type rules hang off the **template** rather than off
+`/api/admin/organisation-types/:id`, so the whole feature sits in one router under one mount instead
+of being split across an unrelated one. (Note also that the existing super-admin mount is
+`organization-types`, with a z — the American spelling that column names use.)
+
+The org-admin read is `/api/orgadmin/organisation/event-templates`, not
+`/api/orgadmin/event-type-templates`. Everything under `/api/orgadmin/organisation/` is served by
+`orgadmin-organisation.routes.ts`, which resolves the club from the token and the
+`X-Organisation-Id` header and is already listed in `useApi`'s `UNSCOPED_ORGADMIN_PATHS`. Putting
+these three anywhere else would have needed a new bare mount and a fourth entry in that list, for no
+gain — and the Settings screen these serve (S0-6) reaches every other tab the same way.
+
+**Acceptance — all met**
+
+- ✅ **The list is the gate.** `listTemplatesForOrganisation` is one `WHERE` clause checking *two*
+  capabilities — `event-scheduling` for the module and the template's own for the discipline — and
+  the read and the write both go through it, so they cannot come to disagree. A club holding
+  `equestrian-disciplines` without the module sees nothing.
+- ✅ A template the club may not use is a **404, not a 403**: the error must not confirm that a
+  discipline it has not been granted exists.
+- ✅ OpenAPI annotations on every route. Note the tag is `@swagger` in the new admin router and
+  `@openapi` in the org-admin one — swagger-jsdoc treats them as synonyms, and each file matches its
+  neighbours rather than the other file.
+- ✅ A **locked** key is refused with a 403 **naming every key refused**, not merely the first, and
+  nothing is written. Accepting the write and quietly discarding the key would show the club its old
+  value back with no way to tell a federation's rule from a bug.
+- ✅ `audited()` on all three writes, with `event-template.updated` (platform) and
+  `event-rules.updated` (settings) in the registry, `auditLabels.ts` and **all six locales**.
+
+**Two decisions the plan did not cover.**
+
+An empty `settings` object is **"reset to template"** and deletes the club's row rather than storing
+`{}` — an absent row is the honest record of a club that overrides nothing.
+
+Locking a key that exists at *neither* the template nor the type is refused with a 400. It is a
+typo, and one that would otherwise sit in the database forbidding a setting nobody has, surfacing
+much later as a club unable to change something for no visible reason. Locking a key the type has
+not *set* is still allowed — that means "the template's value, and no club may move it".
+
+**What the mocked tests could not prove, and how that was closed.** Three things here are SQL, and a
+mocked pool exercises none of them:
+
+- The capability gate is a `WHERE` clause →
+  `src/__tests__/integration/event-template-visibility.test.ts`, which imports
+  `TEMPLATES_FOR_ORGANISATION_SQL` **from the service** rather than copying it, so the test cannot
+  drift from what ships.
+- The two upserts use `ON CONFLICT ... WHERE` against **partial** indexes, which fails at run time
+  and never at compile time → `src/__tests__/integration/event-template-overrides.test.ts`, likewise
+  importing the statements it runs.
+- The migration's two check constraints — a club cannot lock a setting against itself, and a row
+  belongs to exactly one level → asserted in the same suite, each violation inside a `SAVEPOINT`,
+  because the first one aborts the transaction and the second would otherwise report "current
+  transaction is aborted" while appearing to pass.
+
+Finally, the whole chain was run end to end through the real service against the test database:
+create → publish → visible → type override with a lock → club write applied to the unlocked key →
+locked write refused with a 403 → reset removing the row → adding a capability gate hiding the
+template immediately. Cleaned up afterwards, with the count checked.
 
 ### S0-5 · Platform admin UI
 

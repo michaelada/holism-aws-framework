@@ -26131,3 +26131,61 @@ S0-4 next — CRUD and routes, where the capability gate and the locked-key refu
 ## 2026-09-03 13:52:47 — Prompt
 
 go on to SO-4
+
+### Assistant
+
+Two servers failed to connect this session (`github`, `Prisma-Local`), and several claude.ai connectors need authorising in your connector settings — none of which S0-4 touches, so I'll carry on.
+
+Now the service. Appending CRUD, the capability-filtered list, and the override writes:
+
+Fold the module gate into the same predicate as the template gate, so both live in one place:
+
+Now the org-admin side, appended to `orgadmin-organisation.routes.ts`:
+
+All six locales parse. Now the action registry and the English label source:
+
+Extracting the shipped SQL so the integration test runs the real predicate rather than a copy of it:
+
+The two upserts have never actually executed — the unit tests mock the pool, and `ON CONFLICT` against a *partial* index is exactly the kind of clause that only fails in the database. Exporting them so a real transaction runs them:
+
+A real finding: the first violation aborts the transaction, so the second assertion never gets to run. Savepoints:
+
+Now a live probe through the **real service methods** — the tests exercise SQL constants and mocked pools, but nothing has yet run `saveOrganisationOverride` end to end. Pointing it at the disposable test database:
+
+Everything holds end to end against a real database. Now the docs. First the task breakdown:
+
+Now the full backend suite, plus the front-end packages whose files I touched:
+
+Verifying the locale files gained lines and lost none — the check I now always run after the incident earlier in this project:
+
+S0-4 done. Backend **3,740 tests** green (197 suites, +46), typecheck clean, all six locales +2/−0.
+
+**Routes**
+
+| Method | Path | Who |
+|---|---|---|
+| `GET` `POST` | `/api/admin/event-type-templates` | super admin |
+| `GET` `PUT` | `/api/admin/event-type-templates/:id` | super admin |
+| `GET` `PUT` | `…/:id/rules/organisation-type/:organizationTypeId` | super admin |
+| `GET` | `/api/orgadmin/organisation/event-templates` | org admin |
+| `GET` `PUT` | `/api/orgadmin/organisation/event-rules/:templateId` | org admin |
+
+**Three paths differ from the plan.** The org-admin read is under `/api/orgadmin/organisation/`, not `/api/orgadmin/event-type-templates` — that prefix is already the one bare-mounted router and already in `UNSCOPED_ORGADMIN_PATHS`, so the planned path would have needed a new mount and a fourth entry in that list for no gain, and the Settings screen these serve reaches every other tab the same way. The type rules hang off the template rather than off `/api/admin/organisation-types/:id`, keeping the feature in one router. (That mount is also spelled `organization-types`, with a z.)
+
+**The gate is one `WHERE` clause checking two capabilities** — `event-scheduling` for the module, the template's own for the discipline — and the read and both writes go through it, so they can't drift apart. A club with `equestrian-disciplines` but not the module sees nothing. A template it may not use is a **404, not a 403**: the error must not confirm a discipline it hasn't been granted exists.
+
+**Two decisions the plan didn't cover.** An empty `settings` object is *reset to template* and deletes the club's row rather than storing `{}`. And locking a key that exists at neither the template nor the type is refused with a 400 — it's a typo that would otherwise sit in the database forbidding a setting nobody has, surfacing much later as a club unable to change something for no visible reason. Locking a key the type hasn't *set* is still allowed; that means "the template's value, and no club may move it".
+
+**Three things here are SQL, and mocked pools prove none of them.** The capability gate is a `WHERE` clause; the two upserts use `ON CONFLICT … WHERE` against *partial* indexes, which fails at run time and never at compile time. So I exported those statements from the service and had the integration suites import them — the tests run what ships rather than a copy that drifts from the first edit onwards. The migration's two check constraints are asserted there too.
+
+That last suite found something real: a constraint violation aborts the transaction, so my second assertion reported "current transaction is aborted" instead of the constraint it broke. Each violation now runs inside a `SAVEPOINT` — otherwise the test would pass against a looser matcher while proving nothing.
+
+Then the whole chain end to end through the real service: create → visible → type override with a lock → club write applied to the unlocked key → **locked write refused 403 naming the key** → reset removing the row → adding a capability gate hiding the template immediately. Run against the test database, cleaned up, count verified.
+
+Files: [event-type-template.service.ts](packages/backend/src/services/event-type-template.service.ts), [event-type-template.routes.ts](packages/backend/src/routes/event-type-template.routes.ts), [orgadmin-organisation.routes.ts](packages/backend/src/routes/orgadmin-organisation.routes.ts), [audit.types.ts](packages/backend/src/services/audit/audit.types.ts), [auditLabels.ts](packages/components/src/utils/auditLabels.ts), six locales, four test files, plus [the task doc](docs/EVENT_SCHEDULING_TASKS_S0_S1.md), [backend.md](.claude/modules/backend.md) and [core-settings.md](.claude/modules/core-settings.md).
+
+One small note: the task doc asked for `@openapi`; the new admin router uses `@swagger` to match its neighbours. swagger-jsdoc treats them as synonyms.
+
+S0-5 (platform admin UI) and S0-6 (the Event rules Settings tab) are independent of each other and can go in either order. Nothing committed.
+
+---

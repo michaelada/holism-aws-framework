@@ -13,6 +13,7 @@ import { organizationEmailTemplatesService } from '../services/organization-emai
 import { accountRegistrationService } from '../services/account-registration.service';
 import { auditQueryService, queryFromRequest, actorFromRequest } from '../services/audit';
 import { audited } from '../middleware/audit.middleware';
+import { eventTypeTemplateService } from '../services/event-type-template.service';
 
 const router = Router();
 
@@ -855,6 +856,137 @@ router.get(
       return;
     }
     res.json(event);
+  })
+);
+
+/*
+ * ---------------------------------------------------------------------------
+ * Event rules — the club's half of the template settings chain (task S0-4)
+ * ---------------------------------------------------------------------------
+ *
+ * Three routes, all of them gated by the *list*: `listTemplatesForOrganisation`
+ * returns published templates the club's capabilities reveal, and the read and
+ * the write both go through it. A club without `event-scheduling` gets an empty
+ * list and a 404 on everything below — no separate capability middleware to
+ * fall out of step with the query.
+ */
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/event-templates:
+ *   get:
+ *     summary: The event type templates this club may use
+ *     description: >
+ *       Published templates whose capability the organisation holds, and only
+ *       those. **The list is the gate** — a club is not shown a discipline it
+ *       has not been granted, rather than being shown one the screen then hides.
+ *     tags: [OrgAdmin]
+ *     responses:
+ *       200:
+ *         description: The templates available to this organisation, by display name
+ *       403:
+ *         description: Caller does not administer this organisation
+ */
+router.get(
+  '/event-templates',
+  authenticateToken(),
+  withOrganisation('Failed to load the event templates', async (organisationId, _req, res) => {
+    res.json(await eventTypeTemplateService.listTemplatesForOrganisation(organisationId));
+  })
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/event-rules/{templateId}:
+ *   get:
+ *     summary: What a template's settings are worth for this club
+ *     description: >
+ *       The whole chain resolved — the platform's defaults, then the
+ *       organisation type's, then the club's own. `sources` says which level
+ *       each value came from, and `locked` names the settings the organisation
+ *       type has fixed, which the club may read but not change.
+ *     tags: [OrgAdmin]
+ *     parameters:
+ *       - in: path
+ *         name: templateId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Resolved settings, their sources and the locked keys
+ *       404:
+ *         description: No such template, or not one this organisation may use
+ */
+router.get(
+  '/event-rules/:templateId',
+  authenticateToken(),
+  withOrganisation('Failed to load the event rules', async (organisationId, req, res) => {
+    await eventTypeTemplateService.assertTemplateVisible(req.params.templateId, organisationId);
+    res.json(
+      await eventTypeTemplateService.resolveSettings(req.params.templateId, organisationId)
+    );
+  })
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/organisation/event-rules/{templateId}:
+ *   put:
+ *     summary: Set this club's own event rules for a template
+ *     description: >
+ *       `settings` holds **only what the club changes**; anything absent falls
+ *       back to the organisation type's value or the platform default, so a
+ *       later change upstream still reaches a club that never overrode it.
+ *       Sending an empty object is "reset to template" and removes the club's
+ *       row altogether.
+ *
+ *       A setting the organisation type has locked is **refused, not
+ *       discarded** — a 403 naming every key it refused. Accepting the write
+ *       and quietly dropping the key would show the club its old value back
+ *       with no way to tell a federation's rule from a bug.
+ *     tags: [OrgAdmin]
+ *     parameters:
+ *       - in: path
+ *         name: templateId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               settings:
+ *                 type: object
+ *                 description: A flat map of dotted keys, e.g. `minutesPerCompetitor.dressage`.
+ *     responses:
+ *       200:
+ *         description: The rules as they now resolve for this club
+ *       403:
+ *         description: One or more settings are locked by the organisation type
+ *       404:
+ *         description: No such template, or not one this organisation may use
+ */
+router.put(
+  '/event-rules/:templateId',
+  authenticateToken(),
+  audited({
+    action: 'event-rules.updated',
+    entityType: 'event-type-template',
+    kind: 'update',
+    param: 'templateId',
+    label: (after) => (after?.templateKey as string) ?? undefined,
+    values: (req) => ({ settings: req.body?.settings ?? {} }),
+  }),
+  withOrganisation('Failed to save the event rules', async (organisationId, req, res) => {
+    res.json(
+      await eventTypeTemplateService.saveOrganisationOverride(
+        req.params.templateId,
+        organisationId,
+        req.body?.settings ?? {}
+      )
+    );
   })
 );
 

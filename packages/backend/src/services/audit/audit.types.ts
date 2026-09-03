@@ -149,6 +149,8 @@ export const AUDIT_ACTIONS = {
     'organisation-type.logo-changed',
     'capability.granted',
     'capability.revoked',
+    /* A platform administrator defining a discipline every club then inherits. */
+    'event-template.updated',
     'post.created',
     'post.updated',
     'post.deleted',
@@ -169,6 +171,13 @@ export const AUDIT_ACTIONS = {
     'settings.payment-updated',
     'settings.email-template-updated',
     'settings.registration-updated',
+    /*
+     * Scheduling rules, at either scope: a federation fixing them for its
+     * clubs, or a club setting its own. Filed under settings rather than
+     * platform because the club's audit log must show what changed the way its
+     * own events then run.
+     */
+    'event-rules.updated',
   ],
   events: [
     'event.created',

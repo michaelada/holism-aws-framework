@@ -25,6 +25,21 @@ regardless. See [docs/ORGANISATION_TYPE_LOGO.md](../../docs/ORGANISATION_TYPE_LO
 | 2 | Email Templates | `EmailTemplatesTab` | `GET`/`PUT /api/orgadmin/organisation/email-templates`, `DELETE .../email-templates/:name` |
 | 3 | Branding | `BrandingTab` | `GET`/`PUT /api/orgadmin/organisation/branding-settings`, `POST /api/orgadmin/files/branding-logo` |
 
+A fifth tab, **Event rules**, is planned as task S0-6 of
+docs/EVENT_SCHEDULING_TASKS_S0_S1.md. Its three endpoints already exist and are served by the same
+router (task S0-4):
+
+| Method | Path | Returns |
+|---|---|---|
+| `GET` | `/api/orgadmin/organisation/event-templates` | The disciplines this club may use — **only** those whose capability it holds |
+| `GET` | `/api/orgadmin/organisation/event-rules/:templateId` | `{ settings, sources, locked }` — the whole chain resolved |
+| `PUT` | `/api/orgadmin/organisation/event-rules/:templateId` | Saves the club's own differences; `{}` resets to the template |
+
+Two things the tab must not re-implement. `sources` is the `From` column, computed server-side
+because the front end cannot see the organisation type's row. A key in `locked` has been fixed by
+the federation and the write **refuses it with a 403** — so the tab should remove those rows rather
+than grey them out, per the wireframes.
+
 Everything under `/api/orgadmin/organisation/` is served by `orgadmin-organisation.routes`, which is
 mounted **once, bare** — not organisation-scoped like the data routers. Two consequences worth
 knowing before touching these tabs, both of which had already bitten:

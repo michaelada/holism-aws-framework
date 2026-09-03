@@ -67,6 +67,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'organisation-type.logo-changed': 'Organisation type logo changed',
   'capability.granted': 'Capability granted',
   'capability.revoked': 'Capability withdrawn',
+  'event-template.updated': 'Event type template changed',
   'post.created': 'Announcement created',
   'post.updated': 'Announcement updated',
   'post.deleted': 'Announcement deleted',
@@ -86,6 +87,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'settings.payment-updated': 'Payment settings changed',
   'settings.email-template-updated': 'Email template changed',
   'settings.registration-updated': 'Registration settings changed',
+  'event-rules.updated': 'Event rules changed',
 
   // Events
   'event.created': 'Event created',
