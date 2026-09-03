@@ -173,9 +173,9 @@ export const DashboardCardIllustration: React.FC<DashboardCardIllustrationProps>
         background: '#FFFFFF',
         border: '1px solid rgba(0,0,0,0.04)',
         borderRadius: '16px',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        // The shadow lifts, the card does not move — see MuiCard in warmTheme.
         '&:hover': {
-          transform: 'translateY(-4px)',
           boxShadow: '0 10px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)',
         },
         '&:hover .illus-art': {

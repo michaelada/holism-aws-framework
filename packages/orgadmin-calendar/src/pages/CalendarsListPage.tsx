@@ -39,7 +39,13 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useOrganisation,
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { Calendar, CalendarStatus } from '../types/calendar.types';
 
 const CalendarsListPage: React.FC = () => {
@@ -149,6 +155,8 @@ const CalendarsListPage: React.FC = () => {
     }
   };
 
+  const sort = useTableSort(filteredCalendars);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -203,10 +211,17 @@ const CalendarsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
+              {/* The colour swatch. A colour has no order. */}
               <TableCell width={60}></TableCell>
-              <TableCell>{t('calendar.table.name')}</TableCell>
-              <TableCell>{t('calendar.table.description')}</TableCell>
-              <TableCell>{t('calendar.table.status')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('calendar.table.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="description">
+                {t('calendar.table.description')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('calendar.table.status')}
+              </SortableTableCell>
               <TableCell align="right">{t('calendar.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -226,7 +241,7 @@ const CalendarsListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCalendars.map((calendar) => (
+              sort.rows.map((calendar) => (
                 <TableRow key={calendar.id} hover>
                   <TableCell>
                     <Avatar

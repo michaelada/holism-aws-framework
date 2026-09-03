@@ -8,50 +8,18 @@ jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 
 // Mock exceljs with a factory function
-jest.mock('exceljs', () => {
-  return class MockWorkbook {
-    creator = '';
-    created = new Date();
-    worksheets: any[] = [];
-
-    addWorksheet(name: string) {
-      const mockWorksheet = {
-        name: name || 'Sheet1',
-        mergeCells: jest.fn(),
-        getCell: jest.fn(() => ({
-          value: '',
-          font: {},
-          alignment: {},
-        })),
-        addRow: jest.fn(() => ({
-          font: {},
-          fill: {},
-          eachCell: jest.fn(),
-        })),
-        columns: [],
-        getColumn: jest.fn(() => ({ numFmt: '' })),
-        eachRow: jest.fn((callback: any) => {
-          for (let i = 1; i <= 5; i++) {
-            const mockRow = {
-              eachCell: jest.fn((cellCallback: any) => {
-                cellCallback({ border: {} });
-              }),
-            };
-            callback(mockRow, i);
-          }
-        }),
-      };
-      this.worksheets.push(mockWorksheet);
-      return mockWorksheet;
-    }
-
-    get xlsx() {
-      return {
-        writeBuffer: jest.fn().mockResolvedValue(Buffer.from('test')),
-      };
-    }
-  };
-});
+/*
+ * `exceljs` is deliberately **not** mocked.
+ *
+ * A stand-in class was what hid the defect these suites exist to catch: the
+ * real module exports a namespace with `Workbook` on it and no default at all,
+ * so `new ExcelJS()` threw "is not a constructor" and every Excel export in the
+ * application produced a file the operating system refuses to open — while
+ * every one of these tests passed against a class of its own making.
+ *
+ * The library is fast and pure; running it for real is what lets an assertion
+ * on the bytes mean something.
+ */
 
 describe('EventService', () => {
   let service: EventService;
@@ -626,15 +594,22 @@ describe('EventEntryService', () => {
       ];
 
       mockDb.query
-        .mockResolvedValueOnce({ rows: [mockEvent] } as any) // getEvent
-        .mockResolvedValueOnce({ rows: mockEntries } as any); // getEntries
+        .mockResolvedValueOnce({ rows: [mockEvent] } as any) // the event's name
+        .mockResolvedValueOnce({ rows: mockEntries } as any) // its entries
+        .mockResolvedValueOnce({ rows: [] } as any) // each activity's form fields
+        .mockResolvedValueOnce({ rows: [] } as any); // the submissions behind them
 
-      // The Excel export functionality is mocked, so we just verify it returns a buffer
       const result = await service.exportEntriesToExcel('event-1');
 
-      // Verify we got a buffer back from the mock
-      expect(Buffer.isBuffer(result)).toBe(true);
-      expect(mockDb.query).toHaveBeenCalledTimes(2);
+      /*
+       * A real workbook, not a stub's say-so: `exceljs` is no longer mocked, so
+       * this asserts on the bytes. An .xlsx is a zip and starts PK\x03\x04.
+       *
+       * Four reads now, not two: the sheet carries a column for every field of
+       * the activity's form, which means reading the form and the answers.
+       */
+      expect(result.subarray(0, 4).toString('hex')).toBe('504b0304');
+      expect(mockDb.query).toHaveBeenCalledTimes(4);
     });
 
     it('should throw error when event not found', async () => {

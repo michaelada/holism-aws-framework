@@ -104,6 +104,24 @@ export interface PaymentProvider {
   createPaymentIntent(request: PaymentIntentRequest): Promise<PaymentIntentResult>;
 
   /**
+   * What the provider currently believes about a payment.
+   *
+   * The provider is the authority on whether money moved; this application only
+   * ever hears about it. Normally it hears through a webhook, and this exists
+   * for when it does not — so a payment can be reconciled by asking rather than
+   * by waiting to be told.
+   *
+   *   `authorised`  taken but not captured, waiting to be settled
+   *   `succeeded`   captured; the money is the club's
+   *   `failed`      declined, cancelled or expired
+   *   `pending`     still in flight — the member may be mid 3-D Secure
+   *   `unknown`     the provider could not be asked
+   */
+  getPaymentState(
+    providerTransactionId: string
+  ): Promise<'authorised' | 'succeeded' | 'failed' | 'pending' | 'unknown'>;
+
+  /**
    * Take the money the member authorised.
    *
    * The second half of a manual-capture payment. Between authorising and this

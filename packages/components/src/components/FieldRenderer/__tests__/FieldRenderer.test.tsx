@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -386,5 +386,105 @@ describe('FieldRenderer', () => {
       const input = container.querySelector('input');
       expect(input?.hasAttribute('disabled')).toBe(true);
     });
+  });
+});
+
+/**
+ * A date the member has just picked is not an invalid date.
+ *
+ * Two faults, one symptom: opening a picker and choosing a date left the field
+ * red under a perfectly good answer, reading "Must be a valid date".
+ *
+ *  - Closing the popover **blurs the input**, and the blur ran before the
+ *    chosen date came back down as a prop — so validation saw the *empty*
+ *    field the member had just filled in.
+ *  - Yup casts `''` to an Invalid Date, so an empty date field was reported as
+ *    a wrong one. "Not filled in" is not "filled in wrongly"; whether it may be
+ *    empty is the required rule's business.
+ */
+describe('FieldRenderer — a date field that has just been filled in', () => {
+  const dateField: FieldDefinition = {
+    shortName: 'dob',
+    displayName: 'Date of birth',
+    description: '',
+    datatype: FieldDatatype.DATE,
+    datatypeProperties: {},
+    validationRules: [],
+  };
+
+  it('does not call an empty date field invalid', async () => {
+    const { container } = renderWithPickers(
+      <FieldRenderer fieldDefinition={dateField} value="" onChange={() => {}} />
+    );
+
+    const input = container.querySelector('input')!;
+    await userEvent.click(input);
+    await userEvent.tab();
+
+    expect(screen.queryByText('Must be a valid date')).toBeNull();
+  });
+
+  it('validates the value it has now, not the one it had before the blur', async () => {
+    /*
+     * The picker's own blur arrives before the parent's state does. Validating
+     * the prop as it was at render time meant reporting the empty field.
+     */
+    const { container, rerender } = renderWithPickers(
+      <FieldRenderer fieldDefinition={dateField} value="" onChange={() => {}} />
+    );
+
+    rerender(
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <FieldRenderer
+          fieldDefinition={dateField}
+          value={new Date('2012-05-04').toISOString()}
+          onChange={() => {}}
+        />
+      </LocalizationProvider>
+    );
+
+    const input = container.querySelector('input')!;
+    await userEvent.click(input);
+    await userEvent.tab();
+
+    expect(screen.queryByText('Must be a valid date')).toBeNull();
+  });
+
+  it('still says so when what is in the box is not a date', async () => {
+    // The check is not weakened: a real error is still raised on blur.
+    const { container } = renderWithPickers(
+      <FieldRenderer fieldDefinition={dateField} value="the fourth of May" onChange={() => {}} />
+    );
+
+    const input = container.querySelector('input')!;
+    await userEvent.click(input);
+    await userEvent.tab();
+
+    expect(await screen.findByText('Must be a valid date')).toBeTruthy();
+  });
+
+  it('clears an error once the value is corrected, without waiting for a blur', async () => {
+    // On a picker there may be no second blur to clear it, so the field stayed
+    // red under an answer that was already right.
+    const { container, rerender } = renderWithPickers(
+      <FieldRenderer fieldDefinition={dateField} value="the fourth of May" onChange={() => {}} />
+    );
+
+    const input = container.querySelector('input')!;
+    await userEvent.click(input);
+    await userEvent.tab();
+    expect(await screen.findByText('Must be a valid date')).toBeTruthy();
+
+    rerender(
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <FieldRenderer
+          fieldDefinition={dateField}
+          value={new Date('2012-05-04').toISOString()}
+          onChange={() => {}}
+        />
+      </LocalizationProvider>
+    );
+
+    await waitFor(() => expect(screen.queryByText('Must be a valid date')).toBeNull());
   });
 });

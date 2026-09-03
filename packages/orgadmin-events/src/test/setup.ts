@@ -73,3 +73,26 @@ vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
     setOrganisation: vi.fn(),
   })),
 }));
+
+/*
+ * jsdom implements no object URLs.
+ *
+ * A page that downloads a file calls `URL.createObjectURL`, which is simply
+ * absent here — the call throws inside the click handler, and the test reports
+ * whatever the page failed to render rather than the missing browser API. Same
+ * class of gap as `matchMedia` above.
+ */
+if (!URL.createObjectURL) {
+  Object.defineProperty(URL, 'createObjectURL', {
+    value: () => 'blob:test',
+    writable: true,
+    configurable: true,
+  });
+}
+if (!URL.revokeObjectURL) {
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    value: () => undefined,
+    writable: true,
+    configurable: true,
+  });
+}

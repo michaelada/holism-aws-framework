@@ -11,6 +11,7 @@ import { accountRegistrationService } from '../services/account-registration.ser
 import { accountActivityService } from '../services/account-activity.service';
 import { accountDashboardService } from '../services/account-dashboard.service';
 import { checkoutService } from '../services/checkout.service';
+import { webhookService } from '../services/webhook.service';
 import { accountCatalogueService } from '../services/account-catalogue.service';
 import { entrantService } from '../services/entrant.service';
 import { accountTicketingService } from '../services/account-ticketing.service';
@@ -127,41 +128,30 @@ async function assertAddable(
            */
           throw new ValidationError('Choose which member this entry is for');
         }
-        if (member.alreadyEntered) {
-          throw new ValidationError(`${member.name} is already entered in this activity`);
-        }
+        /*
+         * Entered already is not a refusal.
+         *
+         * A rider quite ordinarily rides two horses in the same class, and a
+         * secretary enters the same person for a second reason. `alreadyEntered`
+         * is still reported to the form, which says so beside the name — the
+         * member is told, and then allowed to decide.
+         */
       } else if (!member && !entrantName) {
         // Open entries still need to know who is entering; the name is the
         // entry, not a question about it.
         throw new ValidationError('Enter the name of the person this entry is for');
       }
 
-      if (member) {
-        /*
-         * The same member twice in one basket.
-         *
-         * `alreadyEntered` reads `event_entries`, which nothing has written
-         * yet — both lines are still in the basket. Without this the parent
-         * pays twice for one child and the club has one entry and one refund
-         * to make.
-         */
-        const duplicate = await db.query(
-          `SELECT 1
-             FROM cart_items ci
-             JOIN carts c ON c.id = ci.cart_id
-            WHERE c.organisation_id = $1
-              AND c.user_id = $2
-              AND c.status = 'open'
-              AND ci.item_type = 'event_entry'
-              AND ci.context_ref->>'activityId' = $3
-              AND ci.context_ref->>'memberId' = $4
-            LIMIT 1`,
-          [organisationId, organisationUserId, contextRef.activityId, memberId]
-        );
-        if (duplicate.rows.length > 0) {
-          throw new ValidationError(`${member.name} is already in your basket for this activity`);
-        }
-      }
+      /*
+       * The same member twice in one basket is allowed too.
+       *
+       * This used to be refused on the grounds that a parent would otherwise
+       * pay twice for one child. That is a real mistake and it is now possible
+       * — and it was refusing a real intention just as often: two horses, one
+       * rider, one class. The club's remedy for the mistake is the one it
+       * already has (refund the line and withdraw the entry); there is no
+       * remedy for a refusal.
+       */
 
       /*
        * An entry is only worth holding where places can run out. An uncapped
@@ -787,6 +777,51 @@ router.get(
  *       200:
  *         description: The member's memberships, latest expiry first
  */
+/**
+ * @swagger
+ * /api/account/{orgCode}/memberships/{membershipId}/form-answers:
+ *   get:
+ *     summary: What the member answered when they took out this membership
+ *     tags: [Account]
+ *     responses:
+ *       200:
+ *         description: The answers, keyed by field name, for prefilling a renewal
+ *       404:
+ *         description: No such membership on this account
+ */
+router.get(
+  '/:orgCode/memberships/:membershipId/form-answers',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationId, organisationUserId } = req.account!;
+
+      const answers = await accountActivityService.membershipFormAnswers(
+        organisationId,
+        organisationUserId,
+        req.params.membershipId
+      );
+
+      /*
+       * Not found and not-yours answer identically. Telling a member that a
+       * membership exists but belongs to somebody else confirms the id is real,
+       * and this endpoint returns the contents of an application form.
+       */
+      if (!answers) {
+        return res.status(404).json({
+          error: { code: 'NOT_FOUND', message: 'Membership not found' },
+        });
+      }
+
+      return res.json(answers);
+    } catch (error) {
+      logger.error('Error in GET /account/:orgCode/memberships/:id/form-answers:', error);
+      return res.status(500).json({ error: 'Failed to load the membership' });
+    }
+  }
+);
+
 router.get(
   '/:orgCode/memberships',
   authenticateToken(),
@@ -963,12 +998,55 @@ router.get(
   async (req: AccountRequest, res: Response) => {
     try {
       const { organisationId, organisationUserId } = req.account!;
-      const status = await checkoutService.getPaymentStatus(
+
+      /*
+       * Read it first, so an unknown or somebody else's payment is refused
+       * before this process goes anywhere near the provider on its behalf.
+       */
+      const initial = await checkoutService.getPaymentStatus(
         organisationId,
         organisationUserId,
         req.params.paymentId
       );
-      return res.json(status);
+
+      /*
+       * Still in flight: ask the provider rather than wait to be told.
+       *
+       * This endpoint is what the confirmation screen polls, and it used to
+       * re-read a row that only a webhook could change. Where the webhook does
+       * not arrive — a laptop Stripe cannot reach, a missed delivery in
+       * production — the money is taken and nothing else happens: the member
+       * watches "Confirming your payment", the basket stays full, and what they
+       * bought is never created.
+       *
+       * Reconciling is idempotent and only ever moves a payment forward, so a
+       * webhook arriving in the middle changes nothing. Quiet on failure: the
+       * status just read is still the honest answer, and a provider that cannot
+       * be reached must not turn a slow confirmation into an error page.
+       * See docs/PAYMENT_STUCK_CONFIRMING.md.
+       */
+      if (initial.status === 'pending' || initial.status === 'authorised') {
+        try {
+          const outcome = await webhookService.reconcilePayment(req.params.paymentId);
+
+          if (outcome !== 'unchanged') {
+            return res.json(
+              await checkoutService.getPaymentStatus(
+                organisationId,
+                organisationUserId,
+                req.params.paymentId
+              )
+            );
+          }
+        } catch (error) {
+          logger.warn('Could not reconcile a payment while reporting its status', {
+            paymentId: req.params.paymentId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      return res.json(initial);
     } catch (error) {
       if (error instanceof NotFoundError) {
         return res.status(404).json({
@@ -1300,6 +1378,51 @@ router.get(
         return res.status(400).json({ error: error.message });
       }
       logger.error('Error in GET /account/:orgCode/catalogue/activities/:activityId/entrant-suggestions:', error);
+      return res.status(500).json({ error: 'Failed to load suggestions' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/account/{orgCode}/catalogue/membership-types/{typeId}/applicant-suggestions:
+ *   get:
+ *     summary: Names this account is likely to be applying for
+ *     description: >
+ *       The people it already holds memberships for, and the names it has used
+ *       on entries. There is no roster search here, unlike the entrant field: an
+ *       application creates a membership rather than resolving to one, and
+ *       offering other families' names would be neither useful nor anybody's
+ *       business.
+ *     tags: [Account]
+ *     responses:
+ *       200:
+ *         description: Two lists, memberships held and recently used names
+ */
+router.get(
+  '/:orgCode/catalogue/membership-types/:typeId/applicant-suggestions',
+  authenticateToken(),
+  resolveAccountOrganisation(),
+  requireAccountCapability('memberships'),
+  async (req: AccountRequest, res: Response) => {
+    try {
+      const { organisationId, organisationUserId } = req.account!;
+
+      return res.json(
+        await entrantService.applicantSuggestions(
+          organisationId,
+          organisationUserId,
+          req.params.typeId
+        )
+      );
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      logger.error(
+        'Error in GET /account/:orgCode/catalogue/membership-types/:typeId/applicant-suggestions:',
+        error
+      );
       return res.status(500).json({ error: 'Failed to load suggestions' });
     }
   }

@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
@@ -116,6 +117,8 @@ const MembersReportPage: React.FC = () => {
       setExporting(false);
     }
   };
+
+  const sort = useTableSort(membershipTypes);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -259,16 +262,28 @@ const MembersReportPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('reporting.members.table.membershipType')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.total')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.active')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.pending')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.elapsed')}</TableCell>
-                    <TableCell align="right">{t('reporting.members.table.revenue')}</TableCell>
+                    <SortableTableCell sort={sort} field="membershipTypeName">
+                      {t('reporting.members.table.membershipType')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="totalMembers" align="right">
+                      {t('reporting.members.table.total')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="activeMembers" align="right">
+                      {t('reporting.members.table.active')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="pendingMembers" align="right">
+                      {t('reporting.members.table.pending')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="elapsedMembers" align="right">
+                      {t('reporting.members.table.elapsed')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="totalRevenue" align="right">
+                      {t('reporting.members.table.revenue')}
+                    </SortableTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {membershipTypes.map((type) => (
+                  {sort.rows.map((type) => (
                     <TableRow key={type.membershipTypeId} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">

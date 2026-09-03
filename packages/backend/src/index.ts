@@ -51,6 +51,9 @@ import webhookRoutes from './routes/webhook.routes';
 import { allowedOrigins as allowedOriginList } from './utils/allowed-origins';
 import userPreferencesRoutes from './routes/user-preferences.routes';
 import userGroupRoutes from './routes/user-group.routes';
+import announcementRoutes from './routes/announcement.routes';
+import scanSessionRoutes from './routes/scan-session.routes';
+import gateScanRoutes from './routes/gate-scan.routes';
 import publicRoutes from './routes/public.routes';
 import seoRoutes from './routes/seo.routes';
 import accountRoutes from './routes/account.routes';
@@ -338,6 +341,8 @@ const ORGADMIN_DATA_ROUTERS: [string, express.Router][] = [
   ['', paymentRoutes],
   ['', reportingRoutes],
   ['', userGroupRoutes],
+  ['', announcementRoutes],
+  ['', scanSessionRoutes],
   ['/files', fileUploadRoutes],
 ];
 
@@ -366,6 +371,13 @@ app.use('/api/user-preferences', userPreferencesRoutes);
 // reaches before they have a session. /api/account/* requires a token and
 // resolves the organisation from the URL rather than from the token, because
 // an account user may belong to several.
+/*
+ * The gate. Unauthenticated in the Keycloak sense and deliberately so: a
+ * steward at a gate is a volunteer for the afternoon with no account, carrying
+ * a device token that reaches one event's tickets and expires by itself.
+ * See docs/GATE_SCANNING.md.
+ */
+app.use('/api/scan', gateScanRoutes);
 app.use('/api/public', publicRoutes);
 /*
  * `robots.txt` and `sitemap.xml` sit at the site root, not under `/api`,

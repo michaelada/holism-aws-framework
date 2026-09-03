@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -139,6 +140,16 @@ const OrgAdminUsersListPage: React.FC = () => {
     return status === 'active' ? 'success' : 'default';
   };
 
+  const sort = useTableSort(filteredUsers, {
+    accessors: {
+      // Surname first, because that is how a list of people is looked down.
+      name: (user) => `${user.lastName ?? ''} ${user.firstName ?? ''}`.trim(),
+      // Alphabetical by the roles held, so administrators with the same
+      // role land together; an administrator with none sinks.
+      roles: (user) => [...user.roles].sort().join(' '),
+    },
+  });
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -183,11 +194,21 @@ const OrgAdminUsersListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('users.fields.name')}</TableCell>
-              <TableCell>{t('users.fields.email')}</TableCell>
-              <TableCell>{t('users.fields.roles')}</TableCell>
-              <TableCell>{t('users.fields.status')}</TableCell>
-              <TableCell>{t('users.fields.lastLogin')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('users.fields.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="email">
+                {t('users.fields.email')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="roles">
+                {t('users.fields.roles')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('users.fields.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="lastLogin">
+                {t('users.fields.lastLogin')}
+              </SortableTableCell>
               <TableCell align="right">{t('users.fields.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -205,7 +226,7 @@ const OrgAdminUsersListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user) => (
+              sort.rows.map((user) => (
                 <TableRow key={user.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

@@ -54,11 +54,25 @@ const locale = { locale: 'en-GB', setLocale };
  * translation visible in a test failure rather than silently rendering blank.
  */
 function translate(key: string, options?: Record<string, unknown>): string {
-  const value = key.split('.').reduce<unknown>(
-    (node, part) =>
-      node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
-    enGB as unknown
-  );
+  const lookup = (path: string): unknown =>
+    path.split('.').reduce<unknown>(
+      (node, part) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+      enGB as unknown
+    );
+
+  /*
+   * Plurals, the way i18next selects them. A counted entry has no bare key at
+   * all — only `_one` and `_other` — so looking up the plain path finds nothing
+   * and the page renders "payments.settlement.itemsCreated", which reads in a
+   * failure as though the page were broken.
+   */
+  const value =
+    lookup(key) ??
+    (options && typeof options.count === 'number'
+      ? lookup(`${key}_${options.count === 1 ? 'one' : 'other'}`)
+      : undefined);
+
   if (typeof value !== 'string') return key;
 
   // i18next-style interpolation. Without this, "{{count}} lodgements" renders

@@ -266,13 +266,23 @@ describe('BrowsePage (D1/D4)', () => {
     expect(screen.queryByRole('button', { name: 'Add to basket' })).not.toBeInTheDocument();
   });
 
-  it('says so when the member has already entered', async () => {
-    respond([
-      event({ activities: [activity({ available: false, unavailableReason: 'already-entered' })] }),
-    ]);
+  /**
+   * Having entered does not close an activity.
+   *
+   * A rider on two horses, a parent with three children, a secretary entering
+   * half the club: all of them were refused by an `already-entered` reason that
+   * read as a capacity problem. The activity stays open, and the name field is
+   * where "already entered" is said — beside the name, as information.
+   */
+  it('stays open to somebody who has entered already', async () => {
+    const user = userEvent.setup();
+    respond([event({ activities: [activity({ available: true })] })]);
     render();
 
-    expect(await screen.findByText('Already entered')).toBeInTheDocument();
+    await openFirstEvent(user);
+
+    expect(await screen.findByRole('button', { name: 'Add to basket' })).toBeInTheDocument();
+    expect(screen.queryByText('Already entered')).not.toBeInTheDocument();
   });
 
   it('warns about remaining places only when the number is small', async () => {

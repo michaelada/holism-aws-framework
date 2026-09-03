@@ -75,7 +75,14 @@ export const TicketPage: React.FC = () => {
     let cancelled = false;
     if (!ticket?.qrCode) return;
 
-    generateQRCodeDataURL(ticket.qrCode, { width: 260, margin: 1 })
+    /*
+     * 320, not 260. The code is a signed token now rather than a UUID, so the
+     * grid is denser; at the old width the modules were small enough that a
+     * steward's camera hunted for them in low light. This is the one QR in the
+     * product read off a **screen**, at whatever brightness the holder's phone
+     * happens to be on.
+     */
+    generateQRCodeDataURL(ticket.qrCode, { width: 320, margin: 1 })
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })

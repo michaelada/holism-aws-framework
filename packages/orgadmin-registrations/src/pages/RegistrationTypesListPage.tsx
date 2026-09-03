@@ -34,7 +34,13 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { RegistrationType } from '../types/registration.types';
 
 const RegistrationTypesListPage: React.FC = () => {
@@ -125,6 +131,8 @@ const RegistrationTypesListPage: React.FC = () => {
     }
   };
 
+  const sort = useTableSort(filteredTypes);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -179,10 +187,18 @@ const RegistrationTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('registrations.table.name')}</TableCell>
-              <TableCell>{t('registrations.table.entityName')}</TableCell>
-              <TableCell>{t('registrations.table.status')}</TableCell>
-              <TableCell>{t('registrations.table.createdAt')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('registrations.table.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="entityName">
+                {t('registrations.table.entityName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('registrations.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="createdAt">
+                {t('registrations.table.createdAt')}
+              </SortableTableCell>
               <TableCell align="right">{t('registrations.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -202,7 +218,7 @@ const RegistrationTypesListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTypes.map((type) => (
+              sort.rows.map((type) => (
                 <TableRow
                   key={type.id}
                   hover

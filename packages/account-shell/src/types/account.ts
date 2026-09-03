@@ -224,11 +224,9 @@ export type UnavailableReason =
   | 'entries-closed'
   | 'event-full'
   | 'activity-full'
-  | 'already-entered'
   /** Open to the club's members, and this login holds no active membership. */
   | 'members-only'
   /** Members-only, and every membership this login holds is already entered. */
-  | 'members-all-entered'
   | 'not-open-for-applications'
   | 'already-a-member'
   | 'not-on-sale'
@@ -275,6 +273,7 @@ export interface EligibleMember {
   name: string;
   membershipTypeName: string;
   membershipNumber: string;
+  /** Already entered. Said beside the name; it does not refuse a second entry. */
   alreadyEntered: boolean;
 }
 
@@ -461,6 +460,30 @@ export interface AccountDashboard {
   externalEvents: DashboardExternalEvent[];
   /** What the federation is called — names the external-events section. */
   organisationTypeName: string | null;
+  /**
+   * What the club is telling its members right now.
+   *
+   * Empty both for a club without the announcements capability and for one that
+   * has it with nothing showing — the home page treats the two the same, which
+   * is what makes "no announcements" look exactly like the page did before the
+   * feature existed.
+   */
+  announcements: DashboardAnnouncement[];
+}
+
+/** One club announcement, as the home page shows it. */
+export interface DashboardAnnouncement {
+  id: string;
+  title: string;
+  /** HTML. Sanitised again by `RichText` inside the card. */
+  description: string;
+  startsAt: string;
+  endsAt: string;
+  /** A signed URL, valid for an hour, or null. */
+  imageUrl: string | null;
+  imagePlacement: 'background' | 'header' | 'footer' | null;
+  /** Where the notice points, or null. Both halves or neither. */
+  link: { label: string; url: string } | null;
 }
 
 /** One line of a payment — what it bought, and whether that arrived. */
@@ -503,6 +526,10 @@ export interface AccountPaymentLine {
   handlingFee: number;
   fulfilled: boolean;
   fulfilmentError: string | null;
+  /** The record this line produced. Null until the line is fulfilled. */
+  fulfilmentRef: string | null;
+  /** Who or what it was for: the entrant, the member, the horse. */
+  subjectName: string | null;
 }
 
 /** `GET /api/account/:orgCode/payments` — screens F1 and F2. */
@@ -763,7 +790,6 @@ export interface AccountTicketDetail extends AccountTicketSummary {
     headerText: string | null;
     instructions: string | null;
     footerText: string | null;
-    includeEventLogo: boolean;
     backgroundColour: string | null;
   };
 }

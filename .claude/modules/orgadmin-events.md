@@ -17,12 +17,14 @@ event-level discounts, types and venues.
 | `events/new` | `CreateEventPage` | — |
 | `events/:id` | `EventDetailsPage` | — |
 | `events/:id/edit` | `EditEventPage` | — |
-| `events/:id/entries` | `EventEntriesPage` | — |
+| `events/:id/entries` | `EventEntriesPage` | — |  <!-- grouped by activity: name, email, entered, status -->
+| `events/:id/entries/:entryId` | `EventEntryDetailsPage` | — |  <!-- Edit opens EditEntryAnswersDialog: the entrant's name plus every field of the activity's form -->
 | `events/types` | `EventTypesListPage` | `event-types` |
 | `events/venues` | `VenuesListPage` | `venues` |
 | `events/discounts` | `DiscountsListPage` | `entry-discounts` |
 | `events/discounts/new` | `CreateDiscountPage` | `entry-discounts` |
 | `events/discounts/:id/edit` | `CreateDiscountPage` (edit mode) | `entry-discounts` |
+| `events/discounts/:id/stats` | `DiscountUsagePage` | `entry-discounts` |  <!-- shared: memberships, merchandise and calendar mount it too -->
 
 ## Layout
 
@@ -69,7 +71,12 @@ passes `showErrors`, which `EventActivitiesSection` derives from `fieldErrors.ac
 
 ## Data it touches
 
-- `/api/orgadmin/events`, `/events/:id/activities`, `/events/:id/entries`
+- `/api/orgadmin/events`, `/events/:id/activities`, `/events/:id/entries`,
+  `/events/:id/entries/:entryId` (the entry in full: activity, fee, form answers, the payment it
+  arrived on, the member behind the entrant), `PUT /events/:id/entries/:entryId/answers`
+  (correcting the name and the answers)
+- `/api/orgadmin/application-forms/:formId/with-fields` (the fields the editor offers, including the
+  ones nobody answered)
 - `/api/orgadmin/event-types`, `/api/orgadmin/venues`
 - `/api/orgadmin/organisations/:orgId/application-forms`
 - `/api/orgadmin/organisations/:orgId/discounts/events`
@@ -83,9 +90,16 @@ Backend counterparts: `event.service`, `event-activity.service`, `event-entry.se
 An activity is what someone actually enters. It carries name, description, public visibility, a
 **mandatory** application form, an **entry eligibility**, optional applicant limits and quantity, optional terms and
 conditions (rich text via `react-quill`), fee, supported payment methods, a handling-fee flag,
-cheque/offline instructions, and discount ids. Payment methods are classified by name — a method
-containing `card`, `stripe` or `helix` counts as a card method, which is what reveals the
-handling-fee option.
+cheque/offline instructions, discount ids, and **how many people one of its tickets admits**
+(`ticketsAdmit`, minimum 1). Payment methods are classified by name — a method containing `card`,
+`stripe` or `helix` counts as a card method, which is what reveals the handling-fee option.
+
+`ticketsAdmit` is the club's gate setting: 1 for a day ticket, 4 for a family ticket. It is
+**copied onto each ticket at issue** (`electronic_tickets.admits`) rather than read live, so raising
+it in March does not change what a ticket sold in February lets somebody through with. Note that
+cloning an event carries it — along with `entryEligibility`, which the clone was silently dropping
+until this landed, quietly reopening a members-only activity to everybody. See
+[GATE_SCANNING.md](../../docs/GATE_SCANNING.md).
 
 ## Documentation
 
@@ -136,6 +150,14 @@ Several `docs/EVENT_*.md` and `docs/DISCOUNT_*.md` files record specific fixes.
 | "Why won't the event save / the wizard advance?" | `hooks/useEventValidation.ts` |
 | "Where is this field on the activity form?" | `components/EventActivityForm.tsx` |
 | "How is form state managed?" | `hooks/useEventForm.ts` |
+| "Where does an entry's name come from?" | The entry's own `first_name`/`last_name`, written by `fulfilment.service` from the membership named in the basket line, else the name typed into "Who is this entry for?", else the account holder. **Not** from the form — entry forms no longer ask. Screens show the two **joined**: the split is a storage detail (`splitName` cuts at the first space), not something the club asked for |
+| "What is in the entries export?" | One sheet per activity: `Entry Date · Name · ‹the form's own questions› · Email · Payment Method · Entered By · Entry ID · Status`. A column for **every** field of that activity's form, read from `application_form_fields`, so a question nobody answered still has one. **Entered By** is the account holder who made the entry, not the entrant. `eventEntryService.exportEntriesToExcel`; see [EXCEL_EXPORTS_WERE_NOT_WORKBOOKS.md](../../docs/EXCEL_EXPORTS_WERE_NOT_WORKBOOKS.md) |
+| "Which events issue tickets?" | The ones with an `event_ticketing_config` row where `generate_electronic_tickets` is true — written by the event form's ticketing step. In the seed, two Meath events; see [SEED_TICKETS.md](../../docs/SEED_TICKETS.md) |
+| "Why is an entry missing from the list?" | `entry_status = 'removed'` — withdrawn when its payment was refunded and the club chose to. `getEntriesByEvent` excludes them unless `includeRemoved`; the entry's own page still opens and is headed by a withdrawal notice |
+| "Where does the discounts list's View Usage icon go?" | `‹section›/discounts/:id/stats` → `DiscountUsagePage`, shared the way `DiscountsListPage` is and mounted by events, memberships, merchandise and calendar under the same capability as the list. It 404'd in every module until it was built: the navigation lives here and the routing lives in four other packages, so nothing joined them up. `discount-usage-route.test.ts` now does. See [DISCOUNT_USAGE_PAGE.md](../../docs/DISCOUNT_USAGE_PAGE.md) |
+| "Why is the entries page grouped?" | A club works in classes: the entries for the 80cm are a class list, and a flat table across six of them is not one. Grouped by activity **id**, not name — a two-day event runs "80cm" on both days. See [REFUNDS_SETTLEMENT_AND_ENTRY_DETAIL.md](../../docs/REFUNDS_SETTLEMENT_AND_ENTRY_DETAIL.md) |
+| "Can an administrator fix a mistake on an entry?" | Yes — **Edit**, beside "Who entered" on `EventEntryDetailsPage`, opening `EditEntryAnswersDialog`: the entrant's name as one field plus **every** field of the activity's form, answered or not, fetched from `/application-forms/:formId/with-fields` (the summary drops blanks, which is right for reading and useless for editing). Saves `PUT /events/:id/entries/:entryId/answers` → `eventEntryService.updateEntryAnswers`, validated with `validateSubmissionData` and audited as `entry.answers-corrected`. Everything is checked before anything is written, so a refused correction renames nobody. See [CORRECTING_AN_ENTRY.md](../../docs/CORRECTING_AN_ENTRY.md) |
+| "Where can I see what an entrant put on the form?" | `EventEntryDetailsPage` → `GET /events/:id/entries/:entryId` → `eventEntryService.getEntryById`, which joins the answers with `formSummariesFor`. The form itself is gone once the entry exists, so this is the only place they can be read back. `EventEntryDetailsDialog` is a superseded component: never mounted, and its API hook is a stub |
 | "Where does the entries count on the list come from?" | `Event.entryCount`, a `COUNT(*)` of `event_entries` added to `getEventsByOrganisation` only. It is the same count the event-level limit is checked against and the same set `GET /events/:id/entries` lists, so the number and the screen it links to agree. `undefined` elsewhere means *not counted*, which the list renders as an em dash rather than `0` |
 | "Why does an event have entry dates nobody set?" | It used to. `useEventForm` filled an absent entry window with `new Date()`, so opening an event and saving anything wrote the load time into both columns. Now absent stays absent. `docs/EVENT_ENTRY_DATE_INVENTION_FIX.md` |
 | "Which event dates are required?" | **All four** — start, end, entry opening, entry closing. `useEventValidation.validateDates` on save and on the wizard's step 1; `eventService.createEvent` refuses a create missing any, and `updateEvent` refuses to clear one. The **columns stay nullable**: pre-rule events and the seed's deliberately ungated `Ward Union Open Day` still read correctly, and a null window still means *unbounded* in `public-event.service` |

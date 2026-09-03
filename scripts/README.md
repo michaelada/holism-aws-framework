@@ -222,6 +222,9 @@ saoirse.brennan@example.test	khpc
 ruairi.kelly@example.test	lhpc
 tadhg.nolan@example.test	wupc — awaiting approval
 
+aine.mcgrath@example.test
+brid.mcnamara@example.test
+
 Separately, the Keycloak admin console (http://localhost:8080) uses admin / admin by default, from KEYCLOAK_ADMIN_PASSWORD.
 
 Members — http://localhost:5176/account/`<code>(codes:khpc, lhpc, wupc`)

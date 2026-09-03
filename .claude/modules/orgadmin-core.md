@@ -1,5 +1,13 @@
 # `packages/orgadmin-core` — Always-on org-admin features
 
+> **Navigate without `/orgadmin`.** The router carries it as its basename, so a path that includes it
+> produces `/orgadmin/orgadmin/…` and a 404. This was live in the payments and account-users lists.
+>
+> **A payment is `paymentDate` / `paymentStatus` / `paymentType`, plus `userName` and `userEmail`
+> from the join** — not `date` / `status` / `type` / `customerName`. Both payments screens declared
+> the latter and rendered `Invalid Date` and `common.status.undefined` for it; an interface over an
+> untyped response is an assertion, not a check. See docs/ORGADMIN_PAYMENTS_BROKEN_FIELDS.md.
+
 A library, not an app. It supplies the six modules every organisation gets regardless of
 capabilities, plus the hooks, contexts and utilities the capability modules build on.
 
@@ -14,6 +22,17 @@ its refund confirmation and a sterling club saw euro on its revenue report. `for
 *requires* a currency; its old `'GBP'` default was the trap. `money-is-not-hard-coded.test.ts` fails
 the build on any currency literal reaching a formatter.
 
+**Every list table sorts by its columns.** `useTableSort(rows)` plus `SortableTableCell` — two
+changes per table: the headings that should sort, and the array the body maps over becomes
+`sort.rows`. The comparison lives once in `utils/sorting.ts` and reads the type from the value
+(number, `Date`, ISO date or date-time, clock time, text), sinks empties in **both** directions, and
+compares text with `localeCompare` so case and accents do not split a list into two alphabets.
+**Sort by the value, not by what is on screen**: `€1,240.00` sorts as text before `€9.00`, and a
+translated status chip would order differently in each of six locales — hence the `accessors`
+option. Sorted after filtering and **before** paging. The audit log is the one list that is not
+sortable, because it is cursor-paged from the server and sorting fifty of thousands would lie. See
+[docs/SORTABLE_TABLES.md](../../docs/SORTABLE_TABLES.md).
+
 **`ConfirmDialog` is the only way to ask "are you sure?"** Two screens used the browser's native
 `confirm()`, which carries no i18n at all. The confirm button names the action rather than agreeing
 with the question, cancel precedes it in the DOM, and `busy` prevents a double-send.
@@ -21,8 +40,9 @@ with the question, cancel precedes it in the DOM, and `busy` prevents a double-s
 ## Public surface (`src/index.ts`)
 
 ```ts
-export * from './hooks';        // useApi, AuthTokenContext, OrganisationIdContext
-export * from './utils';        // formatting + validation helpers
+export * from './hooks';        // useApi, useCurrency, useTableSort, AuthTokenContext, OrganisationIdContext
+export * from './utils';        // formatting, validation + sorting helpers
+export * from './components';   // ConfirmDialog, ResponsiveTable, SortableTableCell
 export { OrganisationProvider, useOrganisation } from './context/OrganisationContext';
 export * from './dashboard';    // dashboardModule
 export * from './forms';        // formsModule
@@ -46,7 +66,7 @@ Five of the seven have their own summary — read that rather than this table wh
 | `payments/` | [core-payments.md](core-payments.md) | `payments`, `payments/:id`, `payments/lodgements` | Consolidated payment history, detail, refunds and lodgements |
 | `reporting/` | [core-reporting.md](core-reporting.md) | `reporting`, `reporting/events`, `reporting/members`, `reporting/revenue` | Reports & Analytics — dashboard plus events, members and revenue reports |
 | `users/` | [core-users.md](core-users.md) | `users`, `users/admins`, `users/admins/invite`, `users/accounts`, `users/accounts/create`, `users/:type/:id` | Org-admin users vs account users, roles and Keycloak invitations |
-| `audit/` | — | `audit` | This organisation's audit trail — the same events the Platform Admin sees, with the organisation **fixed by the server**. See docs/AUDIT_TRAIL_AND_SESSIONS.md §7 |
+| `audit/` | — | `audit` | This organisation's audit trail — the same events the Platform Admin sees, with the organisation **fixed by the server**. Each event shows the record it was about: its label, its reference (`entityId`), and a button through to it via `auditEntityDestination`. See docs/AUDIT_TRAIL_AND_SESSIONS.md §7 |
 | `dashboard/` | — | `dashboard` | A single `DashboardPage` composed of the available modules' cards; no summary of its own |
 
 ## `useApi` — the API hook everything uses
@@ -79,8 +99,15 @@ await execute({ method: 'GET', url: '/api/orgadmin/events', retryCount: 3 });
   compiles, passes every test, and 404s in the browser. Page tests mock `useApi` and cannot catch
   it; the guard is `hooks/__tests__/organisationScopedUrl.test.ts`. See
   [docs/ORGADMIN_ROUTE_TENANCY.md](../../docs/ORGADMIN_ROUTE_TENANCY.md).
+- **Sets `Content-Type: application/json` — except for a file upload.** A `FormData` body is left
+  without a content type so axios can write `multipart/form-data` *with the boundary it generated
+  with the body*; only the client can produce that. Forcing JSON sent a multipart body under a JSON
+  header, the server's parser found no file, and the 400 became `null` — an announcement saved with
+  its picture silently missing. A header the caller set is still never overwritten (which is how the
+  merchandise gallery worked before the fix, by passing one by hand).
 - Options extend Axios config with `showSuccessMessage`, `successMessage`, `showErrorMessage`,
-  `onSuccess`, `onError`, `retryCount` (default 2), `retryDelay` (default 1000).
+  `onSuccess`, `onError`, `retryCount` (default 2), `retryDelay` (default 1000), and
+  **`throwOnError`** (default false — see below).
 - Returns loading/error state alongside the resolved data.
 
 ### ⚠️ `execute` resolves to `null` on failure — it does not throw
@@ -91,7 +118,13 @@ A page relying on `catch` therefore renders its **empty state** for a failed req
 money screen means telling a club there is nothing to chase, or that no money has reached its bank.
 Both were live defects, in `OfflinePaymentsPage` and `LodgementsPage`.
 
-Use the `onError` callback, and suppress the empty state when a load has failed:
+**For an action — a mutation whose refusal has to be read — pass `throwOnError: true`** and let the
+`catch` do its job. It throws the server's own message, which for a refusal is the wording the
+administrator needs. Undoing an offline receipt reported *"Undone"* through three consecutive 400s
+before this existed; the audit trail was the only place the failures showed. Opt-in rather than the
+default, because ~240 call sites read the `null`.
+
+For a **load**, use the `onError` callback and suppress the empty state when it has failed:
 
 ```ts
 let errored = false;

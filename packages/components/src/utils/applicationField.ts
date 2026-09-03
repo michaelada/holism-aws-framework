@@ -28,6 +28,7 @@
 import { FieldDatatype } from '../types';
 import type { FieldDefinition, ValidationRule } from '../types';
 import { defaultValidationService } from '../validation';
+import { formatDisplayDate, formatDisplayDateTime } from './formatting';
 
 /** How a field arrives from `/application-forms/:id/with-fields` and its account twin. */
 export interface ApplicationFieldLike {
@@ -193,6 +194,42 @@ export function validateApplicationField(
   );
 
   return valid ? null : error ?? 'Invalid value';
+}
+
+/**
+ * One stored answer, as a person reads it.
+ *
+ * A date field's answer is stored as an ISO string —
+ * `2012-05-04T00:00:00.000Z` — which is exactly right for storing and
+ * unreadable on a page: a member looking at their own entry saw the raw string.
+ * Everything else is already display text by the time it gets here: the server
+ * turns booleans into Yes/No and lists into "Sat, Sun", because those readings
+ * have to match wherever the answer is shown.
+ *
+ * The same formatters the rest of the app reads dates with — `formatDisplayDate`
+ * and `formatDisplayDateTime` — so an answer on this page and the entry date
+ * above it are written the same way. The time is shown only where the field
+ * asks for one. A value that is not a date at all is left exactly as it came:
+ * an answer nobody can parse is better shown than replaced with a dash.
+ */
+export function formatFormAnswer(
+  answer: { value: string; datatype?: string | null },
+  locale = 'en-GB'
+): string {
+  const parsed = answer.value ? new Date(answer.value) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return answer.value;
+
+  switch (answer.datatype) {
+    case 'date':
+      return formatDisplayDate(parsed, locale);
+    case 'datetime':
+      return formatDisplayDateTime(parsed, locale);
+    case 'time':
+      // The day is not part of the answer, so showing one would invent it.
+      return parsed.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    default:
+      return answer.value;
+  }
 }
 
 /**

@@ -15,7 +15,8 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import {
   Alert,
   Box,
@@ -160,6 +161,15 @@ const LodgementsPage: React.FC = () => {
     void load(null);
   }, [load]);
 
+  /*
+   * Above the loading return: a hook after an early return is a hook that does
+   * not always run. Stripe hands these back newest first and the screen keeps
+   * that, so the sort opens on the order a club already reads it in.
+   */
+  const sort = useTableSort(lodgements, {
+    initial: { field: 'arrivalDate', direction: 'desc' },
+  });
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -236,14 +246,22 @@ const LodgementsPage: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>{t('payments.lodgements.columnDate')}</TableCell>
-                      <TableCell align="right">{t('payments.lodgements.columnAmount')}</TableCell>
-                      <TableCell>{t('payments.lodgements.columnStatus')}</TableCell>
-                      <TableCell>{t('payments.lodgements.columnAccount')}</TableCell>
+                      <SortableTableCell sort={sort} field="arrivalDate">
+                        {t('payments.lodgements.columnDate')}
+                      </SortableTableCell>
+                      <SortableTableCell sort={sort} field="amount" align="right">
+                        {t('payments.lodgements.columnAmount')}
+                      </SortableTableCell>
+                      <SortableTableCell sort={sort} field="status">
+                        {t('payments.lodgements.columnStatus')}
+                      </SortableTableCell>
+                      <SortableTableCell sort={sort} field="destination">
+                        {t('payments.lodgements.columnAccount')}
+                      </SortableTableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {lodgements.map((lodgement) => (
+                    {sort.rows.map((lodgement) => (
                       <TableRow
                         key={lodgement.id}
                         hover

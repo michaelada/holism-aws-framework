@@ -449,6 +449,48 @@ describe('when Stripe itself refuses', () => {
     await expect(source().listLodgements(ORG, {})).rejects.toThrow(/could not be reached/);
   });
 
+  /**
+   * A payout somebody made by hand cannot be itemised.
+   *
+   * Stripe only breaks down payouts it created on the account's own schedule:
+   * `balanceTransactions.list({ payout })` refuses a manual one outright. That
+   * is a fact about the payout rather than a fault, and it is the state anybody
+   * testing this screen creates for themselves — a payout from the dashboard,
+   * or from `scripts/test-lodgements.ts`.
+   */
+  it('explains a payout Stripe will not break down', async () => {
+    stripe.payouts.retrieve.mockResolvedValue(payout());
+    stripe.balanceTransactions.list.mockRejectedValue(
+      stripeError({
+        type: 'StripeInvalidRequestError',
+        statusCode: 400,
+        message: 'Balance transaction history can only be filtered on automatic transfers, not manual.',
+      })
+    );
+
+    // Not "Stripe could not be reached", which sends a developer to look at
+    // their network and a club to ring somebody, over a permanent refusal.
+    await expect(source().getLodgement(ORG, 'po_manual')).rejects.toThrow(
+      /cannot break down a payout that was created by hand/
+    );
+  });
+
+  it('does not dress that refusal up as an outage', async () => {
+    stripe.payouts.retrieve.mockResolvedValue(payout());
+    stripe.balanceTransactions.list.mockRejectedValue(
+      stripeError({
+        type: 'StripeInvalidRequestError',
+        statusCode: 400,
+        message: 'Balance transaction history can only be filtered on automatic transfers, not manual.',
+      })
+    );
+
+    await expect(source().getLodgement(ORG, 'po_manual')).rejects.toMatchObject({
+      statusCode: 422,
+      code: 'LODGEMENT_NOT_ITEMISED',
+    });
+  });
+
   it('leaves anything that is not a Stripe error alone', async () => {
     // A bug in our own code must not be dressed up as a Stripe outage.
     stripe.payouts.list.mockRejectedValue(new TypeError('x is not a function'));

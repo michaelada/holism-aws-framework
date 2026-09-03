@@ -127,7 +127,6 @@ describe('AccountTicketingService', () => {
               ticket_header_text: 'Admit one',
               ticket_instructions: 'Show this at the gate.',
               ticket_footer_text: 'Registered charity 12345',
-              include_event_logo: true,
               ticket_background_color: '#ffffff',
             },
           ],
@@ -144,7 +143,6 @@ describe('AccountTicketingService', () => {
           headerText: 'Admit one',
           instructions: 'Show this at the gate.',
           footerText: 'Registered charity 12345',
-          includeEventLogo: true,
           backgroundColour: '#ffffff',
         },
       });
@@ -162,7 +160,6 @@ describe('AccountTicketingService', () => {
         headerText: null,
         instructions: null,
         footerText: null,
-        includeEventLogo: false,
         backgroundColour: null,
       });
     });

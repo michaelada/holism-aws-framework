@@ -87,6 +87,11 @@ export const membershipsModule: ModuleRegistration = {
       component: lazy(() => import('./pages/EditDiscountPage')),
       capability: 'membership-discounts',
     },
+    {
+      path: 'members/discounts/:id/stats',
+      component: lazy(() => import('./pages/DiscountUsagePage')),
+      capability: 'membership-discounts',
+    },
   ],
   subMenuItems: [
     {

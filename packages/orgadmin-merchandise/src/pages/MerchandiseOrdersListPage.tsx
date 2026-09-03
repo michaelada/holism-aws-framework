@@ -35,7 +35,13 @@ import {
   FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatCurrency, formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import BatchOrderOperationsDialog from '../components/BatchOrderOperationsDialog';
 import type { MerchandiseOrder, OrderStatus, PaymentStatus } from '../types/merchandise.types';
 
@@ -140,6 +146,12 @@ const MerchandiseOrdersListPage: React.FC = () => {
   const handleViewOrder = (orderId: string) => {
     navigate(`/merchandise/orders/${orderId}`);
   };
+
+  const sort = useTableSort(orders, {
+    accessors: {
+      merchandise: (order) => order.merchandiseType?.name,
+    },
+  });
 
   return (
     <Box sx={{ p: 3 }}>
@@ -253,14 +265,31 @@ const MerchandiseOrdersListPage: React.FC = () => {
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </TableCell>
-              <TableCell>{t('merchandise.table.orderId')}</TableCell>
-              <TableCell>{t('merchandise.table.customer')}</TableCell>
-              <TableCell>{t('merchandise.table.merchandise')}</TableCell>
-              <TableCell>{t('merchandise.table.quantity')}</TableCell>
-              <TableCell>{t('merchandise.table.total')}</TableCell>
-              <TableCell>{t('merchandise.table.payment')}</TableCell>
-              <TableCell>{t('merchandise.table.orderStatus')}</TableCell>
-              <TableCell>{t('merchandise.table.date')}</TableCell>
+              <SortableTableCell sort={sort} field="id">
+                {t('merchandise.table.orderId')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="customerName">
+                {t('merchandise.table.customer')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="merchandise">
+                {t('merchandise.table.merchandise')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="quantity">
+                {t('merchandise.table.quantity')}
+              </SortableTableCell>
+              {/* The number behind the formatting: "€1,240.00" sorts as text. */}
+              <SortableTableCell sort={sort} field="totalPrice">
+                {t('merchandise.table.total')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="paymentStatus">
+                {t('merchandise.table.payment')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="orderStatus">
+                {t('merchandise.table.orderStatus')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="orderDate">
+                {t('merchandise.table.date')}
+              </SortableTableCell>
               <TableCell align="right">{t('merchandise.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -278,7 +307,7 @@ const MerchandiseOrdersListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((order) => (
+              sort.rows.map((order) => (
                 <TableRow key={order.id} hover>
                   <TableCell padding="checkbox">
                     <Checkbox

@@ -21,6 +21,12 @@ vi.mock('@aws-web-framework/orgadmin-shell', () => import('../../../test/orgadmi
 
 vi.mock('../../../hooks/useApi');
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual<Record<string, unknown>>('react-router-dom')),
+  useNavigate: () => mockNavigate,
+}));
+
 const mockExecute = vi.fn();
 
 const payment = (over: Record<string, unknown> = {}) => ({
@@ -329,4 +335,42 @@ describe('OfflinePaymentsPage', () => {
     });
   });
 
+});
+
+/**
+ * Into the payment itself.
+ *
+ * This card says what is owed and who owes it. The next question — what was in
+ * the basket, what has been refunded, how it was settled — is a page away, and
+ * was previously a search away.
+ */
+describe('opening the payment behind a card', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useApiModule.useApi).mockReturnValue({
+      execute: mockExecute,
+      data: null,
+      error: null,
+      loading: false,
+      reset: vi.fn(),
+    });
+    mockExecute.mockResolvedValue([payment()]);
+  });
+
+  it('offers a way through to the payment', async () => {
+    renderWithProviders(<OfflinePaymentsPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'View payment' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/payments/pay-1');
+  });
+
+  it('offers it whether or not the money has been recorded', async () => {
+    // The card is worth opening either way: before, to check what is owed;
+    // after, to see what the receipt released.
+    mockExecute.mockResolvedValue([payment({ receivedAt: '2026-08-20T09:00:00Z' })]);
+    renderWithProviders(<OfflinePaymentsPage />);
+
+    expect(await screen.findByRole('button', { name: 'View payment' })).toBeInTheDocument();
+  });
 });

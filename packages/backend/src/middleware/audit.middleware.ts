@@ -81,6 +81,7 @@ const ROW_SQL: Record<string, string> = {
   organisation: 'SELECT * FROM organizations WHERE id = $1',
   organisationType: 'SELECT * FROM organization_types WHERE id = $1',
   post: 'SELECT * FROM platform_posts WHERE id = $1',
+  announcement: 'SELECT * FROM organisation_announcements WHERE id = $1',
 };
 
 export type AuditResource = keyof typeof ROW_SQL;
@@ -143,8 +144,17 @@ export interface AuditedOptions {
    * query string — the date range, the filters. "Which report" is barely worth
    * recording; "which slice of the members list did they take away with them"
    * is the question this answers.
+   *
+   * The response is passed too, for the actions whose substance is in what came
+   * back rather than what was sent: recording an offline payment as received is
+   * an empty POST, and what is worth writing down — the amount, the payer, what
+   * the money then created — is in the reply. Null on the failure path, where
+   * there is no successful response to describe.
    */
-  values?: (req: Request) => Record<string, unknown> | null;
+  values?: (
+    req: Request,
+    after: Record<string, unknown> | null
+  ) => Record<string, unknown> | null;
 
   /**
    * Extra fields to record as present-but-hidden on top of the global list.
@@ -361,8 +371,12 @@ const errorMessage = (body: unknown): string | undefined => {
 };
 
 /** What the caller sent, whether or not it was accepted. */
-const submitted = (req: Request, options: ResolvedOptions): Record<string, unknown> | null =>
-  options.values ? options.values(req) : camelKeys(asRow(req.body));
+const submitted = (
+  req: Request,
+  options: ResolvedOptions,
+  after: Record<string, unknown> | null
+): Record<string, unknown> | null =>
+  options.values ? options.values(req, after) : camelKeys(asRow(req.body));
 
 /**
  * A refused change is still worth the record — often more so than an accepted one.
@@ -372,7 +386,7 @@ const submitted = (req: Request, options: ResolvedOptions): Record<string, unkno
  * that does not show the failure.
  */
 const attempted = (req: Request, options: ResolvedOptions): AuditChanges | null => {
-  const sent = submitted(req, options);
+  const sent = submitted(req, options, null);
   if (!sent) return null;
   return { attempted: redactObject(sent, options.sensitiveFields, HOUSEKEEPING, false) };
 };
@@ -390,7 +404,9 @@ function changesFor(
 
   switch (kind) {
     case 'create': {
-      const values = options.values ? submitted(req, options) : (after ?? submitted(req, options));
+      const values = options.values
+        ? submitted(req, options, after)
+        : (after ?? submitted(req, options, after));
       return values ? created(values, sensitiveFields, omit) : null;
     }
 
@@ -421,7 +437,7 @@ function changesFor(
     }
 
     default: {
-      const values = submitted(req, options);
+      const values = submitted(req, options, after);
       return values ? created(values, sensitiveFields, omit) : null;
     }
   }

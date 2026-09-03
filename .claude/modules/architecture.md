@@ -27,6 +27,7 @@ packages/
   orgadmin-calendar       } lazy-loaded by the shell)
   orgadmin-registrations  }
   orgadmin-ticketing      }
+  orgadmin-announcements  }
 docs/                     Feature documentation and wireframes
 infrastructure/           nginx, Keycloak, Prometheus, Grafana, init-db.sql
 terraform/                AWS infrastructure (staging, production)
@@ -107,7 +108,7 @@ email-notifications         entry-discounts         entry-restrictions
 event-document-management   event-management        event-ticketing
 event-types                 membership-discounts    membership-document-management
 memberships                 merchandise             merchandise-discounts
-multi-area-discounts        organisation-level-members
+multi-area-discounts        org-announcements       organisation-level-members
 payment-processing          pcuk-integration
 public-search               registration-discounts  registration-document-management
 registrations               reporting               sms-notifications

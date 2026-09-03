@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import { useCurrency } from '../../hooks/useCurrency';
 import {
   Box,
@@ -120,6 +121,13 @@ const EventsReportPage: React.FC = () => {
       setExporting(false);
     }
   };
+
+  const sort = useTableSort(events, {
+    accessors: {
+      // How many classes, which is what the column leads with.
+      activities: (event) => event.activities.length,
+    },
+  });
 
   return (
     <Box sx={{ p: 3 }}>
@@ -244,15 +252,25 @@ const EventsReportPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('reporting.events.table.eventName')}</TableCell>
-                    <TableCell>{t('reporting.events.table.dateRange')}</TableCell>
-                    <TableCell align="right">{t('reporting.events.table.entries')}</TableCell>
-                    <TableCell align="right">{t('reporting.events.table.revenue')}</TableCell>
-                    <TableCell>{t('reporting.events.table.activities')}</TableCell>
+                    <SortableTableCell sort={sort} field="eventName">
+                      {t('reporting.events.table.eventName')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="startDate">
+                      {t('reporting.events.table.dateRange')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="totalEntries" align="right">
+                      {t('reporting.events.table.entries')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="totalRevenue" align="right">
+                      {t('reporting.events.table.revenue')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="activities">
+                      {t('reporting.events.table.activities')}
+                    </SortableTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {events.map((event) => (
+                  {sort.rows.map((event) => (
                     <TableRow key={event.eventId} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">

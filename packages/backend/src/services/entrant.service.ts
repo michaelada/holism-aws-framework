@@ -92,6 +92,18 @@ export interface EntrantSuggestion {
   memberId: string | null;
   /** Shown beside the name: the membership type, or the club it is with. */
   detail: string | null;
+  /**
+   * A membership of this account's whose stored answers describe this person.
+   *
+   * Distinct from `memberId`, and deliberately so. `memberId` says *this entry
+   * is for that member* — it proves eligibility and links the record.  This
+   * says only *there are answers on file for this name*, which is what lets an
+   * application form fill itself in when the applicant is chosen, and lets it
+   * fill in **again** when a different one is.
+   *
+   * Null for a name that was merely typed once: there is nothing on file.
+   */
+  fillFromMembershipId?: string | null;
 }
 
 /**
@@ -383,6 +395,110 @@ class EntrantService {
         .map((row: any) => ({
           name: `${row.first_name} ${row.last_name}`.trim(),
           memberId: row.member_id ?? null,
+          detail: null,
+        }))
+        .filter((s: EntrantSuggestion) => !named.has(s.name.toLowerCase())),
+    };
+  }
+
+  /**
+   * The names one account is likely to be applying for.
+   *
+   * The membership application asks the same question an entry does — *who is
+   * this for?* — and the answer comes from the same two places: the people this
+   * account already holds memberships for, and the names it has used on entries.
+   * A club's form no longer has to ask, and a household stops typing the same
+   * three children's names every season.
+   *
+   * ## Why there is no roster search here
+   *
+   * An entry searches the club's whole roster, because a members-only activity
+   * has to resolve the name to a real membership and entries are made on other
+   * people's behalf all the time. A membership application resolves to nothing:
+   * it *creates* the membership, for whoever the account names. Searching the
+   * roster would offer other families' names to somebody who has no business
+   * with them and could not use them anyway — so the field is a plain text box
+   * with this account's own names offered beneath it.
+   *
+   * Memberships are listed whatever their state, not only the active ones: the
+   * common case is a household renewing for the same three children, and
+   * hiding a lapsed one is hiding exactly the name they are about to type. The
+   * catalogue still refuses an application for somebody who already holds a
+   * current membership of that type.
+   */
+  async applicantSuggestions(
+    organisationId: string,
+    organisationUserId: string,
+    membershipTypeId: string
+  ): Promise<EntrantSuggestions> {
+    const type = await db.query(
+      `SELECT 1 FROM membership_types WHERE id = $1 AND organisation_id = $2`,
+      [membershipTypeId, organisationId]
+    );
+
+    if (type.rows.length === 0) {
+      // Another club's type, or none. Refused rather than answered: this is
+      // the caller's own names, but the URL should not be a way to ask a club
+      // it has nothing to do with.
+      throw new ValidationError('That membership type could not be found');
+    }
+
+    const held = await db.query(
+      `SELECT m.id, m.first_name, m.last_name, mt.name AS membership_type_name, m.status
+         FROM members m
+         JOIN membership_types mt ON mt.id = m.membership_type_id
+        WHERE m.user_id = $1 AND m.organisation_id = $2
+        ORDER BY m.first_name, m.last_name`,
+      [organisationUserId, organisationId]
+    );
+
+    /*
+     * One row per distinct name, most recently used first — the same shape and
+     * the same reasoning as the entrant suggestions above.
+     */
+    const recent = await db.query(
+      `SELECT first_name, last_name, member_id
+         FROM (
+           SELECT DISTINCT ON (lower(first_name), lower(last_name))
+                  first_name, last_name, member_id, entry_date
+             FROM event_entries
+            WHERE user_id = $1
+            ORDER BY lower(first_name), lower(last_name), entry_date DESC
+         ) AS names
+        ORDER BY entry_date DESC
+        LIMIT ${RECENT_ENTRANTS}`,
+      [organisationUserId]
+    );
+
+    const memberships = held.rows.map((row: any) => ({
+      name: [row.first_name, row.last_name].filter(Boolean).join(' '),
+      /*
+       * The membership id is **not** carried as `memberId`.
+       *
+       * On an entry that field proves eligibility; on an application it would
+       * read as "renew this one", which is a different journey with its own
+       * route (`?renew=`).
+       */
+      memberId: null,
+      /*
+       * It *is* carried as something to fill from. Choosing a name on an
+       * application form is choosing whose details these are, and the club has
+       * a set of answers on file for each of this account's members — asking a
+       * parent to retype what is already stored, three children at a time, is
+       * the thing this whole field exists to stop.
+       */
+      fillFromMembershipId: row.id,
+      detail: row.membership_type_name,
+    }));
+
+    const named = new Set(memberships.map((m) => m.name.trim().toLowerCase()));
+
+    return {
+      memberships,
+      recent: recent.rows
+        .map((row: any) => ({
+          name: `${row.first_name} ${row.last_name}`.trim(),
+          memberId: null,
           detail: null,
         }))
         .filter((s: EntrantSuggestion) => !named.has(s.name.toLowerCase())),

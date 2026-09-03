@@ -26,15 +26,32 @@ const activity = (over: Partial<PublicEvent['activities'][0]> = {}) => ({
   ...over,
 });
 
+/**
+ * The fixture's dates, relative to whenever the suite runs.
+ *
+ * `eventStructuredData` compares `endDate` to now — a finished event offers
+ * nothing — so an event written out as a fixed date is an event that quietly
+ * finishes one morning, taking every `offers` assertion here with it. The same
+ * trap caught `PublicEventPage.test.tsx` on 2 September 2026.
+ *
+ * The deliberately-past overrides below stay literal: 2020 is still in the past
+ * next year.
+ */
+const daysFromNow = (days: number): string =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+/** When entries opened. Named, because one assertion reads it back. */
+const ENTRIES_OPENED = daysFromNow(-30);
+
 const event = (over: Partial<PublicEvent> = {}): PublicEvent => ({
   id: 'ev-1',
   slug: 'spring-show-a1b2c3d4',
   name: 'Spring Show Jumping League',
   description: 'Four rounds over the spring.',
-  startDate: '2026-09-09T00:00:00.000Z',
-  endDate: '2026-09-09T00:00:00.000Z',
-  entriesOpenDate: '2026-08-01T00:00:00.000Z',
-  entriesClosingDate: '2026-09-02T00:00:00.000Z',
+  startDate: daysFromNow(21),
+  endDate: daysFromNow(21),
+  entriesOpenDate: ENTRIES_OPENED,
+  entriesClosingDate: daysFromNow(14),
   entriesLimit: 120,
   placesRemaining: 112,
   eventType: 'Show Jumping',
@@ -42,7 +59,7 @@ const event = (over: Partial<PublicEvent> = {}): PublicEvent => ({
   location: null,
   organisation: { code: 'khpc', name: 'Kildare Hunt Pony Club', currency: 'EUR' },
   activities: [activity()],
-  updatedAt: '2026-08-14T00:00:00.000Z',
+  updatedAt: daysFromNow(-2),
   ...over,
 });
 
@@ -156,7 +173,7 @@ describe('offers', () => {
 
   it('says when entries open, so an offer is not claimed as live early', () => {
     const [offer] = (eventStructuredData(event(), ORIGIN) as any).offers;
-    expect(offer.validFrom).toBe('2026-08-01T00:00:00.000Z');
+    expect(offer.validFrom).toBe(ENTRIES_OPENED);
   });
 
   it('offers nothing for an event that has already happened', () => {

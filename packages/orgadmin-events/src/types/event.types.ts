@@ -49,6 +49,13 @@ export interface EventActivity {
   limitApplicants: boolean;            // Limit Number of Applicants
   applicantsLimit?: number;            // Limit if limitApplicants is true
   allowSpecifyQuantity: boolean;       // Allow ordering multiple entries
+  /**
+   * How many people one of this activity's tickets admits at the gate — 1 for
+   * a day ticket, 4 for a family ticket. Copied onto each ticket at issue, so
+   * changing it does not change what an already-sold ticket is worth.
+   * See docs/GATE_SCANNING.md.
+   */
+  ticketsAdmit?: number;
   useTermsAndConditions: boolean;      // Use Terms and Conditions
   termsAndConditions?: string;         // Rich text T&Cs
   fee: number;                         // Entry fee (0.00 for free)
@@ -106,7 +113,6 @@ export interface EventFormData {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
   // Discount configuration (conditional on entry-discounts capability)
   discountIds?: string[];
@@ -121,6 +127,8 @@ export interface EventActivityFormData {
   limitApplicants: boolean;
   applicantsLimit?: number;
   allowSpecifyQuantity: boolean;
+  /** See `EventActivity.ticketsAdmit`. Defaults to 1. */
+  ticketsAdmit?: number;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;

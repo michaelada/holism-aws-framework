@@ -38,6 +38,8 @@ import { calendarModule } from '@aws-web-framework/orgadmin-calendar';
 import { registrationsModule } from '@aws-web-framework/orgadmin-registrations';
 // @ts-ignore - Module may not have type declarations
 import { ticketingModule } from '@aws-web-framework/orgadmin-ticketing';
+// @ts-ignore - Module may not have type declarations
+import { announcementsModule } from '@aws-web-framework/orgadmin-announcements';
 
 // Debug: Log memberships module on import
 console.log('Memberships module imported:', {
@@ -64,6 +66,7 @@ const ALL_MODULES: ModuleRegistration[] = [
   calendarModule,
   registrationsModule,
   ticketingModule,
+  announcementsModule,
 ];
 
 /**

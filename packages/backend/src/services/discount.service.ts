@@ -5,6 +5,7 @@ import {
   CreateDiscountDto,
   UpdateDiscountDto,
   ModuleType,
+  UsageStats,
 } from '../types/discount.types';
 
 /**
@@ -617,56 +618,81 @@ export class DiscountService {
   }
 
   /**
-   * Get usage statistics for a discount
+   * What a discount has actually taken off, and for whom.
+   *
+   * **Read from the cart line, not from `discount_usage`.** That table is the
+   * one the original design intended — `recordUsage` writes it — but nothing
+   * has ever called `recordUsage`, so it holds no rows in any environment and a
+   * page built on it would report zero uses for a discount used a hundred
+   * times. `cart_items.discount_id` is where a discount is actually recorded
+   * against a purchase, and the cart survives checkout as `ordered`, so the
+   * line is still there afterwards to be counted.
+   *
+   * A **use** is a line on a cart that became an order. Not an open cart, which
+   * is a shopper still thinking, and not an abandoned one. The payment behind
+   * it may still be outstanding — an offline order awaiting a cheque has used
+   * the discount, and the club's next question is who owes what, not whether to
+   * count it.
+   *
+   * Amounts are stored in **minor units** on the cart line and returned in
+   * major ones, because every other money field this API returns is major and a
+   * page that formats one field in cents is worse than one that formats none.
    */
-  async getUsageStats(discountId: string): Promise<any> {
+  async getUsageStats(discountId: string): Promise<UsageStats> {
     try {
-      const result = await db.query(
-        `SELECT 
-          COUNT(*) as "totalUses",
-          SUM(discount_amount) as "totalDiscountGiven",
-          AVG(discount_amount) as "averageDiscountAmount"
-        FROM discount_usage
-        WHERE discount_id = $1`,
+      const totals = await db.query(
+        `SELECT COUNT(*)::int AS uses,
+                COALESCE(SUM(ci.discount_amount), 0)::bigint AS total
+           FROM cart_items ci
+           JOIN carts c ON c.id = ci.cart_id
+          WHERE ci.discount_id = $1 AND c.status = 'ordered'`,
         [discountId]
       );
 
-      const topUsersResult = await db.query(
-        `SELECT 
-          user_id as "userId",
-          COUNT(*) as "usageCount",
-          SUM(discount_amount) as "totalDiscountReceived"
-        FROM discount_usage
-        WHERE discount_id = $1
-        GROUP BY user_id
-        ORDER BY "usageCount" DESC
-        LIMIT 10`,
+      /*
+       * Named, not numbered. The column is an `organization_users` id and a
+       * page listing uuids answers nobody's question; the join is left outer so
+       * a member since removed still counts as a use, under whatever the row
+       * still holds.
+       */
+      const byMember = await db.query(
+        `SELECT c.user_id AS "userId",
+                NULLIF(TRIM(CONCAT_WS(' ', ou.first_name, ou.last_name)), '') AS name,
+                COUNT(*)::int AS "usageCount",
+                COALESCE(SUM(ci.discount_amount), 0)::bigint AS total
+           FROM cart_items ci
+           JOIN carts c ON c.id = ci.cart_id
+           LEFT JOIN organization_users ou ON ou.id = c.user_id
+          WHERE ci.discount_id = $1 AND c.status = 'ordered'
+          GROUP BY c.user_id, ou.first_name, ou.last_name
+          ORDER BY "usageCount" DESC, name NULLS LAST
+          LIMIT 10`,
         [discountId]
       );
 
-      // Get discount to check remaining uses
-      const discountResult = await db.query(
-        `SELECT usage_limits FROM discounts WHERE id = $1`,
-        [discountId]
-      );
+      const limits = await db.query(`SELECT usage_limits FROM discounts WHERE id = $1`, [
+        discountId,
+      ]);
 
-      const usageLimits = discountResult.rows[0]?.usage_limits;
-      const totalUses = parseInt(result.rows[0].totalUses, 10);
-      let remainingUses: number | undefined;
-
-      if (usageLimits?.totalUsageLimit) {
-        remainingUses = Math.max(0, usageLimits.totalUsageLimit - totalUses);
-      }
+      const totalUses = totals.rows[0].uses;
+      const totalDiscountGiven = Number(totals.rows[0].total) / 100;
+      const totalUsageLimit = limits.rows[0]?.usage_limits?.totalUsageLimit;
 
       return {
         totalUses,
-        remainingUses,
-        totalDiscountGiven: parseFloat(result.rows[0].totalDiscountGiven || 0),
-        averageDiscountAmount: parseFloat(result.rows[0].averageDiscountAmount || 0),
-        topUsers: topUsersResult.rows.map((row) => ({
+        // Absent, not zero: a discount with no cap has no number to show here,
+        // and `0` would read as one that has run out.
+        remainingUses:
+          typeof totalUsageLimit === 'number'
+            ? Math.max(0, totalUsageLimit - totalUses)
+            : undefined,
+        totalDiscountGiven,
+        averageDiscountAmount: totalUses > 0 ? totalDiscountGiven / totalUses : 0,
+        topUsers: byMember.rows.map((row) => ({
           userId: row.userId,
-          usageCount: parseInt(row.usageCount, 10),
-          totalDiscountReceived: parseFloat(row.totalDiscountReceived),
+          name: row.name ?? undefined,
+          usageCount: row.usageCount,
+          totalDiscountReceived: Number(row.total) / 100,
         })),
       };
     } catch (error) {

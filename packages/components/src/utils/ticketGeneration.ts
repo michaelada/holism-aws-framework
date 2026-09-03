@@ -29,9 +29,28 @@ export const generateQRCodeUUID = (): string => {
 };
 
 /**
- * Generate QR code as data URL
- * @param qrCodeData - The data to encode in the QR code (typically the UUID)
- * @param options - QR code generation options
+ * Generate QR code as data URL.
+ *
+ * ## Why the defaults are what they are
+ *
+ * A ticket's code used to be a 36-character UUID and is now a ~72-character
+ * signed token, which takes the QR from around version 3 to version 6 — a
+ * denser grid in the same square, and therefore smaller modules for a camera to
+ * resolve. Two settings answer that, and they are defaults rather than call-site
+ * decisions because every ticket in the product is read in the same conditions:
+ * a phone, at arm's length, outdoors, often in poor light.
+ *
+ * - **`width: 360`** rather than 300, so a module stays about the same physical
+ *   size as it was before the code grew.
+ * - **`errorCorrectionLevel: 'M'`** — 15% recoverable. The library's default is
+ *   `M` already; it is named here because raising it to `Q` or `H` to "be safe"
+ *   is the tempting change, and it would add another version and shrink the
+ *   modules again. A ticket is read off a screen or clean paper, not off a
+ *   crate in a warehouse.
+ *
+ * @param qrCodeData - What the QR encodes: a signed ticket token, or the bare
+ *   identifier for a ticket issued before signing
+ * @param options - Overrides for the above
  * @returns Promise resolving to data URL of QR code image
  */
 export const generateQRCodeDataURL = async (
@@ -46,8 +65,9 @@ export const generateQRCodeDataURL = async (
   }
 ): Promise<string> => {
   const defaultOptions = {
-    width: 300,
+    width: 360,
     margin: 2,
+    errorCorrectionLevel: 'M' as const,
     color: {
       dark: '#000000',
       light: '#FFFFFF',

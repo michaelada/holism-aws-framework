@@ -35,7 +35,14 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ConfirmDialog, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ConfirmDialog,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 
 interface Venue {
   id: string;
@@ -55,6 +62,11 @@ const VenuesListPage: React.FC = () => {
   
   const [venues, setVenues] = useState<Venue[]>([]);
   const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
+  const sort = useTableSort(filteredVenues, {
+    // North to south. The cell reads "53.512345, -6.541234"; sorted as that
+    // text, a negative longitude decides the order before the latitude does.
+    accessors: { coordinates: (venue) => venue.latitude },
+  });
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   /*
@@ -236,9 +248,15 @@ const VenuesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('events.venues.name')}</TableCell>
-              <TableCell>{t('events.venues.address')}</TableCell>
-              <TableCell>{t('events.venues.coordinates')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('events.venues.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="address">
+                {t('events.venues.address')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="coordinates">
+                {t('events.venues.coordinates')}
+              </SortableTableCell>
               <TableCell align="right">{t('events.venues.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -256,7 +274,7 @@ const VenuesListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredVenues.map((venue) => (
+              sort.rows.map((venue) => (
                 <TableRow key={venue.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

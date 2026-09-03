@@ -15,7 +15,7 @@ Design and all 51 wireframes: [docs/ACCOUNT_USER_APP_WIREFRAMES.md](../../docs/A
 
 | Path | Purpose |
 |---|---|
-| `src/App.tsx` | Routes. `/`, `/switch`, `/:orgCode`, `/:orgCode/register`, `/:orgCode/pending`, `/:orgCode/entries`, `/:orgCode/entries/:entryId`, `/:orgCode/memberships`, `/:orgCode/tickets`, `/:orgCode/tickets/:ticketId`, `/:orgCode/profile`, `/:orgCode/browse/events`, `/:orgCode/browse/memberships`, `/:orgCode/browse/events/:itemId/enter`, `/:orgCode/browse/memberships/:itemId/apply`, `/:orgCode/shop`, `/:orgCode/shop/:itemId`, `/:orgCode/orders`, `/:orgCode/book`, `/:orgCode/book/:calendarId`, `/:orgCode/register-interest`, `/:orgCode/register-interest/:typeId`, `/:orgCode/registrations`, `/:orgCode/payments`, `/confirm-email` (unbranded, anonymous) |
+| `src/App.tsx` | Routes. `/`, `/switch`, `/:orgCode`, `/:orgCode/register`, `/:orgCode/pending`, `/:orgCode/entries`, `/:orgCode/entries/:entryId`, `/:orgCode/memberships`, `/:orgCode/tickets`, `/:orgCode/tickets/:ticketId`, `/:orgCode/profile`, `/:orgCode/browse/events`, `/:orgCode/browse/memberships`, `/:orgCode/browse/events/:itemId/enter`, `/:orgCode/browse/memberships/:itemId/apply`, `/:orgCode/shop`, `/:orgCode/shop/:itemId`, `/:orgCode/orders`, `/:orgCode/book`, `/:orgCode/book/:calendarId`, `/:orgCode/register-interest`, `/:orgCode/register-interest/:typeId`, `/:orgCode/registrations`, `/:orgCode/payments`, `/confirm-email` (unbranded, anonymous), `/scan/:token` (unbranded, anonymous — the gate scanner) |
 | `src/hooks/useAuth.ts` | Keycloak, **`check-sso`** not `login-required` |
 | Keycloak client | **`account-app`**, created by hand — see docs/ACCOUNT_APP_KEYCLOAK_SETUP.md. Served under base path **`/account`**, so both `…/account` and `…/account/*` must be registered as redirect URIs or logout breaks |
 | `src/context/AuthContext.tsx` | Holds the single `useAuth` instance |
@@ -41,7 +41,7 @@ GET  /api/public/organisations?q=        A1 directory        (anonymous)
 GET  /api/public/organisations/:code     A2 + branding       (anonymous)
 GET  /api/account/organisations          A7 switcher
 GET  /api/account/:orgCode/me            resolves the shell
-GET  /api/account/:orgCode/dashboard     B3 — the whole home screen in one call
+GET  /api/account/:orgCode/dashboard     B3 — the whole home screen in one call, announcements included
 POST /api/account/:orgCode/register      A4
 GET  /api/account/:orgCode/entries       C1
 GET  /api/account/:orgCode/entries/:id   C2
@@ -67,6 +67,17 @@ POST /api/account/:orgCode/bookings/:id/cancel   C1 bookings tab (capability: ca
 ---
 
 ## Questions this answers without opening code
+
+**Why are the home page's teasers three across?** `TEASER_COLUMNS` in `HomePage.tsx`, shared by all
+six rows of them. They were four when that column was the whole page; it is `md={8}` once a club has
+notices to show, and four cards in that space squash an event's name into three lines.
+
+**Why does the home page sometimes have a right-hand column?** The club has the `org-announcements`
+capability and something inside its window: `HomeLayout` in `HomePage.tsx` puts the page in `md={8}`
+and the notices in `md={4}`, and with none it renders the page **bare** rather than in a grid that
+happens to be full width — `md={12}` and no wrapper are not the same thing, and the difference shows
+in the margins of every card below. `order: -1` below `md` puts the notices first on a phone. See
+[ORG_ANNOUNCEMENTS.md](../../docs/ORG_ANNOUNCEMENTS.md).
 
 **Why doesn't it force login like orgadmin-shell?** Because A1 and A2 are public. `login-required`
 would bounce every anonymous visitor to Keycloak and make a club's short link unusable for anyone
@@ -102,10 +113,31 @@ deep-links every kind — `/shop/:id`, `/book/:id`, `/register-interest/:id`, an
 `/browse/events/:eventId`. Events alone used to open `/browse/events`, the whole programme with
 every row collapsed, so a member who had already chosen an event was asked to find it again.
 
+**How does a renewal know what to fill in?** The membership id travels from the card — **on C4 and
+on the dashboard alike**, which it did not at first — through the catalogue to the application form
+as `?renew=`, and the form fetches `/memberships/:id/form-answers`: `submission_data` keyed by field
+name, plus `memberName`, so the form can say who it is for as well. Only fields the chosen type asks
+for are carried, and a failed lookup leaves a blank but working form. Not inferred from "their most
+recent membership": a parent holds several.
+
+**And it follows the applicant — on an entry as well as an application.** Choosing a person fills the
+form from **their** membership's stored answers, matching by field name, so an entry form asking a
+rider's date of birth gets the one the club already holds. What identifies them differs by journey:
+an entry has `memberId` on the suggestion (it needs it for eligibility anyway), an application has
+`fillFromMembershipId` — *there are answers on file for this name*, weaker than `memberId` and
+deliberately so. Choosing a name with nothing on file takes back what was filled. The member's own
+typing is never overwritten and never cleared; everything the form filled in is the form's to take
+back. See docs/MEMBERSHIP_RENEWAL_PREFILL.md.
+
 **Why is a grid one gutter out of line?** Because it is a direct child of a `Stack`. A spaced
 `Grid container` works by taking a negative margin that its items' padding gives back, and `Stack`
 sets `margin: 0` on every direct child — so the padding stays and the row starts a gutter in. Wrap
 the container in a `Box`, as every section of `HomePage` does. See docs/HOME_COMING_UP_ALIGNMENT.md.
+
+**Why does a `?param=` test render an empty document?** Because the effect that consumes it calls
+`scrollIntoView`, which jsdom does not implement — the throw happens during the effect flush and
+unmounts the tree, so the failure reads as missing text rather than a missing browser API.
+`src/test/setup.ts` stubs it, beside `matchMedia`.
 
 **What an activity row shows:** name, description, then fee and places. `ActivityRow` in
 `BrowsePage` renders all three; the description comes straight off `CatalogueActivity.description`,
@@ -526,6 +558,12 @@ a different name each time. `EntrantNameField` comes from `packages/components`;
 `GET /catalogue/activities/:activityId/entrants?q=`, which returns *both* how the field should
 behave (`autocomplete`, `allowFreeText`) and any matches, so one call draws the field.
 
+**An activity may be entered more than once** — one rider on two horses, a parent with three
+children, a secretary entering half the club. Nothing refuses a repeat: not the catalogue, not the
+add-to-cart guard, not the name field, which says *Already entered* beside a member as information
+and still lets them be chosen. Capacity is untouched; two entries take two places. See
+[docs/DATE_FIELD_AND_REPEAT_ENTRIES.md](../../docs/DATE_FIELD_AND_REPEAT_ENTRIES.md).
+
 The completion is over **the club's whole roster**, not the caller's own memberships — entries are
 made on other people's behalf constantly. A typed name is accepted only where entries are open to
 all; members-only and federation-wide activities take a chosen member or nothing. A member's own
@@ -536,6 +574,16 @@ their own.
 
 The basket line carries `entrantName` and, when one was chosen, `memberId`. See
 [docs/ENTRANT_NAME.md](../../docs/ENTRANT_NAME.md).
+
+**A membership application asks the same question**, with the same field: *"Who is this membership
+for?"*. What differs is that there is **no roster search** — an application creates a membership
+rather than resolving to one, so the field is a plain box with this account's own names beneath it,
+from `GET /catalogue/membership-types/:typeId/applicant-suggestions` (memberships held, whatever
+their state, and names used on entries). The line carries `memberName`, and `createMembership` uses
+it — before this, every membership took the **account holder's** name, so a parent joining three
+children produced three identical records. Neither an entry form nor a membership form asks for the
+name any more; the seed's field library no longer contains one. See
+[docs/ENTRY_FORMS_DO_NOT_ASK_THE_NAME.md](../../docs/ENTRY_FORMS_DO_NOT_ASK_THE_NAME.md).
 
 `HomePage` shows `dashboard.externalEvents` in its own section: events other clubs of the same type
 have opened, badged, linking to `/{urlCode}` of the organiser. Deliberately not merged into
@@ -982,3 +1030,40 @@ both the opening and closing moments, once open just the deadline. The chip is f
 "20 places left". The latter implies a race that has not started and a number that will have moved
 by the time it has. `CatalogueActivity` carries `entriesLimit` alongside `placesRemaining` so the
 cap is accurate even when some entries already exist.
+
+---
+
+## The gate scanner — `/scan/:token`
+
+A ticket scanner for whoever is on the gate at a club's event, opened from a link the club sends
+them. Unbranded and anonymous, alongside `/confirm-email` and outside `/:orgCode`.
+
+**Why it is in this app rather than the org-admin.** Three reasons, and the first is the substance:
+this app is a PWA with a service worker and a response cache already, and scanning has to keep
+working in a field with no signal. Its Keycloak client uses `check-sso`, so an anonymous route is
+not bounced to a login page. And it is already the app with an unbranded anonymous route opened cold
+from a link.
+
+**The steward has no account.** They give their name and a six-digit PIN, and the server answers
+with a device token that reaches one event's manifest and the right to admit against it. The name is
+the point: it is written onto every scan, so a club reading the history afterwards sees a person.
+
+**It does not use `useAccountApi`.** That hook carries a member's Keycloak token, caches by member
+id, and treats offline as a failure — all three are wrong here. `src/scan/gateScan.ts` is the
+scanner's own client, its `localStorage` (device, manifest, queue, each read behind a `try`), and
+`decideLocally`, which applies the server's rule to the cached manifest when there is no signal.
+
+**The scanner reads a signed token, and does not verify it.** `readScannedCode` in
+`src/scan/gateScan.ts` parses the format the backend mints — identifier, event, expiry — and uses
+the claims for the two things the manifest cannot answer: a code that is not ours at all (a QR off a
+poster) and a ticket for **another event**, which is simply absent from a one-event manifest and
+would otherwise read as "not recognised". The HMAC is not checked here and cannot be: the key never
+leaves the server, which is the whole reason it is an HMAC. Authenticity offline comes from the
+manifest; online, the server verifies. A bare UUID from a ticket issued before signing still reads.
+See [docs/SIGNED_TICKET_CODES.md](../../docs/SIGNED_TICKET_CODES.md).
+
+**`html5-qrcode`** is the only new dependency, and it is this package's alone. Nothing else in the
+repository reads a QR code — `qrcode` writes them.
+
+See [docs/GATE_SCANNING.md](../../docs/GATE_SCANNING.md) and
+[docs/GATE_SCANNING_WIREFRAMES.md](../../docs/GATE_SCANNING_WIREFRAMES.md).

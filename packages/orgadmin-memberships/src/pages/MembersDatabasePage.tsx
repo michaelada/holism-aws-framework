@@ -57,7 +57,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
 import { useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useApi } from '@aws-web-framework/orgadmin-core';
+import { useApi, SortableTableCell, useTableSort } from '@aws-web-framework/orgadmin-core';
 import { useOrganisation } from '@aws-web-framework/orgadmin-core';
 import type { Member, MemberFilter, CreateMemberFilterDto } from '../types/membership.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
@@ -125,6 +125,25 @@ const MembersDatabasePage: React.FC = () => {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
+
+  /*
+   * One sort, drawn on the table and obeyed by the phone's card list too.
+   *
+   * The cards have no headings to click, so on a phone this is only ever the
+   * order the list arrives in — but an administrator who sorts on a laptop and
+   * then narrows the browser should not watch the rows jump back.
+   */
+  const sort = useTableSort(filteredMembers, {
+    accessors: {
+      // Whatever the row actually shows: a member with no separate first and
+      // last name still has one.
+      name: (member) => member.name || `${member.lastName ?? ''} ${member.firstName ?? ''}`.trim(),
+      membershipTypeName: (member) => member.membershipTypeName || member.membershipTypeId,
+      // Alphabetical by the labels themselves, so members sharing one land
+      // together — a count would order by how many, which nobody is asking.
+      labels: (member) => [...member.labels].sort().join(' '),
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'current' | 'elapsed' | 'all'>('current');
@@ -639,7 +658,7 @@ const MembersDatabasePage: React.FC = () => {
               {t('memberships.noMembersFound')}
             </Box>
           ) : (
-            filteredMembers.map((member, index) => {
+            sort.rows.map((member, index) => {
               const selected = selectedMembers.includes(member.id);
               return (
                 <Box key={member.id}>
@@ -787,14 +806,30 @@ const MembersDatabasePage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>{t('memberships.table.membershipType')}</TableCell>
-              <TableCell>{t('memberships.table.name')}</TableCell>
-              <TableCell>{t('memberships.table.membershipNumber')}</TableCell>
-              <TableCell>{t('memberships.table.dateLastRenewed')}</TableCell>
-              <TableCell>{t('memberships.table.status')}</TableCell>
-              <TableCell>{t('memberships.table.validUntil')}</TableCell>
-              <TableCell>{t('memberships.table.labels')}</TableCell>
-              <TableCell>{t('memberships.table.processed')}</TableCell>
+              <SortableTableCell sort={sort} field="membershipTypeName">
+                {t('memberships.table.membershipType')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('memberships.table.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="membershipNumber">
+                {t('memberships.table.membershipNumber')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="dateLastRenewed">
+                {t('memberships.table.dateLastRenewed')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('memberships.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="validUntil">
+                {t('memberships.table.validUntil')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="labels">
+                {t('memberships.table.labels')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="processed">
+                {t('memberships.table.processed')}
+              </SortableTableCell>
               <TableCell
                 align="right"
                 sx={{
@@ -830,7 +865,7 @@ const MembersDatabasePage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMembers.map((member) => (
+              sort.rows.map((member) => (
                 <TableRow key={member.id} hover>
                   <TableCell padding="checkbox">
                     <Checkbox

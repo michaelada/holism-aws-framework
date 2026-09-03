@@ -82,6 +82,11 @@ export const calendarModule: ModuleRegistration = {
       component: lazy(() => import('./pages/EditDiscountPage')),
       capability: 'calendar-discounts',
     },
+    {
+      path: 'calendar/discounts/:id/stats',
+      component: lazy(() => import('./pages/DiscountUsagePage')),
+      capability: 'calendar-discounts',
+    },
   ],
   subMenuItems: [
     {

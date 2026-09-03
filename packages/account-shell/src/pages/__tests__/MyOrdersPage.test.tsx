@@ -130,3 +130,39 @@ describe('MyOrdersPage', () => {
     });
   });
 });
+
+/**
+ * Opened at one order.
+ *
+ * A payment's detail links here as `?order={id}` — the shop has no page for a
+ * single order, so this list is the destination. Sending the member to a page
+ * of orders with nothing marking the one they clicked is what this replaced:
+ * a four-line basket used to land on the confirmation for the whole payment.
+ */
+describe('MyOrdersPage — arriving for one order', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+    mockExecute.mockResolvedValue([order()]);
+  });
+
+  it('marks the order named in the URL', async () => {
+    // The query is what matters here, not the path pattern: `useSearchParams`
+    // reads it whichever route the page is mounted at.
+    renderWithProviders(<MyOrdersPage />, {
+      route: '/khpc/orders?order=order-1',
+      path: '/:orgCode/orders',
+    });
+    await screen.findByText('Club polo');
+    expect(document.getElementById('order-order-1')).toBeInTheDocument();
+    expect(document.getElementById('order-order-1')!.className).toMatch(/MuiCard/);
+  });
+
+  it('marks nothing when the list was opened on its own', async () => {
+    renderWithProviders(<MyOrdersPage />, { route: '/khpc/orders', path: '/:orgCode/orders' });
+
+    await screen.findByText('Club polo');
+    // The card is still there; it simply carries no outline.
+    expect(document.getElementById('order-order-1')).toBeInTheDocument();
+  });
+});

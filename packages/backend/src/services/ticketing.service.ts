@@ -1,5 +1,7 @@
 import { db } from '../database/pool';
+import { signTicketCode, ticketIdFromCode } from './ticket-token.service';
 import { logger } from '../config/logger';
+import { fileUploadService } from './file-upload.service';
 
 /**
  * Event Ticketing Config interface
@@ -12,8 +14,13 @@ export interface EventTicketingConfig {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo: boolean;
   ticketBackgroundColor?: string;
+  /** The S3 key. A signed URL is derived from it at read time. */
+  ticketImageKey?: string | null;
+  ticketImagePlacement?: 'header' | 'footer' | 'topRight' | 'background' | null;
+  ticketLayout?: 'stacked' | 'sideBySide' | 'compact';
+  /** Filled in only where the caller is going to render the ticket. */
+  ticketImageUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +45,14 @@ export interface ElectronicTicket {
   scanDate?: Date;
   scanLocation?: string;
   scanCount: number;
+  /**
+   * The string printed into the QR code: a signed token, or the bare `qrCode`
+   * for a ticket issued before signing. **This is what a scanner reads**;
+   * `qrCode` remains the identifier everything is looked up by.
+   */
+  qrToken: string;
+  /** How many people this ticket admits — 1 unless the activity says more. */
+  admits: number;
   status: 'issued' | 'cancelled' | 'expired';
   ticketData: any;
   createdAt: Date;
@@ -51,6 +66,10 @@ export interface TicketScanHistory {
   id: string;
   ticketId: string;
   scanDate: Date;
+  /** Who was on the gate, if this scan came from one. */
+  scannedByName?: string | null;
+  /** Why it was turned away, if it was. See docs/GATE_SCANNING.md. */
+  refusalReason?: string | null;
   scanLocation?: string;
   scannedBy?: string;
   scanResult: string;
@@ -68,9 +87,22 @@ export interface CreateTicketingConfigDto {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
+  ticketImagePlacement?: TicketImagePlacement | null;
+  ticketLayout?: TicketLayout;
 }
+
+/** Where a ticket's image goes. `topRight` is a ticket's own, for a small mark. */
+export type TicketImagePlacement = 'header' | 'footer' | 'topRight' | 'background';
+export type TicketLayout = 'stacked' | 'sideBySide' | 'compact';
+
+export const TICKET_IMAGE_PLACEMENTS: TicketImagePlacement[] = [
+  'header',
+  'footer',
+  'topRight',
+  'background',
+];
+export const TICKET_LAYOUTS: TicketLayout[] = ['stacked', 'sideBySide', 'compact'];
 
 /**
  * DTO for updating ticketing config
@@ -81,8 +113,9 @@ export interface UpdateTicketingConfigDto {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
+  ticketImagePlacement?: TicketImagePlacement | null;
+  ticketLayout?: TicketLayout;
 }
 
 /**
@@ -115,6 +148,57 @@ export interface TicketedEventSummary {
 /**
  * Service for managing event ticketing
  */
+/**
+ * Refused rather than silently corrected.
+ *
+ * The database has the same constraint; this is what turns its refusal into a
+ * sentence, and stops a typo becoming a ticket that renders as something the
+ * club did not choose.
+ */
+function assertPlacement(placement: unknown): TicketImagePlacement | null {
+  if (placement === null || placement === undefined || placement === '') return null;
+  if (!TICKET_IMAGE_PLACEMENTS.includes(placement as TicketImagePlacement)) {
+    throw new Error('Choose where the image goes: header, footer, topRight or background');
+  }
+  return placement as TicketImagePlacement;
+}
+
+function assertLayout(layout: unknown): TicketLayout {
+  // Absent means the default, which is what every ticket looked like before a
+  // club could choose.
+  if (layout === null || layout === undefined || layout === '') return 'stacked';
+  if (!TICKET_LAYOUTS.includes(layout as TicketLayout)) {
+    throw new Error('Choose a layout: stacked, sideBySide or compact');
+  }
+  return layout as TicketLayout;
+}
+
+/** How long a browser may use a ticket image URL before asking again. */
+const TICKET_IMAGE_URL_TTL_SECONDS = 3600;
+
+/** Everything the shared renderer needs, gathered from four tables. */
+export interface TicketForRendering {
+  ticketReference: string;
+  qrCode: string;
+  /** The string the QR encodes: a signed token, or the identifier if unsigned. */
+  qrToken: string;
+  customerName: string;
+  customerEmail: string | null;
+  eventName: string;
+  eventDescription: string | null;
+  activityName: string | null;
+  activityDescription: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  headerText: string | null;
+  instructions: string | null;
+  footerText: string | null;
+  backgroundColour: string | null;
+  imageUrl: string | null;
+  imagePlacement: TicketImagePlacement | null;
+  layout: TicketLayout;
+}
+
 export class TicketingService {
   /**
    * Convert database row to EventTicketingConfig object
@@ -128,8 +212,15 @@ export class TicketingService {
       ticketInstructions: row.ticket_instructions,
       ticketFooterText: row.ticket_footer_text,
       ticketValidityPeriod: row.ticket_validity_period,
-      includeEventLogo: row.include_event_logo,
       ticketBackgroundColor: row.ticket_background_color,
+      /*
+       * The key stays on the row; what leaves here is a signed URL, filled in
+       * by `withImageUrl` where a caller needs to render the ticket. A URL in
+       * the column would tie every row to a bucket name.
+       */
+      ticketImageKey: row.ticket_image_key ?? null,
+      ticketImagePlacement: row.ticket_image_key ? (row.ticket_image_placement ?? null) : null,
+      ticketLayout: row.ticket_layout ?? 'stacked',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -143,6 +234,13 @@ export class TicketingService {
       id: row.id,
       ticketReference: row.ticket_reference,
       qrCode: row.qr_code,
+      /*
+       * What goes in the QR. A signed token where the ticket has one, and the
+       * bare identifier where it does not — a ticket issued before signing has
+       * that identifier in an email nobody can recall, and the screen must scan
+       * the same as the paper.
+       */
+      qrToken: row.qr_token ?? row.qr_code,
       eventId: row.event_id,
       eventActivityId: row.event_activity_id,
       eventEntryId: row.event_entry_id,
@@ -156,6 +254,7 @@ export class TicketingService {
       scanDate: row.scan_date,
       scanLocation: row.scan_location,
       scanCount: row.scan_count,
+      admits: row.admits ?? 1,
       status: row.status,
       ticketData: row.ticket_data,
       createdAt: row.created_at,
@@ -224,8 +323,9 @@ export class TicketingService {
       const result = await db.query(
         `INSERT INTO event_ticketing_config 
          (event_id, generate_electronic_tickets, ticket_header_text, ticket_instructions,
-          ticket_footer_text, ticket_validity_period, include_event_logo, ticket_background_color)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          ticket_footer_text, ticket_validity_period, ticket_background_color,
+          ticket_image_placement, ticket_layout)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           data.eventId,
@@ -234,8 +334,9 @@ export class TicketingService {
           data.ticketInstructions || null,
           data.ticketFooterText || null,
           data.ticketValidityPeriod || null,
-          data.includeEventLogo || false,
           data.ticketBackgroundColor || null,
+          assertPlacement(data.ticketImagePlacement),
+          assertLayout(data.ticketLayout),
         ]
       );
 
@@ -276,13 +377,17 @@ export class TicketingService {
         updates.push(`ticket_validity_period = $${paramCount++}`);
         values.push(data.ticketValidityPeriod || null);
       }
-      if (data.includeEventLogo !== undefined) {
-        updates.push(`include_event_logo = $${paramCount++}`);
-        values.push(data.includeEventLogo);
-      }
       if (data.ticketBackgroundColor !== undefined) {
         updates.push(`ticket_background_color = $${paramCount++}`);
         values.push(data.ticketBackgroundColor || null);
+      }
+      if (data.ticketImagePlacement !== undefined) {
+        updates.push(`ticket_image_placement = $${paramCount++}`);
+        values.push(assertPlacement(data.ticketImagePlacement));
+      }
+      if (data.ticketLayout !== undefined) {
+        updates.push(`ticket_layout = $${paramCount++}`);
+        values.push(assertLayout(data.ticketLayout));
       }
 
       values.push(eventId);
@@ -388,6 +493,153 @@ export class TicketingService {
   /**
    * Get ticketing configuration for an event
    */
+  /**
+   * Everything a ticket needs to be drawn.
+   *
+   * A ticket knows its own reference and its holder, and nothing else: the
+   * event's name and dates, the activity's name, and both descriptions live on
+   * other tables, and `ticket_data` is written as `{}`. The club's design —
+   * words, colours, picture, layout — is on the ticketing config.
+   *
+   * **Joined on read rather than copied at issue.** Copying would leave every
+   * ticket already issued blank, and would freeze a description the club later
+   * corrects — a club that fixes a typo in its instructions means it to reach
+   * the tickets it has already sent.
+   */
+  async getTicketForRendering(ticketId: string): Promise<TicketForRendering | null> {
+    const result = await db.query(
+      `SELECT t.id, t.ticket_reference, t.qr_code, t.customer_name, t.customer_email,
+              t.qr_token, t.valid_from, t.valid_until, t.scan_status, t.status,
+              e.name AS event_name, e.description AS event_description,
+              e.start_date, e.end_date,
+              a.name AS activity_name, a.description AS activity_description,
+              c.ticket_header_text, c.ticket_instructions, c.ticket_footer_text,
+              c.ticket_background_color, c.ticket_image_key, c.ticket_image_placement,
+              c.ticket_layout
+         FROM electronic_tickets t
+         JOIN events e ON e.id = t.event_id
+         LEFT JOIN event_activities a ON a.id = t.event_activity_id
+         LEFT JOIN event_ticketing_config c ON c.event_id = t.event_id
+        WHERE t.id = $1`,
+      [ticketId]
+    );
+
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+
+    return {
+      ticketReference: row.ticket_reference,
+      qrCode: row.qr_code,
+      // What the QR is drawn from — see `ElectronicTicket.qrToken`.
+      qrToken: row.qr_token ?? row.qr_code,
+      customerName: row.customer_name,
+      customerEmail: row.customer_email,
+      eventName: row.event_name,
+      eventDescription: row.event_description ?? null,
+      activityName: row.activity_name ?? null,
+      activityDescription: row.activity_description ?? null,
+      startDate: row.start_date ? new Date(row.start_date).toISOString() : null,
+      endDate: row.end_date ? new Date(row.end_date).toISOString() : null,
+      headerText: row.ticket_header_text ?? null,
+      instructions: row.ticket_instructions ?? null,
+      footerText: row.ticket_footer_text ?? null,
+      backgroundColour: row.ticket_background_color ?? null,
+      // Null placement where there is no picture: a "background" with nothing
+      // behind it is a plain dark rectangle nobody chose.
+      imagePlacement: row.ticket_image_key ? (row.ticket_image_placement ?? null) : null,
+      imageUrl: row.ticket_image_key ? await this.signImage(row.ticket_image_key) : null,
+      layout: row.ticket_layout ?? 'stacked',
+    };
+  }
+
+  /**
+   * A signed URL for the ticket's picture, or nothing.
+   *
+   * Quiet on failure: the picture is decoration and the ticket is the code. A
+   * ticket that will not render because an S3 object went astray is a ticket
+   * nobody can get through the gate with.
+   */
+  private async signImage(key: string): Promise<string | null> {
+    try {
+      return await fileUploadService.getFileUrl(key, TICKET_IMAGE_URL_TTL_SECONDS);
+    } catch (error) {
+      logger.warn('Could not sign a ticket image URL', { key, error });
+      return null;
+    }
+  }
+
+  /** Attach an uploaded image to an event's ticket design. */
+  async setTicketImage(
+    eventId: string,
+    image: { s3Key: string; mimeType: string; placement?: string | null }
+  ): Promise<{ config: EventTicketingConfig; previousKey: string | null }> {
+    const previous = await db.query(
+      `SELECT ticket_image_key FROM event_ticketing_config WHERE event_id = $1`,
+      [eventId]
+    );
+    if (previous.rows.length === 0) {
+      throw new Error('Ticketing configuration not found');
+    }
+
+    const result = await db.query(
+      `UPDATE event_ticketing_config
+          SET ticket_image_key = $2, ticket_image_mime = $3,
+              ticket_image_placement = COALESCE($4, ticket_image_placement, 'header'),
+              updated_at = NOW()
+        WHERE event_id = $1
+        RETURNING *`,
+      [eventId, image.s3Key, image.mimeType, assertPlacement(image.placement)]
+    );
+
+    return {
+      config: this.rowToTicketingConfig(result.rows[0]),
+      previousKey: previous.rows[0].ticket_image_key ?? null,
+    };
+  }
+
+  /**
+   * Forget the picture, and report the key that was there.
+   *
+   * Read before the update rather than from `RETURNING`, which gives the new
+   * row — the same trap `platform_posts` fell into, where every replaced image
+   * stayed in the bucket with nothing left knowing its key.
+   */
+  async clearTicketImage(
+    eventId: string
+  ): Promise<{ config: EventTicketingConfig; previousKey: string | null }> {
+    const previous = await db.query(
+      `SELECT ticket_image_key FROM event_ticketing_config WHERE event_id = $1`,
+      [eventId]
+    );
+    if (previous.rows.length === 0) {
+      throw new Error('Ticketing configuration not found');
+    }
+
+    const result = await db.query(
+      `UPDATE event_ticketing_config
+          SET ticket_image_key = NULL, ticket_image_mime = NULL,
+              ticket_image_placement = NULL, updated_at = NOW()
+        WHERE event_id = $1
+        RETURNING *`,
+      [eventId]
+    );
+
+    return {
+      config: this.rowToTicketingConfig(result.rows[0]),
+      previousKey: previous.rows[0].ticket_image_key ?? null,
+    };
+  }
+
+  /** The config with a signed image URL, for a screen that renders the ticket. */
+  async getTicketingConfigForDesign(eventId: string): Promise<EventTicketingConfig | null> {
+    const config = await this.getTicketingConfigByEvent(eventId);
+    if (!config) return null;
+    return {
+      ...config,
+      ticketImageUrl: config.ticketImageKey ? await this.signImage(config.ticketImageKey) : null,
+    };
+  }
+
   async getTicketingConfigByEvent(eventId: string): Promise<EventTicketingConfig | null> {
     try {
       const result = await db.query(
@@ -430,10 +682,12 @@ export class TicketingService {
       `SELECT en.id, en.event_id, en.event_activity_id, en.user_id,
               en.first_name, en.last_name, en.email,
               e.start_date, e.end_date,
-              c.generate_electronic_tickets, c.ticket_validity_period
+              c.generate_electronic_tickets, c.ticket_validity_period,
+              a.tickets_admit
        FROM event_entries en
        JOIN events e ON e.id = en.event_id
        LEFT JOIN event_ticketing_config c ON c.event_id = en.event_id
+       LEFT JOIN event_activities a ON a.id = en.event_activity_id
        WHERE en.id = $1`,
       [eventEntryId]
     );
@@ -475,11 +729,12 @@ export class TicketingService {
     const result = await db.query(
       `INSERT INTO electronic_tickets
          (ticket_reference, event_id, event_activity_id, event_entry_id, user_id,
-          customer_name, customer_email, valid_from, valid_until, status, ticket_data)
+          customer_name, customer_email, valid_from, valid_until, status, ticket_data,
+          admits)
        VALUES
          ('TKT-' || to_char(NOW(), 'YYYY') || '-' ||
             lpad(nextval('electronic_ticket_reference_seq')::text, 6, '0'),
-          $1, $2, $3, $4, $5, $6, $7, $8, 'issued', '{}'::jsonb)
+          $1, $2, $3, $4, $5, $6, $7, $8, 'issued', '{}'::jsonb, $9)
        ON CONFLICT (event_entry_id) DO NOTHING
        RETURNING *`,
       [
@@ -491,6 +746,13 @@ export class TicketingService {
         row.email,
         validFrom,
         validUntil,
+        /*
+         * Copied onto the ticket rather than read live through a join at the
+         * gate, because it is what the holder was sold: a club that changes the
+         * activity in March must not change what a February ticket lets
+         * somebody through with. Entries with no activity admit one.
+         */
+        Math.max(1, Number(row.tickets_admit ?? 1)),
       ]
     );
 
@@ -503,8 +765,33 @@ export class TicketingService {
       return existing.rows.length ? this.rowToTicket(existing.rows[0]) : null;
     }
 
-    logger.info(`Issued ticket ${result.rows[0].ticket_reference} for entry ${eventEntryId}`);
-    return this.rowToTicket(result.rows[0]);
+    /*
+     * Signed after the insert, not before, because the token contains the
+     * `qr_code` the database generated. A second statement rather than a
+     * trigger or a generated column: the key lives in this process, not in
+     * Postgres.
+     *
+     * A failure here is **not** fatal to issuing. The ticket already exists and
+     * is valid; without a token it simply carries its plain identifier, which
+     * is what every ticket carried before signing existed.
+     */
+    const issued = result.rows[0];
+    const token = signTicketCode(issued.qr_code, issued.event_id, issued.valid_until);
+
+    if (token) {
+      const signed = await db.query(
+        `UPDATE electronic_tickets SET qr_token = $2, updated_at = NOW()
+          WHERE id = $1 RETURNING *`,
+        [issued.id, token]
+      );
+      if (signed.rows.length > 0) {
+        logger.info(`Issued ticket ${signed.rows[0].ticket_reference} for entry ${eventEntryId}`);
+        return this.rowToTicket(signed.rows[0]);
+      }
+    }
+
+    logger.info(`Issued ticket ${issued.ticket_reference} for entry ${eventEntryId}`);
+    return this.rowToTicket(issued);
   }
 
   /**
@@ -533,9 +820,19 @@ export class TicketingService {
    */
   async getTicketByQRCode(qrCode: string): Promise<ElectronicTicket | null> {
     try {
+      /*
+       * The presented code may be a signed token or the bare identifier a
+       * pre-signing ticket carries; either resolves to the identifier the row
+       * is keyed by. A code that is neither — a forgery, or a QR from another
+       * system entirely — resolves to nothing and is answered as *not found*,
+       * which is what it is.
+       */
+      const identifier = ticketIdFromCode(qrCode);
+      if (!identifier) return null;
+
       const result = await db.query(
         'SELECT * FROM electronic_tickets WHERE qr_code = $1',
-        [qrCode]
+        [identifier]
       );
 
       if (result.rows.length === 0) {
@@ -637,6 +934,14 @@ export class TicketingService {
         scanDate: row.scan_date,
         scanLocation: row.scan_location,
         scannedBy: row.scanned_by,
+        /*
+         * The steward's name as they typed it at the gate. Written onto the
+         * row rather than joined, because the device it came from is deleted
+         * with its session and the history has to outlive it.
+         */
+        scannedByName: row.scanned_by_name ?? null,
+        /* Set on the presentations that were turned away. */
+        refusalReason: row.refusal_reason ?? null,
         scanResult: row.scan_result,
         notes: row.notes,
         createdAt: row.created_at,

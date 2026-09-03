@@ -230,6 +230,32 @@ export class StripeLodgementSource implements LodgementSource {
         throw new NotFoundError('No such lodgement');
       }
 
+      /*
+       * A payout somebody created by hand cannot be itemised.
+       *
+       * Stripe refuses `balanceTransactions.list({ payout })` for a **manual**
+       * payout — "Balance transaction history can only be filtered on automatic
+       * transfers, not manual" — and there is no other way to ask what went
+       * into one. Production payouts are automatic, so this is a state a club
+       * meets only when somebody has paid out by hand from the dashboard or the
+       * API, which is exactly what testing this screen involves.
+       *
+       * Reported as what it is. It arrived as "Stripe could not be reached just
+       * now", which sends a developer to look at their network and a club to
+       * ring somebody — for a permanent, explicable refusal.
+       */
+      if (
+        stripeError.statusCode === 400 &&
+        /only be filtered on automatic transfers/i.test(stripeError.message ?? '')
+      ) {
+        throw new AppError(
+          422,
+          'LODGEMENT_NOT_ITEMISED',
+          'Stripe cannot break down a payout that was created by hand. The amount and its status are ' +
+            'shown above; payouts Stripe makes on the schedule are itemised in full.'
+        );
+      }
+
       throw new AppError(502, 'STRIPE_UNAVAILABLE', 'Stripe could not be reached just now.');
     }
   }

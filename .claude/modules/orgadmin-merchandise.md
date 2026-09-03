@@ -27,6 +27,7 @@ merchandise discounts.
 | `merchandise/discounts` | `DiscountsListPage` | `merchandise-discounts` |
 | `merchandise/discounts/new` | `CreateDiscountPage` | `merchandise-discounts` |
 | `merchandise/discounts/:id/edit` | `EditDiscountPage` | `merchandise-discounts` |
+| `merchandise/discounts/:id/stats` | `DiscountUsagePage` (from `orgadmin-events`) | `merchandise-discounts` |  <!-- where the list's View Usage icon goes; see docs/DISCOUNT_USAGE_PAGE.md -->
 
 ## Layout
 

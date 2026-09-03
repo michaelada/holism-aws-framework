@@ -77,6 +77,11 @@ export const merchandiseModule: ModuleRegistration = {
       component: lazy(() => import('./pages/EditDiscountPage')),
       capability: 'merchandise-discounts',
     },
+    {
+      path: 'merchandise/discounts/:id/stats',
+      component: lazy(() => import('./pages/DiscountUsagePage')),
+      capability: 'merchandise-discounts',
+    },
   ],
   subMenuItems: [
     {

@@ -301,6 +301,45 @@ export class StripeProvider implements PaymentProvider {
    * "this genuinely broke". A failure to *read* the intent is reported as not
    * settled, so the caller raises the original error rather than swallowing it.
    */
+  /**
+   * What Stripe currently says about this intent.
+   *
+   * The states are mapped rather than passed through, because the caller acts
+   * on what has happened to the money, not on Stripe's vocabulary:
+   * `requires_capture` is an authorisation waiting to be settled, and
+   * everything from `requires_payment_method` to `requires_action` is a payment
+   * still in flight — a member part-way through 3-D Secure has not failed.
+   *
+   * Never throws. A provider that cannot be reached is `unknown`, and the
+   * caller leaves the payment exactly as it found it.
+   */
+  async getPaymentState(
+    providerTransactionId: string
+  ): Promise<'authorised' | 'succeeded' | 'failed' | 'pending' | 'unknown'> {
+    if (!this.client) return 'unknown';
+
+    try {
+      const intent = await this.client.paymentIntents.retrieve(providerTransactionId);
+
+      switch (intent.status) {
+        case 'succeeded':
+          return 'succeeded';
+        case 'requires_capture':
+          return 'authorised';
+        case 'canceled':
+          return 'failed';
+        default:
+          return 'pending';
+      }
+    } catch (error) {
+      logger.warn('Could not read a payment intent from Stripe', {
+        providerTransactionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return 'unknown';
+    }
+  }
+
   private async alreadySettled(
     providerTransactionId: string,
     ...states: string[]

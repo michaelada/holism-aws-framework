@@ -20,6 +20,14 @@ export interface EventActivity {
    * this organisation. See docs/MEMBERS_ONLY_ENTRIES.md.
    */
   entryEligibility: 'all' | 'members';
+  /**
+   * How many people one of this activity's tickets admits at the gate.
+   *
+   * One for a day ticket, four for a family ticket, a carful for a car pass.
+   * Copied onto each ticket at issue, so changing it here does not change what
+   * a ticket already sold lets somebody through with.
+   */
+  ticketsAdmit: number;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
@@ -44,6 +52,7 @@ export interface CreateEventActivityDto {
   applicantsLimit?: number;
   allowSpecifyQuantity?: boolean;
   entryEligibility?: 'all' | 'members';
+  ticketsAdmit?: number;
   useTermsAndConditions?: boolean;
   termsAndConditions?: string;
   fee?: number;
@@ -52,6 +61,19 @@ export interface CreateEventActivityDto {
   chequePaymentInstructions?: string;
   discountIds?: string[];
 }
+
+/**
+ * How many a ticket admits, made safe.
+ *
+ * The column has a `>= 1` check, so a nonsense payload would otherwise be a
+ * 500 from the database rather than an activity that admits one person. Zero
+ * is not a meaningful setting: an activity that admits nobody is an activity
+ * that should not be ticketed.
+ */
+const admits = (value: unknown): number => {
+  const parsed = Math.floor(Number(value));
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
+};
 
 /**
  * Service for managing event activities
@@ -75,6 +97,7 @@ export class EventActivityService {
       // migration ran, or by a query that does not name it, must still be a
       // valid activity rather than one with an undefined entry rule.
       entryEligibility: row.entry_eligibility === 'members' ? 'members' : 'all',
+      ticketsAdmit: Number(row.tickets_admit ?? 1),
       useTermsAndConditions: row.use_terms_and_conditions,
       termsAndConditions: row.terms_and_conditions,
       fee: parseFloat(row.fee),
@@ -140,8 +163,8 @@ export class EventActivityService {
           limit_applicants, applicants_limit, allow_specify_quantity,
           use_terms_and_conditions, terms_and_conditions, fee,
           supported_payment_methods, handling_fee_included, cheque_payment_instructions, discount_ids,
-          entry_eligibility)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          entry_eligibility, tickets_admit)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING *`,
         [
           data.eventId,
@@ -162,6 +185,7 @@ export class EventActivityService {
           // Anything but the one opt-in value is 'all'. A typo in a payload
           // must not silently lock a club's members out of their own event.
           data.entryEligibility === 'members' ? 'members' : 'all',
+          admits(data.ticketsAdmit),
         ]
       );
 
@@ -209,6 +233,10 @@ export class EventActivityService {
         if (data.entryEligibility !== undefined) {
           updates.push(`entry_eligibility = $${paramCount++}`);
           values.push(data.entryEligibility === 'members' ? 'members' : 'all');
+        }
+        if (data.ticketsAdmit !== undefined) {
+          updates.push(`tickets_admit = $${paramCount++}`);
+          values.push(admits(data.ticketsAdmit));
         }
         if (data.allowSpecifyQuantity !== undefined) {
           updates.push(`allow_specify_quantity = $${paramCount++}`);

@@ -38,13 +38,14 @@ migrations/       node-pg-migrate migrations (the schema's source of truth)
 | `/api/admin/payment-methods` | `payment-method.routes` |
 | `/api/admin/organization-types` | `organization-type.routes` |
 | `/api/admin/organizations` | `organization.routes`, `organization-payment-method.routes`, `organization-user.routes`, `organization-role.routes` |
-| `/api/orgadmin` | `orgadmin-auth`, `event`, `event-type`, `venue`, `discount`, `membership`, `merchandise`, `calendar`, `registration`, `ticketing`, `application-form`, `payment`, `reporting` |
+| `/api/orgadmin` | `orgadmin-auth`, `event`, `event-type`, `venue`, `discount`, `membership`, `merchandise`, `calendar`, `registration`, `ticketing`, `scan-session`, `application-form`, `payment`, `reporting` |
 | `/api/orgadmin/organisation` | `orgadmin-organisation.routes` — payment settings, branding, email templates, registration settings, offline payment settlement and the account-user approval queue |
 | `/api/orgadmin/files` | `file-upload.routes` |
 | `/api/orgadmin/users` | `user-management.routes` |
 | `/api/orgadmin` | `user-group.routes` — account-user groups, used by discount eligibility |
 | `/api/audit` | `audit.routes` (`sessionReportRouter`) — `POST /session` reports a sign-in outcome (unauthenticated, for the failure case; **no caller today**), `POST /session/logout` reports a sign-out (**authenticated** — the actor comes from the token, never the body) |
 | `/api/user-preferences` | `user-preferences.routes` |
+| `/api/scan` | `gate-scan.routes` — **unauthenticated in the Keycloak sense**, the gate scanner's own surface. A device token from `POST /api/scan/:token/unlock` reaches one event's manifest and the right to admit against it, nothing else, and is re-checked on every request so revoking a session stops a phone mid-afternoon. See docs/GATE_SCANNING.md |
 | `/api/public` | `public.routes` — **unauthenticated**, backs the account app's organisation directory and sign-in gateway, plus the email-change confirmation whose link is opened with no session |
 | `/api/account` | `account.routes` — account-user application; the organisation comes from the URL, not the token |
 
@@ -69,7 +70,8 @@ Grouped by area; each is a class or object exported from `src/services`.
 **Domain** — `event.service`, `event-activity.service`, `event-entry.service`, `event-type.service`,
 `venue.service`, `membership.service`, `membership-number-generator.service`,
 `membership-number-validator.service`, `merchandise.service`, `merchandise-option.service`,
-`registration.service`, `calendar.service`, `delivery-rule.service`, `ticketing.service`.
+`registration.service`, `calendar.service`, `delivery-rule.service`, `ticketing.service`,
+`announcement.service`, `gate-scan.service`, `ticket-token.service`.
 
 **Organisation type logos** — a type may set a shared logo that every organisation of that type
 inherits, and may forbid replacing it. `effectiveLogo` in `organization-branding.service` is the one
@@ -138,7 +140,7 @@ registry — ~90 actions in 11 categories), `audit.query` (keyset paging, organi
 | `capability.middleware` | `loadOrganisationCapabilities()`, `requireCapability()`, `requireAllCapabilities()`, `requireOrgAdminCapability()` — org admins only |
 | `account-auth.middleware` | `resolveAccountOrganisation()`, `requireAccountCapability()` — the account-user equivalent |
 | `organisation-scope.middleware` | `scopeToOrganisation()` and its shorthands — **which organisation a request concerns, and whether the caller may act there.** Required on every org-admin route; a structural test enforces it |
-| `audit.middleware` | `audited({...})` — records a route without touching its handler. Loads the before-row for an update or delete, captures the response as the after-row, records on `finish`. On 101 mutating routes |
+| `audit.middleware` | `audited({...})` — records a route without touching its handler. Loads the before-row for an update or delete, captures the response as the after-row, records on `finish`. On 101 mutating routes. It scopes the event with `req.organisationId`, so a router that resolves the club itself must **set that on the request** or every event it writes is filed under no organisation and the org-admin viewer never shows it. `values(req, after)` composes what to record from the response, for actions whose body is empty and whose substance is in the reply |
 | `audit-auth.middleware` | `noteAuthenticatedRequest()`, `auditRefusals()` — logins and access refusals. Also `recordSessionEvent()` / `forgetSession()`, shared with the sign-out endpoint. A session event is filed as **one row per organisation the person belongs to** — filing it under nothing when there was more than one candidate made it invisible, because the org-admin viewer scopes hard on `organisation_id`. See [docs/AUDIT_SESSION_EVENTS_FIX.md](../../docs/AUDIT_SESSION_EVENTS_FIX.md) |
 | `field-capability.middleware` | Capability gating at field granularity |
 | `input-validation.middleware`, `xss-protection.middleware`, `csrf.middleware`, `rate-limit.middleware` | Request hardening |
@@ -191,7 +193,7 @@ Tables:
 organizations  organization_types  organization_users  organization_user_roles
 organization_admin_roles  audit_events (partitioned by month)  users  roles  capabilities
 events  event_activities  event_entries  event_ticketing_config  electronic_tickets
-ticket_scan_history  members  membership_types  member_filters
+ticket_scan_history  ticket_scan_sessions  ticket_scan_devices  members  membership_types  member_filters
 registrations  registration_types  registration_filters
 merchandise_types  merchandise_orders  merchandise_order_history
 merchandise_option_types  merchandise_option_values  delivery_rules
@@ -323,11 +325,19 @@ currency sent by a client rather than honouring it.
 | "How is a card handling fee calculated?" | `src/utils/handling-fee.ts` — pure, and the only place the rules live |
 | "Where do cart totals come from?" | `cart.service.getCart` — computed server-side and returned whole; the client never recomputes |
 | "How does a payment cover several items?" | `payments` is the parent, `payment_transactions` are its lines; legacy rows keep `payment_type`/`context_id` |
+| "Why does an Excel export not open?" | It did not, in any module: `exceljs` has **no default export**, `new ExcelJS()` threw, and the page saved the error as the file. `import { Workbook } from 'exceljs'`. A hand-written `src/types/exceljs.d.ts` and a global jest mapping had each declared the module as something it is not — both gone, and the suites now run the real library and assert on the zip magic. See [EXCEL_EXPORTS_WERE_NOT_WORKBOOKS.md](../../docs/EXCEL_EXPORTS_WERE_NOT_WORKBOOKS.md) |
+| "Who refunded this, and when?" | `refunds`, one row per refund — a payment can be refunded twice, and `refund_transactions` says which lines each covered. `requested_by` is an `organization_users` id resolved from the caller's **Keycloak** id (`paymentService.organisationUserFor`, shared with `offline_received_by`). The payment becomes `refunded` when a `full`/`lessHandlingFee` refund settles it or when the parts cover it, and `partially_refunded` in between. **A refund is a record, not a provider call**. See [PARTIAL_REFUNDS.md](../../docs/PARTIAL_REFUNDS.md) |
+| "Can an entry's answers be corrected after the fact?" | `PUT /events/:eventId/entries/:entryId/answers` → `eventEntryService.updateEntryAnswers`, audited as `entry.answers-corrected`. It takes the entrant's **name** and the **answers** together, and checks everything before writing anything — the first cut renamed first and validated after, so a rejected form still renamed the entrant. Answers go through `validateSubmissionData`, the same rules the member's own submission passed; a missing submission is created and linked rather than refused; the route's guard authorises the *event*, so the service re-checks the entry belongs to it and 404s otherwise. See [CORRECTING_AN_ENTRY.md](../../docs/CORRECTING_AN_ENTRY.md) |
+| "Why is this entry not on the entrant list?" | `event_entries.entry_status = 'removed'` — withdrawn with a refund, and excluded from the list and from every capacity count (`event.service`, `account-catalogue.service`, `public-event.service`). Never deleted: the entry happened, was paid for and was refunded |
+| "Who marked this offline payment received — or undid it?" | `paymentService.getSettlementHistory`, read from `audit_events` (`offline-payment.recorded` / `.receipt-undone`). The payment row cannot answer it: an undo nulls `offline_received_at` and `offline_received_by` |
+| "What did a payment buy, and where is each thing now?" | `paymentService.getPaymentLines` — one row per `payment_transactions` line, joined through `fulfilment_ref` to the entry, member, registration or booking it produced; returned with the payment by `GET /api/orgadmin/payments/:id` |
 | "Where do handling-fee rates come from?" | `organization_type_payment_fees`, per organisation type; resolved by `organization-type-payment-fee.service` |
 | "Why was this URL code rejected?" | `src/utils/url-code.ts` — format, length, or the reserved list |
 | "Why was a form submission rejected with `INVALID_SUBMISSION`?" | `src/utils/application-field-validation.ts` — the answers are checked against the form's own fields before storing, and the 400 names each one |
 | "Why won't an onboarding dialog stay dismissed?" | Two causes, both fixed: `src/utils/onboarding-modules.ts` (the id must also be in orgadmin-shell's `MODULE_IDS`, else 400) and migration `1709000000019` (`user_onboarding_preferences.user_id` held a Keycloak id under a FK to `organization_users`, so every write 500'd) |
 | "Why did an account user get a 403?" | `account-auth.middleware` — the `error.code` says which of the five refusals it was |
+| "How does a club tell its members something?" | `organisation_announcements` + `announcement.service`, gated on the `org-announcements` capability. The **window is the only control** — `starts_at <= now < ends_at`, applied in SQL against the database's clock — so there is no draft flag to disagree with the dates. The members' read is not a route of its own: `activeFor` is called by `account-dashboard.service`, which already returns the whole home screen in one request. Images are S3 keys, returned as signed URLs rather than served from an unauthenticated address the way `platform_posts` are. A notice may carry **one optional link** (`link_label`/`link_url`, both-or-neither by constraint, `http`/`https` only) — the same idea as a platform post's links, singular because a club notice points at the thing it is about. See [ORG_ANNOUNCEMENTS.md](../../docs/ORG_ANNOUNCEMENTS.md) |
+| "Where do a discount's usage figures come from?" | `discountService.getUsageStats` — **`cart_items` on carts whose status is `ordered`**, not `discount_usage`. That table is written only by `recordUsage`, which nothing calls, so it is empty everywhere; the cart line is where a discount is actually recorded against a purchase, and the cart survives checkout. Amounts are minor units on the line and major units out. Note that **nothing sets `cart_items.discount_id` yet**, so the figures read zero until discount application is built — and `discount-validator`'s `perUserLimit` reads the same empty table, so that limit is not enforced. See [DISCOUNT_USAGE_PAGE.md](../../docs/DISCOUNT_USAGE_PAGE.md) |
 | "Why isn't a discount restriction applying?" | `discount-validator.service` — and check the stored `eligibility_criteria` key: older rows use `membershipTypeIds`, current ones `membershipTypes`; both are read |
 | "What can an account user call?" | `public.routes` (no token) and `account.routes` (token + membership) |
 | "Why was an item refused from the basket?" | `assertAddable` in `account.routes` → `account-catalogue.service`; the cart itself trusts its caller by design |
@@ -416,6 +426,25 @@ Things worth knowing before touching any of it:
   `resolveMembership`, so carts, entries and payments belong to the member row. **A query that
   resolves a person's row in a club must say which type it means.** See
   docs/ONE_EMAIL_BOTH_APPS.md.
+
+- **A card payment is settled by two webhooks, and must not depend on them.** `amount_capturable_updated`
+  authorises, `succeeded` confirms and fulfils. If neither arrives the money is taken and nothing
+  else happens — Stripe cannot reach a laptop without `stripe listen`, and a production delivery can
+  be missed. `webhookService.reconcilePayment` asks the provider instead, and the status endpoint
+  the confirmation screen polls calls it while a payment is `pending` or `authorised`. Idempotent,
+  and it never re-opens a payment that is already settled. See docs/PAYMENT_STUCK_CONFIRMING.md.
+
+- **Two fees, both card-only, easily confused.** The **handling fee** is what the member pays on
+  top (`organization_type_payment_fees`, €0.25 + 1.5% + 23% VAT in the seed); the **application
+  fee** is the platform's share out of the payment (`organization_payment_application_fees`, a flat
+  60c with no percentage). VAT applies to the handling fee, never to the order. A basket whose items all absorb their
+  fee attracts none at all — not even the fixed element. See docs/SEED_FEES.md.
+
+- **A member's Payments page lists money that moved.** `listPayments` excludes `pending` and
+  `abandoned`, so an entry awaiting payment appears on "My entries" and *not* under Payments. That
+  is deliberate. What was not: the seed wrote entries and memberships with no `payments` behind
+  them, which the application itself cannot do — a checkout writes the payment, fulfilment then
+  writes the entry. See docs/PAYMENTS_PAGE_EMPTY.md.
 
 - **`membership_types.membership_status` is `'open'` / `'closed'`.** Not `'active'`.
   `account-catalogue.service` tested for `'active'`, which is true of every row ever written, so
@@ -508,6 +537,26 @@ Things worth knowing before touching any of it:
   `ticketingService.issueTicketForEntry` immediately after creating an event entry. It is wrapped: a
   ticketing failure is logged, never thrown, because the entry already exists. Issuance is
   idempotent on `event_entry_id`, because Stripe replays webhooks.
+- **A ticket's QR carries a signed token, not the bare identifier.** `ticket-token.service` mints
+  and reads it: version, key id, ticket uuid, event uuid and expiry, under an HMAC-SHA256 truncated
+  to 128 bits — 72 base64url characters. The key is `TICKET_SIGNING_KEYS` (`id:secret` pairs, newest
+  first; the first signs, all verify, so a key rotates without invalidating tickets already sent)
+  and it **never leaves the server**, which is why an HMAC rather than a public-key signature: the
+  scanner recognises our codes from its downloaded manifest and needs no key. `electronic_tickets.qr_code`
+  is unchanged and still keyed on; the printed string is the new nullable `qr_token`, deliberately
+  **not backfilled** — a ticket issued before this has a bare UUID in an email nobody can recall, so
+  `qr_token ?? qr_code` is what every screen draws and `parseTicketCode` accepts both. With no key
+  configured, tickets are issued unsigned exactly as before. See
+  docs/SIGNED_TICKET_CODES.md.
+- **A gate's admission is one statement, and getting a row back *is* the decision.**
+  `gate-scan.service.scan` runs `UPDATE electronic_tickets … WHERE qr_code = $1 AND scan_count <
+  admits AND status = 'issued' AND valid_until > $2 … RETURNING`, so two gates scanning the same
+  code in the same second are serialised by the row lock and exactly one wins. The older
+  `PUT /tickets/:id/scan-status` path reads then increments with no ceiling and cannot make that
+  promise. `electronic_tickets.admits` is copied from `event_activities.tickets_admit` at issue —
+  what the holder was sold, not what the club later changed it to. Refusals are written to
+  `ticket_scan_history` alongside successes, with `refusal_reason` and the steward's name, because
+  the duplicate is the row a club actually wants. See docs/GATE_SCANNING.md.
 - **A connected account id does not mean a club can be paid.** `accounts.create` runs the moment
   onboarding starts, so an `acct_…` is on file long before Stripe sets `charges_enabled`. Checkout
   guards on `settings.stripeConnect.chargesEnabled`, not on the id's presence — see

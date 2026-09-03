@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -133,6 +134,8 @@ const FormsListPage: React.FC = () => {
     return status === 'published' ? 'success' : 'default';
   };
 
+  const sort = useTableSort(filteredForms);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -187,10 +190,18 @@ const FormsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('forms.table.name')}</TableCell>
-              <TableCell>{t('forms.table.description')}</TableCell>
-              <TableCell>{t('forms.table.status')}</TableCell>
-              <TableCell>{t('forms.table.created')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('forms.table.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="description">
+                {t('forms.table.description')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('forms.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="createdAt">
+                {t('forms.table.created')}
+              </SortableTableCell>
               <TableCell align="right">{t('forms.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -210,7 +221,7 @@ const FormsListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredForms.map((form) => (
+              sort.rows.map((form) => (
                 <TableRow key={form.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

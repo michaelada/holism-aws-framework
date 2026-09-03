@@ -393,10 +393,6 @@ const EventDetailsPage: React.FC = () => {
                   }
                   show={!!ev.ticketBackgroundColor}
                 />
-                <DetailField
-                  label="Include Event Logo"
-                  value={ev.includeEventLogo ? 'Yes' : 'No'}
-                />
               </>
             )}
           </Grid>

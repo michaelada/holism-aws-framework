@@ -49,6 +49,9 @@
     "text": "Fornecido por ItsPlainSailing.com",
     "copyright": "© {{year}} Esker Software. Todos os direitos reservados"
   },
+  "announcements": {
+    "heading": "Avisos"
+  },
   "posts": {
     "regionLabel": "Comunicados"
   },
@@ -456,11 +459,22 @@
     "empty": "Ainda não pagou nada.",
     "itemCount": "{{count}} artigos",
     "handlingFee": "Custos de processamento",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "plusHandling": "+ {{amount}} de processamento",
     "paidByCard": "Pago com cartão",
     "paidOffline": "Pago offline",
     "offlineReceived": "O clube registou a receção a {{date}}",
     "offlineAwaited": "O clube ainda não registou a receção.",
     "lineProblem": "Isto não foi concluído: {{reason}}. O clube entrará em contacto.",
+    "view": {
+      "default": "Ver",
+      "event_entry": "Ver inscrição",
+      "membership": "Ver adesão",
+      "registration": "Ver registo",
+      "booking": "Ver reserva",
+      "merchandise": "Ver encomenda"
+    },
     "status": {
       "paid": "Pago",
       "pending": "Pendente",
@@ -555,6 +569,13 @@
     "itemNotFound": "Já não está disponível.",
     "back": "Voltar",
     "detailsHeading": "Preencha os dados abaixo",
+    "prefilledFromRenewal": "Preenchido a partir da sua adesão atual. Verifique se ainda está correto.",
+    "prefilledFromMembership": "Preenchido com os dados de sócio de {{name}}. Verifique se continuam corretos.",
+    "member": {
+      "label": "Para quem é esta filiação?",
+      "hint": "A pessoa a que se destina. Escreva um nome ou escolha um que já tenha usado.",
+      "required": "Introduza o nome da pessoa a que se destina esta filiação."
+    },
     "termsHeading": "Termos e condições",
     "agreeTerms": "Li e aceito os termos e condições",
     "mustAgree": "Tem de aceitar os termos e condições para continuar",
@@ -577,6 +598,37 @@
       "awaiting-payment": "Aguarda pagamento",
       "used": "Utilizado",
       "expired": "Expirado"
+    }
+  },
+  "scan": {
+    "title": "Controlo de bilhetes",
+    "unlockIntro": "Escreva o seu nome e o PIN que o clube lhe enviou. O seu nome fica registado em cada bilhete que ler.",
+    "yourName": "O seu nome",
+    "yourNameHelper": "Para o clube saber quem leu cada bilhete.",
+    "pin": "PIN",
+    "startScanning": "Come\u00e7ar a ler",
+    "unlockFailed": "Esse link ou PIN n\u00e3o \u00e9 v\u00e1lido. Confirme com quem o enviou.",
+    "cameraFailed": "N\u00e3o foi poss\u00edvel iniciar a c\u00e2mara. Permita o acesso \u00e0 c\u00e2mara ou escreva o c\u00f3digo abaixo.",
+    "scanningAs": "A ler como {{name}}",
+    "finish": "Terminar",
+    "offline": "Sem sinal. Os bilhetes continuam a ser verificados com a lista descarregada no in\u00edcio e ser\u00e3o enviados quando houver sinal.",
+    "waiting": "{{count}} leitura por enviar",
+    "waiting_other": "{{count}} leituras por enviar",
+    "admitted": "Admitido",
+    "countOf": "{{used}} de {{admits}} admitidos",
+    "previously": "Admitido \u00e0s {{when}} por {{who}}",
+    "anotherSteward": "outra pessoa",
+    "enterCode": "Escreva o c\u00f3digo",
+    "check": "Verificar",
+    "disagreementsTitle": "Admitidos aqui, mas recusados no envio",
+    "refused": {
+      "not_found": "N\u00e3o \u00e9 nosso",
+      "wrong_event": "N\u00e3o \u00e9 para este evento",
+      "already_used": "J\u00e1 utilizado",
+      "expired": "Fora de prazo",
+      "cancelled": "Cancelado",
+      "withdrawn": "Inscri\u00e7\u00e3o retirada",
+      "forged": "Bilhete inv\u00e1lido"
     }
   },
   "orders": {

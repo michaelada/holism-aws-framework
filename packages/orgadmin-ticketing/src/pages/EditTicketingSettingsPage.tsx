@@ -9,7 +9,7 @@
  * Requirements: 7.4, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -20,21 +20,36 @@ import {
   Checkbox,
   CircularProgress,
   FormControlLabel,
+  FormControl,
+  FormHelperText,
+  FormLabel,
   Grid,
   IconButton,
   InputAdornment,
   Snackbar,
+  Radio,
+  RadioGroup,
+  Stack,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
+  Image as ImageIcon,
   HelpOutline as HelpIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { useApi } from '@aws-web-framework/orgadmin-core';
+import {
+  renderTicketHTML,
+  generateQRCodeDataURL,
+  TICKET_IMAGE_PLACEMENTS,
+  TICKET_LAYOUTS,
+  type TicketImagePlacement,
+  type TicketLayout,
+} from '@aws-web-framework/components';
 import type { EventTicketingConfig } from '../types/ticketing.types';
 
 /** Fields sent to PUT /events/:eventId/ticketing-config */
@@ -44,8 +59,9 @@ interface UpdateTicketingConfigDto {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo: boolean;
   ticketBackgroundColor?: string;
+  ticketImagePlacement?: TicketImagePlacement | null;
+  ticketLayout?: TicketLayout;
 }
 
 interface FormState {
@@ -55,7 +71,8 @@ interface FormState {
   ticketFooterText: string;
   ticketValidityPeriod: string;
   ticketBackgroundColor: string;
-  includeEventLogo: boolean;
+  ticketImagePlacement: TicketImagePlacement;
+  ticketLayout: TicketLayout;
 }
 
 const defaultFormState: FormState = {
@@ -65,16 +82,24 @@ const defaultFormState: FormState = {
   ticketFooterText: '',
   ticketValidityPeriod: '',
   ticketBackgroundColor: '#ffffff',
-  includeEventLogo: false,
+  ticketImagePlacement: 'header',
+  // What every ticket looked like before a club could choose.
+  ticketLayout: 'stacked',
 };
 
 const EditTicketingSettingsPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const { execute } = useApi();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [eventName, setEventName] = useState<string>('');
+  /** The picture on the ticket: a signed URL once saved, a blob before then. */
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  /** A QR code for the preview. Not a real one — this ticket does not exist. */
+  const [previewQr, setPreviewQr] = useState<string>('');
   const [formState, setFormState] = useState<FormState>(defaultFormState);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,8 +137,10 @@ const EditTicketingSettingsPage: React.FC = () => {
         ticketFooterText: config.ticketFooterText ?? '',
         ticketValidityPeriod: config.ticketValidityPeriod != null ? String(config.ticketValidityPeriod) : '',
         ticketBackgroundColor: config.ticketBackgroundColor ?? '#ffffff',
-        includeEventLogo: config.includeEventLogo ?? false,
+        ticketImagePlacement: config.ticketImagePlacement ?? 'header',
+        ticketLayout: config.ticketLayout ?? 'stacked',
       });
+      setImageUrl(config.ticketImageUrl ?? null);
     } catch (err: any) {
       console.error('Failed to load ticketing config:', err);
       if (err?.response?.status === 404 || err?.status === 404) {
@@ -135,6 +162,116 @@ const EditTicketingSettingsPage: React.FC = () => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
+  /**
+   * A picture chosen but not yet uploaded, as a **data URL**.
+   *
+   * Read with `FileReader` rather than `URL.createObjectURL`, because the
+   * preview is an `iframe` and the print frame is another: a blob URL belongs
+   * to the document that made it, and the surest way to have a picture appear
+   * in both is to carry the bytes rather than a reference to them.
+   */
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pendingImage) {
+      setPendingUrl(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (!cancelled) setPendingUrl(typeof reader.result === 'string' ? reader.result : null);
+    };
+    reader.readAsDataURL(pendingImage);
+
+    return () => {
+      cancelled = true;
+      reader.abort();
+    };
+  }, [pendingImage]);
+
+  const previewImage = pendingUrl ?? imageUrl;
+
+  /*
+   * A QR code for the preview only. It encodes the words "preview" rather than
+   * a ticket reference, because no ticket exists yet — and a preview carrying a
+   * scannable code somebody might photograph is worse than one that plainly
+   * does not.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void generateQRCodeDataURL('preview', { width: 200, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setPreviewQr(url);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /**
+   * The ticket as it will print, from the form's state.
+   *
+   * Rendered by `renderTicketHTML` — the same function that prints the real
+   * thing — so what a club approves here is what a member receives. A preview
+   * drawn separately drifts, and what it gets wrong first is exactly what
+   * somebody is checking.
+   */
+  const previewHtml = useMemo(
+    () =>
+      renderTicketHTML({
+        ticketReference: 'TKT-0000-000000',
+        qrCodeDataURL: previewQr,
+        eventName: eventName || t('ticketing.settings.preview.sampleEvent'),
+        eventDescription: t('ticketing.settings.preview.sampleEventDescription'),
+        activityName: t('ticketing.settings.preview.sampleActivity'),
+        activityDescription: t('ticketing.settings.preview.sampleActivityDescription'),
+        startDate: new Date(),
+        endDate: new Date(),
+        customerName: t('ticketing.settings.preview.sampleHolder'),
+        headerText: formState.ticketHeaderText,
+        instructions: formState.ticketInstructions,
+        footerText: formState.ticketFooterText,
+        imageUrl: previewImage,
+        imagePlacement: previewImage ? formState.ticketImagePlacement : null,
+        layout: formState.ticketLayout,
+        backgroundColour: formState.ticketBackgroundColor,
+        locale: i18n.language,
+      }),
+    [previewQr, eventName, formState, previewImage, t, i18n.language]
+  );
+
+  /** Uploads the chosen picture against the saved configuration. */
+  const uploadImage = async (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('placement', formState.ticketImagePlacement);
+    const saved = await execute({
+      method: 'POST',
+      url: `/api/orgadmin/events/${eventId}/ticketing-config/image`,
+      data: body,
+      throwOnError: true,
+    });
+    if (saved?.ticketImageUrl) setImageUrl(saved.ticketImageUrl);
+    setPendingImage(null);
+  };
+
+  const removeImage = async () => {
+    setPendingImage(null);
+    if (!imageUrl) return;
+    try {
+      await execute({
+        method: 'DELETE',
+        url: `/api/orgadmin/events/${eventId}/ticketing-config/image`,
+      });
+      setImageUrl(null);
+    } catch (err) {
+      console.error('Failed to remove the ticket image:', err);
+      setSnackbar({ open: true, message: t('ticketing.settings.saveError'), severity: 'error' });
+    }
+  };
+
   const handleSave = async () => {
     if (!eventId) return;
     try {
@@ -146,8 +283,10 @@ const EditTicketingSettingsPage: React.FC = () => {
         ticketInstructions: formState.ticketInstructions || undefined,
         ticketFooterText: formState.ticketFooterText || undefined,
         ticketValidityPeriod: formState.ticketValidityPeriod ? parseInt(formState.ticketValidityPeriod, 10) : undefined,
-        includeEventLogo: formState.includeEventLogo,
         ticketBackgroundColor: formState.ticketBackgroundColor || undefined,
+        // Only meaningful with a picture; the server ignores it otherwise.
+        ticketImagePlacement: previewImage ? formState.ticketImagePlacement : null,
+        ticketLayout: formState.ticketLayout,
       };
 
       await execute({
@@ -155,6 +294,8 @@ const EditTicketingSettingsPage: React.FC = () => {
         url: `/api/orgadmin/events/${eventId}/ticketing-config`,
         data: payload,
       });
+
+      if (pendingImage) await uploadImage(pendingImage);
 
       setSnackbar({ open: true, message: t('ticketing.settings.saveSuccess'), severity: 'success' });
 
@@ -381,7 +522,16 @@ const EditTicketingSettingsPage: React.FC = () => {
                 label={t('ticketing.settings.fields.ticketBackgroundColor')}
                 value={formState.ticketBackgroundColor}
                 onChange={(e) => handleFieldChange('ticketBackgroundColor', e.target.value)}
-                helperText={t('ticketing.settings.helpers.ticketBackgroundColor')}
+                /*
+                  A picture replaces this rather than sitting under it, and a
+                  club that has chosen both should be told which one wins
+                  before they wonder why their green went away.
+                */
+                helperText={
+                  previewImage && formState.ticketImagePlacement === 'background'
+                    ? t('ticketing.settings.helpers.imageOverridesColour')
+                    : t('ticketing.settings.helpers.ticketBackgroundColor')
+                }
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -396,24 +546,120 @@ const EditTicketingSettingsPage: React.FC = () => {
               />
             </Grid>
 
-            {/* Include Event Logo */}
+            {/* The picture, and where it goes. */}
             <Grid item xs={12}>
-              <Tooltip title={t('ticketing.settings.tooltips.includeEventLogo')} arrow placement="right">
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formState.includeEventLogo}
-                      onChange={(e) => handleFieldChange('includeEventLogo', e.target.checked)}
-                    />
-                  }
-                  label={t('ticketing.settings.fields.includeEventLogo')}
+              <FormLabel>{t('ticketing.settings.fields.ticketImage')}</FormLabel>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<ImageIcon />}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  {t('ticketing.settings.actions.chooseImage')}
+                </Button>
+                {previewImage && (
+                  <Button size="small" color="error" onClick={removeImage}>
+                    {t('ticketing.settings.actions.removeImage')}
+                  </Button>
+                )}
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  aria-label={t('ticketing.settings.fields.ticketImage')}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) setPendingImage(file);
+                  }}
                 />
-              </Tooltip>
-              <Typography variant="caption" color="textSecondary" display="block" sx={{ ml: 4 }}>
-                {t('ticketing.settings.helpers.includeEventLogo')}
-              </Typography>
+              </Stack>
             </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl disabled={!previewImage}>
+                <FormLabel>{t('ticketing.settings.fields.ticketImagePlacement')}</FormLabel>
+                <RadioGroup
+                  value={formState.ticketImagePlacement}
+                  onChange={(event) =>
+                    handleFieldChange('ticketImagePlacement', event.target.value as TicketImagePlacement)
+                  }
+                >
+                  {TICKET_IMAGE_PLACEMENTS.map((placement) => (
+                    <FormControlLabel
+                      key={placement}
+                      value={placement}
+                      control={<Radio />}
+                      label={t(`ticketing.settings.placements.${placement}`)}
+                    />
+                  ))}
+                </RadioGroup>
+                {/* Told, rather than discovered in the preview. */}
+                <FormHelperText>
+                  {t('ticketing.settings.helpers.ticketImagePlacement')}
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl>
+                <FormLabel>{t('ticketing.settings.fields.ticketLayout')}</FormLabel>
+                <RadioGroup
+                  value={formState.ticketLayout}
+                  onChange={(event) =>
+                    handleFieldChange('ticketLayout', event.target.value as TicketLayout)
+                  }
+                >
+                  {TICKET_LAYOUTS.map((layout) => (
+                    <FormControlLabel
+                      key={layout}
+                      value={layout}
+                      control={<Radio />}
+                      label={t(`ticketing.settings.layouts.${layout}`)}
+                    />
+                  ))}
+                </RadioGroup>
+                {/* The one thing a club cannot restyle, and why. */}
+                <FormHelperText>{t('ticketing.settings.helpers.qrAlwaysWhite')}</FormHelperText>
+              </FormControl>
+            </Grid>
+
+            {/*
+              "Include Event Logo" was here and is gone. Nothing ever rendered a
+              logo: no ticket template took one, and no organisation logo was
+              passed to the one that could have — so it was a setting a club
+              could turn on and see no difference from. The ticket image above,
+              with its four placements, is what it was reaching for.
+            */}
           </Grid>
+        </CardContent>
+      </Card>
+
+      {/*
+        The preview, under the settings rather than beside them: the form is a
+        column of fields and a ticket is a wide thing, and squeezing both into
+        halves makes each unreadable at the width a club actually works at.
+      */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            {t('ticketing.settings.preview.title')}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" paragraph>
+            {t('ticketing.settings.preview.subtitle')}
+          </Typography>
+          {/*
+            An iframe, so the ticket's own styles are the ticket's own: rendered
+            inline it would inherit the org-admin's theme and stop being a
+            preview of what prints.
+          */}
+          <Box
+            component="iframe"
+            title={t('ticketing.settings.preview.title')}
+            srcDoc={previewHtml}
+            sx={{ width: '100%', height: 640, border: '1px solid rgba(0,0,0,0.12)', borderRadius: 1 }}
+          />
         </CardContent>
       </Card>
 

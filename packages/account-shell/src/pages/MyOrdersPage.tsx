@@ -17,6 +17,7 @@ import {
 import { formatCurrency, formatDisplayDate } from '@aws-web-framework/components';
 import ActivityStatusChip from '../components/ActivityStatusChip';
 import { useAccountApi } from '../hooks/useAccountApi';
+import { useSearchParams } from 'react-router-dom';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountMerchandiseOrder } from '../types/account';
 
@@ -38,6 +39,17 @@ export const MyOrdersPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { orgCode, me } = useAccountOrganisation();
+
+  /**
+   * The order a member arrived for, named in the URL.
+   *
+   * A payment's detail links here as `?order={id}` — the shop has no page for
+   * one order, so this is the list opened at the right card. Without it a
+   * four-line basket sent them to a page of orders with nothing marking the one
+   * they clicked, which is the same failure the events list had.
+   */
+  const [searchParams] = useSearchParams();
+  const requestedOrder = searchParams.get('order');
   const { execute } = useAccountApi<AccountMerchandiseOrder[]>();
 
   const [orders, setOrders] = useState<AccountMerchandiseOrder[]>([]);
@@ -64,6 +76,20 @@ export const MyOrdersPage: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+   * Scroll to it once the orders are in, then take the parameter out of the
+   * URL — it has been consumed, and leaving it would re-scroll on every
+   * re-render. The outline stays, because that is what marks the card.
+   */
+  useEffect(() => {
+    if (!requestedOrder || orders.length === 0) return;
+    if (!orders.some((order) => order.id === requestedOrder)) return;
+
+    document
+      .getElementById(`order-${requestedOrder}`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [requestedOrder, orders]);
 
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
@@ -93,7 +119,20 @@ export const MyOrdersPage: React.FC = () => {
       ) : (
         <Stack spacing={2}>
           {orders.map((order) => (
-            <Card key={order.id}>
+            <Card
+              key={order.id}
+              id={`order-${order.id}`}
+              /*
+                Marked, not just scrolled to: a card halfway down a list is
+                found by the scroll and then lost again the moment the member
+                looks away from where the page landed.
+              */
+              sx={
+                order.id === requestedOrder
+                  ? { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 }
+                  : undefined
+              }
+            >
               <CardContent>
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}

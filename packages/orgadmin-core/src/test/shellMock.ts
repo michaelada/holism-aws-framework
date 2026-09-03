@@ -15,11 +15,27 @@ export type Translator = (key: string, options?: Record<string, unknown>) => str
  * blank.
  */
 export const translateFromCatalogue: Translator = (key, options) => {
-  const value = key.split('.').reduce<unknown>(
-    (node, part) =>
-      node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
-    enGB as unknown
-  );
+  const lookup = (path: string): unknown =>
+    path.split('.').reduce<unknown>(
+      (node, part) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+      enGB as unknown
+    );
+
+  /*
+   * Plurals, the way i18next selects them.
+   *
+   * A catalogue entry with a count has no bare key at all — only `_one` and
+   * `_other` — so looking up "events.entries.count" finds nothing and the page
+   * renders the key path. Every assertion on a counted string then reads as a
+   * broken page rather than as the sentence a user sees.
+   */
+  const value =
+    lookup(key) ??
+    (options && typeof options.count === 'number'
+      ? lookup(`${key}_${options.count === 1 ? 'one' : 'other'}`)
+      : undefined);
+
   if (typeof value !== 'string') return key;
 
   // i18next-style interpolation. Without this, "{{count}} entries" renders

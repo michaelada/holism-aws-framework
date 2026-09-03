@@ -144,18 +144,25 @@ describe('MyMembershipsPage (C4)', () => {
   });
 
   /**
-   * Renewal happens in the membership catalogue, which now offers a type the
-   * member holds and is within 30 days of losing rather than refusing it as
+   * Renewal happens in the membership catalogue, which offers a type the member
+   * holds and is within 30 days of losing rather than refusing it as
    * `already-a-member`. This used to point at `/join`, a route that never
    * existed — the button worked and led to the catch-all redirect.
+   *
+   * The membership is named in the URL so the application form at the end of
+   * the journey can open filled in from it. A parent holds several and the form
+   * cannot guess whose details to carry over. See
+   * docs/MEMBERSHIP_RENEWAL_PREFILL.md.
    */
-  it('sends a renewing member to the membership catalogue', async () => {
+  it('sends a renewing member to the catalogue, naming what they are renewing', async () => {
     const user = userEvent.setup();
-    mockExecute.mockResolvedValue([membership({ daysRemaining: 12, canRenew: true })]);
+    mockExecute.mockResolvedValue([
+      membership({ id: 'member-9', daysRemaining: 12, canRenew: true }),
+    ]);
     render();
 
     await user.click(await screen.findByRole('button', { name: 'Renew' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/khpc/browse/memberships');
+    expect(mockNavigate).toHaveBeenCalledWith('/khpc/browse/memberships?renew=member-9');
   });
 
   /**

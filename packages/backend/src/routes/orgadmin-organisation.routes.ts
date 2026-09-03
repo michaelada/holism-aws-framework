@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
@@ -118,6 +118,20 @@ function withOrganisation(
         res.status(403).json({ error: 'User is not an organization administrator' });
         return;
       }
+
+      /*
+       * Tell the rest of the chain which club this turned out to be.
+       *
+       * This router resolves the organisation itself, from the caller's token
+       * and the `X-Organisation-Id` header, rather than from a path parameter —
+       * so `req.organisationId`, which the scope middleware sets everywhere
+       * else, was never set here. `audited()` reads it on `finish` to scope the
+       * event, so every settings change, branding edit and offline receipt
+       * recorded through this router was written with a null organisation, and
+       * the org-admin audit log — which filters on exactly that — showed none
+       * of them.
+       */
+      (req as Request & { organisationId?: string }).organisationId = organisationId;
 
       await handler(organisationId, req, res);
     } catch (error) {
@@ -288,6 +302,65 @@ router.get(
 );
 
 /**
+ * What an offline receipt looks like in the audit trail.
+ *
+ * These two routes take an empty body and answer with the payment, so the
+ * generic "record what was sent" produces `{}` — an entry saying that somebody
+ * did something to a uuid. What a club actually needs to read back is the
+ * money: how much, from whom, and what it then created.
+ *
+ * `after` is the response body as the middleware unwrapped it: `{ payment,
+ * fulfilment }` for a receipt, the payment alone for an undo.
+ */
+const paymentOf = (after: Record<string, unknown> | null): Record<string, unknown> | null => {
+  if (!after) return null;
+  const nested = after.payment;
+  return (nested && typeof nested === 'object' ? nested : after) as Record<string, unknown>;
+};
+
+const payerOf = (payment: Record<string, unknown> | null): string | null =>
+  (payment?.userName as string) || (payment?.userEmail as string) || null;
+
+/** "Fionn Doyle — EUR 45.00", so the list reads as money rather than as ids. */
+const offlinePaymentLabel = (after: Record<string, unknown> | null): string | null => {
+  const payment = paymentOf(after);
+  if (!payment) return null;
+
+  const amount = typeof payment.amount === 'number' ? payment.amount.toFixed(2) : null;
+  const money = amount ? `${payment.currency ?? ''} ${amount}`.trim() : null;
+
+  return [payerOf(payment), money].filter(Boolean).join(' — ') || null;
+};
+
+const offlineReceiptValues = (
+  after: Record<string, unknown> | null
+): Record<string, unknown> | null => {
+  const payment = paymentOf(after);
+  if (!payment) return null;
+
+  const fulfilment = after?.fulfilment as
+    | { fulfilled?: number; failed?: number; complete?: boolean }
+    | undefined;
+
+  return {
+    payer: payerOf(payment),
+    amount: payment.amount ?? null,
+    currency: payment.currency ?? null,
+    paymentStatus: payment.paymentStatus ?? null,
+    receivedAt: payment.paymentDate ?? null,
+    /*
+     * What the money released. A receipt that produced nothing is the ordinary
+     * case for an entry-only basket — everything in it was created when the
+     * order was placed — and a receipt that produced a failure is the one an
+     * administrator must be able to find afterwards.
+     */
+    ...(fulfilment
+      ? { itemsCreated: fulfilment.fulfilled ?? 0, itemsFailed: fulfilment.failed ?? 0 }
+      : {}),
+  };
+};
+
+/**
  * @openapi
  * /api/orgadmin/organisation/payments/{id}/received:
  *   post:
@@ -309,7 +382,13 @@ router.get(
 router.post(
   '/payments/:id/received',
   authenticateToken(),
-  audited({ action: 'offline-payment.recorded', resource: 'payment', entityType: 'payment', kind: 'action' }),
+  audited({
+    action: 'offline-payment.recorded',
+    entityType: 'payment',
+    kind: 'action',
+    label: (after) => offlinePaymentLabel(after),
+    values: (_req, after) => offlineReceiptValues(after),
+  }),
   withOrganisation('Failed to record the payment', async (organisationId, req, res) => {
     const result = await paymentService.markOfflinePaymentReceived(
       organisationId,
@@ -340,7 +419,19 @@ router.post(
 router.delete(
   '/payments/:id/received',
   authenticateToken(),
-  audited({ action: 'offline-payment.recorded', resource: 'payment', entityType: 'payment', kind: 'action' }),
+  /*
+   * A distinct action from the receipt itself. Both wrote
+   * `offline-payment.recorded`, so an undo was indistinguishable in the log
+   * from the thing it reversed — and an undo is the entry an auditor is most
+   * likely to be looking for.
+   */
+  audited({
+    action: 'offline-payment.receipt-undone',
+    entityType: 'payment',
+    kind: 'action',
+    label: (after) => offlinePaymentLabel(after),
+    values: (_req, after) => offlineReceiptValues(after),
+  }),
   withOrganisation('Failed to undo the receipt', async (organisationId, req, res) => {
     res.json(await paymentService.undoOfflinePaymentReceived(organisationId, req.params.id));
   })

@@ -52,7 +52,13 @@ import {
   ToggleOff as DeactivateIcon,
   Assessment as StatsIcon,
 } from '@mui/icons-material';
-import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import { usePageHelp, useOnboarding, formatCurrency, useLocale } from '@aws-web-framework/orgadmin-shell';
 import type { Discount, DiscountStatus, DiscountType, ApplicationScope } from '../types/discount.types';
 
@@ -272,7 +278,32 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
     setPage(0);
   };
 
-  const paginatedDiscounts = filteredDiscounts.slice(
+  /*
+   * Sorted before paging, not after — a page of a sorted list, rather than a
+   * sorted page. Sorting the twenty rows on screen would order them among
+   * themselves and leave the rest where they were, which is not what clicking
+   * "Value" is asking for.
+   */
+  const sort = useTableSort(filteredDiscounts, {
+    accessors: {
+      // The number, not "20%" or "€5.00": those are two formats in one column
+      // and neither of them orders.
+      value: (discount) => discount.discountValue,
+      scope: (discount) => discount.applicationScope,
+      usage: getUsageCount,
+    },
+  });
+
+  /*
+   * Back to the first page when the order changes. Staying on page three of a
+   * list that has just been reordered shows rows the reader did not ask to see
+   * and hides the ones they did — the largest discount is now on page one.
+   */
+  useEffect(() => {
+    setPage(0);
+  }, [sort.field, sort.direction]);
+
+  const paginatedDiscounts = sort.rows.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -374,12 +405,24 @@ const DiscountsListPage: React.FC<DiscountsListPageProps> = ({ moduleType = 'eve
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Value</TableCell>
-              <TableCell>Scope</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Usage</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                Name
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="discountType">
+                Type
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="value">
+                Value
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="scope">
+                Scope
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                Status
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="usage">
+                Usage
+              </SortableTableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>

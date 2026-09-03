@@ -95,7 +95,22 @@ export class ValidationService {
       case 'date':
       case 'datetime':
       case 'time':
-        schema = yup.date().typeError('Must be a valid date');
+        /*
+         * An empty field is not a wrong answer.
+         *
+         * Yup casts `''` to an Invalid Date, so an untouched date field
+         * reported "Must be a valid date" — which is what a member saw the
+         * moment they *opened* the picker, because closing the popover blurs
+         * the input before the chosen date has reached the form. Whether the
+         * field may be left empty is the required rule's business, applied
+         * below; this only stops "not filled in" being reported as "filled in
+         * wrongly". `validateApplicationField` has always drawn the same
+         * distinction, and the two must agree.
+         */
+        schema = yup
+          .date()
+          .transform((cast, original) => (original === '' || original === null ? undefined : cast))
+          .typeError('Must be a valid date');
         break;
       case 'single_select':
         schema = yup.string();

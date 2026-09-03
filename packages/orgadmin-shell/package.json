@@ -21,6 +21,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
+    "@aws-web-framework/orgadmin-announcements": "*",
     "@aws-web-framework/orgadmin-calendar": "*",
     "@aws-web-framework/orgadmin-core": "*",
     "@aws-web-framework/orgadmin-events": "*",

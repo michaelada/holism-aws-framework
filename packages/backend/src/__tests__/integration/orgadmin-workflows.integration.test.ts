@@ -598,12 +598,26 @@ describe('OrgAdmin Workflows Integration Tests', () => {
         })
         .expect(201);
 
-      expect(refundResponse.body.id).toBeDefined();
+      /*
+       * The endpoint answers with what the refund *did*, not only the record:
+       * the payment's new status and how many entries were withdrawn are both
+       * part of the outcome, and the screen reports them.
+       */
+      expect(refundResponse.body.refund.id).toBeDefined();
+      expect(refundResponse.body.paymentStatus).toBe('refunded');
+      expect(refundResponse.body.entriesRemoved).toBe(0);
 
       // Step 4: The refund is recorded against the payment
       const refunds = await db.query('SELECT * FROM refunds WHERE payment_id = $1', [paymentId]);
       expect(refunds.rows.length).toBe(1);
       expect(Number(refunds.rows[0].refund_amount)).toBe(50);
+      expect(refunds.rows[0].refund_scope).toBe('amount');
+
+      // ...and the payment itself now says so.
+      const refunded = await db.query('SELECT payment_status FROM payments WHERE id = $1', [
+        paymentId,
+      ]);
+      expect(refunded.rows[0].payment_status).toBe('refunded');
 
       await db.query('DELETE FROM refunds WHERE payment_id = $1', [paymentId]);
       await db.query('DELETE FROM payments WHERE id = $1', [paymentId]);

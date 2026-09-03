@@ -119,11 +119,21 @@ describe('an activity open to everyone', () => {
     expect(queries.some((sql: string) => sql.includes('FROM members m'))).toBe(false);
   });
 
-  it('still blocks a second entry from the same login', async () => {
-    // The account-level rule is unchanged where there is no member to key on.
-    stubQueries({ activities: [activityRow({ entry_eligibility: 'all', mine: '1' })] });
+  /**
+   * An activity may be entered more than once.
+   *
+   * The account-level rule refused a second entry from the same login, which
+   * refused a parent's second child, a secretary's second entrant, and one
+   * rider on a second horse — and said "already entered", which reads as a
+   * capacity problem rather than a rule.
+   */
+  it('stays open to a login that has already entered', async () => {
+    stubQueries({ activities: [activityRow({ entry_eligibility: 'all', mine: '3' })] });
 
-    expect((await firstActivity()).unavailableReason).toBe('already-entered');
+    const activity = await firstActivity();
+
+    expect(activity.available).toBe(true);
+    expect(activity.unavailableReason).toBeNull();
   });
 });
 
@@ -197,7 +207,9 @@ describe('an activity open to members only', () => {
     expect(activity.eligibleMembers.find((m) => m.id === 'mem-2')?.alreadyEntered).toBe(false);
   });
 
-  it('closes only once every membership is entered', async () => {
+  it('stays open when every membership has already entered', async () => {
+    // Each of them may enter again — a second horse, a second reason. Being
+    // told is useful; being stopped is not.
     stubQueries({
       activities: [activityRow()],
       members: [memberRow(), memberRow({ id: 'mem-2', first_name: 'Fionn' })],
@@ -209,8 +221,10 @@ describe('an activity open to members only', () => {
 
     const activity = await firstActivity();
 
-    expect(activity.available).toBe(false);
-    expect(activity.unavailableReason).toBe('members-all-entered');
+    expect(activity.available).toBe(true);
+    expect(activity.unavailableReason).toBeNull();
+    // Still said, on each of them.
+    expect(activity.eligibleMembers.every((m) => m.alreadyEntered)).toBe(true);
   });
 
   it('ignores the account-level duplicate count', async () => {

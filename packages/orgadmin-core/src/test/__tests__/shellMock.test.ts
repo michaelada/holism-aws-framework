@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { translateFromCatalogue } from '../shellMock';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createShellMock, translateToKey } from '../shellMock';
@@ -76,5 +77,27 @@ describe('the shared shell mock', () => {
     expect(createShellMock({ t: translateToKey }).useTranslation().t('events.title')).toBe(
       'events.title'
     );
+  });
+});
+
+/**
+ * Counted strings.
+ *
+ * A catalogue entry with a count has no bare key — only `_one` and `_other` —
+ * so a mock that looks up the bare path renders "events.entries.count" and the
+ * assertion reads as a broken page.
+ */
+describe('plurals', () => {
+  it('selects the singular for one', () => {
+    expect(translateFromCatalogue('events.entries.count', { count: 1 })).toBe('1 entry');
+  });
+
+  it('selects the plural for anything else', () => {
+    expect(translateFromCatalogue('events.entries.count', { count: 4 })).toBe('4 entries');
+    expect(translateFromCatalogue('events.entries.count', { count: 0 })).toBe('0 entries');
+  });
+
+  it('still returns the key when neither form exists', () => {
+    expect(translateFromCatalogue('nothing.here', { count: 2 })).toBe('nothing.here');
   });
 });

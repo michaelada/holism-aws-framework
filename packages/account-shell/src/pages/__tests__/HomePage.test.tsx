@@ -43,6 +43,7 @@ const empty = (): AccountDashboard => ({
   comingUp: null,
   cart: null,
   whatsOn: [],
+  announcements: [],
 });
 
 const dashboard = (over: Partial<AccountDashboard> = {}): AccountDashboard => ({
@@ -111,6 +112,18 @@ const dashboard = (over: Partial<AccountDashboard> = {}): AccountDashboard => ({
       colour: null,
     },
   ],
+  announcements: [],
+  ...over,
+});
+
+const announcement = (over: Record<string, unknown> = {}) => ({
+  id: 'ann-1',
+  title: 'Clubhouse closed Saturday',
+  description: '<p>The floor is being replaced.</p>',
+  startsAt: '2026-09-01T09:00:00.000Z',
+  endsAt: '2026-09-06T18:00:00.000Z',
+  imageUrl: null,
+  imagePlacement: null,
   ...over,
 });
 
@@ -320,8 +333,33 @@ describe('HomePage (B3)', () => {
 
       await userEvent.click(await screen.findByRole('button', { name: 'Renew' }));
 
-      expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/browse/memberships`);
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringContaining(`/${contextValue.orgCode}/browse/memberships`)
+      );
       expect(mockNavigate).not.toHaveBeenCalledWith(`/${contextValue.orgCode}/memberships`);
+    });
+
+    it('carries which membership is being renewed', async () => {
+      /*
+       * Reported from the product: renewing from here opened a blank
+       * application, while renewing the same membership from My Memberships
+       * opened it filled in. `?renew=` is the whole difference — the form reads
+       * it to know whose details these are, and without it the two Renew
+       * buttons led to two different journeys.
+       */
+      const [first] = dashboard().memberships!;
+      mockExecute.mockResolvedValue(
+        dashboard({
+          memberships: [{ ...first!, id: 'member-9', daysRemaining: 15, canRenew: true } as any],
+        })
+      );
+      renderWithProviders(<HomePage />);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Renew' }));
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `/${contextValue.orgCode}/browse/memberships?renew=member-9`
+      );
     });
   });
 
@@ -338,7 +376,10 @@ describe('HomePage (B3)', () => {
       expect(await screen.findByText(/Expires in 12 days/)).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Renew' }));
-      expect(mockNavigate).toHaveBeenCalledWith(`/${contextValue.orgCode}/browse/memberships`);
+      // With `?renew=` on it — see "carries which membership is being renewed".
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringContaining(`/${contextValue.orgCode}/browse/memberships`)
+      );
     });
 
     /** The same third condition as C4: due, but nothing open to renew into. */
@@ -682,5 +723,156 @@ describe('HomePage — who the entry is for', () => {
     const line = await screen.findByText(/10:00–11:00/);
     // The date and the time, and no trailing separator where a name would be.
     expect(line.textContent).not.toMatch(/·\s*$/);
+  });
+});
+
+/**
+ * How the teasers are laid out.
+ *
+ * Four across was right when this column was the whole page. It is two thirds
+ * of one once a club has notices to show, and four cards in that space squash
+ * an event's name into three lines.
+ */
+describe('B3 — the rows of teasers', () => {
+  it('lays them out three across, not four', async () => {
+    mockExecute.mockResolvedValue(dashboard());
+
+    const { container } = renderWithProviders(<HomePage />);
+    await screen.findByText(/Welcome back/);
+
+    // The cards are `md={4}`; nothing on this page is four-across any more.
+    expect(container.querySelectorAll('.MuiGrid-grid-md-3')).toHaveLength(0);
+    expect(container.querySelectorAll('.MuiGrid-grid-md-4').length).toBeGreaterThan(0);
+  });
+
+  it('keeps every row of them the same width', async () => {
+    /*
+     * Events, external events, memberships, bookings, registrations and the
+     * shop are the same kind of card in the same column. One row a different
+     * width from the rest reads as a mistake, which is why they share a single
+     * definition rather than six literals.
+     */
+    // The default fixture already spans three of the six rows: an event, a
+    // shop item and a membership.
+    mockExecute.mockResolvedValue(dashboard());
+
+    const { container } = renderWithProviders(<HomePage />);
+    await screen.findByText(/Welcome back/);
+
+    /*
+     * Every grid item that holds a teaser, whatever section it is in. The two
+     * summary cells at the top (`md={6}`) and the announcements column are not
+     * teasers and are left out by looking only at the small breakpoints these
+     * carry.
+     */
+    const teasers = Array.from(container.querySelectorAll('.MuiGrid-grid-sm-6'));
+    // Three sections' worth in this fixture: an event, a shop item, a membership.
+    expect(teasers).toHaveLength(3);
+    for (const teaser of teasers) {
+      expect(teaser.className).toContain('MuiGrid-grid-md-4');
+    }
+  });
+});
+
+/**
+ * The club's notices, in the right-hand third.
+ *
+ * Two requirements pull against each other and both have to hold: with
+ * announcements the page is two thirds and one third, and **without** them it
+ * is the page exactly as it was before this feature existed — not the same page
+ * inside a grid that happens to be full width.
+ */
+describe('B3 — announcements', () => {
+  const withNotices = (...announcements: unknown[]) =>
+    mockExecute.mockResolvedValue(dashboard({ announcements } as never));
+
+  it('shows what the club is saying, under a heading that says who is speaking', async () => {
+    // Without a heading a photograph in a sidebar reads as an advertisement.
+    withNotices(announcement());
+
+    renderWithProviders(<HomePage />);
+
+    expect(await screen.findByText('Notices')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Clubhouse closed Saturday' })).toBeInTheDocument();
+    expect(screen.getByText('The floor is being replaced.')).toBeInTheDocument();
+  });
+
+  it('gives the notices a third and the rest of the page two', async () => {
+    withNotices(announcement());
+
+    const { container } = renderWithProviders(<HomePage />);
+    await screen.findByText('Notices');
+
+    expect(container.querySelector('.MuiGrid-grid-md-8')).not.toBeNull();
+    expect(container.querySelector('.MuiGrid-grid-md-4')).not.toBeNull();
+  });
+
+  it('puts them first on a narrow screen', async () => {
+    /*
+     * The club is telling its members something, and on a phone the
+     * alternative is a notice nobody scrolls to. `order: -1` is the base rule;
+     * the `md` override that restores the right-hand column lives in a media
+     * query, which jsdom does not apply — so what is asserted here is exactly
+     * the narrow-screen case.
+     */
+    withNotices(announcement());
+
+    const { container } = renderWithProviders(<HomePage />);
+    await screen.findByText('Notices');
+
+    const column = screen.getByTestId('announcements-column');
+    /*
+     * Read from the emitted rule rather than from `getComputedStyle`: Emotion
+     * injects a class, and jsdom does not resolve it back to a computed value.
+     */
+    const rules = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.textContent ?? '')
+      .join('');
+    const ordering = Array.from(column.classList).find((name) =>
+      new RegExp(`\\.${name}\\b[^{]*\\{[^}]*order:-1`).test(rules)
+    );
+    expect(ordering).toBeDefined();
+  });
+
+  it('shows several, newest first as the server sent them', async () => {
+    withNotices(
+      announcement(),
+      announcement({ id: 'ann-2', title: 'Summer camp booking is open' })
+    );
+
+    renderWithProviders(<HomePage />);
+
+    const headings = await screen.findAllByRole('heading', { level: 3 });
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Clubhouse closed Saturday',
+      'Summer camp booking is open',
+    ]);
+  });
+
+  it('leaves the page exactly as it was when there is nothing to say', async () => {
+    /*
+     * A club without the capability and a club with nothing showing are the
+     * same case. No column, and no wrapping grid either — `md={12}` and no
+     * wrapper are not quite the same thing, and the difference shows up in the
+     * margins of every card below.
+     */
+    mockExecute.mockResolvedValue(dashboard());
+
+    const { container } = renderWithProviders(<HomePage />);
+    await screen.findByText(/Welcome back/);
+
+    expect(screen.queryByText('Notices')).not.toBeInTheDocument();
+    expect(container.querySelector('.MuiGrid-grid-md-8')).toBeNull();
+  });
+
+  it('renders a background notice over a darkened picture', async () => {
+    // The club uploads whatever photograph it has; legibility is the card's job.
+    withNotices(
+      announcement({ imageUrl: 'https://signed.example.test/x.jpg', imagePlacement: 'background' })
+    );
+
+    renderWithProviders(<HomePage />);
+
+    expect(await screen.findByTestId('announcement-scrim')).toBeInTheDocument();
   });
 });

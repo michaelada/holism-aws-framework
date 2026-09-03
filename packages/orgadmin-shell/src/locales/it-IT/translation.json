@@ -1,6 +1,7 @@
 {
   "common": {
     "actions": {
+      "print": "Stampa",
       "save": "Salva",
       "cancel": "Annulla",
       "retry": "Riprova",
@@ -24,6 +25,7 @@
       "add": "Aggiungi"
     },
     "status": {
+      "partially_refunded": "Rimborsato in parte",
       "active": "Attivo",
       "inactive": "Inattivo",
       "pending": "In attesa",
@@ -85,6 +87,23 @@
     }
   },
   "events": {
+    "entries": {
+      "exportFailed": "Non è stato possibile creare l’esportazione. Non è stato scaricato nulla.",
+      "title": "Iscrizioni",
+      "export": "Esporta in Excel",
+      "searchPlaceholder": "Cerca per nome, e-mail o categoria…",
+      "showing": "{{shown}} di {{total}} iscrizioni",
+      "count_one": "{{count}} iscrizione",
+      "count_other": "{{count}} iscrizioni",
+      "name": "Nome",
+      "email": "E-mail",
+      "entered": "Iscritto il",
+      "status": "Stato",
+      "none": "Non si è ancora iscritto nessuno.",
+      "noMatching": "Nessuna iscrizione corrisponde alla ricerca.",
+      "loadFailed": "Non è stato possibile caricare le iscrizioni.",
+      "unnamedActivity": "Non assegnata"
+    },
     "venues": {
       "title": "Sedi",
       "create": "Crea sede",
@@ -268,6 +287,8 @@
         "limitApplicants": "Limita numero di candidati",
         "applicantsLimit": "Limite candidature",
         "applicantsLimitHelper": "Numero massimo di candidati per questa attività",
+        "ticketsAdmit": "Persone ammesse per biglietto",
+        "ticketsAdmitHelper": "Quante persone fa entrare un biglietto di questa attività. 1 per un biglietto giornaliero, 4 per un biglietto famiglia.",
         "allowSpecifyQuantity": "Consenti specifica quantità",
         "useTermsAndConditions": "Usa termini e condizioni",
         "termsAndConditions": "Termini e condizioni",
@@ -306,6 +327,38 @@
       "publishEvent": "Pubblica evento"
     },
     "entryDetails": {
+      "answers": {
+        "nameRequired": "Inserisci il nome della persona a cui si riferisce questa iscrizione.",
+        "edit": "Modifica",
+        "title": "Modifica questa iscrizione",
+        "subtitle": "Il nome della persona iscritta e tutte le domande del modulo, con o senza risposta.",
+        "loadFailed": "Non è stato possibile caricare il modulo di questa categoria.",
+        "saveFailed": "Non è stato possibile salvare queste risposte.",
+        "noFields": "Questo modulo non ha campi.",
+        "missing": "Ancora necessari: {{fields}}",
+        "invalid": "Controlla queste risposte: {{fields}}"
+      },
+      "name": "Nome",
+      "withdrawn": "Questa iscrizione è stata ritirata.",
+      "withdrawnOn": "Questa iscrizione è stata ritirata il {{date}}.",
+      "notFound": "Non è stato possibile caricare questa iscrizione.",
+      "backToEntries": "Torna alle iscrizioni",
+      "entrant": "Chi si è iscritto",
+      "member": "Tesseramento",
+      "notAMember": "Non iscritto come socio",
+      "viewMember": "Apri il socio",
+      "theEntry": "L’iscrizione",
+      "activity": "Categoria",
+      "activityDescription": "Informazioni sulla categoria",
+      "fee": "Quota di iscrizione",
+      "event": "Evento",
+      "eventDates": "Date dell’evento",
+      "noAnswers": "Questa categoria non richiedeva altri dati.",
+      "payment": "Pagamento",
+      "paymentTotal": "Totale del pagamento",
+      "paymentDate": "Pagato",
+      "viewPayment": "Apri il pagamento",
+      "noPayment": "Questa iscrizione non è collegata a un pagamento.",
       "title": "Dettagli iscrizione",
       "firstName": "Nome",
       "lastName": "Cognome",
@@ -507,7 +560,8 @@
       "removeLabels": "Rimuovi etichette",
       "execute": "Esegui",
       "add": "Aggiungi",
-      "addMember": "Aggiungi iscritto"
+      "addMember": "Aggiungi iscritto",
+      "editMember": "Modifica iscritto"
     },
     "typeSelector": {
       "title": "Seleziona il tipo di iscrizione"
@@ -1310,6 +1364,34 @@
     }
   },
   "ticketing": {
+    "scanning": {
+      "title": "Controllo all\u2019ingresso",
+      "intro": "Crei un link per chi \u00e8 all\u2019ingresso. Lo apre sul proprio telefono, inserisce nome e PIN e inizia a scansionare. Non serve un account e scade da solo.",
+      "lasts": "Valido per",
+      "hours": "{{count}} ora",
+      "hours_other": "{{count}} ore",
+      "create": "Crea un link di scansione",
+      "createFailed": "Non \u00e8 stato possibile creare il link di scansione.",
+      "issuedTitle": "Invii questo link e il PIN a chi \u00e8 all\u2019ingresso",
+      "copyLink": "Copia il link",
+      "pin": "PIN {{pin}}",
+      "pinShownOnce": "Il PIN viene mostrato una sola volta. Se va perso, crei un altro link.",
+      "activeUntil": "Attivo fino al {{when}}",
+      "ended": "Terminato",
+      "revoke": "Ferma questo link",
+      "noStewardsYet": "Nessuno ha ancora iniziato a scansionare con questo link.",
+      "stewardLine": "{{name}} \u2014 {{count}} scansioni, visto l\u2019ultima volta {{when}}",
+      "scannedBy": "Scansionato da",
+      "refused": {
+        "not_found": "Non riconosciuto",
+        "wrong_event": "Non \u00e8 per questo evento",
+        "already_used": "Gi\u00e0 utilizzato",
+        "expired": "Scaduto",
+        "cancelled": "Annullato",
+        "withdrawn": "Iscrizione ritirata",
+        "forged": "Non emesso da noi"
+      }
+    },
     "title": "Biglietteria eventi",
     "dashboard": "Dashboard biglietteria",
     "searchPlaceholder": "Cerca per nome, email o riferimento biglietto...",
@@ -1349,7 +1431,8 @@
       "markAsScanned": "Segna come scansionato",
       "markAsNotScanned": "Segna come non scansionato",
       "resendEmail": "Reinvia email",
-      "downloadPDF": "Scarica PDF"
+      "downloadPDF": "Scarica PDF",
+      "printTicket": "Stampa / Salva come PDF"
     },
     "batch": {
       "selectedTickets": "{{count}} biglietto/i selezionato/i",
@@ -1378,7 +1461,13 @@
       "scanCount": "Numero scansioni",
       "scanResult": "Risultato",
       "notes": "Note",
-      "notAvailable": "N/D"
+      "notAvailable": "N/D",
+      "markedByAdmin": "Contrassegnato da un amministratore",
+      "tabs": {
+        "ticket": "Il biglietto",
+        "scanning": "Scansione",
+        "ticketHint": "Esattamente come lo vede chi lo possiede."
+      }
     },
     "scanHistory": {
       "scanDate": "Data scansione",
@@ -1460,7 +1549,9 @@
         "ticketFooterText": "Testo piè di pagina biglietto",
         "ticketValidityPeriod": "Periodo di validità del biglietto (ore)",
         "ticketBackgroundColor": "Colore di sfondo del biglietto",
-        "includeEventLogo": "Includi logo evento"
+        "ticketImage": "Immagine del biglietto (facoltativa)",
+        "ticketImagePlacement": "Usala come",
+        "ticketLayout": "Disposizione"
       },
       "helpers": {
         "ticketHeaderText": "Testo visualizzato nella parte superiore del biglietto",
@@ -1468,7 +1559,9 @@
         "ticketFooterText": "Testo visualizzato nella parte inferiore del biglietto",
         "ticketValidityPeriod": "Quante ore prima dell'evento il biglietto diventa valido",
         "ticketBackgroundColor": "Colore di sfondo del biglietto",
-        "includeEventLogo": "Mostra il logo dell'evento sul biglietto"
+        "ticketImagePlacement": "Le immagini di sfondo vengono scurite per mantenere leggibile il testo.",
+        "qrAlwaysWhite": "Il codice QR sta sempre su bianco, qualunque cosa tu scelga: uno scanner legge scuro su chiaro, e un biglietto che non si legge non serve.",
+        "imageOverridesColour": "Un’immagine di sfondo sostituisce questo colore."
       },
       "tooltips": {
         "generateElectronicTickets": "Abilita la generazione automatica di biglietti elettronici con codici QR",
@@ -1476,13 +1569,38 @@
         "ticketInstructions": "Istruzioni mostrate ai partecipanti sul loro biglietto",
         "ticketFooterText": "Testo di piè di pagina personalizzato stampato su ogni biglietto",
         "ticketValidityPeriod": "Numero di ore prima dell'inizio dell'evento in cui i biglietti sono validi per la scansione",
-        "ticketBackgroundColor": "Scegli un colore di sfondo per il modello del biglietto",
-        "includeEventLogo": "Includi l'immagine del logo dell'evento sul biglietto generato"
+        "ticketBackgroundColor": "Scegli un colore di sfondo per il modello del biglietto"
+      },
+      "actions": {
+        "chooseImage": "Scegli immagine",
+        "removeImage": "Rimuovi immagine"
+      },
+      "placements": {
+        "header": "Intestazione",
+        "footer": "Piè di pagina",
+        "topRight": "In alto a destra",
+        "background": "Sfondo"
+      },
+      "layouts": {
+        "stacked": "In colonna",
+        "sideBySide": "Affiancata",
+        "compact": "Compatta"
+      },
+      "preview": {
+        "title": "Anteprima",
+        "subtitle": "Il biglietto come verrà stampato.",
+        "sampleEvent": "Il tuo evento",
+        "sampleEventDescription": "La descrizione dell’evento appare qui, sotto il nome.",
+        "sampleActivity": "Categoria aperta",
+        "sampleActivityDescription": "La descrizione della categoria appare qui, spesso con le istruzioni per l’ingresso.",
+        "sampleHolder": "Bríd McNamara"
       }
     },
     "errors": {
       "invalidEvent": "Evento non trovato o biglietteria non attivata",
-      "loadFailed": "Caricamento dati biglietteria fallito"
+      "loadFailed": "Caricamento dati biglietteria fallito",
+      "scanStatusFailed": "Non è stato possibile cambiare lo stato di scansione di questo biglietto.",
+      "printFailed": "Non è stato possibile aprire il biglietto per la stampa."
     }
   },
   "forms": {
@@ -1643,6 +1761,61 @@
     }
   },
   "payments": {
+    "itemTypes": {
+      "event_entry": "Iscrizione",
+      "membership": "Tesseramento",
+      "registration": "Registrazione",
+      "booking": "Prenotazione",
+      "merchandise": "Negozio",
+      "ticket": "Biglietto"
+    },
+    "refunds": {
+      "scopes": {
+        "full": "Pagamento intero",
+        "lessHandlingFee": "Tutto tranne le spese",
+        "items": "Voci",
+        "amount": "Importo parziale"
+      },
+      "menu": "Rimborsi",
+      "title": "Rimborsi",
+      "subtitle": "Denaro restituito dal club e chi lo ha autorizzato.",
+      "history": "Rimborsi",
+      "when": "Richiesto",
+      "payer": "Pagato da",
+      "amount": "Rimborsato",
+      "ofPayment": "Pagamento",
+      "requestedBy": "Richiesto da",
+      "reason": "Motivo",
+      "status": "Stato",
+      "none": "Non è stato effettuato alcun rimborso.",
+      "loadFailed": "Non è stato possibile caricare i rimborsi.",
+      "inFull": "per intero",
+      "inPart": "in parte",
+      "requesterUnknown": "Non è più amministratore",
+      "viewPayment": "Apri il pagamento",
+      "refundedOf": "Sono stati rimborsati {{refunded}} su {{total}}.",
+      "statuses": {
+        "completed": "Inviato",
+        "pending": "In attesa di bonifico",
+        "failed": "Non riuscito"
+      }
+    },
+    "settlement": {
+      "history": "Regolamento offline",
+      "when": "Quando",
+      "what": "Che cosa è successo",
+      "who": "Registrato da",
+      "released": "Rilasciato",
+      "kinds": {
+        "received": "Segnato come ricevuto",
+        "undone": "Registrazione annullata"
+      },
+      "itemsCreated_one": "{{count}} voce creata",
+      "itemsCreated_other": "{{count}} voci create",
+      "itemsFailed_one": "{{count}} non è stato possibile crearla",
+      "itemsFailed_other": "{{count}} non è stato possibile crearle"
+    },
+    "unknownPayer": "Sconosciuto",
     "allMenu": "Tutti i pagamenti",
     "title": "Pagamenti",
     "paymentDetails": "Dettagli del pagamento",
@@ -1731,6 +1904,7 @@
       "all": "Tutti"
     },
     "statusOptions": {
+      "partially_refunded": "Rimborsato in parte",
       "all": "Tutti",
       "pending": "In attesa",
       "paid": "Pagato",
@@ -1738,6 +1912,8 @@
       "failed": "Fallito"
     },
     "paymentMethodOptions": {
+      "stripe": "Carta",
+      "pay-offline": "Offline",
       "all": "Tutti",
       "card": "Carta",
       "cheque": "Assegno",
@@ -1749,7 +1925,8 @@
       "merchandise": "Merce",
       "calendar": "Prenotazione",
       "registration": "Registrazione",
-      "ticket": "Biglietto"
+      "ticket": "Biglietto",
+      "cart": "Carrello"
     },
     "actions": {
       "exportToCSV": "Esporta in CSV",
@@ -1757,6 +1934,25 @@
       "backToPayments": "Torna ai pagamenti"
     },
     "details": {
+      "itemStatus": "Stato",
+      "refunded": "{{amount}} rimborsati",
+      "entryWithdrawn": "Iscrizione ritirata",
+      "handlingFee": "Spese di gestione",
+      "subtotal": "Subtotale",
+      "total": "Totale",
+      "items": "Cosa ha pagato",
+      "item": "Voce",
+      "method": "Metodo",
+      "noItems": "Nessuna voce registrata per questo pagamento.",
+      "notYetCreated": "Non ancora creato",
+      "view": {
+        "default": "Vedi",
+        "event_entry": "Vedi iscrizione",
+        "membership": "Vedi socio",
+        "registration": "Vedi registrazione",
+        "booking": "Vedi prenotazione",
+        "merchandise": "Vedi ordine"
+      },
       "paymentInformation": "Informazioni sul pagamento",
       "customerInformation": "Informazioni cliente",
       "relatedTransaction": "Transazione correlata",
@@ -1776,6 +1972,21 @@
       "refundReason": "Motivo"
     },
     "refund": {
+      "howMuch": "Quanto rimborsare",
+      "scopes": {
+        "full": "L’intero pagamento — {{amount}}",
+        "lessHandlingFee": "Tutto tranne le spese di gestione — {{amount}} ({{fee}} trattenuti)",
+        "items": "Voci specifiche",
+        "amount": "Un altro importo"
+      },
+      "amountLabel": "Importo da rimborsare",
+      "upTo": "Si possono ancora rimborsare fino a {{amount}}.",
+      "tooMuch": "Sono rimborsabili solo {{amount}}.",
+      "someAlreadyRefunded": "Le voci già rimborsate non sono elencate.",
+      "summary": "Verranno rimborsati {{amount}}.",
+      "removeEntries_one": "Ritira anche {{count}} iscrizione dall’evento",
+      "removeEntries_other": "Ritira anche {{count}} iscrizioni dall’evento",
+      "removeEntriesHelp": "Le iscrizioni ritirate escono dall’elenco ma restano registrate.",
       "title": "Richiedi rimborso",
       "message": "Sei sicuro di voler rimborsare questo pagamento di {{amount}}? Questa azione non può essere annullata.",
       "reasonLabel": "Motivo del rimborso",
@@ -1785,6 +1996,7 @@
       "processing": "Elaborazione..."
     },
     "offline": {
+      "viewPayment": "Vedi il pagamento",
       "menu": "Pagamenti offline",
       "title": "Pagamenti offline",
       "subtitle": "Assegni e bonifici che i soci si sono impegnati a versare. Nulla di ciò che hanno acquistato esiste finché non registri l’incasso.",
@@ -2219,7 +2431,18 @@
     "contactAdministrator": "Contatta il tuo amministratore per abilitare le funzionalità per la tua organizzazione.",
     "debugInfo": "Debug: {{capabilitiesCount}} funzionalità abilitate, {{modulesCount}} moduli disponibili"
   },
-  "audit": {    "actions": {
+  "audit": {
+    "reference": "Riferimento",
+    "viewEntity": {
+      "default": "Apri il record",
+      "payment": "Apri il pagamento",
+      "event": "Apri l’evento",
+      "member": "Apri il socio",
+      "order": "Apri l’ordine",
+      "merchandiseOrder": "Apri l’ordine",
+      "booking": "Apri la prenotazione"
+    },
+    "actions": {
       "auth.login": "Accesso effettuato",
       "auth.logout": "Uscita effettuata",
       "auth.login-failed": "Accesso non riuscito",
@@ -2318,17 +2541,22 @@
       "field.created": "Campo modulo creato",
       "field.updated": "Campo modulo aggiornato",
       "field.deleted": "Campo modulo eliminato",
+      "entry.answers-corrected": "Risposte dell’iscrizione corrette",
       "checkout.started": "Pagamento avviato",
       "payment.method-selected": "Metodo di pagamento scelto",
       "payment.method-changed": "Metodo di pagamento modificato",
       "payment.succeeded": "Pagamento riuscito",
       "payment.failed": "Pagamento non riuscito",
       "refund.issued": "Rimborso emesso",
-      "offline-payment.recorded": "Pagamento offline registrato",
+      "offline-payment.recorded": "Pagamento offline registrato come ricevuto",
+      "offline-payment.receipt-undone": "Registrazione del pagamento offline annullata",
       "lodgement.viewed": "Versamenti consultati",
       "lodgement.detail-viewed": "Versamento aperto",
       "report.viewed": "Report consultato",
-      "export.downloaded": "Esportazione scaricata"
+      "export.downloaded": "Esportazione scaricata",
+      "announcement.created": "Comunicazione pubblicata",
+      "announcement.updated": "Comunicazione modificata",
+      "announcement.deleted": "Comunicazione rimossa"
     },
     "title": "Registro di controllo",
     "subtitle": "Tutto ciò che accade nella tua organizzazione: chi, su cosa e cosa è cambiato.",
@@ -2347,10 +2575,32 @@
     "noMore": "Questo è tutto ciò che corrisponde a questi filtri.",
     "loadError": "Impossibile caricare il registro di controllo.",
     "unknownActor": "sconosciuto",
-    "columns": { "when": "Quando", "who": "Chi", "what": "Cosa" },
-    "outcomes": { "success": "Riuscito", "failure": "Fallito", "denied": "Negato" },
-    "userTypes": { "super-admin": "Super amministratore", "org-admin": "Amministratore", "account-user": "Utente account", "system": "Sistema", "anonymous": "—" },
-    "changes": { "field": "Campo", "before": "Prima", "after": "Dopo", "createdWith": "Creato con", "deletedValues": "Valori all’eliminazione", "hidden": "nascosto — contrassegnato come sensibile", "none": "Questo evento registra un’azione, non una modifica ai valori memorizzati." }
+    "columns": {
+      "when": "Quando",
+      "who": "Chi",
+      "what": "Cosa"
+    },
+    "outcomes": {
+      "success": "Riuscito",
+      "failure": "Fallito",
+      "denied": "Negato"
+    },
+    "userTypes": {
+      "super-admin": "Super amministratore",
+      "org-admin": "Amministratore",
+      "account-user": "Utente account",
+      "system": "Sistema",
+      "anonymous": "—"
+    },
+    "changes": {
+      "field": "Campo",
+      "before": "Prima",
+      "after": "Dopo",
+      "createdWith": "Creato con",
+      "deletedValues": "Valori all’eliminazione",
+      "hidden": "nascosto — contrassegnato come sensibile",
+      "none": "Questo evento registra un’azione, non una modifica ai valori memorizzati."
+    }
   },
   "modules": {
     "dashboard": {
@@ -2450,6 +2700,11 @@
         "discounts": "Sconti",
         "merchandiseOrders": "Ordini di merce"
       }
+    },
+    "announcements": {
+      "name": "Comunicazioni",
+      "title": "Comunicazioni",
+      "description": "Pubblica avvisi che i tuoi iscritti vedono all’accesso"
     }
   },
   "components": {
@@ -2701,6 +2956,24 @@
     }
   },
   "discounts": {
+    "usage": {
+      "title": "Utilizzo dello sconto",
+      "subtitle": "Quante volte è stato usato questo sconto e quanto ha ridotto.",
+      "subtitleWithCode": "Codice {{code}} — quante volte è stato usato questo sconto e quanto ha ridotto.",
+      "timesUsed": "Volte usato",
+      "totalGiven": "Sconto totale concesso",
+      "average": "Media per utilizzo",
+      "remaining": "Utilizzi rimanenti",
+      "noLimit": "Nessun limite",
+      "whoUsedIt": "Chi lo ha usato",
+      "member": "Iscritto",
+      "uses": "Utilizzi",
+      "received": "Sconto ricevuto",
+      "unknownMember": "Iscritto non più registrato",
+      "notUsedYet": "Questo sconto non è ancora stato usato.",
+      "notFound": "Non è stato possibile caricare questo sconto.",
+      "backToDiscounts": "Torna agli sconti"
+    },
     "eligibility": {
       "title": "Criteri di idoneità",
       "description": "Definisci chi può usare questo sconto e a quali condizioni",
@@ -2727,5 +3000,66 @@
     "deleteBody": "Il tipo verrà rimosso dall’elenco. Gli eventi che lo usano mantengono la loro registrazione.",
     "deleteConfirm": "Elimina tipo",
     "deleteFailed": "Non è stato possibile eliminare il tipo. Potrebbe essere ancora usato da un evento."
+  },
+  "announcements": {
+    "title": "Comunicazioni",
+    "subtitle": "Avvisi che i tuoi iscritti vedono all’accesso.",
+    "createTitle": "Nuova comunicazione",
+    "editTitle": "Modifica comunicazione",
+    "empty": "Ancora nessuna comunicazione. Gli iscritti non vedranno nulla nella pagina iniziale finché non ne scrivi una.",
+    "loadFailed": "Non è stato possibile caricare le comunicazioni.",
+    "saveFailed": "Non è stato possibile salvare la comunicazione.",
+    "imageRemoveFailed": "Non è stato possibile rimuovere l’immagine.",
+    "backgroundNote": "Le immagini di sfondo vengono scurite per mantenere leggibile il testo.",
+    "actions": {
+      "create": "Nuova comunicazione",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "chooseImage": "Scegli immagine",
+      "removeImage": "Rimuovi immagine"
+    },
+    "table": {
+      "title": "Titolo",
+      "showing": "Visualizzazione",
+      "image": "Immagine",
+      "actions": "Azioni"
+    },
+    "states": {
+      "showing": "In evidenza ora",
+      "scheduled": "Programmata",
+      "finished": "Conclusa"
+    },
+    "placements": {
+      "background": "Sfondo",
+      "header": "Intestazione",
+      "footer": "Piè di pagina"
+    },
+    "fields": {
+      "title": "Titolo",
+      "description": "Descrizione",
+      "startsAt": "Visibile dal",
+      "endsAt": "Visibile fino al",
+      "image": "Immagine (facoltativa)",
+      "placement": "Usala come",
+      "linkLabel": "Testo del link",
+      "linkUrl": "Indirizzo del link",
+      "linkLabelHelp": "Facoltativo — le parole sul pulsante",
+      "linkUrlHelp": "Dove porta il pulsante"
+    },
+    "errors": {
+      "endBeforeStart": "«Visibile fino al» deve seguire «Visibile dal»",
+      "needsBoth": "Un link ha bisogno sia del testo del pulsante sia di un indirizzo web",
+      "notAWebAddress": "L’indirizzo deve iniziare con http:// o https://"
+    },
+    "preview": {
+      "title": "Anteprima",
+      "subtitle": "Ciò che vedrà un iscritto.",
+      "untitled": "Comunicazione senza titolo"
+    },
+    "delete": {
+      "title": "Rimuovere questa comunicazione?",
+      "message": "«{{title}}» verrà rimossa. Gli iscritti smetteranno subito di vederla."
+    },
+    "imageUploadFailed": "La comunicazione è stata salvata, ma non è stato possibile caricare l’immagine. Premi Salva per riprovare."
   }
 }

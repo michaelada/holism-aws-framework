@@ -225,6 +225,24 @@ export const warmTheme = createTheme({
          * Orange is this product's invitation colour; using it to confirm a
          * deletion spends the one vocabulary the interface has for danger.
          */
+        /*
+         * `size="small"` meant nothing until this existed.
+         *
+         * The `root` override above sets the padding and the font size for
+         * every button, so MUI's own small-size rules were overridden and a
+         * button asking to be small came out the same 0.85rem × 2rem pill as a
+         * page's primary action. Every `size="small"` in the product — the
+         * per-row actions on the offline payments cards, the table row
+         * buttons — was inert.
+         *
+         * Sized to sit inside a card or a table row without dominating it, and
+         * still comfortably above the 44px touch target on a phone once the
+         * line height is counted.
+         */
+        sizeSmall: {
+          padding: '0.35rem 1rem',
+          fontSize: '0.8125rem',
+        },
         contained: {
           '&:hover': {
             transform: 'translateY(-2px)',
@@ -273,9 +291,20 @@ export const warmTheme = createTheme({
           borderRadius: '20px',
           border: '1px solid rgba(0,0,0,0.04)',
           boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          /*
+           * The card lifts its shadow on hover; it does **not** move.
+           *
+           * It used to rise 4px, which reads as the page shifting under the
+           * pointer — distracting on a dense list, where crossing a grid of
+           * cards sets each one moving in turn, and worse for anyone who tracks
+           * the pointer against what is beneath it. The shadow alone says
+           * "this responds" without displacing anything.
+           *
+           * `transition` names the property rather than `all` for the same
+           * reason: `all` animates whatever a page happens to change on hover.
+           */
           '&:hover': {
-            transform: 'translateY(-4px)',
             boxShadow: '0 10px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)',
           },
         },

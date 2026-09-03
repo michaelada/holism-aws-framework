@@ -3,6 +3,7 @@ import { FieldDatatype } from '../../types';
 import {
   applicationFieldToFieldDefinition,
   emptyValueForField,
+  formatFormAnswer,
   mapApplicationDatatype,
   mapApplicationOptions,
   validateApplicationField,
@@ -284,5 +285,77 @@ describe('emptyValueForField', () => {
     expect(emptyValueForField({ datatype: 'text' })).toBe('');
     expect(emptyValueForField({ datatype: 'radio' })).toBe('');
     expect(emptyValueForField({})).toBe('');
+  });
+});
+
+/**
+ * A stored answer, as a person reads it.
+ *
+ * A date field's answer is an ISO string — `2012-05-04T00:00:00.000Z` — which
+ * is right for storing and unreadable on a page: a member looking at their own
+ * entry saw the raw string under "Date of birth".
+ */
+describe('formatFormAnswer', () => {
+  const answer = (value: string, datatype?: string) => ({ value, datatype });
+
+  it('reads a date the way the rest of the page reads dates', () => {
+    // The same formatter as the entry date above it, so the two agree.
+    expect(
+      formatFormAnswer(answer(new Date(2012, 4, 4, 12, 0).toISOString(), 'date'), 'en-GB')
+    ).toBe('4 May 2012');
+  });
+
+  /*
+   * Built from a *local* instant, not a literal `…Z` string: an answer is
+   * rendered in the reader's own zone, so a UTC literal asserts the runner's
+   * offset rather than the formatting.
+   */
+  const localIso = (hours: number, minutes: number) =>
+    new Date(2026, 6, 1, hours, minutes).toISOString();
+
+  it('adds the time only where the field asks for one', () => {
+    expect(formatFormAnswer(answer(localIso(14, 30), 'datetime'), 'en-GB')).toBe(
+      '1 Jul 2026, 14:30'
+    );
+  });
+
+  it('shows a time on its own without inventing a day', () => {
+    expect(formatFormAnswer(answer(localIso(9, 5), 'time'), 'en-GB')).toBe('09:05');
+  });
+
+  it('leaves every other answer exactly as it came', () => {
+    /*
+     * Booleans and lists are already display text by the time they reach a
+     * screen — the server writes "Yes" and "Sat, Sun" — because those readings
+     * have to match wherever the answer is shown.
+     */
+    expect(formatFormAnswer(answer('Bramble', 'text'), 'en-GB')).toBe('Bramble');
+    expect(formatFormAnswer(answer('Yes', 'boolean'), 'en-GB')).toBe('Yes');
+    expect(formatFormAnswer(answer('Sat, Sun', 'multiselect'), 'en-GB')).toBe('Sat, Sun');
+  });
+
+  it('does not reformat a number that happens to parse as a date', () => {
+    // `new Date('2012')` is a valid date; a year typed into a number field is
+    // not one, and the datatype is what decides.
+    expect(formatFormAnswer(answer('2012', 'number'), 'en-GB')).toBe('2012');
+  });
+
+  it('shows an unparseable answer rather than a dash', () => {
+    // An answer nobody can parse is better shown than replaced: the member
+    // wrote it, and the club may need to see what they wrote.
+    expect(formatFormAnswer(answer('sometime in May', 'date'), 'en-GB')).toBe('sometime in May');
+  });
+
+  it('follows the viewer’s locale', () => {
+    expect(
+      formatFormAnswer(answer(new Date(2012, 4, 4, 12, 0).toISOString(), 'date'), 'fr-FR')
+    ).toContain('mai');
+  });
+
+  it('survives an answer with no datatype at all', () => {
+    // An older cached response, before the datatype travelled with the answer.
+    expect(formatFormAnswer(answer('2012-05-04T00:00:00.000Z'), 'en-GB')).toBe(
+      '2012-05-04T00:00:00.000Z'
+    );
   });
 });

@@ -19,6 +19,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -71,6 +72,7 @@ interface FulfilmentOutcome {
 
 const OfflinePaymentsPage: React.FC = () => {
   const { execute } = useApi();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { locale } = useLocale();
 
@@ -152,6 +154,9 @@ const OfflinePaymentsPage: React.FC = () => {
       const result = await execute({
         method: 'POST',
         url: `/api/orgadmin/organisation/payments/${payment.id}/received`,
+        // Or a refusal is reported as a success: `execute` answers `null` on an
+        // error unless it is asked to throw, and the `catch` below never fires.
+        throwOnError: true,
       });
 
       const outcome: FulfilmentOutcome | undefined = result?.fulfilment;
@@ -190,6 +195,9 @@ const OfflinePaymentsPage: React.FC = () => {
       await execute({
         method: 'DELETE',
         url: `/api/orgadmin/organisation/payments/${payment.id}/received`,
+        // The refusal is the whole point of this call's error path: undoing a
+        // receipt that has released records must say so, not say "Undone".
+        throwOnError: true,
       });
       setNotice({
         text: t('payments.offline.undone', { name: payment.memberName }),
@@ -338,6 +346,19 @@ const OfflinePaymentsPage: React.FC = () => {
                 </Stack>
 
                 <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
+                  {/*
+                    Into the payment itself: this card shows what is owed and
+                    who owes it, and the next question — what was in the basket,
+                    what has been refunded, how it was settled — is a page away
+                    rather than a search away.
+                  */}
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => navigate(`/payments/${payment.id}`)}
+                  >
+                    {t('payments.offline.viewPayment')}
+                  </Button>
                   {payment.receivedAt ? (
                     <Button
                       size="small"

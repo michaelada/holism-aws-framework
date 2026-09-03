@@ -22,6 +22,7 @@ Membership types, the member database, joining and renewal, and membership disco
 | `members/discounts` | `DiscountsListPage` | `membership-discounts` |
 | `members/discounts/new` | `CreateDiscountPage` | `membership-discounts` |
 | `members/discounts/:id/edit` | `EditDiscountPage` | `membership-discounts` |
+| `members/discounts/:id/stats` | `DiscountUsagePage` (from `orgadmin-events`) | `membership-discounts` |  <!-- where the list's View Usage icon goes; see docs/DISCOUNT_USAGE_PAGE.md -->
 
 ## Layout
 
@@ -72,6 +73,8 @@ memberships, application forms. Backend: `membership.service`, `membership-numbe
 | "Where do group-membership person rules live?" | `components/PersonConfigurationSection.tsx` |
 | "How do bulk member actions work?" | `components/BatchOperationsDialog.tsx` |
 | "How are membership numbers allocated?" | Backend `membership-number-generator.service` |
+| "Why would a screen in this module show a raw i18n key?" | The key is missing from `orgadmin-shell`'s catalogue and the module's suites cannot see it: they mock `t()` as the identity function, so a page asking for a key nobody wrote renders the key and every assertion still passes. `src/__tests__/i18n-key-coverage.test.ts` closes that by reading the module's own sources and checking each key it renders against the real catalogue — it fails naming the key and the file. See [MEMBER_EDIT_HEADING_SHOWED_ITS_KEY.md](../../docs/MEMBER_EDIT_HEADING_SHOWED_ITS_KEY.md) |
+| "Where does a member's name come from?" | The application's *"Who is this membership for?"* field, carried on the basket line as `memberName` and used by `fulfilment.createMembership`. **Not** the account holder — that was the old behaviour, and it made a parent's three children three records of the same name — and not the form, which no longer asks |
 
 ## Deleting a membership type withdraws it
 

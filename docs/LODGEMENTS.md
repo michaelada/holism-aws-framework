@@ -212,3 +212,55 @@ route nested under a sub-item, and both the rail and the breadcrumb compared pat
 opening a lodgement deselected the rail and truncated the breadcrumb to "Payments": the reader lost
 their place in the navigation by following a link inside it. Now a longest-match, which also fixes
 `/payments/:id` — previously it highlighted nothing either.
+
+---
+
+## Testing this in a Stripe sandbox
+
+The screens read Stripe, so a test environment shows nothing until a test
+environment has payouts — and a fresh one never does. A seeded connected account
+starts with a **zero balance**, test charges land in `pending`, and the accounts
+the seed creates pay out **daily with a seven-day delay**. Nothing is broken; it
+is simply a week early.
+
+`npm run test:lodgements -w @aws-web-framework/backend -- --club=khpc` does the
+whole thing. What it does, and why in that order:
+
+1. **Funds the platform's available balance** with `pm_card_bypassPending` — the
+   `4000 0000 0000 0077` card, which settles straight to *available* instead of
+   waiting out the delay. Nothing can move before this: a transfer from an empty
+   platform balance is refused, and Stripe's refusal names this card.
+2. **Charges the club the way the application does** — a destination charge with
+   `transfer_data.destination` and an `application_fee_amount` — so the club's
+   share lands in its own balance less the platform's fee, which is the
+   arithmetic the detail screen explains.
+3. **Creates a payout.**
+
+The same thing by hand works too: the card above through the account app's own
+checkout, then *Pay out* on the connected account in the Stripe dashboard.
+
+### The one thing a hand-made payout cannot do
+
+Stripe refuses to itemise it:
+
+> Balance transaction history can only be filtered on automatic transfers, not manual.
+
+`balanceTransactions.list({ payout })` is the only way to ask what went into a
+payout, so a payout created by hand — from this script or from the dashboard —
+appears on the **list** with its amount, status and destination, and its
+**detail cannot be broken down**. Production payouts are automatic, so no club
+meets this; anybody testing the screen meets it immediately.
+
+That refusal used to surface as *"Stripe could not be reached just now"*, which
+sends a developer to look at their network and a club to ring somebody, over a
+permanent and explicable answer. It is now `LODGEMENT_NOT_ITEMISED` (422) and
+the detail page shows Stripe's reason as information rather than as an error.
+
+**To exercise the detail page**, pass `--fund-only`: the money stays in the
+club's balance and Stripe pays it out on the account's own schedule. That payout
+*is* itemisable. It arrives on the schedule, so it is a wait rather than a step.
+
+### Test keys only
+
+The script refuses to run against a key that is not `sk_test`. Every step moves
+money, and on a live key it would move real money.

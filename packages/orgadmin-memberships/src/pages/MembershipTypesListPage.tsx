@@ -37,7 +37,12 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { usePageHelp, useOnboarding } from '@aws-web-framework/orgadmin-shell';
-import { useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { MembershipType } from '../types/membership.types';
 
 const MembershipTypesListPage: React.FC = () => {
@@ -53,6 +58,9 @@ const MembershipTypesListPage: React.FC = () => {
   
   const [membershipTypes, setMembershipTypes] = useState<MembershipType[]>([]);
   const [filteredTypes, setFilteredTypes] = useState<MembershipType[]>([]);
+  const sort = useTableSort(filteredTypes, {
+    accessors: { discounts: (type) => type.discountIds?.length ?? 0 },
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('all');
@@ -233,11 +241,25 @@ const MembershipTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('memberships.table.name')}</TableCell>
-              <TableCell>{t('memberships.table.status')}</TableCell>
-              <TableCell>{t('memberships.table.type')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('memberships.table.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="membershipStatus">
+                {t('memberships.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="membershipTypeCategory">
+                {t('memberships.table.type')}
+              </SortableTableCell>
+              {/*
+                Not sortable, and deliberately: every row of this column reads
+                "Configured" until payment integration fills it in. An arrow
+                over a column that cannot reorder anything is a promise the
+                table does not keep.
+              */}
               <TableCell>{t('memberships.table.pricing')}</TableCell>
-              <TableCell>{t('memberships.table.discounts')}</TableCell>
+              <SortableTableCell sort={sort} field="discounts">
+                {t('memberships.table.discounts')}
+              </SortableTableCell>
               <TableCell align="right">{t('memberships.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -257,7 +279,7 @@ const MembershipTypesListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTypes.map((type) => (
+              sort.rows.map((type) => (
                 <TableRow key={type.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

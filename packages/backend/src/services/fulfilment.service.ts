@@ -364,21 +364,43 @@ export class FulfilmentService {
       );
     }
 
-    const member = await db.query(
+    const account = await db.query(
       `SELECT first_name, last_name FROM organization_users WHERE id = $1`,
       [line.user_id]
     );
 
-    if (member.rows.length === 0) {
+    if (account.rows.length === 0) {
       throw new Error('The member could not be found');
+    }
+
+    let { first_name, last_name } = account.rows[0];
+
+    /*
+     * Who the membership is *for*.
+     *
+     * The application asks — "Who is this membership for?" — and the answer
+     * travels on the basket line, exactly as an entry's does. Without it every
+     * membership took the **account holder's** name, so a parent joining three
+     * children produced three member records all reading "Aoife Byrne" and the
+     * club could not tell which card belonged to whom. The form used to paper
+     * over it with a "Member name" field whose answer nothing read.
+     *
+     * Read through `parseContextRef` like every other reader here: the column
+     * comes back as a string under some drivers and an object under others.
+     */
+    const context = parseContextRef(line.context_ref) as { memberName?: string };
+    if (typeof context?.memberName === 'string' && context.memberName.trim()) {
+      const split = splitName(context.memberName);
+      first_name = split.firstName;
+      last_name = split.lastName;
     }
 
     const created = await membershipService.createMember({
       organisationId: line.organisation_id,
       membershipTypeId: line.context_id,
       userId: line.user_id,
-      firstName: member.rows[0].first_name,
-      lastName: member.rows[0].last_name,
+      firstName: first_name,
+      lastName: last_name,
       formSubmissionId: line.form_submission_id,
     });
 

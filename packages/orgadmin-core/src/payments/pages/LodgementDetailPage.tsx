@@ -17,7 +17,8 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import {
   Alert,
   Box,
@@ -86,6 +87,9 @@ const STATUS_COLOUR: Record<string, 'success' | 'warning' | 'error' | 'default'>
   failed: 'error',
 };
 
+/** One array, so the loading render does not re-sort a new empty list. */
+const NO_LINES: LodgementLine[] = [];
+
 const LodgementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -98,10 +102,13 @@ const LodgementDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  /** What the server said, when it said something more useful than "failed". */
+  const [explanation, setExplanation] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
+    setExplanation(null);
 
     // `useApi.execute` returns null on failure rather than throwing, so a
     // `catch` alone would leave this page rendering an empty lodgement as
@@ -112,8 +119,17 @@ const LodgementDetailPage: React.FC = () => {
       const response = await execute({
         method: 'GET',
         url: `/api/orgadmin/organisation/payments/lodgements/${id}`,
-        onError: () => {
+        onError: (message) => {
           errored = true;
+          /*
+           * The server's own words, where it has any worth reading.
+           *
+           * One refusal here is not a failure at all: Stripe cannot itemise a
+           * payout somebody created by hand, which is a fact about that payout
+           * rather than something wrong. Replacing that with "we could not load
+           * this lodgement" sends the reader looking for a fault.
+           */
+          setExplanation(message || null);
         },
       });
 
@@ -132,6 +148,26 @@ const LodgementDetailPage: React.FC = () => {
     void load();
   }, [load]);
 
+  /*
+   * Declared above the loading and failure returns rather than beside the
+   * table, because the sort below reads it — and a hook after an early return
+   * is a hook that does not always run.
+   */
+  const rowLabel = (line: LodgementLine): string => {
+    if (line.memberName) return line.memberName;
+    if (line.type === 'refund') return t('payments.lodgements.lineRefund');
+    if (line.type === 'adjustment') return t('payments.lodgements.lineAdjustment');
+    return line.description || t('payments.lodgements.lineUnknown');
+  };
+
+  const sort = useTableSort(detail?.lines ?? NO_LINES, {
+    accessors: {
+      // What the row actually shows: a member's name, or the words standing in
+      // for one where the payment could not be matched.
+      member: rowLabel,
+    },
+  });
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -146,19 +182,12 @@ const LodgementDetailPage: React.FC = () => {
         <Button startIcon={<BackIcon />} onClick={() => navigate('/payments/lodgements')}>
           {t('payments.lodgements.backToList')}
         </Button>
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {t('payments.lodgements.detailLoadError')}
+        <Alert severity={explanation ? 'info' : 'error'} sx={{ mt: 2 }}>
+          {explanation ?? t('payments.lodgements.detailLoadError')}
         </Alert>
       </Box>
     );
   }
-
-  const rowLabel = (line: LodgementLine): string => {
-    if (line.memberName) return line.memberName;
-    if (line.type === 'refund') return t('payments.lodgements.lineRefund');
-    if (line.type === 'adjustment') return t('payments.lodgements.lineAdjustment');
-    return line.description || t('payments.lodgements.lineUnknown');
-  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -248,14 +277,22 @@ const LodgementDetailPage: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell sx={{ width: 48 }} />
-              <TableCell>{t('payments.lodgements.columnMember')}</TableCell>
-              <TableCell>{t('payments.lodgements.columnDate')}</TableCell>
-              <TableCell align="right">{t('payments.lodgements.columnCharged')}</TableCell>
-              <TableCell align="right">{t('payments.lodgements.columnIntoLodgement')}</TableCell>
+              <SortableTableCell sort={sort} field="member">
+                {t('payments.lodgements.columnMember')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="createdAt">
+                {t('payments.lodgements.columnDate')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="grossCharged" align="right">
+                {t('payments.lodgements.columnCharged')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="net" align="right">
+                {t('payments.lodgements.columnIntoLodgement')}
+              </SortableTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {detail.lines.map((line) => {
+            {sort.rows.map((line) => {
               const open = expanded === line.id;
               // Only a resolved payment has a basket to open.
               const expandable = Boolean(line.paymentId);

@@ -49,6 +49,9 @@
     "text": "Con tecnología de ItsPlainSailing.com",
     "copyright": "© {{year}} Esker Software. Todos los derechos reservados"
   },
+  "announcements": {
+    "heading": "Avisos"
+  },
   "posts": {
     "regionLabel": "Anuncios"
   },
@@ -456,11 +459,22 @@
     "empty": "Todavía no ha pagado nada.",
     "itemCount": "{{count}} artículos",
     "handlingFee": "Gastos de gestión",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "plusHandling": "+ {{amount}} de gestión",
     "paidByCard": "Pagado con tarjeta",
     "paidOffline": "Pagado fuera de línea",
     "offlineReceived": "El club registró el cobro el {{date}}",
     "offlineAwaited": "El club aún no ha registrado el cobro.",
     "lineProblem": "Esto no se completó: {{reason}}. El club se pondrá en contacto.",
+    "view": {
+      "default": "Ver",
+      "event_entry": "Ver inscripción",
+      "membership": "Ver membresía",
+      "registration": "Ver registro",
+      "booking": "Ver reserva",
+      "merchandise": "Ver pedido"
+    },
     "status": {
       "paid": "Pagado",
       "pending": "Pendiente",
@@ -555,6 +569,13 @@
     "itemNotFound": "Esto ya no está disponible.",
     "back": "Volver",
     "detailsHeading": "Complete los datos que aparecen a continuación",
+    "prefilledFromRenewal": "Rellenado a partir de su membresía actual. Compruebe que sigue siendo correcto.",
+    "prefilledFromMembership": "Rellenado con los datos de la membresía de {{name}}. Comprueba que siguen siendo correctos.",
+    "member": {
+      "label": "¿Para quién es esta cuota de socio?",
+      "hint": "La persona a la que corresponde. Escriba un nombre o elija uno que ya haya usado.",
+      "required": "Introduzca el nombre de la persona a la que corresponde."
+    },
     "termsHeading": "Términos y condiciones",
     "agreeTerms": "He leído y acepto los términos y condiciones",
     "mustAgree": "Debe aceptar los términos y condiciones para continuar",
@@ -577,6 +598,37 @@
       "awaiting-payment": "Pago pendiente",
       "used": "Utilizada",
       "expired": "Caducada"
+    }
+  },
+  "scan": {
+    "title": "Control de entradas",
+    "unlockIntro": "Escriba su nombre y el PIN que le envi\u00f3 el club. Su nombre queda registrado en cada entrada que escanee.",
+    "yourName": "Su nombre",
+    "yourNameHelper": "Para que el club sepa qui\u00e9n escane\u00f3 cada entrada.",
+    "pin": "PIN",
+    "startScanning": "Empezar a escanear",
+    "unlockFailed": "Ese enlace o PIN no es v\u00e1lido. Consulte con quien se lo envi\u00f3.",
+    "cameraFailed": "No se pudo iniciar la c\u00e1mara. Permita el acceso a la c\u00e1mara o escriba el c\u00f3digo abajo.",
+    "scanningAs": "Escaneando como {{name}}",
+    "finish": "Terminar",
+    "offline": "Sin se\u00f1al. Las entradas se siguen comprobando con la lista descargada al empezar y se enviar\u00e1n cuando vuelva la se\u00f1al.",
+    "waiting": "{{count}} escaneo pendiente de enviar",
+    "waiting_other": "{{count}} escaneos pendientes de enviar",
+    "admitted": "Admitido",
+    "countOf": "{{used}} de {{admits}} admitidos",
+    "previously": "Admitido a las {{when}} por {{who}}",
+    "anotherSteward": "otra persona",
+    "enterCode": "Escriba el c\u00f3digo",
+    "check": "Comprobar",
+    "disagreementsTitle": "Admitidos aqu\u00ed, pero rechazados al enviarse",
+    "refused": {
+      "not_found": "No es nuestra",
+      "wrong_event": "No es para este evento",
+      "already_used": "Ya utilizada",
+      "expired": "Caducada",
+      "cancelled": "Cancelada",
+      "withdrawn": "Inscripci\u00f3n retirada",
+      "forged": "No es una entrada v\u00e1lida"
     }
   },
   "orders": {

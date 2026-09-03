@@ -72,6 +72,7 @@ const OWNER_SQL: Record<string, string> = {
   payment: 'SELECT organisation_id FROM payments WHERE id = $1',
   memberFilter: 'SELECT organisation_id FROM member_filters WHERE id = $1',
   userGroup: 'SELECT organisation_id FROM user_groups WHERE id = $1',
+  announcement: 'SELECT organisation_id FROM organisation_announcements WHERE id = $1',
 
   /*
    * Owned through a parent. A booking belongs to a calendar and a ticket to an
@@ -88,6 +89,11 @@ const OWNER_SQL: Record<string, string> = {
              JOIN events e ON e.id = t.event_id WHERE t.id = $1`,
   ticketByQr: `SELECT e.organisation_id FROM electronic_tickets t
                  JOIN events e ON e.id = t.event_id WHERE t.qr_code = $1`,
+  /*
+   * A gate scanning session names its organisation directly: it is a grant made
+   * *by* a club, and it outlives nothing else that could carry the ownership.
+   */
+  scanSession: 'SELECT organisation_id FROM ticket_scan_sessions WHERE id = $1',
   submissionFile: `SELECT s.organisation_id FROM form_submission_files f
                      JOIN form_submissions s ON s.id = f.submission_id WHERE f.id = $1`,
 

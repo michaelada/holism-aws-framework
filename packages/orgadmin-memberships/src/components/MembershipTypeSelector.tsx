@@ -53,11 +53,12 @@ const MembershipTypeSelector: React.FC<MembershipTypeSelectorProps> = ({
                 borderColor: 'divider',
                 borderRadius: 1,
                 overflow: 'hidden',
-                transition: 'all 0.2s ease-in-out',
+                transition: 'border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                // Border and shadow, no movement — cards in this product do not
+                // rise under the pointer.
                 '&:hover': {
                   borderColor: 'primary.main',
                   boxShadow: 1,
-                  transform: 'translateY(-2px)',
                 },
               }}
             >

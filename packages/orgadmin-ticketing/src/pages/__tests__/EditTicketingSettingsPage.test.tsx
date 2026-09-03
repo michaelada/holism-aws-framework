@@ -45,7 +45,6 @@ const CONFIG = {
   ticketFooterText: 'No refunds',
   ticketValidityPeriod: 30,
   ticketBackgroundColor: '#ffffff',
-  includeEventLogo: true,
 };
 
 const respondWith = (config: unknown = CONFIG, sales: unknown = { eventName: 'Winter Dressage' }) => {
@@ -264,5 +263,191 @@ describe('EditTicketingSettingsPage — saving', () => {
     });
     // A failed save that navigates away looks exactly like a successful one.
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Designing the ticket.
+ *
+ * A club can put a picture on it, choose where the picture goes and how the
+ * ticket is laid out, and see the result before anybody is admitted with it.
+ * The preview is the same renderer that prints — a preview drawn separately
+ * drifts, and what it gets wrong first is exactly what is being checked.
+ */
+describe('EditTicketingSettingsPage — the ticket design', () => {
+  it('offers the four placements and the three layouts', async () => {
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    for (const placement of ['Header', 'Footer', 'Top right', 'Background']) {
+      expect(screen.getByRole('radio', { name: placement })).toBeInTheDocument();
+    }
+    for (const layout of ['Stacked', 'Side by side', 'Compact']) {
+      expect(screen.getByRole('radio', { name: layout })).toBeInTheDocument();
+    }
+  });
+
+  it('does not offer a placement until there is an image', async () => {
+    // A placement with no picture renders as nothing.
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    expect(screen.getByRole('radio', { name: 'Background' })).toBeDisabled();
+  });
+
+  it('says a background will be darkened, before one is chosen', async () => {
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    expect(
+      screen.getByText('Background images are darkened so the text stays readable.')
+    ).toBeInTheDocument();
+  });
+
+  it('says the QR code is always on white, and why', async () => {
+    // The one thing a club cannot restyle. Saying so beats a club discovering
+    // it, or worse, expecting to be able to.
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    expect(screen.getByText(/QR code always sits on white/)).toBeInTheDocument();
+  });
+
+  it('shows a preview of the ticket, rendered by the thing that prints it', async () => {
+    renderPage();
+
+    const preview = await screen.findByTitle('Preview');
+    await waitFor(() => expect(preview.getAttribute('srcdoc')).toContain('Winter Dressage'));
+    // The white QR panel is in it, because it is in every ticket.
+    expect(preview.getAttribute('srcdoc')).toMatch(/\.qr\s*\{[^}]*background:\s*#ffffff/i);
+  });
+
+  it('saves the layout and the placement with the rest', async () => {
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Compact' }));
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(savedPayload()?.ticketLayout).toBe('compact'));
+  });
+
+  it('sends no placement while there is no image', async () => {
+    // Otherwise a club that removed a picture keeps a design that claims one.
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(savedPayload()).toBeDefined());
+    expect(savedPayload()?.ticketImagePlacement).toBeNull();
+  });
+
+  it('opens on the design the club already saved', async () => {
+    respondWith({
+      ...CONFIG,
+      ticketImageUrl: 'https://signed.example.test/banks.jpg',
+      ticketImagePlacement: 'background',
+      ticketLayout: 'sideBySide',
+    });
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    expect(screen.getByRole('radio', { name: 'Background' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Side by side' })).toBeChecked();
+    // And the placement can be changed, because there *is* a picture.
+    expect(screen.getByRole('radio', { name: 'Header' })).not.toBeDisabled();
+  });
+
+  it('uploads a chosen image after the configuration is saved', async () => {
+    /*
+     * In that order: the S3 key is derived from the event and the row has to
+     * exist, and a form that uploaded first would leave an orphan object behind
+     * whenever somebody changed their mind.
+     */
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    const file = new File(['x'], 'banks.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('Ticket image (optional)'), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => {
+      const calls = execute.mock.calls.map((call) => call[0]);
+      const put = calls.findIndex((call) => call?.method === 'PUT');
+      const upload = calls.findIndex((call) => String(call?.url).endsWith('/ticketing-config/image'));
+      expect(upload).toBeGreaterThan(put);
+    });
+  });
+});
+
+/**
+ * The preview shows what was chosen.
+ *
+ * Reported from the product: *"I am selecting an image for the Ticket, but when
+ * I do it does not appear on the preview, plus the preview is all darkened."*
+ * Two faults — the renderer dropped `blob:` URLs, and the text colour keyed off
+ * the image placement rather than the background actually behind the words.
+ */
+describe('EditTicketingSettingsPage — the preview shows the chosen image', () => {
+  /** jsdom has no real FileReader result, so this stands in for one. */
+  const readsAsDataUrl = (dataUrl: string) => {
+    class StubReader {
+      public result: string | null = null;
+      public onload: (() => void) | null = null;
+      readAsDataURL() {
+        this.result = dataUrl;
+        this.onload?.();
+      }
+      abort() {}
+    }
+    vi.stubGlobal('FileReader', StubReader);
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('puts a chosen image into the preview before it is uploaded', async () => {
+    readsAsDataUrl('data:image/png;base64,CHOSEN');
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    fireEvent.change(screen.getByLabelText('Ticket image (optional)'), {
+      target: { files: [new File(['x'], 'banks.jpg', { type: 'image/jpeg' })] },
+    });
+
+    const preview = await screen.findByTitle('Preview');
+    await waitFor(() =>
+      expect(preview.getAttribute('srcdoc')).toContain('data:image/png;base64,CHOSEN')
+    );
+  });
+
+  it('lets the placement be chosen once there is one', async () => {
+    // It stays disabled with no picture, which is what made the whole thing
+    // look inert when the picture was silently dropped.
+    readsAsDataUrl('data:image/png;base64,CHOSEN');
+    renderPage();
+    await screen.findByRole('radio', { name: 'Stacked' });
+
+    fireEvent.change(screen.getByLabelText('Ticket image (optional)'), {
+      target: { files: [new File(['x'], 'banks.jpg', { type: 'image/jpeg' })] },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'Background' })).not.toBeDisabled()
+    );
+  });
+
+  it('shows a dark ticket with light text, so it can be read', async () => {
+    // The seeded clubs' ticket colour is a deep green.
+    respondWith({ ...CONFIG, ticketBackgroundColor: '#123c2b' });
+    renderPage();
+
+    const preview = await screen.findByTitle('Preview');
+    await waitFor(() => expect(preview.getAttribute('srcdoc')).toContain('#123c2b'));
+    expect(preview.getAttribute('srcdoc')).toMatch(/color:\s*#ffffff/);
   });
 });

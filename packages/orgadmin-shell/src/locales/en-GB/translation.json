@@ -21,7 +21,8 @@
       "view": "View",
       "download": "Download",
       "upload": "Upload",
-      "add": "Add"
+      "add": "Add",
+      "print": "Print"
     },
     "status": {
       "active": "Active",
@@ -36,7 +37,8 @@
       "rejected": "Rejected",
       "paid": "Paid",
       "refunded": "Refunded",
-      "status": "Status"
+      "status": "Status",
+      "partially_refunded": "Partially refunded"
     },
     "validation": {
       "required": "This field is required",
@@ -277,6 +279,8 @@
         "limitApplicants": "Limit Number of Applicants",
         "applicantsLimit": "Application Limit",
         "applicantsLimitHelper": "Maximum number of applicants for this activity",
+        "ticketsAdmit": "People admitted per ticket",
+        "ticketsAdmitHelper": "How many people one of this activity’s tickets lets through the gate. 1 for a day ticket, 4 for a family ticket.",
         "allowSpecifyQuantity": "Allow Specify Quantity",
         "useTermsAndConditions": "Use Terms and Conditions",
         "termsAndConditions": "Terms and Conditions",
@@ -326,7 +330,56 @@
       "entryDate": "Entry Date",
       "formSubmission": "Form Submission Data",
       "loadingSubmission": "Loading submission data...",
-      "uploadedFiles": "Uploaded Files"
+      "uploadedFiles": "Uploaded Files",
+      "name": "Name",
+      "entrant": "Who entered",
+      "member": "Membership",
+      "notAMember": "Not entered as a member",
+      "viewMember": "Open the member",
+      "theEntry": "The entry",
+      "activity": "Class",
+      "activityDescription": "About this class",
+      "fee": "Entry fee",
+      "event": "Event",
+      "eventDates": "Event dates",
+      "noAnswers": "This class asked for no additional details.",
+      "payment": "Payment",
+      "paymentTotal": "Payment total",
+      "paymentDate": "Paid",
+      "viewPayment": "Open the payment",
+      "noPayment": "This entry is not attached to a payment record.",
+      "notFound": "We could not load this entry.",
+      "backToEntries": "Back to entries",
+      "withdrawn": "This entry has been withdrawn.",
+      "withdrawnOn": "This entry was withdrawn on {{date}}.",
+      "answers": {
+        "edit": "Edit",
+        "title": "Edit this entry",
+        "subtitle": "The entrant’s name, and every question on the form — whether or not it was answered.",
+        "nameRequired": "Enter the name of the person this entry is for.",
+        "loadFailed": "We could not load the form for this activity.",
+        "saveFailed": "We could not save those answers.",
+        "noFields": "This form has no fields.",
+        "missing": "Still needed: {{fields}}",
+        "invalid": "Check these answers: {{fields}}"
+      }
+    },
+    "entries": {
+      "title": "Entries",
+      "name": "Name",
+      "email": "Email",
+      "entered": "Entered",
+      "status": "Status",
+      "count_one": "{{count}} entry",
+      "count_other": "{{count}} entries",
+      "showing": "Showing {{shown}} of {{total}} entries",
+      "searchPlaceholder": "Search by name, email or class…",
+      "none": "Nobody has entered yet.",
+      "noMatching": "No entries match your search.",
+      "loadFailed": "We could not load the entries.",
+      "export": "Export to Excel",
+      "exportFailed": "We could not produce the export. Nothing has been downloaded.",
+      "unnamedActivity": "Unassigned"
     }
   },
   "memberships": {
@@ -531,7 +584,8 @@
       "removeLabels": "Remove Labels",
       "execute": "Execute",
       "add": "Add",
-      "addMember": "Add Member"
+      "addMember": "Add Member",
+      "editMember": "Edit Member"
     },
     "typeSelector": {
       "title": "Select Membership Type"
@@ -1347,6 +1401,34 @@
     }
   },
   "ticketing": {
+    "scanning": {
+      "title": "Scanning at the gate",
+      "intro": "Create a link for whoever is on the gate. They open it on their own phone, give their name and the PIN, and start scanning. No account needed, and it expires by itself.",
+      "lasts": "Lasts for",
+      "hours": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "create": "Create a scanning link",
+      "createFailed": "The scanning link could not be created.",
+      "issuedTitle": "Send this link and PIN to whoever is on the gate",
+      "copyLink": "Copy the link",
+      "pin": "PIN {{pin}}",
+      "pinShownOnce": "The PIN is shown once. If it is lost, create another link.",
+      "activeUntil": "Active until {{when}}",
+      "ended": "Ended",
+      "revoke": "Stop this link",
+      "noStewardsYet": "Nobody has started scanning with this link yet.",
+      "stewardLine": "{{name}} \u2014 {{count}} scans, last seen {{when}}",
+      "scannedBy": "Scanned by",
+      "refused": {
+        "not_found": "Not recognised",
+        "wrong_event": "Not for this event",
+        "already_used": "Already used",
+        "expired": "Out of date",
+        "cancelled": "Cancelled",
+        "withdrawn": "Entry withdrawn",
+        "forged": "Not issued by us"
+      }
+    },
     "title": "Event Ticketing",
     "dashboard": "Ticketing Dashboard",
     "searchPlaceholder": "Search by name, email, or ticket reference...",
@@ -1386,7 +1468,8 @@
       "markAsScanned": "Mark as Scanned",
       "markAsNotScanned": "Mark as Not Scanned",
       "resendEmail": "Resend Email",
-      "downloadPDF": "Download PDF"
+      "downloadPDF": "Download PDF",
+      "printTicket": "Print / Save as PDF"
     },
     "batch": {
       "selectedTickets": "{{count}} ticket(s) selected",
@@ -1415,7 +1498,13 @@
       "scanCount": "Scan Count",
       "scanResult": "Result",
       "notes": "Notes",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "markedByAdmin": "Marked by an administrator",
+      "tabs": {
+        "ticket": "The ticket",
+        "scanning": "Scanning",
+        "ticketHint": "Exactly as the ticket holder sees it."
+      }
     },
     "scanHistory": {
       "scanDate": "Scan Date",
@@ -1497,7 +1586,9 @@
         "ticketFooterText": "Ticket Footer Text",
         "ticketValidityPeriod": "Ticket Validity Period (hours)",
         "ticketBackgroundColor": "Ticket Background Color",
-        "includeEventLogo": "Include Event Logo"
+        "ticketImage": "Ticket image (optional)",
+        "ticketImagePlacement": "Use it as",
+        "ticketLayout": "Layout"
       },
       "helpers": {
         "ticketHeaderText": "Text displayed at the top of the ticket",
@@ -1505,7 +1596,9 @@
         "ticketFooterText": "Text displayed at the bottom of the ticket",
         "ticketValidityPeriod": "How many hours before the event the ticket becomes valid",
         "ticketBackgroundColor": "Background colour of the ticket",
-        "includeEventLogo": "Show the event logo on the ticket"
+        "ticketImagePlacement": "Background images are darkened so the text stays readable.",
+        "qrAlwaysWhite": "The QR code always sits on white, whatever else you choose — a scanner reads dark on light, and a ticket that will not scan has failed.",
+        "imageOverridesColour": "A background image replaces this colour."
       },
       "tooltips": {
         "generateElectronicTickets": "Enable automatic generation of electronic tickets with QR codes",
@@ -1513,13 +1606,38 @@
         "ticketInstructions": "Instructions shown to attendees on their ticket",
         "ticketFooterText": "Custom footer text printed on each ticket",
         "ticketValidityPeriod": "Number of hours before the event start that tickets become valid for scanning",
-        "ticketBackgroundColor": "Choose a background colour for the ticket template",
-        "includeEventLogo": "Include the event logo image on the generated ticket"
+        "ticketBackgroundColor": "Choose a background colour for the ticket template"
+      },
+      "actions": {
+        "chooseImage": "Choose image",
+        "removeImage": "Remove image"
+      },
+      "placements": {
+        "header": "Header",
+        "footer": "Footer",
+        "topRight": "Top right",
+        "background": "Background"
+      },
+      "layouts": {
+        "stacked": "Stacked",
+        "sideBySide": "Side by side",
+        "compact": "Compact"
+      },
+      "preview": {
+        "title": "Preview",
+        "subtitle": "The ticket as it will print.",
+        "sampleEvent": "Your event",
+        "sampleEventDescription": "The event's description appears here, under its name.",
+        "sampleActivity": "Open class",
+        "sampleActivityDescription": "The class's description appears here — often where the gate's own instructions go.",
+        "sampleHolder": "Bríd McNamara"
       }
     },
     "errors": {
       "invalidEvent": "Event not found or does not have ticketing activated",
-      "loadFailed": "Failed to load ticketing data"
+      "loadFailed": "Failed to load ticketing data",
+      "scanStatusFailed": "We could not change this ticket's scan status.",
+      "printFailed": "We could not open the ticket for printing."
     }
   },
   "forms": {
@@ -1772,13 +1890,16 @@
       "pending": "Pending",
       "paid": "Paid",
       "refunded": "Refunded",
-      "failed": "Failed"
+      "failed": "Failed",
+      "partially_refunded": "Partially refunded"
     },
     "paymentMethodOptions": {
       "all": "All",
       "card": "Card",
       "cheque": "Cheque",
-      "offline": "Offline"
+      "offline": "Offline",
+      "stripe": "Card",
+      "pay-offline": "Offline"
     },
     "paymentTypes": {
       "event": "Event",
@@ -1786,7 +1907,8 @@
       "merchandise": "Merchandise",
       "calendar": "Booking",
       "registration": "Registration",
-      "ticket": "Ticket"
+      "ticket": "Ticket",
+      "cart": "Basket"
     },
     "actions": {
       "exportToCSV": "Export to CSV",
@@ -1810,7 +1932,26 @@
       "type": "Type",
       "transactionName": "Name",
       "refundDate": "Refund Date",
-      "refundReason": "Reason"
+      "refundReason": "Reason",
+      "items": "What this paid for",
+      "item": "Item",
+      "itemStatus": "Status",
+      "method": "Method",
+      "handlingFee": "Handling fee",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "refunded": "{{amount}} refunded",
+      "entryWithdrawn": "Entry withdrawn",
+      "notYetCreated": "Not created yet",
+      "noItems": "No items are recorded against this payment.",
+      "view": {
+        "default": "View",
+        "event_entry": "View entry",
+        "membership": "View member",
+        "merchandise": "View order",
+        "registration": "View registration",
+        "booking": "View booking"
+      }
     },
     "refund": {
       "title": "Request Refund",
@@ -1819,7 +1960,22 @@
       "reasonPlaceholder": "Please provide a reason for the refund...",
       "reasonRequired": "Refund reason is required",
       "confirmButton": "Confirm Refund",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "howMuch": "How much to refund",
+      "amountLabel": "Amount to refund",
+      "scopes": {
+        "full": "The whole payment — {{amount}}",
+        "lessHandlingFee": "Everything but the handling fee — {{amount}} (keeping back {{fee}})",
+        "items": "Particular items",
+        "amount": "Another amount"
+      },
+      "someAlreadyRefunded": "Items already refunded are not listed.",
+      "summary": "{{amount}} will be refunded.",
+      "upTo": "Up to {{amount}} can still be refunded.",
+      "tooMuch": "Only {{amount}} is still refundable.",
+      "removeEntries_one": "Also withdraw {{count}} entry from the event",
+      "removeEntries_other": "Also withdraw {{count}} entries from the event",
+      "removeEntriesHelp": "Withdrawn entries leave the entry list but stay on record."
     },
     "offline": {
       "menu": "Offline payments",
@@ -1843,9 +1999,65 @@
       "undone": "{{name}}’s payment is back to awaiting settlement.",
       "undoFailed": "We could not undo that receipt.",
       "receivedByOn": "Recorded by {{name}} on {{date}}",
-      "receivedByUnknownOn": "Recorded by a former administrator on {{date}}"
+      "receivedByUnknownOn": "Recorded by a former administrator on {{date}}",
+      "viewPayment": "View payment"
     },
-    "allMenu": "All payments"
+    "allMenu": "All payments",
+    "itemTypes": {
+      "event_entry": "Entry",
+      "membership": "Membership",
+      "merchandise": "Merchandise",
+      "registration": "Registration",
+      "booking": "Booking",
+      "ticket": "Ticket"
+    },
+    "unknownPayer": "Unknown",
+    "refunds": {
+      "title": "Refunds",
+      "menu": "Refunds",
+      "subtitle": "Money the club has given back, and who authorised it.",
+      "history": "Refunds",
+      "none": "No refunds have been made.",
+      "loadFailed": "We could not load the refunds.",
+      "when": "Requested",
+      "amount": "Refunded",
+      "status": "Status",
+      "reason": "Reason",
+      "requestedBy": "Requested by",
+      "requesterUnknown": "No longer an administrator",
+      "payer": "Paid by",
+      "ofPayment": "Payment",
+      "viewPayment": "Open the payment",
+      "refundedOf": "{{refunded}} of {{total}} has been refunded.",
+      "inFull": "in full",
+      "inPart": "in part",
+      "scopes": {
+        "full": "Whole payment",
+        "lessHandlingFee": "All but the fee",
+        "items": "Items",
+        "amount": "Part amount"
+      },
+      "statuses": {
+        "pending": "Awaiting transfer",
+        "completed": "Sent",
+        "failed": "Failed"
+      }
+    },
+    "settlement": {
+      "history": "Offline settlement",
+      "when": "When",
+      "what": "What happened",
+      "who": "Recorded by",
+      "released": "Released",
+      "kinds": {
+        "received": "Marked received",
+        "undone": "Receipt undone"
+      },
+      "itemsCreated_one": "{{count}} item created",
+      "itemsCreated_other": "{{count}} items created",
+      "itemsFailed_one": "{{count}} could not be created",
+      "itemsFailed_other": "{{count}} could not be created"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -2258,7 +2470,8 @@
     "debugInfo": "Debug: {{capabilitiesCount}} capabilities enabled, {{modulesCount}} modules available",
     "learnMore": "Go"
   },
-  "audit": {    "actions": {
+  "audit": {
+    "actions": {
       "auth.login": "Signed in",
       "auth.logout": "Signed out",
       "auth.login-failed": "Failed sign-in",
@@ -2367,7 +2580,16 @@
       "lodgement.viewed": "Lodgements viewed",
       "lodgement.detail-viewed": "Lodgement opened",
       "report.viewed": "Report viewed",
-      "export.downloaded": "Export downloaded"
+      "export.downloaded": "Export downloaded",
+      "entry": {
+        "answers-corrected": "Entry answers corrected"
+      },
+      "offline-payment": {
+        "receipt-undone": "Offline payment receipt undone"
+      },
+      "announcement.created": "Announcement posted",
+      "announcement.updated": "Announcement changed",
+      "announcement.deleted": "Announcement removed"
     },
     "title": "Audit log",
     "subtitle": "Everything that happens in your organisation — who did it, to what, and what changed.",
@@ -2386,10 +2608,42 @@
     "noMore": "That is everything matching these filters.",
     "loadError": "The audit log could not be loaded.",
     "unknownActor": "unknown",
-    "columns": { "when": "When", "who": "Who", "what": "What" },
-    "outcomes": { "success": "Success", "failure": "Failure", "denied": "Denied" },
-    "userTypes": { "super-admin": "Super admin", "org-admin": "Org admin", "account-user": "Account user", "system": "System", "anonymous": "—" },
-    "changes": { "field": "Field", "before": "Before", "after": "After", "createdWith": "Created with", "deletedValues": "Values at deletion", "hidden": "hidden — marked sensitive", "none": "This event records an action rather than a change to stored values." }
+    "columns": {
+      "when": "When",
+      "who": "Who",
+      "what": "What"
+    },
+    "outcomes": {
+      "success": "Success",
+      "failure": "Failure",
+      "denied": "Denied"
+    },
+    "userTypes": {
+      "super-admin": "Super admin",
+      "org-admin": "Org admin",
+      "account-user": "Account user",
+      "system": "System",
+      "anonymous": "—"
+    },
+    "changes": {
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "createdWith": "Created with",
+      "deletedValues": "Values at deletion",
+      "hidden": "hidden — marked sensitive",
+      "none": "This event records an action rather than a change to stored values."
+    },
+    "reference": "Reference",
+    "viewEntity": {
+      "booking": "Open the booking",
+      "default": "Open this record",
+      "event": "Open the event",
+      "member": "Open the member",
+      "merchandiseOrder": "Open the order",
+      "order": "Open the order",
+      "payment": "Open the payment"
+    }
   },
   "modules": {
     "dashboard": {
@@ -2493,6 +2747,11 @@
         "discounts": "Discounts",
         "merchandiseOrders": "Merchandise Orders"
       }
+    },
+    "announcements": {
+      "name": "Announcements",
+      "title": "Announcements",
+      "description": "Post notices your members see when they sign in"
     }
   },
   "discounts": {
@@ -2698,7 +2957,22 @@
       "averageDiscount": "Average Discount:",
       "topUsers": "Top Users",
       "usageHistory": "Usage History",
-      "noUsageData": "No usage data available"
+      "noUsageData": "No usage data available",
+      "subtitle": "How often this discount has been used, and what it has taken off.",
+      "subtitleWithCode": "Code {{code}} — how often this discount has been used, and what it has taken off.",
+      "timesUsed": "Times used",
+      "totalGiven": "Total discount given",
+      "average": "Average per use",
+      "remaining": "Uses remaining",
+      "noLimit": "No limit",
+      "whoUsedIt": "Who used it",
+      "member": "Member",
+      "uses": "Uses",
+      "received": "Discount received",
+      "unknownMember": "Member no longer on record",
+      "notUsedYet": "This discount has not been used yet.",
+      "notFound": "We could not load this discount.",
+      "backToDiscounts": "Back to discounts"
     },
     "validation": {
       "nameRequired": "Discount name is required",
@@ -3004,5 +3278,66 @@
     "deleteBody": "The type will be removed from the list. Events already using it keep their record.",
     "deleteConfirm": "Delete event type",
     "deleteFailed": "That event type could not be deleted. It may still be in use by an event."
+  },
+  "announcements": {
+    "title": "Announcements",
+    "subtitle": "Notices your members see when they sign in.",
+    "createTitle": "New announcement",
+    "editTitle": "Edit announcement",
+    "empty": "No announcements yet. Members see nothing on their home page until you write one.",
+    "loadFailed": "We could not load the announcements.",
+    "saveFailed": "We could not save the announcement.",
+    "imageRemoveFailed": "We could not remove the image.",
+    "backgroundNote": "Background images are darkened so the text stays readable.",
+    "actions": {
+      "create": "New announcement",
+      "edit": "Edit",
+      "delete": "Delete",
+      "chooseImage": "Choose image",
+      "removeImage": "Remove image"
+    },
+    "table": {
+      "title": "Title",
+      "showing": "Showing",
+      "image": "Image",
+      "actions": "Actions"
+    },
+    "states": {
+      "showing": "Showing now",
+      "scheduled": "Scheduled",
+      "finished": "Finished"
+    },
+    "placements": {
+      "background": "Background",
+      "header": "Header",
+      "footer": "Footer"
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "startsAt": "Shows from",
+      "endsAt": "Shows until",
+      "image": "Image (optional)",
+      "placement": "Use it as",
+      "linkLabel": "Link text",
+      "linkUrl": "Link address",
+      "linkLabelHelp": "Optional — the words on the button",
+      "linkUrlHelp": "Where the button goes"
+    },
+    "errors": {
+      "endBeforeStart": "Shows until must be after shows from",
+      "needsBoth": "A link needs both the words on the button and a web address",
+      "notAWebAddress": "Start the address with http:// or https://"
+    },
+    "preview": {
+      "title": "Preview",
+      "subtitle": "What a member will see.",
+      "untitled": "Untitled announcement"
+    },
+    "delete": {
+      "title": "Remove this announcement?",
+      "message": "“{{title}}” will be removed. Members will stop seeing it straight away."
+    },
+    "imageUploadFailed": "The notice was saved, but the image could not be uploaded. Press Save to try again."
   }
 }

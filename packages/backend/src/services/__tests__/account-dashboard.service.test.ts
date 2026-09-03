@@ -3,6 +3,7 @@ import { accountActivityService } from '../account-activity.service';
 import { accountCatalogueService } from '../account-catalogue.service';
 import { cartService } from '../cart.service';
 import { db } from '../../database/pool';
+import { announcementService } from '../announcement.service';
 
 jest.mock('../../config/logger');
 jest.mock('../account-activity.service', () => ({
@@ -22,12 +23,16 @@ jest.mock('../account-catalogue.service', () => ({
   },
 }));
 jest.mock('../cart.service', () => ({ cartService: { getCart: jest.fn() } }));
+jest.mock('../announcement.service', () => ({
+  announcementService: { activeFor: jest.fn() },
+}));
 jest.mock('../../database/pool', () => ({ db: { query: jest.fn() } }));
 
 const activity = accountActivityService as jest.Mocked<typeof accountActivityService>;
 const catalogue = accountCatalogueService as jest.Mocked<typeof accountCatalogueService>;
 const cart = cartService as jest.Mocked<typeof cartService>;
 const mockDb = db as jest.Mocked<typeof db>;
+const announcements = announcementService as jest.Mocked<typeof announcementService>;
 
 /**
  * B3, assembled server-side.
@@ -652,5 +657,73 @@ describe('AccountDashboardService — events at other organisations', () => {
 
     expect(dashboard.externalEvents).toEqual([]);
     expect(dashboard.whatsOn).toEqual([]);
+  });
+});
+
+/**
+ * The club's own notices.
+ *
+ * They ride on this call rather than on one of their own: the dashboard already
+ * returns the whole home screen in one request, and a second request would put
+ * a second spinner on the one screen that has to feel instant.
+ */
+describe('announcements', () => {
+  const service = new AccountDashboardService();
+  const ORG = 'org-1';
+  const MEMBER = 'ou-1';
+  const TODAY = new Date(2026, 7, 12);
+
+  const notice = {
+    id: 'ann-1',
+    organisationId: ORG,
+    title: 'Clubhouse closed Saturday',
+    description: '<p>The floor is being replaced.</p>',
+    startsAt: '2026-08-10T09:00:00.000Z',
+    endsAt: '2026-08-16T18:00:00.000Z',
+    imageUrl: null,
+    imagePlacement: null,
+    showing: true,
+    createdAt: '2026-08-09T09:00:00.000Z',
+    updatedAt: '2026-08-09T09:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (accountActivityService.listEntries as jest.Mock).mockResolvedValue([]);
+    (accountActivityService.listBookings as jest.Mock).mockResolvedValue([]);
+    (accountActivityService.listMemberships as jest.Mock).mockResolvedValue([]);
+    (cartService.getCart as jest.Mock).mockResolvedValue(null);
+    (db.query as jest.Mock).mockResolvedValue({ rows: [] });
+    announcements.activeFor.mockResolvedValue([notice] as never);
+  });
+
+  it('carries what the club is showing now', async () => {
+    const dashboard = await service.build(ORG, MEMBER, ['org-announcements'], 'EUR', TODAY);
+
+    expect(announcements.activeFor).toHaveBeenCalledWith(ORG, TODAY);
+    expect(dashboard.announcements).toHaveLength(1);
+    expect(dashboard.announcements[0].title).toBe('Clubhouse closed Saturday');
+  });
+
+  it('asks for none where the club has not got the capability', async () => {
+    const dashboard = await service.build(ORG, MEMBER, [], 'EUR', TODAY);
+
+    expect(announcements.activeFor).not.toHaveBeenCalled();
+    // Empty, not null: "no capability" and "nothing showing" render alike, and
+    // a nullable list invites a screen to tell them apart.
+    expect(dashboard.announcements).toEqual([]);
+  });
+
+  it('still builds the dashboard when the notices cannot be read', async () => {
+    /*
+     * Notices are the club talking; the rest of the screen is the member's own
+     * business, and losing one must not lose the other.
+     */
+    announcements.activeFor.mockRejectedValue(new Error('database is having a day'));
+
+    const dashboard = await service.build(ORG, MEMBER, ['org-announcements'], 'EUR', TODAY);
+
+    expect(dashboard.announcements).toEqual([]);
+    expect(dashboard.whatsOn).toBeDefined();
   });
 });

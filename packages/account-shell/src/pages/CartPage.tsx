@@ -25,7 +25,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ApplicationFormDialog from '../components/ApplicationFormDialog';
 import CartItemIcon from '../components/CartItemIcon';
 import { HoldCountdown } from '../components/HoldCountdown';
-import { formatCurrency } from '@aws-web-framework/components';
+import { formatCurrency, formatFormAnswer } from '@aws-web-framework/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
@@ -288,7 +288,7 @@ export const CartPage: React.FC = () => {
                                   <Box component="span" color="text.secondary">
                                     {answer.label}:{' '}
                                   </Box>
-                                  {answer.value}
+                                  {formatFormAnswer(answer, locale)}
                                 </Typography>
                               ))}
                             </Stack>

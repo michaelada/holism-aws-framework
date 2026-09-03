@@ -17,6 +17,7 @@ import {
   formatCurrency,
   formatDateRange,
   formatDisplayDateTime,
+  formatFormAnswer,
 } from '@aws-web-framework/components';
 import { useAccountApi, AccountApiError } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
@@ -173,7 +174,7 @@ export const EntryDetailPage: React.FC = () => {
                   to whoever reads it back.
                 */}
                 <Box component="span" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {answer.value}
+                  {formatFormAnswer(answer, locale)}
                 </Box>
               </Field>
             ))}

@@ -27,7 +27,13 @@ import {
   CalendarMonth as CalendarViewIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatDate, formatCurrency, usePageHelp, useLocale } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useOrganisation,
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { Booking, BookingsFilterOptions } from '../types/calendar.types';
 
 const BookingsListPage: React.FC = () => {
@@ -74,6 +80,14 @@ const BookingsListPage: React.FC = () => {
     // Export to Excel
   };
 
+  /*
+   * `startTime` is "09:30" — a time of day, which the comparison reads as one.
+   * Sorted as text, 9:30 would follow 14:00.
+   */
+  const sort = useTableSort(bookings, {
+    accessors: { calendarName: (booking) => (booking as any).calendarName },
+  });
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -112,14 +126,30 @@ const BookingsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('calendar.table.bookingReference')}</TableCell>
-              <TableCell>{t('calendar.table.calendar')}</TableCell>
-              <TableCell>{t('calendar.table.user')}</TableCell>
-              <TableCell>{t('calendar.table.date')}</TableCell>
-              <TableCell>{t('calendar.table.time')}</TableCell>
-              <TableCell>{t('calendar.table.duration')}</TableCell>
-              <TableCell>{t('calendar.table.price')}</TableCell>
-              <TableCell>{t('calendar.table.bookingStatus')}</TableCell>
+              <SortableTableCell sort={sort} field="bookingReference">
+                {t('calendar.table.bookingReference')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="calendarName">
+                {t('calendar.table.calendar')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="userName">
+                {t('calendar.table.user')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="bookingDate">
+                {t('calendar.table.date')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="startTime">
+                {t('calendar.table.time')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="duration">
+                {t('calendar.table.duration')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="totalPrice">
+                {t('calendar.table.price')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="bookingStatus">
+                {t('calendar.table.bookingStatus')}
+              </SortableTableCell>
               <TableCell align="right">{t('calendar.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -133,7 +163,7 @@ const BookingsListPage: React.FC = () => {
                 <TableCell colSpan={9} align="center">{t('calendar.noBookingsFound')}</TableCell>
               </TableRow>
             ) : (
-              bookings.map((booking) => (
+              sort.rows.map((booking) => (
                 <TableRow key={booking.id} hover>
                   <TableCell>{booking.bookingReference}</TableCell>
                   <TableCell>{(booking as any).calendarName || '—'}</TableCell>

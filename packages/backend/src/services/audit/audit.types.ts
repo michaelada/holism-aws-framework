@@ -155,6 +155,15 @@ export const AUDIT_ACTIONS = {
     'post.reordered',
   ],
   settings: [
+    /*
+     * A club's own notices to its members. Filed under settings rather than
+     * platform: `post.*` is the super admin writing to everybody signing in to
+     * the product, and these are one club writing to its own members — a very
+     * different power, and one an organisation's audit log should show.
+     */
+    'announcement.created',
+    'announcement.updated',
+    'announcement.deleted',
     'settings.organisation-updated',
     'settings.branding-updated',
     'settings.payment-updated',
@@ -180,6 +189,13 @@ export const AUDIT_ACTIONS = {
     'entry.removed-from-basket',
     'entry.created',
     'entry.cancelled',
+    /*
+     * Handing somebody the right to admit people at a gate, and taking it back.
+     * A short-lived credential nobody has to remember to revoke still has to be
+     * a thing the club can see it created.
+     */
+    'ticket-scanning.session-created',
+    'ticket-scanning.session-revoked',
   ],
   memberships: [
     'membership-type.created',
@@ -223,6 +239,12 @@ export const AUDIT_ACTIONS = {
     'form.created',
     'form.updated',
     'form.deleted',
+    /*
+     * A club correcting what a member wrote — a pony's name spelled wrong, a
+     * date a year out. Filed under forms rather than events because what
+     * changed is the submission; the entry itself is untouched.
+     */
+    'entry.answers-corrected',
     'field.created',
     'field.updated',
     'field.deleted',
@@ -235,6 +257,7 @@ export const AUDIT_ACTIONS = {
     'payment.failed',
     'refund.issued',
     'offline-payment.recorded',
+    'offline-payment.receipt-undone',
     'lodgement.viewed',
     'lodgement.detail-viewed',
   ],

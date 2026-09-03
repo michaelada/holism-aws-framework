@@ -141,9 +141,6 @@ This document lists all translation keys used in the Events module following the
 - `events.ticketing.backgroundColor` - Background Color field label
 - `events.ticketing.backgroundColorHelper` - Background Color helper text
 - `events.ticketing.backgroundColorTooltip` - Background Color tooltip
-- `events.ticketing.includeLogo` - Include Logo checkbox label
-- `events.ticketing.includeLogoHelper` - Include Logo helper text
-- `events.ticketing.includeLogoTooltip` - Include Logo tooltip
 
 ### Activities Section
 - `events.activities.title` - Section title

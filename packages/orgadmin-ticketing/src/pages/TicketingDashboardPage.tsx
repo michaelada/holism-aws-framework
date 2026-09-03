@@ -39,7 +39,12 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
-import { useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { ElectronicTicket, TicketFilters } from '../types/ticketing.types';
 import TicketingStatsCards from '../components/TicketingStatsCards';
 import TicketDetailsDialog from '../components/TicketDetailsDialog';
@@ -193,6 +198,17 @@ const TicketingDashboardPage: React.FC = () => {
   const getScanStatusIcon = (scanStatus: string) => {
     return scanStatus === 'scanned' ? <ScannedIcon /> : <NotScannedIcon />;
   };
+
+  const sort = useTableSort(filteredTickets, {
+    accessors: {
+      // `ticket_data` is written as `{}` today, so these read as "Not
+      // available" for every row and sort as one another's equals — which the
+      // stable sort leaves in the order they arrived. They become useful the
+      // moment the join is filled in, and cost nothing until then.
+      eventName: (ticket) => ticket.ticketData?.eventName,
+      activityName: (ticket) => ticket.ticketData?.activityName,
+    },
+  });
 
   return (
     <Box sx={{ p: 3 }}>
@@ -358,14 +374,30 @@ const TicketingDashboardPage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>{t('ticketing.table.ticketReference')}</TableCell>
-              <TableCell>{t('ticketing.table.eventName')}</TableCell>
-              <TableCell>{t('ticketing.table.eventActivity')}</TableCell>
-              <TableCell>{t('ticketing.table.customerName')}</TableCell>
-              <TableCell>{t('ticketing.table.customerEmail')}</TableCell>
-              <TableCell>{t('ticketing.table.issueDate')}</TableCell>
-              <TableCell>{t('ticketing.table.scanStatus')}</TableCell>
-              <TableCell>{t('ticketing.table.scanDate')}</TableCell>
+              <SortableTableCell sort={sort} field="ticketReference">
+                {t('ticketing.table.ticketReference')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="eventName">
+                {t('ticketing.table.eventName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="activityName">
+                {t('ticketing.table.eventActivity')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="customerName">
+                {t('ticketing.table.customerName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="customerEmail">
+                {t('ticketing.table.customerEmail')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="issueDate">
+                {t('ticketing.table.issueDate')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="scanStatus">
+                {t('ticketing.table.scanStatus')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="scanDate">
+                {t('ticketing.table.scanDate')}
+              </SortableTableCell>
               <TableCell>{t('ticketing.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -383,7 +415,7 @@ const TicketingDashboardPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTickets.map((ticket) => (
+              sort.rows.map((ticket) => (
                 <TableRow key={ticket.id} hover>
                   <TableCell padding="checkbox">
                     <Checkbox

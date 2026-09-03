@@ -65,7 +65,6 @@ describe('TicketingService', () => {
         ticketInstructions: 'Present at entrance',
         ticketFooterText: 'Thank you',
         ticketValidityPeriod: 2,
-        includeEventLogo: true,
         ticketBackgroundColor: '#FFFFFF',
       };
 
@@ -77,7 +76,6 @@ describe('TicketingService', () => {
         ticket_instructions: 'Present at entrance',
         ticket_footer_text: 'Thank you',
         ticket_validity_period: 2,
-        include_event_logo: true,
         ticket_background_color: '#FFFFFF',
         created_at: new Date(),
         updated_at: new Date(),
@@ -92,7 +90,6 @@ describe('TicketingService', () => {
 
       expect(result.generateElectronicTickets).toBe(true);
       expect(result.ticketHeaderText).toBe('Welcome!');
-      expect(result.includeEventLogo).toBe(true);
     });
 
     it('should throw error if config already exists', async () => {
@@ -125,7 +122,6 @@ describe('TicketingService', () => {
         ticket_instructions: 'Present at entrance',
         ticket_footer_text: 'Thank you',
         ticket_validity_period: 2,
-        include_event_logo: true,
         ticket_background_color: '#FFFFFF',
         created_at: new Date(),
         updated_at: new Date(),
@@ -256,7 +252,6 @@ describe('TicketingService', () => {
         ticket_instructions: 'Present at entrance',
         ticket_footer_text: 'Thank you',
         ticket_validity_period: 2,
-        include_event_logo: true,
         ticket_background_color: '#FFFFFF',
         created_at: new Date(),
         updated_at: new Date(),
@@ -322,11 +317,19 @@ describe('TicketingService', () => {
   });
 
   describe('getTicketByQRCode', () => {
+    /*
+     * A real identifier, because the presented code is now **read** before it
+     * is looked up: it must be a signed token or the bare UUID a pre-signing
+     * ticket carries. `'qr-1'` is neither, and is answered as not found without
+     * a query — which is the point of signing, and is checked below.
+     */
+    const QR = '123e4567-e89b-12d3-a456-426614174000';
+
     it('should return ticket by QR code', async () => {
       const mockTicket = {
         id: '1',
         ticket_reference: 'TKT-2024-001',
-        qr_code: 'qr-1',
+        qr_code: QR,
         event_id: 'event-1',
         event_activity_id: 'activity-1',
         event_entry_id: 'entry-1',
@@ -348,10 +351,19 @@ describe('TicketingService', () => {
 
       mockDb.query.mockResolvedValue({ rows: [mockTicket] } as any);
 
-      const result = await service.getTicketByQRCode('qr-1');
+      const result = await service.getTicketByQRCode(QR);
 
       expect(result).not.toBeNull();
-      expect(result?.qrCode).toBe('qr-1');
+      expect(result?.qrCode).toBe(QR);
+    });
+
+    it('answers not found for a code we did not mint, without a query', async () => {
+      // A QR off a poster, or a tampered token. It names no ticket, so there is
+      // nothing to look up.
+      const result = await service.getTicketByQRCode('https://example.test/whats-on');
+
+      expect(result).toBeNull();
+      expect(mockDb.query).not.toHaveBeenCalled();
     });
   });
 

@@ -268,7 +268,14 @@ without one cannot take a card payment and the whole checkout path is then unrea
 `custom` accounts — a `standard` one stays `charges_enabled: false` until a human completes hosted
 onboarding — created against the platform's own `sk_test_` key. **A live key is refused outright,
 with no override.** Accounts carry `metadata.seededBy` and `--reset` deletes only those; `--no-stripe`
-skips the step. Nothing is copied from a production platform: live and test are separate universes
+skips the step.
+
+**Both Keycloak and Stripe are shared, and `--reset` is guarded on both.** One realm and one test
+platform serve whatever database is being seeded, so seeding a scratch database with `--reset` used
+to purge the development environment's users and delete the connected accounts its clubs point at
+in `settings.stripeConnect` — twice, in practice. `scratchDatabase` in `scripts/seed/index.ts`
+(`DATABASE_NAME` other than `aws_framework`) leaves both alone, and `--keep-keycloak` forces the
+Keycloak half for a run against the development database itself. Nothing is copied from a production platform: live and test are separate universes
 in Stripe, and this application keeps no per-organisation keys in any case. See
 `docs/SEED_STRIPE_AND_MEATH.md`.
 

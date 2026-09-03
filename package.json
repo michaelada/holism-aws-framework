@@ -16,6 +16,7 @@
     "packages/orgadmin-calendar",
     "packages/orgadmin-registrations",
     "packages/orgadmin-ticketing",
+    "packages/orgadmin-announcements",
     "packages/account-shell"
   ],
   "scripts": {
@@ -32,6 +33,7 @@
     "dev:orgadmin-calendar": "npm run dev --workspace=packages/orgadmin-calendar",
     "dev:orgadmin-registrations": "npm run dev --workspace=packages/orgadmin-registrations",
     "dev:orgadmin-ticketing": "npm run dev --workspace=packages/orgadmin-ticketing",
+    "dev:orgadmin-announcements": "npm run dev --workspace=packages/orgadmin-announcements",
     "build:backend": "npm run build --workspace=packages/backend",
     "build:frontend": "npm run build --workspace=packages/frontend",
     "build:components": "npm run build --workspace=packages/components",
@@ -45,7 +47,8 @@
     "build:orgadmin-calendar": "npm run build --workspace=packages/orgadmin-calendar",
     "build:orgadmin-registrations": "npm run build --workspace=packages/orgadmin-registrations",
     "build:orgadmin-ticketing": "npm run build --workspace=packages/orgadmin-ticketing",
-    "build:all": "npm run build:components && npm run build:backend && npm run build:frontend && npm run build:admin && npm run build:orgadmin && npm run build:orgadmin-core && npm run build:orgadmin-events && npm run build:orgadmin-memberships && npm run build:orgadmin-merchandise && npm run build:orgadmin-calendar && npm run build:orgadmin-registrations && npm run build:orgadmin-ticketing && npm run build:account",
+    "build:orgadmin-announcements": "npm run build --workspace=packages/orgadmin-announcements",
+    "build:all": "npm run build:components && npm run build:backend && npm run build:frontend && npm run build:admin && npm run build:orgadmin && npm run build:orgadmin-core && npm run build:orgadmin-events && npm run build:orgadmin-memberships && npm run build:orgadmin-merchandise && npm run build:orgadmin-calendar && npm run build:orgadmin-registrations && npm run build:orgadmin-ticketing && npm run build:orgadmin-announcements && npm run build:account",
     "test": "jest && npm run test --workspaces",
     "test:root": "jest",
     "test:backend": "npm run test --workspace=packages/backend",
@@ -61,6 +64,7 @@
     "test:orgadmin-calendar": "npm run test --workspace=packages/orgadmin-calendar",
     "test:orgadmin-registrations": "npm run test --workspace=packages/orgadmin-registrations",
     "test:orgadmin-ticketing": "npm run test --workspace=packages/orgadmin-ticketing",
+    "test:orgadmin-announcements": "npm run test --workspace=packages/orgadmin-announcements",
     "check:chunks": "node scripts/check-chunk-cycles.mjs packages/account-shell/dist packages/orgadmin-shell/dist packages/admin/dist packages/frontend/dist",
     "lint": "npm run lint --workspaces",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -68,7 +72,8 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "generate-test-data": "ts-node scripts/generate-test-data.ts",
-    "seed:demo": "npm run seed:demo --workspace=packages/backend --"
+    "seed:demo": "npm run seed:demo --workspace=packages/backend --",
+    "test:lodgements": "npm run test:lodgements --workspace=packages/backend --"
   },
   "dependencies": {
     "date-fns": "^2.30.0"

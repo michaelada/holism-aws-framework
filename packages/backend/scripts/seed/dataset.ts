@@ -69,6 +69,7 @@ export const ORG_TYPE = {
     'calendar-discounts',
     'merchandise-discounts',
     'multi-area-discounts',
+    'org-announcements',
     /*
      * Deliberately **not** in `optInCapabilities`, so every club in the type
      * gets it.
@@ -99,10 +100,27 @@ export const ORG_TYPE = {
     'calendar-discounts',
     'merchandise-discounts',
     'multi-area-discounts',
+    'org-announcements',
   ],
-  /** The platform's cut, inherited as the default by each organisation. */
-  applicationFee: { fixed: 0.3, percentage: 1.5 },
-  handlingFee: { fixedFee: 0.25, percentageFee: 1.5, taxPercentage: 0 },
+  /**
+   * The platform's cut, inherited as the default by each organisation.
+   *
+   * 60c fixed, on every club that can take a card payment. Ward Union has no
+   * card method switched on, so it has no card payment for a share to be taken
+   * from and keeps nulls — that is an absence, not a zero.
+   */
+  applicationFee: { fixed: 0.6, percentage: 0 },
+  /**
+   * What the member pays on a card payment, and the VAT on it.
+   *
+   * `taxPercentage` is charged on the **handling fee**, never on the order —
+   * the club's entries and shirts are priced as the club prices them, and 23%
+   * of a €25 entry is not what this is. It applies to the 25c + 1.5% only.
+   *
+   * `fixedFee` is written here in major units, like every other fee in this
+   * file, and read back in minor ones by `organizationTypePaymentFeeService`.
+   */
+  handlingFee: { fixedFee: 0.25, percentageFee: 1.5, taxPercentage: 23 },
 };
 
 export interface SeedOrg {
@@ -169,8 +187,13 @@ export const ORGS: SeedOrg[] = [
     },
     // Both methods, so activities can offer card, offline or either.
     paymentMethods: ['pay-offline', 'stripe'],
-    // The only club with a shop, so "capability off" stays represented too.
-    extraCapabilities: ['merchandise'],
+    /*
+     * A shop, and notices. Kildare is the club a demo signs into as a member,
+     * so it is the one that needs a home page with a right-hand column —
+     * while Laois and Ward Union keep the plain page, which is the case that
+     * has to keep working.
+     */
+    extraCapabilities: ['merchandise', 'org-announcements'],
   },
   {
     key: 'laois',
@@ -190,8 +213,21 @@ export const ORGS: SeedOrg[] = [
     paymentMethods: ['pay-offline', 'stripe'],
     // The only club taking bookings, so "capability off" stays represented.
     extraCapabilities: ['calendar-bookings'],
-    // Diverges from the type default: a negotiated rate.
-    applicationFee: { fixed: 0.15, percentage: 1.0 },
+    /*
+     * The one club on its own rate: 45c rather than the type's 60c.
+     *
+     * It is here to make copy-on-create visible. Each organisation gets its own
+     * application-fee row when it is created, and that row is what the platform
+     * charges from then on — changing the type's rate does not reach back and
+     * rewrite a rate a club has already agreed. Without a club that differs,
+     * nothing in the fixture distinguishes "copied from the type" from "read
+     * from the type", and the two behave identically until somebody edits the
+     * type.
+     *
+     * Negotiated on the amount, because the amount is all there is now: the
+     * platform's share carries no percentage.
+     */
+    applicationFee: { fixed: 0.45, percentage: 0 },
   },
   {
     key: 'ward',
@@ -211,8 +247,16 @@ export const ORGS: SeedOrg[] = [
     // Offline only — every activity here must fall back to offline payment,
     // which is the case that catches code assuming a card method exists.
     paymentMethods: ['pay-offline'],
-    // Explicitly unconfigured: the platform takes the handling fee.
-    applicationFee: { fixed: null, percentage: null },
+    /*
+     * The type default, like Kildare and Meath — 60c applies to every club.
+     *
+     * It buys nothing today: this club takes no card payments, and an
+     * application fee is a share of one. It is set so that the day Ward Union
+     * switches Stripe on, the platform's share is already what it is
+     * everywhere else rather than nothing at all. Explicit nulls used to sit
+     * here to demonstrate an unconfigured club; a club that quietly pays no
+     * share is a worse thing to have in a fixture than a missing example.
+     */
   },
   {
     key: 'meath',
@@ -393,10 +437,19 @@ export interface SeedField {
  * works is worse than one that does not claim to.
  */
 export const FIELDS: SeedField[] = [
-  {
-    key: 'riderName', name: 'rider_name', datatype: 'text', validation: { required: true, maxLength: 120 },
-    label: { kildare: 'Rider name', laois: 'Competitor name', ward: 'Member name', meath: 'Entrant name' },
-  },
+  /*
+   * No name field in the library at all.
+   *
+   * Both journeys that create a record about a person now ask for the name
+   * themselves — "Who is this entry for?" and "Who is this membership for?" —
+   * and write it to the record. A `rider_name` field sitting in every club's
+   * field library is an invitation to put the question back on a form, where
+   * its answer is a second name that nothing reconciles with the first.
+   *
+   * Registrations are the exception and keep their own: a registration is about
+   * a *horse*, and `entity_name` is asked on the form because there is no
+   * "who is this for" box for an animal.
+   */
   {
     key: 'riderDob', name: 'rider_dob', datatype: 'date', validation: { required: true },
     label: { kildare: 'Rider date of birth', laois: 'Competitor date of birth', ward: 'Member date of birth', meath: 'Entrant date of birth' },
@@ -598,8 +651,21 @@ export const FORMS: SeedForm[] = [
       meath: 'Meath Hunt full entry',
     },
     description: 'Rider, pony and safety details. Uses every field type the builder offers.',
+    /*
+     * No name field. The entry already carries one.
+     *
+     * "Who is this entry for?" is answered on the entry itself — chosen from
+     * the member list or typed — and `fulfilment.service` writes it to
+     * `event_entries.first_name` / `last_name`. Asking again on the form
+     * produced two names for one entrant, never reconciled: pick a child from
+     * the list, type something else into the form, and the entry says one thing
+     * and its answers another. The entry's own columns are the single answer.
+     *
+     * The membership and registration forms below **do** ask, and should: a
+     * membership takes its name from the account holder, so a household naming
+     * each person on a family membership has nowhere else to say it.
+     */
     fields: [
-      { field: 'riderName', group: 'Rider', wizardStep: 1, wizardStepTitle: 'Rider' },
       { field: 'riderDob', group: 'Rider', wizardStep: 1, wizardStepTitle: 'Rider' },
       { field: 'riderEmail', group: 'Rider', wizardStep: 1, wizardStepTitle: 'Rider' },
       { field: 'riderPhone', group: 'Rider', wizardStep: 1, wizardStepTitle: 'Rider' },
@@ -625,8 +691,8 @@ export const FORMS: SeedForm[] = [
       meath: 'Tara camp booking',
     },
     description: 'Multi-day camp: sessions, stabling, dietary needs.',
+    // No name field: the entry carries it. See `fullEntry` above.
     fields: [
-      { field: 'riderName', group: 'Rider' },
       { field: 'ageGroup', group: 'Rider' },
       { field: 'ponyName', group: 'Pony' },
       { field: 'sessions', group: 'Camp' },
@@ -645,8 +711,9 @@ export const FORMS: SeedForm[] = [
       ward: 'Ward Union quick entry',
       meath: 'Meath Hunt short entry',
     },
-    description: 'The minimum a club can ask for. Two required fields and nothing else.',
-    fields: [{ field: 'riderName' }, { field: 'ponyName' }],
+    description: 'The minimum a club can ask for. One required field and nothing else.',
+    // No name field: the entry carries it. See `fullEntry` above.
+    fields: [{ field: 'ponyName' }],
   },
   {
     key: 'spectator',
@@ -657,8 +724,12 @@ export const FORMS: SeedForm[] = [
       meath: 'Meath Hunt spectator list',
     },
     description: 'No pony. Contact details only, for gate lists and catering numbers.',
+    /*
+     * No name field: the entry carries it. The **email** stays — the entry's is
+     * the account holder's, which is where the club writes, and a spectator's
+     * own address is a different answer.
+     */
     fields: [
-      { field: 'riderName' },
       { field: 'riderEmail' },
       { field: 'riderPhone' },
       { field: 'dietary' },
@@ -673,8 +744,18 @@ export const FORMS: SeedForm[] = [
       meath: 'Meath Hunt membership application',
     },
     description: 'What a club asks of one person joining for the season.',
+    /*
+     * No name field here either. The application asks it.
+     *
+     * "Who is this membership for?" sits above the club's own questions, filled
+     * from the people this account already holds memberships for and the names
+     * it has used on entries — and the answer travels on the basket line to
+     * `createMembership`. Before that existed, every membership took the
+     * **account holder's** name whatever the form said, so a parent joining
+     * three children produced three records all reading the same thing and the
+     * form's "Member name" answer went nowhere.
+     */
     fields: [
-      { field: 'riderName', group: 'Member', wizardStep: 1, wizardStepTitle: 'Member' },
       { field: 'riderDob', group: 'Member', wizardStep: 1, wizardStepTitle: 'Member' },
       { field: 'riderEmail', group: 'Member', wizardStep: 1, wizardStepTitle: 'Member' },
       { field: 'riderPhone', group: 'Member', wizardStep: 1, wizardStepTitle: 'Member' },
@@ -698,8 +779,8 @@ export const FORMS: SeedForm[] = [
       meath: 'Meath Hunt family application',
     },
     description: 'Asked once of the household, then once per person on the membership.',
+    // No name field: the application asks it. See `membershipSingle` above.
     fields: [
-      { field: 'riderName', group: 'Person' },
       { field: 'riderDob', group: 'Person' },
       { field: 'ageGroup', group: 'Person' },
       { field: 'addressLine', group: 'Household' },
@@ -1322,6 +1403,11 @@ export interface SeedActivity {
    * seeded activity is and must remain.
    */
   entryEligibility?: 'all' | 'members' | 'org-type-members';
+  /**
+   * How many people one of this activity's tickets admits at the gate.
+   * Omitted means 1, which is what every pre-existing seeded activity is.
+   */
+  ticketsAdmit?: number;
 }
 
 export interface SeedEvent {
@@ -1367,9 +1453,16 @@ export interface SeedEvent {
     headerText: string;
     instructions: string;
     footerText?: string;
+    /**
+     * How the ticket is laid out: `stacked`, `sideBySide` or `compact`.
+     *
+     * Omitted means `stacked`, which is what every ticket looked like before a
+     * club could choose — so a fixture that says nothing produces the ticket
+     * the product produced before this existed.
+     */
+    layout?: 'stacked' | 'sideBySide' | 'compact';
     /** Hours the ticket stays valid from the event start. */
     validityPeriod?: number;
-    includeLogo?: boolean;
     backgroundColour?: string;
   };
   activities: SeedActivity[];
@@ -1953,6 +2046,134 @@ export const EVENTS: SeedEvent[] = [
       },
     ],
   },
+  /**
+   * A ticketed event that has already run.
+   *
+   * The upcoming Tara Hunter Trial shows tickets *before* the day — issued, none
+   * scanned, which is what the issued/scanned/remaining cards are for. Nothing
+   * showed what a gate looks like afterwards, because every ticketed event in
+   * the fixture was in the future and a scan on a future event is a fiction.
+   *
+   * This one has been through the gate: most riders admitted, one who presented
+   * the same ticket twice, one who never came, and one whose entry came off.
+   */
+  {
+    key: 'mhpc-gate-day',
+    org: 'meath',
+    name: 'Dunshaughlin Gate Day (completed)',
+    description:
+      'Ran last month, with electronic tickets scanned at the gate. Useful for the scanning history and the duplicate-use report.',
+    eventType: 'Cross Country',
+    venue: 'Tara Hill Cross Country',
+    startDays: -12,
+    endDays: -12,
+    openDays: -60,
+    closeDays: -15,
+    status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
+    ticketing: {
+      headerText: 'Meath Hunt Pony Club — Dunshaughlin Gate Day',
+      instructions: 'Show this ticket at the gate. One ticket admits the named rider and one horse.',
+      footerText: 'Hard hats to current standard. No dogs on the course.',
+      validityPeriod: 1,
+      backgroundColour: '#123c2b',
+    },
+    activities: [
+      {
+        name: 'Open class',
+        description: 'Open to all grades.',
+        fee: 40,
+        form: 'shortEntry',
+        payment: 'both',
+      },
+      {
+        name: 'Junior class',
+        description: 'Under 14s, lower fences.',
+        fee: 30,
+        form: 'shortEntry',
+        payment: 'both',
+      },
+    ],
+  },
+  /**
+   * A ticketed event running **today**, whose tickets are valid **now**.
+   *
+   * The fixture had a gate day last month and a hunter trial three weeks out,
+   * which between them cover "afterwards" and "before the day" — and leave out
+   * the state a gate is actually worked in. A ticket for a future event cannot
+   * be scanned without lying about when, and one for a past event is expired:
+   * neither can be used to try the scanner, which is the part of ticketing that
+   * matters on the day.
+   *
+   * So: today, with most tickets unscanned and waiting. Two have been through
+   * the gate already, because a morning's gate is a mixture and the counts on
+   * the dashboard should not read as all-or-nothing.
+   *
+   * Entries are closed — they shut yesterday. A gate day whose entries are
+   * still open would be a different fixture and a stranger one.
+   */
+  {
+    key: 'mhpc-gate-today',
+    org: 'meath',
+    name: 'Dunshaughlin Gate Day (today)',
+    description:
+      'Running today. Tickets are valid now — use this one to try scanning at the gate.',
+    eventType: 'Cross Country',
+    venue: 'Tara Hill Cross Country',
+    startDays: 0,
+    endDays: 0,
+    openDays: -45,
+    closeDays: -1,
+    status: 'published',
+    showOnOrganisationPage: true,
+    showOnPlatformPage: true,
+    ticketing: {
+      headerText: 'Meath Hunt Pony Club — Dunshaughlin Gate Day',
+      instructions: 'Show this ticket at the gate. One ticket admits the named rider and one horse.',
+      footerText: 'Hard hats to current standard. No dogs on the course.',
+      /*
+       * The one seeded ticket not laid out the default way, so a developer can
+       * see what the choice does without designing one first. No image: the
+       * seed writes rows, not S3 objects, and a key pointing at nothing renders
+       * as a broken picture on the one screen this is for.
+       */
+      layout: 'sideBySide',
+      // A day after the event, so a ticket issued for today is still valid this
+      // evening — a gate that shuts at midnight is nobody's gate.
+      validityPeriod: 1,
+      backgroundColour: '#123c2b',
+    },
+    activities: [
+      {
+        name: 'Open class',
+        description: 'Open to all grades.',
+        fee: 40,
+        form: 'shortEntry',
+        payment: 'both',
+      },
+      {
+        name: 'Junior class',
+        description: 'Under 14s, lower fences.',
+        fee: 30,
+        form: 'shortEntry',
+        payment: 'both',
+      },
+      {
+        /*
+         * The only seeded activity whose ticket admits more than one person.
+         * Without it `admits` is 1 everywhere and the gate's ceiling can only
+         * be seen failing — a family ticket is what shows it counting.
+         */
+        name: 'Family car pass',
+        description: 'One car, up to four people. Admits four at the gate.',
+        fee: 25,
+        form: 'shortEntry',
+        payment: 'both',
+        ticketsAdmit: 4,
+      },
+    ],
+  },
   {
     key: 'mhpc-tara-hunter-trial',
     org: 'meath',
@@ -1974,8 +2195,17 @@ export const EVENTS: SeedEvent[] = [
       instructions:
         'Show this ticket at the gate. One ticket admits the named rider and one horse; car passes are separate.',
       footerText: 'Hard hats to current standard. No dogs on the cross-country course.',
-      validityPeriod: 24,
-      includeLogo: true,
+      /*
+       * Days, not hours.
+       *
+       * `ticketingService.issueTicketForEntry` adds this to the event's last
+       * day (`validUntil.setDate(+period)`), while the form labels the field
+       * "Ticket Validity Period (hours)" and describes it as hours *before* the
+       * event. The two disagree about the unit and about which end of the
+       * window it moves; the fixture follows the code, because that is what the
+       * data will actually look like. See docs/SEED_TICKETS.md.
+       */
+      validityPeriod: 1,
       backgroundColour: '#123c2b',
     },
     activities: [
@@ -2200,6 +2430,35 @@ export interface SeedEntry {
   payment: 'card' | 'offline';
   /** Days ago the entry was made. Drives `entry_date`, and so the recent order. */
   enteredDaysAgo: number;
+  /**
+   * A basket this was bought in, shared with anything else naming it.
+   *
+   * Omitted means a basket of its own, which is the ordinary case. Naming one
+   * is how the fixture produces a payment with several lines — two entries, a
+   * membership renewal, a shop order — which is what a family checking out at
+   * the start of a season actually does, and what the payment detail screen
+   * exists to itemise.
+   */
+  basket?: string;
+  /**
+   * How this entry's ticket stands, on an event that issues them.
+   *
+   * A ticket is issued for **every** entry on a ticketing event — that is what
+   * `fulfilment.service` does, so the fixture does not ask for one. What it says
+   * here is what happened to the ticket afterwards, which is the part a club
+   * looks at:
+   *
+   * | | |
+   * |---|---|
+   * | `issued` | nobody has scanned it — the state every ticket is in before the day, and the default |
+   * | `scanned` | admitted at the gate |
+   * | `scannedTwice` | presented a second time: `scan_count` 2 and two scans in its history, which is how a duplicate shows |
+   * | `cancelled` | the entry came off and the ticket with it |
+   *
+   * Only meaningful on an event configured for tickets; naming one elsewhere is
+   * a fixture that would silently do nothing, and the writer refuses it.
+   */
+  ticket?: { state: 'issued' | 'scanned' | 'scannedTwice' | 'cancelled'; location?: string };
 }
 
 /**
@@ -2225,8 +2484,18 @@ export interface SeedEntry {
  */
 export const ENTRIES: SeedEntry[] = [
   /* ---- Kildare: Áine's household, on events that have been and gone ---- */
-  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Áine', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 70 },
-  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Rónán', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 70 },
+  /*
+   * One basket, four lines.
+   *
+   * Two children entered, the family membership renewed and a hoodie, paid for
+   * together — which is what a household actually does at the start of a
+   * season, and the case the payment detail screen exists to itemise. Anything
+   * naming `mcgrath-season` joins it, including the membership in `MEMBERS` and
+   * the hoodie in `SHOP_ORDERS`. Every line in a basket must agree on status
+   * and method: a basket settles once. `database.ts` refuses one that does not.
+   */
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Áine', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 110, basket: 'mcgrath-season' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Rónán', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 110, basket: 'mcgrath-season' },
   { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '1.00m', firstName: 'Conor', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 69 },
   { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Preliminary 1', firstName: 'Éabha', lastName: 'McGrath', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 21 },
   /*
@@ -2236,6 +2505,41 @@ export const ENTRIES: SeedEntry[] = [
    * it has been used: offered back as a suggestion, with nothing to link it to.
    */
   { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Novice 2', firstName: 'Tadhg', lastName: 'Nolan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 12 },
+
+  /*
+   * ---- Five baskets on one account, for the handling-fee cases -----------
+   *
+   * All on Áine McGrath at Kildare, so every combination can be walked through
+   * from one login without switching clubs.
+   *
+   * The handling fee is charged on **card** lines whose price does not already
+   * absorb it. Which items those are is the club's decision and lives on the
+   * item, so these baskets are composed from activities and products that
+   * already carry the flag they need rather than overriding it:
+   *
+   *   Spring League grades, the club hoodie   handling fee included
+   *   everything else at Kildare              handling fee added on
+   *
+   *   1  all card, fee added on      two fee-bearing entries
+   *   2  all card, fee included      entry + hoodie, so no fee at all — not
+   *                                  even the fixed element (rule 3)
+   *   3  all card, one of each       only the added-on line bears it
+   *   4  card added-on + offline     fee on the card line; the offline one is
+   *                                  owed to the club and bears nothing
+   *   5  card included + offline     no fee anywhere, and still two methods
+   */
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '80cm', firstName: 'Áine', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 64, basket: 'fees-1-card-added' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-past-event', activity: '1.00m', firstName: 'Rónán', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 64, basket: 'fees-1-card-added' },
+
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-spring-league', activity: 'Grade 1 — 80cm', firstName: 'Éabha', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 34, basket: 'fees-2-card-included' },
+
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-spring-league', activity: 'Grade 3 — 1.00m', firstName: 'Conor', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 33, basket: 'fees-3-card-mixed' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Preliminary 1', firstName: 'Áine', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 33, basket: 'fees-3-card-mixed' },
+
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-dressage-closed', activity: 'Novice 2', firstName: 'Rónán', lastName: 'McGrath', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 32, basket: 'fees-4-added-and-offline' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-hunter-trial', activity: 'Pairs class', firstName: 'Conor', lastName: 'McGrath', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 32, basket: 'fees-4-added-and-offline' },
+
+  { email: 'aine.mcgrath@example.test', org: 'kildare', event: 'khpc-members-cup', activity: 'Open Warm-up Round', firstName: 'Éabha', lastName: 'McGrath', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 31, basket: 'fees-5-included-and-offline' },
 
   /* ---- Kildare: other members, so an entrant list has more than one name -- */
   { email: 'cillian.murphy@example.test', org: 'kildare', event: 'khpc-past-event', activity: '1.00m', firstName: 'Cillian', lastName: 'Murphy', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 68 },
@@ -2270,7 +2574,41 @@ export const ENTRIES: SeedEntry[] = [
    * the account holder's is the case a screen headed by the login gets wrong.
    */
   { email: 'lorcan.hayes@example.test', org: 'ward', event: 'wupc-open-day', activity: 'Family ticket', firstName: 'Cathal', lastName: 'Hayes', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 5 },
+  /*
+   * The gate day that has run. One entry per ticket state, so the scanning
+   * history and the duplicate-use report have something to show.
+   */
+  { email: 'brid.mcnamara@example.test', org: 'meath', event: 'mhpc-gate-day', activity: 'Open class', firstName: 'Bríd', lastName: 'McNamara', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 30, ticket: { state: 'scanned', location: 'Main gate' } },
+  { email: 'colm.fitzgerald@example.test', org: 'meath', event: 'mhpc-gate-day', activity: 'Open class', firstName: 'Colm', lastName: 'Fitzgerald', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 28, ticket: { state: 'scanned', location: 'Main gate' } },
+  // Presented the same ticket twice — the case the scan history exists for.
+  { email: 'darragh.otoole@example.test', org: 'meath', event: 'mhpc-gate-day', activity: 'Open class', firstName: "Éabha", lastName: "O'Toole", paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 26, ticket: { state: 'scannedTwice', location: 'Main gate' } },
+  // Entered, paid, never came: a ticket that stays unscanned after the day.
+  { email: 'seamus.donnelly@example.test', org: 'meath', event: 'mhpc-gate-day', activity: 'Junior class', firstName: 'Séamus', lastName: 'Donnelly', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 25, ticket: { state: 'issued' } },
+  // Withdrew beforehand, so the ticket was cancelled rather than scanned.
+  { email: 'maeve.kiernan@example.test', org: 'meath', event: 'mhpc-gate-day', activity: 'Junior class', firstName: 'Maeve', lastName: 'Kiernan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 24, ticket: { state: 'cancelled' } },
+  { email: 'aoibhinn.regan@example.test', org: 'meath', event: 'mhpc-gate-day', activity: 'Junior class', firstName: 'Aoibhínn', lastName: 'Regan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 22, ticket: { state: 'scanned', location: 'Junior ring' } },
+
   { email: 'colm.fitzgerald@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Junior class', firstName: 'Colm', lastName: 'Fitzgerald', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 11 },
+  /*
+   * Today's gate. Mostly unscanned, because an unscanned ticket that is valid
+   * now is the only thing the scanner can actually be tried against — and
+   * spread across five accounts, so whichever member you sign in as has one in
+   * hand rather than a page of expired ones.
+   */
+  { email: 'brid.mcnamara@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Open class', firstName: 'Bríd', lastName: 'McNamara', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 12, ticket: { state: 'issued' } },
+  { email: 'darragh.otoole@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Open class', firstName: "Darragh", lastName: "O'Toole", paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 11, ticket: { state: 'issued' } },
+  { email: 'seamus.donnelly@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Junior class', firstName: 'Séamus', lastName: 'Donnelly', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 10, ticket: { state: 'issued' } },
+  { email: 'maeve.kiernan@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Junior class', firstName: 'Maeve', lastName: 'Kiernan', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 9, ticket: { state: 'issued' } },
+  // Two already admitted, so the morning reads as a morning.
+  { email: 'colm.fitzgerald@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Open class', firstName: 'Colm', lastName: 'Fitzgerald', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 14, ticket: { state: 'scanned', location: 'Main gate' } },
+  { email: 'aoibhinn.regan@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Junior class', firstName: 'Aoibhínn', lastName: 'Regan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 8, ticket: { state: 'scanned', location: 'Junior ring' } },
+  /*
+   * The family car pass — the one seeded ticket that admits four. Scan it four
+   * times and the fifth is refused; nothing else in the fixture can show that,
+   * because everything else admits one and looks the same used as used up.
+   */
+  { email: 'maeve.kiernan@example.test', org: 'meath', event: 'mhpc-gate-today', activity: 'Family car pass', firstName: 'Maeve', lastName: 'Kiernan', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 7, ticket: { state: 'issued' } },
+
   { email: 'aoibhinn.regan@example.test', org: 'meath', event: 'mhpc-summer-camp', activity: 'Day ticket', firstName: 'Aoibhínn', lastName: 'Regan', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 10 },
   { email: 'seamus.donnelly@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Open class', firstName: 'Séamus', lastName: 'Donnelly', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 9 },
   { email: 'maeve.kiernan@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Spectator car pass', firstName: 'Maeve', lastName: 'Kiernan', paymentStatus: 'pending', payment: 'offline', enteredDaysAgo: 8 },
@@ -2293,13 +2631,364 @@ export const ENTRIES: SeedEntry[] = [
   { email: 'niamh.walsh@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 17 },
   { email: 'niamh.walsh@example.test', org: 'meath', event: 'mhpc-summer-camp', activity: 'Day ticket', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 12 },
   { email: 'niamh.walsh@example.test', org: 'ward', event: 'wupc-league-open', activity: 'Senior track', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'pending', payment: 'offline', enteredDaysAgo: 2 },
+  /*
+   * And one she has paid for at the same club.
+   *
+   * Ward was the only login-and-club pair whose single purchase was the unpaid
+   * one, so its Payments page was empty — correctly, since that list is money
+   * that moved and an unpaid entry is not — but indistinguishable from a page
+   * that was broken. Two entries at one club with different statuses is the
+   * pair worth having: one shows on Payments, one explains why the other does
+   * not.
+   */
+  { email: 'niamh.walsh@example.test', org: 'ward', event: 'wupc-open-day', activity: 'Family ticket', firstName: 'Niamh', lastName: 'Walsh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 16 },
   { email: 'orla.kavanagh@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Órla', lastName: 'Kavanagh', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 19 },
   { email: 'sinead.gallagher@example.test', org: 'laois', event: 'lhpc-closed', activity: 'Novice', firstName: 'Sinéad', lastName: 'Gallagher', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 20 },
 
   /* ---- Laois and Meath, so Kildare is not the only club with a history --- */
   { email: 'ruairi.kelly@example.test', org: 'laois', event: 'lhpc-league', activity: '70cm', firstName: 'Ruairí', lastName: 'Kelly', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 5 },
   { email: 'eoin.sheridan@example.test', org: 'laois', event: 'lhpc-league', activity: 'Spectator pass', firstName: 'Eoin', lastName: 'Sheridan', paymentStatus: 'paid', payment: 'offline', enteredDaysAgo: 4 },
-  { email: 'brid.mcnamara@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Open class', firstName: 'Bríd', lastName: 'McNamara', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 6 },
+  /*
+   * A smaller basket, and a different mixture: an entry, the horse's papers and
+   * a cap. Meath is the club with registrations, so it is the only place this
+   * combination can exist.
+   */
+  { email: 'brid.mcnamara@example.test', org: 'meath', event: 'mhpc-tara-hunter-trial', activity: 'Open class', firstName: 'Bríd', lastName: 'McNamara', paymentStatus: 'paid', payment: 'card', enteredDaysAgo: 6, basket: 'mcnamara-day' },
+];
+
+/* ------------------------------------------------------------- shop orders */
+
+export interface SeedShopOrder {
+  /** The account that placed it. */
+  email: string;
+  org: SeedOrg['key'];
+  /** A `MERCHANDISE` key, and the option value chosen, by its name. */
+  item: string;
+  option: string;
+  quantity: number;
+  paymentStatus: 'paid' | 'pending';
+  payment: 'card' | 'offline';
+  orderedDaysAgo: number;
+  /** A basket shared with other purchases. See `SeedEntry.basket`. */
+  basket?: string;
+}
+
+/**
+ * Shop orders that have already been placed.
+ *
+ * Few, and only for what they demonstrate: the shop is a whole module of its
+ * own and a fixture of orders is not what this seed is for. What it *is* for is
+ * a payment with a shirt on it beside an entry and a membership — the basket a
+ * family fills at the start of a season, which is the case the payment detail
+ * screen exists to itemise and which nothing else here produces.
+ */
+export const SHOP_ORDERS: SeedShopOrder[] = [
+  { email: 'aine.mcgrath@example.test', org: 'kildare', item: 'club-hoodie', option: 'Age 12–14', quantity: 1, paymentStatus: 'paid', payment: 'card', orderedDaysAgo: 110, basket: 'mcgrath-season' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', item: 'baseball-cap', option: 'Navy', quantity: 2, paymentStatus: 'paid', payment: 'card', orderedDaysAgo: 40 },
+  /* The hoodie's price absorbs its handling fee, which is what baskets 2 and 5 need. */
+  { email: 'aine.mcgrath@example.test', org: 'kildare', item: 'club-hoodie', option: 'Small', quantity: 1, paymentStatus: 'paid', payment: 'card', orderedDaysAgo: 34, basket: 'fees-2-card-included' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', item: 'club-hoodie', option: 'Medium', quantity: 1, paymentStatus: 'paid', payment: 'card', orderedDaysAgo: 31, basket: 'fees-5-included-and-offline' },
+  { email: 'brid.mcnamara@example.test', org: 'meath', item: 'mhpc-show-cap', option: 'One size', quantity: 1, paymentStatus: 'paid', payment: 'card', orderedDaysAgo: 6, basket: 'mcnamara-day' },
+];
+
+export interface SeedBooking {
+  email: string;
+  org: SeedOrg['key'];
+  /** A `CALENDARS` key. */
+  calendar: string;
+  /** Days from the run. Negative is in the past; positive is still to come. */
+  daysFromNow: number;
+  /** `HH:MM`, matching one of the calendar's slots. */
+  startTime: string;
+  /** Minutes. Must be one of that slot's durations — the price comes from it. */
+  duration: number;
+  places?: number;
+  status?: 'confirmed' | 'cancelled';
+  paymentStatus: 'paid' | 'pending';
+  payment: 'card' | 'offline';
+  /**
+   * Days ago the member booked it. Defaults to a fortnight before the slot.
+   *
+   * Set it explicitly where two bookings share a basket: they were paid for in
+   * one go, so they cannot have been booked on different days.
+   */
+  bookedDaysAgo?: number;
+  /** A basket shared with other purchases. See `SeedEntry.basket`. */
+  basket?: string;
+}
+
+/**
+ * Bookings members have already made.
+ *
+ * The calendars, their slots and their blocked periods were all seeded and
+ * **no booking ever was**, so a club had a booking module with nothing in it —
+ * and, more to the point here, no payment anywhere in the seed carried a
+ * `booking` line. The payment screens could not be checked against one, and
+ * neither could the click-through to a booking.
+ *
+ * Chosen for the cases the screens branch on rather than for volume: a booking
+ * on its own, a booking beside other things in one basket, one owed offline
+ * (so it appears under Offline Payments with a booking in it), one already
+ * past, and one cancelled.
+ *
+ * `daysFromNow` is a target, not a date: the writer moves it to the nearest day
+ * the slot actually runs. A fixed offset lands on a different weekday every
+ * time the seed is run, so a booking pinned to one would sit outside its own
+ * slot most days of the week.
+ */
+export const BOOKINGS: SeedBooking[] = [
+  /* ------------------------------------------------------------- Laois */
+  // A booking on its own, paid by card: the simplest payment with a booking.
+  {
+    email: 'orla.kavanagh@example.test',
+    org: 'laois',
+    calendar: 'arena',
+    daysFromNow: 9,
+    startTime: '17:00',
+    duration: 60,
+    paymentStatus: 'paid',
+    payment: 'card',
+  },
+  /*
+   * Two bookings in one basket — a member booking the arena and a lesson in one
+   * go. The case the itemised payment detail exists for, with lines that lead
+   * to bookings rather than to entries.
+   */
+  {
+    email: 'niamh.walsh@example.test',
+    org: 'laois',
+    calendar: 'arena',
+    daysFromNow: 12,
+    startTime: '09:00',
+    duration: 120,
+    paymentStatus: 'paid',
+    payment: 'card',
+    bookedDaysAgo: 3,
+    basket: 'walsh-arena-day',
+  },
+  {
+    email: 'niamh.walsh@example.test',
+    org: 'laois',
+    calendar: 'lessons',
+    daysFromNow: 14,
+    startTime: '18:30',
+    duration: 60,
+    paymentStatus: 'paid',
+    payment: 'card',
+    bookedDaysAgo: 3,
+    basket: 'walsh-arena-day',
+  },
+  // Owed to the club: an offline basket with a booking in it, which is what
+  // puts a booking under Offline Payments.
+  {
+    email: 'ruairi.kelly@example.test',
+    org: 'laois',
+    calendar: 'lessons',
+    daysFromNow: 6,
+    startTime: '18:30',
+    duration: 60,
+    paymentStatus: 'pending',
+    payment: 'offline',
+    basket: 'kelly-lesson',
+  },
+  // Been and gone, so the past-booking case is represented.
+  {
+    email: 'eoin.sheridan@example.test',
+    org: 'laois',
+    calendar: 'cross-country',
+    daysFromNow: -11,
+    startTime: '10:00',
+    duration: 180,
+    paymentStatus: 'paid',
+    payment: 'card',
+  },
+  /*
+   * Cancelled but paid for. The money still changed hands, so the payment
+   * stands and the booking says why it is not happening — which is the state a
+   * refund is asked about.
+   */
+  {
+    email: 'clodagh.moran@example.test',
+    org: 'laois',
+    calendar: 'arena',
+    daysFromNow: 4,
+    startTime: '17:00',
+    duration: 30,
+    status: 'cancelled',
+    paymentStatus: 'paid',
+    payment: 'card',
+  },
+  /* ------------------------------------------------------------- Meath */
+  {
+    email: 'darragh.otoole@example.test',
+    org: 'meath',
+    calendar: 'mhpc-indoor-arena',
+    daysFromNow: 15,
+    // Not 19:00: that half-hour is blocked for harrowing, and a seeded booking
+    // inside a blocked period is a state the application refuses to create.
+    startTime: '17:00',
+    duration: 60,
+    paymentStatus: 'paid',
+    payment: 'card',
+  },
+];
+
+export interface SeedRefund {
+  /**
+   * The basket the money came out of — a `basket` name where several purchases
+   * shared a payment, otherwise the email and the thing bought, which is how a
+   * single-line payment is identified.
+   */
+  basket?: string;
+  email?: string;
+  org: SeedOrg['key'];
+  /**
+   * The item refunded, where the refund was of one item.
+   *
+   * Matched against the payment's lines — a description substring, and the
+   * entrant's name where two lines of a basket read identically, which two
+   * children entered in the same class do. A refund that names an item is
+   * written with scope `items` and linked to the line, so the item itself shows
+   * as refunded and cannot be refunded twice.
+   *
+   * The amount then comes from the line: its fee plus the share of the handling
+   * fee it bore, which is what the member paid for it.
+   */
+  item?: { description?: string; subject?: string };
+  /** Minor units. Omit to refund the whole payment, or name an `item` instead. */
+  amountMinor?: number;
+  reason: string;
+  /** `completed` — the money has gone back; `pending` — asked for, not yet sent. */
+  status: 'completed' | 'pending';
+  daysAgo: number;
+}
+
+/**
+ * Refunds the clubs have made.
+ *
+ * Four, chosen for the states the Refunds screen has to tell apart rather than
+ * for volume: a whole payment returned, part of one returned, a refund still
+ * waiting to be sent, and one against a basket of several items — where the
+ * amount refunded matches a single line and the rest of the payment stands.
+ *
+ * The seed used to mark a membership's payment `refunded` and record no refund
+ * at all, so every refund screen was empty against data that claimed refunds
+ * had happened.
+ */
+/**
+ * A notice a club shows its members when they sign in.
+ *
+ * The window is written in days from the seed run rather than as dates, like
+ * everything else here, so a database seeded in March still has a notice
+ * showing in September.
+ */
+export interface SeedAnnouncement {
+  org: SeedOrg['key'];
+  title: string;
+  /** HTML, as the rich-text editor writes it. */
+  description: string;
+  /** Days from today. Negative is in the past. */
+  fromDays: number;
+  untilDays: number;
+  /** How the picture is used, where there is one. */
+  image?: 'background' | 'header' | 'footer';
+  /** Where the notice points. Both halves or neither. */
+  link?: { label: string; url: string };
+}
+
+/**
+ * Kildare's notices, chosen for the states the screens have to tell apart.
+ *
+ * One showing now with a background image, one showing now with none, one still
+ * to start and one already finished — so the admin list has all three of its
+ * badges and the member's home page has a column with two cards in it.
+ *
+ * **No image files.** The seed writes rows, not S3 objects, and a key pointing
+ * at an object that does not exist would render as a broken picture on the one
+ * screen this feature exists for. `image` records the club's *intent* for the
+ * placement; the picture is attached from the org-admin, which is the only
+ * place that can upload one.
+ */
+export const ANNOUNCEMENTS: SeedAnnouncement[] = [
+  {
+    org: 'kildare',
+    title: 'Clubhouse closed this Saturday',
+    description:
+      '<p>The clubhouse is closed all day on Saturday while the floor is replaced. ' +
+      'The yard and the arenas are open as usual.</p>',
+    fromDays: -2,
+    untilDays: 5,
+  },
+  {
+    org: 'kildare',
+    title: 'Summer camp booking is open',
+    description:
+      '<p>Places for the August camp are open now and go quickly. ' +
+      '<strong>Book through the Camps page</strong> — a deposit holds a place.</p>',
+    fromDays: -6,
+    untilDays: 21,
+    // The one notice that points somewhere, so the link renders in a seeded
+    // database rather than only in a club that has typed one.
+    link: { label: 'Book a place', url: 'https://kildarehunt.test/camp' },
+  },
+  {
+    org: 'kildare',
+    title: 'AGM: 14 October, 7.30pm',
+    description:
+      '<p>The AGM is in the clubhouse. Nominations for the committee close a week beforehand.</p>',
+    // Not showing yet — what the "Scheduled" badge is for.
+    fromDays: 20,
+    untilDays: 45,
+  },
+  {
+    org: 'kildare',
+    title: 'Winter league results',
+    description: '<p>Thanks to everyone who came out. Full results are on the noticeboard.</p>',
+    // Over — the list keeps it, the members no longer see it.
+    fromDays: -120,
+    untilDays: -60,
+  },
+];
+
+export const REFUNDS: SeedRefund[] = [
+  // A whole membership returned: the member moved away mid-season.
+  {
+    email: 'clodagh.moran@example.test',
+    org: 'laois',
+    reason: 'Member moved out of the area; season subscription returned in full.',
+    status: 'completed',
+    daysAgo: 40,
+  },
+  // Part of a four-line basket: one child withdrew from the class he entered.
+  // Two children entered the same class, so the entrant's name is what tells
+  // the two identical lines apart.
+  {
+    basket: 'mcgrath-season',
+    org: 'kildare',
+    item: { description: '80cm', subject: 'Rónán McGrath' },
+    reason: 'Rónán withdrew from the 80cm before the closing date.',
+    status: 'completed',
+    daysAgo: 96,
+  },
+  // Asked for and not yet sent — what the pending state is for.
+  {
+    basket: 'mcnamara-day',
+    org: 'meath',
+    item: { description: 'Show cap' },
+    reason: 'Cap ordered in the wrong size; refund agreed, awaiting the transfer.',
+    status: 'pending',
+    daysAgo: 6,
+  },
+  // A part refund on a fee-scenario basket, so the handling fee and a refund
+  // appear on one payment.
+  {
+    basket: 'fees-1-card-added',
+    org: 'kildare',
+    item: { description: '1.00m' },
+    reason: 'Class cancelled for waterlogging; entry fee returned.',
+    status: 'completed',
+    daysAgo: 12,
+  },
 ];
 
 export const MEMBERSHIP_TYPES: SeedMembershipType[] = [
@@ -2384,6 +3073,8 @@ export interface SeedMember {
   status: 'active' | 'pending' | 'elapsed';
   paymentStatus: 'paid' | 'pending' | 'refunded';
   payment?: 'pay-offline' | 'stripe';
+  /** A basket shared with other purchases. See `SeedEntry.basket`. */
+  basket?: string;
   /**
    * Which season the membership belongs to.
    *
@@ -2459,7 +3150,7 @@ export const MEMBERS: SeedMember[] = [
    * dashboard has to say which of the four it is talking about.
    */
   { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'senior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'expiring', renewedDaysAgo: 340 },
-  { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 110, household: 'mcgrath', firstName: 'Conor', lastName: 'McGrath' },
+  { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 110, household: 'mcgrath', firstName: 'Conor', lastName: 'McGrath', basket: 'mcgrath-season' },
   { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'family', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 110, household: 'mcgrath', firstName: 'Éabha', lastName: 'McGrath' },
   { email: 'aine.mcgrath@example.test', org: 'kildare', type: 'junior', status: 'active', paymentStatus: 'paid', payment: 'stripe', season: 'current', renewedDaysAgo: 95, firstName: 'Rónán', lastName: 'McGrath' },
 
@@ -2993,6 +3684,8 @@ export interface SeedRegistration {
   renewedDaysAgo: number;
   /** Days from now it lapses. Negative for one that already has. */
   validUntilDays: number;
+  /** A basket shared with other purchases. See `SeedEntry.basket`. */
+  basket?: string;
   labels?: string[];
   processed?: boolean;
   /** Answers for the registration form, keyed by `FIELDS` key. */
@@ -3008,8 +3701,14 @@ export const REGISTRATIONS: SeedRegistration[] = [
     status: 'active',
     paymentStatus: 'paid',
     payment: 'stripe',
-    renewedDaysAgo: 60,
+    /*
+     * Renewed on the day she entered the hunter trial and bought a cap — the
+     * three are one basket (`mcnamara-day`), and a basket settles on one day by
+     * one method, so the dates have to agree.
+     */
+    renewedDaysAgo: 6,
     validUntilDays: 200,
+    basket: 'mcnamara-day',
     labels: ['Competing', 'Vetted'],
     processed: true,
     answers: {

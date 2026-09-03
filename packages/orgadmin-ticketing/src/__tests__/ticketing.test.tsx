@@ -28,10 +28,12 @@ vi.mock('@aws-web-framework/orgadmin-shell', async () =>
   (await import('@aws-web-framework/orgadmin-core/test/shellMock')).createShellMock()
 );
 
+const { batchExecute } = vi.hoisted(() => ({ batchExecute: vi.fn().mockResolvedValue([]) }));
+
 vi.mock('@aws-web-framework/orgadmin-core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useApi: () => ({
-    execute: vi.fn().mockResolvedValue([]),
+    execute: batchExecute,
     data: null,
     error: null,
     loading: false,
@@ -151,14 +153,20 @@ describe('TicketDetailsDialog', () => {
     );
 
     expect(screen.getByText('Ticket Details')).toBeInTheDocument();
-    // Use getAllByText since ticket reference appears multiple times (QR code section and ticket info)
-    const ticketRefs = screen.getAllByText(mockTicket.ticketReference);
-    expect(ticketRefs.length).toBeGreaterThan(0);
-    expect(screen.getByText(mockTicket.customerName)).toBeInTheDocument();
-    expect(screen.getByText(mockTicket.customerEmail)).toBeInTheDocument();
+    /*
+     * Whose ticket and which one, in the header — so it stays true on whichever
+     * tab the reader is on. The details themselves moved behind tabs: the
+     * ticket first, because "what is this person holding" is what the reference
+     * in the list cannot answer, and the scan history second.
+     */
+    expect(
+      screen.getByText(`${mockTicket.customerName} · ${mockTicket.ticketReference}`)
+    ).toBeInTheDocument();
   });
 
-  it('displays QR code section', () => {
+  it('shows the ticket itself first', () => {
+    // The thing the holder is looking at, rendered by the same function that
+    // prints it.
     render(
       <TicketDetailsDialog
         open={true}
@@ -168,7 +176,27 @@ describe('TicketDetailsDialog', () => {
       />
     );
 
-    expect(screen.getByText('QR Code')).toBeInTheDocument();
+    expect(screen.getByTitle('The ticket')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'The ticket' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+  });
+
+  it('keeps the scan details a tab away', async () => {
+    render(
+      <TicketDetailsDialog
+        open={true}
+        ticket={mockTicket}
+        onClose={mockOnClose}
+        onUpdate={mockOnUpdate}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Scanning' }));
+
+    expect(await screen.findByText('QR Code')).toBeInTheDocument();
+    expect(screen.getByText(mockTicket.customerEmail)).toBeInTheDocument();
   });
 
   it('shows mark as scanned button for unscanned tickets', () => {
@@ -198,7 +226,13 @@ describe('TicketDetailsDialog', () => {
     expect(screen.getByText('Mark as Not Scanned')).toBeInTheDocument();
   });
 
-  it('displays resend email button', () => {
+  it('offers no button for a thing it cannot do', () => {
+    /*
+     * "Resend Email" was here, called `POST /tickets/:id/resend-email` — an
+     * endpoint that has never existed — and announced *"Ticket email resent
+     * successfully"* whatever came back. A club that thought it had re-sent a
+     * ticket had not. Its absence is the fix until a resend is built.
+     */
     render(
       <TicketDetailsDialog
         open={true}
@@ -208,10 +242,12 @@ describe('TicketDetailsDialog', () => {
       />
     );
 
-    expect(screen.getByText('Resend Email')).toBeInTheDocument();
+    expect(screen.queryByText(/Resend Email/i)).not.toBeInTheDocument();
   });
 
-  it('displays download PDF button', () => {
+  it('offers the ticket for printing, which is how it becomes a PDF', () => {
+    // Labelled for what it does. "Download PDF" fetched a `download-pdf`
+    // endpoint that does not exist and logged "PDF download initiated".
     render(
       <TicketDetailsDialog
         open={true}
@@ -221,7 +257,7 @@ describe('TicketDetailsDialog', () => {
       />
     );
 
-    expect(screen.getByText('Download PDF')).toBeInTheDocument();
+    expect(screen.getByText('Print / Save as PDF')).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', () => {
@@ -237,6 +273,69 @@ describe('TicketDetailsDialog', () => {
     const closeButtons = screen.getAllByText('Close');
     fireEvent.click(closeButtons[0]);
     expect(mockOnClose).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Marking a screenful of tickets at once.
+ *
+ * The same fault as the single button, one screen along: this posted to
+ * `/tickets/batch-operation`, which has never been a route. Every batch 404'd,
+ * and the dialog read `response.success` off the `null` that came back.
+ */
+describe('BatchTicketOperationsDialog — what it actually calls', () => {
+  const onClose = vi.fn();
+  const onComplete = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    batchExecute.mockResolvedValue({});
+  });
+
+  it('marks each ticket through the endpoint that exists', async () => {
+    render(
+      <BatchTicketOperationsDialog
+        open
+        ticketIds={['t-1', 't-2']}
+        operation="mark_scanned"
+        onClose={onClose}
+        onComplete={onComplete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    await waitFor(() => expect(batchExecute).toHaveBeenCalledTimes(2));
+    expect(batchExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'PUT',
+        url: '/api/orgadmin/tickets/t-1/scan-status',
+        data: { scanStatus: 'scanned' },
+        throwOnError: true,
+      })
+    );
+  });
+
+  it('reports which ticket failed rather than the whole batch', async () => {
+    // A club marking forty tickets needs to know which one to look at.
+    batchExecute
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error('Ticket not found'));
+
+    render(
+      <BatchTicketOperationsDialog
+        open
+        ticketIds={['t-1', 't-2']}
+        operation="mark_scanned"
+        onClose={onClose}
+        onComplete={onComplete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    await waitFor(() => expect(screen.getByText(/1/)).toBeInTheDocument());
+    expect(batchExecute).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -187,9 +187,15 @@ describe('reading the roster', () => {
     expect(await screen.findByText('Ward Union Pony Club')).toBeInTheDocument();
   });
 
-  it('shows someone already entered, but will not let them be chosen', async () => {
-    // A name missing from the list reads as a bug; a disabled row answers the
-    // question the member was about to ask.
+  /**
+   * Said, and still selectable.
+   *
+   * An activity may be entered more than once — one rider on two horses is the
+   * ordinary case — so having entered is worth telling the member and not worth
+   * refusing. It used to be a disabled row, which reads as "you have made a
+   * mistake" about something that is often deliberate.
+   */
+  it('says someone has already entered, and still lets them be chosen', async () => {
     const onValue = vi.fn();
     render(
       <Harness
@@ -203,13 +209,13 @@ describe('reading the roster', () => {
     await userEvent.type(screen.getByRole('combobox'), 'byr');
 
     expect(await screen.findByText('Already entered')).toBeInTheDocument();
-    // Listed, and refused: MUI marks a disabled option `aria-disabled`, which
-    // is also what stops a screen-reader user selecting it.
     expect(screen.getByRole('option', { name: /Saoirse Byrne/ })).toHaveAttribute(
       'aria-disabled',
-      'true'
+      'false'
     );
-    expect(onValue).not.toHaveBeenCalledWith({ memberId: 'mem-1', name: 'Saoirse Byrne' });
+
+    await userEvent.click(screen.getByRole('option', { name: /Saoirse Byrne/ }));
+    expect(onValue).toHaveBeenCalledWith({ memberId: 'mem-1', name: 'Saoirse Byrne' });
   });
 
   it('says when nothing matched rather than showing an empty box', async () => {

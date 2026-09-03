@@ -196,7 +196,7 @@ const ADMIN_ORG_USER_ID = 'ou-admin-1';
   describe('undoing it', () => {
     it('puts the payment back to awaiting settlement', async () => {
       respond([
-        paymentRow({ payment_status: 'paid', offline_received_at: new Date(), fulfilled_lines: '0' }),
+        paymentRow({ payment_status: 'paid', offline_received_at: new Date(), released_lines: '0' }),
         paymentRow(),
       ]);
 
@@ -216,12 +216,43 @@ const ADMIN_ORG_USER_ID = 'ou-admin-1';
      */
     it('refuses once the receipt has produced anything', async () => {
       respond([
-        paymentRow({ payment_status: 'paid', offline_received_at: new Date(), fulfilled_lines: '2' }),
+        paymentRow({ payment_status: 'paid', offline_received_at: new Date(), released_lines: '2' }),
       ]);
 
       await expect(service.undoOfflinePaymentReceived(ORG, PAYMENT)).rejects.toThrow(
         /Refund it or cancel those individually/
       );
+    });
+
+    /**
+     * The check is about what the **receipt** released, not what the payment
+     * has ever produced.
+     *
+     * An entry, a booking and a merchandise order are created when the order is
+     * *placed*, weeks before the cheque arrives. Counting every fulfilled line
+     * refused the undo on almost every offline order there is — and the screen
+     * said "Undone" anyway, because `useApi.execute` answers `null` rather than
+     * throwing.
+     */
+    it('allows an undo where the lines were fulfilled before the receipt', async () => {
+      respond([
+        paymentRow({ payment_status: 'paid', offline_received_at: new Date(), released_lines: '0' }),
+        paymentRow(),
+      ]);
+
+      await expect(service.undoOfflinePaymentReceived(ORG, PAYMENT)).resolves.toBeDefined();
+    });
+
+    it('counts only the lines fulfilled at or after the receipt', async () => {
+      respond([
+        paymentRow({ payment_status: 'paid', offline_received_at: new Date(), released_lines: '0' }),
+        paymentRow(),
+      ]);
+
+      await service.undoOfflinePaymentReceived(ORG, PAYMENT);
+
+      const [read] = mockDb.query.mock.calls[0];
+      expect(String(read)).toContain('pt.fulfilled_at >= p.offline_received_at');
     });
 
     it('says so when the payment was never marked received', async () => {

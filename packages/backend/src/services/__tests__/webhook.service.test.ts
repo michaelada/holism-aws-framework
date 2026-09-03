@@ -6,6 +6,12 @@ import { logger } from '../../config/logger';
 jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 
+const getPaymentState = jest.fn();
+jest.mock('../payment-providers', () => ({
+  ...jest.requireActual('../payment-providers'),
+  paymentProviderRegistry: { get: () => ({ getPaymentState }) },
+}));
+
 const mockDb = db as jest.Mocked<typeof db>;
 
 const event = (over: Partial<WebhookEvent> = {}): WebhookEvent => ({
@@ -312,5 +318,142 @@ describe('WebhookService — authorisations', () => {
 
     expect(checkout.failPayment).toHaveBeenCalled();
     expect(checkout.settleAuthorisation).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Bringing a payment up to date by asking the provider.
+ *
+ * A card payment is settled by two webhooks — one authorises, one confirms —
+ * and if neither arrives the money is taken and nothing else happens: the
+ * member watches "Confirming your payment", the basket stays full, and what
+ * they bought is never created. Stripe cannot reach a laptop without
+ * `stripe listen`, and a production webhook can be missed. This is the way out
+ * that does not depend on being told.
+ */
+describe('WebhookService — reconciling from the provider', () => {
+  let service: WebhookService;
+  let checkout: {
+    confirmPayment: jest.Mock;
+    failPayment: jest.Mock;
+    settleAuthorisation: jest.Mock;
+  };
+  let fulfilment: { fulfilPayment: jest.Mock };
+
+  const paymentRow = (over: Record<string, unknown> = {}) => ({
+    rows: [
+      {
+        id: 'pay-1',
+        payment_status: 'pending',
+        payment_provider: 'stripe',
+        provider_transaction_id: 'pi_1',
+        ...over,
+      },
+    ],
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getPaymentState.mockReset();
+    checkout = {
+      confirmPayment: jest.fn().mockResolvedValue(true),
+      failPayment: jest.fn().mockResolvedValue(undefined),
+      settleAuthorisation: jest.fn().mockResolvedValue('captured'),
+    };
+    fulfilment = { fulfilPayment: jest.fn().mockResolvedValue({ complete: true, lines: [] }) };
+    service = new WebhookService(checkout as never, fulfilment as never, {} as never);
+  });
+
+  /*
+   * Two passes, not one. Settling captures the money, which is what makes the
+   * provider's own status `succeeded`; capture is not instant, and the
+   * alternative is guessing that it worked.
+   */
+  it('captures an authorisation that nothing has settled', async () => {
+    mockDb.query.mockResolvedValue(paymentRow() as never);
+    getPaymentState.mockResolvedValue('authorised');
+
+    await expect(service.reconcilePayment('pay-1')).resolves.toBe('settled');
+
+    expect(checkout.settleAuthorisation).toHaveBeenCalledWith('pay-1', 'pi_1');
+    expect(checkout.confirmPayment).not.toHaveBeenCalled();
+  });
+
+  it('confirms and fulfils one the provider has already captured', async () => {
+    mockDb.query.mockResolvedValue(paymentRow({ payment_status: 'authorised' }) as never);
+    getPaymentState.mockResolvedValue('succeeded');
+
+    await expect(service.reconcilePayment('pay-1')).resolves.toBe('paid');
+
+    expect(checkout.confirmPayment).toHaveBeenCalledWith('pay-1', 'pi_1');
+    expect(fulfilment.fulfilPayment).toHaveBeenCalledWith('pay-1');
+  });
+
+  /*
+   * Fulfilment runs whether or not this call was the one that confirmed the
+   * payment: a payment a webhook confirmed and then failed to fulfil is exactly
+   * the state worth retrying.
+   */
+  it('still fulfils when the payment was already confirmed elsewhere', async () => {
+    mockDb.query.mockResolvedValue(paymentRow() as never);
+    getPaymentState.mockResolvedValue('succeeded');
+    checkout.confirmPayment.mockResolvedValue(false);
+
+    await service.reconcilePayment('pay-1');
+
+    expect(fulfilment.fulfilPayment).toHaveBeenCalledWith('pay-1');
+  });
+
+  it('fails one the provider says was declined or cancelled', async () => {
+    mockDb.query.mockResolvedValue(paymentRow() as never);
+    getPaymentState.mockResolvedValue('failed');
+
+    await expect(service.reconcilePayment('pay-1')).resolves.toBe('failed');
+    expect(checkout.failPayment).toHaveBeenCalledWith('pay-1', expect.any(String));
+  });
+
+  /* Mid 3-D Secure. Not a failure, and not something to act on. */
+  it('leaves a payment still in flight alone', async () => {
+    mockDb.query.mockResolvedValue(paymentRow() as never);
+    getPaymentState.mockResolvedValue('pending');
+
+    await expect(service.reconcilePayment('pay-1')).resolves.toBe('unchanged');
+    expect(checkout.settleAuthorisation).not.toHaveBeenCalled();
+    expect(checkout.confirmPayment).not.toHaveBeenCalled();
+  });
+
+  it('leaves it alone when the provider cannot be asked', async () => {
+    mockDb.query.mockResolvedValue(paymentRow() as never);
+    getPaymentState.mockResolvedValue('unknown');
+
+    await expect(service.reconcilePayment('pay-1')).resolves.toBe('unchanged');
+    expect(checkout.confirmPayment).not.toHaveBeenCalled();
+  });
+
+  /*
+   * A settled, refunded or abandoned payment is somebody's considered answer.
+   * A page refresh does not re-open it, and the provider is not even asked.
+   */
+  it.each(['paid', 'refunded', 'abandoned', 'failed'])(
+    'does not reopen a payment already %s',
+    async (status) => {
+      mockDb.query.mockResolvedValue(paymentRow({ payment_status: status }) as never);
+
+      await expect(service.reconcilePayment('pay-1')).resolves.toBe('unchanged');
+      expect(getPaymentState).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does nothing for a payment with no provider reference', async () => {
+    mockDb.query.mockResolvedValue(paymentRow({ provider_transaction_id: null }) as never);
+
+    await expect(service.reconcilePayment('pay-1')).resolves.toBe('unchanged');
+    expect(getPaymentState).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a payment that does not exist', async () => {
+    mockDb.query.mockResolvedValue({ rows: [] } as never);
+
+    await expect(service.reconcilePayment('nope')).resolves.toBe('unchanged');
   });
 });

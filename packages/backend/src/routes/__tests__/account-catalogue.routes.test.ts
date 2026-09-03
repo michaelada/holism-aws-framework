@@ -470,7 +470,15 @@ describe('POST /api/account/:orgCode/cart/items', () => {
       expect(mockedEntrants.resolveEntrant).toHaveBeenCalledWith('org-1', 'act-1', 'mem-1');
     });
 
-    it('refuses a member already entered', async () => {
+    /**
+     * An activity may be entered more than once.
+     *
+     * A rider quite ordinarily rides two horses in the same class, and a
+     * secretary enters the same person for a second reason. Both of these were
+     * refused — the first on the strength of an entry already in the database,
+     * the second on a line already in the basket.
+     */
+    it('accepts a member who has already entered', async () => {
       mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
       mockedEntrants.resolveEntrant.mockResolvedValue({ ...saoirse, alreadyEntered: true } as any);
 
@@ -478,26 +486,27 @@ describe('POST /api/account/:orgCode/cart/items', () => {
         .post('/api/account/khpc/cart/items')
         .send(entry({ memberId: 'mem-1' }));
 
-      expect(response.status).toBe(400);
-      expect(response.body.error).toMatch(/Saoirse Byrne is already entered/);
+      expect(response.status).toBe(201);
+      expect(mockedCart.addItem).toHaveBeenCalled();
     });
 
-    it('refuses the same member twice in one basket', async () => {
+    it('accepts the same member twice in one basket', async () => {
       /*
-       * `alreadyEntered` reads `event_entries`, which nothing has written yet —
-       * both lines are still in the basket. Without this the parent pays twice
-       * for one child, and the club has one entry and one refund to make.
+       * Two horses, one rider, one class — two lines in one basket. The cost of
+       * allowing it is a double entry made by mistake, for which the club has
+       * the remedy it already has: refund the line and withdraw the entry.
        */
       mockedCatalogue.findActivity.mockResolvedValue(activityFor() as any);
-      mockedDb.query.mockResolvedValueOnce({ rows: [{ exists: 1 }], rowCount: 1 } as any);
 
-      const response = await request(server)
+      const first = await request(server)
+        .post('/api/account/khpc/cart/items')
+        .send(entry({ memberId: 'mem-1' }));
+      const second = await request(server)
         .post('/api/account/khpc/cart/items')
         .send(entry({ memberId: 'mem-1' }));
 
-      expect(response.status).toBe(400);
-      expect(response.body.error).toMatch(/already in your basket/);
-      expect(mockedCart.addItem).not.toHaveBeenCalled();
+      expect([first.status, second.status]).toEqual([201, 201]);
+      expect(mockedCart.addItem).toHaveBeenCalledTimes(2);
     });
 
     it('adds an entry for any member in scope, not only one the caller holds', async () => {

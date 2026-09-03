@@ -56,7 +56,25 @@ If a change affects how the system is built, configured, or run, update the depl
 When the front end and backend disagree on a contract, adapt the front end to the existing backend
 rather than expanding the backend, unless the user asks otherwise.
 
-### 1.8 `.kiro/specs` is reference only
+### 1.8 Marketing, promotion and launch
+
+Finished work lives in [marketing/](marketing/) — sales collateral, promotional material, and the
+plans and strategies for launching the new version. The background it is written from lives in
+[.claude/marketing/](.claude/marketing/): the old product, the new one, the difference, the
+messaging rules and the citable facts. **Read that background before writing anything**, and never
+write around it: it records what may not be claimed as carefully as what may.
+
+Two things it is worth knowing without opening it. **Nothing may be invented** — this repository
+holds no pricing, no customer names, no testimonials and no adoption figures, so a gap is marked
+`[[NEEDS: …]]` rather than filled. And
+[.claude/marketing/what-changed.md](.claude/marketing/what-changed.md) §3 lists what the old system
+does that this one does not do yet; nothing on that list may be promised.
+
+Keep those files current in the same pass as the work, on the same terms as §3.6: when a change
+adds, removes or renames something a club would recognise, closes or opens a gap, or moves a figure
+that has been cited. The test is *would a slide have to change?*
+
+### 1.9 `.kiro/specs` is reference only
 
 `.kiro/specs` is historical context for already-shipped features. Treat it as background, not as
 current requirements, and do not resurrect its workflow in place of §1.3.
@@ -111,6 +129,7 @@ it can answer without opening code.
 | [orgadmin-calendar.md](.claude/modules/orgadmin-calendar.md) | `packages/orgadmin-calendar` | `calendar-bookings` |
 | [orgadmin-registrations.md](.claude/modules/orgadmin-registrations.md) | `packages/orgadmin-registrations` | `registrations` |
 | [orgadmin-ticketing.md](.claude/modules/orgadmin-ticketing.md) | `packages/orgadmin-ticketing` | `event-ticketing` |
+| [orgadmin-announcements.md](.claude/modules/orgadmin-announcements.md) | `packages/orgadmin-announcements` | `org-announcements` |
 
 ### Other front ends
 
@@ -127,6 +146,7 @@ it can answer without opening code.
 
 | Change | Location |
 |---|---|
+| Marketing, promotion or launch material | `marketing/`, written from `.claude/marketing/` (§1.8) |
 | Used by more than one front end | `packages/components` |
 | Used by more than one org-admin module | `packages/orgadmin-core` |
 | Specific to one capability | that capability's package |
@@ -176,8 +196,19 @@ unseeded generators that fail intermittently. When a suite fails:
   a `useEffect` keyed on `execute` / `organisation` identity, so a fresh object per render loops
   forever and the test times out.
 - Use `vi.hoisted()` when a `vi.mock` factory needs values defined in the test file.
+- **A fixture with a hard-coded future date is a test that expires.** Where a component branches on
+  `now` — an entry window, a finished event — build the fixture's dates from `Date.now()`
+  (`daysFromNow(14)`) rather than writing them out. `PublicEventPage.test.tsx` and
+  `EventStructuredData.test.tsx` went red the morning their `entriesClosingDate` passed, in tests
+  that say nothing about dates. A date meant to be *long* past (`2020-01-01`) is safe as a literal.
 - Several suites mock `t()` as the identity function, so assertions should match i18n keys rather
   than English text.
+- **A test that clicks "the first row" is a test about ordering it did not mean to write.** Org-admin
+  list tables sort by their columns now, and several open on a column rather than on arrival order.
+  Find the row by something in it — `screen.getByText('John Doe').closest('tr')` — and click inside
+  it with `within`.
+- A `vi.mock('@aws-web-framework/orgadmin-core', …)` factory that does not spread `importOriginal()`
+  breaks the moment a page uses anything else from the package. Spread it and replace only `useApi`.
 
 ### 3.5 Running things locally
 

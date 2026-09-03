@@ -25,11 +25,9 @@ export type UnavailableReason =
   | 'entries-closed'
   | 'event-full'
   | 'activity-full'
-  | 'already-entered'
+
   /** Open to the club's members, and this login holds no active membership. */
   | 'members-only'
-  /** Members-only, and every membership this login holds is already entered. */
-  | 'members-all-entered'
   /** Open across the organisation type, and this person is a member of none of it. */
   | 'org-members-only'
   | 'not-open-for-applications'
@@ -39,7 +37,14 @@ export type UnavailableReason =
   | 'not-open-for-bookings'
   /** The last places are in other members' baskets, and may yet come back. */
   | 'held-by-others'
-  /** The member already has this in their own basket. */
+  /**
+   * The member already has this in their own basket.
+   *
+   * Calendar slots only. An **activity** can be entered more than once — a
+   * rider on two horses, a parent with three children — so a line in the basket
+   * no longer closes one; a slot is one thing at one time and genuinely cannot
+   * be booked twice.
+   */
   | 'in-your-basket';
 
 /**
@@ -459,7 +464,8 @@ export class AccountCatalogueService {
         `SELECT e.id, e.name, e.description, e.start_date, e.end_date,
                 e.open_date_entries, e.entries_closing_date,
                 e.limit_entries, e.entries_limit,
-                (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_id = e.id) AS entry_count
+                (SELECT COUNT(*) FROM event_entries ee
+                  WHERE ee.event_id = e.id AND ee.entry_status <> 'removed') AS entry_count
          FROM events e
          WHERE e.organisation_id = $1
            AND e.status = 'published'
@@ -480,10 +486,12 @@ export class AccountCatalogueService {
                 a.limit_applicants, a.applicants_limit,
                 a.use_terms_and_conditions, a.terms_and_conditions,
                 a.entry_eligibility,
-                (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_activity_id = a.id)
+                (SELECT COUNT(*) FROM event_entries ee
+                  WHERE ee.event_activity_id = a.id AND ee.entry_status <> 'removed')
                   AS entry_count,
                 (SELECT COUNT(*) FROM event_entries ee
-                  WHERE ee.event_activity_id = a.id AND ee.user_id = $2) AS mine
+                  WHERE ee.event_activity_id = a.id AND ee.user_id = $2
+                    AND ee.entry_status <> 'removed') AS mine
          FROM event_activities a
          WHERE a.event_id = ANY($1::uuid[])
            AND a.show_publicly = TRUE
@@ -538,7 +546,8 @@ export class AccountCatalogueService {
           `SELECT event_activity_id, member_id
              FROM event_entries
             WHERE event_activity_id = ANY($1::uuid[])
-              AND member_id = ANY($2::uuid[])`,
+              AND member_id = ANY($2::uuid[])
+              AND entry_status <> 'removed'`,
           [activities.rows.map((row) => row.id), allMyMemberIds]
         );
         for (const row of entered.rows) {
@@ -718,24 +727,26 @@ export class AccountCatalogueService {
       // is "join any club in the federation".
       reason = acrossType ? 'org-members-only' : 'members-only';
     }
-    if (!reason && membersOnly && eligibleMembers.every((member) => member.alreadyEntered)) {
-      reason = 'members-all-entered';
-    }
-
     /*
-     * The account-level duplicate check applies to open activities only.
+     * **An activity may be entered more than once.**
      *
-     * On a members-only activity the question is per member — a parent must be
-     * able to enter each child once — and that is answered above. Keeping this
-     * here as well would block the second child on the strength of the first.
+     * Three rules used to stop it — the account had entered, every eligible
+     * member had entered, or a line was already in the basket — and all three
+     * assumed one entry per person per class. That is not how a class fills up:
+     * a parent enters three children, a secretary enters half the club, and one
+     * rider quite ordinarily rides two horses in the same class. Each of those
+     * was refused, with a message that read as a capacity problem.
+     *
+     * `alreadyEntered` survives on each eligible member as **information** —
+     * the name field still says so beside them — because knowing is useful and
+     * being stopped is not.
+     *
+     * What this gives up is worth naming: an accidental double entry is now
+     * possible, and the club sees two entries where the member meant one. The
+     * remedy is the one the club already has for a mistaken entry — refund it
+     * and withdraw it — and it is a smaller cost than refusing the second horse
+     * outright. Capacity still holds: two entries take two places.
      */
-    if (!reason && !membersOnly && Number(row.mine) > 0) reason = 'already-entered';
-    /*
-     * A member's own hold is called what it is. They cannot enter twice, but
-     * "in your basket" sends them to the basket, where "full" would send them
-     * away from an entry they have already got.
-     */
-    if (!reason && held.mine > 0) reason = 'in-your-basket';
     if (!reason && placesRemaining === 0) {
       // Held rather than full whenever a lapsing hold would bring it back.
       reason = capped && taken < limit ? 'held-by-others' : 'activity-full';

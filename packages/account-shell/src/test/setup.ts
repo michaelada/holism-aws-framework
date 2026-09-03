@@ -6,6 +6,25 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
 /**
+ * `Element.scrollIntoView`, which jsdom does not implement.
+ *
+ * Two screens scroll to something the URL named — the events list opened at
+ * `?event=`, the shop orders list at `?order=` — and both do it from an effect.
+ * Without this the call throws *during the effect flush*, which unmounts the
+ * tree: the test sees an empty document and a "cannot find the text" failure,
+ * with nothing pointing at the missing browser API.
+ *
+ * A no-op is the right stub. There is no layout in jsdom to scroll, and what
+ * these tests are checking is that the right element was singled out, not that
+ * the viewport moved.
+ */
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {
+    /* no layout in jsdom; nothing to scroll */
+  };
+}
+
+/**
  * `window.matchMedia`, which jsdom does not implement.
  *
  * Without it MUI's `useMediaQuery` returns false for every query, so the shell

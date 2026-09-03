@@ -49,6 +49,9 @@
     "text": "Propulsé par ItsPlainSailing.com",
     "copyright": "© {{year}} Esker Software. Tous droits réservés"
   },
+  "announcements": {
+    "heading": "Avis"
+  },
   "posts": {
     "regionLabel": "Annonces"
   },
@@ -456,11 +459,22 @@
     "empty": "Vous n’avez encore rien payé.",
     "itemCount": "{{count}} articles",
     "handlingFee": "Frais de gestion",
+    "subtotal": "Sous-total",
+    "total": "Total",
+    "plusHandling": "+ {{amount}} de frais",
     "paidByCard": "Payé par carte",
     "paidOffline": "Payé hors ligne",
     "offlineReceived": "Le club a enregistré la réception le {{date}}",
     "offlineAwaited": "Le club n’a pas encore enregistré la réception.",
     "lineProblem": "Cela n’a pas abouti : {{reason}}. Le club vous contactera.",
+    "view": {
+      "default": "Voir",
+      "event_entry": "Voir l’engagement",
+      "membership": "Voir l’adhésion",
+      "registration": "Voir l’enregistrement",
+      "booking": "Voir la réservation",
+      "merchandise": "Voir la commande"
+    },
     "status": {
       "paid": "Payé",
       "pending": "En attente",
@@ -555,6 +569,13 @@
     "itemNotFound": "Ceci n’est plus disponible.",
     "back": "Retour",
     "detailsHeading": "Veuillez remplir les informations ci-dessous",
+    "prefilledFromRenewal": "Rempli à partir de votre adhésion actuelle. Vérifiez que tout est encore exact.",
+    "prefilledFromMembership": "Rempli à partir des informations d’adhésion de {{name}}. Vérifiez qu’elles sont toujours exactes.",
+    "member": {
+      "label": "Pour qui est cette adhésion ?",
+      "hint": "La personne concernée par cette adhésion. Saisissez un nom ou choisissez-en un déjà utilisé.",
+      "required": "Saisissez le nom de la personne concernée par cette adhésion."
+    },
     "termsHeading": "Conditions générales",
     "agreeTerms": "J’ai lu et j’accepte les conditions générales",
     "mustAgree": "Vous devez accepter les conditions générales pour continuer",
@@ -577,6 +598,37 @@
       "awaiting-payment": "Paiement en attente",
       "used": "Utilisé",
       "expired": "Expiré"
+    }
+  },
+  "scan": {
+    "title": "Contr\u00f4le des billets",
+    "unlockIntro": "Indiquez votre nom et le code PIN envoy\u00e9 par le club. Votre nom est enregistr\u00e9 pour chaque billet scann\u00e9.",
+    "yourName": "Votre nom",
+    "yourNameHelper": "Pour que le club sache qui a scann\u00e9 chaque billet.",
+    "pin": "Code PIN",
+    "startScanning": "Commencer \u00e0 scanner",
+    "unlockFailed": "Ce lien ou ce code PIN n\u2019est pas valide. Renseignez-vous aupr\u00e8s de son exp\u00e9diteur.",
+    "cameraFailed": "La cam\u00e9ra n\u2019a pas pu d\u00e9marrer. Autorisez l\u2019acc\u00e8s \u00e0 la cam\u00e9ra ou saisissez le code ci-dessous.",
+    "scanningAs": "Connect\u00e9 en tant que {{name}}",
+    "finish": "Terminer",
+    "offline": "Aucun signal. Les billets sont toujours v\u00e9rifi\u00e9s avec la liste t\u00e9l\u00e9charg\u00e9e au d\u00e9marrage et seront envoy\u00e9s au retour du signal.",
+    "waiting": "{{count}} scan en attente d\u2019envoi",
+    "waiting_other": "{{count}} scans en attente d\u2019envoi",
+    "admitted": "Admis",
+    "countOf": "{{used}} sur {{admits}} admis",
+    "previously": "Admis \u00e0 {{when}} par {{who}}",
+    "anotherSteward": "une autre personne",
+    "enterCode": "Saisir le code",
+    "check": "V\u00e9rifier",
+    "disagreementsTitle": "Admis ici, mais refus\u00e9s \u00e0 l\u2019envoi",
+    "refused": {
+      "not_found": "Billet inconnu",
+      "wrong_event": "Pas pour cet \u00e9v\u00e9nement",
+      "already_used": "D\u00e9j\u00e0 utilis\u00e9",
+      "expired": "Expir\u00e9",
+      "cancelled": "Annul\u00e9",
+      "withdrawn": "Inscription retir\u00e9e",
+      "forged": "Billet non valide"
     }
   },
   "orders": {

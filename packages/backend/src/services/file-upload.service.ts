@@ -372,6 +372,95 @@ export class FileUploadService {
   }
 
   /**
+   * The image shown with a club's announcement.
+   *
+   * Keyed under the organisation as well as the announcement, unlike a platform
+   * post's `platform/posts/…`: these belong to a club, and a bucket listing
+   * that cannot tell you whose picture something is makes every later question
+   * — a club leaving, a club's data being exported — harder than it needs to be.
+   */
+  async uploadAnnouncementImage(params: {
+    organisationId: string;
+    announcementId: string;
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number };
+  }): Promise<{ s3Key: string; fileName: string; fileSize: number; mimeType: string }> {
+    const { organisationId, announcementId, file } = params;
+
+    const validation = this.validateFile(file, 'image');
+    if (!validation.valid) {
+      throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const sanitizedFileName = path.basename(file.originalname);
+    const extension = path.extname(sanitizedFileName);
+    const unique = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+    const s3Key = `organisations/${organisationId}/announcements/${announcementId}/image_${unique}${extension}`;
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        Metadata: {
+          organisationId,
+          announcementId,
+          purpose: 'announcement-image',
+          originalName: sanitizedFileName,
+        },
+      })
+    );
+
+    logger.info('Announcement image uploaded', { announcementId, s3Key, fileSize: file.size });
+
+    return { s3Key, fileName: sanitizedFileName, fileSize: file.size, mimeType: file.mimetype };
+  }
+
+  /**
+   * The image a club shows on its tickets for one event.
+   *
+   * Keyed under the organisation as well as the event, like an announcement's:
+   * a bucket listing that cannot say whose picture something is makes every
+   * later question harder than it needs to be.
+   */
+  async uploadTicketImage(params: {
+    organisationId: string;
+    eventId: string;
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number };
+  }): Promise<{ s3Key: string; fileName: string; fileSize: number; mimeType: string }> {
+    const { organisationId, eventId, file } = params;
+
+    const validation = this.validateFile(file, 'image');
+    if (!validation.valid) {
+      throw new Error(`File validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const sanitizedFileName = path.basename(file.originalname);
+    const extension = path.extname(sanitizedFileName);
+    const unique = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+    const s3Key = `organisations/${organisationId}/events/${eventId}/ticket_${unique}${extension}`;
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        Metadata: {
+          organisationId,
+          eventId,
+          purpose: 'ticket-image',
+          originalName: sanitizedFileName,
+        },
+      })
+    );
+
+    logger.info('Ticket image uploaded', { eventId, s3Key, fileSize: file.size });
+
+    return { s3Key, fileName: sanitizedFileName, fileSize: file.size, mimeType: file.mimetype };
+  }
+
+  /**
    * Get signed URL for file download
    * URL expires after 1 hour
    */

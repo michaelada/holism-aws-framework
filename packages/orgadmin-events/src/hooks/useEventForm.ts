@@ -76,7 +76,6 @@ const createDefaultFormData = (): EventFormData => ({
   ticketInstructions: undefined,
   ticketFooterText: undefined,
   ticketValidityPeriod: undefined,
-  includeEventLogo: false,
   ticketBackgroundColor: '#ffffff',
   // Discount configuration
   discountIds: [],
@@ -300,6 +299,9 @@ export function useEventForm(): UseEventFormReturn {
       limitApplicants: false,
       applicantsLimit: undefined,
       allowSpecifyQuantity: false,
+      // One person per ticket, which is what every ticket meant before a club
+      // could say otherwise.
+      ticketsAdmit: 1,
       useTermsAndConditions: false,
       termsAndConditions: undefined,
       fee: 0,

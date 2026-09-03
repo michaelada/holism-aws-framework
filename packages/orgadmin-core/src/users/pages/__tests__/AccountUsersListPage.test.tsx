@@ -337,7 +337,9 @@ describe('AccountUsersListPage', () => {
       const editButtons = screen.getAllByTitle('common.actions.edit');
       fireEvent.click(editButtons[0]);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/users/accounts/1');
+      // No `/orgadmin` prefix: the router carries it as its basename, so
+      // including it produced `/orgadmin/orgadmin/users/…` and a 404.
+      expect(mockNavigate).toHaveBeenCalledWith('/users/accounts/1');
     });
 
     it('should navigate to admin users tab when clicked', async () => {

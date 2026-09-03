@@ -8,36 +8,18 @@ jest.mock('../../database/pool');
 jest.mock('../../config/logger');
 
 // Mock exceljs
-jest.mock('exceljs', () => {
-  return class MockWorkbook {
-    creator = '';
-    created = new Date();
-    worksheets: any[] = [];
-
-    addWorksheet(name: string) {
-      const mockWorksheet = {
-        name: name || 'Sheet1',
-        columns: [],
-        addRow: jest.fn(() => ({
-          font: {},
-          fill: {},
-        })),
-        getRow: jest.fn(() => ({
-          font: {},
-          fill: {},
-        })),
-      };
-      this.worksheets.push(mockWorksheet);
-      return mockWorksheet;
-    }
-
-    get xlsx() {
-      return {
-        writeBuffer: jest.fn().mockResolvedValue(Buffer.from('test')),
-      };
-    }
-  };
-});
+/*
+ * `exceljs` is deliberately **not** mocked.
+ *
+ * A stand-in class was what hid the defect these suites exist to catch: the
+ * real module exports a namespace with `Workbook` on it and no default at all,
+ * so `new ExcelJS()` threw "is not a constructor" and every Excel export in the
+ * application produced a file the operating system refuses to open — while
+ * every one of these tests passed against a class of its own making.
+ *
+ * The library is fast and pure; running it for real is what lets an assertion
+ * on the bytes mean something.
+ */
 
 
 describe('MerchandiseService', () => {

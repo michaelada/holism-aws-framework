@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { ticketingService } from '../services/ticketing.service';
+import { fileUploadService } from '../services/file-upload.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import {
   byParam,
@@ -15,6 +17,13 @@ import { db } from '../database/pool';
  * names no organisation at all.
  */
 const router = Router({ mergeParams: true });
+
+const upload = multer({
+  // Enough for a photograph on a ticket, small enough that a ticket stays a
+  // ticket. `validateFile` re-checks the type and the size.
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 /**
  * Middleware to check if organisation has event-ticketing capability
@@ -117,7 +126,11 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { eventId } = req.params;
-      const config = await ticketingService.getTicketingConfigByEvent(eventId);
+      /*
+       * The design, not only the settings: the screen that reads this renders a
+       * preview of the ticket, and a preview with no picture in it is not one.
+       */
+      const config = await ticketingService.getTicketingConfigForDesign(eventId);
       
       if (!config) {
         return res.status(404).json({ error: 'Ticketing configuration not found' });
@@ -465,5 +478,140 @@ router.get(
     }
   }
 );
+
+/**
+ * @openapi
+ * /api/orgadmin/tickets/{ticketId}/render:
+ *   get:
+ *     summary: Everything needed to draw one ticket
+ *     description: >
+ *       The ticket joined to its event, its activity and the club's ticket
+ *       design — none of which is on the ticket row itself, and none of which
+ *       is copied there at issue time, so a club that corrects a description
+ *       corrects it on tickets already sent.
+ *     tags: [Ticketing]
+ *     responses:
+ *       200:
+ *         description: The ticket, ready to render
+ *       404:
+ *         description: No such ticket
+ */
+router.get(
+  '/tickets/:ticketId/render',
+  authenticateToken(),
+  byResource('ticket', 'ticketId'),
+  async (req: Request, res: Response) => {
+    try {
+      const ticket = await ticketingService.getTicketForRendering(req.params.ticketId);
+      if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+      return res.json(ticket);
+    } catch (error) {
+      logger.error('Error in GET /tickets/:ticketId/render:', error);
+      return res.status(500).json({ error: 'Failed to load the ticket' });
+    }
+  }
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/events/{eventId}/ticketing-config/image:
+ *   post:
+ *     summary: Attach an image to a club's ticket design
+ *     description: >
+ *       A separate step from saving the configuration: the S3 key is derived
+ *       from the event, and a form that uploaded before saving would leave an
+ *       orphan object behind whenever somebody changed their mind.
+ *     tags: [Ticketing]
+ *     responses:
+ *       200:
+ *         description: The configuration, with its image
+ *       400:
+ *         description: No file, or not an image we accept
+ */
+router.post(
+  '/events/:eventId/ticketing-config/image',
+  authenticateToken(),
+  byResource('event', 'eventId'),
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    try {
+      const file = (req as any).file;
+      if (!file) return res.status(400).json({ error: 'Choose an image to upload' });
+
+      const validation = fileUploadService.validateFile(file, 'image');
+      if (!validation.valid) return res.status(400).json({ error: validation.errors.join(', ') });
+
+      const event = await db.query(`SELECT organisation_id FROM events WHERE id = $1`, [
+        req.params.eventId,
+      ]);
+      if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+
+      const uploaded = await fileUploadService.uploadTicketImage({
+        organisationId: event.rows[0].organisation_id,
+        eventId: req.params.eventId,
+        file,
+      });
+
+      const { config, previousKey } = await ticketingService.setTicketImage(req.params.eventId, {
+        s3Key: uploaded.s3Key,
+        mimeType: uploaded.mimeType,
+        placement: req.body?.placement ?? null,
+      });
+
+      // Replacing an image otherwise leaves the old object behind forever, with
+      // nothing left knowing its key.
+      if (previousKey && previousKey !== uploaded.s3Key) await deleteQuietly(previousKey);
+
+      return res.json(await ticketingService.getTicketingConfigForDesign(req.params.eventId) ?? config);
+    } catch (error) {
+      logger.error('Error uploading a ticket image:', error);
+      return res.status(500).json({ error: 'Failed to upload the image' });
+    }
+  }
+);
+
+/**
+ * @openapi
+ * /api/orgadmin/events/{eventId}/ticketing-config/image:
+ *   delete:
+ *     summary: Remove the ticket image, keeping the rest of the design
+ *     tags: [Ticketing]
+ *     responses:
+ *       200:
+ *         description: The configuration, without its image
+ */
+router.delete(
+  '/events/:eventId/ticketing-config/image',
+  authenticateToken(),
+  byResource('event', 'eventId'),
+  async (req: Request, res: Response) => {
+    try {
+      const { config, previousKey } = await ticketingService.clearTicketImage(req.params.eventId);
+      if (previousKey) await deleteQuietly(previousKey);
+      return res.json(config);
+    } catch (error) {
+      logger.error('Error removing a ticket image:', error);
+      if (error instanceof Error && error.message.includes('not found')) {
+        return res.status(404).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Failed to remove the image' });
+    }
+  }
+);
+
+/**
+ * Best-effort tidying of the bucket.
+ *
+ * The row is the record; the object is a copy of a picture. A failure to remove
+ * it is worth a log line and nothing more — turning it into a failed request
+ * would stop a club changing its ticket over a transient S3 error.
+ */
+async function deleteQuietly(key: string): Promise<void> {
+  try {
+    await fileUploadService.deleteFile(key);
+  } catch (error) {
+    logger.warn('Could not delete a ticket image from S3', { key, error });
+  }
+}
 
 export default router;

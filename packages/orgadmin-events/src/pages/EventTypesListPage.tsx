@@ -34,7 +34,14 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ConfirmDialog, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ConfirmDialog,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 
 interface EventType {
   id: string;
@@ -51,6 +58,7 @@ const EventTypesListPage: React.FC = () => {
   
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [filteredEventTypes, setFilteredEventTypes] = useState<EventType[]>([]);
+  const sort = useTableSort(filteredEventTypes);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   /*
@@ -212,8 +220,12 @@ const EventTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                Name
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="description">
+                Description
+              </SortableTableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -231,7 +243,7 @@ const EventTypesListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredEventTypes.map((eventType) => (
+              sort.rows.map((eventType) => (
                 <TableRow key={eventType.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

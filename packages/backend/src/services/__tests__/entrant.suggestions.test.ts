@@ -131,3 +131,163 @@ describe('entrantSuggestions', () => {
     );
   });
 });
+
+/**
+ * The names offered under a **membership application's** name field.
+ *
+ * The application asks the same question an entry does — who is this for — and
+ * the answer comes from the same two places: the people this account already
+ * holds memberships for, and the names it has used on entries.
+ *
+ * What it does **not** do is search the club's roster. An application creates a
+ * membership rather than resolving to one, and offering other families' names
+ * would be neither useful nor anybody's business.
+ */
+describe('applicantSuggestions', () => {
+  const TYPE = 'type-1';
+  const found = { rows: [{ '?column?': 1 }] } as any;
+
+  beforeEach(() => {
+    mockDb.query.mockReset();
+  });
+
+  it('offers the people this account already holds memberships for', async () => {
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({
+        rows: [
+          { id: 'm-1', first_name: 'Rónán', last_name: 'McGrath', membership_type_name: 'Junior Member', status: 'active' },
+        ],
+      } as any)
+      .mockResolvedValueOnce({ rows: [] } as any);
+
+    const result = await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    expect(result.memberships).toEqual([
+      {
+        name: 'Rónán McGrath',
+        memberId: null,
+        fillFromMembershipId: 'm-1',
+        detail: 'Junior Member',
+      },
+    ]);
+  });
+
+  it('offers a lapsed membership too, which is who they are renewing', async () => {
+    // Hiding it hides exactly the name they are about to type.
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({
+        rows: [
+          { id: 'm-1', first_name: 'Éabha', last_name: 'McGrath', membership_type_name: 'Junior Member', status: 'elapsed' },
+        ],
+      } as any)
+      .mockResolvedValueOnce({ rows: [] } as any);
+
+    const result = await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    expect(result.memberships.map((m) => m.name)).toEqual(['Éabha McGrath']);
+  });
+
+  it('carries no membership id, because this is not a renewal', async () => {
+    /*
+     * On an entry the id proves eligibility. Here it would read as "renew this
+     * one", which is a different journey with its own route.
+     */
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'm-1', first_name: 'Rónán', last_name: 'McGrath', membership_type_name: 'Junior', status: 'active' }],
+      } as any)
+      .mockResolvedValueOnce({ rows: [] } as any);
+
+    const result = await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    expect(result.memberships[0].memberId).toBeNull();
+  });
+
+  it('says which membership each name’s answers can be copied from', async () => {
+    /*
+     * Distinct from `memberId`, and the distinction is the point. That field
+     * says "this record is for that member"; this one says "the club already
+     * holds this person's answers", which is what lets the form fill itself in
+     * when the applicant is chosen — and fill in *again* when a different one
+     * is, instead of leaving the first person's details under the second's
+     * name.
+     */
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({
+        rows: [
+          { id: 'm-1', first_name: 'Áine', last_name: 'McGrath', membership_type_name: 'Senior', status: 'active' },
+          { id: 'm-2', first_name: 'Rónán', last_name: 'McGrath', membership_type_name: 'Junior', status: 'active' },
+        ],
+      } as any)
+      .mockResolvedValueOnce({ rows: [] } as any);
+
+    const result = await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    expect(result.memberships.map((m) => m.fillFromMembershipId)).toEqual(['m-1', 'm-2']);
+  });
+
+  it('offers the names used on past entries as well', async () => {
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({ rows: [] } as any)
+      .mockResolvedValueOnce({
+        rows: [{ first_name: 'Bríd', last_name: 'McNamara', member_id: null }],
+      } as any);
+
+    const result = await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    expect(result.recent).toEqual([{ name: 'Bríd McNamara', memberId: null, detail: null }]);
+    // A name used once on an entry has no application on file to copy.
+    expect(result.recent[0].fillFromMembershipId).toBeUndefined();
+  });
+
+  it('does not offer the same name in both lists', async () => {
+    // They sit one above the other; the same name in both reads as two people.
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({
+        rows: [{ id: 'm-1', first_name: 'Rónán', last_name: 'McGrath', membership_type_name: 'Junior', status: 'active' }],
+      } as any)
+      .mockResolvedValueOnce({
+        rows: [{ first_name: 'rónán', last_name: 'mcgrath', member_id: null }],
+      } as any);
+
+    const result = await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    expect(result.recent).toEqual([]);
+  });
+
+  it('never searches the club’s roster', async () => {
+    mockDb.query
+      .mockResolvedValueOnce(found)
+      .mockResolvedValueOnce({ rows: [] } as any)
+      .mockResolvedValueOnce({ rows: [] } as any);
+
+    await entrantService.applicantSuggestions(ORG, OU, TYPE);
+
+    // Only this account's own members are read: every query naming `members`
+    // is filtered by the caller's own user id.
+    // `FROM members ` with the space: `membership_types` starts the same way,
+    // and the type check is a legitimate read that names no member.
+    for (const [sql, params] of mockDb.query.mock.calls) {
+      if (String(sql).includes('FROM members ')) {
+        expect(String(sql)).toContain('m.user_id = $1');
+        expect(params).toContain(OU);
+      }
+    }
+  });
+
+  it('refuses a membership type belonging to another club', async () => {
+    // The caller's own names, but the URL should not be a way to ask a club
+    // they have nothing to do with.
+    mockDb.query.mockResolvedValueOnce({ rows: [] } as any);
+
+    await expect(entrantService.applicantSuggestions(ORG, OU, TYPE)).rejects.toThrow(
+      /could not be found/i
+    );
+  });
+});

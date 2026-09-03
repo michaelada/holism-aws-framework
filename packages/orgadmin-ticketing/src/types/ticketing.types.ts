@@ -18,8 +18,12 @@ export interface EventTicketingConfig {
   ticketValidityPeriod?: number; // Hours before event
   
   // Ticket template settings
-  includeEventLogo: boolean;
   ticketBackgroundColor?: string;
+  /** Where the ticket's picture goes. Null where there is none. */
+  ticketImagePlacement?: 'header' | 'footer' | 'topRight' | 'background' | null;
+  ticketLayout?: 'stacked' | 'sideBySide' | 'compact';
+  /** A signed URL, valid for an hour, or null. */
+  ticketImageUrl?: string | null;
   
   createdAt: Date;
   updatedAt: Date;
@@ -52,7 +56,15 @@ export interface TicketSalesSummary {
 export interface ElectronicTicket {
   id: string;
   ticketReference: string; // e.g., "TKT-2024-001234"
-  qrCode: string; // Unique UUID for QR code validation
+  /** The ticket's identifier — what every lookup and the gate's update match on. */
+  qrCode: string;
+  /**
+   * What the QR actually encodes: a **signed token** carrying that identifier,
+   * the event and the expiry, or the bare identifier for a ticket issued before
+   * signing. Absent on responses that predate the column. See
+   * docs/SIGNED_TICKET_CODES.md.
+   */
+  qrToken?: string;
   
   // Event and booking linkage
   eventId: string;
@@ -92,6 +104,10 @@ export interface TicketScanHistory {
   scanDate: Date;
   scanLocation?: string;
   scannedBy?: string;
+  /** The steward's name, for scans that came from a gate. */
+  scannedByName?: string | null;
+  /** Why the ticket was turned away, if it was. See docs/GATE_SCANNING.md. */
+  refusalReason?: string | null;
   scanResult: 'valid' | 'invalid' | 'already_scanned' | 'expired';
   notes?: string;
   createdAt: Date;

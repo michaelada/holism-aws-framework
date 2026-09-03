@@ -10,6 +10,9 @@ import {
 } from '../middleware';
 import { logger } from '../config/logger';
 import { audited } from '../middleware/audit.middleware';
+import { AppError, ValidationError } from '../middleware/errors';
+import { sensitiveFieldsFor } from '../services/audit/sensitive-fields';
+import { organisationFromRequest } from '../services/audit/with-audit';
 
 /*
  * `mergeParams` so this router can be mounted twice: at `/api/orgadmin` and at
@@ -513,48 +516,84 @@ router.get(
 
 /**
  * @swagger
- * /api/orgadmin/events/{eventId}/entries/{entryId}:
- *   get:
- *     summary: Get entry by ID
+ * /api/orgadmin/events/{eventId}/entries/{entryId}/answers:
+ *   put:
+ *     summary: Correct the answers on an entry
+ *     description: >
+ *       The club's remedy for a member's mistake — the entrant's name spelled
+ *       wrong, a vaccination date a year out. The answers are validated against
+ *       the activity's own form, and an entry made before the club added a form
+ *       gets its submission created rather than refused. `name` is one string,
+ *       as it was typed, and is split for storage the way an entry's is.
  *     tags: [Event Entries]
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: entryId
- *         required: true
- *         schema:
- *           type: string
  *     responses:
  *       200:
- *         description: Entry details
+ *         description: The entry, with its corrected answers
+ *       400:
+ *         description: Some answers need correcting; the response names each one
  *       404:
- *         description: Entry not found
+ *         description: No such entry on this event
  */
-router.get(
-  '/events/:eventId/entries/:entryId',
+router.put(
+  '/events/:eventId/entries/:entryId/answers',
   authenticateToken(),
   byResource('event', 'eventId'),
+  audited({
+    action: 'entry.answers-corrected',
+    entityType: 'entry',
+    param: 'entryId',
+    kind: 'update',
+    label: (row) =>
+      [row.firstName, row.lastName].filter(Boolean).join(' ') || undefined,
+    /*
+     * The answers, not the request body's envelope — and after the fact, so
+     * what is recorded is what was stored. A club marks some of its own fields
+     * sensitive, and those are redacted here as everywhere else.
+     */
+    values: (_req, after) =>
+      after
+        ? {
+            // The name too, where it was corrected — the entrant list prints
+            // it, and a correction to it is the change most worth reading back.
+            entrant: [after.firstName, after.lastName].filter(Boolean).join(' '),
+            ...((after.formValues as Record<string, unknown>) ?? {}),
+          }
+        : null,
+    sensitiveFields: (req) => sensitiveFieldsFor(organisationFromRequest(req)),
+  }),
   async (req: Request, res: Response) => {
     try {
-      const { entryId } = req.params;
-      const entry = await eventEntryService.getEntryById(entryId);
-      
-      if (!entry) {
-        return res.status(404).json({ error: 'Entry not found' });
+      const { eventId, entryId } = req.params;
+      const answers = req.body?.answers ?? req.body?.submissionData ?? {};
+      const name = req.body?.name;
+
+      if (typeof answers !== 'object') {
+        return res.status(400).json({ error: 'answers must be an object' });
       }
-      
-      return res.json(entry);
-    } catch (error) {
-      logger.error('Error in GET /events/:eventId/entries/:entryId:', error);
-      return res.status(500).json({ error: 'Failed to fetch entry' });
+
+      return res.json(
+        await eventEntryService.updateEntryAnswers(eventId, entryId, answers, name)
+      );
+    } catch (error: unknown) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({
+          error: error.message,
+          fields: error instanceof ValidationError ? error.fieldErrors : undefined,
+        });
+      }
+      logger.error('Error in PUT /events/:eventId/entries/:entryId/answers:', error);
+      return res.status(500).json({ error: 'Failed to update the entry answers' });
     }
   }
 );
 
+/*
+ * Declared **before** `/entries/:entryId`, deliberately.
+ *
+ * Express matches in order, so with the parameterised route first "export" was
+ * read as an entry id — the export never ran, and the entry lookup answered a
+ * uuid cast error instead.
+ */
 /**
  * @swagger
  * /api/orgadmin/events/{eventId}/entries/export:
@@ -601,6 +640,57 @@ router.get(
     } catch (error) {
       logger.error('Error in GET /events/:eventId/entries/export:', error);
       return res.status(500).json({ error: 'Failed to export entries' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/orgadmin/events/{eventId}/entries/{entryId}:
+ *   get:
+ *     summary: Get entry by ID
+ *     tags: [Event Entries]
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: entryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Entry details
+ *       404:
+ *         description: Entry not found
+ */
+router.get(
+  '/events/:eventId/entries/:entryId',
+  authenticateToken(),
+  byResource('event', 'eventId'),
+  async (req: Request, res: Response) => {
+    try {
+      const { eventId, entryId } = req.params;
+      const entry = await eventEntryService.getEntryById(entryId);
+
+      /*
+       * The guard above authorises the **event**, not the entry, and this
+       * looked the entry up by id alone — so an entry belonging to another
+       * club's event could be read by naming one of your own. The two must
+       * agree, and a mismatch is a 404 rather than a 403: confirming that an id
+       * exists elsewhere is itself the leak.
+       */
+      if (!entry || entry.eventId !== eventId) {
+        return res.status(404).json({ error: 'Entry not found' });
+      }
+
+      return res.json(entry);
+    } catch (error) {
+      logger.error('Error in GET /events/:eventId/entries/:entryId:', error);
+      return res.status(500).json({ error: 'Failed to fetch entry' });
     }
   }
 );

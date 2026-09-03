@@ -24,7 +24,56 @@ import WhatsOnCard from '../components/WhatsOnCard';
 import { useBookingsLabel } from '../hooks/useBookingsLabel';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
-import { AccountDashboard, DashboardWhatsOn } from '../types/account';
+import AnnouncementsPanel from '../components/AnnouncementsPanel';
+import { AccountDashboard, DashboardAnnouncement, DashboardWhatsOn } from '../types/account';
+
+/**
+ * How wide a teaser card is, in every row of them on this page.
+ *
+ * **Three across, not four.** They were four when this column was the whole
+ * page; it is two thirds of it once a club has notices to show, and four cards
+ * in that space squash a name like "Spring Show Jumping League" into three
+ * lines. Three reads at a glance, which is the only thing a teaser has to do.
+ *
+ * One definition rather than six literals: the events, external events,
+ * memberships, bookings, registrations and shop rows are the same kind of card
+ * in the same column, and a page where one row is a different width reads as a
+ * mistake rather than as a decision.
+ */
+const TEASER_COLUMNS = { xs: 12, sm: 6, md: 4 } as const;
+
+/**
+ * Where the club's notices go, and what happens when there are none.
+ *
+ * With announcements the page is two thirds and one third. Without them the
+ * children are rendered **bare** — not in a grid that happens to be full width.
+ * `md={12}` and no wrapper are not quite the same thing: a `Grid container`
+ * carries negative margins and its items carry padding, so a club with nothing
+ * to say would get a home page subtly different from the one it had before this
+ * feature existed. That difference is exactly what nobody would be able to
+ * describe and everybody would notice.
+ *
+ * `order` puts the notices **first** below `md`. On a phone the alternative is
+ * a notice nobody scrolls to: the two-column arrangement is a convenience of
+ * wide screens, not the meaning of the page.
+ */
+const HomeLayout: React.FC<{
+  announcements: DashboardAnnouncement[];
+  children: React.ReactNode;
+}> = ({ announcements, children }) => {
+  if (announcements.length === 0) return <>{children}</>;
+
+  return (
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={8}>
+        {children}
+      </Grid>
+      <Grid item xs={12} md={4} data-testid="announcements-column" sx={{ order: { xs: -1, md: 0 } }}>
+        <AnnouncementsPanel announcements={announcements} />
+      </Grid>
+    </Grid>
+  );
+};
 
 /**
  * B3 — Home / My Dashboard. Route `/:orgCode`.
@@ -84,6 +133,12 @@ export const HomePage: React.FC = () => {
   const registrationWhatsOn =
     dashboard?.whatsOn.filter((item) => item.kind === 'registration') ?? [];
   const externalEvents = dashboard?.externalEvents ?? [];
+  /*
+   * Empty for a club without the capability, and for one with nothing showing.
+   * The server decides which announcements are inside their window, against its
+   * own clock — a member whose device clock is wrong sees what everyone sees.
+   */
+  const announcements = dashboard?.announcements ?? [];
 
   /** Where each teaser leads — the screen that can actually do the thing. */
   const whatsOnTarget = (item: DashboardWhatsOn): string => {
@@ -128,6 +183,7 @@ export const HomePage: React.FC = () => {
         </Box>
       ) : (
         dashboard && (
+          <HomeLayout announcements={announcements}>
           <Stack spacing={3}>
             {/*
               The basket gets a row to itself, at the left edge.
@@ -342,7 +398,7 @@ export const HomePage: React.FC = () => {
                 </Stack>
                 <Grid container spacing={2}>
                   {eventWhatsOn.map((item) => (
-                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                    <Grid item {...TEASER_COLUMNS} key={`${item.kind}-${item.id}`}>
                       <WhatsOnCard
                         item={item}
                         currency={fallbackCurrency}
@@ -383,7 +439,7 @@ export const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {externalEvents.map((event) => (
-                    <Grid item xs={12} sm={6} md={3} key={event.id}>
+                    <Grid item {...TEASER_COLUMNS} key={event.id}>
                       <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <CardContent sx={{ flexGrow: 1 }}>
                           <Chip
@@ -430,11 +486,24 @@ export const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {activeMemberships.map((membership) => (
-                    <Grid item xs={12} sm={6} md={3} key={membership.id}>
+                    <Grid item {...TEASER_COLUMNS} key={membership.id}>
                       <MembershipCard
                         membership={membership}
                         locale={locale}
-                        onRenew={() => navigate(`/${orgCode}/browse/memberships`)}
+                        /*
+                          `?renew=` travels with them, exactly as it does from
+                          the membership card on C4.
+
+                          Without it the catalogue is opened as a fresh
+                          application: the form does not know which membership
+                          is being renewed, so it cannot fill itself in and
+                          cannot say who it is for. The two Renew buttons led to
+                          two different journeys, and the one on the screen a
+                          member sees first was the poorer of them.
+                        */
+                        onRenew={() =>
+                          navigate(`/${orgCode}/browse/memberships?renew=${membership.id}`)
+                        }
                         onOpen={() => navigate(`/${orgCode}/memberships`)}
                       />
                     </Grid>
@@ -450,7 +519,7 @@ export const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {bookingWhatsOn.map((item) => (
-                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                    <Grid item {...TEASER_COLUMNS} key={`${item.kind}-${item.id}`}>
                       <WhatsOnCard
                         item={item}
                         currency={fallbackCurrency}
@@ -471,7 +540,7 @@ export const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {registrationWhatsOn.map((item) => (
-                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                    <Grid item {...TEASER_COLUMNS} key={`${item.kind}-${item.id}`}>
                       <WhatsOnCard
                         item={item}
                         currency={fallbackCurrency}
@@ -497,7 +566,7 @@ export const HomePage: React.FC = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {shopWhatsOn.map((item) => (
-                    <Grid item xs={12} sm={6} md={3} key={`${item.kind}-${item.id}`}>
+                    <Grid item {...TEASER_COLUMNS} key={`${item.kind}-${item.id}`}>
                       <WhatsOnCard
                         item={item}
                         currency={fallbackCurrency}
@@ -526,6 +595,7 @@ export const HomePage: React.FC = () => {
                 </Card>
               )}
           </Stack>
+          </HomeLayout>
         )
       )}
     </Container>

@@ -32,3 +32,27 @@ global.IntersectionObserver = class IntersectionObserver {
   }
   unobserve() {}
 } as any;
+
+/*
+ * jsdom implements no object URLs.
+ *
+ * The ticketing settings screen previews a chosen image from a blob URL, so
+ * `URL.createObjectURL` is called during render. Absent, it throws inside the
+ * render and the test reports a missing Save button rather than a missing
+ * browser API — the same class of gap as `matchMedia` above. Copied from
+ * orgadmin-events' setup, which met it first.
+ */
+if (!URL.createObjectURL) {
+  Object.defineProperty(URL, 'createObjectURL', {
+    value: () => 'blob:test',
+    writable: true,
+    configurable: true,
+  });
+}
+if (!URL.revokeObjectURL) {
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    value: () => undefined,
+    writable: true,
+    configurable: true,
+  });
+}

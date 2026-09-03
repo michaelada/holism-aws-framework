@@ -8,9 +8,12 @@ and a booking workflow.
   (`components/CalendarIcon`), chosen beside its colour and drawn in that colour wherever the
   calendar is offered. Falls back to a generic mark rather than rendering nothing. See
   `docs/BOOKINGS_NAMING_AND_CALENDAR_ICONS.md`.
-- **Demo data:** the seed gives **only Laois Hunt** bookings — 4 calendars covering exclusive and
+- **Demo data:** the seed gives Laois Hunt and Meath Hunt calendars — covering exclusive and
   shared places, a fortnightly pattern, a blocked week, a recurring gap, cancellation allowed and
-  refused, and a closed calendar. See `docs/EVENTS_DEMO_SEED.md`.
+  refused, and a closed calendar — plus **seven bookings** with the payments they were made on: one
+  alone, two in a basket, one owed offline, one past and one cancelled. See
+  `docs/EVENTS_DEMO_SEED.md` and
+  [REFUNDS_SETTLEMENT_AND_ENTRY_DETAIL.md](../../docs/REFUNDS_SETTLEMENT_AND_ENTRY_DETAIL.md).
 - **Tests:** Vitest — `npm run test:orgadmin-calendar` (~3 test files; light coverage — add tests
   with new work).
 
@@ -28,6 +31,7 @@ and a booking workflow.
 | `calendar/discounts` | `DiscountsListPage` | `calendar-discounts` |
 | `calendar/discounts/new` | `CreateDiscountPage` | `calendar-discounts` |
 | `calendar/discounts/:id/edit` | `EditDiscountPage` | `calendar-discounts` |
+| `calendar/discounts/:id/stats` | `DiscountUsagePage` (from `orgadmin-events`) | `calendar-discounts` |  <!-- where the list's View Usage icon goes; see docs/DISCOUNT_USAGE_PAGE.md -->
 
 ## Layout
 
@@ -85,6 +89,7 @@ Backend: `calendar.service`, `discount*.service`. Tables: `calendars`, `bookings
 | "Why can't this booking be cancelled?" | `utils/cancellationValidator.ts` |
 | "How is recurring availability defined?" | `components/ScheduleRulesSection.tsx` |
 | "How does the grid switch views?" | `hooks/useCalendarView.ts` + `CalendarToolbar` |
+| "Where do the seed's bookings come from?" | `BOOKINGS` in `scripts/seed/dataset.ts`. The calendars were seeded and no booking ever was, so no payment carried a `booking` line. `daysFromNow` is a target — the writer moves it to the nearest day the slot runs, and refuses a slot or duration the calendar does not offer |
 
 ## Deleting a calendar withdraws it; bookings are cancelled, not deleted
 

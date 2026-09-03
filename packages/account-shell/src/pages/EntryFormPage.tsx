@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -96,6 +96,12 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { itemId } = useParams<{ itemId: string }>();
+  /**
+   * The membership this application renews, named by the card it was started
+   * from. Absent for a fresh application, and for every event entry.
+   */
+  const [searchParams] = useSearchParams();
+  const renewingMembership = searchParams.get('renew');
   const { orgCode, me } = useAccountOrganisation();
   const online = useOnlineStatus();
 
@@ -103,6 +109,11 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const { execute: executeForm } = useAccountApi<any>();
   const { execute: executeSubmit } = useAccountApi<{ id: string }>();
   const { execute: executeAdd } = useAccountApi<unknown>();
+  const { execute: executeRenewal } = useAccountApi<{
+    membershipTypeId: string;
+    memberName: string | null;
+    answers: Record<string, unknown>;
+  }>();
   const { execute: executeSuggestions } = useAccountApi<{
     memberships: EntrantSuggestion[];
     recent: EntrantSuggestion[];
@@ -120,6 +131,59 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
   const [event, setEvent] = useState<CatalogueEvent | null>(null);
   const [form, setForm] = useState<ApplicationForm | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
+  /**
+   * Whether this form opened filled in from a membership being renewed.
+   *
+   * Worth saying on the page: a form that fills itself in has to be checked,
+   * and a member who does not know where the answers came from either trusts
+   * them without reading or retypes them anyway.
+   */
+  const [prefilledFromRenewal, setPrefilledFromRenewal] = useState(false);
+  /**
+   * Whose membership the answers came from, for the notice above the form.
+   *
+   * A renewal fills itself in from *your current membership*; an entry fills
+   * itself in from *the rider's* — often a child's, on a form the parent is
+   * filling in. Naming them is the difference between a notice a reader can
+   * check and one they have to guess at.
+   */
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  /**
+   * Which of this account's memberships the answers on screen came from.
+   *
+   * Starts as the membership being renewed, and **changes with the applicant**:
+   * choosing a different person on the name field is saying these are somebody
+   * else's details now. Null once the applicant is a name with nothing on file.
+   */
+  const [fillFrom, setFillFrom] = useState<string | null>(null);
+  /**
+   * The fields the form filled in, as opposed to the ones the member typed.
+   *
+   * Kept so a change of applicant can take back exactly what was filled and
+   * nothing else. Clearing everything would delete a member's own work; leaving
+   * everything is what produced the report this fixes — Áine's answers still on
+   * screen under somebody else's name, ready to be submitted as theirs.
+   *
+   * A ref rather than state, and that is load-bearing. Two fills can be in
+   * flight at once — the renewal's, and the one a member starts by choosing a
+   * name a moment later — and a second effect closing over a stale copy of this
+   * list neither clears what the first wrote nor recognises it as its own. It
+   * reads the field as the member's typing, declines to touch it, and reports
+   * that it filled nothing in.
+   */
+  const prefilledFields = useRef<string[]>([]);
+  /**
+   * What is on the form right now, readable outside a state updater.
+   *
+   * The fill below has to decide *and then report* — which fields it wrote, and
+   * whether it wrote any — and a `setValues` updater runs later than the line
+   * after it. Reading the values through a ref lets the whole decision happen
+   * in one pass, in order.
+   */
+  const valuesRef = useRef<Record<string, unknown>>({});
+  useEffect(() => {
+    valuesRef.current = values;
+  }, [values]);
   const [agreed, setAgreed] = useState(false);
   /**
    * Who the entry is for — a name, and the membership behind it where there is
@@ -190,11 +254,18 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
         setEvent(parent ?? null);
         setItem(activity);
 
-        // The only case with nothing to ask: one eligible membership, so the
-        // name is already known and the field opens filled in.
-        const selectable = (activity.eligibleMembers ?? []).filter((m) => !m.alreadyEntered);
-        if (activity.membersOnly && selectable.length === 1) {
-          setEntrant({ memberId: selectable[0].id, name: selectable[0].name });
+        /*
+         * The only case with nothing to ask: one eligible membership, so the
+         * name is already known and the field opens filled in.
+         *
+         * Having entered already does not take a member out of this. An
+         * activity may be entered more than once — one rider, two horses — so
+         * the member who has entered is still the only answer there is; the
+         * field says "already entered" beside the name and lets them decide.
+         */
+        const eligible = activity.eligibleMembers ?? [];
+        if (activity.membersOnly && eligible.length === 1) {
+          setEntrant({ memberId: eligible[0].id, name: eligible[0].name });
         }
 
         if (activity.applicationFormId) {
@@ -293,13 +364,21 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
    * typing must not be blocked by a convenience that did not load.
    */
   useEffect(() => {
-    if (kind !== 'event' || !orgCode || !itemId) return undefined;
+    if (!orgCode || !itemId) return undefined;
 
     let cancelled = false;
     void (async () => {
       try {
+        /*
+         * The same two lists for a membership application, from its own
+         * endpoint: an application asks the same question an entry does — who
+         * is this for — and the answer comes from the same two places.
+         */
         const result = await executeSuggestions({
-          url: `/api/account/${orgCode}/catalogue/activities/${itemId}/entrant-suggestions`,
+          url:
+            kind === 'event'
+              ? `/api/account/${orgCode}/catalogue/activities/${itemId}/entrant-suggestions`
+              : `/api/account/${orgCode}/catalogue/membership-types/${itemId}/applicant-suggestions`,
         });
         if (cancelled || !result) return;
         setSuggestions({
@@ -315,6 +394,159 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
       cancelled = true;
     };
   }, [kind, orgCode, itemId, executeSuggestions]);
+
+  /*
+   * A renewal starts filled in from the membership it renews.
+   *
+   * `?renew=` names it, and it is the *starting* answer to "whose details are
+   * these" rather than the only one — see the effect below, which follows the
+   * applicant.
+   */
+  useEffect(() => {
+    if (kind === 'membership' && renewingMembership) setFillFrom(renewingMembership);
+  }, [kind, renewingMembership]);
+
+  /**
+   * Whose details are on screen, once the person has been chosen.
+   *
+   * **The same question on both journeys.** An entry form asks a rider's date
+   * of birth and their emergency contact; the club already has both, because
+   * the same person gave them on a membership application. Asking again for
+   * every class of every event is the work this saves — and it is the same work
+   * whether the form is an application or an entry.
+   *
+   * Where the membership comes from differs, because the two suggestion lists
+   * are built for different purposes:
+   *
+   *  - **An entry** names a member outright. `memberId` is on the suggestion
+   *    and on the autocomplete option, because a members-only class has to
+   *    prove eligibility — and it is the same `members` row whose answers are
+   *    on file.
+   *  - **An application** creates a membership rather than resolving to one, so
+   *    its suggestions carry `fillFromMembershipId` instead: *there are answers
+   *    on file for this name*, which is a weaker claim and the only one an
+   *    application can make. Matched by name, because that is what the field
+   *    produces whether a chip was picked, an option chosen, or the name typed
+   *    out in full.
+   *
+   * Either way a name with nothing on file is `null`, and whatever was filled
+   * in for somebody else is taken back.
+   */
+  useEffect(() => {
+    const typed = entrant.name.trim().toLowerCase();
+
+    if (kind === 'event') {
+      setFillFrom(entrant.memberId ?? null);
+      return;
+    }
+
+    if (!typed) return;
+
+    const match = suggestions.memberships.find(
+      (suggestion) => suggestion.name.trim().toLowerCase() === typed
+    );
+    setFillFrom(match?.fillFromMembershipId ?? null);
+  }, [kind, entrant.name, entrant.memberId, suggestions.memberships]);
+
+  /*
+   * Fill the form in from whichever membership `fillFrom` names — and take back
+   * what the last one put there.
+   *
+   * The answers are keyed by field name, the same shape this form holds its own
+   * values in, and are applied **only to fields the chosen type actually
+   * asks**: renewing into a different type is allowed, and an answer to a
+   * question that type does not ask would be submitted as an orphan.
+   *
+   * One rule decides what happens to what is already on screen: **the member's
+   * own typing wins, and everything this filled in is this to take back.**
+   *
+   * So a field the member has written in is never overwritten and never
+   * cleared, however often the applicant changes; and a field carrying the last
+   * person's answer is replaced by the new one's, or emptied where there is
+   * nothing on file. Keeping those would leave one member's date of birth under
+   * another's name — which is the report this fixes — and clearing everything
+   * instead would delete a member's own work for the crime of correcting a
+   * name.
+   *
+   * Runs after the form has loaded, because until then there is nothing to
+   * match against, and quietly on failure — a form nobody could fill in for you
+   * is the form this screen was before any of it existed.
+   */
+  useEffect(() => {
+    if (!form) return undefined;
+
+    let cancelled = false;
+
+    const withoutPreviousFill = () => {
+      const next = { ...valuesRef.current };
+      for (const name of prefilledFields.current) delete next[name];
+      return next;
+    };
+
+    if (!fillFrom) {
+      // Nothing on file for this applicant. Their form starts where the member
+      // left off, minus somebody else's answers.
+      if (prefilledFields.current.length > 0) {
+        const next = withoutPreviousFill();
+        prefilledFields.current = [];
+        valuesRef.current = next;
+        setValues(next);
+        setPrefilledFromRenewal(false);
+        setPrefilledFor(null);
+      }
+      return undefined;
+    }
+
+    void (async () => {
+      try {
+        const previous = await executeRenewal({
+          url: `/api/account/${orgCode}/memberships/${fillFrom}/form-answers`,
+        });
+        if (cancelled || !previous?.answers) return;
+
+        const asked = new Set((form.fields ?? []).map((field) => field.name));
+        const carried = Object.entries(previous.answers).filter(
+          ([name, value]) => asked.has(name) && value !== null && value !== undefined && value !== ''
+        );
+
+        const next = withoutPreviousFill();
+        const written: string[] = [];
+        for (const [name, value] of carried) {
+          // Ours to write only where the member has not written there
+          // themselves — the previous fill has already been taken out.
+          if (next[name] === undefined || next[name] === '') {
+            next[name] = value;
+            written.push(name);
+          }
+        }
+
+        prefilledFields.current = written;
+        valuesRef.current = next;
+        setValues(next);
+        setPrefilledFromRenewal(written.length > 0);
+        setPrefilledFor(previous.memberName ?? null);
+
+        /*
+         * And the name, where the member has not said who this is for.
+         *
+         * A renewal arrives knowing whose membership it renews; leaving the box
+         * empty asks the member a question the URL already answered, and the
+         * answers on screen would then belong to nobody in particular.
+         */
+        if (previous.memberName) {
+          setEntrant((current) =>
+            current.name.trim() ? current : { memberId: null, name: previous.memberName! }
+          );
+        }
+      } catch {
+        // Leaves the form as the member left it, which still works.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fillFrom, orgCode, form, executeRenewal]);
 
   const terms: string | null = item?.termsAndConditions ?? null;
   const fields = useMemo(
@@ -430,7 +662,12 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
               }
             : {
                 itemType: 'membership' satisfies CartItemType,
-                contextRef: { membershipTypeId: item.id },
+                /*
+                 * Who the membership is for. Without it every membership took
+                 * the account holder's name, so a parent joining three children
+                 * produced three records all reading the same thing.
+                 */
+                contextRef: { membershipTypeId: item.id, memberName: entrant.name.trim() },
                 description: item.name,
                 unitFee: item.fee,
                 handlingFeeIncluded: item.handlingFeeIncluded,
@@ -506,10 +743,26 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
    * also have come from the roster — `allowFreeText` is the server's word for
    * that, so the two cannot disagree about which activities admit a stranger.
    */
+  /*
+   * How the name field behaves on a membership application.
+   *
+   * A plain box with this account's own names beneath it. There is no roster to
+   * complete against: an application *creates* a membership rather than
+   * resolving to one, and searching the club's members would offer other
+   * families' names to somebody who has no business with them.
+   */
+  const nameFieldMode =
+    kind === 'event' ? entrantMode : { autocomplete: false, allowFreeText: true };
+
   const entrantNamed = entrant.name.trim().length > 0;
+  /*
+   * A name is required either way. On an entry it must resolve to a member
+   * where the activity says members only; on an application anything typed will
+   * do, because the person may be joining for the first time.
+   */
   const entrantSatisfied =
-    kind !== 'event' ||
-    (entrantNamed && (entrantMode?.allowFreeText !== false || Boolean(entrant.memberId)));
+    entrantNamed &&
+    (kind !== 'event' || entrantMode?.allowFreeText !== false || Boolean(entrant.memberId));
 
   const canSubmit =
     online &&
@@ -560,7 +813,12 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
       )}
 
       {/*
-        Who the entry is for — first, above the club's own questions.
+        Who this is for — first, above the club's own questions.
+
+        An application asks it too: a membership is *for* a person, and until
+        this field existed a club had to put a "Member name" box on its own form
+        and the answer went nowhere — every membership was created under the
+        account holder's name whatever the form said.
 
         Always asked on an event entry, whatever the club put on its form. The
         name is not a question *about* the entry, it is the entry: without it an
@@ -569,34 +827,37 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
         different name each time, and forgetting it entirely often enough that
         the entry list was the place the omission was discovered.
       */}
-      {kind === 'event' && entrantMode && (
+      {nameFieldMode && (
         <Paper sx={{ p: 3, mb: 3 }}>
           <EntrantNameField
             value={entrant}
             onChange={setEntrant}
             onSearch={setEntrantQuery}
-            options={entrantOptions}
-            loading={entrantLoading}
-            autocomplete={entrantMode.autocomplete}
-            allowFreeText={entrantMode.allowFreeText}
+            options={kind === 'event' ? entrantOptions : []}
+            loading={kind === 'event' && entrantLoading}
+            autocomplete={nameFieldMode.autocomplete}
+            allowFreeText={nameFieldMode.allowFreeText}
             disabled={saving}
             onBlur={() => setEntrantTouched(true)}
             suggestions={suggestions}
             error={
               entrantTouched && !entrantSatisfied
-                ? entrantMode.allowFreeText
-                  ? t('form.entrant.required')
+                ? nameFieldMode.allowFreeText
+                  ? t(kind === 'event' ? 'form.entrant.required' : 'form.member.required')
                   : t('form.entrant.mustBeMember')
                 : null
             }
             labels={{
-              label: t('form.entrant.label'),
+              label: t(kind === 'event' ? 'form.entrant.label' : 'form.member.label'),
               placeholder: t('form.entrant.placeholder'),
-              helperText: entrantMode.autocomplete
-                ? entrantMode.allowFreeText
-                  ? t('form.entrant.hintOpen')
-                  : t('form.entrant.hintMembersOnly')
-                : t('form.entrant.hintPlain'),
+              helperText:
+                kind === 'membership'
+                  ? t('form.member.hint')
+                  : nameFieldMode.autocomplete
+                    ? nameFieldMode.allowFreeText
+                      ? t('form.entrant.hintOpen')
+                      : t('form.entrant.hintMembersOnly')
+                    : t('form.entrant.hintPlain'),
               noMatches: t('form.entrant.noMatches'),
               alreadyEntered: t('form.entrant.alreadyEntered'),
               loading: t('form.entrant.searching'),
@@ -619,6 +880,20 @@ export const EntryFormPage: React.FC<{ kind: 'event' | 'membership' }> = ({ kind
           <Typography variant="h2" gutterBottom>
             {t('form.detailsHeading')}
           </Typography>
+
+          {/*
+            Said out loud, because a form that fills itself in has to be
+            checked. A member who does not know where the answers came from
+            either trusts them without reading — and renews on last season's
+            address — or retypes them anyway, which is the work this saves.
+          */}
+          {prefilledFromRenewal && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {kind === 'event' && prefilledFor
+                ? t('form.prefilledFromMembership', { name: prefilledFor })
+                : t('form.prefilledFromRenewal')}
+            </Alert>
+          )}
 
           {/*
             The date/time pickers a form may contain read their locale from

@@ -45,7 +45,13 @@ import {
 } from '@mui/icons-material';
 import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useOrganisation,
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { Registration, RegistrationFilter, RegistrationType } from '../types/registration.types';
 import CreateCustomFilterDialog from '../components/CreateCustomFilterDialog';
 import BatchOperationsDialog from '../components/BatchOperationsDialog';
@@ -349,6 +355,16 @@ const RegistrationsDatabasePage: React.FC = () => {
     }
   };
 
+  const sort = useTableSort(filteredRegistrations, {
+    accessors: {
+      // The type's name as the row shows it, not the id it falls back to —
+      // otherwise a club with one unnamed type sorts by a UUID.
+      registrationType: (registration) =>
+        registrationTypeMap[registration.registrationTypeId] || registration.registrationTypeId,
+      labels: (registration) => [...registration.labels].sort().join(' '),
+    },
+  });
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header with title and action buttons */}
@@ -485,15 +501,33 @@ const RegistrationsDatabasePage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>{t('registrations.table.registrationType')}</TableCell>
-              <TableCell>{t('registrations.table.entityName')}</TableCell>
-              <TableCell>{t('registrations.table.ownerName')}</TableCell>
-              <TableCell>{t('registrations.table.registrationNumber')}</TableCell>
-              <TableCell>{t('registrations.table.dateLastRenewed')}</TableCell>
-              <TableCell>{t('registrations.table.status')}</TableCell>
-              <TableCell>{t('registrations.table.validUntil')}</TableCell>
-              <TableCell>{t('registrations.table.labels')}</TableCell>
-              <TableCell>{t('registrations.table.processed')}</TableCell>
+              <SortableTableCell sort={sort} field="registrationType">
+                {t('registrations.table.registrationType')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="entityName">
+                {t('registrations.table.entityName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="ownerName">
+                {t('registrations.table.ownerName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="registrationNumber">
+                {t('registrations.table.registrationNumber')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="dateLastRenewed">
+                {t('registrations.table.dateLastRenewed')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('registrations.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="validUntil">
+                {t('registrations.table.validUntil')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="labels">
+                {t('registrations.table.labels')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="processed">
+                {t('registrations.table.processed')}
+              </SortableTableCell>
               <TableCell align="right">{t('registrations.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -511,7 +545,7 @@ const RegistrationsDatabasePage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRegistrations.map((registration) => (
+              sort.rows.map((registration) => (
                 <TableRow key={registration.id} hover>
                   <TableCell padding="checkbox">
                     <Checkbox

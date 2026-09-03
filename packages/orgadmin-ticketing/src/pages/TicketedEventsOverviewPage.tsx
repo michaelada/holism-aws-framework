@@ -29,7 +29,13 @@ import {
 } from '@mui/icons-material';
 import { useTranslation, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { TicketedEventSummary } from '../types/ticketing.types';
 
 const TicketedEventsOverviewPage: React.FC = () => {
@@ -83,6 +89,8 @@ const TicketedEventsOverviewPage: React.FC = () => {
     navigate(`/tickets/${eventId}/settings`);
   };
 
+  const sort = useTableSort(events);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -127,17 +135,29 @@ const TicketedEventsOverviewPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>{t('ticketing.overview.columns.eventName')}</TableCell>
-                <TableCell>{t('ticketing.overview.columns.eventDate')}</TableCell>
-                <TableCell align="right">{t('ticketing.overview.columns.totalTickets')}</TableCell>
-                <TableCell align="right">{t('ticketing.overview.columns.scanned')}</TableCell>
-                <TableCell align="right">{t('ticketing.overview.columns.notScanned')}</TableCell>
-                <TableCell align="right">{t('ticketing.overview.columns.scanPercentage')}</TableCell>
+                <SortableTableCell sort={sort} field="eventName">
+                  {t('ticketing.overview.columns.eventName')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="eventDate">
+                  {t('ticketing.overview.columns.eventDate')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="totalTickets" align="right">
+                  {t('ticketing.overview.columns.totalTickets')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="ticketsScanned" align="right">
+                  {t('ticketing.overview.columns.scanned')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="ticketsNotScanned" align="right">
+                  {t('ticketing.overview.columns.notScanned')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="scanPercentage" align="right">
+                  {t('ticketing.overview.columns.scanPercentage')}
+                </SortableTableCell>
                 <TableCell>{t('ticketing.overview.columns.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {events.map((event) => (
+              {sort.rows.map((event) => (
                 <TableRow
                   key={event.eventId}
                   hover

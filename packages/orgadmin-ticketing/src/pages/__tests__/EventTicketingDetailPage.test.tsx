@@ -250,6 +250,45 @@ describe('EventTicketingDetailPage — finding a ticket', () => {
   });
 });
 
+/**
+ * Getting from the list into one ticket.
+ *
+ * The table has nine columns, so on anything but a wide screen the only way in
+ * — an eye icon in the last of them — was six columns of sideways scrolling
+ * away. The name is what a reader is looking at when they decide to open a
+ * ticket, so the name opens it. The icon stays: it is where the *Actions*
+ * heading says it is, and somebody who has learned it should not have to learn
+ * again.
+ */
+describe('EventTicketingDetailPage — opening a ticket', () => {
+  it('opens it from the name', async () => {
+    await renderPage([ticket({ customerName: 'Aoife Byrne' })]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aoife Byrne' }));
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Aoife Byrne');
+  });
+
+  it('keeps the eye icon as well', async () => {
+    await renderPage([ticket({ customerName: 'Aoife Byrne' })]);
+
+    // Both ways in, not one instead of the other.
+    expect(screen.getByRole('button', { name: 'Aoife Byrne' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view ticket details/i })).toBeInTheDocument();
+  });
+
+  it('gives every row its own way in', async () => {
+    await renderPage([
+      ticket({ id: 'a', ticketReference: 'TKT-0001', customerName: 'Aoife Byrne' }),
+      ticket({ id: 'b', ticketReference: 'TKT-0002', customerName: 'Cian Murphy' }),
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cian Murphy' }));
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Cian Murphy');
+  });
+});
+
 describe('EventTicketingDetailPage — acting on tickets', () => {
   it('offers batch actions only once something is selected', async () => {
     await renderPage();

@@ -60,6 +60,10 @@ export const eventsModule: ModuleRegistration = {
       component: lazy(() => import('./pages/EventEntriesPage')),
     },
     {
+      path: 'events/:id/entries/:entryId',
+      component: lazy(() => import('./pages/EventEntryDetailsPage')),
+    },
+    {
       path: 'events/types',
       component: lazy(() => import('./pages/EventTypesListPage')),
       capability: 'event-types', // Only accessible if event-types capability enabled
@@ -83,6 +87,11 @@ export const eventsModule: ModuleRegistration = {
       path: 'events/discounts/:id/edit',
       component: lazy(() => import('./pages/CreateDiscountPage')),
       capability: 'entry-discounts', // Only show if entry-discounts capability enabled
+    },
+    {
+      path: 'events/discounts/:id/stats',
+      component: lazy(() => import('./pages/DiscountUsagePage')),
+      capability: 'entry-discounts',
     },
   ],
   subMenuItems: [
@@ -118,9 +127,11 @@ export { default as CreateEventPage } from './pages/CreateEventPage';
 export { default as EditEventPage } from './pages/EditEventPage';
 export { default as EventDetailsPage } from './pages/EventDetailsPage';
 export { default as EventEntriesPage } from './pages/EventEntriesPage';
+export { default as EventEntryDetailsPage } from './pages/EventEntryDetailsPage';
 export { default as EventTypesListPage } from './pages/EventTypesListPage';
 export { default as VenuesListPage } from './pages/VenuesListPage';
 export { default as DiscountsListPage } from './pages/DiscountsListPage';
+export { default as DiscountUsagePage } from './pages/DiscountUsagePage';
 export { default as CreateDiscountPage } from './pages/CreateDiscountPage';
 
 // Export components

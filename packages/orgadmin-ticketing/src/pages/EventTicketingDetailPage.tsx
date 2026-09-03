@@ -19,6 +19,7 @@ import {
   CircularProgress,
   FormControl,
   IconButton,
+  Link,
   InputAdornment,
   InputLabel,
   MenuItem,
@@ -44,11 +45,17 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from '@aws-web-framework/orgadmin-shell';
 import { formatDateTime } from '@aws-web-framework/orgadmin-shell';
-import { useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { ElectronicTicket, TicketSalesSummary } from '../types/ticketing.types';
 import TicketingStatsCards from '../components/TicketingStatsCards';
 import TicketDetailsDialog from '../components/TicketDetailsDialog';
 import BatchTicketOperationsDialog from '../components/BatchTicketOperationsDialog';
+import GateScanningPanel from '../components/GateScanningPanel';
 
 const EventTicketingDetailPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -196,6 +203,20 @@ const EventTicketingDetailPage: React.FC = () => {
     ).entries()
   );
 
+  /*
+   * Above the error and loading returns: a hook after an early return is a
+   * hook that does not always run.
+   */
+  const sort = useTableSort(filteredTickets, {
+    accessors: {
+      // `ticket_data` is written as `{}` today, so this reads as "Not
+      // available" for every row and sorts as its own equal — which the stable
+      // sort leaves in the order it arrived. It becomes useful the moment the
+      // join is filled in, and costs nothing until then.
+      activityName: (ticket) => ticket.ticketData?.activityName,
+    },
+  });
+
   // Error state with back navigation
   if (error && tickets.length === 0) {
     return (
@@ -280,6 +301,13 @@ const EventTicketingDetailPage: React.FC = () => {
 
       {/* Statistics Cards */}
       <TicketingStatsCards tickets={tickets} />
+
+      {/*
+        Above the list, because it is what a club does *before* the gate opens.
+        Finding it under a table of tickets would mean scrolling past the thing
+        it is meant to make work.
+      */}
+      {eventId && <GateScanningPanel eventId={eventId} />}
 
       {/* Filters — no event filter dropdown */}
       <Card sx={{ mb: 3 }}>
@@ -404,13 +432,27 @@ const EventTicketingDetailPage: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>{t('ticketing.table.ticketReference')}</TableCell>
-              <TableCell>{t('ticketing.table.eventActivity')}</TableCell>
-              <TableCell>{t('ticketing.table.customerName')}</TableCell>
-              <TableCell>{t('ticketing.table.customerEmail')}</TableCell>
-              <TableCell>{t('ticketing.table.issueDate')}</TableCell>
-              <TableCell>{t('ticketing.table.scanStatus')}</TableCell>
-              <TableCell>{t('ticketing.table.scanDate')}</TableCell>
+              <SortableTableCell sort={sort} field="ticketReference">
+                {t('ticketing.table.ticketReference')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="activityName">
+                {t('ticketing.table.eventActivity')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="customerName">
+                {t('ticketing.table.customerName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="customerEmail">
+                {t('ticketing.table.customerEmail')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="issueDate">
+                {t('ticketing.table.issueDate')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="scanStatus">
+                {t('ticketing.table.scanStatus')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="scanDate">
+                {t('ticketing.table.scanDate')}
+              </SortableTableCell>
               <TableCell>{t('ticketing.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -422,7 +464,7 @@ const EventTicketingDetailPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTickets.map((ticket) => (
+              sort.rows.map((ticket) => (
                 <TableRow key={ticket.id} hover>
                   <TableCell padding="checkbox">
                     <Checkbox
@@ -436,7 +478,31 @@ const EventTicketingDetailPage: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>{ticket.ticketData?.activityName || t('ticketing.details.notAvailable')}</TableCell>
-                  <TableCell>{ticket.customerName}</TableCell>
+                  <TableCell>
+                    {/*
+                      The name opens the ticket, as well as the eye at the far
+                      right of the row.
+
+                      There are nine columns here, so on anything but a wide
+                      screen the only way in was to scroll sideways past six of
+                      them to reach an icon. The name is what a reader is
+                      looking at when they decide to open a ticket, so it is
+                      what they should be able to click. The icon stays: it is
+                      where the column header says the actions are, and somebody
+                      who has learned it should not have to learn again.
+                    */}
+                    <Link
+                      component="button"
+                      type="button"
+                      variant="body2"
+                      align="left"
+                      underline="hover"
+                      onClick={() => handleViewTicket(ticket)}
+                      sx={{ textAlign: 'left' }}
+                    >
+                      {ticket.customerName}
+                    </Link>
+                  </TableCell>
                   <TableCell>{ticket.customerEmail}</TableCell>
                   <TableCell>{formatDateTime(new Date(ticket.issueDate), i18n.language)}</TableCell>
                   <TableCell>
@@ -471,6 +537,8 @@ const EventTicketingDetailPage: React.FC = () => {
         <TicketDetailsDialog
           open={ticketDetailsOpen}
           ticket={selectedTicket}
+          // The ticket row does not carry it; this page does.
+          eventName={eventName}
           onClose={() => {
             setTicketDetailsOpen(false);
             setSelectedTicket(null);

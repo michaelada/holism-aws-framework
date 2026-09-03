@@ -73,6 +73,14 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'post.reordered': 'Announcements reordered',
 
   // Settings
+  /*
+   * A club's own notices, distinct from the platform's `post.*` above: those
+   * are the super admin writing to everybody signing in to the product. Worded
+   * differently on purpose, because both can appear in Platform Admin's log.
+   */
+  'announcement.created': 'Announcement posted',
+  'announcement.updated': 'Announcement changed',
+  'announcement.deleted': 'Announcement removed',
   'settings.organisation-updated': 'Organisation details changed',
   'settings.branding-updated': 'Branding changed',
   'settings.payment-updated': 'Payment settings changed',
@@ -98,6 +106,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'entry.removed-from-basket': 'Entry removed from basket',
   'entry.created': 'Entry created',
   'entry.cancelled': 'Entry cancelled',
+  'ticket-scanning.session-created': 'Gate scanning link created',
+  'ticket-scanning.session-revoked': 'Gate scanning link stopped',
 
   // Memberships
   'membership-type.created': 'Membership type created',
@@ -144,6 +154,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'field.created': 'Form field created',
   'field.updated': 'Form field updated',
   'field.deleted': 'Form field deleted',
+  'entry.answers-corrected': 'Entry answers corrected',
 
   // Payments
   'checkout.started': 'Checkout started',
@@ -152,7 +163,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'payment.succeeded': 'Payment succeeded',
   'payment.failed': 'Payment failed',
   'refund.issued': 'Refund issued',
-  'offline-payment.recorded': 'Offline payment recorded',
+  'offline-payment.recorded': 'Offline payment recorded as received',
+  'offline-payment.receipt-undone': 'Offline payment receipt undone',
   'lodgement.viewed': 'Lodgements viewed',
   'lodgement.detail-viewed': 'Lodgement opened',
 

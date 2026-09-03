@@ -19,7 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { formatDisplayDate } from '@aws-web-framework/components';
+import { formatDisplayDate, formatFormAnswer } from '@aws-web-framework/components';
 import { useAccountApi } from '../hooks/useAccountApi';
 import { useAccountOrganisation } from '../context/AccountOrganisationContext';
 import { AccountMembershipRecord } from '../types/account';
@@ -97,7 +97,16 @@ export const MyMembershipsPage: React.FC = () => {
                  * days of losing comes back available and marked `isRenewal`.
                  * This used to point at `/join`, a route that never existed.
                  */
-                onRenew={() => navigate(`/${orgCode}/browse/memberships`)}
+                /*
+                  Which membership is being renewed travels with them.
+                  
+                  A parent holds four, so the form at the end of this cannot
+                  work out whose details to open with unless it is told. See
+                  docs/MEMBERSHIP_RENEWAL_PREFILL.md.
+                */
+                onRenew={() =>
+                  navigate(`/${orgCode}/browse/memberships?renew=${membership.id}`)
+                }
               />
             </Grid>
           ))}
@@ -215,7 +224,7 @@ const MembershipCard: React.FC<{
                       something to whoever reads it back.
                     */}
                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {answer.value}
+                      {formatFormAnswer(answer, locale)}
                     </Typography>
                   </Box>
                 ))}

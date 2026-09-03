@@ -92,7 +92,7 @@ Keycloak themes load the Sora font via CSS @import in the warm.css files.
 ### Components
 All MUI components have been styled to match the warm theme:
 - **Buttons**: Rounded (60px border-radius) with gradient backgrounds
-- **Cards**: Soft shadows with hover effects
+- **Cards**: Soft shadows that lift on hover — the card itself does **not** move (see below)
 - **Text Fields**: Clean borders with orange focus states
 - **Tables**: Warm header backgrounds
 - **Alerts**: Color-coded with appropriate backgrounds
@@ -229,3 +229,42 @@ These files are currently identical and should remain so for consistency.
 For the best user experience, keep the application themes and Keycloak login themes in sync:
 - If applications use warm theme → Keycloak should use warm theme
 - If applications use neumorphic theme → Keycloak should use neumorphic theme
+
+---
+
+## Cards do not move on hover
+
+They used to rise four pixels. Reported as disconcerting, and rightly: a card
+that moves under the pointer reads as the page shifting beneath the mouse, and
+crossing a grid of them sets each one moving in turn. It is worse for anyone who
+tracks the pointer against what is under it, and for anyone sensitive to motion.
+
+The **shadow still lifts**, so a card still says *this responds* — only the
+displacement is gone.
+
+The lift was written in **five places**, which is why removing it from the theme
+alone would not have settled it:
+
+| Where | Was |
+|---|---|
+| `warmTheme` → `MuiCard.root['&:hover']` | `translateY(-4px)` |
+| `DashboardCard.tsx` | the same again, in `sx` |
+| `DashboardCardHero.tsx` | the same again |
+| `DashboardCardIllustration.tsx` | the same again |
+| `DashboardCardPhoto.tsx` | the same again |
+
+Plus the membership type selector's list rows (`translateY(-2px)`), which are
+cards in all but name.
+
+Each `transition` now names the property — `box-shadow` — rather than `all`.
+`all` animates whatever a page happens to change on hover, which is how an
+element that no longer sets a transform can still appear to drift.
+
+**Buttons still lift 2px** on hover (`contained` and `outlined`). That was not
+part of the report: a button is a small target the pointer rests on, not a
+region the pointer crosses. Easy to remove the same way if it grates.
+
+Pinned by `src/theme/__tests__/warmTheme.hover.test.ts`: the theme's card hover
+carries a shadow and no transform, its transition names `box-shadow` rather than
+`all`, and no `DashboardCard*.tsx` contains a `translateY(-` — the check reads
+the directory, so a fifth dashboard card cannot slip past it.

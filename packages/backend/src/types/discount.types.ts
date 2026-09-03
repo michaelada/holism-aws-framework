@@ -127,6 +127,8 @@ export interface UsageStats {
   averageDiscountAmount: number;
   topUsers: Array<{
     userId: string;
+    /** The member's name, where the row is still there to name them. */
+    name?: string;
     usageCount: number;
     totalDiscountReceived: number;
   }>;

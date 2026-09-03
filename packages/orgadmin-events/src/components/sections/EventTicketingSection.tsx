@@ -170,22 +170,13 @@ const EventTicketingSection: React.FC<EventTicketingSectionProps> = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
-                <Tooltip title="Display your organisation's logo on the ticket" arrow placement="right">
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.includeEventLogo || false}
-                        onChange={(e) => onChange('includeEventLogo', e.target.checked)}
-                      />
-                    }
-                    label="Include Event Logo"
-                  />
-                </Tooltip>
-                <Typography variant="caption" color="textSecondary" display="block" sx={{ ml: 4 }}>
-                  Show organisation logo on ticket
-                </Typography>
-              </Grid>
+              {/*
+                "Include Event Logo" was here. Nothing ever rendered a logo —
+                no ticket template took one, and no organisation logo was passed
+                to the one that could have — so it was a setting a club could
+                turn on and see no difference from. The ticket **image**, with
+                its four placements, is the thing it was reaching for.
+              */}
             </>
           )}
         </Grid>

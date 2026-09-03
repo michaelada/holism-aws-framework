@@ -3,6 +3,7 @@ import { db } from '../database/pool';
 import { accountActivityService } from './account-activity.service';
 import { accountCatalogueService } from './account-catalogue.service';
 import { cartService } from './cart.service';
+import { announcementService, Announcement } from './announcement.service';
 
 /**
  * The member's home screen (B3), assembled in one request.
@@ -154,6 +155,16 @@ export interface AccountDashboard {
    * not a coincidence.
    */
   organisationTypeName: string | null;
+  /**
+   * What the club is telling its members right now.
+   *
+   * `[]` for a club without the capability and `[]` for a club that has it and
+   * has nothing showing — the home page treats both the same, which is what
+   * makes "no announcements" look exactly like the page did before the feature
+   * existed. Never null, because a nullable empty list invites a screen to
+   * distinguish two cases that render identically.
+   */
+  announcements: Announcement[];
 }
 
 /**
@@ -214,7 +225,8 @@ export class AccountDashboardService {
      * other, and a member on a phone waits for the slowest, not the sum. A
      * section the club has not enabled is not asked for at all.
      */
-    const [entries, bookings, memberships, cart, whatsOn, externalEvents] = await Promise.all([
+    const [entries, bookings, memberships, cart, whatsOn, externalEvents, announcements] =
+      await Promise.all([
       has('event-management')
         ? accountActivityService.listEntries(organisationId, organisationUserId, today)
         : null,
@@ -236,6 +248,14 @@ export class AccountDashboardService {
         logger.warn('Dashboard could not read external events', { organisationId, error });
         return { events: [], typeName: null };
       }),
+      has('org-announcements')
+        ? announcementService.activeFor(organisationId, today).catch((error) => {
+            // Notices are the club talking; the rest of the screen is the
+            // member's own business, and losing one must not lose the other.
+            logger.warn('Dashboard could not read announcements', { organisationId, error });
+            return [];
+          })
+        : [],
     ]);
 
     return {
@@ -253,6 +273,7 @@ export class AccountDashboardService {
       whatsOn,
       externalEvents: externalEvents.events,
       organisationTypeName: externalEvents.typeName,
+      announcements,
     };
   }
 

@@ -37,6 +37,17 @@ describe('action labels', () => {
     expect(auditActionLabel('somethingHappened')).toBe('Something happened');
   });
 
+  it('tells a settlement apart from its reversal', () => {
+    // Both used to be `offline-payment.recorded`, so an undo read in the log as
+    // the thing it undid.
+    expect(auditActionLabel('offline-payment.recorded')).toBe(
+      'Offline payment recorded as received'
+    );
+    expect(auditActionLabel('offline-payment.receipt-undone')).toBe(
+      'Offline payment receipt undone'
+    );
+  });
+
   it('has no empty labels', () => {
     for (const [action, label] of Object.entries(AUDIT_ACTION_LABELS)) {
       expect(label, action).toBeTruthy();

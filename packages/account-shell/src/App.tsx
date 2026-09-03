@@ -12,6 +12,7 @@ import PublicEventsPage from './pages/PublicEventsPage';
 import PlatformEventsPage from './pages/PlatformEventsPage';
 import PublicEventPage from './pages/PublicEventPage';
 import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage';
+import GateScanPage from './pages/GateScanPage';
 import OrganisationSwitcherPage from './pages/OrganisationSwitcherPage';
 import RegisterWithOrganisationPage from './pages/RegisterWithOrganisationPage';
 import AwaitingApprovalPage from './pages/AwaitingApprovalPage';
@@ -117,6 +118,24 @@ export const App: React.FC = () => (
             element={
               <UnbrandedRoute>
                 <ConfirmEmailChangePage />
+              </UnbrandedRoute>
+            }
+          />
+
+          {/*
+            The gate scanner, opened from a link a club sent to a steward.
+
+            Unbranded, anonymous and outside `/:orgCode` for the same reasons as
+            `confirm-email`: it is opened cold on a volunteer's own phone with
+            no session, and the token in the link is the authority. Declared
+            before the organisation routes so `scan` is not read as an
+            organisation code. See docs/GATE_SCANNING.md.
+          */}
+          <Route
+            path="/scan/:token"
+            element={
+              <UnbrandedRoute>
+                <GateScanPage />
               </UnbrandedRoute>
             }
           />

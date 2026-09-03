@@ -433,6 +433,20 @@ const EventActivityForm: React.FC<EventActivityFormProps> = ({
             />
           </Grid>
 
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              type="number"
+              inputProps={{ min: 1, step: 1 }}
+              label={t('events.activities.activity.ticketsAdmit')}
+              value={activity.ticketsAdmit ?? 1}
+              onChange={(e) =>
+                handleChange('ticketsAdmit', Math.max(1, parseInt(e.target.value, 10) || 1))
+              }
+              helperText={t('events.activities.activity.ticketsAdmitHelper')}
+            />
+          </Grid>
+
           <Grid item xs={12}>
             <FormControlLabel
               control={

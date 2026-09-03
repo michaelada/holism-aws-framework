@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { paymentService } from '../services/payment.service';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { byParam, byResource } from '../middleware/organisation-scope.middleware';
 import { OrganisationRequest } from '../middleware/capability.middleware';
 import { logger } from '../config/logger';
+import { AppError } from '../middleware/errors';
 import { audited } from '../middleware/audit.middleware';
 
 /*
@@ -132,6 +133,37 @@ router.get(
 
 /**
  * @swagger
+ * /api/orgadmin/organisations/{organisationId}/refunds:
+ *   get:
+ *     summary: Every refund this organisation has made
+ *     description: >
+ *       Listed in its own right rather than found by opening payments one at a
+ *       time. Each carries the payment it came out of, so a reader can go
+ *       straight to it.
+ *     tags: [Payments]
+ *     responses:
+ *       200:
+ *         description: The refunds, most recent first
+ */
+router.get(
+  '/refunds',
+  authenticateToken(),
+  // Scoped like the payments list beside it: the front end addresses this
+  // router through `/organisations/:organisationId`, and the guard checks the
+  // caller administers the club they named.
+  byParam('organisationId'),
+  async (req: OrganisationRequest, res: Response) => {
+    try {
+      return res.json(await paymentService.listRefunds(req.organisationId!));
+    } catch (error) {
+      logger.error('Error in GET /refunds:', error);
+      return res.status(500).json({ error: 'Failed to fetch refunds' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /api/orgadmin/payments/{id}:
  *   get:
  *     summary: Get payment by ID
@@ -162,8 +194,31 @@ router.get(
       if (!payment) {
         return res.status(404).json({ error: 'Payment not found' });
       }
-      
-      return res.json(payment);
+
+      /*
+       * With what it bought.
+       *
+       * The payment row is a total; an administrator looking at €185 needs the
+       * two entries, the membership and the shirt inside it — and a way into
+       * each. Fetched here rather than behind a second endpoint because the
+       * screen has no use for one without the other.
+       *
+       * Scoped by the payment's own organisation, which `byResource` has
+       * already established as one the caller administers.
+       */
+      const [lines, refunds, settlement] = await Promise.all([
+        paymentService.getPaymentLines(id, payment.organisationId),
+        /*
+         * What went back, and how an offline settlement got where it is. Both
+         * belong to the same question the screen is answering — "what happened
+         * to this payment" — and a second round trip for each would leave the
+         * page rendering three times.
+         */
+        paymentService.getRefundsForPayment(id, payment.organisationId),
+        paymentService.getSettlementHistory(id, payment.organisationId),
+      ]);
+
+      return res.json({ ...payment, lines, refunds, settlement });
     } catch (error) {
       logger.error('Error in GET /payments/:id:', error);
       return res.status(500).json({ error: 'Failed to fetch payment' });
@@ -224,7 +279,17 @@ router.post(
   async (req: OrganisationRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { refundAmount, refundReason, requestedBy } = req.body;
+      const { refundAmount, refundReason, scope, lineIds, removeEntries } = req.body;
+
+      /*
+       * Who is asking comes from the token, not the body.
+       *
+       * `refunds.requested_by` is the accountability record for money going
+       * back, and a client-supplied one is a client-supplied answer to "who
+       * authorised this". The screen had never sent it anyway, so every refund
+       * from the interface was refused with a 400 — the button did nothing.
+       */
+      const requestedBy = (req as AuthenticatedRequest).user?.userId;
 
       /*
        * The payment's organisation, established by the guard above — not the
@@ -234,23 +299,37 @@ router.post(
        */
       const organisationId = req.organisationId!;
 
-      if (!refundAmount || !requestedBy) {
-        return res.status(400).json({ 
-          error: 'refundAmount and requestedBy are required' 
-        });
+      if (!requestedBy) {
+        return res.status(401).json({ error: 'User not authenticated' });
       }
 
-      const refund = await paymentService.requestRefund({
+      /*
+       * Only an `amount` refund needs a figure from the caller; every other
+       * scope is worked out from the payment. Kept as a guard here because an
+       * amount-scoped request with no amount is a client bug worth naming, and
+       * the service would otherwise refuse it less clearly.
+       */
+      if ((scope ?? 'amount') === 'amount' && !refundAmount) {
+        return res.status(400).json({ error: 'refundAmount is required' });
+      }
+
+      const outcome = await paymentService.requestRefund({
         paymentId: id,
         organisationId,
         refundAmount,
         refundReason,
         requestedBy,
+        scope,
+        lineIds,
+        removeEntries,
       });
 
-      return res.status(201).json(refund);
+      return res.status(201).json(outcome);
     } catch (error) {
       logger.error('Error in POST /payments/:id/refund:', error);
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       if (error instanceof Error) {
         return res.status(400).json({ error: error.message });
       }

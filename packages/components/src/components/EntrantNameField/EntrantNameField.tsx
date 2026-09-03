@@ -20,6 +20,14 @@ export interface EntrantSuggestion {
   memberId: string | null;
   /** The membership type, or the club it is with. Shown beside the name. */
   detail?: string | null;
+  /**
+   * A membership whose stored answers describe this person.
+   *
+   * Not used by this field — it fills in a name and nothing else — but carried
+   * on the suggestion so the form around it can fill itself in for whoever was
+   * chosen. See `EntryFormPage`.
+   */
+  fillFromMembershipId?: string | null;
 }
 
 /** One person the entry could be for. Mirrors the server's `EntrantCandidate`. */
@@ -30,7 +38,7 @@ export interface EntrantOption {
   membershipNumber?: string | null;
   /** The member's own club — set only when it differs from the host's. */
   organisationName?: string | null;
-  /** Already entered in this activity: shown, but not selectable. */
+  /** Already entered in this activity: said beside the name, still selectable. */
   alreadyEntered?: boolean;
 }
 
@@ -202,7 +210,14 @@ export const EntrantNameField: React.FC<EntrantNameFieldProps> = ({
       filterOptions={(x) => x}
       value={selected}
       inputValue={value.name}
-      getOptionDisabled={(option) => Boolean(option.alreadyEntered)}
+      /*
+       * Nothing is disabled by having been entered.
+       *
+       * An activity may be entered more than once — one rider on two horses is
+       * the ordinary case — so "already entered" is worth *saying* beside the
+       * name and not worth refusing. It was a disabled option, which reads as
+       * "you have made a mistake" for something that is often deliberate.
+       */
       getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
       isOptionEqualToValue={(option, chosen) => option.memberId === chosen.memberId}
       onInputChange={(_event, input, reason) => {

@@ -399,6 +399,67 @@ describe('FulfilmentService', () => {
       );
     });
 
+    /**
+     * Whose membership it is.
+     *
+     * The application asks — "Who is this membership for?" — and the answer
+     * travels on the basket line. Without it every membership took the
+     * **account holder's** name, so a parent joining three children produced
+     * three records all reading "Sam Rivers" and the club could not tell which
+     * card belonged to whom.
+     */
+    it('creates it in the name the application gave', async () => {
+      mockMembership.createMember.mockResolvedValue({ id: 'member-1' } as any);
+      respond([
+        line({
+          item_type: 'membership',
+          context_id: 'mt-1',
+          form_submission_id: 'fs-1',
+          context_ref: { membershipTypeId: 'mt-1', memberName: 'Rónán McGrath' },
+        }),
+      ]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(mockMembership.createMember).toHaveBeenCalledWith(
+        expect.objectContaining({ firstName: 'Rónán', lastName: 'McGrath' })
+      );
+    });
+
+    it('reads the name through a context recorded as a string', async () => {
+      // `context_ref` comes back as a string under some drivers and an object
+      // under others; `?.memberName` on a string is silently undefined.
+      mockMembership.createMember.mockResolvedValue({ id: 'member-1' } as any);
+      respond([
+        line({
+          item_type: 'membership',
+          context_id: 'mt-1',
+          form_submission_id: 'fs-1',
+          context_ref: JSON.stringify({ memberName: 'Éabha McGrath' }),
+        }),
+      ]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(mockMembership.createMember).toHaveBeenCalledWith(
+        expect.objectContaining({ firstName: 'Éabha', lastName: 'McGrath' })
+      );
+    });
+
+    it('falls back to the account holder where the application named nobody', async () => {
+      // An older basket line, from before the application asked.
+      mockMembership.createMember.mockResolvedValue({ id: 'member-1' } as any);
+      respond([
+        line({ item_type: 'membership', context_id: 'mt-1', form_submission_id: 'fs-1' }),
+      ]);
+
+      await service.fulfilPayment('pay-1');
+
+      expect(mockMembership.createMember).toHaveBeenCalledWith(
+        expect.objectContaining({ firstName: 'Sam', lastName: 'Rivers' })
+      );
+    });
+
     it('records a membership-service failure against the line', async () => {
       mockMembership.createMember.mockRejectedValue(new Error('Membership type not found'));
       respond([

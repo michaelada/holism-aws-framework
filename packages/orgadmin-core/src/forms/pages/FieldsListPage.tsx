@@ -6,7 +6,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -181,6 +182,8 @@ const FieldsListPage: React.FC = () => {
     });
   };
 
+  const sort = useTableSort(filteredFields);
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -239,10 +242,18 @@ const FieldsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('forms.fields.table.label')}</TableCell>
-              <TableCell>{t('forms.fields.table.description')}</TableCell>
-              <TableCell>{t('forms.fields.table.type')}</TableCell>
-              <TableCell>{t('forms.fields.table.created')}</TableCell>
+              <SortableTableCell sort={sort} field="label">
+                {t('forms.fields.table.label')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="description">
+                {t('forms.fields.table.description')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="datatype">
+                {t('forms.fields.table.type')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="createdAt">
+                {t('forms.fields.table.created')}
+              </SortableTableCell>
               <TableCell align="right">{t('forms.fields.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -262,7 +273,7 @@ const FieldsListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredFields.map((field) => (
+              sort.rows.map((field) => (
                 <TableRow key={field.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

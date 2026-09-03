@@ -116,6 +116,14 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
    * pages that use it — this is a different *shape* of the same screen, not a
    * second implementation of it.
    */
+  /**
+   * The membership being renewed, where the member arrived from its card.
+   *
+   * Carried on to the application form, which prefills from it. Absent for
+   * somebody browsing the catalogue on its own, who is applying fresh.
+   */
+  const renewingMembership = searchParams.get('renew');
+
   const { eventId } = useParams<{ eventId?: string }>();
   const singleEvent = eventId ? events.find((event) => event.id === eventId) : undefined;
 
@@ -209,10 +217,20 @@ export const BrowsePage: React.FC<BrowsePageProps> = ({ section }) => {
     }
   ) => {
     if (entry.formId || entry.termsAndConditions) {
+      /*
+       * `?renew=` travels with the member from their membership card, through
+       * this catalogue, to the form — so the form knows which membership is
+       * being renewed and can open filled in from it. A parent holds several,
+       * so "the most recent one" would be a guess at whose.
+       */
+      const carryRenewal = entry.kind === 'membership' && renewingMembership
+        ? `?renew=${encodeURIComponent(renewingMembership)}`
+        : '';
+
       navigate(
         entry.kind === 'event'
           ? `/${orgCode}/browse/events/${entry.itemId}/enter`
-          : `/${orgCode}/browse/memberships/${entry.itemId}/apply`
+          : `/${orgCode}/browse/memberships/${entry.itemId}/apply${carryRenewal}`
       );
       return;
     }

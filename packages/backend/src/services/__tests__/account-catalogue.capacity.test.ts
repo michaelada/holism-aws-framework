@@ -288,16 +288,31 @@ describe('AccountCatalogueService — entry holds', () => {
     expect(event.activities[0].unavailableReason).toBe('activity-full');
   });
 
-  it("calls the member's own hold what it is", async () => {
+  /**
+   * A line in the basket no longer closes the activity.
+   *
+   * It used to say "in your basket", which was accurate and was still a
+   * refusal: an activity may be entered more than once, so the member with one
+   * line in the basket is exactly the one adding the second horse. The hold
+   * still takes its place against the cap — that part is capacity, not a rule
+   * about who may enter.
+   */
+  it('leaves the activity open to a member who already holds a place in it', async () => {
+    const [event] = await list([eventRow()], [activityRow()], [holdRow({ user_id: USER })]);
+
+    expect(event.activities[0].available).toBe(true);
+    expect(event.activities[0].unavailableReason).toBeNull();
+  });
+
+  it('still counts that hold against the cap', async () => {
+    // Uncapped above; capped here, so the place it takes is visible.
     const [event] = await list(
       [eventRow()],
-      [activityRow()],
+      [activityRow({ limit_applicants: true, applicants_limit: 1 })],
       [holdRow({ user_id: USER })]
     );
 
-    // Sends them to the basket, where "full" would send them away from an
-    // entry they have already got.
-    expect(event.activities[0].unavailableReason).toBe('in-your-basket');
+    expect(event.activities[0].placesRemaining).toBe(0);
   });
 
   it('counts a quantity of several as several places', async () => {

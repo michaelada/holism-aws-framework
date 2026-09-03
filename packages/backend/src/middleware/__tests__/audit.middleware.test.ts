@@ -162,6 +162,75 @@ describe('finding the row in the response', () => {
   });
 });
 
+/**
+ * An action whose substance is in the reply.
+ *
+ * `values` was given the request alone, which is enough for a report view — the
+ * filters are in the query string — but not for a route whose body is empty and
+ * whose meaning is in what came back. Recording an offline payment as received
+ * is an empty POST; the money, the payer and what the money then created are
+ * all in the response.
+ */
+describe('values composed from the response', () => {
+  it('passes the response body to values', async () => {
+    const res = await run(
+      {
+        action: 'offline-payment.recorded',
+        entityType: 'payment',
+        kind: 'action',
+        values: (_req, after) => ({ payer: after?.userName, amount: after?.amount }),
+      },
+      request({ method: 'POST' } as Partial<Request>)
+    );
+
+    res.json({ id: ID, userName: 'Fionn Doyle', amount: 45 });
+    res.finish();
+
+    expect(lastEvent().changes).toEqual({
+      created: { payer: 'Fionn Doyle', amount: 45 },
+    });
+  });
+
+  it('still records what was sent when values is not given', async () => {
+    // The default is unchanged: the request body.
+    const res = await run(
+      { action: 'payment.method-selected', entityType: 'payment', kind: 'action' },
+      request({ method: 'POST', body: { method: 'cheque' } } as Partial<Request>)
+    );
+
+    res.json({ id: ID });
+    res.finish();
+
+    expect(lastEvent().changes).toEqual({ created: { method: 'cheque' } });
+  });
+
+  it('composes values with no response on the failure path', async () => {
+    /*
+     * A refused action never reaches `res.json`, so `after` is null. The
+     * composer must be allowed to say "nothing worth recording" rather than
+     * being handed a response that does not exist.
+     */
+    const values = jest.fn((_req: Request, after: Record<string, unknown> | null) =>
+      after ? { payer: after.userName } : null
+    );
+
+    const res = await run(
+      { action: 'offline-payment.receipt-undone', entityType: 'payment', kind: 'action', values },
+      request({ method: 'DELETE' } as Partial<Request>)
+    );
+
+    res.json({ error: 'This payment has already produced memberships' });
+    res.finish(400);
+
+    expect(values).toHaveBeenCalledWith(expect.anything(), null);
+    expect(lastEvent()).toMatchObject({
+      outcome: 'failure',
+      changes: null,
+      context: expect.objectContaining({ error: 'This payment has already produced memberships' }),
+    });
+  });
+});
+
 describe('labels', () => {
   it('assembles a person from two columns', async () => {
     mockDb.query.mockResolvedValue({

@@ -12,7 +12,8 @@
  * already approve this person?" without a search.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import {
   Alert,
   Box,
@@ -145,6 +146,17 @@ const RegistrationsPage: React.FC = () => {
     }
   };
 
+  const sort = useTableSort(registrations, {
+    // Oldest waiting first: a queue of people to approve is worked from the
+    // front, and somebody who registered a fortnight ago should not be at the
+    // bottom of it.
+    initial: { field: 'registeredAt', direction: 'asc' },
+    accessors: {
+      name: (registration) =>
+        `${registration.lastName ?? ''} ${registration.firstName ?? ''}`.trim(),
+    },
+  });
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -205,22 +217,32 @@ const RegistrationsPage: React.FC = () => {
               <Table size="small" sx={{ minWidth: 650 }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('users.registrations.columns.name')}</TableCell>
-                    <TableCell>{t('users.registrations.columns.email')}</TableCell>
-                    <TableCell>{t('users.registrations.columns.phone')}</TableCell>
-                    <TableCell>{t('users.registrations.columns.registered')}</TableCell>
+                    <SortableTableCell sort={sort} field="name">
+                      {t('users.registrations.columns.name')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="email">
+                      {t('users.registrations.columns.email')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="phone">
+                      {t('users.registrations.columns.phone')}
+                    </SortableTableCell>
+                    <SortableTableCell sort={sort} field="registeredAt">
+                      {t('users.registrations.columns.registered')}
+                    </SortableTableCell>
                     {status === 'pending' && (
                       <TableCell align="right">
                         {t('users.registrations.columns.actions')}
                       </TableCell>
                     )}
                     {status !== 'pending' && (
-                      <TableCell>{t('users.registrations.columns.status')}</TableCell>
+                      <SortableTableCell sort={sort} field="status">
+                        {t('users.registrations.columns.status')}
+                      </SortableTableCell>
                     )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {registrations.map((registration) => (
+                  {sort.rows.map((registration) => (
                     <TableRow key={registration.id}>
                       <TableCell>
                         {`${registration.firstName} ${registration.lastName}`.trim()}

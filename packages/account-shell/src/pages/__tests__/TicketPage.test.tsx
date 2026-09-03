@@ -78,7 +78,6 @@ const detail = (over: Partial<AccountTicketDetail> = {}): AccountTicketDetail =>
     headerText: 'Admit one',
     instructions: 'Show this at the gate.',
     footerText: 'Registered charity 12345',
-    includeEventLogo: false,
     backgroundColour: null,
   },
   ...over,

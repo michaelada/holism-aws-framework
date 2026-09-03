@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import PaymentsListPage from '../PaymentsListPage';
+import PaymentsListPage, { paymentKinds } from '../PaymentsListPage';
 import * as useApiModule from '../../../hooks/useApi';
 import { renderWithProviders } from '../../../test/renderWithProviders';
 
@@ -32,36 +32,48 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+/*
+ * Named the way the API names a payment.
+ *
+ * These fixtures used to carry `date`, `status`, `type` and `customerName` —
+ * fields the endpoint has never returned. The page's interface claimed the same
+ * shape, so the tests and the code agreed with each other and both disagreed
+ * with the server: every row rendered `Invalid Date` and
+ * `common.status.undefined` in the browser while this suite stayed green.
+ */
 const mockPayments = [
   {
     id: '1',
-    date: '2024-01-15T10:00:00Z',
-    amount: 50.00,
-    status: 'paid' as const,
-    type: 'event' as const,
-    paymentMethod: 'card' as const,
-    customerName: 'John Doe',
-    customerEmail: 'john@example.com',
+    paymentDate: '2024-01-15T10:00:00Z',
+    createdAt: '2024-01-15T09:00:00Z',
+    amount: 50.0,
+    paymentStatus: 'paid',
+    paymentType: 'event',
+    paymentMethod: 'card',
+    userName: 'John Doe',
+    userEmail: 'john@example.com',
   },
   {
     id: '2',
-    date: '2024-01-20T10:00:00Z',
-    amount: 100.00,
-    status: 'pending' as const,
-    type: 'membership' as const,
-    paymentMethod: 'cheque' as const,
-    customerName: 'Jane Smith',
-    customerEmail: 'jane@example.com',
+    paymentDate: '2024-01-20T10:00:00Z',
+    createdAt: '2024-01-20T09:00:00Z',
+    amount: 100.0,
+    paymentStatus: 'pending',
+    paymentType: 'membership',
+    paymentMethod: 'cheque',
+    userName: 'Jane Smith',
+    userEmail: 'jane@example.com',
   },
   {
     id: '3',
-    date: '2024-01-25T10:00:00Z',
-    amount: 75.00,
-    status: 'refunded' as const,
-    type: 'merchandise' as const,
-    paymentMethod: 'card' as const,
-    customerName: 'Bob Johnson',
-    customerEmail: 'bob@example.com',
+    paymentDate: '2024-01-25T10:00:00Z',
+    createdAt: '2024-01-25T09:00:00Z',
+    amount: 75.0,
+    paymentStatus: 'refunded',
+    paymentType: 'merchandise',
+    paymentMethod: 'card',
+    userName: 'Bob Johnson',
+    userEmail: 'bob@example.com',
   },
 ];
 
@@ -162,9 +174,10 @@ describe('PaymentsListPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('15 Jan 2024')).toBeInTheDocument();
-        expect(screen.getByText('20 Jan 2024')).toBeInTheDocument();
-        expect(screen.getByText('25 Jan 2024')).toBeInTheDocument();
+        // With the time: two payments on one day are told apart by nothing else.
+        expect(screen.getByText('15 Jan 2024 10:00')).toBeInTheDocument();
+        expect(screen.getByText('20 Jan 2024 10:00')).toBeInTheDocument();
+        expect(screen.getByText('25 Jan 2024 10:00')).toBeInTheDocument();
       });
     });
 
@@ -271,10 +284,18 @@ describe('PaymentsListPage', () => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
-      const viewButtons = screen.getAllByTitle('View Details');
-      fireEvent.click(viewButtons[0]);
+      /*
+       * Found through the row rather than by position. The list opens sorted
+       * newest first, so "the first view button" is not the first fixture —
+       * and a test that assumes it is fails the day the default order changes
+       * rather than the day navigation breaks.
+       */
+      const row = screen.getByText('John Doe').closest('tr')!;
+      fireEvent.click(within(row).getByTitle('View Details'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/orgadmin/payments/1');
+      // No `/orgadmin` prefix: the router carries it as its basename, and
+      // including it here produced `/orgadmin/orgadmin/payments/1` and a 404.
+      expect(mockNavigate).toHaveBeenCalledWith('/payments/1');
     });
   });
 
@@ -323,5 +344,58 @@ describe('PaymentsListPage', () => {
         expect(screen.getByText(/no payments yet/i)).toBeInTheDocument();
       });
     });
+  });
+});
+
+/**
+ * What a payment was for.
+ *
+ * Everything taken through checkout carries `paymentType: 'cart'`, so the Type
+ * column said "Basket" on every row and told a club nothing about what any of
+ * them bought.
+ */
+describe('the Type column', () => {
+  const t = (key: string, options: { defaultValue: string }) =>
+    ({
+      'payments.itemTypes.event_entry': 'Entry',
+      'payments.itemTypes.membership': 'Membership',
+      'payments.itemTypes.merchandise': 'Shop',
+      'payments.itemTypes.booking': 'Booking',
+      'payments.paymentTypes.cart': 'Basket',
+      'payments.paymentTypes.event': 'Event',
+    })[key] ?? options.defaultValue;
+
+  const payment = (over: Record<string, unknown> = {}) =>
+    ({
+      id: '1',
+      paymentDate: null,
+      createdAt: '2026-08-01T10:00:00Z',
+      amount: 50,
+      paymentStatus: 'paid',
+      paymentType: 'cart',
+      paymentMethod: 'card',
+      userName: null,
+      userEmail: null,
+      ...over,
+    }) as never;
+
+  it('names what a basket held rather than calling it a basket', () => {
+    expect(
+      paymentKinds(payment({ itemTypes: ['event_entry', 'membership', 'merchandise'] }), t)
+    ).toBe('Entry, Membership, Shop');
+  });
+
+  it('names a single-item payment by what it bought', () => {
+    expect(paymentKinds(payment({ itemTypes: ['booking'] }), t)).toBe('Booking');
+  });
+
+  it('falls back to the payment type where there are no lines', () => {
+    // An older row, or one raised by hand: "Basket" is still better than blank.
+    expect(paymentKinds(payment({ itemTypes: [] }), t)).toBe('Basket');
+    expect(paymentKinds(payment({ paymentType: 'event' }), t)).toBe('Event');
+  });
+
+  it('shows an untranslated item type rather than a key path', () => {
+    expect(paymentKinds(payment({ itemTypes: ['donation'] }), t)).toBe('donation');
   });
 });

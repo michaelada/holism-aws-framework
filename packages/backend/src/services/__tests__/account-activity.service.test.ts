@@ -458,6 +458,8 @@ describe('AccountActivityService', () => {
           handlingFee: 75,
           fulfilled: true,
           fulfilmentError: null,
+          fulfilmentRef: 'order-1',
+          subjectName: null,
         },
       ],
       ...over,
@@ -520,6 +522,77 @@ describe('AccountActivityService', () => {
       expect(payment.lines).toEqual([
         expect.objectContaining({ description: 'Club polo — Large', fee: 2750, fulfilled: true }),
       ]);
+    });
+
+    /*
+     * Who each line was for, and what it produced.
+     *
+     * A payment covering a basket — two children entered, a membership
+     * renewed, a shirt — reads as four figures unless each line says who it
+     * was for and leads to the thing it bought. The description alone cannot:
+     * it is composed when the basket is filled, so two children in one class
+     * give two lines reading identically.
+     */
+    it('names who each line was for, and what it produced', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [
+          paymentRow({
+            lines: [
+              { id: 'l-1', itemType: 'event_entry', description: 'Spring League — Class 2', fee: 2500, handlingFee: 0, fulfilled: true, fulfilmentError: null, fulfilmentRef: 'entry-9', subjectName: 'Rónán McGrath' },
+              { id: 'l-2', itemType: 'membership', description: 'Family Membership', fee: 9600, handlingFee: 0, fulfilled: true, fulfilmentError: null, fulfilmentRef: 'member-3', subjectName: 'Conor McGrath' },
+            ],
+          }),
+        ],
+        rowCount: 1,
+      } as any);
+
+      const [payment] = await service.listPayments(ORG, MEMBER);
+
+      expect(payment.lines).toEqual([
+        expect.objectContaining({ subjectName: 'Rónán McGrath', fulfilmentRef: 'entry-9' }),
+        expect.objectContaining({ subjectName: 'Conor McGrath', fulfilmentRef: 'member-3' }),
+      ]);
+    });
+
+    it('reports no name and no record where the line has neither', async () => {
+      mockDb.query.mockResolvedValue({
+        rows: [
+          paymentRow({
+            lines: [
+              { id: 'l-1', itemType: 'merchandise', description: 'Club cap', fee: 1500, handlingFee: 0, fulfilled: false, fulfilmentError: null, fulfilmentRef: null, subjectName: null },
+            ],
+          }),
+        ],
+        rowCount: 1,
+      } as any);
+
+      const [payment] = await service.listPayments(ORG, MEMBER);
+
+      // Null, not an empty string: the screen offers no link rather than a
+      // dead one, and prints no name rather than a blank line.
+      expect(payment.lines[0]).toMatchObject({ subjectName: null, fulfilmentRef: null });
+    });
+
+    /*
+     * The join has to answer per item type.
+     *
+     * `CONCAT_WS` returns an empty string rather than null when every argument
+     * is null, so a `COALESCE` over bare concatenations always picks the first
+     * branch — which made every membership line come back nameless while the
+     * entries looked fine.
+     */
+    it('reads the name from the record each item type produced', async () => {
+      mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+
+      await service.listPayments(ORG, MEMBER);
+
+      const [sql] = mockDb.query.mock.calls[0];
+      const text = String(sql);
+      expect(text).toContain('pt.item_type = \'event_entry\' AND ee.id = pt.fulfilment_ref');
+      expect(text).toContain('pt.item_type = \'membership\' AND mem.id = pt.fulfilment_ref');
+      expect(text).toContain('pt.item_type = \'registration\' AND reg.id = pt.fulfilment_ref');
+      // Each branch nulls its own empty string, or the first would always win.
+      expect(text).toContain("NULLIF(TRIM(CONCAT_WS(' ', mem.first_name, mem.last_name)), '')");
     });
 
     /** Paid for and produced nothing — the member should hear it here. */
@@ -700,6 +773,101 @@ describe('AccountActivityService', () => {
         expect.any(String),
         false
       );
+    });
+  });
+});
+
+/**
+ * What a member answered last time, for prefilling a renewal.
+ *
+ * Renewing gives the club the same address and emergency contact as last
+ * season, and the member was retyping every one of them.
+ */
+describe('membershipFormAnswers', () => {
+  const service = new AccountActivityService();
+
+  beforeEach(() => mockDb.query.mockReset());
+
+  it('returns the answers keyed by field name', async () => {
+    mockDb.query.mockResolvedValue({
+      rows: [
+        {
+          membership_type_id: 'mt-1',
+          first_name: 'Rónán',
+          last_name: 'McGrath',
+          submission_data: { rider_name: 'Rónán McGrath', address_line: '1 Main Street' },
+        },
+      ],
+    } as any);
+
+    const result = await service.membershipFormAnswers(ORG, MEMBER, 'member-9');
+
+    expect(result).toEqual({
+      membershipTypeId: 'mt-1',
+      memberName: 'Rónán McGrath',
+      answers: { rider_name: 'Rónán McGrath', address_line: '1 Main Street' },
+    });
+  });
+
+  it('says who the membership is for, so the form can say so too', async () => {
+    /*
+     * The answers and the name belong together. A renewal form filled in from
+     * Áine's membership under an empty "Who is this membership for?" is a form
+     * that will be submitted for whoever is picked next, over answers that were
+     * hers.
+     */
+    mockDb.query.mockResolvedValue({
+      rows: [
+        {
+          membership_type_id: 'mt-1',
+          first_name: 'Áine',
+          last_name: 'McGrath',
+          submission_data: {},
+        },
+      ],
+    } as any);
+
+    expect((await service.membershipFormAnswers(ORG, MEMBER, 'member-9'))?.memberName).toBe(
+      'Áine McGrath'
+    );
+  });
+
+  it('reports no name rather than an empty one', async () => {
+    // A record with neither name on it: null is a fact the form can act on,
+    // where '' would be filled into the box as a name.
+    mockDb.query.mockResolvedValue({
+      rows: [{ membership_type_id: 'mt-1', first_name: null, last_name: null, submission_data: {} }],
+    } as any);
+
+    expect((await service.membershipFormAnswers(ORG, MEMBER, 'member-9'))?.memberName).toBeNull();
+  });
+
+  /*
+   * Not found and not-yours are the same answer. This returns the contents of
+   * somebody's application form, so confirming that an id is real would be a
+   * way of learning which ids exist.
+   */
+  it('scopes to the caller’s own memberships', async () => {
+    mockDb.query.mockResolvedValue({ rows: [] } as any);
+
+    const result = await service.membershipFormAnswers(ORG, MEMBER, 'member-9');
+
+    expect(result).toBeNull();
+    const [sql, params] = mockDb.query.mock.calls[0];
+    expect(String(sql)).toContain('m.id = $1 AND m.user_id = $2 AND m.organisation_id = $3');
+    expect(params).toEqual(['member-9', MEMBER, ORG]);
+  });
+
+  /* A club that asked nothing, or a submission since removed. */
+  it('reports no answers rather than failing when there is no submission', async () => {
+    mockDb.query.mockResolvedValue({
+      rows: [{ membership_type_id: 'mt-1', submission_data: null }],
+    } as any);
+
+    await expect(service.membershipFormAnswers(ORG, MEMBER, 'member-9')).resolves.toEqual({
+      membershipTypeId: 'mt-1',
+      memberName: null,
+      answers: {},
     });
   });
 });

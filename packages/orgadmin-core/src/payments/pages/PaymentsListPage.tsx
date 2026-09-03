@@ -6,7 +6,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -36,15 +37,72 @@ import {
 import { useApi } from '../../hooks/useApi';
 import { useTranslation, useLocale, useOnboarding, usePageHelp, formatDate } from '@aws-web-framework/orgadmin-shell';
 
+/**
+ * A payment, named the way the API names one.
+ *
+ * This interface used to describe fields the endpoint has never returned —
+ * `date`, `status`, `type`, `customerName`, `customerEmail`. Nothing failed:
+ * TypeScript was told the shape and believed it, so every row rendered
+ * `Invalid Date` from `new Date(undefined)` and looked up
+ * `common.status.undefined`. A hand-written interface over an untyped response
+ * is an assertion, not a check.
+ */
 interface Payment {
   id: string;
-  date: string;
+  /** Set when the money moved. Null on a payment still owed. */
+  paymentDate: string | null;
+  createdAt: string;
   amount: number;
-  status: 'pending' | 'paid' | 'refunded' | 'failed';
-  type: 'event' | 'membership' | 'merchandise' | 'calendar' | 'registration' | 'ticket';
-  paymentMethod: 'card' | 'cheque' | 'offline';
-  customerName: string;
-  customerEmail: string;
+  paymentStatus: string;
+  paymentType: string;
+  paymentMethod: string;
+  userName: string | null;
+  userEmail: string | null;
+  /**
+   * The kinds of thing in the basket, from the payment's lines.
+   *
+   * Absent on an older response; empty on a payment with no lines. Either way
+   * `paymentType` is the fallback.
+   */
+  itemTypes?: string[];
+}
+
+/**
+ * When the payment happened, for display and for filtering.
+ *
+ * `payment_date` is the moment the money moved and is null until it does, so an
+ * unpaid payment falls back to when it was raised — otherwise the row it is
+ * most important to chase is the one with no date on it.
+ */
+const paymentMoment = (payment: Payment): Date =>
+  new Date(payment.paymentDate ?? payment.createdAt);
+
+/**
+ * What a payment was for.
+ *
+ * Everything taken through checkout carries `paymentType: 'cart'` — true, and
+ * useless: the Type column read "Basket" on every row and told a club nothing
+ * about what any of them bought. The basket's own lines do, so the column
+ * names them instead: "Entry, Membership, Shop".
+ *
+ * Falls back to `paymentType` where a payment has no lines — an older row, or
+ * one raised by hand — because "Basket" is still better than a blank.
+ */
+export function paymentKinds(
+  payment: Payment,
+  label: (key: string, options: { defaultValue: string }) => string
+): string {
+  const types = payment.itemTypes ?? [];
+
+  if (types.length === 0) {
+    return label(`payments.paymentTypes.${payment.paymentType}`, {
+      defaultValue: payment.paymentType,
+    });
+  }
+
+  return types
+    .map((type) => label(`payments.itemTypes.${type}`, { defaultValue: type }))
+    .join(', ');
 }
 
 const PaymentsListPage: React.FC = () => {
@@ -61,7 +119,7 @@ const PaymentsListPage: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | Payment['status']>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | Payment['paymentStatus']>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | Payment['paymentMethod']>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -100,7 +158,7 @@ const PaymentsListPage: React.FC = () => {
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(payment => payment.status === statusFilter);
+      filtered = filtered.filter(payment => payment.paymentStatus === statusFilter);
     }
 
     // Apply payment method filter
@@ -110,17 +168,22 @@ const PaymentsListPage: React.FC = () => {
 
     // Apply date range filter
     if (startDate) {
-      filtered = filtered.filter(payment => new Date(payment.date) >= new Date(startDate));
+      filtered = filtered.filter(payment => paymentMoment(payment) >= new Date(startDate));
     }
     if (endDate) {
-      filtered = filtered.filter(payment => new Date(payment.date) <= new Date(endDate));
+      filtered = filtered.filter(payment => paymentMoment(payment) <= new Date(endDate));
     }
 
     setFilteredPayments(filtered);
   };
 
   const handleViewPayment = (paymentId: string) => {
-    navigate(`/orgadmin/payments/${paymentId}`);
+    /*
+      No `/orgadmin` prefix: the router carries it as its basename, so including
+      it here produced `/orgadmin/orgadmin/payments/…` and a 404. Every other
+      page in this package navigates without it.
+    */
+    navigate(`/payments/${paymentId}`);
   };
 
   const handleExportCSV = async () => {
@@ -163,12 +226,12 @@ const PaymentsListPage: React.FC = () => {
       t('payments.table.paymentMethod')
     ];
     const rows = data.map(payment => [
-      formatDate(new Date(payment.date), 'dd MMM yyyy', locale),
-      payment.customerName,
-      payment.customerEmail,
+      formatDate(paymentMoment(payment), 'dd MMM yyyy HH:mm', locale),
+      payment.userName ?? '',
+      payment.userEmail ?? '',
       formatMoney(payment.amount),
-      t(`common.status.${payment.status}`),
-      t(`payments.paymentTypes.${payment.type}`),
+      t(`common.status.${payment.paymentStatus}`),
+      paymentKinds(payment, t),
       payment.paymentMethod,
     ]);
     
@@ -178,7 +241,7 @@ const PaymentsListPage: React.FC = () => {
     ].join('\n');
   };
 
-  const getStatusColor = (status: Payment['status']) => {
+  const getStatusColor = (status: Payment['paymentStatus']) => {
     switch (status) {
       case 'paid':
         return 'success';
@@ -186,12 +249,28 @@ const PaymentsListPage: React.FC = () => {
         return 'warning';
       case 'refunded':
         return 'info';
+      // Money has gone back and some of it has not: neither settled nor spent.
+      case 'partially_refunded':
+        return 'warning';
       case 'failed':
         return 'error';
       default:
         return 'default';
     }
   };
+
+  const sort = useTableSort(filteredPayments, {
+    // Newest first: the question asked of a payment list is almost always
+    // "what has just come in", and the reader can reverse it in one click.
+    initial: { field: 'date', direction: 'desc' },
+    accessors: {
+      // The same moment the cell prints — `paymentMoment` falls back through
+      // the several dates a payment can carry, and sorting a different one
+      // from the one on screen is a list that looks unsorted.
+      date: paymentMoment,
+      type: (payment) => paymentKinds(payment, t),
+    },
+  });
 
   return (
     <Box sx={{ p: 3 }}>
@@ -241,6 +320,9 @@ const PaymentsListPage: React.FC = () => {
                 <MenuItem value="all">{t('payments.statusOptions.all')}</MenuItem>
                 <MenuItem value="pending">{t('payments.statusOptions.pending')}</MenuItem>
                 <MenuItem value="paid">{t('payments.statusOptions.paid')}</MenuItem>
+                <MenuItem value="partially_refunded">
+                  {t('payments.statusOptions.partially_refunded')}
+                </MenuItem>
                 <MenuItem value="refunded">{t('payments.statusOptions.refunded')}</MenuItem>
                 <MenuItem value="failed">{t('payments.statusOptions.failed')}</MenuItem>
               </Select>
@@ -266,12 +348,24 @@ const PaymentsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('payments.table.date')}</TableCell>
-              <TableCell>{t('payments.table.customer')}</TableCell>
-              <TableCell>{t('payments.table.amount')}</TableCell>
-              <TableCell>{t('payments.table.status')}</TableCell>
-              <TableCell>{t('payments.table.type')}</TableCell>
-              <TableCell>{t('payments.table.paymentMethod')}</TableCell>
+              <SortableTableCell sort={sort} field="date">
+                {t('payments.table.date')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="userName">
+                {t('payments.table.customer')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="amount">
+                {t('payments.table.amount')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="paymentStatus">
+                {t('payments.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="type">
+                {t('payments.table.type')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="paymentMethod">
+                {t('payments.table.paymentMethod')}
+              </SortableTableCell>
               <TableCell align="right">{t('payments.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -291,15 +385,22 @@ const PaymentsListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPayments.map((payment) => (
+              sort.rows.map((payment) => (
                 <TableRow key={payment.id} hover>
-                  <TableCell>{formatDate(new Date(payment.date), 'dd MMM yyyy', locale)}</TableCell>
+                  {/*
+                    The time as well as the date. Two payments on one day are
+                    told apart by nothing else, and "when exactly" is the first
+                    question asked of a payment being traced.
+                  */}
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {formatDate(paymentMoment(payment), 'dd MMM yyyy HH:mm', locale)}
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {payment.customerName}
+                      {payment.userName ?? t('payments.unknownPayer')}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      {payment.customerEmail}
+                      {payment.userEmail ?? ''}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -309,12 +410,16 @@ const PaymentsListPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={t(`common.status.${payment.status}`)}
-                      color={getStatusColor(payment.status)}
+                      label={t(`common.status.${payment.paymentStatus}`, {
+                        defaultValue: payment.paymentStatus,
+                      })}
+                      color={getStatusColor(payment.paymentStatus)}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{t(`payments.paymentTypes.${payment.type}`)}</TableCell>
+                  <TableCell>
+                    {paymentKinds(payment, t)}
+                  </TableCell>
                   <TableCell sx={{ textTransform: 'capitalize' }}>
                     {t(`payments.paymentMethodOptions.${payment.paymentMethod}`)}
                   </TableCell>

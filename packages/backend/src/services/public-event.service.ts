@@ -140,7 +140,8 @@ const SELECT = `
          v.latitude, v.longitude,
          o.url_code, o.display_name AS organisation_name,
          COALESCE(o.settings->>'currency', ot.currency) AS currency,
-         (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_id = e.id) AS entry_count
+         (SELECT COUNT(*) FROM event_entries ee
+           WHERE ee.event_id = e.id AND ee.entry_status <> 'removed') AS entry_count
     FROM events e
     JOIN organizations o        ON o.id  = e.organisation_id
     JOIN organization_types ot  ON ot.id = o.organization_type_id
@@ -404,7 +405,8 @@ export class PublicEventService {
     const activities = await db.query(
       `SELECT a.id, a.event_id, a.name, a.description, a.fee,
               a.limit_applicants, a.applicants_limit, a.entry_eligibility,
-              (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_activity_id = a.id)
+              (SELECT COUNT(*) FROM event_entries ee
+                WHERE ee.event_activity_id = a.id AND ee.entry_status <> 'removed')
                 AS entry_count
          FROM event_activities a
         WHERE a.event_id = ANY($1::uuid[])

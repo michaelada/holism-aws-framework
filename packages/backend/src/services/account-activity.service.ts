@@ -184,6 +184,20 @@ export interface AccountPaymentLine {
   fulfilled: boolean;
   /** Why the line produced nothing, when it did not. */
   fulfilmentError: string | null;
+  /**
+   * The id of the record this line produced — an entry, a membership, a
+   * registration, a booking — so a payment can be followed to what it bought.
+   *
+   * Null until the line is fulfilled, which for an offline order is until the
+   * club records the money.
+   */
+  fulfilmentRef: string | null;
+  /**
+   * Who or what the line was for: the entrant's name, the member's, the
+   * horse's. Null where the record it came from has no name of its own, or
+   * where there is no record yet.
+   */
+  subjectName: string | null;
 }
 
 /** `GET /api/account/:orgCode/payments` — screens F1 and F2. */
@@ -617,13 +631,49 @@ export class AccountActivityService {
                       'fee', pt.fee,
                       'handlingFee', pt.handling_fee,
                       'fulfilled', pt.fulfilled_at IS NOT NULL,
-                      'fulfilmentError', pt.fulfilment_error
+                      'fulfilmentError', pt.fulfilment_error,
+                      -- What the line produced, and who it was for. See the
+                      -- joins below.
+                      'fulfilmentRef', pt.fulfilment_ref,
+                      -- NULLIF around each branch, not around the COALESCE:
+                      -- CONCAT_WS returns an empty string rather than NULL when
+                      -- every argument is null, so the first branch would
+                      -- always win and a membership line would come back
+                      -- nameless.
+                      'subjectName', COALESCE(
+                        NULLIF(TRIM(CONCAT_WS(' ', ee.first_name, ee.last_name)), ''),
+                        NULLIF(TRIM(CONCAT_WS(' ', mem.first_name, mem.last_name)), ''),
+                        NULLIF(TRIM(reg.entity_name), ''),
+                        NULLIF(TRIM(bk.booking_reference), '')
+                      )
                     ) ORDER BY pt.created_at
                   ) FILTER (WHERE pt.id IS NOT NULL),
                   '[]'
                 ) AS lines
          FROM payments p
          LEFT JOIN payment_transactions pt ON pt.payment_id = p.id
+         /*
+          * Who each line was for, from the record it created.
+          *
+          * fulfilment_ref is the id fulfilment wrote back when the line
+          * produced something, so it is the only link between a payment and the
+          * thing it bought. Read from the record rather than from the line's
+          * description: a description is composed when the basket is filled and
+          * says what was bought, not who for — four children entered in one
+          * class produce four lines reading the same thing.
+          *
+          * Each join is on a primary key and matches at most one row, so none
+          * of them multiplies the aggregate above. A line whose fulfilment
+          * failed, or whose record has since been deleted, simply has no name.
+          */
+         LEFT JOIN event_entries ee
+                ON pt.item_type = 'event_entry' AND ee.id = pt.fulfilment_ref
+         LEFT JOIN members mem
+                ON pt.item_type = 'membership' AND mem.id = pt.fulfilment_ref
+         LEFT JOIN registrations reg
+                ON pt.item_type = 'registration' AND reg.id = pt.fulfilment_ref
+         LEFT JOIN bookings bk
+                ON pt.item_type = 'booking' AND bk.id = pt.fulfilment_ref
          WHERE p.user_id = $1 AND p.organisation_id = $2
            -- Attempts are not payments. A pending checkout is one a member
            -- opened and has not finished; an abandoned one had its basket
@@ -661,6 +711,16 @@ export class AccountActivityService {
           fee: line.fee ?? 0,
           handlingFee: line.handlingFee ?? 0,
           fulfilled: Boolean(line.fulfilled),
+          /**
+           * The record this line produced, so the screen can link to it.
+           *
+           * Null where the line has not been fulfilled — an offline order the
+           * club has not recorded yet — in which case there is nothing to link
+           * to and the screen says so by not offering one.
+           */
+          fulfilmentRef: line.fulfilmentRef ?? null,
+          /** Who or what it was for: the entrant, the member, the horse. */
+          subjectName: line.subjectName ?? null,
           /*
            * Surfaced to the member on purpose. A line that was paid for and
            * produced nothing is the club's problem to fix, but hiding it means
@@ -752,6 +812,65 @@ export class AccountActivityService {
    * offers a button that leads nowhere; when the first two hold and the third
    * does not, `renewalNotOpen` says so instead.
    */
+  /**
+   * What the member answered when they took out this membership.
+   *
+   * Keyed by field `name`, which is the shape the application form holds its
+   * own values in — so a renewal can open filled in rather than asking a member
+   * to retype an address and an emergency contact that have not changed since
+   * last season.
+   *
+   * Scoped to the caller's own memberships. Not found and not-yours are the
+   * same answer, so this cannot be used to read somebody else's form.
+   */
+  async membershipFormAnswers(
+    organisationId: string,
+    organisationUserId: string,
+    membershipId: string
+  ): Promise<{
+    membershipTypeId: string;
+    /**
+     * Who the membership is for.
+     *
+     * Carried with the answers because the two belong together: a form filled
+     * in from Áine's membership and headed with an empty "Who is this
+     * membership for?" is a form that will be submitted for whoever the member
+     * picks next, over answers that were hers.
+     */
+    memberName: string | null;
+    answers: Record<string, unknown>;
+  } | null> {
+    try {
+      const result = await db.query(
+        `SELECT m.membership_type_id, m.first_name, m.last_name, fs.submission_data
+           FROM members m
+           LEFT JOIN form_submissions fs ON fs.id = m.form_submission_id
+          WHERE m.id = $1 AND m.user_id = $2 AND m.organisation_id = $3`,
+        [membershipId, organisationUserId, organisationId]
+      );
+
+      if (result.rows.length === 0) return null;
+
+      return {
+        membershipTypeId: result.rows[0].membership_type_id,
+        memberName:
+          [result.rows[0].first_name, result.rows[0].last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || null,
+        /*
+         * An empty object where the club asked nothing, or where the
+         * submission has since been removed — the renewal form then opens
+         * blank, which is what it did before and is a working form.
+         */
+        answers: (result.rows[0].submission_data as Record<string, unknown>) ?? {},
+      };
+    } catch (error) {
+      logger.error('Failed to load a membership’s form answers:', error);
+      throw error;
+    }
+  }
+
   async listMemberships(
     organisationId: string,
     organisationUserId: string,

@@ -33,6 +33,8 @@ new entity types need no bespoke components.
 
 | Component | Purpose |
 |---|---|
+| `renderTicketHTML` (`utils/ticketRender`) | A ticket as HTML — printed by the org-admin and previewed by the ticketing settings screen, so what a club approves is what a member receives. Four image placements, three layouts, one-or-two dates, and a **QR panel that is always white** whatever else the club chose. Everything inline: no stylesheet, no web font, no network, because the HTML is written into a print frame and printed a moment later |
+| `AnnouncementCard` | One club announcement — the member's home page and the org-admin's **preview** render this same component, which is what stops a preview drifting from the thing it previews. Three image placements: `header`, `footer`, and `background`, where the card lays a gradient scrim over the picture and writes in white so legibility does not depend on the photograph a club happened to upload |
 | `FieldRenderer` | One field from its definition. Renderers: `TextRenderer`, `NumberRenderer`, `BooleanRenderer`, `DateRenderer`, `SelectRenderer`, `MultiSelectRenderer`, `DocumentUploadRenderer`. `SelectRenderer` and `MultiSelectRenderer` each have two presentations, chosen by `datatypeProperties.displayMode`: radio buttons or a dropdown for one answer, a row of checkboxes or a dropdown for many |
 | `MetadataForm` | A full form from an object definition; `MetadataReadOnlyView` for display |
 | `MetadataTable` | Definition-driven table; `VirtualizedMetadataTable` for large sets |
@@ -156,6 +158,9 @@ separators and a two-digit hour is never suffixed as if it were a day.
 | Question | Start at |
 |---|---|
 | "How is a field of type X rendered?" | `components/FieldRenderer/renderers/` |
+| "Why does a date field say 'Must be a valid date' when one has been picked?" | It did, twice over: an empty date cast to an Invalid Date, and the picker's popover blurs the input *before* the chosen date arrives as a prop. `FieldRenderer` validates through a ref and clears a corrected error without waiting for another blur; the validator treats `''` as unanswered. See [DATE_FIELD_AND_REPEAT_ENTRIES.md](../../docs/DATE_FIELD_AND_REPEAT_ENTRIES.md) |
+| "Why is a form answer showing an ISO date?" | It should not: `formatFormAnswer` renders `date`, `datetime` and `time` answers with the app's own date formatters, from the `datatype` the server now sends alongside each answer. Everything else is already display text |
+| "Why is an already-entered member still selectable?" | Because an activity may be entered more than once — one rider, two horses. `alreadyEntered` is a label beside the name, not a disabled option |
 | "Why is this date '22 Sept' here and '22nd Sept' there?" | `utils/formatting.ts` — ordinals are for deadlines, and only in English and French |
 | "Why does an application-form field render as a text box?" | `utils/applicationField.ts` — its datatype is unmapped, and the fallback is `TextRenderer` |
 | "How do I show a definition-driven form?" | `components/MetadataForm/MetadataForm.tsx` |

@@ -22,6 +22,9 @@ const { execute, organisation } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../hooks/useApi', () => ({ useApi: () => ({ execute }) }));
+
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', () => ({ useNavigate: () => navigate }));
 vi.mock('../../../context/OrganisationContext', () => ({
   useOrganisation: () => ({ organisation }),
 }));
@@ -61,7 +64,7 @@ vi.mock('@aws-web-framework/components', async () => ({
   ),
 }));
 
-import { AuditLogPage } from '../AuditLogPage';
+import { AuditLogPage, auditEntityDestination } from '../AuditLogPage';
 
 const event = (over: Record<string, unknown> = {}) => ({
   id: 'e1',
@@ -74,6 +77,7 @@ const event = (over: Record<string, unknown> = {}) => ({
   action: 'settings.branding-updated',
   outcome: 'success',
   entityType: 'branding-settings',
+  entityId: null,
   entityLabel: 'Branding',
   changes: { primaryColor: { from: '#1976d2', to: '#aa0000' } },
   context: null,
@@ -312,5 +316,128 @@ describe('the detail', () => {
 
     const changes = await screen.findByTestId('changes');
     expect(changes.textContent).toContain('#aa0000');
+  });
+});
+
+/**
+ * Which record an event was about.
+ *
+ * "Offline payment recorded as received — Fionn Doyle, EUR 45.00" still does
+ * not say *which* payment: two settlements of the same amount by the same
+ * member read identically, and the id the event was filed against was never on
+ * the screen at all.
+ */
+describe('the record behind an event', () => {
+  const settlement = (over: Record<string, unknown> = {}) =>
+    event({
+      action: 'offline-payment.recorded',
+      category: 'payments',
+      entityType: 'payment',
+      entityId: '695b04c7-d611-4d1b-aa14-dfcc00017f47',
+      entityLabel: 'Fionn Doyle — EUR 45.00',
+      ...over,
+    });
+
+  const open = async (row: unknown) => {
+    respond({ events: [row], nextCursor: null });
+    render(<AuditLogPage />);
+    fireEvent.click(await screen.findByText('Aoife Byrne'));
+  };
+
+  it('shows the reference, so the event names one record and not a kind', async () => {
+    await open(settlement());
+
+    expect(
+      await screen.findByText(/695b04c7-d611-4d1b-aa14-dfcc00017f47/)
+    ).toBeInTheDocument();
+  });
+
+  it('opens the payment the settlement was about', async () => {
+    await open(settlement());
+
+    /*
+     * The key, not the English: this suite's `t` behaves like i18next with
+     * nothing translated, so a locale-specific label resolves to its
+     * `defaultValue` — itself a key here. What matters is that the button is
+     * offered and where it goes.
+     */
+    fireEvent.click(await screen.findByRole('button', { name: /audit\.viewEntity/ }));
+    expect(navigate).toHaveBeenCalledWith('/payments/695b04c7-d611-4d1b-aa14-dfcc00017f47');
+  });
+
+  it('still shows the reference for a record this app has no page for', async () => {
+    // A capability or a role is a real event about a real thing; it simply has
+    // nowhere to open. The reference is the reader's only handle on it.
+    await open(settlement({ entityType: 'capability', entityLabel: 'Event management' }));
+
+    expect(await screen.findByText(/695b04c7/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /audit\.viewEntity/ })).not.toBeInTheDocument();
+  });
+
+  it('marks a row that has no label with the head of its reference', async () => {
+    // The event recorded before settlements carried a label: the list said
+    // "Offline payment recorded as received" and nothing else.
+    respond({
+      events: [settlement({ entityLabel: null })],
+      nextCursor: null,
+    });
+    render(<AuditLogPage />);
+
+    expect(await screen.findByText('695b04c7')).toBeInTheDocument();
+  });
+
+  it('offers nothing to open when the event names no record', async () => {
+    await open(event({ entityId: null }));
+
+    await screen.findByTestId('changes');
+    expect(screen.queryByRole('button', { name: /audit\.viewEntity/ })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The mapping itself. Two spellings reach it: `audited()` defaults `entityType`
+ * to its `resource` (`merchandiseOrder`), while routes that set it explicitly
+ * use the domain word (`order`).
+ */
+describe('auditEntityDestination', () => {
+  const ID = '695b04c7-d611-4d1b-aa14-dfcc00017f47';
+
+  it('leads to the record for the kinds that have a page', () => {
+    expect(auditEntityDestination('payment', ID)).toBe(`/payments/${ID}`);
+    expect(auditEntityDestination('event', ID)).toBe(`/events/${ID}`);
+    expect(auditEntityDestination('member', ID)).toBe(`/members/${ID}`);
+    expect(auditEntityDestination('membershipType', ID)).toBe(`/members/types/${ID}`);
+    expect(auditEntityDestination('booking', ID)).toBe(`/calendar/bookings/${ID}`);
+  });
+
+  it('accepts both spellings of a merchandise order', () => {
+    expect(auditEntityDestination('merchandiseOrder', ID)).toBe(`/merchandise/orders/${ID}`);
+    expect(auditEntityDestination('order', ID)).toBe(`/merchandise/orders/${ID}`);
+  });
+
+  it('sends the kinds with no page of their own to the list that holds them', () => {
+    expect(auditEntityDestination('venue', ID)).toBe('/events/venues');
+    expect(auditEntityDestination('eventType', ID)).toBe('/events/types');
+  });
+
+  it('opens a registration on its own record', () => {
+    /*
+     * This went to `/users/registrations`, which is the account-user approval
+     * queue — a different thing from the registrations module, which is where
+     * `registration.submitted` and `registration.approved` come from.
+     */
+    expect(auditEntityDestination('registration', ID)).toBe(`/registrations/${ID}`);
+  });
+
+  it('leads nowhere for a kind this app cannot show', () => {
+    expect(auditEntityDestination('capability', ID)).toBeNull();
+    expect(auditEntityDestination(null, ID)).toBeNull();
+  });
+
+  it('refuses an id that is not one', () => {
+    // Some events are filed against a name or a code rather than a uuid, and
+    // `/payments/settings` is a route to nowhere.
+    expect(auditEntityDestination('payment', 'payment-settings')).toBeNull();
+    expect(auditEntityDestination('payment', null)).toBeNull();
   });
 });

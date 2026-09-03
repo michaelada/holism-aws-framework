@@ -23,7 +23,7 @@ groups, roles).
 
 | | |
 |---|---|
-| Organisation type | **Irish Pony Clubs** — EUR, en-GB, 20 capabilities, handling fee €0.25 + 1.5%, platform share €0.30 + 1.5% |
+| Organisation type | **Irish Pony Clubs** — EUR, en-GB, 20 capabilities, handling fee €0.25 + 1.5% **+ 23% VAT**, platform share a flat **€0.60** (Laois negotiated to €0.45) |
 | Organisations | **Kildare Hunt** (`khpc`), **Laois Hunt** (`lhpc`), **Ward Union** (`wupc`) |
 | Logins | 1 super admin, 3 organisation admins, 16 account users across 24 club affiliations |
 | Events | 18, with 41 activities — 15 published publicly |
@@ -533,7 +533,7 @@ and purged. The developer database was not touched.
   happens, so a mistaken re-run costs nothing and leaves nothing behind. (`--reset` deletes
   previously seeded Stripe accounts by their metadata tag, including any stranded by the old
   behaviour.) `--reset` is almost always what you want.
-- **Thirty-seven entries are seeded; payments and carts still are not.** `ENTRIES` in `dataset.ts` names
+- **Thirty-eight entries are seeded, with the payments behind them. Carts still are not.** `ENTRIES` in `dataset.ts` names
   who entered what, and the seed writes them the way `fulfilment.service` does — the names on the
   entry, a `member_id` where a membership stands behind the name, and a form submission wherever the
   activity asks for one. `entry_date` is backdated, which is the one thing a real entry cannot do
@@ -556,7 +556,39 @@ and purged. The developer database was not touched.
   and a fifth for a friend with no login — five distinct names, which is what the "used before" list
   is sized for. See docs/ENTRANT_NAME_SUGGESTIONS.md.
 
-  Payments and carts remain unseeded, so payment screens are still empty until you buy something.
+  **Every entry and every membership carries a `payments` row and a `payment_transactions` line**,
+  the way `checkout.service` writes them — because in this system nothing else can produce an entry.
+  A checkout writes the payment, then `fulfilment.service` writes the entry. A fixture with entries
+  and no payments gave a member an entry marked "Awaiting payment" beside an empty Payments page:
+  two screens disagreeing about one purchase, with nothing wrong in the code.
+
+  **Two of them are baskets.** Most purchases get a payment of their own, but naming a `basket` in
+  the dataset puts several on one — which is what a household actually does:
+
+  | Basket | Lines |
+  |---|---|
+  | `mcgrath-season` (Kildare, €184) | two children entered, the family membership renewed, a hoodie |
+  | `mcnamara-day` (Meath, €98) | an entry, the horse's papers renewed, a show cap |
+
+  A basket settles once, by one method, so every line in one must agree on status and payment
+  method; `database.ts` refuses a basket that mixes them rather than writing a shape the application
+  cannot produce. Payments are written after every other loop for the same reason — a basket holds
+  an entry, a membership and a shop order, and those are created in three different places.
+
+  Every line carries `fulfilment_ref`, the id of the record it produced. That is what lets the
+  member's payment detail name who an entry was for and link through to it.
+
+  **A member's Payments page lists money that moved** — `listPayments` excludes `pending` — so an
+  unpaid entry deliberately does not appear there. Every login therefore has at least one *paid*
+  purchase in every club it belongs to, or the page would be empty in a way that reads as broken.
+  Niamh Walsh at Ward Union is the pair to look at: one entry paid and listed, one awaiting payment
+  and not, which is the distinction made visible.
+
+  **Three shop orders** are seeded too (`SHOP_ORDERS`), only for what they demonstrate: a shirt on a
+  payment beside an entry and a membership. The shop is a module of its own and a fixture of orders
+  is not what this seed is for.
+
+  Carts remain unseeded, so a basket is empty until you put something in it.
 - **Stripe is enabled but not connected.** Kildare and Laois have the Stripe payment method switched
   on, but no Connect account, so a card checkout will hit the "club has not connected a payment
   account" refusal. That is a faithful state — it is what a real club looks like before onboarding —

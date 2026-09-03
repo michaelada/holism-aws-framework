@@ -74,28 +74,52 @@ const BatchTicketOperationsDialog: React.FC<BatchTicketOperationsDialogProps> = 
       setProcessing(true);
       setProgress(0);
 
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      /*
+       * One request per ticket, against the endpoint that exists.
+       *
+       * This asked `POST /tickets/batch-operation`, which has never been a
+       * route — so every batch 404'd, and because `execute` answers `null` on
+       * an error the dialog read `response.success` off nothing and reported a
+       * failure it could not explain. The same fault as the single Mark as
+       * Scanned button, one screen along.
+       *
+       * A loop rather than a new endpoint: the batches are a screenful of
+       * tickets, the work is a single-row update each, and a per-ticket result
+       * is what this dialog already reports. A club marking forty tickets in
+       * one go should be told *which* one failed, which a single call would
+       * have to invent a shape to say.
+       */
+      const errors: Array<{ ticketId: string; error: string }> = [];
+      let processed = 0;
 
-      const response = await execute({
-        method: 'POST',
-        url: '/api/orgadmin/tickets/batch-operation',
-        data: {
-          ticketIds,
-          operation,
-        },
-      });
+      for (const [index, ticketId] of ticketIds.entries()) {
+        try {
+          await execute({
+            method: 'PUT',
+            url: `/api/orgadmin/tickets/${ticketId}/scan-status`,
+            data: {
+              scanStatus: operation === 'mark_scanned' ? 'scanned' : 'not_scanned',
+            },
+            throwOnError: true,
+          });
+          processed += 1;
+        } catch (failure) {
+          errors.push({
+            ticketId,
+            error: failure instanceof Error ? failure.message : 'Failed',
+          });
+        }
+        // Real progress, rather than a bar that climbs to 90% on a timer.
+        setProgress(Math.round(((index + 1) / ticketIds.length) * 100));
+      }
 
-      clearInterval(progressInterval);
       setProgress(100);
+      const response = {
+        success: errors.length === 0,
+        processedCount: processed,
+        failedCount: errors.length,
+        errors,
+      };
       setResult(response);
 
       // Auto-close and complete if successful

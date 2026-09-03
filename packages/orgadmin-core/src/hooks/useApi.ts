@@ -21,6 +21,19 @@ export interface ApiCallOptions extends AxiosRequestConfig {
   onError?: (error: string) => void;
   retryCount?: number; // Number of retries on failure (default: 2)
   retryDelay?: number; // Delay between retries in ms (default: 1000)
+  /**
+   * Throw the failure instead of answering `null`.
+   *
+   * `execute` resolves to `null` on any error and records the message in the
+   * hook's `error`. That suits a screen that loads data — it renders an empty
+   * state and moves on — and it is **wrong for an action**: every
+   * `try { await execute(...) } catch` around a mutation in this codebase is
+   * dead code, and the screen reports success on a refusal. Undoing an offline
+   * receipt said "Undone" while the server was answering 400.
+   *
+   * Opt-in rather than the default, because ~240 call sites read the `null`.
+   */
+  throwOnError?: boolean;
 }
 
 /**
@@ -162,6 +175,7 @@ export function useApi<T = any>() {
       retryDelay = 1000,
       onSuccess,
       onError,
+      throwOnError = false,
       ...axiosOptions
     } = options;
 
@@ -176,8 +190,25 @@ export function useApi<T = any>() {
           ...(axiosOptions.headers as Record<string, string>),
         };
 
-        // Set Content-Type if not already set
-        if (!headers['Content-Type']) {
+        /*
+         * JSON unless the body is a file upload.
+         *
+         * `FormData` has to be sent as `multipart/form-data; boundary=…`, and
+         * only the HTTP client can write that boundary — it is generated with
+         * the body. Forcing `application/json` here produced a request whose
+         * body was multipart and whose header said otherwise, so the server's
+         * parser found no file and answered 400. With `throwOnError` unset that
+         * 400 became `null`, and the screen carried on as though the upload had
+         * worked: an announcement saved with its picture silently missing.
+         *
+         * Left unset rather than set to `multipart/form-data`, because a
+         * boundary-less multipart header is the same bug one step further on.
+         * Axios fills it in correctly from the `FormData` itself.
+         */
+        const isFileUpload =
+          typeof FormData !== 'undefined' && axiosOptions.data instanceof FormData;
+
+        if (!headers['Content-Type'] && !isFileUpload) {
           headers['Content-Type'] = 'application/json';
         }
 
@@ -245,6 +276,12 @@ export function useApi<T = any>() {
     // Call error callback if provided
     if (onError) {
       onError(lastError);
+    }
+
+    // An action's caller asked to hear about it, and carries the server's own
+    // words — which for a refusal are the words the administrator needs.
+    if (throwOnError) {
+      throw new Error(lastError);
     }
 
     return null;

@@ -111,6 +111,9 @@ jobs:
       - name: Run unit tests - Ticketing Module
         run: npm test --workspace=packages/orgadmin-ticketing -- --run
 
+      - name: Run unit tests - Announcements Module
+        run: npm test --workspace=packages/orgadmin-announcements -- --run
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
         with:

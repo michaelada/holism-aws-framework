@@ -41,6 +41,15 @@ export class HelixPayProvider implements PaymentProvider {
     );
   }
 
+  /**
+   * Not implemented: this provider is a stub for a second gateway that was
+   * scoped and never built. `unknown` leaves any payment it is asked about
+   * exactly as the caller found it.
+   */
+  async getPaymentState(): Promise<'authorised' | 'succeeded' | 'failed' | 'pending' | 'unknown'> {
+    return 'unknown';
+  }
+
   async capturePayment(_providerTransactionId: string): Promise<void> {
     throw new PaymentProviderError(
       'Helix Pay is not yet supported for online payment',

@@ -3,7 +3,7 @@ import { logger } from '../config/logger';
 import { checkoutService, CheckoutService } from './checkout.service';
 import { fulfilmentService, FulfilmentService } from './fulfilment.service';
 import { stripeConnectService, StripeConnectService } from './stripe-connect.service';
-import { WebhookEvent } from './payment-providers';
+import { WebhookEvent, paymentProviderRegistry } from './payment-providers';
 
 /**
  * Processing a provider webhook, exactly once.
@@ -49,6 +49,88 @@ export class WebhookService {
     private readonly fulfilment: FulfilmentService = fulfilmentService,
     private readonly connect: StripeConnectService = stripeConnectService
   ) {}
+
+  /**
+   * Bring a payment up to date by **asking** the provider, rather than waiting
+   * to be told.
+   *
+   * A card payment is settled by two webhooks: `amount_capturable_updated`
+   * authorises it, and `succeeded` confirms it and hands out what was bought.
+   * If neither arrives the money is taken and nothing else happens — the member
+   * watches "Confirming your payment", the basket stays full, and the entry or
+   * membership is never created. That is the worst failure this system has, and
+   * until now the only thing that could resolve it was a webhook.
+   *
+   * It happens routinely in development, where Stripe cannot reach a laptop
+   * without `stripe listen`, and it happens in production whenever a webhook is
+   * missed or delayed.
+   *
+   * So the confirmation screen's polling now drives this instead of merely
+   * re-reading a row that nothing is updating. Every step is the same code the
+   * webhook runs and every step is idempotent — `settleAuthorisation` acts only
+   * on a payment still pending or authorised, `confirmPayment` takes a row lock
+   * and returns false if it is already paid — so a webhook arriving in the
+   * middle of this changes nothing.
+   */
+  async reconcilePayment(paymentId: string): Promise<'unchanged' | 'settled' | 'paid' | 'failed'> {
+    const payment = await db.query(
+      `SELECT id, payment_status, payment_provider, provider_transaction_id
+         FROM payments WHERE id = $1`,
+      [paymentId]
+    );
+
+    const row = payment.rows[0];
+    if (!row) return 'unchanged';
+
+    // Only a payment still in flight. Anything settled, refunded or abandoned
+    // is somebody's considered answer and is not re-opened by a page refresh.
+    if (row.payment_status !== 'pending' && row.payment_status !== 'authorised') {
+      return 'unchanged';
+    }
+    if (!row.provider_transaction_id) return 'unchanged';
+
+    const provider = paymentProviderRegistry.get(row.payment_provider);
+    if (!provider) return 'unchanged';
+
+    const state = await provider.getPaymentState(row.provider_transaction_id);
+
+    /*
+     * `authorised` means the money is held and nobody has captured it. Settling
+     * captures it, which makes Stripe's own status `succeeded` — so this
+     * returns and the next poll picks up the confirmation. Two passes rather
+     * than one, because capture is not instant and the alternative is guessing
+     * that it worked.
+     */
+    if (state === 'authorised') {
+      const settlement = await this.checkout.settleAuthorisation(
+        paymentId,
+        row.provider_transaction_id
+      );
+      return settlement === 'captured' ? 'settled' : 'failed';
+    }
+
+    if (state === 'succeeded') {
+      await this.checkout.confirmPayment(paymentId, row.provider_transaction_id);
+
+      /*
+       * Fulfilment runs whether or not this call was the one that confirmed
+       * it: a payment confirmed by a webhook whose fulfilment then failed is
+       * exactly the state worth retrying, and `fulfilPayment` skips lines it
+       * has already delivered.
+       */
+      await this.fulfilment.fulfilPayment(paymentId);
+      return 'paid';
+    }
+
+    if (state === 'failed') {
+      await this.checkout.failPayment(paymentId, 'The payment was declined or cancelled');
+      return 'failed';
+    }
+
+    // `pending` — the member may be mid 3-D Secure — or `unknown`, where the
+    // provider could not be asked. Either way, nothing to act on.
+    return 'unchanged';
+  }
 
   async process(provider: string, event: WebhookEvent): Promise<WebhookProcessResult> {
     /*

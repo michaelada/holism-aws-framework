@@ -177,3 +177,240 @@ the fix back and confirming the test fails — the loop guard reports `expected 
 **Backend**
 - `packages/backend/src/routes/orgadmin-organisation.routes.ts` — `receivedBy` join, organisation selection
 - `packages/backend/src/services/payment.service.ts` — resolve the org-user id for `offline_received_by`
+
+---
+
+# Follow-up: the settlement was missing from the audit log
+
+> I marked a payment as received, which seemed to work, but the audit log shows no record of it.
+> Marking a payment as received, or undoing it, should log a clear message.
+
+The event *was* written — `offline-payment.recorded` was in `audit_events` all along. Three separate
+faults kept it out of the reader's way, or made it worthless once found.
+
+## 1. It was recorded against no organisation
+
+`audited()` scopes an event with `organisationFromRequest(req)`, which reads `req.organisationId` —
+set by `organisation-scope.middleware` on every router that takes the club from the URL.
+
+**This router is the exception.** It resolves the organisation itself, from the caller's token
+narrowed by the `X-Organisation-Id` header (see *choosing the organisation* above), and kept the
+answer in a local variable. So `req.organisationId` was never set, every event it produced was
+written with `organisation_id = NULL`, and the org-admin audit log — which filters on exactly that —
+showed none of them.
+
+```
+ action                    | no_org | count
+---------------------------+--------+-------
+ offline-payment.recorded  | t      |     1
+ settings.organisation-updated | f  |     3
+```
+
+The settings routes escaped it by accident: they PUT the whole organisation, so
+`organisationFromRequest` found an id in the request *body*. An empty POST has nowhere to look.
+
+`withOrganisation` now puts the resolved id on the request before calling the handler, which fixes
+every audited route on this router at once — payment settings, branding, email templates,
+registration settings and the account-user approval queue, as well as these two.
+
+## 2. A receipt and its reversal were the same action
+
+Both routes wrote `offline-payment.recorded`, so an undo was indistinguishable in the log from the
+thing it reversed — and the undo is the entry an auditor is most likely to be hunting for. The
+DELETE now writes **`offline-payment.receipt-undone`**, registered in `AUDIT_ACTIONS`, labelled in
+`packages/components/src/utils/auditLabels.ts` and translated in all six locales.
+
+`offline-payment.recorded` was relabelled *"Offline payment recorded as received"* — "recorded" on
+its own reads as "a payment was recorded", which is the checkout, not the settlement.
+
+## 3. The record said nothing
+
+Both routes take an empty body, and `audited()` records what was *sent*. The entry read:
+
+```
+changes: {"created": {}}
+entity_label: (null)
+```
+
+— an event saying somebody did something to a uuid. What the money was is in the **response**, not
+the request, so `audited()`'s `values` composer now receives the response body as well as the
+request:
+
+```ts
+values?: (req: Request, after: Record<string, unknown> | null) => Record<string, unknown> | null;
+```
+
+Backwards compatible — every existing caller ignores the second argument — and `null` on the failure
+path, where there is no successful response to describe. The two routes compose from it:
+
+| | |
+|---|---|
+| **Label** | `Fionn Doyle — EUR 45.00`, falling back to the email when no name is recorded |
+| **Changes** | `payer`, `amount`, `currency`, `paymentStatus`, `receivedAt`, and — for a receipt — `itemsCreated` / `itemsFailed` |
+
+`itemsFailed` is the reason the fulfilment outcome is in there at all: a settlement that half-worked
+is announced once, in an alert the administrator may close, and afterwards the audit trail is the
+only place that remembers.
+
+A refused undo — one whose receipt has already produced memberships — is recorded as a `failure`
+carrying the refusal as its reason. A rejected reversal is at least as interesting as an accepted
+one.
+
+## The one event already in the database
+
+The receipt recorded before this fix was backfilled with its payment's organisation, so it is
+visible in that club's log. Its label and values stay empty; they were never captured.
+
+## Tests
+
+| Suite | Covers |
+|---|---|
+| `src/routes/__tests__/orgadmin-offline-payments.routes.test.ts` | 6 new: the organisation on the event, the money and the fulfilment outcome in `changes`, the label and its email fallback, the undo as its own action, and a refused undo recorded as a failure |
+| `src/middleware/__tests__/audit.middleware.test.ts` | 3 new: `values` receives the response, the request-body default is unchanged, and `after` is null on the failure path |
+
+## 4. …and the entry still did not say *which* payment
+
+> I see it now, however it is not possible to know what payment it was that was marked as received,
+> or undone.
+
+Right, and the label alone would not have fixed it. "Offline payment recorded as received — Fionn
+Doyle, EUR 45.00" does not identify one payment: a member who pays two cheques of the same amount
+produces two events that read identically. And the id the event *was* filed against —
+`entity_id`, present on every row — **was never shown on the screen at all**. The page's
+`AuditEvent` interface did not even declare the field, though the API had been returning it all
+along.
+
+Three changes to `orgadmin-core/src/audit/pages/AuditLogPage.tsx`:
+
+- **The reference is shown in the detail**, whether or not anything can be opened. A reader can
+  quote it, search on it, or paste it into a URL. That is the minimum a trail owes them, and it is
+  what makes the events recorded *before* this work legible — their labels were never captured and
+  cannot honestly be invented after the fact.
+- **A row with no label is marked with the head of its reference** in the list, so two otherwise
+  identical lines can be told apart while scanning.
+- **`auditEntityDestination(entityType, entityId)`** maps an event to the screen that shows the
+  record, and the detail offers a button to it:
+
+  | Entity type | Opens |
+  |---|---|
+  | `payment` | `/payments/:id` |
+  | `event` | `/events/:id` |
+  | `member`, `membership` | `/members/:id` |
+  | `membershipType` | `/members/types/:id` |
+  | `merchandiseType` | `/merchandise/:id` |
+  | `merchandiseOrder`, `order` | `/merchandise/orders/:id` |
+  | `booking` | `/calendar/bookings/:id` |
+  | `calendar` | `/calendar/:id` |
+  | `applicationForm` | `/forms/:id/edit` |
+  | `eventType`, `venue`, `registration` | the list that holds them — there is no per-record page |
+
+  Both spellings are handled because the trail writes both: `audited()` defaults `entityType` to its
+  `resource` (`merchandiseOrder`), while routes that set it explicitly use the domain word
+  (`order`).
+
+  **Null rather than a guess** for a kind this app cannot show — a capability, a role, a session —
+  and for an `entity_id` that is not a uuid, since a few events are filed against a name or a code
+  and `/payments/payment-settings` is a route to nowhere. No button appears; the reference still
+  does.
+
+New keys `audit.reference` and `audit.viewEntity.*` in all six locales, the latter falling back to
+*"Open this record"* for the kinds with no wording of their own.
+
+Six further tests in `orgadmin-core/src/audit/pages/__tests__/AuditLogPage.test.tsx`: the reference
+on screen, the button leading to the payment, a labelless row marked by its reference, no button for
+a record with no page, no button when the event names no record, and the mapping itself.
+
+---
+
+# Follow-up: "it said Undone, and nothing moved"
+
+> I marked an offline order as received, then clicked Undo. The screen said it was undone, but it did
+> not move back to the Outstanding section.
+
+The audit trail said what the screen would not:
+
+```
+15:43  offline-payment.receipt-undone   failure
+14:52  offline-payment.receipt-undone   failure
+14:52  offline-payment.receipt-undone   failure
+14:50  offline-payment.recorded         success
+```
+
+Three refusals, reported as three successes. Two separate defects.
+
+## 1. `useApi.execute` answers `null` instead of throwing
+
+Every `try { await execute(...) } catch` around a mutation in this codebase is **dead code**. The
+hook records the message in its own `error` state and resolves to `null`; the `catch` never fires,
+and the page runs its success path. That suits a screen that *loads* data — it renders an empty
+state and moves on — and it is wrong for an action.
+
+Changing the default would touch ~240 call sites that read the `null`, so the option is opt-in:
+
+```ts
+await execute({ method: 'DELETE', url: '…/received', throwOnError: true });
+```
+
+It throws the **server's own words**, which for a refusal are the words the administrator needs.
+Applied to the mark-received and undo calls, and to the new buttons on the payment detail.
+
+## 2. The undo refused what the receipt had not created
+
+```sql
+-- was: everything the payment has ever produced
+WHERE pt.payment_id = p.id AND pt.fulfilled_at IS NOT NULL
+```
+
+An entry, a booking and a merchandise order are created **when the order is placed** — that is the
+rule in `fulfilment.service`, and it is deliberate: an offline order might wait weeks for a cheque
+and the member should not be without their entry for all of it. So on the payment in question the
+line had been fulfilled on **24 August** and the receipt on **1 September** released nothing — and
+the undo was refused for records the receipt had not made.
+
+Which made the Undo button a permanent lie for almost every offline order there is.
+
+```sql
+-- now: what this receipt released
+AND pt.fulfilled_at >= p.offline_received_at
+```
+
+A membership or a registration — the two fulfilment defers — is created *by* the receipt, so those
+still refuse the undo, which is the case the rule exists for. The message says so in those terms
+now: *"Recording this payment created memberships, bookings or orders."*
+
+Read back on the payment that failed:
+
+```
+line: event_entry fulfilled 2026-08-24 — before any receipt
+marked received: paid, released 0
+undone:          awaiting_offline, received —
+back on the Outstanding list? true
+```
+
+## Settling from the payment itself
+
+> If I drill into an offline payment, add a "Mark Received" button so the user doesn't have to go to
+> the Offline Payments section.
+
+Both buttons are now on the payment detail, beside Request Refund, calling the same two endpoints:
+
+| Button | Shown when |
+|---|---|
+| **Mark received** | `payment_status = 'awaiting_offline'` — what a finished offline checkout writes, and what the Offline Payments screen selects on, so the two agree about which payments are outstanding |
+| **Undo** | the payment has an `offline_received_at`. Whether the undo is *allowed* is the server's to say, so the button is offered and the refusal is shown in its own words |
+
+The outcome is reported on the page — including a **partial fulfilment as a warning**, which is the
+one an administrator must not skim past: the member has paid and has not got everything.
+
+> The settlement history the same ask mentions was built earlier and is on this page already — the
+> **Offline settlement** card, below "What this paid for": who marked it received or undid it, when,
+> and what the receipt released. It reads the audit trail, and shows successes only; the three
+> refusals above are in the audit log itself, under Failures.
+
+## Tests
+
+| Suite | Covers |
+|---|---|
+| `useApi.test.ts` | `throwOnError` throws the server's message; the default still answers `null`; the error is recorded either way |
+| `payment.offline-received.test.ts` | an undo allowed where the lines were fulfilled before the receipt, and the query scoped to `fulfilled_at >= offline_received_at` |
+| `PaymentDetailsPage.test.tsx` | both buttons and when they appear, the endpoints they call, the refusal shown rather than a claimed success, and the reload afterwards |

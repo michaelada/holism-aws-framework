@@ -1,6 +1,13 @@
 import { PoolClient } from 'pg';
+/*
+ * The cart's own fee arithmetic, not a copy of it. A fixture that computed
+ * handling fees its own way would be a second implementation of the rule the
+ * member is charged by, and the two would drift.
+ */
+import { allocateHandlingFee, calculateHandlingFee } from '../../src/utils/handling-fee';
 import { randomUUID } from 'crypto';
 import { productArtwork } from './artwork';
+import { signTicketCode } from '../../src/services/ticket-token.service';
 import {
   birthDateForAge,
   dateOnly,
@@ -10,6 +17,7 @@ import {
 } from './dates';
 import {
   ACCOUNT_USERS,
+  BOOKINGS,
   DISCOUNTS,
   ENTRIES,
   EVENTS,
@@ -20,6 +28,9 @@ import {
   MEMBERS,
   MEMBERSHIP_TYPES,
   MERCHANDISE,
+  SHOP_ORDERS,
+  REFUNDS,
+  ANNOUNCEMENTS,
   REGISTRATIONS,
   REGISTRATION_TYPES,
   SeedEntry,
@@ -94,12 +105,18 @@ const registrationSubmission = (
 };
 
 const memberSubmission = (member: SeedMember): Record<string, unknown> => {
-  const person = ACCOUNT_USERS.find((u) => u.email === member.email)!;
   const county = { kildare: 'Kildare', laois: 'Laois', ward: 'Meath', meath: 'Meath' }[member.org];
   const junior = member.type === 'junior' || member.type === 'family';
 
+  /*
+   * No `rider_name`. The application carries the name.
+   *
+   * "Who is this membership for?" is answered on the application and travels to
+   * `createMembership` on the basket line; the membership forms no longer have
+   * the field, so answering it here would write an orphan key into
+   * `submission_data` that no form displays.
+   */
   return {
-    rider_name: `${person.firstName} ${person.lastName}`,
     // An age, resolved against the run date. A fixed birth year would quietly
     // turn a junior member into an adult a few seasons from now.
     rider_dob: birthDateForAge(junior ? 13 : 38),
@@ -134,8 +151,16 @@ const memberSubmission = (member: SeedMember): Record<string, unknown> => {
 const entrySubmission = (entry: SeedEntry): Record<string, unknown> => {
   const county = { kildare: 'Kildare', laois: 'Laois', ward: 'Meath', meath: 'Meath' }[entry.org];
 
+  /*
+   * No `rider_name`. The entry carries the name.
+   *
+   * "Who is this entry for?" is answered on the entry itself and written to
+   * `event_entries.first_name` / `last_name`; an entry form that asks again
+   * produces two names for one entrant, never reconciled. The entry forms no
+   * longer have the field, so answering it here would write an orphan key into
+   * `submission_data` that no form displays.
+   */
   return {
-    rider_name: `${entry.firstName} ${entry.lastName}`,
     rider_email: entry.email,
     rider_phone: '+353 87 000 0000',
     pony_name: 'Cloud',
@@ -144,6 +169,58 @@ const entrySubmission = (entry: SeedEntry): Record<string, unknown> => {
     emergency_contact_phone: '+353 87 222 2222',
   };
 };
+
+/**
+ * A payment line, held back until every record it could belong to exists.
+ *
+ * Payments are written last rather than beside the thing they paid for,
+ * because a basket holds several things and they are created in different
+ * loops — an entry here, a membership there, a shop order later. Collecting the
+ * lines and grouping them at the end is what lets one payment cover four of
+ * them, which is what a real basket does and what the payment detail screen
+ * exists to show.
+ *
+ * `basket` is the grouping key. Items that name the same one share a payment;
+ * anything without a shared name gets its own, which is the ordinary case.
+ */
+interface PendingPaymentLine {
+  basket: string;
+  org: SeedOrg['key'];
+  orgUserId: string;
+  itemType: 'event_entry' | 'membership' | 'registration' | 'merchandise' | 'booking';
+  contextId: string;
+  contextRef: Record<string, unknown>;
+  description: string;
+  /** Minor units, as `payment_transactions.fee` holds it. */
+  feeMinor: number;
+  /**
+   * Card or offline, per line rather than per basket.
+   *
+   * A basket can be settled both ways at once — some items paid for now, some
+   * on the day — and the handling fee is charged only on the card side.
+   */
+  isCard: boolean;
+  /**
+   * Whether the item's price already absorbs its handling fee.
+   *
+   * Set on the item, not on the purchase: it is the club's decision about that
+   * product or class. An included item is excluded from the fee-bearing base,
+   * because charging on it bills the member twice.
+   */
+  handlingFeeIncluded: boolean;
+  formSubmissionId: string | null;
+  status: 'paid' | 'pending' | 'refunded';
+  /** When it was bought. Backdates the payment and, where paid, the receipt. */
+  on: Date;
+  /**
+   * The record the line produced.
+   *
+   * Written to `fulfilment_ref`, which is what the member's payment detail
+   * follows to show who an entry was for and to link through to it. A seeded
+   * payment without it is a payment whose lines lead nowhere.
+   */
+  fulfilmentRef: string;
+}
 
 export interface SeedResult {
   orgTypeId: string;
@@ -283,6 +360,7 @@ export async function resetDatabase(client: PoolClient): Promise<Record<string, 
     'application_forms',
     'application_fields',
     // Discounts themselves, now that nothing references them.
+    'organisation_announcements',
     'discounts',
     // Users, roles and the organisations they belong to.
     'user_group_members',
@@ -793,6 +871,14 @@ export async function seedDatabase(
     bump('discounts');
   }
 
+  /**
+   * Every payment line, written after all four loops have run.
+   *
+   * See `PendingPaymentLine`: a basket can hold an entry, a membership and a
+   * shop order, and those are created in different places.
+   */
+  const paymentLines: PendingPaymentLine[] = [];
+
   /* --- events and activities -------------------------------------------- */
   /**
    * Event and activity ids, keyed the way `ENTRIES` names them.
@@ -864,7 +950,8 @@ export async function seedDatabase(
       await client.query(
         `INSERT INTO event_ticketing_config
            (event_id, generate_electronic_tickets, ticket_header_text, ticket_instructions,
-            ticket_footer_text, ticket_validity_period, include_event_logo, ticket_background_color)
+            ticket_footer_text, ticket_validity_period, ticket_background_color,
+            ticket_layout)
          VALUES ($1,TRUE,$2,$3,$4,$5,$6,$7)`,
         [
           eventId,
@@ -872,8 +959,10 @@ export async function seedDatabase(
           event.ticketing.instructions,
           event.ticketing.footerText ?? '',
           event.ticketing.validityPeriod ?? null,
-          event.ticketing.includeLogo ?? false,
           event.ticketing.backgroundColour ?? null,
+          // Absent means the default, which is what every ticket looked like
+          // before a club could choose.
+          event.ticketing.layout ?? 'stacked',
         ]
       );
       bump('event_ticketing_config');
@@ -914,8 +1003,8 @@ export async function seedDatabase(
             limit_applicants, applicants_limit, allow_specify_quantity,
             use_terms_and_conditions, terms_and_conditions, fee,
             allowed_payment_method, handling_fee_included,
-            discount_ids, supported_payment_methods, entry_eligibility)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+            discount_ids, supported_payment_methods, entry_eligibility, tickets_admit)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          RETURNING id`,
         [
           eventId,
@@ -938,6 +1027,7 @@ export async function seedDatabase(
           // Defaulted here rather than relying on the column default, so the
           // seed states what it means for every row it writes.
           activity.entryEligibility ?? 'all',
+          activity.ticketsAdmit ?? 1,
         ]
       );
       activityIds[event.key][activity.name] = ar.rows[0].id as string;
@@ -1128,6 +1218,34 @@ export async function seedDatabase(
     );
     memberRowIds[`${member.org}|${firstName} ${lastName}`] = memberRow.rows[0].id as string;
     bump('members');
+
+    /*
+     * The money behind the membership, collected rather than written now: it
+     * may share a basket with an entry or a shop order created in a later loop.
+     * A membership is bought through a basket like anything else, and a fixture
+     * without the payment left the member's Payments page empty while their
+     * membership said it was paid for.
+     *
+     * A refunded membership keeps a refunded payment rather than none — the
+     * money did move, and a history that omits it is the one shape a member
+     * would query.
+     */
+    paymentLines.push({
+      basket: member.basket ?? `member-${memberRow.rows[0].id}`,
+      org: member.org,
+      orgUserId,
+      itemType: 'membership',
+      contextId: membershipTypeIds[member.org][member.type],
+      contextRef: { membershipTypeId: membershipTypeIds[member.org][member.type] },
+      description: `${type.name} — ${firstName} ${lastName}`,
+      feeMinor: Math.round(type.fee * 100),
+      formSubmissionId: submission.rows[0].id,
+      status: member.paymentStatus,
+      isCard: member.payment === 'stripe',
+      handlingFeeIncluded: type.handlingFeeIncluded ?? false,
+      on: dayOffset(-member.renewedDaysAgo),
+      fulfilmentRef: memberRow.rows[0].id,
+    });
   }
 
   for (const [orgKey, next] of Object.entries(nextNumber)) {
@@ -1203,11 +1321,12 @@ export async function seedDatabase(
       bump('form_submissions');
     }
 
-    await client.query(
+    const entryRow = await client.query(
       `INSERT INTO event_entries
          (event_id, event_activity_id, user_id, first_name, last_name, email,
           form_submission_id, quantity, payment_status, payment_method, member_id, entry_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,1,$8,$9,$10,$11)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,1,$8,$9,$10,$11)
+       RETURNING id`,
       [
         eventId,
         activityId,
@@ -1222,7 +1341,157 @@ export async function seedDatabase(
         dayOffset(-entry.enteredDaysAgo),
       ]
     );
+    const entryId = entryRow.rows[0].id as string;
     bump('event_entries');
+
+    /*
+     * And the money behind it, collected for the same reason: an entry very
+     * often shares a basket with another entry, and did not used to share
+     * anything at all — the fixture wrote entries with no payment behind them,
+     * which is a state the application cannot reach. A checkout writes the
+     * payment; fulfilment then writes the entry.
+     */
+    paymentLines.push({
+      basket: entry.basket ?? `entry-${entryId}`,
+      org: entry.org,
+      orgUserId,
+      itemType: 'event_entry',
+      contextId: activityId,
+      contextRef: { activityId, eventId, entrantName: `${entry.firstName} ${entry.lastName}` },
+      description: `${EVENTS.find((e) => e.key === entry.event)!.name} — ${entry.activity}`,
+      feeMinor: Math.round(activity.fee * 100),
+      formSubmissionId: submissionId,
+      status: entry.paymentStatus,
+      isCard: entry.payment === 'card',
+      handlingFeeIncluded: activity.handlingFeeIncluded ?? false,
+      on: dayOffset(-entry.enteredDaysAgo),
+      fulfilmentRef: entryId,
+    });
+
+    /*
+     * The ticket, where the event issues them.
+     *
+     * Written for **every** entry on a ticketing event, because that is what
+     * `fulfilment.service` does — it calls `issueTicketForEntry` after creating
+     * the entry, and the fixture should not be able to produce an entry the
+     * application would have ticketed and this one did not.
+     *
+     * The reference comes from the same sequence the service uses, so a seeded
+     * ticket and one issued by the running application cannot collide. Validity
+     * mirrors `issueTicketForEntry` too: from the start of the event day —
+     * *not* the moment of issue, or a ticket bought in March reads as
+     * valid-since-March on its face — until the end of the last day plus the
+     * configured period.
+     */
+    const seedEvent = EVENTS.find((e) => e.key === entry.event)!;
+
+    if (entry.ticket && !seedEvent.ticketing) {
+      throw new Error(
+        `Entry for ${entry.firstName} ${entry.lastName} names a ticket state on ` +
+          `"${seedEvent.name}", which issues no tickets. Add a ticketing block to that event, ` +
+          `or drop the ticket state.`
+      );
+    }
+
+    if (seedEvent.ticketing) {
+      const state = entry.ticket?.state ?? 'issued';
+      const validFrom = dayOffset(seedEvent.startDays);
+      validFrom.setHours(0, 0, 0, 0);
+      const validUntil = dayOffset(
+        (seedEvent.endDays ?? seedEvent.startDays) + (seedEvent.ticketing.validityPeriod ?? 0)
+      );
+      validUntil.setHours(23, 59, 59, 999);
+
+      // Scanned on the day, at the gate, rather than at some arbitrary hour.
+      const scannedAt = dayOffset(seedEvent.startDays);
+      scannedAt.setHours(9, 20, 0, 0);
+      const scannedAgain = dayOffset(seedEvent.startDays);
+      scannedAgain.setHours(11, 45, 0, 0);
+
+      const scans = state === 'scanned' ? 1 : state === 'scannedTwice' ? 2 : 0;
+
+      const ticket = await client.query(
+        `INSERT INTO electronic_tickets
+           (ticket_reference, event_id, event_activity_id, event_entry_id, user_id,
+            customer_name, customer_email, issue_date, valid_from, valid_until,
+            scan_status, scan_date, scan_location, scan_count, status, ticket_data,
+            admits, created_at, updated_at)
+         VALUES ('TKT-' || to_char($8::timestamp, 'YYYY') || '-' ||
+                   lpad(nextval('electronic_ticket_reference_seq')::text, 6, '0'),
+                 $1,$2,$3,$4,$5,$6,$7,$9,$10,$11,$12,$13,$14,$15,'{}'::jsonb,
+                 -- Read from the activity rather than passed in, exactly as
+                 -- issueTicketForEntry copies it: a seeded ticket that
+                 -- disagreed with the code's own issue path would be a fixture
+                 -- teaching the wrong thing.
+                 COALESCE((SELECT a.tickets_admit FROM event_activities a WHERE a.id = $2), 1),
+                 $8,$8)
+         RETURNING id, qr_code, event_id, valid_until`,
+        [
+          eventId,
+          activityId,
+          entryId,
+          orgUserId,
+          `${entry.firstName} ${entry.lastName}`,
+          entry.email,
+          dayOffset(-entry.enteredDaysAgo),
+          dayOffset(-entry.enteredDaysAgo),
+          validFrom,
+          validUntil,
+          scans > 0 ? 'scanned' : 'not_scanned',
+          // The most recent scan, which is what the ticket row records.
+          scans === 2 ? scannedAgain : scans === 1 ? scannedAt : null,
+          scans > 0 ? (entry.ticket?.location ?? 'Main gate') : null,
+          scans,
+          state === 'cancelled' ? 'cancelled' : 'issued',
+        ]
+      );
+      bump('electronic_tickets');
+
+      /*
+       * Sign the seeded ticket the way `issueTicketForEntry` signs a real one,
+       * so a developer pointing the scanner at a demo ticket is exercising the
+       * real path. With no key configured this is a no-op and the fixture keeps
+       * its plain identifier — which is exactly what a pre-signing ticket
+       * carries, so that case stays represented too.
+       */
+      {
+        const issued = ticket.rows[0];
+        const token = signTicketCode(issued.qr_code, issued.event_id, issued.valid_until);
+        if (token) {
+          await client.query('UPDATE electronic_tickets SET qr_token = $2 WHERE id = $1', [
+            issued.id,
+            token,
+          ]);
+        }
+      }
+
+      /*
+       * Every scan, not only the last. The ticket row keeps the latest; the
+       * history is what shows a ticket presented twice — which is the whole
+       * point of keeping a history rather than a flag.
+       *
+       * `success` is what the application records for a scan, including a
+       * repeat: `updateTicketScanStatus` writes that value for every scan and
+       * the count is what tells a duplicate from an admission.
+       */
+      for (const [index, at] of [scannedAt, scannedAgain].slice(0, scans).entries()) {
+        await client.query(
+          `INSERT INTO ticket_scan_history
+             (ticket_id, scan_date, scan_location, scanned_by, scan_result, notes, created_at)
+           VALUES ($1,$2,$3,$4,'success',$5,$2)`,
+          [
+            ticket.rows[0].id,
+            at,
+            entry.ticket?.location ?? 'Main gate',
+            orgAdminRowIds[entry.org],
+            index === 0
+              ? 'Ticket scanned successfully'
+              : 'Ticket presented a second time at the gate',
+          ]
+        );
+        bump('ticket_scan_history');
+      }
+    }
   }
 
   /* --- registrations ------------------------------------------------------ */
@@ -1322,12 +1591,13 @@ export async function seedDatabase(
     );
     bump('form_submissions');
 
-    await client.query(
+    const registrationRow = await client.query(
       `INSERT INTO registrations
          (organisation_id, registration_type_id, user_id, registration_number, entity_name,
           owner_name, form_submission_id, date_last_renewed, status, valid_until, labels,
           processed, payment_status, payment_method)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       RETURNING id`,
       [
         orgIds[type.org],
         registrationTypeIds[type.key],
@@ -1346,9 +1616,34 @@ export async function seedDatabase(
       ]
     );
     bump('registrations');
+
+    /*
+     * A registration is bought like anything else, so it carries its payment
+     * too — and can share a basket, which is how a member renewing a horse's
+     * papers alongside an entry looks on the payments screen.
+     */
+    paymentLines.push({
+      basket: registration.basket ?? `registration-${registrationRow.rows[0].id}`,
+      org: type.org,
+      orgUserId,
+      itemType: 'registration',
+      contextId: registrationTypeIds[registration.type],
+      contextRef: { registrationTypeId: registrationTypeIds[registration.type] },
+      description: `${type.name} — ${registration.entityName}`,
+      feeMinor: Math.round(type.fee * 100),
+      formSubmissionId: submission.rows[0].id,
+      status: registration.paymentStatus,
+      isCard: registration.payment === 'stripe',
+      handlingFeeIncluded: type.handlingFeeIncluded ?? false,
+      on: dayOffset(-registration.renewedDaysAgo),
+      fulfilmentRef: registrationRow.rows[0].id,
+    });
   }
 
   /* --- merchandise -------------------------------------------------------- */
+  /** Product ids by `MERCHANDISE` key, so `SHOP_ORDERS` can name what was bought. */
+  const merchandiseIds: Record<string, string> = {};
+
   for (const item of MERCHANDISE) {
     /*
      * A club without the capability must not end up with a shop. The dataset
@@ -1408,6 +1703,7 @@ export async function seedDatabase(
     );
 
     const merchandiseId = r.rows[0].id;
+    merchandiseIds[item.key] = merchandiseId;
     bump('merchandise_types');
 
     await applyDiscounts(client, item.discounts, 'merchandise', merchandiseId, item.org);
@@ -1451,7 +1747,80 @@ export async function seedDatabase(
     }
   }
 
+  /* --- shop orders --------------------------------------------------------- */
+
+  for (const order of SHOP_ORDERS) {
+    const item = MERCHANDISE.find((m) => m.key === order.item);
+    if (!item || item.org !== order.org) {
+      throw new Error(`Shop order names "${order.item}", which ${order.org} does not sell.`);
+    }
+
+    const chosen = item.options
+      .flatMap((option) => option.values.map((value) => ({ option: option.name, ...value })))
+      .find((value) => value.name === order.option);
+    if (!chosen) {
+      throw new Error(
+        `Shop order for "${item.name}" names the option "${order.option}", which it does not offer.`
+      );
+    }
+
+    const orgUserId = accountUserRowIds[order.org]?.[order.email];
+    if (!orgUserId) {
+      throw new Error(
+        `${order.email} ordered from ${order.org} but is not an account user there.`
+      );
+    }
+
+    const subtotal = chosen.price * order.quantity;
+    const orderedOn = dayOffset(-order.orderedDaysAgo);
+
+    const orderRow = await client.query(
+      `INSERT INTO merchandise_orders
+         (organisation_id, merchandise_type_id, user_id, selected_options, quantity,
+          unit_price, subtotal, delivery_fee, total_price, payment_status, payment_method,
+          order_status, order_date, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,0,$7,$8,$9,$10,$11,$11,$11)
+       RETURNING id`,
+      [
+        orgIds[order.org],
+        merchandiseIds[order.item],
+        orgUserId,
+        JSON.stringify({ [chosen.option]: chosen.name }),
+        order.quantity,
+        chosen.price,
+        subtotal,
+        order.paymentStatus,
+        order.payment,
+        order.paymentStatus === 'paid' ? 'paid' : 'pending',
+        orderedOn,
+      ]
+    );
+    bump('merchandise_orders');
+
+    paymentLines.push({
+      basket: order.basket ?? `order-${orderRow.rows[0].id}`,
+      org: order.org,
+      orgUserId,
+      itemType: 'merchandise',
+      contextId: merchandiseIds[order.item],
+      contextRef: { merchandiseTypeId: merchandiseIds[order.item], options: { [chosen.option]: chosen.name } },
+      description:
+        order.quantity > 1
+          ? `${item.name} — ${chosen.name} × ${order.quantity}`
+          : `${item.name} — ${chosen.name}`,
+      feeMinor: Math.round(subtotal * 100),
+      formSubmissionId: null,
+      status: order.paymentStatus,
+      isCard: order.payment === 'card',
+      handlingFeeIncluded: item.handlingFeeIncluded ?? false,
+      on: orderedOn,
+      fulfilmentRef: orderRow.rows[0].id,
+    });
+  }
+
   /* --- calendars ---------------------------------------------------------- */
+  const calendarIds: Record<string, string> = {};
+
   for (const calendar of CALENDARS) {
     if (!capabilitiesFor(ORGS.find((o) => o.key === calendar.org)!).includes('calendar-bookings')) {
       throw new Error(
@@ -1497,6 +1866,7 @@ export async function seedDatabase(
     );
 
     const calendarId = r.rows[0].id;
+    calendarIds[calendar.key] = calendarId;
     bump('calendars');
 
     await applyDiscounts(client, calendar.discounts, 'calendar', calendarId, calendar.org);
@@ -1565,6 +1935,468 @@ export async function seedDatabase(
       );
       bump('schedule_rules');
     }
+  }
+
+  /* --- bookings ----------------------------------------------------------- */
+
+  /*
+   * Bookings members have already made, and the payments they made them on.
+   *
+   * The calendars and their slots were seeded and no booking ever was, so no
+   * payment anywhere carried a `booking` line — the payment screens could not
+   * be checked against one, and neither could the click-through to a booking.
+   *
+   * Written the way `calendar.service.createBooking` writes one: the end time
+   * derived from the start and the duration, the price taken from the duration
+   * option rather than restated, and a `BK-<year>-<n>` reference.
+   */
+  let bookingSequence = 0;
+
+  for (const booking of BOOKINGS) {
+    const calendar = CALENDARS.find((c) => c.key === booking.calendar);
+    if (!calendar || calendar.org !== booking.org) {
+      throw new Error(
+        `Booking for ${booking.email} names calendar "${booking.calendar}", which does not exist ` +
+          `under ${booking.org}.`
+      );
+    }
+
+    const slot = calendar.slots.find((s) => s.startTime === booking.startTime);
+    const duration = slot?.durations.find(([minutes]) => minutes === booking.duration);
+    if (!slot || !duration) {
+      throw new Error(
+        `Booking for ${booking.email} asks for ${booking.startTime} × ${booking.duration}min on ` +
+          `"${calendar.name}", which offers no such slot. A seeded booking outside its own slot is ` +
+          `a state the application cannot produce.`
+      );
+    }
+
+    /*
+     * The nearest day the slot actually runs.
+     *
+     * `daysFromNow` is a target: a fixed offset lands on a different weekday
+     * every time the seed runs, so a booking pinned to one would sit outside
+     * its own slot most days of the week. Searched outwards from the target so
+     * a past booking stays past and a future one stays future.
+     */
+    const direction = booking.daysFromNow < 0 ? -1 : 1;
+    let offset = booking.daysFromNow;
+    for (let step = 0; step < 7; step += 1) {
+      const candidate = dayOffset(offset);
+      if (slot.days.includes(candidate.getDay())) break;
+      offset += direction;
+    }
+
+    const bookedOn = dayOffset(offset);
+    const [durationMinutes, pricePerPlace] = duration;
+    const places = booking.places ?? 1;
+    const total = pricePerPlace * places;
+
+    const [startHours, startMinutes] = booking.startTime.split(':').map(Number);
+    const endTotal = startHours * 60 + startMinutes + durationMinutes;
+    const endTime =
+      `${String(Math.floor(endTotal / 60) % 24).padStart(2, '0')}:` +
+      `${String(endTotal % 60).padStart(2, '0')}`;
+
+    bookingSequence += 1;
+    const reference = `BK-${bookedOn.getFullYear()}-${String(bookingSequence).padStart(6, '0')}`;
+    /*
+     * When it was booked. A fortnight before the slot unless the fixture says
+     * otherwise — two bookings sharing a basket were paid for in one go, so
+     * they cannot have been booked on different days.
+     */
+    const bookedAt = dayOffset(
+      booking.bookedDaysAgo === undefined ? offset - 14 : -booking.bookedDaysAgo
+    );
+
+    const bookingRow = await client.query(
+      `INSERT INTO bookings
+         (booking_reference, calendar_id, user_id, booking_date, start_time, duration, end_time,
+          places_booked, price_per_place, total_price, booking_status, payment_status,
+          payment_method, cancelled_at, cancellation_reason, refund_processed,
+          booked_at, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,false,$16,$16,$16)
+       RETURNING id`,
+      [
+        reference,
+        calendarIds[calendar.key],
+        accountUserRowIds[booking.org][booking.email],
+        dateOnly(offset),
+        booking.startTime,
+        durationMinutes,
+        endTime,
+        places,
+        pricePerPlace,
+        total,
+        booking.status ?? 'confirmed',
+        booking.paymentStatus,
+        booking.payment === 'card' ? 'stripe' : 'pay-offline',
+        booking.status === 'cancelled' ? bookedAt : null,
+        booking.status === 'cancelled'
+          ? 'Cancelled by the member — horse lame, arena released in time.'
+          : null,
+        bookedAt,
+      ]
+    );
+    bump('bookings');
+
+    paymentLines.push({
+      basket: booking.basket ?? `booking-${bookingRow.rows[0].id}`,
+      org: booking.org,
+      orgUserId: accountUserRowIds[booking.org][booking.email],
+      itemType: 'booking',
+      contextId: calendarIds[calendar.key],
+      contextRef: {
+        calendarId: calendarIds[calendar.key],
+        bookingDate: dateOnly(offset),
+        startTime: booking.startTime,
+      },
+      description: `${calendar.name} — ${duration[2]}, ${dateOnly(offset)} ${booking.startTime}`,
+      feeMinor: Math.round(total * 100),
+      isCard: booking.payment === 'card',
+      handlingFeeIncluded: calendar.handlingFeeIncluded ?? false,
+      formSubmissionId: null,
+      status: booking.paymentStatus,
+      on: bookedAt,
+      fulfilmentRef: bookingRow.rows[0].id,
+    });
+  }
+
+  /* --- payments ----------------------------------------------------------- */
+
+  /*
+   * One payment per basket, written last.
+   *
+   * Grouped rather than one-per-item because that is what a basket is: a family
+   * entering two children, renewing a membership and buying a shirt pays once,
+   * and the payment carries a line for each. Written the way
+   * `checkout.service` writes one — the payment, then a `payment_transactions`
+   * line per item — so the member's payment detail has the same shape whether
+   * the row came from a real checkout or from here.
+   *
+   * `fulfilment_ref` is set on every line, which is what lets that screen name
+   * who an entry was for and link through to it.
+   */
+  const baskets = new Map<string, PendingPaymentLine[]>();
+  for (const line of paymentLines) {
+    const key = `${line.org}|${line.orgUserId}|${line.basket}`;
+    baskets.set(key, [...(baskets.get(key) ?? []), line]);
+  }
+
+  /*
+   * The handling fee, as the org type charges it.
+   *
+   * `fixedFee` is stored in major units on the type and read back in minor
+   * ones, so it is converted here the way `organizationTypePaymentFeeService`
+   * converts it. `percentageFee` is a percentage either way.
+   */
+  const feeConfig = {
+    fixedFee: Math.round(ORG_TYPE.handlingFee.fixedFee * 100),
+    percentageFee: ORG_TYPE.handlingFee.percentageFee,
+    taxPercentage: ORG_TYPE.handlingFee.taxPercentage,
+  };
+
+  for (const lines of baskets.values()) {
+    const [first] = lines;
+
+    /*
+     * A basket settles once, so every line shares its status — but **not
+     * necessarily its method**. Some items paid for by card now and some owed
+     * to the club on the day is an ordinary basket, and the one the payment
+     * detail has to be able to explain.
+     */
+    const mixedStatus = lines.find((l) => l.status !== first.status);
+    if (mixedStatus) {
+      throw new Error(
+        `Basket "${first.basket}" mixes payment states: ${first.description} is ` +
+          `${first.status} and ${mixedStatus.description} is ${mixedStatus.status}. ` +
+          `A basket is paid for once.`
+      );
+    }
+
+    /*
+     * The same arithmetic the cart runs, from the same module — not a second
+     * implementation of it. The fee is charged on card lines that do **not**
+     * already absorb it; an included item in the base would bill the member
+     * twice, and a basket of nothing but included items attracts no fee at all,
+     * fixed element included.
+     */
+    const cardLines = lines.filter((l) => l.isCard);
+    const offlineSubtotal = lines
+      .filter((l) => !l.isCard)
+      .reduce((sum, l) => sum + l.feeMinor, 0);
+    const cardSubtotal = cardLines.reduce((sum, l) => sum + l.feeMinor, 0);
+
+    const feeBearing = cardLines.filter((l) => !l.handlingFeeIncluded);
+    const handling = calculateHandlingFee(
+      feeBearing.reduce((sum, l) => sum + l.feeMinor, 0),
+      feeConfig
+    );
+
+    /*
+     * The fee split across the lines that bear it, largest-remainder, so the
+     * parts sum to the total exactly. Same helper the checkout uses.
+     */
+    const allocations = allocateHandlingFee(
+      lines.map((l) => ({
+        id: l.fulfilmentRef,
+        fee: l.feeMinor,
+        paymentMethodId: l.isCard ? 'stripe' : 'pay-offline',
+        isCard: l.isCard,
+        handlingFeeIncluded: l.handlingFeeIncluded,
+      })),
+      handling.total
+    );
+
+    const cardAmount = cardSubtotal + handling.total;
+    const settled = first.status === 'paid' || first.status === 'refunded';
+
+    const payment = await client.query(
+      `INSERT INTO payments
+         (organisation_id, user_id, payment_type, context_id, amount, currency,
+          payment_method, payment_status, payment_date, handling_fee,
+          offline_amount, card_amount, created_at, updated_at)
+       VALUES ($1,$2,'cart',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)
+       RETURNING id`,
+      [
+        orgIds[first.org],
+        first.orgUserId,
+        // The single-line case keeps its context; a basket of several has no
+        // one thing it is "for", and the lines carry that instead.
+        lines.length === 1 ? first.contextId : null,
+        // Major units, like the column; the minor-unit figures sit beside it.
+        (offlineSubtotal + cardAmount) / 100,
+        ORG_TYPE.currency,
+        // What the payment was taken by, which is the card provider wherever
+        // anything at all was taken now. `checkout.service` does the same.
+        cardLines.length > 0 ? 'card' : 'offline',
+        /*
+         * `awaiting_offline`, not `pending`, for money the club is owed.
+         *
+         * `pending` is a *card* payment in flight — a checkout somebody opened
+         * and has not finished — and the application excludes it from both the
+         * member's payment history and the club's offline list, because it is
+         * not an obligation anybody has taken on. An offline order is the
+         * opposite: checkout finished, the cart closed, and the club is waiting
+         * for a cheque. `checkout.service.markAwaitingOfflinePayment` writes
+         * that status, and the club's Offline Payments screen selects on it.
+         *
+         * Seeded as `pending`, these orders existed in neither place.
+         */
+        first.status === 'pending' && !cardLines.length ? 'awaiting_offline' : first.status,
+        settled ? first.on : null,
+        handling.total,
+        offlineSubtotal,
+        cardAmount,
+        first.on,
+      ]
+    );
+    bump('payments');
+
+    for (const line of lines) {
+      await client.query(
+        `INSERT INTO payment_transactions
+           (payment_id, organisation_id, item_type, context_id, context_ref,
+            description, fee, handling_fee, payment_method_id, form_submission_id,
+            status, fulfilled_at, fulfilment_ref, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14)`,
+        [
+          payment.rows[0].id,
+          orgIds[line.org],
+          line.itemType,
+          line.contextId,
+          JSON.stringify(line.contextRef),
+          line.description,
+          line.feeMinor,
+          allocations[line.fulfilmentRef] ?? 0,
+          methodId[line.isCard ? 'stripe' : 'pay-offline'] ?? null,
+          line.formSubmissionId,
+          line.status,
+          /*
+           * The seed creates the entry or membership itself, so every line has
+           * produced something and is marked fulfilled. Real fulfilment defers
+           * memberships and registrations on an unpaid offline order — they
+           * would hand over a year's entitlement before the money arrives — so
+           * that one state is not represented here.
+           */
+          line.on,
+          line.fulfilmentRef,
+          line.on,
+        ]
+      );
+      bump('payment_transactions');
+    }
+
+    /*
+     * What went back out again.
+     *
+     * A refund is a record in its own table, not a status: `refunds` holds the
+     * amount, the reason and the administrator who authorised it, and that is
+     * what both the payment's own history and the Refunds screen read. The
+     * seed used to set a membership payment's status to `refunded` and write
+     * no refund at all, so every one of those screens was empty against data
+     * that claimed a refund had happened.
+     *
+     * Matched by basket where the fixture names one, and otherwise by the
+     * payer — a single-line payment has no basket name of its own, only the
+     * synthetic key given to it here.
+     */
+    const refunds = REFUNDS.filter(
+      (refund) =>
+        refund.org === first.org &&
+        (refund.basket
+          ? refund.basket === first.basket
+          : refund.email !== undefined &&
+            accountUserRowIds[first.org]?.[refund.email] === first.orgUserId &&
+            first.status === 'refunded')
+    );
+
+    let refundedMinor = 0;
+
+    for (const refund of refunds) {
+      const requestedAt = dayOffset(-refund.daysAgo);
+
+      /*
+       * The line a refund of one item is about.
+       *
+       * Matched on the description, narrowed by the entrant where two lines of
+       * a basket read identically — which two children entered in the same
+       * class do. Exactly one must match: a fixture that quietly matched none
+       * would write a refund linked to nothing, which is the state this was
+       * added to fix.
+       */
+      const matched = refund.item
+        ? lines.filter(
+            (line) =>
+              (!refund.item!.description ||
+                line.description.includes(refund.item!.description)) &&
+              (!refund.item!.subject ||
+                String((line.contextRef as { entrantName?: string })?.entrantName ?? '') ===
+                  refund.item!.subject)
+          )
+        : [];
+
+      if (refund.item && matched.length !== 1) {
+        throw new Error(
+          `Refund "${refund.reason}" names an item (${JSON.stringify(refund.item)}) matching ` +
+            `${matched.length} lines of basket "${first.basket}". A refund of one item must name one.`
+        );
+      }
+
+      const [refundedLine] = matched;
+
+      /*
+       * What the member paid for that line: its own fee plus the share of the
+       * handling fee it bore. Taken from the line rather than restated in the
+       * fixture, so the two cannot drift.
+       */
+      const amountMinor = refundedLine
+        ? refundedLine.feeMinor + (allocations[refundedLine.fulfilmentRef] ?? 0)
+        : (refund.amountMinor ?? offlineSubtotal + cardAmount);
+      refundedMinor += amountMinor;
+
+      const refundRow = await client.query(
+        `INSERT INTO refunds
+           (payment_id, organisation_id, refund_amount, refund_reason, refund_status,
+            refund_provider, refund_date, requested_by, requested_at, refund_scope,
+            created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$9,$9)
+         RETURNING id`,
+        [
+          payment.rows[0].id,
+          orgIds[first.org],
+          // Major units, like the column. No amount means the whole payment.
+          amountMinor / 100,
+          refund.reason,
+          refund.status,
+          cardLines.length > 0 ? 'stripe' : null,
+          // A refund that has not been sent has no date, which is what tells
+          // the two states apart on the screen.
+          refund.status === 'completed' ? requestedAt : null,
+          orgAdminRowIds[first.org],
+          requestedAt,
+          /*
+           * How the amount was arrived at. A fixture naming an item is the
+           * `items` scope and is linked to the line below; one naming an amount
+           * is the arbitrary scope; one naming neither is the whole payment.
+           */
+          refundedLine ? 'items' : refund.amountMinor === undefined ? 'full' : 'amount',
+        ]
+      );
+      bump('refunds');
+
+      /*
+       * The link, which is what makes the item itself show as refunded and
+       * stops it being refunded a second time. A seeded refund used to name an
+       * item in its reason and link to nothing, so the screens disagreed: the
+       * refund said the cap had gone back and the cap said it was paid for.
+       */
+      if (refundedLine) {
+        await client.query(
+          `INSERT INTO refund_transactions (refund_id, payment_transaction_id, amount)
+           VALUES ($1, (SELECT id FROM payment_transactions
+                         WHERE payment_id = $2 AND fulfilment_ref = $3), $4)`,
+          [refundRow.rows[0].id, payment.rows[0].id, refundedLine.fulfilmentRef, amountMinor]
+        );
+        bump('refund_transactions');
+      }
+    }
+
+    /*
+     * What the refunds leave the payment as.
+     *
+     * `partially_refunded` is a real status now, and a payment with €25 back
+     * out of €185 is exactly what it is for. Written here rather than in the
+     * fixture so the two cannot disagree: the status follows the money.
+     */
+    if (refundedMinor > 0) {
+      await client.query(
+        `UPDATE payments SET payment_status = $2, updated_at = NOW() WHERE id = $1`,
+        [
+          payment.rows[0].id,
+          refundedMinor >= offlineSubtotal + cardAmount ? 'refunded' : 'partially_refunded',
+        ]
+      );
+    }
+  }
+
+  /* --- announcements ---------------------------------------------------- */
+
+  /*
+   * A club's notices to its members. Only for clubs that have the capability —
+   * writing them for a club without it would seed rows nothing ever reads and
+   * make "no announcements" impossible to demonstrate.
+   *
+   * `created_by` is left null: the seed's administrators exist, but attributing
+   * a notice to one of them says something the fixture does not know, and the
+   * column is nullable precisely because an announcement outlives its author.
+   */
+  for (const announcement of ANNOUNCEMENTS) {
+    const org = ORGS.find((o) => o.key === announcement.org)!;
+    if (!capabilitiesFor(org).includes('org-announcements')) continue;
+
+    await client.query(
+      `INSERT INTO organisation_announcements
+         (organisation_id, title, description, starts_at, ends_at, image_placement,
+          link_label, link_url, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`,
+      [
+        orgIds[announcement.org],
+        announcement.title,
+        announcement.description,
+        dayOffset(announcement.fromDays),
+        dayOffset(announcement.untilDays),
+        /*
+         * Null unless the fixture names a placement, and no fixture does: the
+         * seed writes no S3 objects, and a placement with no image would be a
+         * card claiming a background it has no picture for.
+         */
+        announcement.image ?? null,
+        announcement.link?.label ?? null,
+        announcement.link?.url ?? null,
+      ]
+    );
+    bump('organisation_announcements');
   }
 
   return { orgTypeId, orgIds, superAdminEmail: SUPER_ADMIN.email, counts };

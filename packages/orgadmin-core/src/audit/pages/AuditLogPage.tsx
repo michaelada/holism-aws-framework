@@ -26,6 +26,7 @@ import {
   auditActionLabel,
   auditFieldLabel,
 } from '@aws-web-framework/components';
+import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { useOrganisation } from '../../context/OrganisationContext';
 
@@ -40,9 +41,72 @@ interface AuditEvent {
   action: string;
   outcome: 'success' | 'failure' | 'denied';
   entityType: string | null;
+  entityId: string | null;
   entityLabel: string | null;
   changes: Record<string, unknown> | null;
   context: Record<string, unknown> | null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The record an event is about, opened.
+ *
+ * A trail that says "Offline payment recorded as received — Fionn Doyle, EUR
+ * 45.00" still leaves the reader unable to say *which* payment, and the id it
+ * was recorded against was never shown at all. Two clubs' worth of settlements
+ * a week apart read identically.
+ *
+ * The entity types are the two spellings the trail actually writes: `audited()`
+ * defaults `entityType` to its `resource` (`membershipType`, `merchandiseOrder`)
+ * while the explicit ones read as the domain word (`member`, `order`).
+ *
+ * Null where the app has no screen for that kind of record — a capability, a
+ * role, a session. The reference is shown regardless, so an event is always
+ * identifiable even where it cannot be opened.
+ */
+export function auditEntityDestination(
+  entityType: string | null,
+  entityId: string | null
+): string | null {
+  if (!entityId || !UUID.test(entityId)) return null;
+
+  switch (entityType) {
+    case 'payment':
+      return `/payments/${entityId}`;
+    case 'event':
+      return `/events/${entityId}`;
+    case 'member':
+    case 'membership':
+      return `/members/${entityId}`;
+    case 'membershipType':
+      return `/members/types/${entityId}`;
+    case 'merchandiseType':
+      return `/merchandise/${entityId}`;
+    case 'merchandiseOrder':
+    case 'order':
+      return `/merchandise/orders/${entityId}`;
+    case 'booking':
+      return `/calendar/bookings/${entityId}`;
+    case 'calendar':
+      return `/calendar/${entityId}`;
+    case 'applicationForm':
+      return `/forms/${entityId}/edit`;
+    case 'eventType':
+      return '/events/types';
+    case 'venue':
+      return '/events/venues';
+    case 'registration':
+      /*
+       * The registrations module's own record — `registration.submitted` and
+       * `registration.approved` come from `registration.routes`, which is that
+       * module. `/users/registrations` is a different thing entirely: the
+       * account-user approval queue.
+       */
+      return `/registrations/${entityId}`;
+    default:
+      return null;
+  }
 }
 
 interface FilterOptions {
@@ -109,6 +173,7 @@ export const AuditLogPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { organisation } = useOrganisation();
   const { execute } = useApi<any>();
+  const navigate = useNavigate();
 
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -117,6 +182,10 @@ export const AuditLogPage: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<AuditEvent | null>(null);
+
+  const entityDestination = selected
+    ? auditEntityDestination(selected.entityType, selected.entityId)
+    : null;
 
   /*
    * Names a reader knows, resolved through the translations first.
@@ -303,7 +372,7 @@ export const AuditLogPage: React.FC = () => {
       </Paper>
 
       {failed && (
-        <Alert severity="error" sx={{ mb: 2 }} action={<Button onClick={load}>{t('common.retry')}</Button>}>
+        <Alert severity="error" sx={{ mb: 2 }} action={<Button onClick={load}>{t('common.actions.retry')}</Button>}>
           {t('audit.loadError')}
         </Alert>
       )}
@@ -334,6 +403,17 @@ export const AuditLogPage: React.FC = () => {
         <>
           <Paper>
             <Table size="small">
+              {/*
+                Not sortable, and the only org-admin list that is not.
+
+                The trail is **cursor-paged from the server**, fifty at a time,
+                and what is on screen is the newest fifty of possibly thousands.
+                Sorting those by "Who" would put one name at the top of a table
+                that looks like the whole log and is not — the earliest entry
+                for that person is almost certainly on a page nobody has
+                loaded. The filters above are the honest way to narrow this,
+                because the server applies them to everything.
+              */}
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ width: 150 }}>{t('audit.columns.when')}</TableCell>
@@ -378,9 +458,16 @@ export const AuditLogPage: React.FC = () => {
                           />
                         )}
                       </Stack>
-                      {event.entityLabel && (
+                      {/*
+                        An older event, or one about a record with nothing to
+                        name it, has no label — and the list then said only that
+                        somebody did something. The short reference is enough to
+                        tell two of them apart while scanning; the row opens to
+                        the whole of it.
+                      */}
+                      {(event.entityLabel || event.entityId) && (
                         <Typography variant="caption" color="text.secondary">
-                          {event.entityLabel}
+                          {event.entityLabel ?? event.entityId!.slice(0, 8)}
                         </Typography>
                       )}
                     </TableCell>
@@ -393,7 +480,7 @@ export const AuditLogPage: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             {cursor ? (
               <Button onClick={loadOlder} disabled={loadingMore}>
-                {loadingMore ? t('common.loading') : t('audit.loadOlder')}
+                {loadingMore ? t('common.messages.loading') : t('audit.loadOlder')}
               </Button>
             ) : (
               <Typography variant="caption" color="text.secondary">
@@ -414,10 +501,44 @@ export const AuditLogPage: React.FC = () => {
                 {selected.actorEmail ? ` · ${selected.actorEmail}` : ''} ·{' '}
                 {new Date(selected.occurredAt).toLocaleString()}
               </Typography>
-              {selected.entityLabel && (
-                <Typography variant="body2" color="text.secondary">
-                  {auditFieldLabel(selected.entityType)} · {selected.entityLabel}
-                </Typography>
+              {/*
+                Which record this was about.
+
+                The label alone does not identify one: two settlements of the
+                same amount by the same member read identically, and the id the
+                event was recorded against was never on the screen at all. It is
+                shown here whether or not it can be opened, because a reference
+                the reader can quote is the minimum a trail owes them.
+              */}
+              {(selected.entityLabel || selected.entityId) && (
+                <Stack spacing={0.5}>
+                  {selected.entityLabel && (
+                    <Typography variant="body2" color="text.secondary">
+                      {selected.entityType ? `${auditFieldLabel(selected.entityType)} · ` : ''}
+                      {selected.entityLabel}
+                    </Typography>
+                  )}
+                  {selected.entityId && (
+                    <Typography variant="caption" color="text.secondary">
+                      {t('audit.reference')}: {selected.entityId}
+                    </Typography>
+                  )}
+                  {entityDestination && (
+                    <Box>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setSelected(null);
+                          navigate(entityDestination);
+                        }}
+                      >
+                        {t(`audit.viewEntity.${selected.entityType}`, {
+                          defaultValue: t('audit.viewEntity.default'),
+                        })}
+                      </Button>
+                    </Box>
+                  )}
+                </Stack>
               )}
               <AuditChanges
                 changes={selected.changes}

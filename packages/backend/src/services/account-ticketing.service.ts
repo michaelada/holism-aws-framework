@@ -40,6 +40,12 @@ export interface AccountTicketSummary {
 
 /** Everything screen C10 renders, so the ticket view needs exactly one call. */
 export interface AccountTicketDetail extends AccountTicketSummary {
+  /**
+   * The string the member's QR encodes — a signed token for a ticket issued
+   * since signing, and the bare identifier for one issued before it. Named
+   * `qrCode` because that is what the screen draws; the identifier the ticket
+   * is looked up by is never sent to the member's device.
+   */
   qrCode: string;
   entrantEmail: string;
   validFrom: string | null;
@@ -49,7 +55,6 @@ export interface AccountTicketDetail extends AccountTicketSummary {
     headerText: string | null;
     instructions: string | null;
     footerText: string | null;
-    includeEventLogo: boolean;
     backgroundColour: string | null;
   };
 }
@@ -71,7 +76,7 @@ const STATE_SQL = `
   END`;
 
 const BASE_SELECT = `
-  SELECT t.id, t.ticket_reference, t.qr_code, t.valid_from, t.valid_until,
+  SELECT t.id, t.ticket_reference, t.qr_code, t.qr_token, t.valid_from, t.valid_until,
          t.scan_date, t.customer_name, t.customer_email,
          e.id AS event_id, e.name AS event_name, e.start_date, e.end_date,
          a.name AS activity_name,
@@ -157,7 +162,7 @@ export class AccountTicketingService {
       const extra = await db.query(
         `SELECT o.display_name,
                 c.ticket_header_text, c.ticket_instructions, c.ticket_footer_text,
-                c.include_event_logo, c.ticket_background_color
+                c.ticket_background_color
          FROM events e
          JOIN organizations o ON o.id = e.organisation_id
          LEFT JOIN event_ticketing_config c ON c.event_id = e.id
@@ -169,7 +174,12 @@ export class AccountTicketingService {
 
       return {
         ...toSummary(row),
-        qrCode: row.qr_code,
+        /*
+         * What the member's phone draws. A signed token where the ticket has
+         * one; the bare identifier where it does not, so the screen scans the
+         * same as the ticket already in their inbox.
+         */
+        qrCode: row.qr_token ?? row.qr_code,
         entrantEmail: row.customer_email,
         validFrom: row.valid_from ?? null,
         organisationName: meta.display_name ?? '',
@@ -177,7 +187,6 @@ export class AccountTicketingService {
           headerText: meta.ticket_header_text ?? null,
           instructions: meta.ticket_instructions ?? null,
           footerText: meta.ticket_footer_text ?? null,
-          includeEventLogo: meta.include_event_logo === true,
           backgroundColour: meta.ticket_background_color ?? null,
         },
       };

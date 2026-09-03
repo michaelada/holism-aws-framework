@@ -117,13 +117,27 @@ describe('Feature: membership-discount-integration - Discount Navigation Integra
       // and conditionally render the menu item
     });
 
+    it('should register the usage page the list’s View Usage icon leads to', () => {
+      /*
+       * It navigated to `/members/discounts/:id/stats` from the day the icon
+       * was added, and no module registered that path — so the icon led to Page
+       * Not Found. See docs/DISCOUNT_USAGE_PAGE.md.
+       */
+      const usage = membershipsModule.routes.find(
+        (route) => route.path === 'members/discounts/:id/stats'
+      );
+
+      expect(usage).toBeDefined();
+      expect(usage?.capability).toBe('membership-discounts');
+    });
+
     it('should gate all discount routes with entry-discounts capability', () => {
       // Requirement 1.4: All discount routes should check capability
       const discountRoutes = membershipsModule.routes.filter((route) =>
         route.path.includes('discounts')
       );
 
-      expect(discountRoutes.length).toBe(3); // list, create, edit
+      expect(discountRoutes.length).toBe(4); // list, create, edit, usage
       discountRoutes.forEach((route) => {
         expect(route.capability).toBe('membership-discounts');
       });

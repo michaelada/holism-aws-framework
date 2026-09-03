@@ -10,6 +10,7 @@ import {
   Payment as PaymentIcon,
   AccountBalance as BankIcon,
   ReceiptLong as OfflineIcon,
+  Undo as RefundIcon,
 } from '@mui/icons-material';
 import type { ModuleRegistration } from '../types/module.types';
 
@@ -48,6 +49,10 @@ export const paymentsModule: ModuleRegistration = {
       path: 'payments/offline',
       component: lazy(() => import('./pages/OfflinePaymentsPage')),
     },
+    {
+      path: 'payments/refunds',
+      component: lazy(() => import('./pages/RefundsListPage')),
+    },
   ],
   menuItem: {
     label: 'modules.payments.name',
@@ -81,6 +86,19 @@ export const paymentsModule: ModuleRegistration = {
       icon: OfflineIcon,
     },
     /*
+     * Money that went back out. Its own entry rather than a status filter on
+     * the list above, because the question is about the refunds — how much has
+     * gone back, and who authorised it — and a payments list filtered to
+     * `refunded` answers a different one: it shows the payments, at their
+     * original amounts, and says nothing about a payment only part of which
+     * was returned.
+     */
+    {
+      label: 'payments.refunds.menu',
+      path: '/payments/refunds',
+      icon: RefundIcon,
+    },
+    /*
      * Third, and last, because it is the end of the money's journey: taken,
      * then settled, then lodged. It answers a different question from the two
      * above — not "what did we charge?" but "what actually reached the bank?",
@@ -100,3 +118,4 @@ export { default as PaymentDetailsPage } from './pages/PaymentDetailsPage';
 export { default as LodgementsPage } from './pages/LodgementsPage';
 export { default as LodgementDetailPage } from './pages/LodgementDetailPage';
 export { default as OfflinePaymentsPage } from './pages/OfflinePaymentsPage';
+export { default as RefundsListPage } from './pages/RefundsListPage';

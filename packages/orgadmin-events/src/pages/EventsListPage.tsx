@@ -44,7 +44,13 @@ import {
 } from '@mui/icons-material';
 import { useTranslation, useLocale, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
 import { formatDate } from '@aws-web-framework/orgadmin-shell';
-import { useApi, useOrganisation, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useApi,
+  useOrganisation,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { Event } from '../types/event.types';
 import { useDiscountService } from '../hooks/useDiscountService';
 
@@ -71,6 +77,23 @@ const EventsListPage: React.FC = () => {
   const [eventDiscounts, setEventDiscounts] = useState<Record<string, DiscountSummary[]>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+
+  /*
+   * Sorted after filtering, so the reader's choice of column survives a search
+   * — and so a club looking for "the events with the most entries" gets them
+   * from the rows they can actually see.
+   */
+  const sort = useTableSort(filteredEvents, {
+    accessors: {
+      // Sorted by when the event starts, which is what the column reads as: it
+      // shows a range, and "2–4 September" has no order of its own.
+      startDate: (event) => event.startDate,
+      // Unlimited is not a very large number, and sorting it as one would put
+      // every unlimited event above every capped one. Absent sinks instead.
+      entriesLimit: (event) => (event.limitEntries ? event.entriesLimit : null),
+      discounts: (event) => eventDiscounts[event.id]?.length ?? 0,
+    },
+  });
 
   // Register page for contextual help
   usePageHelp('list');
@@ -332,12 +355,24 @@ const EventsListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>{t('events.table.eventName')}</TableCell>
-              <TableCell>{t('events.table.dates')}</TableCell>
-              <TableCell>{t('events.table.status')}</TableCell>
-              <TableCell align="right">{t('events.table.entries')}</TableCell>
-              <TableCell>{t('events.table.entryLimit')}</TableCell>
-              <TableCell align="center">{t('events.table.hasDiscounts')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('events.table.eventName')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="startDate">
+                {t('events.table.dates')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('events.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="entryCount" align="right">
+                {t('events.table.entries')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="entriesLimit">
+                {t('events.table.entryLimit')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="discounts" align="center">
+                {t('events.table.hasDiscounts')}
+              </SortableTableCell>
               <TableCell align="right">{t('events.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -357,7 +392,7 @@ const EventsListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredEvents.map((event) => (
+              sort.rows.map((event) => (
                 <TableRow key={event.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">

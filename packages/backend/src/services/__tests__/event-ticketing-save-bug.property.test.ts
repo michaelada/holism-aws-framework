@@ -76,7 +76,6 @@ const ticketingPayloadArb = fc.record({
   ticketInstructions: fc.option(fc.string({ minLength: 1, maxLength: 100 }), { nil: undefined }),
   ticketFooterText: fc.option(fc.string({ minLength: 1, maxLength: 50 }), { nil: undefined }),
   ticketValidityPeriod: fc.option(fc.integer({ min: 1, max: 365 }), { nil: undefined }),
-  includeEventLogo: fc.option(fc.boolean(), { nil: undefined }),
   ticketBackgroundColor: fc.option(
     fc.hexaString({ minLength: 6, maxLength: 6 }).map(h => `#${h}`),
     { nil: undefined }
@@ -88,7 +87,6 @@ const ticketingPayloadArb = fc.record({
     || payload.ticketInstructions !== undefined
     || payload.ticketFooterText !== undefined
     || payload.ticketValidityPeriod !== undefined
-    || payload.includeEventLogo !== undefined
     || payload.ticketBackgroundColor !== undefined;
 });
 
@@ -173,7 +171,6 @@ describe('Property 1: Bug Condition — Ticketing Fields Silently Dropped', () =
             ticketInstructions: null,
             ticketFooterText: null,
             ticketValidityPeriod: null,
-            includeEventLogo: false,
             ticketBackgroundColor: null,
           });
           mockUpdateTicketedEvent.mockResolvedValue({

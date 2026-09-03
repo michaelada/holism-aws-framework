@@ -7,7 +7,8 @@
  * configured, so it was unusable.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { ResponsiveTable } from '../../components';
+import { ResponsiveTable, SortableTableCell } from '../../components';
+import { useTableSort } from '../../hooks/useTableSort';
 import {
   Box,
   Button,
@@ -228,6 +229,12 @@ export const UserGroupsPage: React.FC = () => {
     (user) => !members.some((m) => m.organisationUserId === user.id)
   );
 
+  /*
+   * Above the loading return, because a hook after an early return is a hook
+   * that does not always run.
+   */
+  const sort = useTableSort(groups);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -276,14 +283,20 @@ export const UserGroupsPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>{t('users.groups.fields.name')}</TableCell>
-                <TableCell>{t('users.groups.fields.description')}</TableCell>
-                <TableCell align="right">{t('users.groups.fields.members')}</TableCell>
+                <SortableTableCell sort={sort} field="name">
+                  {t('users.groups.fields.name')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="description">
+                  {t('users.groups.fields.description')}
+                </SortableTableCell>
+                <SortableTableCell sort={sort} field="memberCount" align="right">
+                  {t('users.groups.fields.members')}
+                </SortableTableCell>
                 <TableCell align="right">{t('users.groups.fields.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {groups.map((group) => (
+              {sort.rows.map((group) => (
                 <TableRow key={group.id} hover>
                   <TableCell>{group.name}</TableCell>
                   <TableCell>{group.description || '—'}</TableCell>

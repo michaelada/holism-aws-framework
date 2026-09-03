@@ -768,3 +768,588 @@ describe('EntryFormPage', () => {
   });
 
 });
+
+/**
+ * A renewal opens filled in.
+ *
+ * A member renewing gives the club the same address and the same emergency
+ * contact they gave last season, and was retyping every one of them. The
+ * answers come from the membership named in the URL — `?renew=` — because a
+ * parent holds several and "the most recent" is a guess at whose.
+ */
+describe('EntryFormPage — renewing a membership', () => {
+  const FORM = {
+    id: 'form-1',
+    name: 'Membership application',
+    fields: [
+      { id: 'f1', name: 'rider_name', label: 'Rider name', datatype: 'text', order: 1, required: true },
+      { id: 'f2', name: 'address_line', label: 'Address', datatype: 'text', order: 2, required: false },
+    ],
+  };
+
+  // `useParams` is stubbed file-wide to `itemId: 'act-1'`, so the type under
+  // test has to carry that id whatever it is called.
+  const membershipType = { id: 'act-1', name: 'Senior Member', fee: 7500, membershipFormId: 'form-1', termsAndConditions: null, handlingFeeIncluded: false, supportedPaymentMethodIds: ['pm-1'] };
+
+  const respondMembership = (answers: Record<string, unknown> | null) => {
+    mockExecute.mockImplementation((request: { url: string; method?: string }) => {
+      if (request.method === 'POST') return Promise.resolve({ id: 'sub-1' });
+      if (request.url.includes('/form-answers')) {
+        return answers === null
+          ? Promise.reject(new Error('not found'))
+          : Promise.resolve({ membershipTypeId: 'act-1', memberName: null, answers });
+      }
+      if (request.url.includes('/forms/')) return Promise.resolve(FORM);
+      return Promise.resolve([membershipType]);
+    });
+  };
+
+  /**
+   * A household's answers, one set per member, as the endpoints return them.
+   *
+   * `applicant-suggestions` carries the membership each name's answers live on,
+   * which is what lets the form fill itself in again when the applicant
+   * changes.
+   */
+  const respondHousehold = (
+    people: Array<{ membershipId: string; name: string; answers: Record<string, unknown> }>
+  ) => {
+    mockExecute.mockImplementation((request: { url: string; method?: string }) => {
+      if (request.method === 'POST') return Promise.resolve({ id: 'sub-1' });
+      if (request.url.includes('/applicant-suggestions')) {
+        return Promise.resolve({
+          memberships: people.map((person) => ({
+            name: person.name,
+            memberId: null,
+            fillFromMembershipId: person.membershipId,
+            detail: 'Senior Member',
+          })),
+          recent: [{ name: 'Somebody Typed', memberId: null, detail: null }],
+        });
+      }
+      if (request.url.includes('/form-answers')) {
+        const person = people.find((candidate) => request.url.includes(candidate.membershipId));
+        return person
+          ? Promise.resolve({
+              membershipTypeId: 'act-1',
+              memberName: person.name,
+              answers: person.answers,
+            })
+          : Promise.reject(new Error('not found'));
+      }
+      if (request.url.includes('/forms/')) return Promise.resolve(FORM);
+      return Promise.resolve([membershipType]);
+    });
+  };
+
+  const renderRenewal = (query = '?renew=member-9') =>
+    renderWithProviders(<EntryFormPage kind="membership" />, {
+      route: `/khpc/browse/memberships/act-1/apply${query}`,
+      path: '/:orgCode/browse/memberships/:itemId/apply',
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+  });
+
+  it('carries last season’s answers into the form', async () => {
+    respondMembership({ rider_name: 'Rónán McGrath', address_line: '1 Main Street' });
+    renderRenewal();
+
+    expect(await screen.findByDisplayValue('Rónán McGrath')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('1 Main Street')).toBeInTheDocument();
+  });
+
+  it('says where the answers came from, so they get checked', async () => {
+    respondMembership({ rider_name: 'Rónán McGrath' });
+    renderRenewal();
+
+    expect(await screen.findByText(/from your current membership/i)).toBeInTheDocument();
+  });
+
+  /*
+   * Renewing into a *different* type is allowed, and that type may not ask
+   * last season's questions. An answer to a question nobody asked would be
+   * submitted as an orphan.
+   */
+  it('carries only what the chosen type actually asks for', async () => {
+    respondMembership({
+      rider_name: 'Rónán McGrath',
+      pony_name: 'Cloud', // not on this form
+    });
+    renderRenewal();
+
+    await screen.findByDisplayValue('Rónán McGrath');
+    expect(screen.queryByDisplayValue('Cloud')).not.toBeInTheDocument();
+  });
+
+  it('leaves the form blank for a fresh application', async () => {
+    respondMembership({ rider_name: 'Rónán McGrath' });
+    renderRenewal('');
+
+    await screen.findByText('Senior Member');
+    expect(screen.queryByDisplayValue('Rónán McGrath')).not.toBeInTheDocument();
+    expect(screen.queryByText(/from your current membership/i)).not.toBeInTheDocument();
+  });
+
+  it('names who the renewal is for, rather than leaving the question open', async () => {
+    /*
+     * The URL already answers it. An empty "Who is this membership for?" over a
+     * filled-in form leaves answers belonging to nobody in particular — and the
+     * member is asked something they have already said.
+     */
+    mockExecute.mockImplementation((request: { url: string; method?: string }) => {
+      if (request.method === 'POST') return Promise.resolve({ id: 'sub-1' });
+      if (request.url.includes('/form-answers'))
+        return Promise.resolve({
+          membershipTypeId: 'act-1',
+          memberName: 'Áine McGrath',
+          answers: { rider_name: 'Áine McGrath' },
+        });
+      if (request.url.includes('/forms/')) return Promise.resolve(FORM);
+      return Promise.resolve([membershipType]);
+    });
+    renderRenewal();
+
+    expect(await screen.findAllByDisplayValue('Áine McGrath')).not.toHaveLength(0);
+  });
+
+  /* A convenience that fails must not take the form with it. */
+  it('still renders a usable form when the answers cannot be read', async () => {
+    respondMembership(null);
+    renderRenewal();
+
+    expect(await screen.findByLabelText(/Rider name/)).toBeInTheDocument();
+    expect(screen.queryByText(/from your current membership/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Who a membership is for.
+ *
+ * The same field an entry has, and for the same reason: a membership is *for* a
+ * person. Until it existed a club had to put a "Member name" box on its own
+ * form and the answer went nowhere — every membership was created under the
+ * **account holder's** name whatever the form said, so a parent joining three
+ * children produced three records all reading the same thing.
+ *
+ * What it does not do is search the club's roster. An application creates a
+ * membership rather than resolving to one, and other families' names are
+ * neither useful here nor anybody's business.
+ */
+describe('EntryFormPage — who a membership is for', () => {
+  const membershipType = {
+    id: 'act-1',
+    name: 'Senior Member',
+    fee: 7500,
+    membershipFormId: null,
+    termsAndConditions: null,
+    handlingFeeIncluded: false,
+    supportedPaymentMethodIds: ['pm-1'],
+  };
+
+  let suggestions: { memberships: unknown[]; recent: unknown[] } = { memberships: [], recent: [] };
+
+  const respondMembership = () => {
+    mockExecute.mockImplementation((request: { url: string; method?: string }) => {
+      if (request.method === 'POST') return Promise.resolve({ id: 'sub-1' });
+      if (request.url.includes('applicant-suggestions')) return Promise.resolve(suggestions);
+      if (request.url.includes('/forms/')) return Promise.resolve(null);
+      return Promise.resolve([membershipType]);
+    });
+  };
+
+  const renderApplication = () =>
+    renderWithProviders(<EntryFormPage kind="membership" />, {
+      route: '/khpc/browse/memberships/act-1/apply',
+      path: '/:orgCode/browse/memberships/:itemId/apply',
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+    suggestions = { memberships: [], recent: [] };
+  });
+
+  it('asks who the membership is for', async () => {
+    respondMembership();
+    renderApplication();
+
+    expect(await screen.findByLabelText(/Who is this membership for/)).toBeInTheDocument();
+  });
+
+  it('will not add it to the basket unnamed', async () => {
+    // Held at the button rather than refused after the click: a membership with
+    // no name creates a record under the account holder, which is the thing
+    // this field exists to stop.
+    respondMembership();
+    renderApplication();
+
+    expect(await screen.findByRole('button', { name: /add to basket/i })).toBeDisabled();
+  });
+
+  it('says what is missing once the field has been left', async () => {
+    respondMembership();
+    renderApplication();
+
+    const field = await screen.findByLabelText(/Who is this membership for/);
+    await userEvent.click(field);
+    await userEvent.tab();
+
+    expect(
+      await screen.findByText('Enter the name of the person this membership is for.')
+    ).toBeInTheDocument();
+  });
+
+  it('sends the name on the basket line', async () => {
+    respondMembership();
+    renderApplication();
+
+    await userEvent.type(
+      await screen.findByLabelText(/Who is this membership for/),
+      'Rónán McGrath'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /add to basket/i }));
+
+    await waitFor(() =>
+      expect(mockExecute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining('/cart/items'),
+          data: expect.objectContaining({
+            itemType: 'membership',
+            contextRef: { membershipTypeId: 'act-1', memberName: 'Rónán McGrath' },
+          }),
+        })
+      )
+    );
+  });
+
+  it('offers the people this account already holds memberships for', async () => {
+    suggestions = {
+      memberships: [{ name: 'Éabha McGrath', memberId: null, detail: 'Junior Member' }],
+      recent: [{ name: 'Bríd McNamara', memberId: null, detail: null }],
+    };
+    respondMembership();
+    renderApplication();
+
+    // One click rather than retyping the same three children every season.
+    await userEvent.click(await screen.findByRole('button', { name: /Éabha McGrath/ }));
+
+    expect(await screen.findByDisplayValue('Éabha McGrath')).toBeInTheDocument();
+  });
+
+  it('asks its own endpoint for them, not the event one', async () => {
+    respondMembership();
+    renderApplication();
+
+    await screen.findByLabelText(/Who is this membership for/);
+    await waitFor(() =>
+      expect(mockExecute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining(
+            '/catalogue/membership-types/act-1/applicant-suggestions'
+          ),
+        })
+      )
+    );
+    expect(mockExecute).not.toHaveBeenCalledWith(
+      expect.objectContaining({ url: expect.stringContaining('/entrants') })
+    );
+  });
+});
+
+/**
+ * Whose details are these?
+ *
+ * Reported from the product, in three parts. Renewing from the dashboard did
+ * not fill the form in at all, while renewing from My Memberships did.
+ * Choosing a different name on the filled-in form left the first person's
+ * answers on screen — ready to be submitted as somebody else's — and filled in
+ * nothing for the person actually chosen.
+ *
+ * The rule the fix establishes: **the answers on screen belong to the applicant
+ * named above them**, and follow whoever that is.
+ */
+describe('EntryFormPage — the applicant the answers belong to', () => {
+  const FORM = {
+    id: 'form-1',
+    name: 'Membership application',
+    fields: [
+      { id: 'f1', name: 'rider_name', label: 'Rider name', datatype: 'text', order: 1, required: true },
+      { id: 'f2', name: 'address_line', label: 'Address', datatype: 'text', order: 2, required: false },
+    ],
+  };
+
+  const membershipType = { id: 'act-1', name: 'Senior Member', fee: 7500, membershipFormId: 'form-1', termsAndConditions: null, handlingFeeIncluded: false, supportedPaymentMethodIds: ['pm-1'] };
+
+  const HOUSEHOLD = [
+    {
+      membershipId: 'member-9',
+      name: 'Áine McGrath',
+      answers: { rider_name: 'Áine McGrath', address_line: '1 Main Street' },
+    },
+    {
+      membershipId: 'member-4',
+      name: 'Rónán McGrath',
+      answers: { rider_name: 'Rónán McGrath', address_line: '2 Chapel Lane' },
+    },
+  ];
+
+  const respondHousehold = () => {
+    mockExecute.mockImplementation((request: { url: string; method?: string }) => {
+      if (request.method === 'POST') return Promise.resolve({ id: 'sub-1' });
+      if (request.url.includes('/applicant-suggestions')) {
+        return Promise.resolve({
+          memberships: HOUSEHOLD.map((person) => ({
+            name: person.name,
+            memberId: null,
+            fillFromMembershipId: person.membershipId,
+            detail: 'Senior Member',
+          })),
+          recent: [{ name: 'Bríd Typed-In', memberId: null, detail: null }],
+        });
+      }
+      if (request.url.includes('/form-answers')) {
+        const person = HOUSEHOLD.find((candidate) => request.url.includes(candidate.membershipId));
+        return person
+          ? Promise.resolve({
+              membershipTypeId: 'act-1',
+              memberName: person.name,
+              answers: person.answers,
+            })
+          : Promise.reject(new Error('not found'));
+      }
+      if (request.url.includes('/forms/')) return Promise.resolve(FORM);
+      return Promise.resolve([membershipType]);
+    });
+  };
+
+  const renderApplication = (query = '') =>
+    renderWithProviders(<EntryFormPage kind="membership" />, {
+      route: `/khpc/browse/memberships/act-1/apply${query}`,
+      path: '/:orgCode/browse/memberships/:itemId/apply',
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+    respondHousehold();
+  });
+
+  it('fills in the details of the person whose name is chosen', async () => {
+    // "Select a name to fill it in" filled in a name and nothing else, which is
+    // not what a member reads it as — and not what it can usefully mean when
+    // the club already holds that person's answers.
+    renderApplication();
+    await screen.findByLabelText(/Rider name/);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Áine McGrath/ }));
+
+    expect(await screen.findByDisplayValue('1 Main Street')).toBeInTheDocument();
+  });
+
+  it('swaps them when a different person is chosen', async () => {
+    /*
+     * The part that mattered most: Áine's address under Rónán's name would have
+     * been submitted as his.
+     */
+    renderApplication('?renew=member-9');
+    expect(await screen.findByDisplayValue('1 Main Street')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Rónán McGrath/ }));
+
+    expect(await screen.findByDisplayValue('2 Chapel Lane')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('1 Main Street')).not.toBeInTheDocument();
+  });
+
+  it('takes back what it filled in when the applicant has nothing on file', async () => {
+    // A name used once on an entry, or typed freehand: the club holds no
+    // answers for them, so the form must not keep showing somebody else's.
+    renderApplication('?renew=member-9');
+    expect(await screen.findByDisplayValue('1 Main Street')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Bríd Typed-In/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByDisplayValue('1 Main Street')).not.toBeInTheDocument()
+    );
+  });
+
+  it('never throws away what the member typed themselves', async () => {
+    /*
+     * Only the fields the form filled in are taken back. Clearing the lot would
+     * delete a member's own work for the crime of correcting a name.
+     */
+    renderApplication();
+    const address = await screen.findByLabelText(/Address/);
+    await userEvent.type(address, 'Somewhere I typed');
+
+    await userEvent.click(screen.getByRole('button', { name: /Áine McGrath/ }));
+    // Her name reaches both the applicant field and the form's own name field.
+    await waitFor(() => expect(screen.getAllByDisplayValue('Áine McGrath')).toHaveLength(2));
+
+    await userEvent.click(screen.getByRole('button', { name: /Bríd Typed-In/ }));
+
+    await waitFor(() => expect(screen.getByLabelText(/Address/)).toHaveValue('Somewhere I typed'));
+  });
+});
+
+/**
+ * An entry form fills itself in from the rider's membership.
+ *
+ * Reported from the product:
+ *
+ * > I added a membership for Michael Adams, then went to the Tara Hunter Trial
+ * > to enter the Open class. Selecting "Michael Adams — Associate Member" did
+ * > not populate anything. The membership form has "Entrant date of birth" and
+ * > so does the entry form, but it was not filled in.
+ *
+ * The club already holds those answers; asking again for every class of every
+ * event is what this saves. The mechanism existed for membership applications
+ * and simply did not run for entries — and the two are the same question.
+ */
+describe('EntryFormPage — filling an entry from the rider’s membership', () => {
+  const FORM = {
+    id: 'form-1',
+    name: 'Meath Hunt full entry',
+    fields: [
+      { id: 'f1', name: 'rider_dob', label: 'Entrant date of birth', datatype: 'text', order: 1, required: false },
+      { id: 'f2', name: 'pony_name', label: 'Pony name', datatype: 'text', order: 2, required: false },
+    ],
+  };
+
+  const MEMBERS = {
+    'member-mick': {
+      memberName: 'Michael Adams',
+      answers: { rider_dob: '1979-04-02', county: 'Meath' },
+    },
+    'member-ronan': {
+      memberName: 'Rónán McGrath',
+      answers: { rider_dob: '2013-04-18' },
+    },
+  } as const;
+
+  const respondEntry = () => {
+    mockExecute.mockImplementation((request: { url: string; method?: string }) => {
+      if (request.method === 'POST' && request.url.includes('form-submissions')) {
+        return Promise.resolve({ id: 'sub-1' });
+      }
+      if (request.method === 'POST') return Promise.resolve({});
+      if (request.url.includes('/entrant-suggestions')) {
+        return Promise.resolve({
+          memberships: [
+            { name: 'Michael Adams', memberId: 'member-mick', detail: 'Associate Member' },
+            { name: 'Rónán McGrath', memberId: 'member-ronan', detail: 'Junior Member' },
+          ],
+          recent: [{ name: 'Bríd Typed-In', memberId: null, detail: null }],
+        });
+      }
+      if (request.url.includes('/entrants')) return Promise.resolve(entrants);
+      if (request.url.includes('/form-answers')) {
+        const member = Object.entries(MEMBERS).find(([id]) => request.url.includes(id));
+        return member
+          ? Promise.resolve({ membershipTypeId: 'mt-1', ...member[1] })
+          : Promise.reject(new Error('not found'));
+      }
+      if (request.url.includes('/forms/')) return Promise.resolve(FORM);
+      return Promise.resolve([eventWith(activity({ applicationFormId: 'form-1' }))]);
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contextValue = makeOrganisationContext();
+    entrants = { autocomplete: false, allowFreeText: true, matches: [] };
+    respondEntry();
+  });
+
+  it('fills the entry form from the member chosen', async () => {
+    // The reported case, in miniature: a date of birth the club already holds.
+    render();
+    await screen.findByLabelText(/Entrant date of birth/);
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+
+    expect(await screen.findByDisplayValue('1979-04-02')).toBeInTheDocument();
+  });
+
+  it('asks the membership named on the suggestion', async () => {
+    render();
+    await screen.findByLabelText(/Entrant date of birth/);
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+
+    await waitFor(() =>
+      expect(mockExecute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining('/memberships/member-mick/form-answers'),
+        })
+      )
+    );
+  });
+
+  it('carries only what this entry form actually asks', async () => {
+    /*
+     * A membership application asks things an entry does not — a county, a
+     * guardian's phone. An answer to a question nobody asked would be submitted
+     * as an orphan.
+     */
+    render();
+    await screen.findByLabelText(/Entrant date of birth/);
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+    await screen.findByDisplayValue('1979-04-02');
+
+    expect(screen.queryByDisplayValue('Meath')).not.toBeInTheDocument();
+  });
+
+  it('says whose details these are', async () => {
+    // A form that fills itself in has to be checked, and a parent entering a
+    // child needs to know which child's answers are on screen.
+    render();
+    await screen.findByLabelText(/Entrant date of birth/);
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+
+    expect(await screen.findByText(/Michael Adams's membership details/)).toBeInTheDocument();
+  });
+
+  it('swaps them when a different rider is chosen', async () => {
+    render();
+    await screen.findByLabelText(/Entrant date of birth/);
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+    await screen.findByDisplayValue('1979-04-02');
+
+    await userEvent.click(screen.getByRole('button', { name: /Rónán McGrath/ }));
+
+    expect(await screen.findByDisplayValue('2013-04-18')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('1979-04-02')).not.toBeInTheDocument();
+  });
+
+  it('takes them back for a name the club holds nothing for', async () => {
+    render();
+    await screen.findByLabelText(/Entrant date of birth/);
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+    await screen.findByDisplayValue('1979-04-02');
+
+    await userEvent.click(screen.getByRole('button', { name: /Bríd Typed-In/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByDisplayValue('1979-04-02')).not.toBeInTheDocument()
+    );
+  });
+
+  it('never overwrites what the member typed', async () => {
+    render();
+    const pony = await screen.findByLabelText(/Pony name/);
+    await userEvent.type(pony, 'Cloud');
+
+    await userEvent.click(screen.getByRole('button', { name: /Michael Adams/ }));
+    await screen.findByDisplayValue('1979-04-02');
+
+    expect(screen.getByLabelText(/Pony name/)).toHaveValue('Cloud');
+  });
+});

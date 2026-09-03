@@ -17,6 +17,15 @@ import { db } from '../database/pool';
 export interface FormAnswer {
   label: string;
   value: string;
+  /**
+   * The field's own datatype, so a screen can render the answer as what it is.
+   *
+   * A date is stored as an ISO string — `2012-05-04T00:00:00.000Z` — which is
+   * exactly right for storing and unreadable on a page. The formatting is left
+   * to the client because that is where the viewer's locale lives; what travels
+   * is the fact that this answer is a date.
+   */
+  datatype: string;
 }
 
 /** One stored answer as display text. Empty means "not answered". */
@@ -62,7 +71,11 @@ export async function formSummariesFor(
     if (!display) continue;
 
     const existing = summaries.get(row.submission_id) ?? [];
-    existing.push({ label: row.label || row.field_name, value: display });
+    existing.push({
+      label: row.label || row.field_name,
+      value: display,
+      datatype: row.datatype,
+    });
     summaries.set(row.submission_id, existing);
   }
   return summaries;

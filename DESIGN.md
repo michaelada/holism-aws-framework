@@ -401,6 +401,14 @@ Headers sit on `paper-warm` with `ink` labels at 600 — the one place a warm gr
 work. Rows are separated by `hairline` bottom borders and nothing else: no zebra striping, no
 vertical rules, no outer border. Row hover washes to `rgba(255,152,0,0.08)`.
 
+**The Sortable Heading Rule.** A list table's headings sort it: once for ascending, again for
+descending, with the arrow appearing on hover before a column is sorted so the reader can find out
+that any of this is possible. Sort by the **value**, never by the rendering — `€1,240.00` sorts as
+text before `€9.00`, and a translated status chip would order differently in each of six locales.
+A heading carries no arrow where there is nothing to order: a picture, an actions column, or a
+column that reads the same on every row. `orgadmin-core`'s `useTableSort` and `SortableTableCell`
+are how, and [docs/SORTABLE_TABLES.md](docs/SORTABLE_TABLES.md) is why.
+
 ### Alerts
 
 12px radius on a tinted ground with darkened text: success #F0FDF4/#166534, error #FEF2F2/#991B1B,

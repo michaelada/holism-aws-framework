@@ -46,8 +46,21 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useTranslation, formatCurrency, useOnboarding, usePageHelp } from '@aws-web-framework/orgadmin-shell';
-import { useOrganisation, useApi, ResponsiveTable } from '@aws-web-framework/orgadmin-core';
+import {
+  useOrganisation,
+  useApi,
+  ResponsiveTable,
+  SortableTableCell,
+  useTableSort,
+} from '@aws-web-framework/orgadmin-core';
 import type { MerchandiseType, StockLevel } from '../types/merchandise.types';
+
+/** Worst first, so one click on Stock brings what needs restocking to the top. */
+const STOCK_ORDER: Record<StockLevel, number> = {
+  out_of_stock: 0,
+  low_stock: 1,
+  in_stock: 2,
+};
 
 const MerchandiseTypesListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -275,6 +288,29 @@ const MerchandiseTypesListPage: React.FC = () => {
     }
   };
 
+  /*
+   * Declared here rather than beside the state it orders: the accessors call
+   * `getPriceRange` and `getStockLevel`, which are `const` arrow functions
+   * further down the component. Sorting from above them would read them before
+   * they exist.
+   */
+  const sort = useTableSort(filteredTypes, {
+    accessors: {
+      options: (type) => type.optionTypes?.length ?? 0,
+      // The lowest price, not the range as it reads: "€10.00 - €25.00" sorted
+      // as text puts €9.00 last.
+      priceRange: (type) => {
+        const prices = (type.optionTypes ?? []).flatMap((option) =>
+          (option.optionValues ?? []).map((value) => value.price)
+        );
+        return prices.length > 0 ? Math.min(...prices) : null;
+      },
+      // Worst first when ascending, so one click puts what needs restocking at
+      // the top. Sorting the words would be alphabetical by accident.
+      stockStatus: (type) => STOCK_ORDER[getStockLevel(type)],
+    },
+  });
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3,
@@ -348,12 +384,23 @@ const MerchandiseTypesListPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
+              {/* A picture has no order. */}
               <TableCell>{t('merchandise.table.image')}</TableCell>
-              <TableCell>{t('merchandise.table.name')}</TableCell>
-              <TableCell>{t('merchandise.table.status')}</TableCell>
-              <TableCell>{t('merchandise.table.options')}</TableCell>
-              <TableCell>{t('merchandise.table.priceRange')}</TableCell>
-              <TableCell>{t('merchandise.table.stockStatus')}</TableCell>
+              <SortableTableCell sort={sort} field="name">
+                {t('merchandise.table.name')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="status">
+                {t('merchandise.table.status')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="options">
+                {t('merchandise.table.options')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="priceRange">
+                {t('merchandise.table.priceRange')}
+              </SortableTableCell>
+              <SortableTableCell sort={sort} field="stockStatus">
+                {t('merchandise.table.stockStatus')}
+              </SortableTableCell>
               <TableCell align="right">{t('merchandise.table.actions')}</TableCell>
             </TableRow>
           </TableHead>
@@ -373,7 +420,7 @@ const MerchandiseTypesListPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTypes.map((type) => (
+              sort.rows.map((type) => (
                 <TableRow key={type.id} hover>
                   <TableCell>
                     <Avatar

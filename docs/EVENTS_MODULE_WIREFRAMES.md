@@ -309,125 +309,186 @@ In the wizard (Create Event) these rules also block advancing past the Activitie
 
 **Route:** `/orgadmin/events/:id/entries`
 
-**Purpose:** View and manage all entries for an event with filtering and export
+**Purpose:** Who has entered, grouped into the classes they entered
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Event Entries                              [📥 Download All Entries]│
+│  Entries                                        [📥 Export to Excel] │
+│  Spring League                                                       │
 ├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
 │  ┌───────────────────────────────────────────────────────────────┐  │
-│  │  [Event Activity: All Activities ▼]  [🔍 Search by name...]  │  │
+│  │  🔍 Search by name, email or class…                           │  │
+│  │  Showing 4 of 4 entries                                       │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 │                                                                       │
-│  ┌───────────────────────────────────────────────────────────────┐  │
-│  │ Activity    │ First Name │ Last Name │ Entry Date/Time │ Act. │  │
-│  ├─────────────┼────────────┼───────────┼─────────────────┼──────┤  │
-│  │ Junior      │ Emma       │ Wilson    │ 05 Jun 10:23    │  👁️  │  │
-│  │ Sailing     │            │           │                 │      │  │
-│  ├─────────────┼────────────┼───────────┼─────────────────┼──────┤  │
-│  │ Open Race   │ James      │ Smith     │ 05 Jun 14:15    │  👁️  │  │
-│  │             │            │           │                 │      │  │
-│  ├─────────────┼────────────┼───────────┼─────────────────┼──────┤  │
-│  │ Junior      │ Oliver     │ Brown     │ 06 Jun 09:45    │  👁️  │  │
-│  │ Sailing     │            │           │                 │      │  │
-│  ├─────────────┼────────────┼───────────┼─────────────────┼──────┤  │
-│  │ Family      │ Sarah      │ Johnson   │ 07 Jun 16:30    │  👁️  │  │
-│  │ Fun Race    │            │           │                 │      │  │
-│  └─────────────┴────────────┴───────────┴─────────────────┴──────┘  │
+│  80cm   2 entries                                                    │
+│  ┌──────────────────┬─────────────────────────┬────────────┬──────┐ │
+│  │ Name             │ Email                   │ Entered    │Status│ │
+│  ├──────────────────┼─────────────────────────┼────────────┼──────┤ │
+│  │ Áine McGrath     │ aine@example.test       │ 01 Aug 10:0│[Paid]│ │
+│  │ Bríd McNamara    │ brid@example.test       │ 02 Aug 09:1│[Paid]│ │
+│  └──────────────────┴─────────────────────────┴────────────┴──────┘ │
 │                                                                       │
-│  Showing 4 entries                                                    │
+│  1.00m   1 entry                                                     │
+│  ┌──────────────────┬─────────────────────────┬────────────┬──────┐ │
+│  │ Rónán McGrath    │ aine@example.test       │ 01 Aug 10:0│[Pend]│ │
+│  └──────────────────┴─────────────────────────┴────────────┴──────┘ │
 │                                                                       │
+│  [← Back]                                                            │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key Features:**
-- **Activity Filter**: Dropdown to filter by specific event activity
-- **Name Search**: Real-time search across first and last names
-- **Download Button**: Exports all entries to Excel with separate tables per activity
-- **View Action**: Eye icon (👁️) opens entry details dialog
+**Key features:**
+- **Grouped by class**, because that is the unit a club works in — the entries
+  for the 80cm are a class list, and a flat table across six classes is not one.
+  Grouped by activity **id**, not name: a two-day event runs "80cm" on both days.
+- **A count beside each class**, which is the number an organiser checks against
+  a limit.
+- **Name, email and date entered** — who entered, how to reach them, and when.
+  Everything else about an entry is one click away rather than crammed into the
+  row.
+- **Search across every class at once**, on name, email or class name. A class
+  whose entries are all filtered out disappears with them.
+- **A row opens that entry**, at `/events/:id/entries/:entryId`.
 
-**Empty State:**
-```
-┌───────────────────────────────────────────────────────────────┐
-│                                                               │
-│                    No entries yet for this event              │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-```
+**Empty state:** *Nobody has entered yet.* — distinct from the filtered state,
+*No entries match your search.*, and from a load failure, *We could not load the
+entries.*
 
-**Filtered Empty State:**
-```
-┌───────────────────────────────────────────────────────────────┐
-│                                                               │
-│                  No entries match your filters                │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-```
+**Withdrawn entries are not here.** An entry refunded with *"also withdraw from
+the event"* has `entry_status = 'removed'`: off this list and out of the counts —
+this is the list a club prints on the day — while staying on record and reachable
+from the payment that refunded it. See
+[PARTIAL_REFUNDS.md](PARTIAL_REFUNDS.md).
 
 ---
 
-## 6. Event Entry Details Dialog
+## 6. Event Entry Details Page
 
-**Purpose:** Display complete entry information including form submission and files
+**Route:** `/orgadmin/events/:id/entries/:entryId`
+
+**Purpose:** One entry, in full — what a secretary is asked on the phone
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Entry Details                                          [Close] │
+│  Áine McGrath                                          [ Paid ] │
+│  80cm — Spring League                                           │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  First Name              Last Name                              │
-│  Emma                    Wilson                                 │
-│                                                                 │
-│  Email                   Quantity                               │
-│  emma.wilson@email.com   1                                      │
-│                                                                 │
-│  Payment Status          Payment Method                         │
-│  [Paid] (green)         Card                                   │
-│                                                                 │
+│  Who entered                                          [✎ Edit] │
+│  ─────────────────────────────────────────────────────────────  │
+│  Name                                                           │
+│  Áine McGrath                                                   │
+│  Email                 Membership                               │
+│  aine@example.test     Áine McGrath  (opens the member)          │
+├─────────────────────────────────────────────────────────────────┤
+│  The entry                                                      │
+│  ─────────────────────────────────────────────────────────────  │
+│  Class                 Entry fee                                │
+│  80cm                  €25.00                                   │
+│  About this class                                               │
+│  Open to riders who have not won at this level                  │
+│  Event                 Event dates                              │
+│  Spring League         12 Sep 2026 – 13 Sep 2026                │
 │  Entry Date                                                     │
-│  05/06/2024, 10:23                                             │
-│                                                                 │
-│  ─────────────────────────────────────────────────────────────  │
-│                                                                 │
+│  01 Aug 2026 10:00                                              │
+├─────────────────────────────────────────────────────────────────┤
 │  Form Submission Data                                           │
-│                                                                 │
-│  Age                                                            │
-│  12                                                             │
-│                                                                 │
-│  Experience Level                                               │
-│  Intermediate                                                   │
-│                                                                 │
-│  Emergency Contact                                              │
-│  Jane Wilson - 555-0123                                        │
-│                                                                 │
-│  Dietary Requirements                                           │
-│  Vegetarian                                                     │
-│                                                                 │
 │  ─────────────────────────────────────────────────────────────  │
-│                                                                 │
-│  Uploaded Files                                                 │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  📄 parental_consent.pdf                    [📥 Download] │ │
-│  │  PDF • 245 KB                                             │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  📄 medical_form.pdf                        [📥 Download] │ │
-│  │  PDF • 189 KB                                             │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│                                                                 │
-│                                                        [Close]  │
-│                                                                 │
+│  Pony name             Entrant age group                        │
+│  Bramble               Under 12                                 │
+│  Medical notes                                                  │
+│  Asthma inhaler carried in the tack box                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Payment                                                        │
+│  ─────────────────────────────────────────────────────────────  │
+│  Payment Status        Payment Method                           │
+│  Paid                  Card                                     │
+│  Payment total         Paid                                     │
+│  €185.23               01 Aug 2026 10:00                        │
+│  [🧾 Open the payment]                                          │
 └─────────────────────────────────────────────────────────────────┘
+[← Back to entries]
 ```
 
-**Payment Status Colors:**
-- 🟢 Green = Paid
-- 🟡 Yellow = Pending
-- 🔴 Red = Refunded
+**Key features:**
+- **The answers the entrant gave.** The form itself is gone once the entry
+  exists, so this is the only place the club can read back what was declared.
+  Labels come from the form, joined to the stored answers by `formSummariesFor`
+  — the same helper the member's own screens use.
+- **The payment it came in on**, found through
+  `payment_transactions.fulfilment_ref`, with a link into it: an entry is
+  usually one line of a basket, and the rest of it is what the club is asked
+  about next. An entry added by hand has no payment record and says so.
+- **Whether they entered as a member**, and which one. An entry carries its own
+  name — a parent may enter a child who is not the account holder.
+- **A class that asked nothing** shows *This class asked for no additional
+  details.* rather than an empty heading implying the answers were lost.
+- **A club can correct a mistake** — **Edit**, beside *Who entered* because the
+  name is the commoner correction and an activity that asks nothing still has
+  one to fix. Section 7.
+
+**Payment status colours:** 🟢 Paid · 🟡 Pending · 🔴 Refunded
+
+**A withdrawn entry is headed by a notice** — *"This entry was withdrawn on 20
+Aug 2026 — Withdrew before the closing date."* It is off the entrant list and
+still here, which is the point of withdrawing rather than deleting, so somebody
+arriving from the payment that refunded it must not read it as an entry that
+still stands.
+
+> The `EventEntryDetailsDialog` component is superseded by this page. It was
+> never mounted anywhere and its API hook is a stub returning empty data.
+
+---
+
+## 7. Correcting an Entry
+
+**Opened from:** *Edit*, beside *Who entered* on the entry details page
+
+**Purpose:** the club's remedy for a member's mistake — a name typed in a hurry,
+a vaccination date a year out — which used to mean database access
+
+```
+┌ Edit this entry ────────────────────────────────────────────────┐
+│  The entrant’s name, and every question on the form — whether    │
+│  or not it was answered.                                         │
+│                                                                  │
+│  Name *                                                          │
+│  [ Áine McGrath                                              ]   │
+│  ──────────────────────────────────────────────────────────────  │
+│  Pony name                                                       │
+│  [ Bramble                                                   ]   │
+│  Entrant age group                                               │
+│  [ Under 12                                               ▾ ]    │
+│  Entrant date of birth                                           │
+│  [ 12/05/2012                                            📅 ]    │
+│  Medical notes                        ← never answered, offered  │
+│  [                                                           ]   │
+│                                                                  │
+│  ⚠ Still needed: Emergency contact name                          │
+│                                                                  │
+│                                       [ Cancel ]  [   Save   ]   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Key features:**
+- **Every field of the form, answered or not.** The read-only summary drops
+  blanks — right for reading back what somebody said, useless for correcting it,
+  because the skipped question is the one being filled in. The fields come from
+  `/application-forms/:formId/with-fields`, not from the answers.
+- **The name as one field.** It is typed as one string into *Who is this entry
+  for?* and split at the first space only so the schema has somewhere to put it;
+  offering *first* and *last* here would ask the club to maintain a split it
+  never made.
+- **The same controls the member met** — `FieldRenderer`, so a date is a date
+  picker and a choice is a choice.
+- **Save is held** while a required answer is missing or an answer is wrong for
+  its field, and the dialog names them by **label**.
+- **An activity that asks nothing still opens this**, with the name alone.
+- **A refusal changes nothing.** The name and the answers are checked before
+  either is written, so a rejected form does not leave the entrant renamed.
+
+Saved with `PUT /events/:id/entries/:entryId/answers`, audited as
+`entry.answers-corrected`. See [CORRECTING_AN_ENTRY.md](CORRECTING_AN_ENTRY.md).
 
 ---
 
@@ -450,14 +511,15 @@ Events List Page
     │       ├─→ Delete Event
     │       └─→ View Entries
     │
-    └─→ Event Entries Page
+    └─→ Event Entries Page  (grouped by class)
             │
-            ├─→ Filter by Activity
-            ├─→ Search by Name
-            ├─→ Download Excel Export
-            └─→ View Entry Details Dialog
+            ├─→ Search by name, email or class
+            ├─→ Export to Excel
+            └─→ Event Entry Details Page
                     │
-                    └─→ Download Files
+                    ├─→ Open the member
+                    ├─→ Open the payment
+                    └─→ Edit this entry (name + every form field)
 ```
 
 ---

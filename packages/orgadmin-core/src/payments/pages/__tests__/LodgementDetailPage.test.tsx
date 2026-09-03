@@ -213,6 +213,38 @@ describe('LodgementDetailPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/payments/pay-1');
   });
 
+  it('passes on an explanation rather than calling it a failure', async () => {
+    /*
+     * Stripe will not itemise a payout somebody created by hand, and says so
+     * plainly. That is a fact about the payout — the state anybody testing this
+     * screen puts themselves in — and reporting it as "we could not load this
+     * lodgement" sends the reader looking for a fault that is not there.
+     */
+    mockExecute.mockImplementation((request: { onError?: (message: string) => void }) => {
+      request.onError?.(
+        'Stripe cannot break down a payout that was created by hand. The amount and its status ' +
+          'are shown above; payouts Stripe makes on the schedule are itemised in full.'
+      );
+      return Promise.resolve(null);
+    });
+    renderWithProviders(<LodgementDetailPage />);
+
+    expect(
+      await screen.findByText(/cannot break down a payout that was created by hand/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/could not load this lodgement/)).not.toBeInTheDocument();
+  });
+
+  it('still says it failed when the server said nothing useful', async () => {
+    mockExecute.mockImplementation((request: { onError?: (message: string) => void }) => {
+      request.onError?.('');
+      return Promise.resolve(null);
+    });
+    renderWithProviders(<LodgementDetailPage />);
+
+    expect(await screen.findByText(/could not load this lodgement/)).toBeInTheDocument();
+  });
+
   it('offers a way back that still works when the load failed', async () => {
     mockExecute.mockRejectedValue(new Error('network'));
     renderWithProviders(<LodgementDetailPage />);

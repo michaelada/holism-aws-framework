@@ -12,6 +12,14 @@ export interface EventActivity {
   limitApplicants: boolean;
   applicantsLimit?: number;
   allowSpecifyQuantity: boolean;
+  /*
+   * Optional here, and required in `event-activity.service`'s own
+   * `EventActivity`: this shape is also what a caller *sends* when creating an
+   * event with its activities in one payload, and both have defaults.
+   */
+  entryEligibility?: 'all' | 'members';
+  /** How many people one of this activity's tickets admits. Defaults to 1. */
+  ticketsAdmit?: number;
   useTermsAndConditions: boolean;
   termsAndConditions?: string;
   fee: number;
@@ -64,7 +72,6 @@ export interface Event {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
   // Soft delete fields
   deleted?: boolean;
@@ -117,7 +124,6 @@ export interface CreateEventDto {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
 }
 
@@ -150,7 +156,6 @@ export interface UpdateEventDto {
   ticketInstructions?: string;
   ticketFooterText?: string;
   ticketValidityPeriod?: number;
-  includeEventLogo?: boolean;
   ticketBackgroundColor?: string;
 }
 
@@ -247,7 +252,8 @@ export class EventService {
            v.longitude as venue_longitude,
            -- A correlated subquery rather than a join and a GROUP BY: e.* is
            -- selected here, so grouping would mean naming every column of it.
-           (SELECT COUNT(*) FROM event_entries ee WHERE ee.event_id = e.id) AS entry_count
+           (SELECT COUNT(*) FROM event_entries ee
+              WHERE ee.event_id = e.id AND ee.entry_status <> 'removed') AS entry_count
          FROM events e
          LEFT JOIN event_types et ON e.event_type_id = et.id
          LEFT JOIN venues v ON e.venue_id = v.id
@@ -304,7 +310,6 @@ export class EventService {
         event.ticketInstructions = ticketingConfig.ticketInstructions;
         event.ticketFooterText = ticketingConfig.ticketFooterText;
         event.ticketValidityPeriod = ticketingConfig.ticketValidityPeriod;
-        event.includeEventLogo = ticketingConfig.includeEventLogo;
         event.ticketBackgroundColor = ticketingConfig.ticketBackgroundColor;
       }
 
@@ -599,7 +604,6 @@ export class EventService {
         data.ticketInstructions !== undefined ||
         data.ticketFooterText !== undefined ||
         data.ticketValidityPeriod !== undefined ||
-        data.includeEventLogo !== undefined ||
         data.ticketBackgroundColor !== undefined;
 
       if (hasTicketingFields) {
@@ -612,7 +616,6 @@ export class EventService {
         if (data.ticketInstructions !== undefined) ticketingFields.ticketInstructions = data.ticketInstructions;
         if (data.ticketFooterText !== undefined) ticketingFields.ticketFooterText = data.ticketFooterText;
         if (data.ticketValidityPeriod !== undefined) ticketingFields.ticketValidityPeriod = data.ticketValidityPeriod;
-        if (data.includeEventLogo !== undefined) ticketingFields.includeEventLogo = data.includeEventLogo;
         if (data.ticketBackgroundColor !== undefined) ticketingFields.ticketBackgroundColor = data.ticketBackgroundColor;
 
         if (!existingConfig) {
@@ -698,6 +701,13 @@ export class EventService {
           limitApplicants: activity.limitApplicants,
           applicantsLimit: activity.applicantsLimit,
           allowSpecifyQuantity: activity.allowSpecifyQuantity,
+          /*
+           * Both of these were being dropped by the clone, and both fail
+           * quietly: a members-only activity reopened to everybody, and a
+           * family ticket copied as one that admits a single person.
+           */
+          entryEligibility: activity.entryEligibility,
+          ticketsAdmit: activity.ticketsAdmit,
           useTermsAndConditions: activity.useTermsAndConditions,
           termsAndConditions: activity.termsAndConditions,
           fee: activity.fee,

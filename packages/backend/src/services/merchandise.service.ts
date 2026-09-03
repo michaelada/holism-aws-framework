@@ -1,6 +1,16 @@
 import { db } from '../database/pool';
 import { logger } from '../config/logger';
-import ExcelJS from 'exceljs';
+/*
+ * The **named** export, not the default one.
+ *
+ * `exceljs`'s typings declare `export default Workbook` and its CommonJS module
+ * exports a namespace with no `default` at all — so `new ExcelJS()` type-checked
+ * and threw "is not a constructor" at runtime, and every Excel export in this
+ * application produced a file the operating system refuses to open. It survived
+ * because the suites mock `exceljs` with a class of their own, which is exactly
+ * the shape the real module does not have.
+ */
+import { Workbook } from 'exceljs';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, S3_BUCKET_NAME } from '../config/aws.config';
@@ -1102,7 +1112,7 @@ export class MerchandiseService {
       }
 
       // Create workbook
-      const workbook = new ExcelJS();
+      const workbook = new Workbook();
       const worksheet = workbook.addWorksheet('Orders');
 
       // Add headers

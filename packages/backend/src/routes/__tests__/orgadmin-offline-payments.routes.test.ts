@@ -47,6 +47,7 @@ jest.mock('../../middleware/auth.middleware', () => ({
 }));
 
 import { db } from '../../database/pool';
+import { auditService } from '../../services/audit/audit.service';
 import { paymentService } from '../../services/payment.service';
 import { ValidationError, NotFoundError } from '../../middleware/errors';
 import orgadminOrganisationRoutes from '../orgadmin-organisation.routes';
@@ -300,6 +301,137 @@ describe('DELETE /api/orgadmin/organisation/payments/:id/received', () => {
  * branding and Stripe Connect read and wrote against a club that had not been
  * opened. Both were legitimately theirs, so nothing looked wrong.
  */
+/**
+ * The trail a settlement leaves.
+ *
+ * Recording a cheque as arrived is money changing hands and is exactly the kind
+ * of thing an auditor comes looking for. Three separate faults made it
+ * invisible or useless, all fixed here:
+ *
+ *  - the event was written with **no organisation**, because this router
+ *    resolves the club itself rather than from the URL and never put it on the
+ *    request — and the org-admin audit log filters on precisely that;
+ *  - the receipt and its **undo shared one action**, so a reversal could not be
+ *    told from the thing it reversed;
+ *  - the body of both routes is empty, so the generic "record what was sent"
+ *    wrote `{}` against a uuid.
+ */
+describe('the audit record a settlement leaves', () => {
+  const recorded = jest.spyOn(auditService, 'record').mockResolvedValue(undefined as never);
+
+  /** `audited` writes on the response's `finish`, which can trail the client. */
+  const lastEvent = async (): Promise<any> => {
+    for (let attempt = 0; attempt < 20 && !recorded.mock.calls.length; attempt += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    return recorded.mock.calls.at(-1)?.[0];
+  };
+
+  const paid = {
+    payment: {
+      id: 'pay-1',
+      amount: 45,
+      currency: 'EUR',
+      paymentStatus: 'paid',
+      paymentDate: '2026-09-01T10:00:00.000Z',
+      userName: 'Fionn Doyle',
+      userEmail: 'fionn@example.com',
+    },
+    fulfilment: { fulfilled: 1, failed: 0, complete: true },
+  };
+
+  beforeEach(() => recorded.mockClear());
+  afterAll(() => recorded.mockRestore());
+
+  it('records the receipt against the club whose money it is', async () => {
+    respond();
+    mockPayments.markOfflinePaymentReceived.mockResolvedValue(paid as any);
+
+    await request(server).post('/api/orgadmin/organisation/payments/pay-1/received');
+
+    const event = await lastEvent();
+    expect(event).toMatchObject({
+      action: 'offline-payment.recorded',
+      organisationId: 'org-1',
+      entityType: 'payment',
+      entityId: 'pay-1',
+      outcome: 'success',
+    });
+  });
+
+  it('says how much, from whom, and what the money released', async () => {
+    respond();
+    mockPayments.markOfflinePaymentReceived.mockResolvedValue(paid as any);
+
+    await request(server).post('/api/orgadmin/organisation/payments/pay-1/received');
+
+    expect((await lastEvent()).changes).toEqual({
+      created: expect.objectContaining({
+        payer: 'Fionn Doyle',
+        amount: 45,
+        currency: 'EUR',
+        paymentStatus: 'paid',
+        itemsCreated: 1,
+        itemsFailed: 0,
+      }),
+    });
+  });
+
+  it('names the payment by its payer and amount, not by its uuid', async () => {
+    respond();
+    mockPayments.markOfflinePaymentReceived.mockResolvedValue(paid as any);
+
+    await request(server).post('/api/orgadmin/organisation/payments/pay-1/received');
+
+    expect((await lastEvent()).entityLabel).toBe('Fionn Doyle — EUR 45.00');
+  });
+
+  it('falls back to the email when the payer has no name recorded', async () => {
+    respond();
+    mockPayments.markOfflinePaymentReceived.mockResolvedValue({
+      ...paid,
+      payment: { ...paid.payment, userName: null },
+    } as any);
+
+    await request(server).post('/api/orgadmin/organisation/payments/pay-1/received');
+
+    expect((await lastEvent()).entityLabel).toBe('fionn@example.com — EUR 45.00');
+  });
+
+  it('records an undo as its own action', async () => {
+    respond();
+    mockPayments.undoOfflinePaymentReceived.mockResolvedValue({
+      ...paid.payment,
+      paymentStatus: 'awaiting_offline',
+      paymentDate: null,
+    } as any);
+
+    await request(server).delete('/api/orgadmin/organisation/payments/pay-1/received');
+
+    const event = await lastEvent();
+    expect(event.action).toBe('offline-payment.receipt-undone');
+    expect(event.organisationId).toBe('org-1');
+    expect(event.changes).toEqual({
+      created: expect.objectContaining({ payer: 'Fionn Doyle', paymentStatus: 'awaiting_offline' }),
+    });
+  });
+
+  it('records a refused undo as a failure, with the reason', async () => {
+    // The refusal is the interesting entry: somebody tried to reverse a receipt
+    // that had already produced records.
+    respond();
+    mockPayments.undoOfflinePaymentReceived.mockRejectedValue(
+      new ValidationError('This payment has already produced memberships, bookings or orders.')
+    );
+
+    await request(server).delete('/api/orgadmin/organisation/payments/pay-1/received');
+
+    const event = await lastEvent();
+    expect(event.outcome).toBe('failure');
+    expect(event.context.error).toMatch(/already produced/i);
+  });
+});
+
 describe('choosing the organisation', () => {
   const OTHER = '3752a3be-6cb1-4f71-9d3d-2e6bfd23797c';
 

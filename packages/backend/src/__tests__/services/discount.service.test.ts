@@ -339,52 +339,56 @@ describe('Discount Service - Unit Tests', () => {
   });
 
   describe('Usage Statistics', () => {
-    /**
-     * Test total discount amount calculation
-     * Requirements: 14.7
+    /*
+     * These read the **cart line**, not `discount_usage`.
+     *
+     * The suite used to mock three queries against that table; nothing has ever
+     * called `recordUsage`, so it holds no rows and the page it fed would have
+     * reported nought uses for a discount used all season. The shape below is
+     * what the service now asks for: totals and a breakdown by member from
+     * `cart_items` on carts that became an order, both in **minor units**.
      */
-    it('should calculate total discount amount given', async () => {
-      // Arrange
-      const discountId = 'discount-123';
-
+    const totalsThen = (
+      totals: { uses: number; total: number | string },
+      members: Array<Record<string, unknown>> = [],
+      usageLimits: unknown = null
+    ) => {
       mockDb.query
         .mockResolvedValueOnce({
-          // Usage stats query
-          rows: [{
-            totalUses: '5',
-            totalDiscountGiven: '150.50',
-            averageDiscountAmount: '30.10',
-          }],
+          rows: [totals],
           command: 'SELECT',
           rowCount: 1,
           oid: 0,
           fields: [],
         })
         .mockResolvedValueOnce({
-          // Top users query
-          rows: [],
+          rows: members,
           command: 'SELECT',
-          rowCount: 0,
+          rowCount: members.length,
           oid: 0,
           fields: [],
         })
         .mockResolvedValueOnce({
-          // Discount query for remaining uses
-          rows: [{
-            usage_limits: { totalUsageLimit: 10, currentUsageCount: 5 },
-          }],
+          rows: [{ usage_limits: usageLimits }],
           command: 'SELECT',
           rowCount: 1,
           oid: 0,
           fields: [],
         });
+    };
 
-      // Act
-      const stats = await service.getUsageStats(discountId);
+    /**
+     * Test total discount amount calculation
+     * Requirements: 14.7
+     */
+    it('should calculate total discount amount given', async () => {
+      totalsThen({ uses: 5, total: '15050' }, [], { totalUsageLimit: 10 });
 
-      // Assert
+      const stats = await service.getUsageStats('discount-123');
+
       expect(stats.totalUses).toBe(5);
-      expect(stats.totalDiscountGiven).toBe(150.50);
+      // Minor units on the line, major units out.
+      expect(stats.totalDiscountGiven).toBe(150.5);
     });
 
     /**
@@ -392,43 +396,11 @@ describe('Discount Service - Unit Tests', () => {
      * Requirements: 14.8
      */
     it('should calculate average discount amount per use', async () => {
-      // Arrange
-      const discountId = 'discount-123';
+      totalsThen({ uses: 4, total: '10000' });
 
-      mockDb.query
-        .mockResolvedValueOnce({
-          rows: [{
-            totalUses: '10',
-            totalDiscountGiven: '250.00',
-            averageDiscountAmount: '25.00',
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [],
-          command: 'SELECT',
-          rowCount: 0,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            usage_limits: null,
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        });
+      const stats = await service.getUsageStats('discount-123');
 
-      // Act
-      const stats = await service.getUsageStats(discountId);
-
-      // Assert
-      expect(stats.averageDiscountAmount).toBe(25.00);
+      expect(stats.averageDiscountAmount).toBe(25);
     });
 
     /**
@@ -436,197 +408,46 @@ describe('Discount Service - Unit Tests', () => {
      * Requirements: 14.9
      */
     it('should identify top users of discount', async () => {
-      // Arrange
-      const discountId = 'discount-123';
+      totalsThen({ uses: 12, total: '24000' }, [
+        { userId: 'user-1', name: 'Aoife Byrne', usageCount: 5, total: '10000' },
+        { userId: 'user-2', name: 'Conor McGrath', usageCount: 4, total: '8000' },
+        { userId: 'user-3', name: null, usageCount: 3, total: '6000' },
+      ]);
 
-      mockDb.query
-        .mockResolvedValueOnce({
-          rows: [{
-            totalUses: '15',
-            totalDiscountGiven: '300.00',
-            averageDiscountAmount: '20.00',
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [
-            {
-              userId: 'user-1',
-              usageCount: '5',
-              totalDiscountReceived: '100.00',
-            },
-            {
-              userId: 'user-2',
-              usageCount: '4',
-              totalDiscountReceived: '80.00',
-            },
-            {
-              userId: 'user-3',
-              usageCount: '3',
-              totalDiscountReceived: '60.00',
-            },
-          ],
-          command: 'SELECT',
-          rowCount: 3,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            usage_limits: null,
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        });
+      const stats = await service.getUsageStats('discount-123');
 
-      // Act
-      const stats = await service.getUsageStats(discountId);
-
-      // Assert
       expect(stats.topUsers).toHaveLength(3);
       expect(stats.topUsers[0].userId).toBe('user-1');
+      expect(stats.topUsers[0].name).toBe('Aoife Byrne');
       expect(stats.topUsers[0].usageCount).toBe(5);
-      expect(stats.topUsers[0].totalDiscountReceived).toBe(100.00);
+      expect(stats.topUsers[0].totalDiscountReceived).toBe(100);
       expect(stats.topUsers[1].usageCount).toBe(4);
-      expect(stats.topUsers[2].usageCount).toBe(3);
+      // A member since removed still counts as a use.
+      expect(stats.topUsers[2].name).toBeUndefined();
     });
 
     /**
      * Test remaining uses calculation
-     * Requirements: 14.7
+     * Requirements: 14.10
      */
     it('should calculate remaining uses when limit is set', async () => {
-      // Arrange
-      const discountId = 'discount-123';
+      totalsThen({ uses: 7, total: '10500' }, [], { totalUsageLimit: 10 });
 
-      mockDb.query
-        .mockResolvedValueOnce({
-          rows: [{
-            totalUses: '7',
-            totalDiscountGiven: '140.00',
-            averageDiscountAmount: '20.00',
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [],
-          command: 'SELECT',
-          rowCount: 0,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            usage_limits: { totalUsageLimit: 10, currentUsageCount: 7 },
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        });
-
-      // Act
-      const stats = await service.getUsageStats(discountId);
-
-      // Assert
-      expect(stats.remainingUses).toBe(3);
+      expect((await service.getUsageStats('discount-123')).remainingUses).toBe(3);
     });
 
-    /**
-     * Test remaining uses is undefined when no limit
-     * Requirements: 14.7
-     */
     it('should return undefined remaining uses when no limit set', async () => {
-      // Arrange
-      const discountId = 'discount-123';
+      totalsThen({ uses: 7, total: '10500' }, [], { perUserLimit: 1 });
 
-      mockDb.query
-        .mockResolvedValueOnce({
-          rows: [{
-            totalUses: '100',
-            totalDiscountGiven: '2000.00',
-            averageDiscountAmount: '20.00',
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [],
-          command: 'SELECT',
-          rowCount: 0,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            usage_limits: { currentUsageCount: 100 },
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        });
-
-      // Act
-      const stats = await service.getUsageStats(discountId);
-
-      // Assert
-      expect(stats.remainingUses).toBeUndefined();
+      expect((await service.getUsageStats('discount-123')).remainingUses).toBeUndefined();
     });
 
-    /**
-     * Test remaining uses is 0 when limit reached
-     * Requirements: 14.7
-     */
     it('should return 0 remaining uses when limit is reached', async () => {
-      // Arrange
-      const discountId = 'discount-123';
+      totalsThen({ uses: 10, total: '20000' }, [], { totalUsageLimit: 10 });
 
-      mockDb.query
-        .mockResolvedValueOnce({
-          rows: [{
-            totalUses: '10',
-            totalDiscountGiven: '200.00',
-            averageDiscountAmount: '20.00',
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [],
-          command: 'SELECT',
-          rowCount: 0,
-          oid: 0,
-          fields: [],
-        })
-        .mockResolvedValueOnce({
-          rows: [{
-            usage_limits: { totalUsageLimit: 10, currentUsageCount: 10 },
-          }],
-          command: 'SELECT',
-          rowCount: 1,
-          oid: 0,
-          fields: [],
-        });
-
-      // Act
-      const stats = await service.getUsageStats(discountId);
-
-      // Assert
-      expect(stats.remainingUses).toBe(0);
+      expect((await service.getUsageStats('discount-123')).remainingUses).toBe(0);
     });
+
 
     /**
      * Test user usage count

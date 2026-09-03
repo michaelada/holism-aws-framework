@@ -34,6 +34,7 @@ export default defineConfig({
       '@aws-web-framework/orgadmin-merchandise': path.resolve(__dirname, '../orgadmin-merchandise/src'),
       '@aws-web-framework/orgadmin-calendar': path.resolve(__dirname, '../orgadmin-calendar/src'),
       '@aws-web-framework/orgadmin-ticketing': path.resolve(__dirname, '../orgadmin-ticketing/src'),
+      '@aws-web-framework/orgadmin-announcements': path.resolve(__dirname, '../orgadmin-announcements/src'),
     },
     
     /**

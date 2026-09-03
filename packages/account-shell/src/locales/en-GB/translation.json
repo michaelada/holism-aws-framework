@@ -49,6 +49,9 @@
     "text": "Powered by ItsPlainSailing.com",
     "copyright": "© {{year}} Esker Software. All rights reserved"
   },
+  "announcements": {
+    "heading": "Notices"
+  },
   "posts": {
     "regionLabel": "Announcements"
   },
@@ -456,11 +459,22 @@
     "empty": "You have not paid for anything yet.",
     "itemCount": "{{count}} items",
     "handlingFee": "Handling fee",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "plusHandling": "+ {{amount}} handling",
     "paidByCard": "Paid by card",
     "paidOffline": "Paid offline",
     "offlineReceived": "The club recorded this as received on {{date}}",
     "offlineAwaited": "The club has still to record this as received.",
     "lineProblem": "This did not go through: {{reason}}. The club will be in touch.",
+    "view": {
+      "default": "View",
+      "event_entry": "View entry",
+      "membership": "View membership",
+      "registration": "View registration",
+      "booking": "View booking",
+      "merchandise": "View order"
+    },
     "status": {
       "paid": "Paid",
       "pending": "Pending",
@@ -554,6 +568,13 @@
     "itemNotFound": "This is no longer available.",
     "back": "Back",
     "detailsHeading": "Please fill out the details below",
+    "prefilledFromRenewal": "Filled in from your current membership. Please check it is still correct.",
+    "prefilledFromMembership": "Filled in from {{name}}'s membership details. Please check they are still correct.",
+    "member": {
+      "label": "Who is this membership for?",
+      "hint": "The person this membership is for. Type a name, or pick one you have used before.",
+      "required": "Enter the name of the person this membership is for."
+    },
     "termsHeading": "Terms and conditions",
     "agreeTerms": "I have read and agree to the terms and conditions",
     "mustAgree": "You must agree to the terms and conditions to continue",
@@ -576,6 +597,37 @@
       "awaiting-payment": "Awaiting payment",
       "used": "Used",
       "expired": "Expired"
+    }
+  },
+  "scan": {
+    "title": "Ticket scanning",
+    "unlockIntro": "Give your name and the PIN the club sent you. Your name is recorded against every ticket you scan.",
+    "yourName": "Your name",
+    "yourNameHelper": "So the club can see who scanned each ticket.",
+    "pin": "PIN",
+    "startScanning": "Start scanning",
+    "unlockFailed": "That link or PIN is not valid. Check with whoever sent it.",
+    "cameraFailed": "The camera could not be started. Allow camera access, or type the code below.",
+    "scanningAs": "Scanning as {{name}}",
+    "finish": "Finish",
+    "offline": "No signal. Tickets are still being checked against the list downloaded when you started, and will be sent when a signal returns.",
+    "waiting": "{{count}} scan waiting to be sent",
+    "waiting_other": "{{count}} scans waiting to be sent",
+    "admitted": "Admitted",
+    "countOf": "{{used}} of {{admits}} admitted",
+    "previously": "Admitted at {{when}} by {{who}}",
+    "anotherSteward": "another steward",
+    "enterCode": "Type the code",
+    "check": "Check",
+    "disagreementsTitle": "Let through here, but refused when sent",
+    "refused": {
+      "not_found": "Not one of ours",
+      "wrong_event": "Not for this event",
+      "already_used": "Already used",
+      "expired": "Out of date",
+      "cancelled": "Cancelled",
+      "withdrawn": "Entry withdrawn",
+      "forged": "Not a valid ticket"
     }
   },
   "orders": {

@@ -58,6 +58,7 @@ import { Pool } from 'pg';
 import {
   ACCOUNT_USERS,
   DISCOUNTS,
+  ENTRIES,
   REGISTRATIONS,
   REGISTRATION_TYPES,
   SEED_TAG,
@@ -107,6 +108,46 @@ const RESET_ONLY = args.includes('--reset-only');
  */
 const NO_STRIPE = args.includes('--no-stripe');
 
+/**
+ * Leave the Keycloak realm alone on a reset.
+ *
+ * **The realm is shared; the database is not.** `--reset` deletes every seeded
+ * realm user and creates them again with new ids, and it does that whatever
+ * database it has been pointed at. Seed a scratch database with `--reset` and
+ * the *development* database is left holding `organization_users` rows whose
+ * `keycloak_user_id` no longer names anybody — every login then fails with
+ * "User is not an organization administrator", and nothing in either place
+ * looks wrong.
+ *
+ * With this flag the purge is skipped. `upsertUser` finds the existing users by
+ * username and returns the ids they already have, so the realm comes through
+ * untouched and no other database is orphaned.
+ *
+ * Implied whenever the target database is not the one this checkout normally
+ * uses, because that is exactly the scratch-database case and nobody remembers
+ * a flag for a hazard they have not met yet.
+ */
+const KEEP_KEYCLOAK = args.includes('--keep-keycloak');
+
+/**
+ * Seeding somewhere other than the development database.
+ *
+ * Keycloak and Stripe are **shared**: one realm and one test platform serve
+ * whatever database is being seeded, so a scratch run's `--reset` reaches
+ * straight into the environment the developer is using. It has done real
+ * damage twice — orphaning every `organization_users.keycloak_user_id` in the
+ * development database, and deleting the connected accounts the clubs there
+ * point at.
+ */
+const scratchDatabase = (process.env.DATABASE_NAME ?? 'aws_framework') !== 'aws_framework';
+
+/**
+ * The realm is left alone for a scratch database whether the flag was passed or
+ * not: that is exactly the case the hazard lives in, and nobody remembers a
+ * flag for a hazard they have not met yet.
+ */
+const keepKeycloak = KEEP_KEYCLOAK || scratchDatabase;
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', 'postgres', 'keycloak', 'host.docker.internal']);
 
 /**
@@ -142,6 +183,7 @@ function guard(): { dbHost: string; dbName: string; kcUrl: string } {
 
   const dbHost = process.env.DATABASE_HOST || 'localhost';
   const dbName = process.env.DATABASE_NAME || 'aws_framework';
+
   const kcUrl = process.env.KEYCLOAK_ADMIN_BASE_URL || process.env.KEYCLOAK_URL || 'http://localhost:8080';
 
   if (!LOCAL_HOSTS.has(dbHost) && process.env.SEED_ALLOW_REMOTE_DB !== 'yes') {
@@ -206,10 +248,19 @@ async function main(): Promise<void> {
         ? '  Would skip Stripe (--no-stripe).'
         : stripeReason
           ? `  Would skip Stripe — ${stripeReason}.`
-          : `  Would create ${ORGS.length} Stripe test connected accounts, one per club.`
+          : `  Would create ${ORGS.length} Stripe test connected accounts, one per club.` +
+            (RESET && scratchDatabase
+              ? ' Existing accounts would be left alone — seeding a scratch database.'
+              : '')
     );
     log('');
-    if (RESET) log('  Would first DELETE all application data and every seeded Keycloak user.');
+    if (RESET) {
+      log(
+        keepKeycloak
+          ? '  Would first DELETE all application data. Keycloak users would be left alone.'
+          : '  Would first DELETE all application data and every seeded Keycloak user.'
+      );
+    }
     if (RESET && !NO_STRIPE && !stripeReason) {
       log('  Would first delete the Stripe test accounts a previous run created.');
     }
@@ -293,8 +344,12 @@ async function main(): Promise<void> {
 
       if (RESET_ONLY) {
         await client.query('COMMIT');
-        const purged = await purgeSeededKeycloak(keycloak, emails);
-        log(`  reset: ${purged.usersDeleted} Keycloak users, ${purged.groupsDeleted} group trees removed`);
+        if (keepKeycloak) {
+          log('  reset: Keycloak left alone — see --keep-keycloak.');
+        } else {
+          const purged = await purgeSeededKeycloak(keycloak, emails);
+          log(`  reset: ${purged.usersDeleted} Keycloak users, ${purged.groupsDeleted} group trees removed`);
+        }
         log('');
         log('  --reset-only: stopping here. Nothing was seeded.');
         log('');
@@ -308,7 +363,18 @@ async function main(): Promise<void> {
      * between the two leaves orphaned realm users, which the next run adopts by
      * username rather than duplicating.
      */
-    if (RESET) {
+    if (RESET && keepKeycloak) {
+      log(
+        dbName === 'aws_framework'
+          ? '  keycloak: left alone (--keep-keycloak). Existing users are reused.'
+          : `  keycloak: left alone — seeding "${dbName}" rather than the development database.`
+      );
+      log('            Realm users are shared, so purging them here would orphan');
+      log('            the logins of every other database pointed at this realm.');
+      log('');
+    }
+
+    if (RESET && !keepKeycloak) {
       const purged = await purgeSeededKeycloak(keycloak, emails);
       log(`  reset: ${purged.usersDeleted} Keycloak users, ${purged.groupsDeleted} group trees removed`);
       log('');
@@ -391,7 +457,16 @@ async function main(): Promise<void> {
     } else {
       const stripe = new StripeSeeder(stripeConfigFromEnv());
 
-      if (RESET) {
+      /*
+       * Not for a scratch database. The connected accounts belong to the shared
+       * test platform, and the development database's clubs point at them by
+       * id in `settings.stripeConnect` — deleting them there leaves that
+       * environment unable to take a card payment, with nothing on screen
+       * saying why.
+       */
+      if (RESET && scratchDatabase) {
+        log('  stripe: existing accounts left alone — seeding a scratch database');
+      } else if (RESET) {
         const purged = await stripe.purgeSeededAccounts(SEED_TAG);
         log(`  stripe: ${purged.deleted} seeded test accounts removed${purged.failed ? `, ${purged.failed} could not be` : ''}`);
       }
@@ -555,8 +630,17 @@ function printCredentials(): void {
     log('  Electronic tickets');
     ticketedEvents.forEach((event) => {
       const org = ORGS.find((o) => o.key === event.org)!;
-      log(`    ${event.name.padEnd(26)} ${org.displayName}`);
+      const issued = ENTRIES.filter((entry) => entry.event === event.key);
+      const scanned = issued.filter((entry) => entry.ticket?.state?.startsWith('scanned')).length;
+
+      log(
+        `    ${event.name.padEnd(34)} ${org.displayName.padEnd(24)} ` +
+          `${issued.length} issued, ${scanned} scanned`
+      );
     });
+    log('    A ticket is issued for every entry on a ticketing event, as fulfilment does.');
+    log('    The completed gate day carries the scans: one presented twice, one never used,');
+    log('    one cancelled — which is what the scan history and the stats cards are for.');
     log('');
   }
 

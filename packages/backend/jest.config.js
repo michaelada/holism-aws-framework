@@ -22,7 +22,18 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
   moduleNameMapper: {
-    '^exceljs$': '<rootDir>/__mocks__/exceljs.js',
+    /*
+     * `exceljs` is deliberately absent from this list.
+     *
+     * It used to be mapped to a stand-in shaped to satisfy both a default and a
+     * named import — so nothing could notice that the real module has **no
+     * default export at all**. `new ExcelJS()` threw "is not a constructor" in
+     * production while every export test passed, and all five Excel exports in
+     * the application produced files the operating system refuses to open.
+     *
+     * The library is fast and pure. Running it for real is what lets a test
+     * assert on the bytes.
+     */
     '^isomorphic-dompurify$': '<rootDir>/__mocks__/isomorphic-dompurify.js',
   },
   transform: {
