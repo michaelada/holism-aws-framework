@@ -71,7 +71,7 @@ Grouped by area; each is a class or object exported from `src/services`.
 `venue.service`, `membership.service`, `membership-number-generator.service`,
 `membership-number-validator.service`, `merchandise.service`, `merchandise-option.service`,
 `registration.service`, `calendar.service`, `delivery-rule.service`, `ticketing.service`,
-`announcement.service`, `gate-scan.service`, `ticket-token.service`.
+`announcement.service`, `gate-scan.service`, `ticket-token.service`, `event-type-template.service`.
 
 **Organisation type logos** — a type may set a shared logo that every organisation of that type
 inherits, and may forbid replacing it. `effectiveLogo` in `organization-branding.service` is the one
@@ -538,6 +538,13 @@ Things worth knowing before touching any of it:
   `ticketingService.issueTicketForEntry` immediately after creating an event entry. It is wrapped: a
   ticketing failure is logged, never thrown, because the entry already exists. Issuance is
   idempotent on `event_entry_id`, because Stripe replays webhooks.
+- **A club's event-rule settings come from `event-type-template.service.resolveSettings`, and from
+  nowhere else.** Three levels resolved in **one query** — template defaults, then the organisation
+  type's override, then the club's — with `sources` naming where each key came from (the screen's
+  `From` column, which cannot be derived on the front end) and `locked` naming the keys a federation
+  has fixed. Settings are a **flat map of dotted keys** (`minutesPerCompetitor.dressage`) precisely so
+  that every setting has its own source and its own lock. A locked key ignores the club's row rather
+  than refusing it — refusing belongs at the route, where there is somebody to tell.
 - **Event type templates are the platform's; a club's event types point at one.** `event_types` is
   club-owned free text with no behaviour, so a discipline that knows how to schedule or score itself
   is defined once by the platform in `event_type_templates` and referenced by a **nullable**

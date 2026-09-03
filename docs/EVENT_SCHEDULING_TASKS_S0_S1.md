@@ -115,9 +115,16 @@ Note `capability_permissions` is a jsonb **object** (`{"venues": "admin", …}`)
 `?` and `-` operators behave identically on both, which is why the same SQL serves all three
 columns — checked rather than assumed.
 
-### S0-3 · Settings resolution
+### S0-3 · Settings resolution ✅ **done**
 
-`packages/backend/src/services/event-type-template.service.ts`
+`packages/backend/src/services/event-type-template.service.ts`, with 13 unit tests and 5
+integration tests (`src/__tests__/integration/event-type-settings-chain.test.ts`).
+
+**Settings are a flat map of dotted keys** — `minutesPerCompetitor.dressage`, never
+`{ minutesPerCompetitor: { dressage: 8 } }`. This was not written down before and everything rests
+on it: each setting a club can see needs **its own source** and **its own lock**, and a nested object
+cannot carry either without inventing a path language to name its leaves. Flat keys make merging
+shallow, sources exact, and locks meaningful, and cost nothing but a dot.
 
 The one piece of logic in S0, and the one most likely to be reimplemented by accident later:
 
@@ -129,16 +136,29 @@ resolveSettings(templateId, organisationId): Promise<{
 }>
 ```
 
-**Acceptance**
+**Acceptance — all met**
 
-- Last wins: template → organisation type → organisation.
-- `sources` names where **each key** came from — the wireframe's `From` column is not decoration and
-  cannot be derived on the front end.
-- A locked key is returned with the type's value and listed in `locked`, whatever the organisation
-  row says. A club cannot override a locked setting by writing one directly.
-- Improving a template default reaches every level that did not override it. **Test this explicitly**
-  — it is the whole reason for storing differences rather than whole objects.
-- One query per level, not one per key.
+- ✅ Last wins: template → organisation type → organisation.
+- ✅ `sources` names where **each key** came from.
+- ✅ A locked key resolves to the type's value — or the **template's**, where the type locked it
+  without setting one, which means "nobody below may change this" rather than "this has no value" —
+  and the club's row for it is **ignored rather than refused**. Refusing belongs at the route, where
+  there is somebody to tell; here the answer merely has to be right, including for a row written
+  before the lock existed.
+- ✅ Raising a platform default reaches a club that has its own override row but does not name that
+  key. Tested explicitly.
+- ✅ **One query for the whole chain**, not one per level — both overrides are found by joining
+  through the organisation's own type. A club with forty settings costs the same round trip as a club
+  with one.
+
+**The unit tests mock the pool, so they cannot prove the query.** That gap is closed by an
+integration suite running the real SQL against the test database, because the join is where the
+**isolation** lives: a club must not receive another type's rules, nor another club's. Verified both
+ways round, plus that a non-existent organisation resolves to nothing — which is what makes the
+service's `NotFoundError` correct rather than incidental.
+
+Also defensive about a jsonb column holding an array or a string: an unusable value is treated as no
+override rather than taking the resolution down.
 
 ### S0-4 · CRUD and routes
 

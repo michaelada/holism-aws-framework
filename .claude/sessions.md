@@ -26087,3 +26087,47 @@ One thing I checked rather than assumed: `capability_permissions` is a jsonb **o
 S0-3 next — settings resolution, which the breakdown calls the one piece of logic in S0 and the one most likely to get reimplemented by accident later. Nothing committed.
 
 ---
+
+
+## 2026-09-03 13:44:49 — Prompt
+
+please continue
+
+### Assistant
+
+S0-3 — the settings chain. One design decision to make explicit first, because it determines whether `sources` and `locked` can work at all.
+
+Unit tests mock the pool, so the SQL itself is still unproven. Let me run it against the real database.
+
+Cases 1–3 exactly right — the club's locked value was ignored while its unlocked one applied. Case 4 didn't run; let me find out why, since type isolation matters.
+
+Type isolation confirmed and nothing persisted. But my unit tests mock the pool, so that join is still untested in CI — worth closing.
+
+The test database already has two organisations of *different* types — ideal for this.
+
+S0-3 done — `event-type-template.service.ts`, 13 unit tests plus 5 integration tests.
+
+**One decision I had to make that wasn't in the plan.** Settings are a **flat map of dotted keys** — `minutesPerCompetitor.dressage`, never `{ minutesPerCompetitor: { dressage: 8 } }`. Everything rests on it: the wireframe shows a `From` column and a padlock *per row*, so every setting a club can see needs its own source and its own lock. A nested object can't carry either without inventing a path language to name its leaves. Flat keys make merging shallow, sources exact, locks meaningful, and cost nothing but a dot. It's now written into the task doc and the backend summary.
+
+**The chain resolves in one query**, not one per level — both overrides are found by joining through the organisation's own type, so a club with forty settings costs the same round trip as a club with one.
+
+**Two behaviours worth naming**, because I had to decide them and neither was specified:
+
+A key the type locks *without setting* resolves to the **template's** value. Locking means "nobody below may change this", not "this has no value".
+
+A locked key **ignores** the club's row rather than refusing it. Refusing belongs at the route in S0-4, where there's somebody to tell; here the answer merely has to be right — including for a row written before the lock existed.
+
+**The unit tests mock the pool, so they prove the merge and not the query** — and the query is where the isolation lives. I closed that with an integration suite running the real SQL: a club gets its own type's override, a club of **another type gets nothing**, one club never sees another's, and a non-existent organisation resolves to no rows, which is what makes the service's `NotFoundError` correct rather than incidental. Cross-organisation leakage is a class of bug this codebase has a whole document about, so a mocked test wasn't enough.
+
+I also ran it live against the seeded database before writing any of that — template only, then a type override with a lock, then a club override — and watched the club's locked value get ignored while its unlocked one applied. The type-isolation check needed two clubs of different types, and all four seeded clubs share one, so I moved one to a new type inside a transaction and rolled back. Confirmed nothing persisted.
+
+**Verified:** backend **3,694 tests** green, typecheck clean.
+
+S0-4 next — CRUD and routes, where the capability gate and the locked-key refusal live. Nothing committed.
+
+---
+
+
+## 2026-09-03 13:52:47 — Prompt
+
+go on to SO-4
