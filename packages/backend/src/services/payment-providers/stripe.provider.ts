@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { logger } from '../../config/logger';
+import { stripeClientOptions } from '../../config/stripe-client';
 import {
   PaymentProvider,
   PaymentIntentRequest,
@@ -37,7 +38,6 @@ import {
  */
 
 /** Pinned so a Stripe-side API change cannot alter behaviour without a deploy. */
-const STRIPE_API_VERSION = '2025-10-29.clover';
 
 export interface StripePlatformConfig {
   secretKey: string;
@@ -92,9 +92,7 @@ export class StripeProvider implements PaymentProvider {
     if (client) {
       this.client = client;
     } else if (config.secretKey) {
-      this.client = new Stripe(config.secretKey, {
-        apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
-      });
+      this.client = new Stripe(config.secretKey, stripeClientOptions());
     } else {
       // Not an error at construction — the platform may simply not have Stripe
       // configured yet, and every other part of the application must still run.

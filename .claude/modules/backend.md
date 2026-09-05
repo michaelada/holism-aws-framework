@@ -683,6 +683,16 @@ Things worth knowing before touching any of it:
 - **Exactly-once is an insert-first claim** on `processed_webhook_events` (unique on
   `provider, event_id`), released on failure so a retry can succeed. `confirmPayment` also locks the
   payment row `FOR UPDATE` and re-checks its status.
+- **A webhook must answer inside about 20 seconds, or Stripe records a timeout.** Two bounds keep it
+  there. Every Stripe client is built from `config/stripe-client.ts` with an **8-second timeout and
+  one retry** — the library's own defaults are **80 seconds and two retries**, up to four minutes for
+  a single call, which is what produced a run of 85 timed-out deliveries on a working system. And the
+  route races the work against `WEBHOOK_RESPONSE_DEADLINE_MS` (default 10s): past it, the response is
+  a **500** and the work is left running. A 500 rather than a 2xx deliberately keeps **Stripe** as
+  the retry engine; the running work holds the claim, so the redelivery finds it done and takes the
+  idempotent already-claimed path. A `.catch` is attached before the race because past the deadline
+  nobody awaits that promise and an unhandled rejection would end the process. See
+  docs/STRIPE_WEBHOOK_TIMEOUTS.md.
 - **Organisation status gates org-admin access.** `active` or `inactive` only. Sign-in and every
   capability- or role-gated request check `o.status = 'active'`, so deactivating an organisation
   locks out its administrators immediately, not when their token expires. `DELETE` on an

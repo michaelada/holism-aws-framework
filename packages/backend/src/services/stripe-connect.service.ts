@@ -3,6 +3,7 @@ import { db } from '../database/pool';
 import { logger } from '../config/logger';
 import { ValidationError, NotFoundError } from '../middleware/errors';
 import { stripeConfigFromEnv, StripePlatformConfig } from './payment-providers/stripe.provider';
+import { stripeClientOptions } from '../config/stripe-client';
 
 /**
  * Stripe Connect onboarding — getting a club to the point where it can be paid.
@@ -53,7 +54,6 @@ export const EMPTY_CONNECT_STATE: StripeConnectState = {
   updatedAt: null,
 };
 
-const STRIPE_API_VERSION = '2025-10-29.clover';
 
 export class StripeConnectService {
   private readonly client: Stripe | null;
@@ -65,9 +65,7 @@ export class StripeConnectService {
     if (client) {
       this.client = client;
     } else if (config.secretKey) {
-      this.client = new Stripe(config.secretKey, {
-        apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
-      });
+      this.client = new Stripe(config.secretKey, stripeClientOptions());
     } else {
       this.client = null;
     }

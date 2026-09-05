@@ -26271,3 +26271,93 @@ The `AuditLogPage` failure is pre-existing: identical with my components export 
 S1-1 is next when you want it. Nothing committed by me.
 
 ---
+
+
+## 2026-09-05 07:17:52 — Prompt
+
+I have a test system running at itsps.org, and I have tried some test payments, however I just reeived an email from Stripe that included the message below.
+
+ /\/\/\/\/\/\/\/\/\/\/\
+We’ve had some trouble sending requests in test mode to a webhook endpoint associated with your Itsplainsailing account. Stripe sends webhook events to your server to notify you of activity in your Stripe account, such as a completed payout or a newly created invoice.	
+ 
+
+The URL of the failing webhook endpoint is: https://itsps.org/api/webhooks/stripe
+
+ 
+Here is the summary of errors we received while attempting to send webhook events:	
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+85 requests timed out. Make sure your server quickly responds to acknowledge receipt of the webhook event. Whenever possible, use asynchronous patterns and defer processing the event until after responding to Stripe with a successful HTTP status code.	
+ 
+You need to return any status code between HTTP 200 to 299 for Stripe to consider the webhook event successfully delivered.
+
+/\/\/\/\/\/\/\/\/\/\/\//
+
+
+can you fix this ?
+
+### Assistant
+
+Let me look at the handler before changing anything — 85 timeouts usually means the work happens before the response.
+
+Two things stand out already. Let me check whether there's any background-job infrastructure before deciding the shape of the fix:
+
+The DB pool is healthy, so that's not it. Let me read the full processing path — its redelivery behaviour decides which fix is safe:
+
+Now I have the full picture. Let me confirm the mount ordering is still correct and find where the Stripe API version constant lives:
+
+Ordering is correct. Now the shared Stripe client options — the timeout must be identical across all three clients or it will drift:
+
+Now the response deadline. The key subtlety: after answering, the in-flight promise must not be left to reject unhandled or to write to a sent response:
+
+Now tests — the deadline path and the unhandled-rejection guard are exactly what would rot silently:
+
+Fake timers fight supertest's own socket timing. Better: read the deadline lazily from the environment — testable with real timers, and tunable in ops:
+
+I wrote that last test as a tautology (`0 === 0`, asserting nothing). Replacing it with the real observable property:
+
+Let me verify my headline diagnosis rather than assert it — what is stripe-node's actual default timeout in the installed version?
+
+Confirmed empirically: **80 s default timeout, 2 retries** — up to 240 s for one call, against Stripe's ~20 s deadline. Now the deployment artefacts, since I added an environment variable (§1.6):
+
+Now the feature doc and the module summary:
+
+Fixed. **Verified:** 198 suites, **3,752** tests green (+9), typecheck clean.
+
+**The cause, confirmed rather than guessed.** Every `new Stripe(...)` was built with an API version and nothing else. I checked the installed library's defaults directly:
+
+```
+stripe version: 22.4.0
+default timeout (ms): 80000
+default maxNetworkRetries: 2
+```
+
+**Eighty seconds per attempt, up to three attempts — 240 seconds for one call**, against Stripe's ~20-second webhook deadline. The handler makes exactly those calls while Stripe waits: `getPaymentState`, `settleAuthorisation`, `confirmPayment`. One slow call and Stripe had long since given up, retried, and triggered the same call again — which is how a working system produces 85 timeouts rather than a handful.
+
+There were **three** Stripe clients, each with its own copy of the API version. They now share `config/stripe-client.ts` at **8 s and one retry**, because a timeout applied to two of three would be a bug on precisely the path nobody tested.
+
+**Bounding the calls isn't sufficient, so the route now has its own deadline.** Processing confirms the payment then fulfils *every line* of the order — unbounded in principle. The work is raced against `WEBHOOK_RESPONSE_DEADLINE_MS` (default 10 s, read per request so you can turn it down without a rebuild).
+
+**Two judgement calls worth flagging.**
+
+Past the deadline it answers **500, not 202**. A 2xx would stop Stripe retrying, which would silently hand this application the job of retrying payment events with nothing built to do it. A 500 keeps Stripe as the retry engine — and the work is deliberately *not* abandoned, because it holds the claim in `processed_webhook_events`; letting it finish is what makes the redelivery cheap, arriving to find the event claimed and taking the idempotent path your `webhook.service.ts` already documents. If the background work then fails it releases its own claim, so the retry reprocesses in full. Either way the payment isn't lost.
+
+And `work.catch(() => undefined)` is attached before the race: past the deadline nobody awaits that promise, and an unhandled rejection ends the Node process under its default — one slow webhook becoming an outage.
+
+**I checked your live endpoint** (a GET, no body, no side effects): 404 as expected for GET, in **86 ms** total including DNS and TLS. So the network path, proxy and DNS are healthy — the delay was inside the handler, which matches the diagnosis and rules out the "unreachable endpoint" reading of Stripe's message.
+
+Also updated per §1.6: `packages/backend/.env.example`, `.env.deploy.example` and `docker-compose.deploy.yml` (compose config validates), plus [docs/STRIPE_WEBHOOK_TIMEOUTS.md](docs/STRIPE_WEBHOOK_TIMEOUTS.md) and the backend summary.
+
+**What I can't confirm from here** is that this accounts for all 85 — that needs your server logs, and the proof is simply that the timeouts stop. This needs a deploy to take effect; once it's out, Stripe's dashboard will let you resend the failed events, and `Webhook received` now logs every arrival with its event and payment id. If any still time out, the doc lists the three remaining candidates in the order worth checking.
+
+Nothing committed.
+
+---

@@ -145,6 +145,11 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
 
+      # How long a Stripe webhook may take before the server answers without
+      # it. Stripe gives up at about 20 seconds and records a timeout.
+      # See docs/STRIPE_WEBHOOK_TIMEOUTS.md.
+      WEBHOOK_RESPONSE_DEADLINE_MS: ${WEBHOOK_RESPONSE_DEADLINE_MS:-10000}
+
       # Signs the token in every ticket's QR. Unset, tickets carry the plain
       # identifier and a gate cannot tell a forgery from an unknown code until
       # it asks. See docs/SIGNED_TICKET_CODES.md.

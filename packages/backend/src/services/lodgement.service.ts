@@ -4,6 +4,7 @@ import { logger } from '../config/logger';
 import { AppError, NotFoundError } from '../middleware/errors';
 import { stripeConfigFromEnv, StripePlatformConfig } from './payment-providers/stripe.provider';
 import { stripeConnectService } from './stripe-connect.service';
+import { stripeClientOptions } from '../config/stripe-client';
 
 /**
  * Lodgements — money that actually reached the club's bank account.
@@ -134,7 +135,6 @@ export interface LodgementSource {
   getLodgement(organisationId: string, lodgementId: string): Promise<LodgementDetail>;
 }
 
-const STRIPE_API_VERSION = '2025-10-29.clover';
 
 /** Stripe caps list pages at 100. */
 const STRIPE_PAGE_LIMIT = 100;
@@ -157,9 +157,7 @@ export class StripeLodgementSource implements LodgementSource {
     if (client) {
       this.client = client;
     } else if (config.secretKey) {
-      this.client = new Stripe(config.secretKey, {
-        apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
-      });
+      this.client = new Stripe(config.secretKey, stripeClientOptions());
     } else {
       this.client = null;
     }
